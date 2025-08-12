@@ -26,7 +26,7 @@ and functionality of the NeMo Agent toolkit CLI. To begin, the command hierarchy
 throughout the remainder of this document.
 
 ```
-aiq
+nat
 ├── configure
 │   └── channel
 │       ├── add
@@ -57,16 +57,16 @@ aiq
 
 ## Start
 
-The group of `aiq start` commands provide several mechanisms to launch workflows. Each of these commands are summarized
+The group of `nat start` commands provide several mechanisms to launch workflows. Each of these commands are summarized
 in the following sections.
 
 ### FastAPI
 
-The `aiq start fastapi` command will serve a FastAPI endpoint for the workflow based on the supplied configuration file
+The `nat start fastapi` command will serve a FastAPI endpoint for the workflow based on the supplied configuration file
 in the `--config_file` option. This command is ideal for serving a workflow as a microservice that allows client
-applications to submit requests to a workflow. The `aiq serve` command is a good option when deploying this workflow into
+applications to submit requests to a workflow. The `nat serve` command is a good option when deploying this workflow into
 production as the entrypoint of a containerized application. Additional options are available to serve this workflow
-are made available via the `aiq start fastapi --help` utility:
+are made available via the `nat start fastapi --help` utility:
 
 ```console
 $ nat start fastapi --help
@@ -99,28 +99,28 @@ Options:
   --help                          Show this message and exit.
 ```
 
-Once a workflow has been launched using the `aiq start fastapi` command, client applications may submit POST requests
+Once a workflow has been launched using the `nat start fastapi` command, client applications may submit POST requests
 that will run data through the hosted workflow. To access documentation on the available routes and schemas, Swagger API
 documentation are made available at the <HOST>:<IP>/docs endpoint. For example, if serving locally, with
 the following command:
 
 
 ```bash
-aiq start fastapi --config_file=path/to/config --host 0.0.0.0 --port 8000
+nat start fastapi --config_file=path/to/config --host 0.0.0.0 --port 8000
 ```
 
 The Swagger API docs will be available at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ### Console
 
-The `aiq start console` command will run a NeMo Agent toolkit workflow from a provided configuration file against inputs supplied
+The `nat start console` command will run a NeMo Agent toolkit workflow from a provided configuration file against inputs supplied
 at the command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in
 the configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
 debugging a workflow. When invoking the run command, the workflow will follow the same harness as the
 other workflow launch commands. This simplifies the debugging process when transitioning from development to production.
 
-The `aiq start console` help utility provides a brief description of each option to describe is usage.
+The `nat start console` help utility provides a brief description of each option to describe is usage.
 
 ```console
 $ nat start console --help
@@ -139,7 +139,7 @@ Options:
 
 ### MCP
 
-The `aiq start mcp` command (or simply `aiq mcp`) will start a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your NeMo Agent toolkit functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. The MCP front-end is especially useful for integrating NeMo Agent toolkit workflows with MCP-compatible clients.
+The `nat start mcp` command (or simply `nat mcp`) will start a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your NeMo Agent toolkit functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. The MCP front-end is especially useful for integrating NeMo Agent toolkit workflows with MCP-compatible clients.
 
 The MCP front-end can be configured using the following options:
 
@@ -165,21 +165,21 @@ Options:
 For example, to start an MCP server with a specific workflow and expose only a particular tool:
 
 ```bash
-aiq mcp --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --tool_names mcp_retriever_tool
+nat mcp --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --tool_names mcp_retriever_tool
 ```
 
 This will start an MCP server exposing the `mcp_retriever_tool` function from the workflow, which can then be accessed by any MCP-compatible client.
 
 ## Run
 
-The `aiq run` is an alias for the `aiq start console` command and will run a NeMo Agent toolkit workflow from a provided configuration file against inputs supplied at the
+The `nat run` is an alias for the `nat start console` command and will run a NeMo Agent toolkit workflow from a provided configuration file against inputs supplied at the
 command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in the
 configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
 debugging a workflow. When invoking the run command, the workflow will follow the same harness as the
 other workflow launch commands. This simplifies the debugging process when transitioning from development to production.
 
-The `aiq run` help utility provides a brief description of each option to describe is usage.
+The `nat run` help utility provides a brief description of each option to describe is usage.
 
 ```console
 $ nat run --help
@@ -197,11 +197,11 @@ Options:
 ```
 
 ## Serve
-The `aiq serve` is an alias for the `aiq start fastapi` command and will serve a FastAPI endpoint for the workflow based
+The `nat serve` is an alias for the `nat start fastapi` command and will serve a FastAPI endpoint for the workflow based
 on the supplied configuration file in the `--config_file` option. This command is ideal for serving a workflow as a
-microservice that allows client applications to submit requests to a workflow. The `aiq serve` command is a good option
+microservice that allows client applications to submit requests to a workflow. The `nat serve` command is a good option
 when deploying this workflow into production as the entrypoint of a containerized application. Additional options are
-available to serve this workflow are made available via the `aiq serve --help` utility:
+available to serve this workflow are made available via the `nat serve --help` utility:
 
 ```console
 $ nat serve --help
@@ -234,24 +234,24 @@ Options:
   --help                          Show this message and exit.
 ```
 
-Once a workflow has been launched using the `aiq serve` command, client applications may submit POST requests that will
+Once a workflow has been launched using the `nat serve` command, client applications may submit POST requests that will
 run data through the hosted workflow. To access documentation on the available routes and schemas, Swagger API
 documentation are made available at the <HOST>:<IP>/docs endpoint. For example, if serving locally, with
 the following command:
 
 ```bash
-aiq serve --config_file=path/to/config --host 0.0.0.0 --port 8000
+nat serve --config_file=path/to/config --host 0.0.0.0 --port 8000
 ```
 
 The Swagger API docs will be available at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## Evaluation
-The `aiq eval` command provides access a set of evaluators designed to assessing the accuracy of NeMo Agent toolkit workflows as
+The `nat eval` command provides access a set of evaluators designed to assessing the accuracy of NeMo Agent toolkit workflows as
 well as instrumenting their performance characteristics. Please reference
 [Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) for a detailed overview of the
 suite of evaluation capabilities.
 
-The `aiq eval --help` utility provides a brief overview of the command and its available options.
+The `nat eval --help` utility provides a brief overview of the command and its available options.
 
 ```console
 $ nat eval --help
@@ -288,7 +288,7 @@ Options:
 
 When a package and its corresponding components are no longer needed, they can be removed from the local environment.
 This can help if certain packages are creating dependency conflicts. To remove packages from the local environment, use
-the `aiq uninstall` command. This command can be used with one or more packages. The `aiq uninstall --help` utility
+the `nat uninstall` command. This command can be used with one or more packages. The `nat uninstall --help` utility
 illustrates is usage:
 
 ```console
@@ -303,10 +303,10 @@ Options:
 
 ## Validate
 
-Running a NeMo Agent toolkit workflow from the CLI requires a valid workflow configuration file. Use the `aiq validate` command to
+Running a NeMo Agent toolkit workflow from the CLI requires a valid workflow configuration file. Use the `nat validate` command to
 ensure a configuration files has been created with the right settings, components and parameters. It can be useful to
-each components valid configuration settings using the `aiq info components` command and corresponding filters.
-The `aiq validate` help utility illustrates its usage.
+each components valid configuration settings using the `nat info components` command and corresponding filters.
+The `nat validate` help utility illustrates its usage.
 
 ```console
 $ nat validate --help
@@ -328,10 +328,10 @@ of commands that automate some of these steps.
 
 ### Create
 
-The `aiq workflow create` command generates a valid `pyproject.toml` file with a plugin section that points to a
+The `nat workflow create` command generates a valid `pyproject.toml` file with a plugin section that points to a
 register.py file that has been pre-populated with NeMo Agent toolkit programming model boiler plate code. This boiler plate code
 should be further customized to implement the desired custom workflow and necessary NeMo Agent toolkit components. The
-`aiq workflow create --help` utility provides a description of its usage.
+`nat workflow create --help` utility provides a description of its usage.
 
 ```console
 $ nat workflow create --help
@@ -354,27 +354,27 @@ Options:
   --description TEXT        A description of the component being created. Will
                             be used to populate the docstring and will
                             describe the component when inspecting installed
-                            components using 'aiq info component'  [default:
+                            components using 'nat info component'  [default:
                             NeMo Agent toolkit function template. Please update the
                             description.]
   --help                    Show this message and exit.
 ```
 
-Also, a configuration file will be generated when you run the `aiq workflow create` command. To launch the new workflow from the CLI
-(e.g. using `aiq run` or `aiq serve`), you will need a configuration file that maps to these component
+Also, a configuration file will be generated when you run the `nat workflow create` command. To launch the new workflow from the CLI
+(e.g. using `nat run` or `nat serve`), you will need a configuration file that maps to these component
 configuration objects. For more information on configuration objects, refer to
 [Workflow Configuration](../workflows/workflow-configuration.md).
 
 ### Reinstall
 
-When you modify a workflow's code or update its dependencies, you need to reinstall the workflow package to ensure the changes take effect. The `aiq workflow reinstall` command rebuilds and reinstalls the workflow package with any updates. This is particularly useful after:
+When you modify a workflow's code or update its dependencies, you need to reinstall the workflow package to ensure the changes take effect. The `nat workflow reinstall` command rebuilds and reinstalls the workflow package with any updates. This is particularly useful after:
 
 - Modifying the workflow's Python code
 - Updating dependencies in `pyproject.toml`
 - Making changes to the workflow's configuration
 - Adding new tools or components
 
-The `aiq workflow reinstall --help` utility provides a description of its usage:
+The `nat workflow reinstall --help` utility provides a description of its usage:
 
 ```console
 $ nat workflow reinstall --help
@@ -392,23 +392,23 @@ Options:
 For example, after updating the dependencies in your workflow's `pyproject.toml`, you would run:
 
 ```bash
-aiq workflow reinstall my_workflow
+nat workflow reinstall my_workflow
 ```
 
-After running the `aiq workflow reinstall` command, the following actions will happen:
+After running the `nat workflow reinstall` command, the following actions will happen:
 1. Rebuild the workflow package
 2. Uninstall the existing version
 3. Install the updated version
 4. Verify the installation by checking the registered components
 
 :::{note}
-If you want to completely remove a workflow instead of reinstalling it, use the `aiq workflow delete` command.
+If you want to completely remove a workflow instead of reinstalling it, use the `nat workflow delete` command.
 :::
 
 ### Delete
 
-By default, unless the `--no-install` flag is set, the `aiq workflow create` command will install the generated package
-into the local environment. To remove a workflow package from the local environment, use the `aiq workflow delete` command.
+By default, unless the `--no-install` flag is set, the `nat workflow create` command will install the generated package
+into the local environment. To remove a workflow package from the local environment, use the `nat workflow delete` command.
 
 ```console
 $ nat workflow delete --help
@@ -425,13 +425,13 @@ Options:
 
 ## Information Commands
 
-The `aiq info` command group provides utilities that facilitate the discovery of registered NeMo Agent toolkit components and
+The `nat info` command group provides utilities that facilitate the discovery of registered NeMo Agent toolkit components and
 retrieval of information about the locally configured NeMo Agent toolkit environment.
 
 ### Components Information
 
 When defining a NeMo Agent toolkit workflow's configuration file, it can be helpful to discover the locally registered components,
-possible configuration settings, and their default values. The `aiq info components` will provide this information in
+possible configuration settings, and their default values. The `nat info components` will provide this information in
 tabular format with the following columns.
 
 - `package`: The Python package containing this row's NeMo Agent toolkit component.
@@ -444,7 +444,7 @@ of the configuration file.
 - `description`: A description of the component's uses, configuration parameters, and any default values. These
 parameters are what will need to be specified in the configuration object.
 
-The `aiq info components --help` utility provides an overview of usage and filter options:
+The `nat info components --help` utility provides an overview of usage and filter options:
 
 ```console
 $ nat info components --help
@@ -465,13 +465,13 @@ Options:
 
 ### Channels Information
 
-The `aiq info channels` command provides a list of each configured remote registry channel and their corresponding
+The `nat info channels` command provides a list of each configured remote registry channel and their corresponding
 configuration settings. This command provides the `-t, --type` option to filter the remote registry channels by type.
-By default, this command will return an empty list. The `aiq registry` command group will not be functional without
-first configuring registry channels with the `aiq configure channel add` command. Successful channel configurations
-will be returned when invoking the `aiq info channels` command.
+By default, this command will return an empty list. The `nat registry` command group will not be functional without
+first configuring registry channels with the `nat configure channel add` command. Successful channel configurations
+will be returned when invoking the `nat info channels` command.
 
-The `aiq info channels --help` provides an overview of its usage:
+The `nat info channels --help` provides an overview of its usage:
 
 ```console
 $ nat info channels --help
@@ -504,7 +504,7 @@ Currently, there are two channel types that facilitate remote discovery and reus
  - `rest` – provides a contract driven interface to a registry service behind a REST endpoint
  - `pypi` – a simple interface to publish packages to a private PyPI registry.
 
-Invoking the `aiq info components` command provides a description of the available channel settings.
+Invoking the `nat info components` command provides a description of the available channel settings.
 
 Here we provide a example that configures a remote rest channel. To use this channel, there must exists a remote
 registry that adheres to the contracts defined in the rest handler in NeMo Agent toolkit.
@@ -535,7 +535,7 @@ Search Route: simple  # The route use when searching for relevant NeMo Agent too
 #### Updating a Remote Registry Channel Configuration
 
 At some point, a developer might need to update a remote registry channel's configuration settings. In this case,
-using the `aiq configure channel update` command will select a remote registry channel by its locally unique name and allow
+using the `nat configure channel update` command will select a remote registry channel by its locally unique name and allow
 the developer to override the configuration settings.
 
 A usage example is provided below:
@@ -552,17 +552,17 @@ Remove Route: remove
 
 #### Removing a Remote Registry Channel
 
-A developer may need to remove a locally configured remote registry channel. In this case, the `aiq registry remove`
+A developer may need to remove a locally configured remote registry channel. In this case, the `nat registry remove`
 command can be used. The channel will be removed based on the name supplied with the command.
 
 An example of using this command is provided below:
 
 ```bash
-aiq configure channel remove my_rest_channel
+nat configure channel remove my_rest_channel
 ```
 
-Note, once a channel is removed, it will no longer be able to support `aiq registry publish`, `aiq registry search`,
-`aiq registry pull`, or `aiq registry remove` commands until reconfigured.
+Note, once a channel is removed, it will no longer be able to support `nat registry publish`, `nat registry search`,
+`nat registry pull`, or `nat registry remove` commands until reconfigured.
 
 ## Remote Registry Interactions
 
@@ -571,10 +571,10 @@ distribute NeMo Agent toolkit plugin packages that will benefit others. This sec
 exposes to facilitate publishing, discovering, downloading, and removing NeMo Agent toolkit packages from a configured remote
 registry. Here we define a remote registry as a centralized location that stores plugin wheel packages and NeMo Agent toolkit
 specific metadata to that describes its usage details. Before these commands can be used, a remote registry must be
-available and a developer must have configured the corresponding channel using the `aiq configure channel add` command.
+available and a developer must have configured the corresponding channel using the `nat configure channel add` command.
 Refer to [Adding a Remote Registry Channel](#adding-a-remote-registry-channel) for more details on adding a remote registry channels.
 
-The `aiq registry` help command will provide the available commands in this group.
+The `nat registry` help command will provide the available commands in this group.
 
 ```console
 $ nat registry --help
@@ -596,11 +596,11 @@ Commands:
 
 NeMo Agent toolkit developers may want to distribute their components with the broader ecosystem. The NeMo Agent toolkit publish CLI utility
 provides a mechanism to publish a NeMo Agent toolkit plugin package to a remote registry channel so that other developers can
-benefit from it's implemented components. Invoking the `aiq registry publish` command will build a package wheel, gather
+benefit from it's implemented components. Invoking the `nat registry publish` command will build a package wheel, gather
 all component metadata, and transmit to the specified remote registry by channel name. Note, a package must be first
 installed locally so the discovery hooks can pull in necessary NeMo Agent toolkit component metadata.
 
-The `aiq registry publish --help` utility provides an overview of its usage:
+The `nat registry publish --help` utility provides an overview of its usage:
 
 ```console
 $ nat registry publish --help
@@ -622,11 +622,11 @@ Options:
 When developing and deploying NeMo Agent toolkit workflows, it is most efficient to leverage pre-built components. When using
 pre-built components will, only configuration settings are required to integration with the rest of a workflow. These
 pre-built exist in the core library, as well as, within other NeMo Agent toolkit plugin packages. Remote registry channels are the
-formal mechanism to publish reusable components to the community. The `aiq registry search` command allows developers
+formal mechanism to publish reusable components to the community. The `nat registry search` command allows developers
 to search relevant pre-built components that might benefit their application. The search command is usually followed up
-by an `aiq registry pull` command, once a useful package has been identified.
+by an `nat registry pull` command, once a useful package has been identified.
 
-The `aiq registry search --help` utility provides an overview of its usage:
+The `nat registry search --help` utility provides an overview of its usage:
 
 ```console
 $ nat registry search --help
@@ -651,12 +651,12 @@ Options:
 ```
 
 #### Pulling in NeMo Agent Toolkit Components
-Once a useful NeMo Agent toolkit component has been discovered using the `aiq registry search` command, the containing package can be
+Once a useful NeMo Agent toolkit component has been discovered using the `nat registry search` command, the containing package can be
 pulled in and installed from a configured remote registry, so that it can be used withing the local NeMo Agent toolkit environment.
 Once installed, all components in the package can be referenced by name in a NeMo Agent toolkit workflow YAML configuration file.
 In many cases, components can be stitched together in YAML without having to write much integration code.
 
-The `aiq registry pull --help` command provides an overview of its usage:
+The `nat registry pull --help` command provides an overview of its usage:
 
 ```console
 $ nat registry pull --help
@@ -676,10 +676,10 @@ Note, the supplied package takes the following format: `package_name==version`, 
 
 #### Removing NeMo Agent Toolkit Components
 In rare cases, it might make sense to remove a package from a remote registry over a configured remote registry channel.
-This the `aiq registry remove` command provides support for this feature, assuming the remote registry provides and
+This the `nat registry remove` command provides support for this feature, assuming the remote registry provides and
 allows this interaction.
 
-The `aiq registry remove --help` utility provides an overview of its usage.
+The `nat registry remove --help` utility provides an overview of its usage.
 
 ```console
 $ nat registry remove --help

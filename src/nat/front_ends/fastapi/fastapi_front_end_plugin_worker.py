@@ -527,7 +527,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         GenerateSingleResponseType = workflow.single_output_schema  # pylint: disable=invalid-name
 
         # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
-        # Consider prefixing these with "aiq_" to avoid conflicts
+        # Consider prefixing these with "nat_" to avoid conflicts
         class AsyncGenerateRequest(GenerateBodyType):
             job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
             sync_timeout: int = Field(

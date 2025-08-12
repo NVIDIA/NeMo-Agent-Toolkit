@@ -103,18 +103,18 @@ export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 note: the below is an example command to use and query this and trigger `rag_agent`
 
 ```bash
-aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "tell me about this workflow"
+nat run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "tell me about this workflow"
 ```
 
 **Expected Workflow Output**
 ```console
-This workflow is a multi-frameworks example that can be installed locally and run using specific commands. To install the workflow, you need to run `uv pip install -e examples/frameworks/multi_frameworks`. After installation, you can run the workflow using the command `aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "your query here"`. You can replace "your query here" with any input you want to query the workflow with.
+This workflow is a multi-frameworks example that can be installed locally and run using specific commands. To install the workflow, you need to run `uv pip install -e examples/frameworks/multi_frameworks`. After installation, you can run the workflow using the command `nat run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "your query here"`. You can replace "your query here" with any input you want to query the workflow with.
 ```
 
 Note: the below is an example command to use and query this and trigger `research_agent`
 
 ```bash
-aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "what is RAG?"
+nat run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "what is RAG?"
 ```
 **Expected Workflow Output**
 ```console

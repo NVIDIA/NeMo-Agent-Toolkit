@@ -74,7 +74,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"
+nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"
 ```
 
 **Expected Workflow Output**

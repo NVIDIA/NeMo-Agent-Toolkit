@@ -77,8 +77,8 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 
 1. Clone the NeMo Agent toolkit repository to your local machine.
    ```bash
-   git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git aiqtoolkit
-   cd aiqtoolkit
+   git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit
+   cd nemo-agent-toolkit
    ```
 
 2. Initialize, fetch, and update submodules in the Git repository.
@@ -123,7 +123,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
    ```
 
    > [!NOTE]
-   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
+   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
 
 
 
@@ -135,7 +135,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 6. Verify the installation using the NeMo Agent toolkit CLI
 
    ```bash
-   aiq --version
+   nat --version
    ```
 
    This should output the NeMo Agent toolkit version which is currently installed.
@@ -177,10 +177,10 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
       parse_agent_response_max_retries: 3
    ```
 
-3. Run the Hello World example using the `aiq` CLI and the `workflow.yaml` file.
+3. Run the Hello World example using the `nat` CLI and the `workflow.yaml` file.
 
    ```bash
-   aiq run --config_file workflow.yaml --input "List five subspecies of Aardvarks"
+   nat run --config_file workflow.yaml --input "List five subspecies of Aardvarks"
    ```
 
    This will run the workflow and output the results to the console.

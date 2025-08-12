@@ -9,6 +9,22 @@ These are the overarching standards that every **source, test, documentation and
 
 ---
 
+## Terminology and Naming
+- Make sure to follow this naming convention for all the documentation. If there is any documentation not following this rule, you MUST update it.
+- **Full name on first use**: "NVIDIA NeMo Agent toolkit"
+- **Subsequent references**: "NeMo Agent toolkit"
+- **Abbreviations**: "NAT" or "nat"
+  - "nat" for the API namespace and CLI tool
+  - "nvidia-nat" for the package name
+  - "NAT" for environment variable prefixes, and informal usage in comments
+  - This should be used for all abbreviations in the comments in the code.
+  - This should NEVER be used in the documentation.
+- Examples:
+  - "In the NeMo Agent toolkit, you can…"
+  - "Change directory to the NeMo Agent toolkit repo root…"
+- Consistently use this terminology throughout all documentation
+- NeMo Agent toolkit was previously known as the Agent Intelligence toolkit, and AgentIQ. You should NEVER use the deprecated names, including Agent Intelligence toolkit, aiqtoolkit, AgentIQ, or AIQ/aiq. If you see any of these names in the documentation, you MUST update it based on the latest naming convention above, unless those names are intentionally used to refer to the deprecated names, or implementing a compatibility layer for the deprecated names.
+
 ## Project Structure
 
 - All importable Python code lives under `src/` or `packages/<pkg>/src/` so namespace-packages resolve correctly.
