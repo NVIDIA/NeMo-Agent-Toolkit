@@ -55,9 +55,11 @@ if typing.TYPE_CHECKING:
     from nat.data_models.intermediate_step import IntermediateStep
     from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
+
 @pytest.fixture(name="project_dir")
 def project_dir_fixture():
     return PROJECT_DIR
+
 
 @pytest.fixture(name="test_data_dir")
 def test_data_dir_fixture():
