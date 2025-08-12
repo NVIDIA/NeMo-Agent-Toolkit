@@ -30,7 +30,7 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/agents/data/",
     ),
     (
-        r"^examples/advanced_agents/alert_triage_agent/src/aiq_alert_triage_agent/configs/config.*\.yml",
+        r"^examples/advanced_agents/alert_triage_agent/src/nat_alert_triage_agent/configs/config.*\.yml",
         r"^examples/advanced_agents/alert_triage_agent/data/",
     ),
     (

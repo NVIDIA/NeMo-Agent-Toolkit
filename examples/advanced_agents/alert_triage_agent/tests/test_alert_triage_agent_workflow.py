@@ -22,9 +22,9 @@ from pathlib import Path
 
 import pytest
 import yaml
-from aiq_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
+from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 
-from aiq.runtime.loader import load_workflow
+from nat.runtime.loader import load_workflow
 
 logger = logging.getLogger(__name__)
 

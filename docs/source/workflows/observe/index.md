@@ -26,6 +26,13 @@ The NeMo Agent toolkit uses a flexible, plugin-based observability system that p
 
 These features enable developers to test their workflows locally and integrate observability seamlessly with their preferred monitoring stack.
 
+
+### Compatibility with Previous Versions
+As of v1.2, the span exporter exports attributes names prefixed with `nat` by default. In prior releases the attribute names were prefixed with `aiq`, to retain compatibility the `NAT_SPAN_PREFIX` environment variable can be set to `aiq`:
+```bash
+export NAT_SPAN_PREFIX=aiq
+```
+
 ## Installation
 
 The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras:
@@ -138,8 +145,8 @@ Each exporter can optionally include a processing pipeline that transforms, filt
 
 #### Integration Components
 
-- **{py:class}`aiq.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
-- **{py:class}`~aiq.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain, LLama Index, CrewAI, and Semantic Kernel frameworks.
+- **{py:class}`nat.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
+- **{py:class}`~nat.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain, LLama Index, CrewAI, and Semantic Kernel frameworks.
 
 ### Registering a New Telemetry Provider as a Plugin
 

@@ -50,10 +50,10 @@ The following example shows how to define and register a custom evaluator. The c
 ```python
 from pydantic import Field
 
-from aiq.builder.builder import EvalBuilder
-from aiq.builder.evaluator import EvaluatorInfo
-from aiq.cli.register_workflow import register_evaluator
-from aiq.data_models.evaluator import EvaluatorBaseConfig
+from nat.builder.builder import EvalBuilder
+from nat.builder.evaluator import EvaluatorInfo
+from nat.cli.register_workflow import register_evaluator
+from nat.data_models.evaluator import EvaluatorBaseConfig
 
 
 class SimilarityEvaluatorConfig(EvaluatorBaseConfig, name="similarity"):
@@ -122,8 +122,8 @@ from typing import override
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from aiq.eval.evaluator.base_evaluator import BaseEvaluator
-from aiq.eval.evaluator.evaluator_model import EvalInputItem, EvalOutputItem
+from nat.eval.evaluator.base_evaluator import BaseEvaluator
+from nat.eval.evaluator.evaluator_model import EvalInputItem, EvalOutputItem
 
 class SimilarityEvaluator(BaseEvaluator):
     def __init__(self, similarity_type: str = "cosine", max_concurrency: int = 4):
