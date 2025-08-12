@@ -38,11 +38,11 @@ if typing.TYPE_CHECKING:
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 DOC_DIR = os.path.dirname(CUR_DIR)
 ROOT_DIR = os.path.dirname(os.path.dirname(CUR_DIR))
-AIQ_DIR = os.path.join(ROOT_DIR, "src", "aiq")
+NAT_DIR = os.path.join(ROOT_DIR, "src", "nat")
 
 # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
 # AutoAPI support for implicit namespaces is broken, so we need to manually
-# construct an aiq package with an __init__.py file
+# construct an nat package with an __init__.py file
 BUILD_DIR = os.path.join(DOC_DIR, "build")
 API_TREE = os.path.join(BUILD_DIR, "_api_tree")
 
@@ -50,13 +50,13 @@ if os.path.exists(API_TREE):
     shutil.rmtree(API_TREE)
 
 os.makedirs(API_TREE)
-shutil.copytree(AIQ_DIR, os.path.join(API_TREE, "aiq"))
-with open(os.path.join(API_TREE, "aiq", "__init__.py"), "w") as f:
+shutil.copytree(NAT_DIR, os.path.join(API_TREE, "nat"))
+with open(os.path.join(API_TREE, "nat", "__init__.py"), "w") as f:
     f.write("")
 
 # -- Project information -----------------------------------------------------
 
-project = 'NVIDIA Agent Intelligence Toolkit'
+project = 'NVIDIA NeMo Agent Toolkit'
 copyright = '2025, NVIDIA'
 author = 'NVIDIA Corporation'
 
@@ -212,7 +212,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'aiqdoc'
+htmlhelp_basename = 'natdoc'
 
 # -- Options for LaTeX output ------------------------------------------------
 
@@ -238,14 +238,14 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (root_doc, 'aiq.tex', 'Agent Intelligence Toolkit Documentation', 'NVIDIA', 'manual'),
+    (root_doc, 'nat.tex', 'NeMo Agent Toolkit Documentation', 'NVIDIA', 'manual'),
 ]
 
 # -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(root_doc, 'aiq', 'Agent Intelligence Toolkit Documentation', [author], 1)]
+man_pages = [(root_doc, 'nat', 'NeMo Agent Toolkit Documentation', [author], 1)]
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -254,10 +254,10 @@ man_pages = [(root_doc, 'aiq', 'Agent Intelligence Toolkit Documentation', [auth
 #  dir menu entry, description, category)
 texinfo_documents = [
     (root_doc,
-     'aiq',
-     'Agent Intelligence Toolkit Documentation',
+     'nat',
+     'NeMo Agent Toolkit Documentation',
      author,
-     'aiq',
+     'nat',
      'One line description of project.',
      'Miscellaneous'),
 ]

@@ -24,7 +24,7 @@ aiq info components -t llm_provider
 
 In NeMo Agent toolkit there are LLM providers, like NIM and OpenAI, and there are frameworks which need to use those providers, such as LangChain LlamaIndex with a client defined for each. To add support, we need to cover the combinations of providers to clients.
 
-As an example, NeMo Agent toolkit contains multiple clients for interacting with the OpenAI API with different frameworks, each sharing the same provider configuration {class}`aiq.llm.openai_llm.OpenAIModelConfig`. To view the full list of clients registered for the OpenAI LLM provider, run the following command:
+As an example, NeMo Agent toolkit contains multiple clients for interacting with the OpenAI API with different frameworks, each sharing the same provider configuration {class}`nat.llm.openai_llm.OpenAIModelConfig`. To view the full list of clients registered for the OpenAI LLM provider, run the following command:
 
 ```bash
 aiq info components -t llm_client -q openai
@@ -32,13 +32,13 @@ aiq info components -t llm_client -q openai
 
 ## Provider Types
 
-In NeMo Agent toolkit, there are three provider types: `llm`, `embedder`, and `retreiver`. The three provider types are defined by their respective base configuration classes: {class}`aiq.data_models.llm.LLMBaseConfig`, {class}`aiq.data_models.embedder.EmbedderBaseConfig`, and {class}`aiq.data_models.retriever.RetrieverBaseConfig`. This guide focuses on adding an LLM provider. However, the process for adding an embedder or retriever provider is similar.
+In NeMo Agent toolkit, there are three provider types: `llm`, `embedder`, and `retreiver`. The three provider types are defined by their respective base configuration classes: {class}`nat.data_models.llm.LLMBaseConfig`, {class}`nat.data_models.embedder.EmbedderBaseConfig`, and {class}`nat.data_models.retriever.RetrieverBaseConfig`. This guide focuses on adding an LLM provider. However, the process for adding an embedder or retriever provider is similar.
 
 
 ## Defining an LLM Provider
-The first step to adding an LLM provider is to subclass the {class}`aiq.data_models.llm.LLMBaseConfig` class and add the configuration parameters needed to interact with the LLM API. Typically, this involves a `model_name` parameter and an `api_key` parameter; however, the exact parameters will depend on the API. The only requirement is a unique name for the provider.
+The first step to adding an LLM provider is to subclass the {class}`nat.data_models.llm.LLMBaseConfig` class and add the configuration parameters needed to interact with the LLM API. Typically, this involves a `model_name` parameter and an `api_key` parameter; however, the exact parameters will depend on the API. The only requirement is a unique name for the provider.
 
-Examine the previously mentioned {class}`aiq.llm.openai_llm.OpenAIModelConfig` class:
+Examine the previously mentioned {class}`nat.llm.openai_llm.OpenAIModelConfig` class:
 ```python
 class OpenAIModelConfig(LLMBaseConfig, name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
@@ -58,10 +58,10 @@ class OpenAIModelConfig(LLMBaseConfig, name="openai"):
 
 
 ### Registering the Provider
-An asynchronous function decorated with {py:deco}`aiq.cli.register_workflow.register_llm_provider` is used to register the provider with NeMo Agent toolkit by yielding an instance of {class}`aiq.builder.llm.LLMProviderInfo`.
+An asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_provider` is used to register the provider with NeMo Agent toolkit by yielding an instance of {class}`nat.builder.llm.LLMProviderInfo`.
 
 :::{note}
-Registering an embedder or retriever provider is similar; however, the function should be decorated with  {py:deco}`aiq.cli.register_workflow.register_embedder_provider` or  {py:deco}`aiq.cli.register_workflow.register_retriever_provider`.
+Registering an embedder or retriever provider is similar; however, the function should be decorated with  {py:deco}`nat.cli.register_workflow.register_embedder_provider` or  {py:deco}`nat.cli.register_workflow.register_retriever_provider`.
 :::
 
 
@@ -86,13 +86,13 @@ async def openai_llm(config: OpenAIModelConfig, builder: Builder):
 ```
 
 ## LLM Clients
-As previously mentioned, each LLM client is specific to both the LLM API and the framework being used. The LLM client is registered by defining an asynchronous function decorated with {py:deco}`aiq.cli.register_workflow.register_llm_client`. The `register_llm_client` decorator receives two required parameters: `config_type`, which is the configuration class of the provider, and `wrapper_type`, which identifies the framework being used.
+As previously mentioned, each LLM client is specific to both the LLM API and the framework being used. The LLM client is registered by defining an asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_client`. The `register_llm_client` decorator receives two required parameters: `config_type`, which is the configuration class of the provider, and `wrapper_type`, which identifies the framework being used.
 
 :::{note}
-Registering an embedder or retriever client is similar. However, the function should be decorated with {py:deco}`aiq.cli.register_workflow.register_embedder_client` or {py:deco}`aiq.cli.register_workflow.register_retriever_client`.
+Registering an embedder or retriever client is similar. However, the function should be decorated with {py:deco}`nat.cli.register_workflow.register_embedder_client` or {py:deco}`nat.cli.register_workflow.register_retriever_client`.
 :::
 
-The wrapped function in turn receives two required positional arguments: an instance of the configuration class of the provider, and an instance of {class}`aiq.builder.builder.Builder`. The function should then yield a client suitable for the given provider and framework. The exact type is dictated by the framework itself and not by NeMo Agent toolkit.
+The wrapped function in turn receives two required positional arguments: an instance of the configuration class of the provider, and an instance of {class}`nat.builder.builder.Builder`. The function should then yield a client suitable for the given provider and framework. The exact type is dictated by the framework itself and not by NeMo Agent toolkit.
 
 Since many frameworks provide clients for many of the common LLM APIs, in NeMo Agent toolkit, the client registration functions are often simple factory methods. For example, the OpenAI client registration function for LangChain is as follows:
 

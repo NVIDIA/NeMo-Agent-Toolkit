@@ -95,8 +95,8 @@ The toolkit offers a programmatic way to execute workflows through its Python AP
 ```python
 import asyncio
 
-from aiq.runtime.loader import load_workflow
-from aiq.utils.type_utils import StrPath
+from nat.runtime.loader import load_workflow
+from nat.utils.type_utils import StrPath
 
 
 async def run_workflow(config_file: StrPath, input_str: str) -> str:
@@ -115,6 +115,6 @@ print(result)
 In this example:
 - `config_file`: A string or {py:class}`~pathlib.Path` pointing to your workflow YAML file
 - `input_str`: A string containing the input for your workflow
-- The `workflow.run(input_str)` method returns an instance of {py:class}`~aiq.runtime.runner.AIQRunner`
+- The `workflow.run(input_str)` method returns an instance of {py:class}`~nat.runtime.runner.AIQRunner`
 
-For detailed information about the `AIQRunner` class and its capabilities, please refer to the Python API documentation for the {py:class}`~aiq.runtime.runner.AIQRunner` class.
+For detailed information about the `AIQRunner` class and its capabilities, please refer to the Python API documentation for the {py:class}`~nat.runtime.runner.AIQRunner` class.
