@@ -36,6 +36,7 @@ class DictBatchingProcessor(BatchingProcessor[dict]):
     This class provides explicit type information for the TypeIntrospectionMixin
     by overriding the type properties directly.
     """
+    pass
 
 
 class DFWExporter(SpanExporter[Span, dict]):

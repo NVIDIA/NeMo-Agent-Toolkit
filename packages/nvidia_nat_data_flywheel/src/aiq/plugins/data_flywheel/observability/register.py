@@ -40,7 +40,8 @@ class DFWElasticsearchTelemetryExporter(TelemetryExporterBaseConfig,
 
 @register_telemetry_exporter(config_type=DFWElasticsearchTelemetryExporter)
 async def dfw_elasticsearch_telemetry_exporter(config: DFWElasticsearchTelemetryExporter, builder: Builder):  # pylint: disable=unused-argument # noqa: E501
-    from aiq.plugins.data_flywheel.observability.exporter.dfw_elasticsearch_exporter import DFWElasticsearchExporter
+    from aiq.plugins.data_flywheel.observability.exporter.dfw_elasticsearch_exporter import \
+        DFWElasticsearchExporter  # noqa: F401
 
     yield DFWElasticsearchExporter(client_id=config.client_id,
                                    index=config.index,
