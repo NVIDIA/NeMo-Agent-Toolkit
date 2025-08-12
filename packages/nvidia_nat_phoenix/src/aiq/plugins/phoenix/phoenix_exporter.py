@@ -15,7 +15,7 @@
 
 import logging
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 from aiq.plugins.phoenix.mixin.phoenix_mixin import PhoenixMixin
 
@@ -45,7 +45,7 @@ class PhoenixOtelExporter(PhoenixMixin, OtelSpanExporter):  # pylint: disable=R0
     """
 
     def __init__(self,
-                 context_state: AIQContextState | None = None,
+                 context_state: ContextState | None = None,
                  batch_size: int = 100,
                  flush_interval: float = 5.0,
                  max_queue_size: int = 1000,

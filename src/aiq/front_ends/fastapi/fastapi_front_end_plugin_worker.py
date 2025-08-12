@@ -39,11 +39,11 @@ from pydantic import Field
 from starlette.websockets import WebSocket
 
 from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.api_server import AIQChatRequest
-from aiq.data_models.api_server import AIQChatResponse
-from aiq.data_models.api_server import AIQChatResponseChunk
-from aiq.data_models.api_server import AIQResponseIntermediateStep
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.api_server import ChatRequest
+from aiq.data_models.api_server import ChatResponse
+from aiq.data_models.api_server import ChatResponseChunk
+from aiq.data_models.api_server import ResponseIntermediateStep
+from aiq.data_models.config import Config
 from aiq.data_models.object_store import KeyAlreadyExistsError
 from aiq.data_models.object_store import NoSuchKeyError
 from aiq.eval.config import EvaluationRunOutput
@@ -52,11 +52,11 @@ from aiq.eval.evaluate import EvaluationRunConfig
 from aiq.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
 from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
 from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
-from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerateResponse
-from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerationStatusResponse
-from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateRequest
-from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateResponse
-from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateStatusResponse
+from aiq.front_ends.fastapi.fastapi_front_end_config import AsyncGenerateResponse
+from aiq.front_ends.fastapi.fastapi_front_end_config import AsyncGenerationStatusResponse
+from aiq.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
+from aiq.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
+from aiq.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.job_store import JobInfo
 from aiq.front_ends.fastapi.job_store import JobStore
@@ -66,14 +66,14 @@ from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
 from aiq.object_store.models import ObjectStoreItem
-from aiq.runtime.session import AIQSessionManager
+from aiq.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
 
 class FastApiFrontEndPluginWorkerBase(ABC):
 
-    def __init__(self, config: AIQConfig):
+    def __init__(self, config: Config):
         self._config = config
 
         assert isinstance(config.general.front_end,
@@ -86,7 +86,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         self._http_flow_handler: HTTPAuthenticationFlowHandler | None = HTTPAuthenticationFlowHandler()
 
     @property
-    def config(self) -> AIQConfig:
+    def config(self) -> Config:
         return self._config
 
     @property
@@ -202,7 +202,7 @@ class RouteInfo(BaseModel):
 
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
-    def __init__(self, config: AIQConfig):
+    def __init__(self, config: Config):
         super().__init__(config)
 
         self._outstanding_flows: dict[str, FlowState] = {}
@@ -247,8 +247,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
 
-        await self.add_default_route(app, AIQSessionManager(builder.build()))
-        await self.add_evaluate_route(app, AIQSessionManager(builder.build()))
+        await self.add_default_route(app, SessionManager(builder.build()))
+        await self.add_evaluate_route(app, SessionManager(builder.build()))
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
 
@@ -256,13 +256,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             entry_workflow = builder.build(entry_function=ep.function_name)
 
-            await self.add_route(app, endpoint=ep, session_manager=AIQSessionManager(entry_workflow))
+            await self.add_route(app, endpoint=ep, session_manager=SessionManager(entry_workflow))
 
-    async def add_default_route(self, app: FastAPI, session_manager: AIQSessionManager):
+    async def add_default_route(self, app: FastAPI, session_manager: SessionManager):
 
         await self.add_route(app, self.front_end_config.workflow, session_manager)
 
-    async def add_evaluate_route(self, app: FastAPI, session_manager: AIQSessionManager):
+    async def add_evaluate_route(self, app: FastAPI, session_manager: SessionManager):
         """Add the evaluate endpoint to the FastAPI app."""
 
         response_500 = {
@@ -281,7 +281,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Don't run multiple evaluations at the same time
         evaluation_lock = asyncio.Lock()
 
-        async def run_evaluation(job_id: str, config_file: str, reps: int, session_manager: AIQSessionManager):
+        async def run_evaluation(job_id: str, config_file: str, reps: int, session_manager: SessionManager):
             """Background task to run the evaluation."""
             async with evaluation_lock:
                 try:
@@ -304,9 +304,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     logger.error("Error in evaluation job %s: %s", job_id, str(e))
                     job_store.update_status(job_id, "failure", error=str(e))
 
-        async def start_evaluation(request: AIQEvaluateRequest,
-                                   background_tasks: BackgroundTasks,
-                                   http_request: Request):
+        async def start_evaluation(request: EvaluateRequest, background_tasks: BackgroundTasks, http_request: Request):
             """Handle evaluation requests."""
 
             async with session_manager.session(request=http_request):
@@ -315,26 +313,26 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 if request.job_id:
                     job = job_store.get_job(request.job_id)
                     if job:
-                        return AIQEvaluateResponse(job_id=job.job_id, status=job.status)
+                        return EvaluateResponse(job_id=job.job_id, status=job.status)
 
                 job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
                 await self.create_cleanup_task(app=app, name="async_evaluation", job_store=job_store)
                 background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
 
-                return AIQEvaluateResponse(job_id=job_id, status="submitted")
+                return EvaluateResponse(job_id=job_id, status="submitted")
 
-        def translate_job_to_response(job: JobInfo) -> AIQEvaluateStatusResponse:
+        def translate_job_to_response(job: JobInfo) -> EvaluateStatusResponse:
             """Translate a JobInfo object to an AIQEvaluateStatusResponse."""
-            return AIQEvaluateStatusResponse(job_id=job.job_id,
-                                             status=job.status,
-                                             config_file=str(job.config_file),
-                                             error=job.error,
-                                             output_path=str(job.output_path),
-                                             created_at=job.created_at,
-                                             updated_at=job.updated_at,
-                                             expires_at=job_store.get_expires_at(job))
+            return EvaluateStatusResponse(job_id=job.job_id,
+                                          status=job.status,
+                                          config_file=str(job.config_file),
+                                          error=job.error,
+                                          output_path=str(job.output_path),
+                                          created_at=job.created_at,
+                                          updated_at=job.updated_at,
+                                          expires_at=job_store.get_expires_at(job))
 
-        async def get_job_status(job_id: str, http_request: Request) -> AIQEvaluateStatusResponse:
+        async def get_job_status(job_id: str, http_request: Request) -> EvaluateStatusResponse:
             """Get the status of an evaluation job."""
             logger.info("Getting status for job %s", job_id)
 
@@ -347,7 +345,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 logger.info("Found job %s with status %s", job_id, job.status)
                 return translate_job_to_response(job)
 
-        async def get_last_job_status(http_request: Request) -> AIQEvaluateStatusResponse:
+        async def get_last_job_status(http_request: Request) -> EvaluateStatusResponse:
             """Get the status of the last created evaluation job."""
             logger.info("Getting last job status")
 
@@ -360,7 +358,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 logger.info("Found last job %s with status %s", job.job_id, job.status)
                 return translate_job_to_response(job)
 
-        async def get_jobs(http_request: Request, status: str | None = None) -> list[AIQEvaluateStatusResponse]:
+        async def get_jobs(http_request: Request, status: str | None = None) -> list[EvaluateStatusResponse]:
             """Get all jobs, optionally filtered by status."""
 
             async with session_manager.session(request=http_request):
@@ -380,7 +378,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 path=f"{self.front_end_config.evaluate.path}/job/last",
                 endpoint=get_last_job_status,
                 methods=["GET"],
-                response_model=AIQEvaluateStatusResponse,
+                response_model=EvaluateStatusResponse,
                 description="Get the status of the last created evaluation job",
                 responses={
                     404: {
@@ -394,7 +392,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 path=f"{self.front_end_config.evaluate.path}/job/{{job_id}}",
                 endpoint=get_job_status,
                 methods=["GET"],
-                response_model=AIQEvaluateStatusResponse,
+                response_model=EvaluateStatusResponse,
                 description="Get the status of an evaluation job",
                 responses={
                     404: {
@@ -408,7 +406,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 path=f"{self.front_end_config.evaluate.path}/jobs",
                 endpoint=get_jobs,
                 methods=["GET"],
-                response_model=list[AIQEvaluateStatusResponse],
+                response_model=list[EvaluateStatusResponse],
                 description="Get all jobs, optionally filtered by status",
                 responses={500: response_500},
             )
@@ -418,7 +416,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 path=self.front_end_config.evaluate.path,
                 endpoint=start_evaluation,
                 methods=[self.front_end_config.evaluate.method],
-                response_model=AIQEvaluateResponse,
+                response_model=EvaluateResponse,
                 description=self.front_end_config.evaluate.description,
                 responses={500: response_500},
             )
@@ -520,7 +518,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
     async def add_route(self,
                         app: FastAPI,
                         endpoint: FastApiFrontEndConfig.EndpointBase,
-                        session_manager: AIQSessionManager):
+                        session_manager: SessionManager):
 
         workflow = session_manager.workflow
 
@@ -530,7 +528,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
         # Consider prefixing these with "aiq_" to avoid conflicts
-        class AIQAsyncGenerateRequest(GenerateBodyType):
+        class AsyncGenerateRequest(GenerateBodyType):
             job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
             sync_timeout: int = Field(
                 default=0,
@@ -688,13 +686,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                      session_manager=session_manager,
                                                      streaming=True,
                                                      step_adaptor=self.get_step_adaptor(),
-                                                     result_type=AIQChatResponseChunk,
-                                                     output_type=AIQChatResponseChunk))
+                                                     result_type=ChatResponseChunk,
+                                                     output_type=ChatResponseChunk))
                     else:
                         # Return single response - check if workflow supports non-streaming
                         try:
                             response.headers["Content-Type"] = "application/json"
-                            return await generate_single_response(payload, session_manager, result_type=AIQChatResponse)
+                            return await generate_single_response(payload, session_manager, result_type=ChatResponse)
                         except ValueError as e:
                             if "Cannot get a single output value for streaming workflows" in str(e):
                                 # Workflow only supports streaming, but client requested non-streaming
@@ -705,13 +703,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                         session_manager=session_manager,
                                         streaming=True,
                                         step_adaptor=self.get_step_adaptor(),
-                                        result_type=AIQChatResponseChunk,
-                                        output_type=AIQChatResponseChunk):
+                                        result_type=ChatResponseChunk,
+                                        output_type=ChatResponseChunk):
                                     if chunk_str.startswith("data: ") and not chunk_str.startswith("data: [DONE]"):
                                         chunk_data = chunk_str[6:].strip()  # Remove "data: " prefix
                                         if chunk_data:
                                             try:
-                                                chunk_json = AIQChatResponseChunk.model_validate_json(chunk_data)
+                                                chunk_json = ChatResponseChunk.model_validate_json(chunk_data)
                                                 if (chunk_json.choices and len(chunk_json.choices) > 0
                                                         and chunk_json.choices[0].delta
                                                         and chunk_json.choices[0].delta.content is not None):
@@ -721,7 +719,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                                 # Create a single response from collected chunks
                                 content = "".join(chunks)
-                                single_response = AIQChatResponse.from_string(content)
+                                single_response = ChatResponse.from_string(content)
                                 response.headers["Content-Type"] = "application/json"
                                 return single_response
                             else:
@@ -729,10 +727,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return post_openai_api_compatible
 
-        async def run_generation(job_id: str,
-                                 payload: typing.Any,
-                                 session_manager: AIQSessionManager,
-                                 result_type: type):
+        async def run_generation(job_id: str, payload: typing.Any, session_manager: SessionManager, result_type: type):
             """Background task to run the evaluation."""
             async with async_job_concurrency:
                 try:
@@ -744,23 +739,23 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     logger.error("Error in evaluation job %s: %s", job_id, e)
                     job_store.update_status(job_id, "failure", error=str(e))
 
-        def _job_status_to_response(job: JobInfo) -> AIQAsyncGenerationStatusResponse:
+        def _job_status_to_response(job: JobInfo) -> AsyncGenerationStatusResponse:
             job_output = job.output
             if job_output is not None:
                 job_output = job_output.model_dump()
-            return AIQAsyncGenerationStatusResponse(job_id=job.job_id,
-                                                    status=job.status,
-                                                    error=job.error,
-                                                    output=job_output,
-                                                    created_at=job.created_at,
-                                                    updated_at=job.updated_at,
-                                                    expires_at=job_store.get_expires_at(job))
+            return AsyncGenerationStatusResponse(job_id=job.job_id,
+                                                 status=job.status,
+                                                 error=job.error,
+                                                 output=job_output,
+                                                 created_at=job.created_at,
+                                                 updated_at=job.updated_at,
+                                                 expires_at=job_store.get_expires_at(job))
 
         def post_async_generation(request_type: type, final_result_type: type):
 
             async def start_async_generation(
                     request: request_type, background_tasks: BackgroundTasks, response: Response,
-                    http_request: Request) -> AIQAsyncGenerateResponse | AIQAsyncGenerationStatusResponse:
+                    http_request: Request) -> AsyncGenerateResponse | AsyncGenerationStatusResponse:
                 """Handle async generation requests."""
 
                 async with session_manager.session(request=http_request):
@@ -769,7 +764,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     if request.job_id:
                         job = job_store.get_job(request.job_id)
                         if job:
-                            return AIQAsyncGenerateResponse(job_id=job.job_id, status=job.status)
+                            return AsyncGenerateResponse(job_id=job.job_id, status=job.status)
 
                     job_id = job_store.create_job(job_id=request.job_id, expiry_seconds=request.expiry_seconds)
                     await self.create_cleanup_task(app=app, name="async_generation", job_store=job_store)
@@ -801,11 +796,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         await asyncio.sleep(0.1)
 
                     response.status_code = 202
-                    return AIQAsyncGenerateResponse(job_id=job_id, status="submitted")
+                    return AsyncGenerateResponse(job_id=job_id, status="submitted")
 
             return start_async_generation
 
-        async def get_async_job_status(job_id: str, http_request: Request) -> AIQAsyncGenerationStatusResponse:
+        async def get_async_job_status(job_id: str, http_request: Request) -> AsyncGenerationStatusResponse:
             """Get the status of an async job."""
             logger.info("Getting status for job %s", job_id)
 
@@ -942,10 +937,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 app.add_api_route(
                     path=f"{endpoint.path}/async",
-                    endpoint=post_async_generation(request_type=AIQAsyncGenerateRequest,
+                    endpoint=post_async_generation(request_type=AsyncGenerateRequest,
                                                    final_result_type=GenerateSingleResponseType),
                     methods=[endpoint.method],
-                    response_model=AIQAsyncGenerateResponse | AIQAsyncGenerationStatusResponse,
+                    response_model=AsyncGenerateResponse | AsyncGenerationStatusResponse,
                     description="Start an async generate job",
                     responses={500: response_500},
                 )
@@ -956,7 +951,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 path=f"{endpoint.path}/async/job/{{job_id}}",
                 endpoint=get_async_job_status,
                 methods=["GET"],
-                response_model=AIQAsyncGenerationStatusResponse,
+                response_model=AsyncGenerationStatusResponse,
                 description="Get the status of an async job",
                 responses={
                     404: {
@@ -970,9 +965,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 app.add_api_route(
                     path=endpoint.openai_api_path,
-                    endpoint=get_single_endpoint(result_type=AIQChatResponse),
+                    endpoint=get_single_endpoint(result_type=ChatResponse),
                     methods=[endpoint.method],
-                    response_model=AIQChatResponse,
+                    response_model=ChatResponse,
                     description=endpoint.description,
                     responses={500: response_500},
                 )
@@ -980,10 +975,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 app.add_api_route(
                     path=f"{endpoint.openai_api_path}/stream",
                     endpoint=get_streaming_endpoint(streaming=True,
-                                                    result_type=AIQChatResponseChunk,
-                                                    output_type=AIQChatResponseChunk),
+                                                    result_type=ChatResponseChunk,
+                                                    output_type=ChatResponseChunk),
                     methods=[endpoint.method],
-                    response_model=AIQChatResponseChunk,
+                    response_model=ChatResponseChunk,
                     description=endpoint.description,
                     responses={500: response_500},
                 )
@@ -998,9 +993,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     # <openai_api_path> = non-streaming (legacy behavior)
                     app.add_api_route(
                         path=endpoint.openai_api_path,
-                        endpoint=post_single_endpoint(request_type=AIQChatRequest, result_type=AIQChatResponse),
+                        endpoint=post_single_endpoint(request_type=ChatRequest, result_type=ChatResponse),
                         methods=[endpoint.method],
-                        response_model=AIQChatResponse,
+                        response_model=ChatResponse,
                         description=endpoint.description,
                         responses={500: response_500},
                     )
@@ -1008,12 +1003,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     # <openai_api_path>/stream = streaming (legacy behavior)
                     app.add_api_route(
                         path=f"{endpoint.openai_api_path}/stream",
-                        endpoint=post_streaming_endpoint(request_type=AIQChatRequest,
+                        endpoint=post_streaming_endpoint(request_type=ChatRequest,
                                                          streaming=True,
-                                                         result_type=AIQChatResponseChunk,
-                                                         output_type=AIQChatResponseChunk),
+                                                         result_type=ChatResponseChunk,
+                                                         output_type=ChatResponseChunk),
                         methods=[endpoint.method],
-                        response_model=AIQChatResponseChunk | AIQResponseIntermediateStep,
+                        response_model=ChatResponseChunk | ResponseIntermediateStep,
                         description=endpoint.description,
                         responses={500: response_500},
                     )
@@ -1023,9 +1018,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     # OpenAI v1 Compatible Mode: Create single endpoint that handles both streaming and non-streaming
                     app.add_api_route(
                         path=openai_v1_path,
-                        endpoint=post_openai_api_compatible_endpoint(request_type=AIQChatRequest),
+                        endpoint=post_openai_api_compatible_endpoint(request_type=ChatRequest),
                         methods=[endpoint.method],
-                        response_model=AIQChatResponse | AIQChatResponseChunk,
+                        response_model=ChatResponse | ChatResponseChunk,
                         description=f"{endpoint.description} (OpenAI Chat Completions API compatible)",
                         responses={500: response_500},
                     )

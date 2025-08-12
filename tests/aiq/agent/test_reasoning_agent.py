@@ -29,7 +29,7 @@ from aiq.builder.builder import Builder
 from aiq.builder.function import Function
 from aiq.builder.function import LambdaFunction
 from aiq.builder.function_info import FunctionInfo
-from aiq.data_models.api_server import AIQChatRequest
+from aiq.data_models.api_server import ChatRequest
 from aiq.data_models.function import FunctionBaseConfig
 
 #############################
@@ -101,9 +101,9 @@ class MockStreamingAugmentedFunction(MockAugmentedFunction):
     def __init__(self, config: FunctionBaseConfig, description: str = "some streaming tool desc"):
         super().__init__(config, description)
         self._has_streaming = True
-        self._input_schema = AIQChatRequest
+        self._input_schema = ChatRequest
 
-    async def _astream(self, value: AIQChatRequest):
+    async def _astream(self, value: ChatRequest):
         yield f"AugmentedStreamChunk1: {value}"
         yield f"AugmentedStreamChunk2: {value}"
 

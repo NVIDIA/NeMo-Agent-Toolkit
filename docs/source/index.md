@@ -131,7 +131,7 @@ Command Line Interface (CLI) <./reference/cli.md>
 Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
-Inference Time Scaling <./reference/inference-time-scaling.md>
+Test Time Compute <./reference/test-time-compute.md>
 Troubleshooting <./troubleshooting.md>
 ```
 

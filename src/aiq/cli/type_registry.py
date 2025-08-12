@@ -44,8 +44,8 @@ from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.authentication import AuthProviderBaseConfigT
 from aiq.data_models.common import TypedBaseModelT
-from aiq.data_models.component import AIQComponentEnum
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.component import ComponentEnum
+from aiq.data_models.config import Config
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.embedder import EmbedderBaseConfigT
@@ -55,8 +55,6 @@ from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.front_end import FrontEndConfigT
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function import FunctionConfigT
-from aiq.data_models.its_strategy import ITSStrategyBaseConfig
-from aiq.data_models.its_strategy import ITSStrategyBaseConfigT
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.llm import LLMBaseConfigT
 from aiq.data_models.logging import LoggingBaseConfig
@@ -71,7 +69,9 @@ from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfigT
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterConfigT
-from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
+from aiq.data_models.ttc_strategy import TTCStrategyBaseConfigT
+from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
 from aiq.observability.exporter.base_exporter import BaseExporter
@@ -83,9 +83,9 @@ AuthProviderBuildCallableT = Callable[[AuthProviderBaseConfigT, Builder], AsyncI
 EmbedderClientBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[typing.Any]]
 EmbedderProviderBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[EmbedderProviderInfo]]
 EvaluatorBuildCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AsyncIterator[EvaluatorInfo]]
-FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
+FrontEndBuildCallableT = Callable[[FrontEndConfigT, Config], AsyncIterator[FrontEndBase]]
 FunctionBuildCallableT = Callable[[FunctionConfigT, Builder], AsyncIterator[FunctionInfo | Callable | FunctionBase]]
-ITSStrategyBuildCallableT = Callable[[ITSStrategyBaseConfigT, Builder], AsyncIterator[StrategyBase]]
+TTCStrategyBuildCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AsyncIterator[StrategyBase]]
 LLMClientBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[typing.Any]]
 LLMProviderBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[LLMProviderInfo]]
 LoggingMethodBuildCallableT = Callable[[LoggingMethodConfigT, Builder], AsyncIterator[Handler]]
@@ -103,10 +103,10 @@ EmbedderClientRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder], Abs
 EmbedderProviderRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder],
                                                AbstractAsyncContextManager[EmbedderProviderInfo]]
 EvaluatorRegisteredCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AbstractAsyncContextManager[EvaluatorInfo]]
-FrontEndRegisteredCallableT = Callable[[FrontEndConfigT, AIQConfig], AbstractAsyncContextManager[FrontEndBase]]
+FrontEndRegisteredCallableT = Callable[[FrontEndConfigT, Config], AbstractAsyncContextManager[FrontEndBase]]
 FunctionRegisteredCallableT = Callable[[FunctionConfigT, Builder],
                                        AbstractAsyncContextManager[FunctionInfo | Callable | FunctionBase]]
-ITSStrategyRegisterCallableT = Callable[[ITSStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
+TTCStrategyRegisterCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
 LLMClientRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[LLMProviderInfo]]
 LoggingMethodRegisteredCallableT = Callable[[LoggingMethodConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
@@ -248,12 +248,12 @@ class RegisteredObjectStoreInfo(RegisteredInfo[ObjectStoreBaseConfig]):
     build_fn: ObjectStoreRegisteredCallableT = Field(repr=False)
 
 
-class RegisteredITSStrategyInfo(RegisteredInfo[ITSStrategyBaseConfig]):
+class RegisteredTTCStrategyInfo(RegisteredInfo[TTCStrategyBaseConfig]):
     """
-    Represents a registered Inference Time Scaling (ITS) strategy.
+    Represents a registered TTC strategy.
     """
 
-    build_fn: ITSStrategyRegisterCallableT = Field(repr=False)
+    build_fn: TTCStrategyRegisterCallableT = Field(repr=False)
 
 
 class RegisteredToolWrapper(BaseModel):
@@ -353,8 +353,8 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         # Tool Wrappers
         self._registered_tool_wrappers: dict[str, RegisteredToolWrapper] = {}
 
-        # ITS Strategies
-        self._registered_its_strategies: dict[type[ITSStrategyBaseConfig], RegisteredITSStrategyInfo] = {}
+        # TTC Strategies
+        self._registered_ttc_strategies: dict[type[TTCStrategyBaseConfig], RegisteredTTCStrategyInfo] = {}
 
         # Packages
         self._registered_packages: dict[str, RegisteredPackage] = {}
@@ -728,24 +728,24 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
             raise KeyError(f"Could not find a registered tool wrapper for LLM framework `{llm_framework}`. "
                            f"Registered LLM frameworks: {set(self._registered_tool_wrappers.keys())}") from err
 
-    def register_its_strategy(self, info: RegisteredITSStrategyInfo):
-        if (info.config_type in self._registered_its_strategies):
+    def register_ttc_strategy(self, info: RegisteredTTCStrategyInfo):
+        if (info.config_type in self._registered_ttc_strategies):
             raise ValueError(
-                f"An ITS strategy with the same config type `{info.config_type}` has already been registered.")
+                f"An TTC strategy with the same config type `{info.config_type}` has already been registered.")
 
-        self._registered_its_strategies[info.config_type] = info
+        self._registered_ttc_strategies[info.config_type] = info
 
         self._registration_changed()
 
-    def get_its_strategy(self, config_type: type[ITSStrategyBaseConfig]) -> RegisteredITSStrategyInfo:
+    def get_ttc_strategy(self, config_type: type[TTCStrategyBaseConfig]) -> RegisteredTTCStrategyInfo:
         try:
-            strategy = self._registered_its_strategies[config_type]
+            strategy = self._registered_ttc_strategies[config_type]
         except Exception as e:
-            raise KeyError(f"Could not find a registered ITS strategy for config `{config_type}`. ") from e
+            raise KeyError(f"Could not find a registered TTC strategy for config `{config_type}`. ") from e
         return strategy
 
-    def get_registered_its_strategies(self) -> list[RegisteredInfo[ITSStrategyBaseConfig]]:
-        return list(self._registered_its_strategies.values())
+    def get_registered_ttc_strategies(self) -> list[RegisteredInfo[TTCStrategyBaseConfig]]:
+        return list(self._registered_ttc_strategies.values())
 
     def register_registry_handler(self, info: RegisteredRegistryHandlerInfo):
 
@@ -779,125 +779,125 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         self._registration_changed()
 
-    def get_infos_by_type(self, component_type: AIQComponentEnum) -> dict:  # pylint: disable=R0911
+    def get_infos_by_type(self, component_type: ComponentEnum) -> dict:  # pylint: disable=R0911
 
-        if component_type == AIQComponentEnum.FRONT_END:
+        if component_type == ComponentEnum.FRONT_END:
             return self._registered_front_end_infos
 
-        if component_type == AIQComponentEnum.AUTHENTICATION_PROVIDER:
+        if component_type == ComponentEnum.AUTHENTICATION_PROVIDER:
             return self._registered_auth_provider_infos
 
-        if component_type == AIQComponentEnum.FUNCTION:
+        if component_type == ComponentEnum.FUNCTION:
             return self._registered_functions
 
-        if component_type == AIQComponentEnum.TOOL_WRAPPER:
+        if component_type == ComponentEnum.TOOL_WRAPPER:
             return self._registered_tool_wrappers
 
-        if component_type == AIQComponentEnum.LLM_PROVIDER:
+        if component_type == ComponentEnum.LLM_PROVIDER:
             return self._registered_llm_provider_infos
 
-        if component_type == AIQComponentEnum.LLM_CLIENT:
+        if component_type == ComponentEnum.LLM_CLIENT:
             leaf_llm_client_infos = {}
             for framework in self._llm_client_provider_to_framework.values():
                 for info in framework.values():
                     leaf_llm_client_infos[info.discovery_metadata.component_name] = info
             return leaf_llm_client_infos
 
-        if component_type == AIQComponentEnum.EMBEDDER_PROVIDER:
+        if component_type == ComponentEnum.EMBEDDER_PROVIDER:
             return self._registered_embedder_provider_infos
 
-        if component_type == AIQComponentEnum.EMBEDDER_CLIENT:
+        if component_type == ComponentEnum.EMBEDDER_CLIENT:
             leaf_embedder_client_infos = {}
             for framework in self._embedder_client_provider_to_framework.values():
                 for info in framework.values():
                     leaf_embedder_client_infos[info.discovery_metadata.component_name] = info
             return leaf_embedder_client_infos
 
-        if component_type == AIQComponentEnum.RETRIEVER_PROVIDER:
+        if component_type == ComponentEnum.RETRIEVER_PROVIDER:
             return self._registered_retriever_provider_infos
 
-        if component_type == AIQComponentEnum.RETRIEVER_CLIENT:
+        if component_type == ComponentEnum.RETRIEVER_CLIENT:
             leaf_retriever_client_infos = {}
             for framework in self._retriever_client_provider_to_framework.values():
                 for info in framework.values():
                     leaf_retriever_client_infos[info.discovery_metadata.component_name] = info
             return leaf_retriever_client_infos
 
-        if component_type == AIQComponentEnum.EVALUATOR:
+        if component_type == ComponentEnum.EVALUATOR:
             return self._registered_evaluator_infos
 
-        if component_type == AIQComponentEnum.MEMORY:
+        if component_type == ComponentEnum.MEMORY:
             return self._registered_memory_infos
 
-        if component_type == AIQComponentEnum.OBJECT_STORE:
+        if component_type == ComponentEnum.OBJECT_STORE:
             return self._registered_object_store_infos
 
-        if component_type == AIQComponentEnum.REGISTRY_HANDLER:
+        if component_type == ComponentEnum.REGISTRY_HANDLER:
             return self._registered_registry_handler_infos
 
-        if component_type == AIQComponentEnum.LOGGING:
+        if component_type == ComponentEnum.LOGGING:
             return self._registered_logging_methods
 
-        if component_type == AIQComponentEnum.TRACING:
+        if component_type == ComponentEnum.TRACING:
             return self._registered_telemetry_exporters
 
-        if component_type == AIQComponentEnum.PACKAGE:
+        if component_type == ComponentEnum.PACKAGE:
             return self._registered_packages
 
-        if component_type == AIQComponentEnum.ITS_STRATEGY:
-            return self._registered_its_strategies
+        if component_type == ComponentEnum.TTC_STRATEGY:
+            return self._registered_ttc_strategies
 
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
     def get_registered_types_by_component_type(  # pylint: disable=R0911
-            self, component_type: AIQComponentEnum) -> list[str]:
+            self, component_type: ComponentEnum) -> list[str]:
 
-        if component_type == AIQComponentEnum.FUNCTION:
+        if component_type == ComponentEnum.FUNCTION:
             return [i.static_type() for i in self._registered_functions]
 
-        if component_type == AIQComponentEnum.TOOL_WRAPPER:
+        if component_type == ComponentEnum.TOOL_WRAPPER:
             return list(self._registered_tool_wrappers)
 
-        if component_type == AIQComponentEnum.LLM_PROVIDER:
+        if component_type == ComponentEnum.LLM_PROVIDER:
             return [i.static_type() for i in self._registered_llm_provider_infos]
 
-        if component_type == AIQComponentEnum.LLM_CLIENT:
+        if component_type == ComponentEnum.LLM_CLIENT:
             leaf_client_provider_framework_types = []
             for framework in self._llm_client_provider_to_framework.values():
                 for info in framework.values():
                     leaf_client_provider_framework_types.append([info.discovery_metadata.component_name])
             return leaf_client_provider_framework_types
 
-        if component_type == AIQComponentEnum.EMBEDDER_PROVIDER:
+        if component_type == ComponentEnum.EMBEDDER_PROVIDER:
             return [i.static_type() for i in self._registered_embedder_provider_infos]
 
-        if component_type == AIQComponentEnum.EMBEDDER_CLIENT:
+        if component_type == ComponentEnum.EMBEDDER_CLIENT:
             leaf_embedder_provider_framework_types = []
             for framework in self._embedder_client_provider_to_framework.values():
                 for info in framework.values():
                     leaf_embedder_provider_framework_types.append([info.discovery_metadata.component_name])
             return leaf_embedder_provider_framework_types
 
-        if component_type == AIQComponentEnum.EVALUATOR:
+        if component_type == ComponentEnum.EVALUATOR:
             return [i.static_type() for i in self._registered_evaluator_infos]
 
-        if component_type == AIQComponentEnum.MEMORY:
+        if component_type == ComponentEnum.MEMORY:
             return [i.static_type() for i in self._registered_memory_infos]
 
-        if component_type == AIQComponentEnum.REGISTRY_HANDLER:
+        if component_type == ComponentEnum.REGISTRY_HANDLER:
             return [i.static_type() for i in self._registered_registry_handler_infos]
 
-        if component_type == AIQComponentEnum.LOGGING:
+        if component_type == ComponentEnum.LOGGING:
             return [i.static_type() for i in self._registered_logging_methods]
 
-        if component_type == AIQComponentEnum.TRACING:
+        if component_type == ComponentEnum.TRACING:
             return [i.static_type() for i in self._registered_telemetry_exporters]
 
-        if component_type == AIQComponentEnum.PACKAGE:
+        if component_type == ComponentEnum.PACKAGE:
             return list(self._registered_packages)
 
-        if component_type == AIQComponentEnum.ITS_STRATEGY:
-            return [i.static_type() for i in self._registered_its_strategies]
+        if component_type == ComponentEnum.TTC_STRATEGY:
+            return [i.static_type() for i in self._registered_ttc_strategies]
 
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
@@ -966,8 +966,8 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if issubclass(cls, LoggingBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_logging_method())
 
-        if issubclass(cls, ITSStrategyBaseConfig):
-            return self._do_compute_annotation(cls, self.get_registered_its_strategies())
+        if issubclass(cls, TTCStrategyBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_ttc_strategies())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 
@@ -997,4 +997,4 @@ class GlobalTypeRegistry:
 
 
 # Finally, update the Config object each time the registry changes
-GlobalTypeRegistry.get().add_registration_changed_hook(lambda: AIQConfig.rebuild_annotations())
+GlobalTypeRegistry.get().add_registration_changed_hook(lambda: Config.rebuild_annotations())

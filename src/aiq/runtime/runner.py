@@ -17,8 +17,8 @@ import logging
 import typing
 from enum import Enum
 
-from aiq.builder.context import AIQContext
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import Context
+from aiq.builder.context import ContextState
 from aiq.builder.function import Function
 from aiq.data_models.invocation_node import InvocationNode
 from aiq.observability.exporter_manager import ExporterManager
@@ -31,7 +31,7 @@ class UserManagerBase:
     pass
 
 
-class AIQRunnerState(Enum):
+class RunnerState(Enum):
     UNINITIALIZED = 0
     INITIALIZED = 1
     RUNNING = 2
@@ -42,12 +42,12 @@ class AIQRunnerState(Enum):
 _T = typing.TypeVar("_T")
 
 
-class AIQRunner:
+class Runner:
 
     def __init__(self,
                  input_message: typing.Any,
                  entry_fn: Function,
-                 context_state: AIQContextState,
+                 context_state: ContextState,
                  exporter_manager: ExporterManager):
         """
         The AIQRunner class is used to run a workflow. It handles converting input and output data types and running the
@@ -70,9 +70,9 @@ class AIQRunner:
 
         self._entry_fn = entry_fn
         self._context_state = context_state
-        self._context = AIQContext(self._context_state)
+        self._context = Context(self._context_state)
 
-        self._state = AIQRunnerState.UNINITIALIZED
+        self._state = RunnerState.UNINITIALIZED
 
         self._input_message_token = None
 
@@ -82,7 +82,7 @@ class AIQRunner:
         self._exporter_manager = exporter_manager
 
     @property
-    def context(self) -> AIQContext:
+    def context(self) -> Context:
         return self._context
 
     def convert(self, value: typing.Any, to_type: type[_T]) -> _T:
@@ -100,8 +100,8 @@ class AIQRunner:
             function_id="root",
         ))
 
-        if (self._state == AIQRunnerState.UNINITIALIZED):
-            self._state = AIQRunnerState.INITIALIZED
+        if (self._state == RunnerState.UNINITIALIZED):
+            self._state = RunnerState.INITIALIZED
         else:
             raise ValueError("Cannot enter the context more than once")
 
@@ -114,7 +114,7 @@ class AIQRunner:
 
         self._context_state.input_message.reset(self._input_message_token)
 
-        if (self._state not in (AIQRunnerState.COMPLETED, AIQRunnerState.FAILED)):
+        if (self._state not in (RunnerState.COMPLETED, RunnerState.FAILED)):
             raise ValueError("Cannot exit the context without completing the workflow")
 
     @typing.overload
@@ -127,11 +127,11 @@ class AIQRunner:
 
     async def result(self, to_type: type | None = None):
 
-        if (self._state != AIQRunnerState.INITIALIZED):
+        if (self._state != RunnerState.INITIALIZED):
             raise ValueError("Cannot run the workflow without entering the context")
 
         try:
-            self._state = AIQRunnerState.RUNNING
+            self._state = RunnerState.RUNNING
 
             if (not self._entry_fn.has_single_output):
                 raise ValueError("Workflow does not support single output")
@@ -145,7 +145,7 @@ class AIQRunner:
                 if event_stream:
                     event_stream.on_complete()
 
-            self._state = AIQRunnerState.COMPLETED
+            self._state = RunnerState.COMPLETED
 
             return result
         except Exception as e:
@@ -153,17 +153,17 @@ class AIQRunner:
             event_stream = self._context_state.event_stream.get()
             if event_stream:
                 event_stream.on_complete()
-            self._state = AIQRunnerState.FAILED
+            self._state = RunnerState.FAILED
 
             raise
 
     async def result_stream(self, to_type: type | None = None):
 
-        if (self._state != AIQRunnerState.INITIALIZED):
+        if (self._state != RunnerState.INITIALIZED):
             raise ValueError("Cannot run the workflow without entering the context")
 
         try:
-            self._state = AIQRunnerState.RUNNING
+            self._state = RunnerState.RUNNING
 
             if (not self._entry_fn.has_streaming_output):
                 raise ValueError("Workflow does not support streaming output")
@@ -173,7 +173,7 @@ class AIQRunner:
                 async for m in self._entry_fn.astream(self._input_message, to_type=to_type):
                     yield m
 
-                self._state = AIQRunnerState.COMPLETED
+                self._state = RunnerState.COMPLETED
 
                 # Close the intermediate stream
                 event_stream = self._context_state.event_stream.get()
@@ -185,6 +185,11 @@ class AIQRunner:
             event_stream = self._context_state.event_stream.get()
             if event_stream:
                 event_stream.on_complete()
-            self._state = AIQRunnerState.FAILED
+            self._state = RunnerState.FAILED
 
             raise
+
+
+# Compatibility aliases with previous releases
+AIQRunnerState = RunnerState
+AIQRunner = Runner

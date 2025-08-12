@@ -26,9 +26,9 @@ from aiq.data_models.interactive import InteractionStatus
 logger = logging.getLogger(__name__)
 
 
-class AIQUserInteractionManager:
+class UserInteractionManager:
     """
-    AIQUserInteractionManager is responsible for requesting user input
+    UserInteractionManager is responsible for requesting user input
     at runtime. It delegates the actual prompting to a callback function
     stored in AIQContextState.user_input_callback.
 
@@ -72,3 +72,7 @@ class AIQUserInteractionManager:
         sys_human_interaction = InteractionResponse(id=uuid_req, status=status, timestamp=timestamp, content=resp)
 
         return sys_human_interaction
+
+
+# Compatibility aliases with previous releases
+AIQUserInteractionManager = UserInteractionManager

@@ -19,7 +19,7 @@ from io import StringIO
 import pytest
 
 from _utils.configs import WorkflowTestConfig
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 
 
 # Make a fixture which auto registers the test workflow
@@ -31,7 +31,7 @@ def do_register_test_workflow(register_test_workflow):
 
 def test_aiq_config_print_summary(workflow_config: WorkflowTestConfig):
 
-    c = AIQConfig(workflow=workflow_config)
+    c = Config(workflow=workflow_config)
 
     # We don't want to be strict about the exact format of the printed output, but we do want to assert that it printed
     # something relevant.
@@ -47,7 +47,7 @@ def test_aiq_config_print_summary(workflow_config: WorkflowTestConfig):
 def test_invalid_config_path():
 
     with pytest.raises(ValueError, match=re.compile(r"^functions\.invalid_function\.prompt$", re.MULTILINE)):
-        AIQConfig.model_validate({
+        Config.model_validate({
             'functions': {
                 'invalid_function': {
                     '_type': 'test_workflow',

@@ -19,7 +19,7 @@ from uuid import uuid4
 
 import pytest
 
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -150,7 +150,7 @@ async def test_crewai_handler_time_between_calls(reactive_stream: Subject):
     results = []
     handler = CrewAIProfilerHandler()
     _ = reactive_stream.subscribe(results.append)
-    step_manager = AIQContext.get().intermediate_step_manager
+    step_manager = Context.get().intermediate_step_manager
 
     # We'll patch time.time so it returns predictable values:
     # e.g. 100.0 for the first call, 103.2 for the second, etc.
@@ -213,7 +213,7 @@ async def test_semantic_kernel_handler_tool_call(reactive_stream: Subject):
     all_ = []
     _ = SemanticKernelProfilerHandler(workflow_llms={})
     _ = reactive_stream.subscribe(all_.append)
-    step_manager = AIQContext.get().intermediate_step_manager
+    step_manager = Context.get().intermediate_step_manager
     # We'll manually simulate the relevant methods.
 
     # Suppose we do a tool "invoke_function_call"
@@ -246,7 +246,7 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
     """
     pytest.importorskip("litellm")
 
-    from aiq.builder.context import AIQContext
+    from aiq.builder.context import Context
     from aiq.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
     from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
@@ -255,7 +255,7 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
     handler = AgnoProfilerHandler()
     subscription = reactive_stream.subscribe(all_stats.append)
     print(f"Created subscription: {subscription}")
-    step_manager = AIQContext.get().intermediate_step_manager
+    step_manager = Context.get().intermediate_step_manager
 
     # Mock the original LLM call function that would be patched
     def original_completion(*args, **kwargs):
@@ -466,7 +466,7 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     Note: This test simulates how tool execution is tracked in the tool_wrapper.py
     since AgnoProfilerHandler doesn't directly patch tool execution.
     """
-    from aiq.builder.context import AIQContext
+    from aiq.builder.context import Context
     from aiq.data_models.intermediate_step import IntermediateStep
     from aiq.data_models.invocation_node import InvocationNode
     from aiq.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
@@ -476,7 +476,7 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     _ = AgnoProfilerHandler()  # Create handler but we won't use its monkey patching
     subscription = reactive_stream.subscribe(all_stats.append)
     print(f"Created tool execution subscription: {subscription}")
-    step_manager = AIQContext.get().intermediate_step_manager
+    step_manager = Context.get().intermediate_step_manager
 
     # Define a simple tool function
     def sample_tool(arg1, arg2, param1=None, tool_name="SampleTool"):

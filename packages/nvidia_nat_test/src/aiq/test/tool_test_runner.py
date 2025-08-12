@@ -66,29 +66,29 @@ class MockBuilder(Builder):
         """Add a mock object store that returns a fixed response."""
         self._mocks[f"object_store_{name}"] = mock_response
 
-    def mock_its_strategy(self, name: str, mock_response: typing.Any):
-        """Add a mock ITS strategy that returns a fixed response."""
-        self._mocks[f"its_strategy_{name}"] = mock_response
+    def mock_ttc_strategy(self, name: str, mock_response: typing.Any):
+        """Add a mock TTC strategy that returns a fixed response."""
+        self._mocks[f"ttc_strategy_{name}"] = mock_response
 
-    async def add_its_strategy(self, name: str, config):
+    async def add_ttc_strategy(self, name: str, config):
         """Mock implementation (no‑op)."""
         pass
 
-    async def get_its_strategy(self,
+    async def get_ttc_strategy(self,
                                strategy_name: str,
                                pipeline_type: typing.Any = None,
                                stage_type: typing.Any = None):
-        """Return a mock ITS strategy if one is configured."""
-        key = f"its_strategy_{strategy_name}"
+        """Return a mock TTC strategy if one is configured."""
+        key = f"ttc_strategy_{strategy_name}"
         if key in self._mocks:
             mock_strategy = MagicMock()
             # Provide common callable patterns used in tests
             mock_strategy.invoke = MagicMock(return_value=self._mocks[key])
             mock_strategy.ainvoke = AsyncMock(return_value=self._mocks[key])
             return mock_strategy
-        raise ValueError(f"ITS strategy '{strategy_name}' not mocked. Use mock_its_strategy() to add it.")
+        raise ValueError(f"TTC strategy '{strategy_name}' not mocked. Use mock_ttc_strategy() to add it.")
 
-    async def get_its_strategy_config(self,
+    async def get_ttc_strategy_config(self,
                                       strategy_name: str,
                                       pipeline_type: typing.Any = None,
                                       stage_type: typing.Any = None):

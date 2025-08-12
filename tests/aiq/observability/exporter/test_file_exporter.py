@@ -22,7 +22,7 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -36,7 +36,7 @@ from aiq.observability.processor.intermediate_step_serializer import Intermediat
 @pytest.fixture
 def mock_context_state():
     """Create a mock context state."""
-    mock_state = Mock(spec=AIQContextState)
+    mock_state = Mock(spec=ContextState)
     return mock_state
 
 
