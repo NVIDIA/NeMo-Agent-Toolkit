@@ -8,7 +8,9 @@ root = "../../.."
 [project]
 name = "nat_redact_pii"
 dynamic = ["version"]
-dependencies = ["nvidia-nat[weave]~=1.2"]
+dependencies = [
+    "nvidia-nat[weave]~=1.2",
+]
 requires-python = ">=3.11,<3.13"
 description = "Simple Redact PII example"
 keywords = ["ai", "pii", "redaction"]

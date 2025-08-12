@@ -8,7 +8,11 @@ root = "../../.."
 [project]
 name = "nat_swe_bench"
 dynamic = ["version"]
-dependencies = ["nvidia-nat[langchain]~=1.2", "swebench==3.0.3"]
+dependencies = [
+    "nvidia-nat[langchain]~=1.2",
+    "swebench==3.0.3",
+]
+
 requires-python = ">=3.11,<3.13"
 description = "Example for solving SWE bench problems"
 classifiers = ["Programming Language :: Python"]

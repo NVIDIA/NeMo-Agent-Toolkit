@@ -8,7 +8,10 @@ root = "../../.."
 [project]
 name = "nat_simple_auth"
 dynamic = ["version"]
-dependencies = ["nvidia-nat[langchain]~=1.2", "httpx"]
+dependencies = [
+    "nvidia-nat[langchain]~=1.2",
+    "httpx",
+]
 requires-python = ">=3.11,<3.13"
 description = "Custom  NeMo Agent toolkit workflow demonstrating auth"
 classifiers = ["Programming Language :: Python"]
