@@ -26,9 +26,19 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.span import Span
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter.span_exporter import SpanExporter
+from nat.utils.log_utils import LogFilter
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
+
+# Use LogFilter to filter out specific message patterns
+presidio_filter = LogFilter([
+    "nlp_engine not provided",
+    "Created NLP engine",
+    "registry not provided",
+    "Loaded recognizer",
+    "Recognizer not added to registry"
+])
 
 
 class WeaveExporter(SpanExporter[Span, Span]):
@@ -36,11 +46,20 @@ class WeaveExporter(SpanExporter[Span, Span]):
 
     _weave_calls: IsolatedAttribute[dict[str, Call]] = IsolatedAttribute(dict)
 
-    def __init__(self, context_state=None, entity: str | None = None, project: str | None = None):
+    def __init__(self,
+                 context_state=None,
+                 entity: str | None = None,
+                 project: str | None = None,
+                 verbose: bool = False):
         super().__init__(context_state=context_state)
         self._entity = entity
         self._project = project
         self._gc = weave_client_context.require_weave_client()
+
+        # Optionally, set log filtering for presidio-analyzer to reduce verbosity
+        if not verbose:
+            presidio_logger = logging.getLogger('presidio-analyzer')
+            presidio_logger.addFilter(presidio_filter)
 
     @override
     async def export_processed(self, item: Span | list[Span]) -> None:
