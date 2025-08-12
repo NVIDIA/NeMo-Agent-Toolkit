@@ -72,8 +72,8 @@ In the workflow configuration YAML file, user credentials required for API authe
 `authentication` key. Users should provide all required and valid credentials for each authentication method to ensure
 the library can authenticate requests without encountering credential related errors. Examples of currently supported
 API configurations are
-[OAuth 2.0 Authorization Code Grant Flow Configuration](../../../src/aiq/authentication/oauth2/oauth2_auth_code_flow_provider_config.py),
-[API Key Configuration](../../../src/aiq/authentication/api_key/api_key_auth_provider_config.py), and [Basic HTTP Authentication](../../../src/aiq/authentication/http_basic_auth/register.py).
+[OAuth 2.0 Authorization Code Grant Flow Configuration](../../../src/nat/authentication/oauth2/oauth2_auth_code_flow_provider_config.py),
+[API Key Configuration](../../../src/nat/authentication/api_key/api_key_auth_provider_config.py), and [Basic HTTP Authentication](../../../src/nat/authentication/http_basic_auth/register.py).
 
 ### Authentication YAML Configuration Example
 
@@ -144,7 +144,7 @@ class WhoAmIConfig(FunctionBaseConfig, name="who_am_i"):
     timeout: int = Field(default=10, description="Request timeout in seconds")
 ```
 
-Full source code for the above example can be found in `examples/front_ends/simple_auth/src/aiq_simple_auth/ip_lookup.py`.
+Full source code for the above example can be found in `examples/front_ends/simple_auth/src/nat_simple_auth/ip_lookup.py`.
 
 ## 4. Authentication by Application Configuration
 Authentication methods not needing consent prompts, such as API Keys are supported uniformly across all deployment methods.

@@ -17,12 +17,12 @@ ARG BASE_IMAGE_URL=nvcr.io/nvidia/base/ubuntu
 ARG BASE_IMAGE_TAG=22.04_20240212
 ARG PYTHON_VERSION=3.12
 
-# Specified on the command line with --build-arg AIQ_VERSION=$(python -m setuptools_scm)
-ARG AIQ_VERSION=0.0.1
+# Specified on the command line with --build-arg NAT_VERSION=$(python -m setuptools_scm)
+ARG NAT_VERSION=0.0.1
 
 FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 COPY --from=ghcr.io/astral-sh/uv:0.6.17 /uv /uvx /bin/
-ARG AIQ_VERSION
+ARG NAT_VERSION
 ARG PYTHON_VERSION
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -33,23 +33,23 @@ WORKDIR /workspace
 # Copy the project into the container
 COPY ./ /workspace
 
-# Install the AIQ toolkit package and the example package
+# Install the NAT toolkit package and the example package
 RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
-    export SETUPTOOLS_SCM_PRETEND_VERSION=${AIQ_VERSION} && \
-    export SETUPTOOLS_SCM_PRETEND_VERSION_AIQTOOLKIT=${AIQ_VERSION} && \
-    export SETUPTOOLS_SCM_PRETEND_VERSION_AIQTOOLKIT_TEST=${AIQ_VERSION} && \
-    export SETUPTOOLS_SCM_PRETEND_VERSION_AIQTOOLKIT_AGNO=${AIQ_VERSION} && \
-    export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AIQ_AGNO_PERSONAL_FINANCE=${AIQ_VERSION} && \
+    export SETUPTOOLS_SCM_PRETEND_VERSION=${NAT_VERSION} && \
+    export SETUPTOOLS_SCM_PRETEND_VERSION_NVIDIA_NAT=${NAT_VERSION} && \
+    export SETUPTOOLS_SCM_PRETEND_VERSION_NVIDIA_NAT_TEST=${NAT_VERSION} && \
+    export SETUPTOOLS_SCM_PRETEND_VERSION_NVIDIA_NAT_AGNO=${NAT_VERSION} && \
+    export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NAT_AGNO_PERSONAL_FINANCE=${NAT_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
     uv pip install -e '.[agno, langchain]' && \
     uv pip install --link-mode=copy ./examples/frameworks/agno_personal_finance
 
 # Set the config file environment variable
-ENV AIQ_CONFIG_FILE=/workspace/examples/frameworks/agno_personal_finance/configs/config.yml
+ENV NAT_CONFIG_FILE=/workspace/examples/frameworks/agno_personal_finance/configs/config.yml
 
 # Enivronment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Define the entry point to start the server
-ENTRYPOINT ["sh", "-c", "exec aiq serve --config_file=$AIQ_CONFIG_FILE --host 0.0.0.0"]
+ENTRYPOINT ["sh", "-c", "exec nat serve --config_file=$NAT_CONFIG_FILE --host 0.0.0.0"]

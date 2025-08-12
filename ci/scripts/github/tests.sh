@@ -28,7 +28,7 @@ rapids-logger "Running tests with Python version $(python --version) and pytest 
 set +e
 
 pytest --junit-xml=${WORKSPACE_TMP}/report_pytest.xml \
-       --cov=aiq --cov-report term-missing \
+       --cov=nat --cov-report term-missing \
        --cov-report=xml:${WORKSPACE_TMP}/report_pytest_coverage.xml
 PYTEST_RESULTS=$?
 

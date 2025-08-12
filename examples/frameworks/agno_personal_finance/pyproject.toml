@@ -6,7 +6,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_agno_personal_finance"
+name = "nat_agno_personal_finance"
 dynamic = ["version"]
 dependencies = ["nvidia-nat[agno]~=1.2", "openai~=1.66", "litellm~=1.63.14"]
 requires-python = ">=3.11,<3.13"
@@ -16,5 +16,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_agno_personal_finance = "aiq_agno_personal_finance.register"
+[project.entry-points.'nat.components']
+nat_agno_personal_finance = "nat_agno_personal_finance.register"
