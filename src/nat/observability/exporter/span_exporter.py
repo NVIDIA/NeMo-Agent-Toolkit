@@ -89,7 +89,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
     def __init__(self, context_state: "ContextState | None" = None, span_prefix: str | None = None):
         super().__init__(context_state=context_state)
         if span_prefix is None:
-            span_prefix = os.getenv("NAT_SPAN_PREFIX", "nat")
+            span_prefix = os.getenv("NAT_SPAN_PREFIX", "nat").strip() or "nat"
 
         self._span_prefix = span_prefix
 
