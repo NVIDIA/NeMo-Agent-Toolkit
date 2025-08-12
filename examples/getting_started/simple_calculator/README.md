@@ -90,7 +90,7 @@ Prior to building the Docker image ensure that you have followed the steps in th
 From the root directory of the Simple Calculator repository, build the Docker image:
 
 ```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_calculator/Dockerfile .
+docker build --build-arg NAT_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_calculator/Dockerfile .
 ```
 
 ### Run the Docker Container

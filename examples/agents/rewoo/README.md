@@ -86,7 +86,7 @@ export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
+nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
 ```
 
 **Expected Workflow Output**
@@ -169,12 +169,12 @@ Workflow Result:
 
 ### Starting the NeMo Agent Toolkit Server
 
-You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
 
 **Starting the ReWOO Agent Example Workflow**
 
 ```bash
-aiq serve --config_file=examples/agents/rewoo/configs/config.yml
+nat serve --config_file=examples/agents/rewoo/configs/config.yml
 ```
 
 ### Making Requests to the NeMo Agent Toolkit Server
@@ -208,5 +208,5 @@ curl --request POST \
 **Run and evaluate the `rewoo_agent` example Workflow**
 
 ```bash
-aiq eval --config_file=examples/agents/rewoo/configs/config.yml
+nat eval --config_file=examples/agents/rewoo/configs/config.yml
 ```

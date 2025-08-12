@@ -29,7 +29,7 @@ NeMo Agent toolkit provides a set of evaluators to run and evaluate the workflow
 
 Example:
 ```bash
-aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
 ## Using Datasets
@@ -274,7 +274,7 @@ Note: In your evaluation dataset, make sure that the `answer` field is a descrip
 
 **Sample Usage:**
 ```bash
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/config-tunable-rag-eval.yml
+nat eval --config_file=examples/getting_started/simple_web_query/configs/config-tunable-rag-eval.yml
 ```
 
 ## Adding Custom Evaluators
@@ -284,7 +284,7 @@ You can add custom evaluators to evaluate the workflow output. To add a custom e
 ## Running multiple repetitions
 You can run multiple repetitions of the evaluation by running a command line option `--reps`. For example, to run the evaluation 5 times, run the following command:
 ```bash
-aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --reps=5
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --reps=5
 ```
 This will allow you to get an average score across multiple runs and analyze the variation in the generated outputs.
 
@@ -303,26 +303,26 @@ You can then re-run evaluation on that output file along with `--skip_completed_
 
 Pass-1:
 ```
-aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 This pass results in workflow interrupted warning. You can then do another pass.
 
 Pass-2:
 ```bash
 cp .tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
 ```
 
 ## Running evaluation offline
 You can evaluate a dataset with previously generated answers via the `--skip_workflow` option. In this case the dataset has both the expected `answer` and the `generated_answer`.
 ```bash
 cp .tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
 ```
 This assumes that the workflow output was previously generated and stored in `.tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json`
 
 ## Running the workflow over a dataset without evaluation
-You can do this by running `aiq eval` with a workflow configuration file that includes an `eval` section with no `evaluators`.
+You can do this by running `nat eval` with a workflow configuration file that includes an `eval` section with no `evaluators`.
 ```yaml
 eval:
   general:

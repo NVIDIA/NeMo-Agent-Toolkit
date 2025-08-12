@@ -68,7 +68,7 @@ From the root directory of the NeMo Agent toolkit library, run the following com
 uv pip install -e .
 ```
 
-The `code_generation` and `wiki_search` tools are part of the `aiqtoolkit[langchain]` package.  To install the package run the following command:
+The `code_generation` and `wiki_search` tools are part of the `nvidia-nat[langchain]` package.  To install the package run the following command:
 ```bash
 # local package install from source
 uv pip install -e '.[langchain]'
@@ -92,7 +92,7 @@ For more details, refer to the [ReAct agent documentation](../../../docs/source/
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file=examples/agents/react/configs/config.yml --input "who was Djikstra?"
+nat run --config_file=examples/agents/react/configs/config.yml --input "who was Djikstra?"
 ```
 
 **Expected Workflow Output**
@@ -124,12 +124,12 @@ Workflow Result:
 
 ### Starting the NeMo Agent Toolkit Server
 
-You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
 
 **Starting the ReAct Agent Example Workflow**
 
 ```bash
-aiq serve --config_file=examples/agents/react/configs/config.yml
+nat serve --config_file=examples/agents/react/configs/config.yml
 ```
 
 ### Making Requests to the NeMo Agent Toolkit Server
@@ -162,5 +162,5 @@ curl --request POST \
 **Run and evaluate the `react_agent` example Workflow**
 
 ```bash
-aiq eval --config_file=examples/agents/react/configs/config.yml
+nat eval --config_file=examples/agents/react/configs/config.yml
 ```

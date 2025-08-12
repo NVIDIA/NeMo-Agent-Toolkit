@@ -42,10 +42,10 @@ git submodule update --init --recursive
 ```
 
 ### Start the NeMo Agent Toolkit Server
-You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
 
 ```bash
-aiq serve --config_file=examples/getting_started/simple_calculator/configs/config.yml
+nat serve --config_file=examples/getting_started/simple_calculator/configs/config.yml
 ```
 Running this command will produce the expected output as shown below (truncated for brevity):
 ```bash

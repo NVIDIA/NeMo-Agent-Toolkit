@@ -143,7 +143,7 @@ Prior to building the Docker image ensure that you have followed the steps in th
 From the root directory of the NeMo Agent toolkit repository, build the Docker image:
 
 ```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t agno_personal_finance -f examples/frameworks/agno_personal_finance/Dockerfile .
+docker build --build-arg NAT_VERSION=$(python -m setuptools_scm) -t agno_personal_finance -f examples/frameworks/agno_personal_finance/Dockerfile .
 ```
 
 ### Run the Docker Container

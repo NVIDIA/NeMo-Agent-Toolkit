@@ -154,7 +154,7 @@ front-end UI is responsible for rendering the consent prompt.
 
 Below is a table listing the current support for the various authentication methods based on the application
 
-| # | Authentication Method                                | `aiq run` | `aiq serve` | Support Level                                         |
+| # | Authentication Method                                | `nat run` | `nat serve` | Support Level                                         |
 |---|------------------------------------------------------|-----------|-------------|-------------------------------------------------------|
 | 1 | OAuth2.0 Authorization Code Grant Flow               | ✅         | ✅           | Full support with front-end UI only in websocket mode |
 | 2 | API Key Authentication                               | ✅         | ✅           | Full support across all configurations                |

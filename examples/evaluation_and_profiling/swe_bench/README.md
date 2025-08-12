@@ -66,9 +66,9 @@ uv pip install -e examples/evaluation_and_profiling/swe_bench
 ```
 
 ## Quickstart
-Run the example via the `aiq eval` CLI command:
+Run the example via the `nat eval` CLI command:
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
+nat eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 ```
 
 The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
@@ -180,7 +180,7 @@ The evaluation results, logs and reports, are stored in the output directory spe
 ### Sample evaluation output
 Run:
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
+nat eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 ```
 Expected output:
 ```console

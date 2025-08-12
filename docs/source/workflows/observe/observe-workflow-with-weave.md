@@ -63,7 +63,7 @@ Install `simple_calculator` example using the instructions in the `examples/obse
 Run the workflow using `config-weave.yml` configuration file:
 
 ```bash
-aiq run --config_file examples/observability/simple_calculator_observability/configs/config-weave.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/observability/simple_calculator_observability/configs/config-weave.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 If it is your first time running the workflow, you will be prompted to login to W&B Weave.

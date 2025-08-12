@@ -18,7 +18,7 @@ limitations under the License.
 # Interactive Models Guide
 NeMo Agent toolkit provides interactive prompt and response Pydantic data models as a way to validate, serialize, and document
 data structures to support human input during the execution of an agent workflow.
-**Note**: All human in the loop interaction data models are supported by the `aiq serve` command, while the `aiq run`
+**Note**: All human in the loop interaction data models are supported by the `nat serve` command, while the `nat run`
 command **only** supports the {py:mod}`nat.data_models.interactive.HumanPromptText` data model. Ensure WebSocket mode
 is enabled by toggling the setting in the top-right corner of the webpage for proper interaction when using this feature
 with the front-end user interface.

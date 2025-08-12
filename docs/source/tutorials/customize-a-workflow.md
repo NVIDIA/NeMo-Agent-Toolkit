@@ -78,7 +78,7 @@ llms:
 
 To override the `temperature` parameter for the `nim_llm`, the following command can be used:
 ```bash
-aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"  \
+nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"  \
   --override llms.nim_llm.temperature 0.7
 ```
 
@@ -89,7 +89,7 @@ aiq.cli.cli_utils.config_override - INFO - Successfully set override for llms.ni
 
 The `--override` flag can be specified multiple times, allowing the ability to override multiple parameters. For example, the `llama-3.1-70b-instruct` model can be replaced with the `llama-3.3-70b-instruct` using:
 ```bash
-aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"  \
+nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"  \
   --override llms.nim_llm.temperature 0.7 \
   --override llms.nim_llm.model_name meta/llama-3.3-70b-instruct
 ```

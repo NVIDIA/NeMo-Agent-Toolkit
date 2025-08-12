@@ -167,7 +167,7 @@ Configure your Agent to use the Milvus collections for RAG. We have pre-configur
 #### Run the Workflow
 
 ```bash
-aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --input "How do I install CUDA"
+nat run --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --input "How do I install CUDA"
 ```
 
 The expected workflow result of running the above command is:
@@ -269,7 +269,7 @@ Each function was given a description that helps the agent know when to use it a
 This time, we will tell the agent about how we like our responses formatted, and notice if it stores that fact to long term memory.
 
 ```bash
-aiq run --config_file=examples/RAG/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA? I like responses with a lot of emojis in them! :)"
+nat run --config_file=examples/RAG/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA? I like responses with a lot of emojis in them! :)"
 ```
 
 The expected workflow result of the above run is:
@@ -298,7 +298,7 @@ These workflows demonstrate how agents can use multiple tools in tandem to provi
 We can now run one of these workflows with a slightly more complex input.
 
 ```bash
-aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
+nat run --config_file examples/RAG/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
 ```
 The expected workflow result of the above run is:
 ```console
@@ -316,7 +316,7 @@ An example configuration can be found in the `configs/milvus_rag_config_ttc.yml`
 
 To run this workflow, you can use the following command:
 ```bash
-aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_config_ttc.yml --input "What is the difference between CUDA and MCP?"
+nat run --config_file examples/RAG/simple_rag/configs/milvus_rag_config_ttc.yml --input "What is the difference between CUDA and MCP?"
 ```
 
 You should see several concurrent agent runs in the intermediate output which include output similar to:

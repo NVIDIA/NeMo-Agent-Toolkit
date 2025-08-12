@@ -98,7 +98,7 @@ telemetry:
 2. Serve the workflow:
 
 ```console
-aiq serve --config_file examples/observability/redact_pii/configs/weave_redact_pii_config.yml
+nat serve --config_file examples/observability/redact_pii/configs/weave_redact_pii_config.yml
 ```
 
 3. Invoke the workflow:

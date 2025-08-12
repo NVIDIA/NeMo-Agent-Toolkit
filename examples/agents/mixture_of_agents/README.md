@@ -83,7 +83,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file=examples/agents/mixture_of_agents/configs/config.yml --input "who was Djikstra?"
+nat run --config_file=examples/agents/mixture_of_agents/configs/config.yml --input "who was Djikstra?"
 ```
 
 **Expected Output**
@@ -137,12 +137,12 @@ Workflow Result:
 
 ### Starting the NeMo Agent toolkit Server
 
-You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
 
 **Starting the Mixture of Agents Example Workflow**
 
 ```bash
-aiq serve --config_file=examples/agents/mixture_of_agents/configs/config.yml
+nat serve --config_file=examples/agents/mixture_of_agents/configs/config.yml
 ```
 
 ### Making Requests to the NeMo Agent toolkit Server

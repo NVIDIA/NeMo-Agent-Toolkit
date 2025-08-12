@@ -99,7 +99,7 @@ For more details, refer to the [ReAct Agent documentation](../../../docs/source/
 Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
+nat run --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
 ```
 
 **Expected Workflow Output**
@@ -137,12 +137,12 @@ Workflow Result:
 
 ### Starting the NeMo Agent Toolkit Server
 
-You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
 
 **Starting the Tool Calling Agent Example Workflow**
 
 ```bash
-aiq serve --config_file=examples/agents/tool_calling/configs/config.yml
+nat serve --config_file=examples/agents/tool_calling/configs/config.yml
 ```
 
 ### Making Requests to the NeMo Agent Toolkit Server
@@ -175,6 +175,5 @@ curl --request POST \
 **Run and evaluate the `tool_calling_agent` example Workflow**
 
 ```bash
-aiq eval --config_file=examples/agents/tool_calling/configs/config.yml
+nat eval --config_file=examples/agents/tool_calling/configs/config.yml
 ```
-

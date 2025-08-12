@@ -120,7 +120,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 ### Run the Workflow
 
 ```bash
-aiq serve --config_file examples/front_ends/simple_calculator_custom_routes/configs/config-metadata.yml
+nat serve --config_file examples/front_ends/simple_calculator_custom_routes/configs/config-metadata.yml
 ```
 
 The server starts with both standard and custom endpoints:

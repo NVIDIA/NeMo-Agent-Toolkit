@@ -109,7 +109,7 @@ In this example, we will use NeMo Agent toolkit as both a MCP client and a MCP s
 1. Start the MCP server by following the instructions in the [MCP Server Usage](#mcp-server-usage) section. NeMo Agent toolkit will act as an MCP server and publish the calculator tools as MCP tools.
 2. Run the simple calculator workflow with the `config-mcp-math.yml` config file. NeMo Agent toolkit will act as an MCP client and connect to the MCP server started in the previous step to access the remote tools.
 ```bash
-aiq run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
+nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
 ```
 
 The functions in `config-mcp-math.yml` are configured to use the calculator tools published by the MCP server running on `http://localhost:9901/sse`.

@@ -24,11 +24,11 @@ limitations under the License.
 NeMo Agent toolkit provides a set of evaluators to run and evaluate workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
 
 ## Evaluating a Workflow
-To evaluate a workflow, you can use the `aiq eval` command. The `aiq eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
+To evaluate a workflow, you can use the `nat eval` command. The `nat eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
 
 To run and evaluate the simple example workflow, use the following command:
 ```bash
-aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
 ## Understanding the Evaluation Configuration
@@ -161,7 +161,7 @@ eval:
 This setting reduces the number of concurrent requests to avoid overwhelming the LLM endpoint.
 
 ## Workflow Output
-The `aiq eval` command runs the workflow on all the entries in the `dataset`. The output of these runs is stored in a file named `workflow_output.json` under the `output_dir` specified in the configuration file.
+The `nat eval` command runs the workflow on all the entries in the `dataset`. The output of these runs is stored in a file named `workflow_output.json` under the `output_dir` specified in the configuration file.
 
 `examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml`:
 ```yaml
@@ -276,8 +276,8 @@ eval:
 ### Step 3: Run evaluation using the configuration file
 Run evaluation with the different configuration files:
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/src/aiq_simple_web_query_eval/configs/eval_config_llama31.yml
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/src/aiq_simple_web_query_eval/configs/eval_config_llama33.yml
+nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/src/aiq_simple_web_query_eval/configs/eval_config_llama31.yml
+nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/src/aiq_simple_web_query_eval/configs/eval_config_llama33.yml
 ```
 ### Step 4: View evaluation results in Weave dashboard
 As the workflow runs, you will find a Weave URL (starting with a 🍩 emoji). Click on the URL to access your logged trace timeline. Select the `Eval` tab to view the evaluation results.
@@ -291,20 +291,20 @@ Note: Plotting metrics for individual dataset entries is only available across t
 
 
 ## Evaluating Remote Workflows
-You can evaluate remote workflows by using the `aiq eval` command with the `--endpoint` flag. In this mode the workflow is run on the remote server specified in the `--endpoint` configuration and evaluation is done on the local server.
+You can evaluate remote workflows by using the `nat eval` command with the `--endpoint` flag. In this mode the workflow is run on the remote server specified in the `--endpoint` configuration and evaluation is done on the local server.
 
 Launch NeMo Agent toolkit on the remote server with the configuration file:
 ```bash
-aiq serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
+nat serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
 ```
 
 Run the evaluation with the `--endpoint` flag and the configuration file with the evaluation dataset:
 ```bash
-aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --endpoint http://localhost:8000
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --endpoint http://localhost:8000
 ```
 
 ## Evaluation Endpoint
-You can also evaluate workflows using the NeMo Agent toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `aiq eval` command. The evaluation endpoint is available at `/evaluate` on the NeMo Agent toolkit server. For more information, refer to the [NeMo Agent toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
+You can also evaluate workflows using the NeMo Agent toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `nat eval` command. The evaluation endpoint is available at `/evaluate` on the NeMo Agent toolkit server. For more information, refer to the [NeMo Agent toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
 
 
 ## Adding Custom Evaluators
@@ -313,7 +313,7 @@ You can add custom evaluators to evaluate the workflow output. To add a custom e
 ## Overriding Evaluation Configuration
 You can override the configuration in the `eval_config.yml` file using the `--override` command line flag. The following is an example of overriding the configuration:
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml \
+nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml \
         --override llms.nim_rag_eval_llm.temperature 0.7 \
         --override llms.nim_rag_eval_llm.model_name meta/llama-3.1-70b-instruct
 ```

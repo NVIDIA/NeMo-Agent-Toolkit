@@ -20,9 +20,9 @@ limitations under the License.
 
 In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing tools that were included with the NeMo Agent toolkit. This tutorial demonstrates how to create a new tool that can ingest data from local files stored on disk.
 
-For this purpose, create a new empty tool using the `aiq workflow create` command. This command automates the setup process by generating the necessary files and directory structure for your new workflow.
+For this purpose, create a new empty tool using the `nat workflow create` command. This command automates the setup process by generating the necessary files and directory structure for your new workflow.
 ```bash
-aiq workflow create --workflow-dir examples text_file_ingest
+nat workflow create --workflow-dir examples text_file_ingest
 ```
 
 This command does the following:
@@ -32,9 +32,9 @@ This command does the following:
 - Installs the new Python package for your workflow.
 
 :::{note}
-Due to the fact that the `aiq workflow create` command installs the new Python package, if you wish to delete the tool you will need to run the following command:
+Due to the fact that the `nat workflow create` command installs the new Python package, if you wish to delete the tool you will need to run the following command:
 ```bash
-aiq workflow delete text_file_ingest
+nat workflow delete text_file_ingest
 ```
 :::
 
@@ -231,21 +231,21 @@ The resulting YAML file is located at `examples/documentation_guides/workflows/t
 The `pyproject.toml` file defines your package metadata and dependencies. In this case, the `pyproject.toml` file that was created is sufficient; however, that might not always be the case. The most common need to update the `pyproject.toml` file is to add additional dependencies that are not included with NeMo Agent toolkit.
 
 - **Dependencies**: Ensure all required libraries are listed under `[project]`.
-  In the example, the tool was created inside the NeMo Agent toolkit repo and simply needed to declare a dependency on `aiqtoolkit[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of NeMo Agent toolkit that it was built against. To determine the version of NeMo Agent toolkit run:
+  In the example, the tool was created inside the NeMo Agent toolkit repo and simply needed to declare a dependency on `nvidia-nat[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of NeMo Agent toolkit that it was built against. To determine the version of NeMo Agent toolkit run:
   ```bash
   nat --version
   ```
 
-  Use the first two digits of the version number. For example, if the version is `1.1.0`, then the dependency would be `aiqtoolkit[langchain]~=1.1`.
+  Use the first two digits of the version number. For example, if the version is `1.1.0`, then the dependency would be `nvidia-nat[langchain]~=1.1`.
 
   ```toml
   dependencies = [
-    "aiqtoolkit[langchain]~=1.1",
+    "nvidia-nat[langchain]~=1.1",
     # Add any additional dependencies your workflow needs
   ]
   ```
 
-  In this example, you have been using NeMo Agent toolkit with LangChain. This is why the dependency is declared on `aiqtoolkit[langchain]`, that is to say NeMo Agent toolkit with the LangChain integration plugin. If you want to use LlamaIndex, declare the dependency on `aiqtoolkit[llama-index]`. This is described in more detail in [Framework Integrations](../quick-start/installing.md#framework-integrations).
+  In this example, you have been using NeMo Agent toolkit with LangChain. This is why the dependency is declared on `nvidia-nat[langchain]`, that is to say NeMo Agent toolkit with the LangChain integration plugin. If you want to use LlamaIndex, declare the dependency on `nvidia-nat[llama-index]`. This is described in more detail in [Framework Integrations](../quick-start/installing.md#framework-integrations).
 
 - **Version**: In this example, and in NeMo Agent toolkit in general, we use [setuptools-scm](https://setuptools-scm.readthedocs.io/en/latest/) to automatically determine the version of the package based on the Git tags. We did this by setting `dynamic = ["version"]` and declaring a build dependency on both `setuptools` and `setuptools_scm` in the `build-system` section of `pyproject.toml`:
   ```toml
@@ -283,13 +283,13 @@ By default, the `workflow create` command will install the template workflow for
 
 Example:
 ```bash
-aiq workflow reinstall text_file_ingest
+nat workflow reinstall text_file_ingest
 ```
 
 :::{note}
 Alternatively, the workflow can be uninstalled with the following command:
 ```bash
-aiq workflow delete text_file_ingest
+nat workflow delete text_file_ingest
 ```
 :::
 
@@ -307,7 +307,7 @@ uv pip install -e examples/documentation_guides/workflows/text_file_ingest
 
 Run the workflow with the following command:
 ```bash
-aiq run --config_file examples/documentation_guides/workflows/text_file_ingest/configs/config.yml \
+nat run --config_file examples/documentation_guides/workflows/text_file_ingest/configs/config.yml \
    --input "What does DOCA GPUNetIO to remove the CPU from the critical path?"
 ```
 

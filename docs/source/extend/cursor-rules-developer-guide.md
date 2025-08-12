@@ -113,18 +113,18 @@ Each subdirectory focuses on a specific area of the toolkit:
 ### Rule Creation Process
 
 1. **Update Documentation First**
-   
+
    Create or update the documentation for the feature you want to add Cursor rules for. You can also create Cursor rules based on existing documentation.
 
 2. **Use Cursor Agent to Create Rules**
-   
+
    The most efficient way to create Cursor rules is to use the Cursor agent itself. Use a prompt like this:
 
    ```
-   Read the @cli.md documentation and create Cursor rules for CLI command use cases including `aiq workflow create/reinstall/delete`, `aiq run/serve`, `aiq info`, and `aiq eval`. 
-   
-   The goal is to enable the Cursor agent to execute the correct CLI commands with proper arguments when users request these actions. For example, when a user asks to create a workflow, the agent should respond with the correct `aiq workflow create` command syntax.
-   
+   Read the @cli.md documentation and create Cursor rules for CLI command use cases including `nat workflow create/reinstall/delete`, `nat run/serve`, `nat info`, and `nat eval`.
+
+   The goal is to enable the Cursor agent to execute the correct CLI commands with proper arguments when users request these actions. For example, when a user asks to create a workflow, the agent should respond with the correct `nat workflow create` command syntax.
+
    Please follow @cursor-rules.mdc guidelines for rule structure and formatting.
    ```
 
@@ -133,7 +133,7 @@ Each subdirectory focuses on a specific area of the toolkit:
    :::
 
 3. **Select Proper Rule Type and Add Description**
-   
+
    According to the [official Cursor documentation](https://docs.cursor.com/context/rules), there are four types of Cursor rules, which are defined in the `.mdc` metadata header:
 
    | Rule Type | Description | When to Use |

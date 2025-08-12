@@ -99,7 +99,7 @@ This can occur in any tool or function in the workflow, allowing for dynamic int
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/HITL/simple_calculator_hitl/configs/config-hitl.yml  --input "Is 2 * 4 greater than 5?"
+nat run --config_file examples/HITL/simple_calculator_hitl/configs/config-hitl.yml  --input "Is 2 * 4 greater than 5?"
 ```
 
 **Expected Workflow Result When Giving Permission**

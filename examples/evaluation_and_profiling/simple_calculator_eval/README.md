@@ -21,7 +21,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 ## Key Features
 
-- **Tunable RAG Evaluator Integration:** Demonstrates the `aiq eval` command with Tunable RAG Evaluator to measure agent response accuracy against ground truth datasets.
+- **Tunable RAG Evaluator Integration:** Demonstrates the `nat eval` command with Tunable RAG Evaluator to measure agent response accuracy against ground truth datasets.
 - **Performance Analysis Framework:** Shows systematic evaluation of agent behavior, accuracy, and response quality using standardized test datasets.
 - **Question-by-Question Analysis:** Provides detailed breakdown of individual responses with comprehensive metrics for identifying failure patterns and areas for improvement.
 - **Evaluation Dataset Management:** Demonstrates how to work with structured evaluation datasets (`simple_calculator.json`) for consistent and reproducible testing.
@@ -54,7 +54,7 @@ uv pip install -e examples/evaluation_and_profiling/simple_calculator_eval
 Evaluate the Simple Calculator agent's accuracy against a test dataset:
 
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
+nat eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
 ```
 
 The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).

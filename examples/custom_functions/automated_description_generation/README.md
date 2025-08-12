@@ -125,7 +125,7 @@ from Wikipedia, but the agent may not know that because the description is inacc
 Let us explore the output of running the agent without an automated description generation tool:
 
 ```bash
-aiq run --config_file examples/custom_functions/automated_description_generation/configs/config_no_auto.yml --input "List 5 subspecies of Aardvark?"
+nat run --config_file examples/custom_functions/automated_description_generation/configs/config_no_auto.yml --input "List 5 subspecies of Aardvark?"
 ```
 
 **Expected Workflow Output**
@@ -208,7 +208,7 @@ Here, we're searching for information about Wikipedia in a collection using a to
 If we run the updated configuration, we see the following output:
 
 ```bash
-aiq run --config_file examples/custom_functions/automated_description_generation/configs/config.yml --input "List 5 subspecies of Aardvark?"
+nat run --config_file examples/custom_functions/automated_description_generation/configs/config.yml --input "List 5 subspecies of Aardvark?"
 ```
 
 **Expected Workflow Output**

@@ -35,7 +35,7 @@ graph TD
 See NeMo Agent toolkit [UI and Server](./../quick-start/launching-ui.md) guide for instructions on starting the NeMo Agent toolkit server.
 Sample Usage:
 ```bash
-aiq serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
+nat serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
 ```
 
 ## Evaluate Request and Response
