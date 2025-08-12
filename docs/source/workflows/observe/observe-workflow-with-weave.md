@@ -48,14 +48,14 @@ general:
     tracing:
       weave:
         _type: weave
-        project: "aiqtoolkit-demo"
+        project: "nat-demo"
 ```
 
 This setup enables logging trace data to W&B weave. The weave integration requires one parameter and one optional parameter:
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
-| `project` | The name of your W&B Weave project | `"aiqtoolkit-demo"` |
+| `project` | The name of your W&B Weave project | `"nat-demo"` |
 | `entity` (optional) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
 
 ### Step 4: Run Your Workflow
@@ -72,7 +72,7 @@ If it is your first time running the workflow, you will be prompted to login to 
 
 As the workflow runs, you will find a Weave URL (starting with a 🍩 emoji). Click on the URL to access your logged trace timeline.
 
-Note how the integration captures not only the `aiq` intermediate steps but also the underlying framework. This is because [Weave has integrations](https://weave-docs.wandb.ai/guides/integrations/) with many of your favorite frameworks.
+Note how the integration captures not only the `nat` intermediate steps but also the underlying framework. This is because [Weave has integrations](https://weave-docs.wandb.ai/guides/integrations/) with many of your favorite frameworks.
 
 ## Redacting Sensitive Data
 
@@ -93,7 +93,7 @@ general:
     tracing:
       weave:
         _type: weave
-        project: "aiqtoolkit-demo"
+        project: "nat-demo"
         redact_pii: true                    # Enable PII redaction
         redact_pii_fields:                  # Optional: specify which entity types to redact
           - EMAIL_ADDRESS

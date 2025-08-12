@@ -93,7 +93,7 @@ popd
 ```
 
 ## Customizing the Configuration Object
-Given that the purpose of this tool will be similar to that of the `webpage_query` tool, you can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/getting_started/simple_web_query/src/aiq_simple_web_query/register.py`:
+Given that the purpose of this tool will be similar to that of the `webpage_query` tool, you can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/getting_started/simple_web_query/src/nat_simple_web_query/register.py`:
 ```python
 class WebQueryToolConfig(FunctionBaseConfig, name="webpage_query"):
     webpage_url: str
@@ -131,7 +131,7 @@ async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builde
 ```
 
 
-Examining the `webquery_tool` function (`examples/getting_started/simple_web_query/src/aiq_simple_web_query/register.py`), you can observe that at the heart of the tool is the [`langchain_community.document_loaders.WebBaseLoader`](https://python.langchain.com/docs/integrations/document_loaders/web_base) class.
+Examining the `webquery_tool` function (`examples/getting_started/simple_web_query/src/nat_simple_web_query/register.py`), you can observe that at the heart of the tool is the [`langchain_community.document_loaders.WebBaseLoader`](https://python.langchain.com/docs/integrations/document_loaders/web_base) class.
 
 ```python
     loader = WebBaseLoader(config.webpage_url)
@@ -274,7 +274,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
 - **Entry Points**: This tells NeMo Agent toolkit where to find your workflow registration.
 
   ```toml
-  [project.entry-points.'aiq.components']
+  [project.entry-points.'nat.plugins']
   text_file_ingest = "text_file_ingest.register"
   ```
 

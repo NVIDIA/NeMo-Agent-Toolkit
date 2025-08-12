@@ -43,7 +43,7 @@ Create a new Python function with proper type hints, docstrings, and formatting 
 
 ### Cursor Rules Management
 
-**Cursor Rule file**: `.cursor/rules/cursor-rules.mdc`  
+**Cursor Rule file**: `.cursor/rules/cursor-rules.mdc`
 **Purpose**: Guidelines for creating and managing cursor rules themselves.
 
 **Prompt**:
@@ -63,7 +63,7 @@ Create a new Cursor rule for creating a new NeMo Agent workflow
 
 ### General Setup Guidelines
 
-**Cursor Rule file**: `.cursor/rules/aiq-setup/general.mdc`  
+**Cursor Rule file**: `.cursor/rules/nat-setup/general.mdc`
 **Purpose**: Guidance for NeMo Agent toolkit installation, setup, and environment configuration.
 
 **Prompt**:
@@ -83,7 +83,7 @@ Help me set up NeMo Agent toolkit development environment with all required depe
 
 ### NeMo Agent Toolkit Installation
 
-**Cursor Rule file**: `.cursor/rules/aiq-setup/aiq-toolkit-installation.mdc`  
+**Cursor Rule file**: `.cursor/rules/nat-setup/nat-toolkit-installation.mdc`
 **Purpose**: Detailed installation procedures and setup guidance.
 
 **Prompt**:
@@ -101,7 +101,7 @@ Install NeMo Agent toolkit with all plugins and verify the installation is worki
 
 ### General CLI Guidelines
 
-**Cursor Rule file**: `.cursor/rules/aiq-cli/general.mdc`  
+**Cursor Rule file**: `.cursor/rules/nat-cli/general.mdc`
 **Purpose**: Guidance for all NeMo Agent CLI commands, operations, and functionality.
 
 **Prompt**:
@@ -121,7 +121,7 @@ Show me how to use CLI commands to manage workflows
 
 ### NeMo Agent Workflow Commands
 
-**Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-workflow.mdc`  
+**Cursor Rule file**: `.cursor/rules/nat-cli/nat-workflow.mdc`
 **Purpose**: Creating, reinstalling, and deleting NeMo Agent workflows.
 
 **Prompt**:
@@ -137,7 +137,7 @@ Create a workflow named demo_workflow in examples directory with description "De
 
 ### NeMo Agent Run and Serve Commands
 
-**Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-run-serve.mdc`  
+**Cursor Rule file**: `.cursor/rules/nat-cli/nat-run-serve.mdc`
 **Purpose**: Running, serving, and executing NeMo Agent workflows.
 
 **Prompt**:
@@ -147,7 +147,7 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 
 
 
-**Related Documentation**: 
+**Related Documentation**:
 - [CLI Reference - Run Commands](./cli.md#run)
 - [Running Workflows](../workflows/run-workflows.md)
 
@@ -155,7 +155,7 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 
 ### NeMo Agent Evaluation Commands
 
-**Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-eval.mdc`  
+**Cursor Rule file**: `.cursor/rules/nat-cli/nat-eval.mdc`
 **Purpose**: Evaluating workflow performance and quality.
 
 **Prompt**:
@@ -163,7 +163,7 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 Evaluate my workflow performance using a test dataset with accuracy and precision metrics.
 ```
 
-**Related Documentation**: 
+**Related Documentation**:
 - [CLI Reference - Evaluation Commands](./cli.md#evaluation)
 - [Workflow Evaluation](../workflows/evaluate.md)
 
@@ -171,7 +171,7 @@ Evaluate my workflow performance using a test dataset with accuracy and precisio
 
 ### NeMo Agent Info Commands
 
-**Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-info.mdc`  
+**Cursor Rule file**: `.cursor/rules/nat-cli/nat-info.mdc`
 **Purpose**: Getting information about NeMo Agent components and system status.
 
 **Prompt**:
@@ -187,7 +187,7 @@ Show me system information and list all available NeMo Agent components with the
 
 ### General Workflow Guidelines
 
-**Cursor Rule file**: `.cursor/rules/aiq-workflows/general.mdc`
+**Cursor Rule file**: `.cursor/rules/nat-workflows/general.mdc`
 **Purpose**: Guidance for NeMo Agent workflows, functions, and tools.
 
 **Capabilities**:
@@ -196,7 +196,7 @@ Show me system information and list all available NeMo Agent components with the
 - Best practices for workflow design
 - Documentation references
 
-**Related Documentation**: 
+**Related Documentation**:
 - [Workflow Overview](../workflows/about/index.md)
 - [Functions Overview](../workflows/functions/index.md)
 
@@ -204,7 +204,7 @@ Show me system information and list all available NeMo Agent components with the
 
 ### Adding Functions to Workflows
 
-**Cursor Rule file**: `.cursor/rules/aiq-workflows/add-functions.mdc`  
+**Cursor Rule file**: `.cursor/rules/nat-workflows/add-functions.mdc`
 **Purpose**: Implementing, adding, creating, or modifying functions within NeMo Agent workflows.
 
 **Prompt**:
@@ -212,7 +212,7 @@ Show me system information and list all available NeMo Agent components with the
 Add a text processing function to my workflow that splits text into sentences and counts words.
 ```
 
-**Related Documentation**: 
+**Related Documentation**:
 - [Writing Custom Functions](../extend/functions.md)
 - [Functions Overview](../workflows/functions/index.md)
 
@@ -220,7 +220,7 @@ Add a text processing function to my workflow that splits text into sentences an
 
 ### Adding Tools to Workflows
 
-**Cursor Rule file**: `.cursor/rules/aiq-workflows/add-tools.mdc`  
+**Cursor Rule file**: `.cursor/rules/nat-workflows/add-tools.mdc`
 **Purpose**: Adding, integrating, implementing, or configuring tools for NeMo Agent workflows.
 
 **Prompt**:
@@ -236,7 +236,7 @@ Integrate a web search tool into my workflow that can fetch and process search r
 
 ### Agent Integration and Selection
 
-**Cursor Rule file**: `.cursor/rules/aiq-agents/general.mdc`  
+**Cursor Rule file**: `.cursor/rules/nat-agents/general.mdc`
 **Purpose**: Guidelines for integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within NeMo Agent workflows.
 
 **Prompt**:
@@ -255,17 +255,17 @@ Integrate ReAct agent to the workflow
 |---------------|---------|------------------|
 | Foundation | `general` | Code quality and standards |
 | Foundation | `cursor-rules` | Managing cursor rules |
-| Setup | `aiq-setup/general` | Environment setup |
-| Setup | `aiq-setup/aiq-toolkit-installation` | Installation procedures |
-| CLI | `aiq-cli/general` | General CLI usage |
-| CLI | `aiq-cli/aiq-workflow` | Workflow management |
-| CLI | `aiq-cli/aiq-run-serve` | Running and serving |
-| CLI | `aiq-cli/aiq-eval` | Performance evaluation |
-| CLI | `aiq-cli/aiq-info` | System information |
-| Workflow | `aiq-workflows/general` | Workflow design |
-| Workflow | `aiq-workflows/add-functions` | Function development |
-| Workflow | `aiq-workflows/add-tools` | Tool integration |
-| Agents | `aiq-agents/general` | Agent selection & integration |
+| Setup | `nat-setup/general` | Environment setup |
+| Setup | `nat-setup/nat-toolkit-installation` | Installation procedures |
+| CLI | `nat-cli/general` | General CLI usage |
+| CLI | `nat-cli/nat-workflow` | Workflow management |
+| CLI | `nat-cli/nat-run-serve` | Running and serving |
+| CLI | `nat-cli/nat-eval` | Performance evaluation |
+| CLI | `nat-cli/nat-info` | System information |
+| Workflow | `nat-workflows/general` | Workflow design |
+| Workflow | `nat-workflows/add-functions` | Function development |
+| Workflow | `nat-workflows/add-tools` | Tool integration |
+| Agents | `nat-agents/general` | Agent selection & integration |
 <!-- path-check-skip-end -->
 
 ## Usage Tips

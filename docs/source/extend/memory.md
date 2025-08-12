@@ -82,7 +82,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
            ...
    ```
 3. **Tell NeMo Agent toolkit how to build your MemoryEditor**. Typically, you do this by hooking into the builder system so that when `builder.get_memory_client("my_custom_memory")` is called, it returns an instance of `MyCustomMemoryEditor`.
-   - For example, you might define a `@register_memory` or do it manually with the global type registry. The standard pattern is to see how `mem0`, `redis` or `zep` memory is integrated in the code. For instance, see `packages/aiqtoolkit_mem0ai/src/aiq/plugins/mem0ai/memory.py` to see how `mem0_memory` is integrated.
+   - For example, you might define a `@register_memory` or do it manually with the global type registry. The standard pattern is to see how `mem0`, `redis` or `zep` memory is integrated in the code. For instance, see `packages/nvidia_nat_mem0ai/src/nat/plugins/mem0ai/memory.py` to see how `mem0_memory` is integrated.
 
 4. **Use in config**: Now in your NeMo Agent toolkit config, you can do something like:
    ```yaml
@@ -208,7 +208,7 @@ workflow:
 
 Explanation:
 
-- We define a memory entry named `saas_memory` with `_type: mem0_memory`, using the [Mem0](https://mem0.ai/) provider included in the [`aiqtoolkit-mem0ai`](https://pypi.org/project/aiqtoolkit-mem0ai/) plugin.
+- We define a memory entry named `saas_memory` with `_type: mem0_memory`, using the [Mem0](https://mem0.ai/) provider included in the [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) plugin.
 - Then we define two tools (functions in NeMo Agent toolkit terminology) that reference `saas_memory`: `add_memory` and `get_memory`.
 - Finally, the `agent_memory` workflow references these two tool names.
 
@@ -244,4 +244,4 @@ This modular design allows any developer to **plug in** a new memory backend—l
 
 ---
 
-**That's it!** You now know how to create, register, and use a **custom memory client** in NeMo Agent toolkit. Feel free to explore the existing memory clients in the `src/aiq/memory` directory for reference and see how they are integrated into the overall framework.
+**That's it!** You now know how to create, register, and use a **custom memory client** in NeMo Agent toolkit. Feel free to explore the existing memory clients in the `src/nat/memory` directory for reference and see how they are integrated into the overall framework.

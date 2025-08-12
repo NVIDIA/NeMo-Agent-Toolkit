@@ -115,6 +115,6 @@ print(result)
 In this example:
 - `config_file`: A string or {py:class}`~pathlib.Path` pointing to your workflow YAML file
 - `input_str`: A string containing the input for your workflow
-- The `workflow.run(input_str)` method returns an instance of {py:class}`~nat.runtime.runner.AIQRunner`
+- The `workflow.run(input_str)` method returns an instance of {py:class}`~nat.runtime.runner.Runner`
 
-For detailed information about the `AIQRunner` class and its capabilities, please refer to the Python API documentation for the {py:class}`~nat.runtime.runner.AIQRunner` class.
+For detailed information about the `Runner` class and its capabilities, please refer to the Python API documentation for the {py:class}`~nat.runtime.runner.Runner` class.

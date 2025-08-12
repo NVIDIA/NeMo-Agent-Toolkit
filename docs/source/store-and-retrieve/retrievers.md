@@ -62,10 +62,10 @@ retrievers:
 ```
 In this example the `uri`, `collection_name`, and `top_k` are specified, while the default values for `output_fields` and `timeout` are used, and the `nvidia_api_key` will be pulled from the `NVIDIA_API_KEY` environment variable.
 
-This configured retriever can then be used as an argument for a function which uses a retriever (such as the `aiq_retriever` function). The `aiq_retriever` function is a simple function to provide the configured retriever as an LLM tool. Its config is shown below
+This configured retriever can then be used as an argument for a function which uses a retriever (such as the `retriever_tool` function). The `retriever_tool` function is a simple function to provide the configured retriever as an LLM tool. Its config is shown below
 
 ```python
-class RetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
+class RetrieverConfig(FunctionBaseConfig, name="retriever_tool"):
     """
     Retriever tool which provides a common interface for different vectorstores. Its
     configuration uses clients, which are the vectorstore-specific implementaiton of the retriever interface.
@@ -79,7 +79,7 @@ class RetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
     description: str = Field(default=None, description="If present it will be used as the tool description")
 ```
 
-Here is an example configuration of an `aiq_retriever` function that uses a `nemo_retriever`:
+Here is an example configuration of an `retriever_tool` function that uses a `nemo_retriever`:
 ```yaml
 retrievers:
     my_retriever:
@@ -90,7 +90,7 @@ retrievers:
 
 functions:
     retriever_tool:
-        _type: aiq_retriever
+        _type: retriever_tool
         retriever: my_retriever
         topic: "NeMo Agent toolkit documentation"
 ```
@@ -103,7 +103,7 @@ Alternatively, you can use a retriever as a component in your own function, such
 async def my_function(config: MyFunctionConfig, builder: Builder):
 
     # Build a Retriever
-    aiq_retriever = await builder.get_retriever(config.retriever)
+    retriever_tool = await builder.get_retriever(config.retriever)
 
     # Build a langchain Retriever
     langchain_retriever = await builder.get_retriever(config.retriever, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

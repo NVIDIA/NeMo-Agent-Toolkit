@@ -40,18 +40,18 @@ The NeMo Agent toolkit uses a hierarchical structure for organizing Cursor rules
 .cursor/rules/
 ├── cursor-rules.mdc           # Meta-rules for creating Cursor rules
 ├── general.mdc                # Project-wide coding standards
-├── aiq-agents/                # Agent integration and selection rules
+├── nat-agents/                # Agent integration and selection rules
 │   └── general.mdc
-├── aiq-cli/                   # CLI command rules
+├── nat-cli/                   # CLI command rules
 │   ├── general.mdc
-│   ├── aiq-eval.mdc          # Evaluation commands
-│   ├── aiq-info.mdc          # Info commands
-│   ├── aiq-run-serve.mdc     # Run and serve commands
-│   └── aiq-workflow.mdc      # Workflow management commands
-├── aiq-setup/                 # Setup and installation rules
+│   ├── nat-eval.mdc          # Evaluation commands
+│   ├── nat-info.mdc          # Info commands
+│   ├── nat-run-serve.mdc     # Run and serve commands
+│   └── nat-workflow.mdc      # Workflow management commands
+├── nat-setup/                 # Setup and installation rules
 │   ├── general.mdc
-│   └── aiq-toolkit-installation.mdc
-└── aiq-workflows/             # Workflow development rules
+│   └── nat-toolkit-installation.mdc
+└── nat-workflows/             # Workflow development rules
     ├── general.mdc
     ├── add-functions.mdc      # Function creation and integration
     └── add-tools.mdc          # Tool integration
@@ -81,23 +81,23 @@ The general rules file (`general.mdc`) contains project-wide coding standards in
 
 Each subdirectory focuses on a specific area of the toolkit:
 
-#### `aiq-agents/`
+#### `nat-agents/`
 * **`general.mdc`**: Integration guidelines for ReAct, Tool-Calling, Reasoning, and ReWOO agents
 * Includes configuration parameters, selection criteria, and best practices
 * Contains decision matrix for choosing appropriate agent types
 
-#### `aiq-cli/`
+#### `nat-cli/`
 * **`general.mdc`**: Meta-rules referencing CLI documentation
-* **`aiq-eval.mdc`**: Detailed rules for workflow evaluation commands
-* **`aiq-info.mdc`**: System information and component querying rules
-* **`aiq-run-serve.mdc`**: Local execution and API serving guidelines
-* **`aiq-workflow.mdc`**: Workflow creation, installation, and deletion rules
+* **`nat-eval.mdc`**: Detailed rules for workflow evaluation commands
+* **`nat-info.mdc`**: System information and component querying rules
+* **`nat-run-serve.mdc`**: Local execution and API serving guidelines
+* **`nat-workflow.mdc`**: Workflow creation, installation, and deletion rules
 
-#### `aiq-setup/`
+#### `nat-setup/`
 * **`general.mdc`**: Environment setup and configuration guidance
-* **`aiq-toolkit-installation.mdc`**: Comprehensive installation procedures
+* **`nat-toolkit-installation.mdc`**: Comprehensive installation procedures
 
-#### `aiq-workflows/`
+#### `nat-workflows/`
 * **`general.mdc`**: High-level workflow architecture guidance
 * **`add-functions.mdc`**: Detailed function creation, registration, and composition rules
 * **`add-tools.mdc`**: Tool integration and configuration guidelines

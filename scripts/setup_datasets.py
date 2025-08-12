@@ -47,10 +47,10 @@ def cli():
               help="The IP address of the NFS server. Can also be set as the NFS_SERVER_IP environment variable.")
 def mount(nfs_server_ip):
     """
-    Mount the NFS share for aiq datasets.
+    Mount the NFS share for nat datasets.
     """
-    remote_path = f"{nfs_server_ip}:/public/datasets/aiq"
-    mount_point = "/mnt/nfs/aiq"
+    remote_path = f"{nfs_server_ip}:/public/datasets/nat"
+    mount_point = "/mnt/nfs/nat"
 
     # Install NFS common tools
     run_command("sudo apt -y update")
@@ -72,7 +72,7 @@ def unmount():
     """
     Unmount the NFS share from the mount point.
     """
-    mount_point = "/mnt/nfs/aiq"
+    mount_point = "/mnt/nfs/nat"
     run_command(f"sudo umount {mount_point}")
     print("NFS unmount completed successfully")
 

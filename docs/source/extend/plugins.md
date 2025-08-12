@@ -92,8 +92,8 @@ Determining which plugins are available in a given environment is done through t
 For example, the `nvidia-nat-langchain` distribution has the following entry point specified in the `pyproject.toml` file:
 
 ```toml
-[project.entry-points.'aiq.components']
-aiq_langchain = "aiq.plugins.langchain.register"
+[project.entry-points.'nat.plugins']
+nat_langchain = "nat.plugins.langchain.register"
 ```
 
 What this means is that when the `nvidia-nat-langchain` distribution is installed, the `nat.plugins.langchain.register` module will be imported when the entry point is loaded. This module must contain all the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
@@ -122,7 +122,7 @@ To register multiple plugins in a single distribution, there are two options:
    * For example, you could have two entry points in the `pyproject.toml` file:`
 
       ```toml
-      [project.entry-points.'aiq.components']
-      aiq_langchain = "aiq.plugins.langchain.register"
-      aiq_langchain_tools = "aiq.plugins.langchain.tools.register"
+      [project.entry-points.'nat.plugins']
+      nat_langchain = "nat.plugins.langchain.register"
+      nat_langchain_tools = "nat.plugins.langchain.tools.register"
       ```
