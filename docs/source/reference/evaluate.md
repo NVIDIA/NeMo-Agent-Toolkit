@@ -139,7 +139,7 @@ eval:
 ```
 
 ### Custom Dataset Format
-You can use a dataset of a custom format by providing a custom dataset parser function.
+You can use a dataset with a custom format by providing a custom dataset parser function.
 
 **Example:**
 `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-custom-dataset-format.yml`:
@@ -154,9 +154,12 @@ eval:
         difficulty: "medium"
         max_rows: 5
 ```
-This example configuration uses a custom dataset parser function to extract the nested questions from the example dataset, filter them by difficulty and return only the first five questions. The example dataset `simple_calculator_nested.json` is a nested JSON file with questions and answers.
+This example configuration uses a custom dataset parser function to:
+- extract the nested questions from the example dataset
+- filter them by difficulty
+- return only the first five questions
 
-The custom dataset parser function is a Python function that takes the dataset `file_path`, optional `kwargs` and returns an `EvalInput` object. Signature of the sample custom dataset parser function is as follows:
+The example dataset `simple_calculator_nested.json` is a nested JSON file with questions and answers. The custom dataset parser function is a Python function that takes the dataset `file_path`, optional `kwargs` and returns an `EvalInput` object. Signature of the sample custom dataset parser function is as follows:
 ```python
 def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
 ```
@@ -169,7 +172,7 @@ The custom dataset parser function should fill the following fields in the `Eval
 - `expected_output_obj`: This is the ground truth answer.
 - `full_dataset_entry`: This is the entire dataset entry and is passed as is to the evaluator.
 
-To run the evaluation, run the following command:
+To run the evaluation using the custom dataset parser, run the following command:
 ```bash
 aiq eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-custom-dataset-format.yml
 ```
