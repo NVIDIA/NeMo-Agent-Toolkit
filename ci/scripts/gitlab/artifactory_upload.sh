@@ -112,7 +112,7 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
                 RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
                 RELATIVE_PATH=$(echo "${RELATIVE_PATH}" | sed -e 's|^nvidia-nat/|aiqtoolkit/|')
                 ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
-"
+
                 echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
 
                 CI=true jf rt u --fail-no-op --url="${AIQ_ARTIFACTORY_URL}" \
