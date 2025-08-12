@@ -26,7 +26,7 @@ from pydantic import field_validator
 
 logger = logging.getLogger(__name__)
 
-_SPAN_PREFIX = os.getenv("NAT_SPAN_PREFIX", "nat")
+_SPAN_PREFIX = os.getenv("NAT_SPAN_PREFIX", "nat").strip() or "nat"
 
 
 class SpanKind(Enum):
