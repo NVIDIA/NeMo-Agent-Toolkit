@@ -228,323 +228,6 @@ wheels = [
 ]
 
 [[package]]
-name = "aiq-agno-personal-finance"
-source = { editable = "examples/frameworks/agno_personal_finance" }
-dependencies = [
-    { name = "litellm" },
-    { name = "nvidia-nat", extra = ["agno"] },
-    { name = "openai" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "litellm", specifier = "~=1.63.14" },
-    { name = "nvidia-nat", extras = ["agno"], editable = "." },
-    { name = "openai", specifier = "~=1.66" },
-]
-
-[[package]]
-name = "aiq-alert-triage-agent"
-source = { editable = "examples/advanced_agents/alert_triage_agent" }
-dependencies = [
-    { name = "ansible-runner" },
-    { name = "flask" },
-    { name = "langchain-core" },
-    { name = "langgraph" },
-    { name = "nvidia-nat", extra = ["langchain"] },
-    { name = "pandas" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "ansible-runner", specifier = ">=2.3.0" },
-    { name = "flask", specifier = ">=3.0.0" },
-    { name = "langchain-core" },
-    { name = "langgraph", specifier = ">=0.0.10" },
-    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
-    { name = "pandas", specifier = ">=2.0.0" },
-]
-
-[[package]]
-name = "aiq-automated-description-generation"
-source = { editable = "examples/custom_functions/automated_description_generation" }
-dependencies = [
-    { name = "nvidia-nat", extra = ["ingestion", "langchain"] },
-]
-
-[package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["ingestion", "langchain"], editable = "." }]
-
-[[package]]
-name = "aiq-email-phishing-analyzer"
-source = { editable = "examples/evaluation_and_profiling/email_phishing_analyzer" }
-dependencies = [
-    { name = "arize-phoenix" },
-    { name = "bs4" },
-    { name = "networkx" },
-    { name = "nvidia-nat", extra = ["langchain"] },
-    { name = "openinference-instrumentation-langchain" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "arize-phoenix", specifier = "==6.1.*" },
-    { name = "bs4", specifier = "==0.0.2" },
-    { name = "networkx", specifier = "~=3.4" },
-    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
-    { name = "openinference-instrumentation-langchain", specifier = "==0.1.29" },
-]
-
-[[package]]
-name = "aiq-multi-frameworks"
-source = { editable = "examples/frameworks/multi_frameworks" }
-dependencies = [
-    { name = "arxiv" },
-    { name = "bs4" },
-    { name = "markdown-it-py" },
-    { name = "nvidia-haystack" },
-    { name = "nvidia-nat", extra = ["langchain", "llama-index"] },
-    { name = "openai" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "arxiv", specifier = "~=2.1.3" },
-    { name = "bs4", specifier = "==0.0.2" },
-    { name = "markdown-it-py", specifier = "~=3.0" },
-    { name = "nvidia-haystack", specifier = "==0.1.2" },
-    { name = "nvidia-nat", extras = ["langchain", "llama-index"], editable = "." },
-    { name = "openai", specifier = "~=1.78.0" },
-]
-
-[[package]]
-name = "aiq-plot-charts"
-source = { editable = "examples/custom_functions/plot_charts" }
-dependencies = [
-    { name = "matplotlib" },
-    { name = "nvidia-nat", extra = ["langchain"] },
-    { name = "seaborn" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "matplotlib", specifier = "==3.9.*" },
-    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
-    { name = "seaborn", specifier = "==0.13.*" },
-]
-
-[[package]]
-name = "aiq-por-to-jiratickets"
-source = { editable = "examples/HITL/por_to_jiratickets" }
-dependencies = [
-    { name = "nvidia-nat", extra = ["langchain"] },
-]
-
-[package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
-
-[[package]]
-name = "aiq-profiler-agent"
-source = { editable = "examples/advanced_agents/profiler_agent" }
-dependencies = [
-    { name = "nvidia-nat", extra = ["langchain", "profiling", "telemetry"] },
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "nvidia-nat", extras = ["langchain", "profiling", "telemetry"], editable = "." },
-    { name = "pydantic", specifier = "~=2.10.0,<2.11.0" },
-]
-
-[[package]]
-name = "aiq-redact-pii"
-source = { editable = "examples/observability/redact_pii" }
-dependencies = [
-    { name = "nvidia-nat", extra = ["weave"] },
-]
-
-[package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["weave"], editable = "." }]
-
-[[package]]
-name = "aiq-semantic-kernel-demo"
-source = { editable = "examples/frameworks/semantic_kernel_demo" }
-dependencies = [
-    { name = "faiss-cpu" },
-    { name = "nvidia-nat", extra = ["langchain", "mem0ai", "semantic-kernel"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "faiss-cpu", specifier = "==1.9.0" },
-    { name = "nvidia-nat", extras = ["langchain", "mem0ai", "semantic-kernel"], editable = "." },
-]
-
-[[package]]
-name = "aiq-simple-auth"
-source = { editable = "examples/front_ends/simple_auth" }
-dependencies = [
-    { name = "httpx" },
-    { name = "nvidia-nat", extra = ["langchain"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx" },
-    { name = "nvidia-nat", editable = "." },
-    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
-]
-
-[[package]]
-name = "aiq-simple-calculator"
-source = { editable = "examples/getting_started/simple_calculator" }
-dependencies = [
-    { name = "nvidia-nat", extra = ["langchain"] },
-]
-
-[package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
-
-[[package]]
-name = "aiq-simple-calculator-custom-routes"
-source = { editable = "examples/front_ends/simple_calculator_custom_routes" }
-dependencies = [
-    { name = "aiq-simple-calculator" },
-    { name = "nvidia-nat", extra = ["langchain"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
-]
-
-[[package]]
-name = "aiq-simple-calculator-eval"
-source = { editable = "examples/evaluation_and_profiling/simple_calculator_eval" }
-dependencies = [
-    { name = "aiq-simple-calculator" },
-    { name = "nvidia-nat", extra = ["langchain"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
-]
-
-[[package]]
-name = "aiq-simple-calculator-hitl"
-source = { editable = "examples/HITL/simple_calculator_hitl" }
-dependencies = [
-    { name = "aiq-por-to-jiratickets" },
-    { name = "aiq-simple-calculator" },
-    { name = "nvidia-nat", extra = ["langchain"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiq-por-to-jiratickets" },
-    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
-]
-
-[[package]]
-name = "aiq-simple-calculator-mcp"
-source = { editable = "examples/MCP/simple_calculator_mcp" }
-dependencies = [
-    { name = "aiq-simple-calculator" },
-    { name = "nvidia-nat", extra = ["langchain"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
-]
-
-[[package]]
-name = "aiq-simple-calculator-observability"
-source = { editable = "examples/observability/simple_calculator_observability" }
-dependencies = [
-    { name = "aiq-simple-calculator" },
-    { name = "nvidia-nat", extra = ["langchain", "telemetry"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["langchain", "telemetry"], editable = "." },
-]
-
-[[package]]
-name = "aiq-simple-rag"
-source = { editable = "examples/RAG/simple_rag" }
-dependencies = [
-    { name = "nvidia-nat", extra = ["ingestion", "langchain", "mem0ai"] },
-]
-
-[package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["ingestion", "langchain", "mem0ai"], editable = "." }]
-
-[[package]]
-name = "aiq-simple-web-query"
-source = { editable = "examples/getting_started/simple_web_query" }
-dependencies = [
-    { name = "faiss-cpu" },
-    { name = "nvidia-nat", extra = ["langchain", "telemetry"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "faiss-cpu", specifier = "==1.9.0" },
-    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
-    { name = "nvidia-nat", extras = ["telemetry"], editable = "." },
-]
-
-[[package]]
-name = "aiq-simple-web-query-eval"
-source = { editable = "examples/evaluation_and_profiling/simple_web_query_eval" }
-dependencies = [
-    { name = "aiq-simple-web-query" },
-    { name = "nvidia-nat", extra = ["langchain", "profiling"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiq-simple-web-query", editable = "examples/getting_started/simple_web_query" },
-    { name = "nvidia-nat", extras = ["langchain", "profiling"], editable = "." },
-]
-
-[[package]]
-name = "aiq-swe-bench"
-source = { editable = "examples/evaluation_and_profiling/swe_bench" }
-dependencies = [
-    { name = "nvidia-nat", extra = ["langchain"] },
-    { name = "swebench" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
-    { name = "swebench", specifier = "==3.0.3" },
-]
-
-[[package]]
-name = "aiq-user-report"
-source = { editable = "examples/object_store/user_report" }
-dependencies = [
-    { name = "nvidia-nat", extra = ["mysql", "s3"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "nvidia-nat", extras = ["mysql"], editable = "." },
-    { name = "nvidia-nat", extras = ["s3"], editable = "." },
-]
-
-[[package]]
 name = "alabaster"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3702,6 +3385,322 @@ wheels = [
 ]
 
 [[package]]
+name = "nat-agno-personal-finance"
+source = { editable = "examples/frameworks/agno_personal_finance" }
+dependencies = [
+    { name = "litellm" },
+    { name = "nvidia-nat", extra = ["agno"] },
+    { name = "openai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "litellm", specifier = "~=1.63.14" },
+    { name = "nvidia-nat", extras = ["agno"], editable = "." },
+    { name = "openai", specifier = "~=1.66" },
+]
+
+[[package]]
+name = "nat-alert-triage-agent"
+source = { editable = "examples/advanced_agents/alert_triage_agent" }
+dependencies = [
+    { name = "ansible-runner" },
+    { name = "flask" },
+    { name = "langchain-core" },
+    { name = "langgraph" },
+    { name = "nvidia-nat", extra = ["langchain"] },
+    { name = "pandas" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ansible-runner", specifier = ">=2.3.0" },
+    { name = "flask", specifier = ">=3.0.0" },
+    { name = "langchain-core" },
+    { name = "langgraph", specifier = ">=0.0.10" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "pandas", specifier = ">=2.0.0" },
+]
+
+[[package]]
+name = "nat-automated-description-generation"
+source = { editable = "examples/custom_functions/automated_description_generation" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["ingestion", "langchain"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["ingestion", "langchain"], editable = "." }]
+
+[[package]]
+name = "nat-email-phishing-analyzer"
+source = { editable = "examples/evaluation_and_profiling/email_phishing_analyzer" }
+dependencies = [
+    { name = "arize-phoenix" },
+    { name = "bs4" },
+    { name = "networkx" },
+    { name = "nvidia-nat", extra = ["langchain"] },
+    { name = "openinference-instrumentation-langchain" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "arize-phoenix", specifier = "==6.1.*" },
+    { name = "bs4", specifier = "==0.0.2" },
+    { name = "networkx", specifier = "~=3.4" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "openinference-instrumentation-langchain", specifier = "==0.1.29" },
+]
+
+[[package]]
+name = "nat-multi-frameworks"
+source = { editable = "examples/frameworks/multi_frameworks" }
+dependencies = [
+    { name = "arxiv" },
+    { name = "bs4" },
+    { name = "markdown-it-py" },
+    { name = "nvidia-haystack" },
+    { name = "nvidia-nat", extra = ["langchain", "llama-index"] },
+    { name = "openai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "arxiv", specifier = "~=2.1.3" },
+    { name = "bs4", specifier = "==0.0.2" },
+    { name = "markdown-it-py", specifier = "~=3.0" },
+    { name = "nvidia-haystack", specifier = "==0.1.2" },
+    { name = "nvidia-nat", extras = ["langchain", "llama-index"], editable = "." },
+    { name = "openai", specifier = "~=1.78.0" },
+]
+
+[[package]]
+name = "nat-plot-charts"
+source = { editable = "examples/custom_functions/plot_charts" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "nvidia-nat", extra = ["langchain"] },
+    { name = "seaborn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "matplotlib", specifier = "==3.9.*" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "seaborn", specifier = "==0.13.*" },
+]
+
+[[package]]
+name = "nat-por-to-jiratickets"
+source = { editable = "examples/HITL/por_to_jiratickets" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
+
+[[package]]
+name = "nat-profiler-agent"
+source = { editable = "examples/advanced_agents/profiler_agent" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain", "profiling", "telemetry"] },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", extras = ["langchain", "profiling", "telemetry"], editable = "." },
+    { name = "pydantic", specifier = "~=2.10.0,<2.11.0" },
+]
+
+[[package]]
+name = "nat-redact-pii"
+source = { editable = "examples/observability/redact_pii" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["weave"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["weave"], editable = "." }]
+
+[[package]]
+name = "nat-semantic-kernel-demo"
+source = { editable = "examples/frameworks/semantic_kernel_demo" }
+dependencies = [
+    { name = "faiss-cpu" },
+    { name = "nvidia-nat", extra = ["langchain", "mem0ai", "semantic-kernel"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "faiss-cpu", specifier = "==1.9.0" },
+    { name = "nvidia-nat", extras = ["langchain", "mem0ai", "semantic-kernel"], editable = "." },
+]
+
+[[package]]
+name = "nat-simple-auth"
+source = { editable = "examples/front_ends/simple_auth" }
+dependencies = [
+    { name = "httpx" },
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+]
+
+[[package]]
+name = "nat-simple-calculator"
+source = { editable = "examples/getting_started/simple_calculator" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
+
+[[package]]
+name = "nat-simple-calculator-custom-routes"
+source = { editable = "examples/front_ends/simple_calculator_custom_routes" }
+dependencies = [
+    { name = "nat-simple-calculator" },
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+]
+
+[[package]]
+name = "nat-simple-calculator-eval"
+source = { editable = "examples/evaluation_and_profiling/simple_calculator_eval" }
+dependencies = [
+    { name = "nat-simple-calculator" },
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+]
+
+[[package]]
+name = "nat-simple-calculator-hitl"
+source = { editable = "examples/HITL/simple_calculator_hitl" }
+dependencies = [
+    { name = "nat-por-to-jiratickets" },
+    { name = "nat-simple-calculator" },
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-por-to-jiratickets" },
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+]
+
+[[package]]
+name = "nat-simple-calculator-mcp"
+source = { editable = "examples/MCP/simple_calculator_mcp" }
+dependencies = [
+    { name = "nat-simple-calculator" },
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+]
+
+[[package]]
+name = "nat-simple-calculator-observability"
+source = { editable = "examples/observability/simple_calculator_observability" }
+dependencies = [
+    { name = "nat-simple-calculator" },
+    { name = "nvidia-nat", extra = ["langchain", "telemetry"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+    { name = "nvidia-nat", extras = ["langchain", "telemetry"], editable = "." },
+]
+
+[[package]]
+name = "nat-simple-rag"
+source = { editable = "examples/RAG/simple_rag" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["ingestion", "langchain", "mem0ai"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["ingestion", "langchain", "mem0ai"], editable = "." }]
+
+[[package]]
+name = "nat-simple-web-query"
+source = { editable = "examples/getting_started/simple_web_query" }
+dependencies = [
+    { name = "faiss-cpu" },
+    { name = "nvidia-nat", extra = ["langchain", "telemetry"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "faiss-cpu", specifier = "==1.9.0" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["telemetry"], editable = "." },
+]
+
+[[package]]
+name = "nat-simple-web-query-eval"
+source = { editable = "examples/evaluation_and_profiling/simple_web_query_eval" }
+dependencies = [
+    { name = "nat-simple-web-query" },
+    { name = "nvidia-nat", extra = ["langchain", "profiling"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-simple-web-query", editable = "examples/getting_started/simple_web_query" },
+    { name = "nvidia-nat", extras = ["langchain", "profiling"], editable = "." },
+]
+
+[[package]]
+name = "nat-swe-bench"
+source = { editable = "examples/evaluation_and_profiling/swe_bench" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain"] },
+    { name = "swebench" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "swebench", specifier = "==3.0.3" },
+]
+
+[[package]]
+name = "nat-user-report"
+source = { editable = "examples/object_store/user_report" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["mysql", "s3"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", extras = ["mysql"], editable = "." },
+    { name = "nvidia-nat", extras = ["s3"], editable = "." },
+]
+
+[[package]]
 name = "nbclient"
 version = "0.10.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3908,28 +3907,28 @@ crewai = [
     { name = "nvidia-nat-crewai" },
 ]
 examples = [
-    { name = "aiq-agno-personal-finance" },
-    { name = "aiq-alert-triage-agent" },
-    { name = "aiq-automated-description-generation" },
-    { name = "aiq-email-phishing-analyzer" },
-    { name = "aiq-multi-frameworks" },
-    { name = "aiq-plot-charts" },
-    { name = "aiq-por-to-jiratickets" },
-    { name = "aiq-profiler-agent" },
-    { name = "aiq-redact-pii" },
-    { name = "aiq-semantic-kernel-demo" },
-    { name = "aiq-simple-auth" },
-    { name = "aiq-simple-calculator" },
-    { name = "aiq-simple-calculator-custom-routes" },
-    { name = "aiq-simple-calculator-eval" },
-    { name = "aiq-simple-calculator-hitl" },
-    { name = "aiq-simple-calculator-mcp" },
-    { name = "aiq-simple-calculator-observability" },
-    { name = "aiq-simple-rag" },
-    { name = "aiq-simple-web-query" },
-    { name = "aiq-simple-web-query-eval" },
-    { name = "aiq-swe-bench" },
-    { name = "aiq-user-report" },
+    { name = "nat-agno-personal-finance" },
+    { name = "nat-alert-triage-agent" },
+    { name = "nat-automated-description-generation" },
+    { name = "nat-email-phishing-analyzer" },
+    { name = "nat-multi-frameworks" },
+    { name = "nat-plot-charts" },
+    { name = "nat-por-to-jiratickets" },
+    { name = "nat-profiler-agent" },
+    { name = "nat-redact-pii" },
+    { name = "nat-semantic-kernel-demo" },
+    { name = "nat-simple-auth" },
+    { name = "nat-simple-calculator" },
+    { name = "nat-simple-calculator-custom-routes" },
+    { name = "nat-simple-calculator-eval" },
+    { name = "nat-simple-calculator-hitl" },
+    { name = "nat-simple-calculator-mcp" },
+    { name = "nat-simple-calculator-observability" },
+    { name = "nat-simple-rag" },
+    { name = "nat-simple-web-query" },
+    { name = "nat-simple-web-query-eval" },
+    { name = "nat-swe-bench" },
+    { name = "nat-user-report" },
 ]
 gunicorn = [
     { name = "gunicorn" },
@@ -4023,28 +4022,6 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "aioboto3", specifier = ">=11.0.0" },
-    { name = "aiq-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/frameworks/agno_personal_finance" },
-    { name = "aiq-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
-    { name = "aiq-automated-description-generation", marker = "extra == 'examples'", editable = "examples/custom_functions/automated_description_generation" },
-    { name = "aiq-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
-    { name = "aiq-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
-    { name = "aiq-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
-    { name = "aiq-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
-    { name = "aiq-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
-    { name = "aiq-redact-pii", marker = "extra == 'examples'", editable = "examples/observability/redact_pii" },
-    { name = "aiq-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
-    { name = "aiq-simple-auth", marker = "extra == 'examples'", editable = "examples/front_ends/simple_auth" },
-    { name = "aiq-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_calculator" },
-    { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/front_ends/simple_calculator_custom_routes" },
-    { name = "aiq-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_calculator_eval" },
-    { name = "aiq-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/HITL/simple_calculator_hitl" },
-    { name = "aiq-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_mcp" },
-    { name = "aiq-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/observability/simple_calculator_observability" },
-    { name = "aiq-simple-rag", marker = "extra == 'examples'", editable = "examples/RAG/simple_rag" },
-    { name = "aiq-simple-web-query", marker = "extra == 'examples'", editable = "examples/getting_started/simple_web_query" },
-    { name = "aiq-simple-web-query-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_web_query_eval" },
-    { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/swe_bench" },
-    { name = "aiq-user-report", marker = "extra == 'examples'", editable = "examples/object_store/user_report" },
     { name = "authlib", specifier = "~=1.3.1" },
     { name = "click", specifier = "~=8.1" },
     { name = "colorama", specifier = "~=0.4.6" },
@@ -4058,6 +4035,28 @@ requires-dist = [
     { name = "lxml", marker = "extra == 'ingestion'", specifier = "~=5.4" },
     { name = "matplotlib", marker = "extra == 'profiling'", specifier = "~=3.9" },
     { name = "mcp", specifier = "~=1.10" },
+    { name = "nat-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/frameworks/agno_personal_finance" },
+    { name = "nat-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
+    { name = "nat-automated-description-generation", marker = "extra == 'examples'", editable = "examples/custom_functions/automated_description_generation" },
+    { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
+    { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
+    { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
+    { name = "nat-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
+    { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
+    { name = "nat-redact-pii", marker = "extra == 'examples'", editable = "examples/observability/redact_pii" },
+    { name = "nat-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
+    { name = "nat-simple-auth", marker = "extra == 'examples'", editable = "examples/front_ends/simple_auth" },
+    { name = "nat-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_calculator" },
+    { name = "nat-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/front_ends/simple_calculator_custom_routes" },
+    { name = "nat-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_calculator_eval" },
+    { name = "nat-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/HITL/simple_calculator_hitl" },
+    { name = "nat-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_mcp" },
+    { name = "nat-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/observability/simple_calculator_observability" },
+    { name = "nat-simple-rag", marker = "extra == 'examples'", editable = "examples/RAG/simple_rag" },
+    { name = "nat-simple-web-query", marker = "extra == 'examples'", editable = "examples/getting_started/simple_web_query" },
+    { name = "nat-simple-web-query-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_web_query_eval" },
+    { name = "nat-swe-bench", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/swe_bench" },
+    { name = "nat-user-report", marker = "extra == 'examples'", editable = "examples/object_store/user_report" },
     { name = "networkx", specifier = "~=3.4" },
     { name = "numpy", specifier = "~=1.26" },
     { name = "nvidia-nat-agno", marker = "extra == 'agno'", editable = "packages/nvidia_nat_agno" },
@@ -4128,7 +4127,7 @@ docs = [
     { name = "sphinx-autoapi", specifier = ">=3.6" },
     { name = "sphinx-copybutton", specifier = ">=0.5" },
     { name = "sphinx-mermaid" },
-    { name = "vale", specifier = "==3.9.5" },
+    { name = "vale", specifier = "~=3.12" },
 ]
 
 [[package]]
@@ -7242,11 +7241,11 @@ wheels = [
 
 [[package]]
 name = "vale"
-version = "3.9.5.0"
+version = "3.12.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a6/3d/6e368803c08fcd3738e8cc5b33ccf89775c8900a60ce64bdfc67054b59cc/vale-3.9.5.0.tar.gz", hash = "sha256:417efe1721d172311a214ad5ec2a63f54d889c9ddcdac6be38f284c0e264181c", size = 5305, upload-time = "2025-02-08T13:21:15.732Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/48/09/0254ecbf8847a3b926e77284568ce30bcb3485dc5b065f7ec3f7eb61afa5/vale-3.12.0.0.tar.gz", hash = "sha256:26bf05326e8fbc878edb782fc9ecee87b826395ba00c066d91ef87a4ed6a6fed", size = 5311, upload-time = "2025-06-10T08:57:28.246Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/68/1dcdd3f4ebfdd2b2fb19a3a472411c188d78559d5e4d4ce4e236e7124aa3/vale-3.9.5.0-py3-none-any.whl", hash = "sha256:b19082fcd71bb6e27e4127c8756d65999bbcd79b180631d51493620ca5b8f84f", size = 5854, upload-time = "2025-02-08T13:21:14.431Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/e5/bbd5a55e50b75de4f3b98b91262191004ba069f8ec2fd36e8bd066177de8/vale-3.12.0.0-py3-none-any.whl", hash = "sha256:bb5f0907bfdbb61e3a11097d4e2b771b2796be2c4af94a45b09f74db39c50d30", size = 5904, upload-time = "2025-06-10T08:57:26.276Z" },
 ]
 
 [[package]]

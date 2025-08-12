@@ -67,7 +67,7 @@ general:
 ```
 
 ### Complete Metadata Access Example
-Get the instance of the `aiq.builder.context.Context` object using the `aiq.builder.context.Context.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `src/aiq/tool/server_tools.py`.
+Get the instance of the `nat.builder.context.Context` object using the `nat.builder.context.Context.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `src/nat/tool/server_tools.py`.
 
 ```python
 @register_function(config_type=RequestAttributesTool)
@@ -78,7 +78,7 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
 
     async def _get_request_attributes(unused: str) -> str:
 
-        from aiq.builder.context import Context
+        from nat.builder.context import Context
         aiq_context = Context.get()
 
         method: str | None = aiq_context.metadata.method

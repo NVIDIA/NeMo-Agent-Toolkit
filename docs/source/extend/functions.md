@@ -40,7 +40,7 @@ Functions can be created in several ways:
     )
     ```
 
-* **By deriving from the {py:class}`~aiq.builder.function.Function` class**:
+* **By deriving from the {py:class}`~nat.builder.function.Function` class**:
 
     ```python
     class MyCustomFunction(Function[MyInput, MyStreamingOutput, MySingleOutput]):
@@ -68,7 +68,7 @@ Both of these methods will result in a function that can be used in the same way
 
 ### Function Configuration Object
 
-To use a function from a configuration file, it must be registered with NeMo Agent toolkit. Registering a function is done with the {py:deco}`aiq.cli.register_workflow.register_function` decorator. More information about registering components can be found in the [Plugin System](../extend/plugins.md) documentation.
+To use a function from a configuration file, it must be registered with NeMo Agent toolkit. Registering a function is done with the {py:deco}`nat.cli.register_workflow.register_function` decorator. More information about registering components can be found in the [Plugin System](../extend/plugins.md) documentation.
 
 When registering a function, we first need to define the function configuration object. This object is used to configure the function and is passed to the function when it is invoked. Any options that are available to the function must be specified in the configuration object.
 
@@ -82,7 +82,7 @@ class MyFunctionConfig(FunctionBaseConfig, name="my_function"):
     option3: dict[str, float]
 ```
 
-The configuration object must inherit from {py:class}`~aiq.data_models.function.FunctionBaseConfig` and must have a `name` attribute. The `name` attribute is used to identify the function in the configuration file.
+The configuration object must inherit from {py:class}`~nat.data_models.function.FunctionBaseConfig` and must have a `name` attribute. The `name` attribute is used to identify the function in the configuration file.
 
 Additionally, the configuration object can use Pydantic's features to provide validation and documentation for each of the options. For example, the following configuration will validate that `option2` is a positive integer, and documents all properties with a description and default value.
 
@@ -101,7 +101,7 @@ This additional metadata will ensure that the configuration object is properly v
 
 With the configuration object defined, there are several options available to register the function:
 
-* **Register a function from a callable using {py:class}`~aiq.builder.function_info.FunctionInfo`**:
+* **Register a function from a callable using {py:class}`~nat.builder.function_info.FunctionInfo`**:
 
     ```python
     @register_function(config_type=MyFunctionConfig)
@@ -144,7 +144,7 @@ With the configuration object defined, there are several options available to re
 
     This is functionally equivalent to the first example but is more concise, pulling the description from the docstring.
 
-* **Register a function derived from {py:class}`~aiq.builder.function.Function`**:
+* **Register a function derived from {py:class}`~nat.builder.function.Function`**:
 
     This method is useful when you need to create a function that is more complex than a simple coroutine. For example, you may need to create a function which derives from another function, or one that needs to share state between invocations. In this case, you can create the function instance directly in the register function and yield it.
 
@@ -194,7 +194,7 @@ With the configuration object defined, there are several options available to re
 
 ## Initialization and Cleanup
 
-Its required to use an async context manager coroutine to register a function (it's not necessary to use `@asynccontextmanager`, since {py:deco}`aiq.cli.register_workflow.register_function` does this for you). This is because the function may need to execute some initialization before construction or cleanup after it is used. For example, if the function needs to load a model, connect to a resource, or download data, this can be done in the register function.
+Its required to use an async context manager coroutine to register a function (it's not necessary to use `@asynccontextmanager`, since {py:deco}`nat.cli.register_workflow.register_function` does this for you). This is because the function may need to execute some initialization before construction or cleanup after it is used. For example, if the function needs to load a model, connect to a resource, or download data, this can be done in the register function.
 
 ```python
 @register_function(config_type=MyFunctionConfig)
@@ -230,7 +230,7 @@ Functions can have any input and output types but are restricted to a single inp
 ### Input Type
 
 The input type is determined in one of two ways:
-- When deriving from {py:class}`~aiq.builder.function.Function`, the input type is specified as a generic parameter.
+- When deriving from {py:class}`~nat.builder.function.Function`, the input type is specified as a generic parameter.
 - When creating a function from a callable, the input type is inferred from the callable's signature.
   - If the callable is not annotated with types, an error will be raised.
 
@@ -261,12 +261,12 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
 
 Functions can have two different output types:
 - A single output type
-  - When the function is invoked with the {py:meth}`~aiq.builder.function.Function.ainvoke` method
+  - When the function is invoked with the {py:meth}`~nat.builder.function.Function.ainvoke` method
 - A streaming output type
-  - When the function is invoked with the {py:meth}`~aiq.builder.function.Function.astream` method
+  - When the function is invoked with the {py:meth}`~nat.builder.function.Function.astream` method
 
 The output types are determined in one of two ways (identical to the input types):
-- When deriving from {py:class}`~aiq.builder.function.Function`, the output types are specified as generic parameters.
+- When deriving from {py:class}`~nat.builder.function.Function`, the output types are specified as generic parameters.
 - When creating from a callable, the output types are determined from the callable's signature.
   - If the callable is not annotated with types, an error will be raised.
 
@@ -296,7 +296,7 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
 
 ### Functions with Multiple Arguments
 
-It is possible to create a function with a callable that has multiple arguments. When a function with multiple arguments is passed to {py:meth}`~aiq.builder.function_info.FunctionInfo.from_fn`, the function will be wrapped with a lambda function which takes a single argument and passes it to the original function. For example, the following function takes two arguments, `input_data` and `repeat`:
+It is possible to create a function with a callable that has multiple arguments. When a function with multiple arguments is passed to {py:meth}`~nat.builder.function_info.FunctionInfo.from_fn`, the function will be wrapped with a lambda function which takes a single argument and passes it to the original function. For example, the following function takes two arguments, `input_data` and `repeat`:
 
 ```python
 async def multi_arg_function(input_data: list[float], repeat: int) -> list[float]:
@@ -317,7 +317,7 @@ class MultiArgFunctionInput(BaseModel):
     repeat: int
 ```
 
-To invoke the function, input can be passed as a dictionary to the {py:meth}`~aiq.builder.function.Function.ainvoke` method as shown below:
+To invoke the function, input can be passed as a dictionary to the {py:meth}`~nat.builder.function.Function.ainvoke` method as shown below:
 
 ```python
 result = await function.ainvoke({"input_data": [1, 2, 3], "repeat": 2})
@@ -325,7 +325,7 @@ result = await function.ainvoke({"input_data": [1, 2, 3], "repeat": 2})
 
 ### Supporting Streaming and Single Outputs Simultaneously
 
-It is possible to create a function that supports both streaming and single outputs. When deriving from {py:class}`~aiq.builder.function.Function` implement both {py:meth}`~aiq.builder.function.Function._ainvoke` and {py:meth}`~aiq.builder.function.Function._astream` methods. For example, the following function has a single output type of `MySingleOutput`, and a streaming output type of `MyStreamingOutput`:
+It is possible to create a function that supports both streaming and single outputs. When deriving from {py:class}`~nat.builder.function.Function` implement both {py:meth}`~nat.builder.function.Function._ainvoke` and {py:meth}`~nat.builder.function.Function._astream` methods. For example, the following function has a single output type of `MySingleOutput`, and a streaming output type of `MyStreamingOutput`:
 
 ```python
 class MyFunction(Function[MyInput, MySingleOutput, MyStreamingOutput]):
@@ -338,7 +338,7 @@ class MyFunction(Function[MyInput, MySingleOutput, MyStreamingOutput]):
             yield MyStreamingOutput(value, i)
 ```
 
-Similarly this can be accomplished using {py:meth}`~aiq.builder.function_info.FunctionInfo.create` which is a more verbose version of {py:meth}`~aiq.builder.function_info.FunctionInfo.from_fn`.
+Similarly this can be accomplished using {py:meth}`~nat.builder.function_info.FunctionInfo.create` which is a more verbose version of {py:meth}`~nat.builder.function_info.FunctionInfo.from_fn`.
 
 ```python
 async def my_ainvoke(self, value: MyInput) -> MySingleOutput:
@@ -358,7 +358,7 @@ assert function_info.single_output_type == MySingleOutput
 assert function_info.stream_output_type == MyStreamingOutput
 ```
 
-Finally, when using {py:meth}`~aiq.builder.function_info.FunctionInfo.create` a conversion function can be provided to convert the single output to a streaming output, and a streaming output into a single output. This is useful when converting between streaming and single outputs is trivial and defining both methods would be overkill. For example, the following function converts a streaming output to a single output by joining the items with a comma:
+Finally, when using {py:meth}`~nat.builder.function_info.FunctionInfo.create` a conversion function can be provided to convert the single output to a streaming output, and a streaming output into a single output. This is useful when converting between streaming and single outputs is trivial and defining both methods would be overkill. For example, the following function converts a streaming output to a single output by joining the items with a comma:
 
 ```python
 # Define a conversion function to convert a streaming output to a single output
@@ -412,7 +412,7 @@ Output schemas can also be overridden in a similar manner but for different purp
 
 ## Instantiating Functions
 
-Once a function is registered, it can be instantiated using the {py:class}`~aiq.builder.workflow_builder.WorkflowBuilder` class. The `WorkflowBuilder` class is used to create and manage all components in a workflow. When calling {py:meth}`~aiq.builder.workflow_builder.WorkflowBuilder.add_function`, which function to create is determined by the type of the configuration object. The builder will match the configuration object type to the type used in the {py:deco}`aiq.cli.register_workflow.register_function` decorator.
+Once a function is registered, it can be instantiated using the {py:class}`~nat.builder.workflow_builder.WorkflowBuilder` class. The `WorkflowBuilder` class is used to create and manage all components in a workflow. When calling {py:meth}`~nat.builder.workflow_builder.WorkflowBuilder.add_function`, which function to create is determined by the type of the configuration object. The builder will match the configuration object type to the type used in the {py:deco}`nat.cli.register_workflow.register_function` decorator.
 
 ```python
 
@@ -457,11 +457,11 @@ Functions can be invoked in two ways:
         print(item)
     ```
 
-If the function only has a single output, using the {py:meth}`~aiq.builder.function.Function.astream` method will result in an error. Likewise, if the function only has a streaming output, using the {py:meth}`~aiq.builder.function.Function.ainvoke` method will result in an error. It's possible to check which output types a function supports using the {py:attr}`~aiq.builder.function.Function.has_single_output` and {py:attr}`~aiq.builder.function.Function.has_streaming_output` properties.
+If the function only has a single output, using the {py:meth}`~nat.builder.function.Function.astream` method will result in an error. Likewise, if the function only has a streaming output, using the {py:meth}`~nat.builder.function.Function.ainvoke` method will result in an error. It's possible to check which output types a function supports using the {py:attr}`~nat.builder.function.Function.has_single_output` and {py:attr}`~nat.builder.function.Function.has_streaming_output` properties.
 
 ## Function Composition
 
-Functions can call other functions allowing for complex workflows to be created. To accomplish this, we can use the {py:class}`~aiq.builder.workflow_builder.WorkflowBuilder` class to get a reference to another function while constructing the current function. For example, the following function composes two other functions:
+Functions can call other functions allowing for complex workflows to be created. To accomplish this, we can use the {py:class}`~nat.builder.workflow_builder.WorkflowBuilder` class to get a reference to another function while constructing the current function. For example, the following function composes two other functions:
 
 ```python
 class MyCompositeFunctionConfig(FunctionBaseConfig, name="my_composite_function"):
@@ -490,21 +490,21 @@ async def my_function(config: MyCompositeFunctionConfig, builder: Builder):
 ```
 
 :::{note}
-We annotate function names in the configuration object using {py:class}`~aiq.data_models.component_ref.FunctionRef` which is equivalent to `str` but indicates that the function name is a reference to another function. When a function is referenced in a configuration object in this way, the builder system will ensure that the function is registered before it is used.
+We annotate function names in the configuration object using {py:class}`~nat.data_models.component_ref.FunctionRef` which is equivalent to `str` but indicates that the function name is a reference to another function. When a function is referenced in a configuration object in this way, the builder system will ensure that the function is registered before it is used.
 :::
 
 ## Type Conversion
 
 When working with functions, it is not guaranteed that the input and output types will be the same as the types specified in the function definition. To make this easier, functions support type conversion which can convert both inputs and outputs to the necessary type at runtime.
 
-To convert a value to a different type, use the {py:meth}`~aiq.builder.function.Function.convert` method where the first argument is the value to convert and the second argument, `to_type`, is the type to convert to.
+To convert a value to a different type, use the {py:meth}`~nat.builder.function.Function.convert` method where the first argument is the value to convert and the second argument, `to_type`, is the type to convert to.
 
 ```python
 # Convert between types
 result = function.convert(value, to_type=TargetType)
 ```
 
-The {py:meth}`~aiq.builder.function.Function.convert` method is used internally by the {py:meth}`~aiq.builder.function.Function.ainvoke` and {py:meth}`~aiq.builder.function.Function.astream` methods to convert the input and output values to the necessary types. When passing a value to the {py:meth}`~aiq.builder.function.Function.ainvoke` or {py:meth}`~aiq.builder.function.Function.astream` methods, the value will be converted to the type specified by the function's input type. The {py:meth}`~aiq.builder.function.Function.ainvoke` and {py:meth}`~aiq.builder.function.Function.astream` methods effectively do the following:
+The {py:meth}`~nat.builder.function.Function.convert` method is used internally by the {py:meth}`~nat.builder.function.Function.ainvoke` and {py:meth}`~nat.builder.function.Function.astream` methods to convert the input and output values to the necessary types. When passing a value to the {py:meth}`~nat.builder.function.Function.ainvoke` or {py:meth}`~nat.builder.function.Function.astream` methods, the value will be converted to the type specified by the function's input type. The {py:meth}`~nat.builder.function.Function.ainvoke` and {py:meth}`~nat.builder.function.Function.astream` methods effectively do the following:
 
 ```python
 async def ainvoke(value: typing.Any, ...):
@@ -514,7 +514,7 @@ async def ainvoke(value: typing.Any, ...):
     return await self._ainvoke(converted_value)
 ```
 
-Once the output is generated, the output type can be converted before it is returned using the `to_type` property on {py:meth}`~aiq.builder.function.Function.ainvoke` and {py:meth}`~aiq.builder.function.Function.astream` methods. The `to_type` property is a type hint that can be used to convert the output to a specific type using the {py:meth}`~aiq.builder.function.Function.convert` method. This is equivalent to the following:
+Once the output is generated, the output type can be converted before it is returned using the `to_type` property on {py:meth}`~nat.builder.function.Function.ainvoke` and {py:meth}`~nat.builder.function.Function.astream` methods. The `to_type` property is a type hint that can be used to convert the output to a specific type using the {py:meth}`~nat.builder.function.Function.convert` method. This is equivalent to the following:
 
 ```python
 async def ainvoke(value: typing.Any, to_type: type):
@@ -526,7 +526,7 @@ async def ainvoke(value: typing.Any, to_type: type):
 
 ### Adding Custom Converters
 
-Functions support custom type converters for complex conversion scenarios. To add a custom converter to a function, provide a list of converter callables to the {py:meth}`~aiq.builder.function_info.FunctionInfo.from_fn` or {py:meth}`~aiq.builder.function_info.FunctionInfo.create` methods when creating a function. A converter callable is any python function which takes a single value and returns a converted value. These functions must be annotated with the type it will convert from and the type it will convert to.
+Functions support custom type converters for complex conversion scenarios. To add a custom converter to a function, provide a list of converter callables to the {py:meth}`~nat.builder.function_info.FunctionInfo.from_fn` or {py:meth}`~nat.builder.function_info.FunctionInfo.create` methods when creating a function. A converter callable is any python function which takes a single value and returns a converted value. These functions must be annotated with the type it will convert from and the type it will convert to.
 
 For example, the following converter will convert an `int` to a `str`:
 
@@ -535,7 +535,7 @@ def my_converter(value: int) -> str:
     return str(value)
 ```
 
-This converter can then be passed to the {py:meth}`~aiq.builder.function_info.FunctionInfo.from_fn` or {py:meth}`~aiq.builder.function_info.FunctionInfo.create` methods when registering the function:
+This converter can then be passed to the {py:meth}`~nat.builder.function_info.FunctionInfo.from_fn` or {py:meth}`~nat.builder.function_info.FunctionInfo.create` methods when registering the function:
 
 ```python
 @register_function(config_type=MyFunctionConfig)

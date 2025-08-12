@@ -272,8 +272,8 @@ class GithubWrapper:
     @functools.lru_cache
     @staticmethod
     def has_cli():
-        if os.environ.get("AIQ_AVOID_GH_CLI") is not None:
-            logger.debug("AIQ_AVOID_GH_CLI is set. Skipping Github CLI check")
+        if os.environ.get("NAT_AVOID_GH_CLI") is not None:
+            logger.debug("NAT_AVOID_GH_CLI is set. Skipping Github CLI check")
             return False
         try:
             _gh("--version")
@@ -636,7 +636,7 @@ def _parse_args():
 
 
 def _main():
-    log_level = logging.getLevelName(os.environ.get("AIQ_LOG_LEVEL", "INFO"))
+    log_level = logging.getLevelName(os.environ.get("NAT_LOG_LEVEL", "INFO"))
     logging.basicConfig(format="%(levelname)s:%(message)s", level=log_level)
 
     args = _parse_args()

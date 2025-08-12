@@ -130,7 +130,7 @@ Follow the steps below to create and register a new strategy.
 2. Implement the strategy
 
    ```python
-   from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
+   from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
    class MyStrategy(StrategyBase):
        ...
    ```
@@ -138,7 +138,7 @@ Follow the steps below to create and register a new strategy.
 3. Register the strategy.
 
    ```python
-   from aiq.cli.register_workflow import register_ttc_strategy
+   from nat.cli.register_workflow import register_ttc_strategy
 
    @register_ttc_strategy(config_type=MyStrategyConfig)
    async def register_my_strategy(cfg: MyStrategyConfig, builder: Builder):

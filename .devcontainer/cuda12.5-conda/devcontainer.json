@@ -24,7 +24,7 @@
   ],
   "containerEnv": {
     "HOST_REPO_ROOT": "${localWorkspaceFolder}",
-    "REPO_ROOT": "~/dev/ai-query-engine",
+    "REPO_ROOT": "~/dev/nat",
     "CUDA_VERSION": "12.5",
     "CUDAARCHS": "RAPIDS",
     "DISPLAY": "${localEnv:DISPLAY:-}",
@@ -52,8 +52,8 @@
     "-c",
     "if [ ${CODESPACES:-false} = 'true' ]; then . devcontainer-utils-post-attach-command; . rapids-post-attach-command; fi"
   ],
-  "workspaceFolder": "/home/coder/dev/ai-query-engine",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/home/coder/dev/ai-query-engine,type=bind,consistency=consistent",
+  "workspaceFolder": "/home/coder/dev/nat",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/coder/dev/nat,type=bind,consistency=consistent",
   "mounts": [
     "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
     "source=${localEnv:XDG_RUNTIME_DIR},target=${localEnv:XDG_RUNTIME_DIR},type=bind",

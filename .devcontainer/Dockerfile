@@ -77,8 +77,8 @@ FROM base as uv-base
 
 FROM ${PYTHON_PACKAGE_MANAGER}-base
 
-ENV PROJECT_MANIFEST_YML="/home/coder/dev/ai-query-engine/manifest.yaml"
-ENV PATH="${PATH}:/home/coder/dev/ai-query-engine/.devcontainer/bin"
+ENV PROJECT_MANIFEST_YML="/home/coder/dev/nat/manifest.yaml"
+ENV PATH="${PATH}:/home/coder/dev/nat/.devcontainer/bin"
 
 ARG CUDA
 ENV CUDAARCHS="RAPIDS"

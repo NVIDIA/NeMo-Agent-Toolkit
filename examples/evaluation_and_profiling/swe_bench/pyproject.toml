@@ -6,12 +6,13 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_swe_bench"
+name = "nat_swe_bench"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[langchain]~=1.2",
-  "swebench==3.0.3"
+    "nvidia-nat[langchain]~=1.2",
+    "swebench==3.0.3",
 ]
+
 requires-python = ">=3.11,<3.13"
 description = "Example for solving SWE bench problems"
 classifiers = ["Programming Language :: Python"]
@@ -19,5 +20,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_swe_bench = "aiq_swe_bench.register"
+[project.entry-points.'nat.components']
+nat_swe_bench = "nat_swe_bench.register"

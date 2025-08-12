@@ -22,7 +22,7 @@ NeMo Agent toolkit workflows are defined by a [YAML configuration file](#workflo
 The configuration attributes of each entity in NeMo Agent toolkit is defined by a [Configuration Object](#configuration-object). This object defines both the type and optionally the default value of each attribute. Any attribute without a default value is required to be specified in the configuration file.
 
 ## Configuration Object
-Each NeMo Agent toolkit tool requires a configuration object which inherits from {py:class}`~aiq.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all NeMo Agent toolkit configuration objects are subclasses of the [`pydantic.BaseModel `](https://docs.pydantic.dev/2.9/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.9/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
+Each NeMo Agent toolkit tool requires a configuration object which inherits from {py:class}`~nat.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all NeMo Agent toolkit configuration objects are subclasses of the [`pydantic.BaseModel `](https://docs.pydantic.dev/2.9/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.9/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
 
 - `FunctionRef`: Refers to a registered function by its instance name in the `functions` section configuration object.
 - `LLMRef`: Refers to a registered LLM by its instance name in the `llms` section of the configuration object.
@@ -78,7 +78,7 @@ This section contains the models used in the workflow. The `_type` value refers 
 <!-- path-check-skip-next-line -->
 The `model_name` value then needs to match a model hosted by the API, in our example we are using the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model.
 
-Both the `nim` and `openai` APIs support API specific attributes. For `nim` these are defined in the {py:class}`~aiq.llm.nim_llm.NIMModelConfig` class, and for `openai` these are defined in the {py:class}`~aiq.llm.openai_llm.OpenAIModelConfig` class.
+Both the `nim` and `openai` APIs support API specific attributes. For `nim` these are defined in the {py:class}`~nat.llm.nim_llm.NIMModelConfig` class, and for `openai` these are defined in the {py:class}`~nat.llm.openai_llm.OpenAIModelConfig` class.
 
 ### `embedders`
 <!-- path-check-skip-next-line -->
@@ -88,10 +88,10 @@ This section follows a the same structure as the `llms` section and serves as a 
 
 This section ties the previous sections together by defining the tools and LLM models to use. The `tool_names` section lists the tool names from the `functions` section, while the `llm_name` section specifies the LLM model to use.
 
-The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. You can also use the workflow type, `tool_calling_agent`. The parameters for each are specified by the {py:class}`~aiq.agent.react_agent.register.ReActAgentWorkflowConfig` and {py:class}`~aiq.agent.tool_calling_agent.register.ToolCallAgentWorkflowConfig` classes respectively.
+The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. You can also use the workflow type, `tool_calling_agent`. The parameters for each are specified by the {py:class}`~nat.agent.react_agent.register.ReActAgentWorkflowConfig` and {py:class}`~nat.agent.tool_calling_agent.register.ToolCallAgentWorkflowConfig` classes respectively.
 
 ### `general`
-This section contains general configuration settings for AngentIQ which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~aiq.data_models.config.GeneralConfig` class.
+This section contains general configuration settings for AngentIQ which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~nat.data_models.config.GeneralConfig` class.
 
 :::{note}
 The `use_uvloop` parameter which specifies whether to use the [`uvloop`](https://github.com/MagicStack/uvloop) event loop. This is set to `true` by default, and can provide a significant speedup in some cases, however this can also make it difficult to debug workflow issues. For debugging purposes it is recommended to set this to `false`:

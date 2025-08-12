@@ -122,7 +122,7 @@ aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml -
 <snipped for brevity>
 
 2025-07-18 14:48:28,247 - aiq_plot_charts.register - INFO - Processing chart request: create a line chart
-2025-07-18 14:48:28,249 - aiq_plot_charts.register - INFO - Successfully loaded data from /Users/yuchenz/Desktop/Work/Project/AgentIQ/examples/custom_functions/plot_charts/src/aiq_plot_charts/../../example_data.json
+2025-07-18 14:48:28,249 - aiq_plot_charts.register - INFO - Successfully loaded data from /Users/yuchenz/Desktop/Work/Project/AgentIQ/examples/custom_functions/plot_charts/src/nat_plot_charts/../../example_data.json
 2025-07-18 14:48:28,249 - aiq_plot_charts.register - INFO - Selected chart type: line
 2025-07-18 14:48:28,522 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
 2025-07-18 14:48:28,523 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.

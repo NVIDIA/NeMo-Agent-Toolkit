@@ -6,7 +6,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_redact_pii"
+name = "nat_redact_pii"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[weave]~=1.2",
@@ -19,5 +19,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-redact_pii = "aiq_redact_pii.register"
+[project.entry-points.'nat.components']
+redact_pii = "nat_redact_pii.register"

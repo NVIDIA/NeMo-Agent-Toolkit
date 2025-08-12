@@ -15,14 +15,14 @@
 
 ARG BASE_IMAGE_URL=nvcr.io/nvidia/base/ubuntu
 ARG BASE_IMAGE_TAG=22.04_20240212
+ARG NAT_VERSION=1.0.0
 ARG PYTHON_VERSION=3.12
-ARG AIQ_VERSION=1.0.0
-ARG UV_VERSION=0.5.31
+ARG UV_VERSION=0.8.3
 
 FROM --platform=$TARGETPLATFORM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv_base
 
 FROM --platform=$TARGETPLATFORM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG} AS base
-ARG AIQ_VERSION
+ARG NAT_VERSION
 ARG PYTHON_VERSION
 ARG UV_VERSION
 
@@ -46,14 +46,14 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 # Set working directory
 WORKDIR /workspace
 
-# Install the AIQ toolkit package and the example package
+# Install the nvidia-nat package and the example package
 RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     . /workspace/.venv/bin/activate && \
-    uv pip install "aiqtoolkit[crewai, langchain, llama-index, mem0ai, semantic-kernel, zep-cloud] == ${AIQ_VERSION}"
+    uv pip install --prerelease=allow "nvidia-nat[crewai, langchain, llama-index, mem0ai, semantic-kernel, zep-cloud] == ${NAT_VERSION}"
 
 # Enivronment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
-# Define the entry point to start the aiq CLI tool
-ENTRYPOINT ["aiq"]
+# Define the entry point to start the nat CLI tool
+ENTRYPOINT ["nat"]

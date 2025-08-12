@@ -110,7 +110,7 @@ It supports all kinds of functions:
 Just decorate your custom function with `@track_function` and provide any optional metadata if needed:
 
 ```python
-from aiq.profiler.decorators.function_tracking import track_function
+from nat.profiler.decorators.function_tracking import track_function
 
 @track_function(metadata={"action": "compute", "source": "custom_function"})
 def my_custom_function(a, b):

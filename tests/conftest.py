@@ -52,9 +52,12 @@ EXAMPLES_DIR = os.path.join(PROJECT_DIR, "examples")
 sys.path.append(SRC_DIR)
 
 if typing.TYPE_CHECKING:
-    from aiq.data_models.intermediate_step import IntermediateStep
-    from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+    from nat.data_models.intermediate_step import IntermediateStep
+    from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
+@pytest.fixture(name="project_dir")
+def project_dir_fixture():
+    return PROJECT_DIR
 
 @pytest.fixture(name="test_data_dir")
 def test_data_dir_fixture():
@@ -175,8 +178,8 @@ def register_test_workflow_fixture(test_workflow_fn) -> Callable[[], Callable]:
 
     def register_test_workflow():
         from _utils.configs import WorkflowTestConfig
-        from aiq.builder.builder import Builder
-        from aiq.cli.register_workflow import register_function
+        from nat.builder.builder import Builder
+        from nat.cli.register_workflow import register_function
 
         @register_function(config_type=WorkflowTestConfig)
         async def build_fn(_: WorkflowTestConfig, __: Builder):
@@ -193,8 +196,8 @@ def reactive_stream_fixture():
     A fixture that sets up a fresh usage_stats queue in the context var
     for each test, then resets it afterward.
     """
-    from aiq.builder.context import ContextState
-    from aiq.utils.reactive.subject import Subject
+    from nat.builder.context import ContextState
+    from nat.utils.reactive.subject import Subject
 
     token = None
     original_queue = ContextState.get().event_stream.get()
@@ -218,7 +221,7 @@ def function_settings_fixture():
     This gets automatically used at the function level to ensure no state is leaked between functions.
     """
 
-    from aiq.settings.global_settings import GlobalSettings
+    from nat.settings.global_settings import GlobalSettings
 
     with GlobalSettings.push() as settings:
         yield settings
@@ -395,12 +398,12 @@ def rag_intermediate_steps_fixture(rag_user_inputs, rag_generated_outputs) -> li
     Returns:
         (list for user_input_1, list for user_input_2)
     """
-    from aiq.builder.framework_enum import LLMFrameworkEnum
-    from aiq.data_models.intermediate_step import IntermediateStep
-    from aiq.data_models.intermediate_step import IntermediateStepPayload
-    from aiq.data_models.intermediate_step import IntermediateStepType
-    from aiq.data_models.intermediate_step import StreamEventData
-    from aiq.data_models.invocation_node import InvocationNode
+    from nat.builder.framework_enum import LLMFrameworkEnum
+    from nat.data_models.intermediate_step import IntermediateStep
+    from nat.data_models.intermediate_step import IntermediateStepPayload
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.data_models.intermediate_step import StreamEventData
+    from nat.data_models.invocation_node import InvocationNode
 
     framework = LLMFrameworkEnum.LANGCHAIN
     token_cnt = 10
@@ -468,7 +471,7 @@ def rag_intermediate_property_adaptor_fixture(rag_intermediate_steps) -> list[li
     """
     Fixture to transform the rag_intermediate_steps fixture data into IntermediatePropertyAdaptor objects.
     """
-    from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+    from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
     return [[IntermediatePropertyAdaptor.from_intermediate_step(step) for step in steps]
             for steps in rag_intermediate_steps]

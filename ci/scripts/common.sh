@@ -15,7 +15,7 @@
 
 export SCRIPT_DIR=${SCRIPT_DIR:-"$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"}
 
-# The root to the AIQ toolkit repo
+# The root to the NAT toolkit repo
 export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${SCRIPT_DIR}/../..)"}
 
 export PY_ROOT="${PROJECT_ROOT}/src"
@@ -23,7 +23,7 @@ export PROJ_TOML="${PROJECT_ROOT}/pyproject.toml"
 export PY_DIRS="${PY_ROOT} ${PROJECT_ROOT}/packages ${PROJECT_ROOT}/tests ${PROJECT_ROOT}/ci/scripts "
 
 # Determine the commits to compare against. If running in CI, these will be set. Otherwise, diff with main
-export AIQ_LOG_LEVEL=WARN
+export NAT_LOG_LEVEL=WARN
 export CI_MERGE_REQUEST_TARGET_BRANCH_NAME=${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-"develop"}
 
 if [[ "${GITLAB_CI}" == "true" ]]; then
@@ -112,8 +112,8 @@ function build_package_wheel()
     local pkg=$1
     pkg_dir_name="${pkg#packages/}"
     pkg_dir_name="${pkg#./packages/}"
-    # Replace "aiq_" with "nvidia_nat_"
-    pkg_dir_name="${pkg_dir_name//aiq_/nvidia_nat_}"
+    # Replace "nat_" with "nvidia_nat_"
+    pkg_dir_name="${pkg_dir_name//nat_/nvidia_nat_}"
 
     # Remove compat/
     pkg_dir_name="${pkg_dir_name/compat\/}"
@@ -131,6 +131,6 @@ trap cleanup EXIT
 # Change directory to the repo root
 pushd "${PROJECT_ROOT}" &> /dev/null
 
-AIQ_EXAMPLES=($(find ./examples/ -maxdepth 4 -name "pyproject.toml" | sort | xargs dirname))
-AIQ_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
-AIQ_COMPAT_PACKAGES=($(find ./packages/compat -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
+NAT_EXAMPLES=($(find ./examples/ -maxdepth 4 -name "pyproject.toml" | sort | xargs dirname))
+NAT_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
+NAT_COMPAT_PACKAGES=($(find ./packages/compat -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
