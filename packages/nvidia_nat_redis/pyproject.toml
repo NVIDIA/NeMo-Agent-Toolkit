@@ -23,7 +23,7 @@ dependencies = [
   "redis~=4.3.4",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Subpackage for Redis memory NeMo Agent toolkit"
+description = "Subpackage for Redis integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "agents", "memory"]
 classifiers = ["Programming Language :: Python"]

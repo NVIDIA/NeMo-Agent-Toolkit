@@ -23,7 +23,7 @@ dependencies = [
   "arize-phoenix~=6.1",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Subpackage for Arize Phoenix NeMo Agent toolkit"
+description = "Subpackage for Arize Phoenix integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "observability", "phoenix", "arize"]
 classifiers = ["Programming Language :: Python"]
