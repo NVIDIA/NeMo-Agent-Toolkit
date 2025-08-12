@@ -42,26 +42,26 @@ retrievers:
 
 ### NVIDIA NIM
 
-The NIM retriever provider is defined by the {py:class}`~aiq.retriever.nemo_retriever.NemoRetrieverConfig` class.
+The NIM retriever provider is defined by the {py:class}`~nat.retriever.nemo_retriever.NemoRetrieverConfig` class.
 
 * `uri` - The URI of the NIM retriever service.
 * `collection_name` - The name of the collection to search.
 * `top_k` - The number of results to return.
-* `output_fields` - A list of fields to return from the datastore. If 'None', all fields but the vector are returned.
+* `output_fields` - A list of fields to return from the data store. If `None`, all fields but the vector are returned.
 * `timeout` - Maximum time to wait for results to be returned from the service.
-* `nvidia_api_key` - API key used to authenticate with the service. If 'None', will use ENV Variable 'NVIDIA_API_KEY'.
+* `nvidia_api_key` - API key used to authenticate with the service. If `None`, will use ENV Variable `NVIDIA_API_KEY`.
 
 ### Milvus
 
-The Milvus retriever provider is defined by the {py:class}`~aiq.retriever.milvus.MilvusRetrieverConfig` class.
+The Milvus retriever provider is defined by the {py:class}`~nat.retriever.milvus.MilvusRetrieverConfig` class.
 
 * `uri` - The URI of the Milvus service.
 * `connection_args` - Dictionary of arguments used to connect to and authenticate with the Milvus service.
-* `embedding_model` - The name of the embedding model to use for vectorizing the query.
-* `collection_name` - The name of the milvus collection to search.
-* `content_field` - Name of the primary field to store/retrieve.
+* `embedding_model` - The name of the embedding model to use to generate the vector from the query.
+* `collection_name` - The name of the Milvus collection to search.
+* `content_field` - Name of the primary field to store or retrieve.
 * `top_k` - The number of results to return.
-* `output_fields` - A list of fields to return from the datastore. If 'None', all fields but the vector are returned.
+* `output_fields` - A list of fields to return from the data store. If `None`, all fields but the vector are returned.
 * `search_params` - Search parameters to use when performing vector search.
-* `vector_field` - Name of the field to compare with the vectorized query.
+* `vector_field` - Name of the field to compare with the vector generated from the query.
 * `description` - If present it will be used as the tool description.

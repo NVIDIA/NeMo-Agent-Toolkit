@@ -47,7 +47,7 @@ llms:
 
 ### NVIDIA NIM
 
-The NIM LLM provider is defined by the {py:class}`~aiq.llm.nim_llm.NIMModelConfig` class.
+The NIM LLM provider is defined by the {py:class}`~nat.llm.nim_llm.NIMModelConfig` class.
 
 * `model_name` - The name of the model to use
 * `temperature` - The temperature to use for the model
@@ -59,7 +59,7 @@ The NIM LLM provider is defined by the {py:class}`~aiq.llm.nim_llm.NIMModelConfi
 
 ### OpenAI
 
-The OpenAI LLM provider is defined by the {py:class}`~aiq.llm.openai_llm.OpenAIModelConfig` class.
+The OpenAI LLM provider is defined by the {py:class}`~nat.llm.openai_llm.OpenAIModelConfig` class.
 
 * `model_name` - The name of the model to use
 * `temperature` - The temperature to use for the model
@@ -72,7 +72,7 @@ The OpenAI LLM provider is defined by the {py:class}`~aiq.llm.openai_llm.OpenAIM
 
 ### AWS Bedrock
 
-The AWS Bedrock LLM provider is defined by the {py:class}`~aiq.llm.aws_bedrock_llm.AWSBedrockModelConfig` class.
+The AWS Bedrock LLM provider is defined by the {py:class}`~nat.llm.aws_bedrock_llm.AWSBedrockModelConfig` class.
 
 * `model_name` - The name of the model to use
 * `temperature` - The temperature to use for the model

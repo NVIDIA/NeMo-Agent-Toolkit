@@ -37,7 +37,7 @@ embedders:
 ```
 
 ### NVIDIA NIM
-The NIM embedder provider is defined by the {py:class}`~aiq.embedder.nim_embedder.NIMEmbedderModelConfig` class.
+The NIM embedder provider is defined by the {py:class}`~nat.embedder.nim_embedder.NIMEmbedderModelConfig` class.
 
 * `model_name` - The name of the model to use
 * `api_key` - The API key to use for the model
@@ -47,7 +47,7 @@ The NIM embedder provider is defined by the {py:class}`~aiq.embedder.nim_embedde
 
 ### OpenAI
 
-The OpenAI embedder provider is defined by the {py:class}`~aiq.embedder.openai_embedder.OpenAIEmbedderModelConfig` class.
+The OpenAI embedder provider is defined by the {py:class}`~nat.embedder.openai_embedder.OpenAIEmbedderModelConfig` class.
 
 * `model_name` - The name of the model to use
 * `api_key` - The API key to use for the model
