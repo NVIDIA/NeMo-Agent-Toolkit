@@ -32,7 +32,7 @@ class PackageError(Exception):
 
 
 def get_repo_root():
-    return find_package_root("aiqtoolkit")
+    return find_package_root("nvidia-nat")
 
 
 def _get_module_name(workflow_name: str):
