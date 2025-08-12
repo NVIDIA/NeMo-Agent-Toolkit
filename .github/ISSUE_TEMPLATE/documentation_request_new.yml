@@ -15,7 +15,7 @@
 
 name: Documentation - New Documentation Request
 description: Request additions to NeMo Agent toolkit documentation
-title: "[DOC]: "
+type: "Documentation"
 labels: ["doc"]
 
 body:

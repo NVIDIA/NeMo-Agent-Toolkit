@@ -55,9 +55,11 @@ if typing.TYPE_CHECKING:
     from nat.data_models.intermediate_step import IntermediateStep
     from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
+
 @pytest.fixture(name="project_dir")
 def project_dir_fixture():
     return PROJECT_DIR
+
 
 @pytest.fixture(name="test_data_dir")
 def test_data_dir_fixture():
@@ -104,9 +106,9 @@ def restore_environ_fixture():
             del (os.environ[key])
 
 
+@pytest.mark.usefixtures("restore_environ")
 @pytest.fixture(name="set_test_api_keys")
-def set_test_api_keys_fixture(restore_environ):
-    # restore_environ fixture is used implicitly, do not remove
+def set_test_api_keys_fixture():
     for key in ("NGC_API_KEY", "NVD_API_KEY", "NVIDIA_API_KEY", "OPENAI_API_KEY", "SERPAPI_API_KEY"):
         os.environ[key] = "test_key"
 
@@ -158,7 +160,7 @@ class SingleOutputModel(BaseModel):
 @pytest.fixture(name="test_workflow_fn")
 def test_workflow_fn_fixture():
 
-    async def workflow_fn(param: BaseModel) -> SingleOutputModel:
+    async def workflow_fn(_param: BaseModel) -> SingleOutputModel:
         return SingleOutputModel(summary="This is a coroutine function")
 
     return workflow_fn
@@ -167,7 +169,7 @@ def test_workflow_fn_fixture():
 @pytest.fixture(name="test_streaming_fn")
 def test_streaming_fn_fixture():
 
-    async def streaming_fn(param: BaseModel) -> typing.Annotated[AsyncGenerator[StreamingOutputModel], ...]:
+    async def streaming_fn(_param: BaseModel) -> typing.Annotated[AsyncGenerator[StreamingOutputModel], ...]:
         yield StreamingOutputModel(result="this is an async generator")
 
     return streaming_fn
@@ -345,18 +347,18 @@ def mock_tool():
             name: str = tool_name
             description: str = 'test tool:' + tool_name
 
-            async def _arun(self,
-                            query: str | dict = 'test',
-                            *args,
-                            run_manager: AsyncCallbackManagerForToolRun | None = None,
-                            **kwargs):  # noqa: E501  # pylint: disable=arguments-differ
+            async def _arun(
+                    self,
+                    query: str | dict = 'test',
+                    run_manager: AsyncCallbackManagerForToolRun | None = None,  # pylint: disable=unused-argument
+                    **kwargs):  # noqa: E501  # pylint: disable=arguments-differ
                 return query
 
-            def _run(self,
-                     query: str | dict = 'test',
-                     *args,
-                     run_manager: CallbackManagerForToolRun | None = None,
-                     **kwargs):  # noqa: E501  # pylint: disable=arguments-differ
+            def _run(
+                    self,
+                    query: str | dict = 'test',
+                    run_manager: CallbackManagerForToolRun | None = None,  # pylint: disable=unused-argument
+                    **kwargs):  # noqa: E501  # pylint: disable=arguments-differ
                 return query
 
         return MockTool()
@@ -416,9 +418,9 @@ def rag_intermediate_steps_fixture(rag_user_inputs, rag_generated_outputs) -> li
                     output_data=None,
                     chunk=None,
                     step_uuid: str | None = None):
+        """Helper to create an `IntermediateStep`."""
         if step_uuid is None:
             step_uuid = str(uuid.uuid4())
-        """Helper to create an `IntermediateStep`."""
         return IntermediateStep(parent_id="root",
                                 function_ancestry=InvocationNode(function_name=name,
                                                                  function_id=f"test-{name}-{step_uuid}"),
