@@ -21,15 +21,15 @@ from unittest.mock import patch
 import pytest
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-from aiq.builder.context import ContextState
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.plugins.opentelemetry.otel_span import OtelSpan
-from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+from nat.builder.context import ContextState
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
+from nat.plugins.opentelemetry.otel_span import OtelSpan
+from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
 
 def create_test_intermediate_step(parent_id="root",
@@ -150,7 +150,7 @@ class TestOTLPSpanAdapterExporter:
         assert exporter is not None
         assert exporter._resource.attributes == {}
 
-    @patch('aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
     async def test_export_otel_spans_success(self, mock_otlp_exporter_class, basic_exporter_config, mock_otel_span):
         """Test successful export of OtelSpans."""
         # Setup mock
@@ -169,8 +169,8 @@ class TestOTLPSpanAdapterExporter:
         # Verify the OTLP exporter was called
         mock_otlp_exporter.export.assert_called_once_with(spans)
 
-    @patch('aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
-    @patch('aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.logger')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.logger')
     async def test_export_otel_spans_with_exception(self,
                                                     mock_logger,
                                                     mock_otlp_exporter_class,
@@ -194,7 +194,7 @@ class TestOTLPSpanAdapterExporter:
         mock_logger.error.assert_called_once()
         assert "Error exporting spans" in str(mock_logger.error.call_args)
 
-    @patch('aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
     async def test_export_multiple_spans(self, mock_otlp_exporter_class, basic_exporter_config):
         """Test export of multiple OtelSpans."""
         # Setup mock
@@ -217,7 +217,7 @@ class TestOTLPSpanAdapterExporter:
 
     async def test_end_to_end_span_processing(self, basic_exporter_config, sample_start_event, sample_end_event):
         """Test end-to-end span processing from IntermediateStep to export."""
-        with patch('aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter') \
+        with patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter') \
                 as mock_otlp_exporter_class:
             # Setup mock
             mock_otlp_exporter = Mock()
@@ -252,7 +252,7 @@ class TestOTLPSpanAdapterExporter:
             assert len(exported_spans) >= 1
             assert all(hasattr(span, 'set_resource') for span in exported_spans)
 
-    @patch('aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
     async def test_batching_behavior(self, mock_otlp_exporter_class, basic_exporter_config):
         """Test that batching works correctly with the OTLP exporter."""
         # Setup mock
@@ -302,8 +302,8 @@ class TestOTLPSpanAdapterExporter:
 
     def test_inheritance_structure(self, basic_exporter_config):
         """Test that OTLPSpanAdapterExporter has the correct inheritance structure."""
-        from aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPSpanExporterMixin
-        from aiq.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
+        from nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPSpanExporterMixin
+        from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 
         exporter = OTLPSpanAdapterExporter(endpoint=basic_exporter_config["endpoint"])
 
@@ -312,7 +312,7 @@ class TestOTLPSpanAdapterExporter:
         assert hasattr(exporter, 'export_otel_spans')
         assert hasattr(exporter, 'export_processed')
 
-    @patch('aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
     def test_otlp_exporter_initialization_with_headers(self, mock_otlp_exporter_class, basic_exporter_config):
         """Test that the internal OTLP exporter is initialized with correct headers."""
         headers = basic_exporter_config["headers"]
@@ -323,7 +323,7 @@ class TestOTLPSpanAdapterExporter:
         # Verify OTLPSpanExporter was initialized with correct parameters
         mock_otlp_exporter_class.assert_called_once_with(endpoint=endpoint, headers=headers)
 
-    @patch('aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
     def test_otlp_exporter_initialization_without_headers(self, mock_otlp_exporter_class, basic_exporter_config):
         """Test that the internal OTLP exporter is initialized correctly without headers."""
         endpoint = basic_exporter_config["endpoint"]
@@ -338,7 +338,7 @@ class TestOTLPSpanAdapterExporter:
         with pytest.raises(TypeError, match="missing 1 required keyword-only argument: 'endpoint'"):
             OTLPSpanAdapterExporter()  # pylint: disable=missing-kwoa # type: ignore[call-arg]
 
-    @patch('aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
     async def test_resource_attributes_applied_to_spans(self,
                                                         mock_otlp_exporter_class,
                                                         basic_exporter_config,

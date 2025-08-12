@@ -5,7 +5,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["aiq.*"]
+include = ["nat.*"]
 
 
 [tool.setuptools_scm]
@@ -17,15 +17,15 @@ name = "nvidia-nat-test"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
-  # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
+  # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat~=1.2",
   "langchain-community~=0.3",
   "pytest~=8.3",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Testing utilities for AIQtoolkit"
-readme = "src/aiq/meta/pypi.md"
+description = "Testing utilities for NeMo Agent toolkit"
+readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
@@ -39,8 +39,8 @@ nvidia-nat = { workspace = true }
 
 
 [project.entry-points.pytest11]
-nvidia-nat-test = "aiq.test.plugin"
+nvidia-nat-test = "nat.test.plugin"
 
 
-[project.entry-points.'aiq.components']
-nvidia-nat-test = "aiq.test.register"
+[project.entry-points.'nat.components']
+nvidia-nat-test = "nat.test.register"

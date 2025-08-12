@@ -20,10 +20,10 @@ import logging
 from pathlib import Path
 
 import pytest
-from aiq_swe_bench.register import SweBenchWorkflowConfig
+from nat_swe_bench.register import SweBenchWorkflowConfig
 
-from aiq.eval.evaluate import EvaluationRun
-from aiq.eval.evaluate import EvaluationRunConfig
+from nat.eval.evaluate import EvaluationRun
+from nat.eval.evaluate import EvaluationRunConfig
 
 logger = logging.getLogger(__name__)
 

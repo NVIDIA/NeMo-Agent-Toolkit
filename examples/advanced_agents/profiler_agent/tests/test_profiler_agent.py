@@ -19,14 +19,14 @@ from pathlib import Path
 import pytest
 
 try:
-    from aiq_profiler_agent.tool.flow_chart import FlowChartConfig
-    from aiq_profiler_agent.tool.token_usage import TokenUsageConfig
+    from nat_profiler_agent.tool.flow_chart import FlowChartConfig
+    from nat_profiler_agent.tool.token_usage import TokenUsageConfig
     PROFILER_AGENT_AVAILABLE = True
 except ImportError:
     PROFILER_AGENT_AVAILABLE = False
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.workflow_builder import WorkflowBuilder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.workflow_builder import WorkflowBuilder
 
 logger = logging.getLogger(__name__)
 

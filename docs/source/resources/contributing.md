@@ -280,18 +280,18 @@ but-this-will-not: /path/to/not/skip
 
 To skip an entire Markdown file, add the following comment to the top of the file:
 ```markdown
-&lt;!-- path-check-skip-file --&gt;
+<!-- path-check-skip-file -->
 ```
 
 To skip a section of a Markdown file, add the following bookend comments:
 ```markdown
-&lt;!-- path-check-skip-begin --&gt;
+<!-- path-check-skip-begin -->
 Here is a list of generated files:
 * /path/to/skip
 * /path/to/skip/too
-&lt;!-- path-check-skip-end --&gt;
+<!-- path-check-skip-end -->
 ...
-&lt;!-- path-check-skip-next-line --&gt;
+<!-- path-check-skip-next-line -->
 For example, the path mentioned here: `/path/to/skip` will be skipped.
 But this path will not be skipped: `/path/to/not/skip`
 ```
