@@ -21,7 +21,7 @@ The [Customizing a Workflow](./customize-a-workflow.md) tutorial demonstrates ho
 
 NeMo Agent toolkit includes several built-in tools (functions) that can be used in any workflow. To query for a list of installed tools, run the following command:
 ```bash
-aiq info components -t function
+nat info components -t function
 ```
 
 The `examples/getting_started/simple_web_query/configs/config.yml` workflow defines a tool to query the [LangSmith User Guide](https://docs.smith.langchain.com). This is defined in the `functions` section of the configuration file:

@@ -62,7 +62,7 @@ Telemetry exporters solve critical observability challenges in Agentic AI workfl
 To view the list of locally installed and registered telemetry exporters, run the following command:
 
 ```bash
-aiq info components -t tracing
+nat info components -t tracing
 ```
 
 Examples of existing telemetry exporters include:
@@ -409,7 +409,7 @@ class CustomSpanExporter(SpanExporter[Span, dict]):
 
 #### OpenTelemetry Exporter (for OTLP compatibility)
 
-> **Note**: OpenTelemetry exporters require the `aiqtoolkit-opentelemetry` subpackage. Install it with:
+> **Note**: OpenTelemetry exporters require the `nvidia-nat-opentelemetry` subpackage. Install it with:
 
 > ```bash
 > pip install nvidia-nat[opentelemetry]
@@ -1319,7 +1319,7 @@ Enable debug logging to troubleshoot issues:
 
 ```python
 import logging
-logging.getLogger("aiq.observability").setLevel(logging.DEBUG)
+logging.getLogger("nat.observability").setLevel(logging.DEBUG)
 ```
 
 ### FAQ

@@ -19,7 +19,7 @@ general:
     tracing:
       weave:
         _type: weave
-        project: "aiqtoolkit-demo"
+        project: "nat-demo"
 
 functions:
   calculator_multiply:

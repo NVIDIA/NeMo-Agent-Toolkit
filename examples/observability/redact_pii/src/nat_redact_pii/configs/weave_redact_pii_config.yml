@@ -19,7 +19,7 @@ general:
     tracing:
       weave:
         _type: weave
-        project: "aiqtoolkit-pii"
+        project: "nat-pii"
         redact_pii: true
         redact_pii_fields:
           - EMAIL_ADDRESS

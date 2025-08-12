@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 class PlanSelectExecuteFunctionConfig(FunctionBaseConfig, name="plan_select_execute_function"):
     """
-    Defines an aiqtoolkit function that performs reasoning on the input data.
+    Defines a NeMo Agent toolkit function that performs reasoning on the input data.
     Output is passed to the next function in the workflow.
 
     Designed to be used with an InterceptingFunction.
@@ -83,7 +83,7 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
         from langchain_core.prompts import PromptTemplate
     except ImportError:
         raise ImportError("langchain-core is not installed. Please install it to use SingleShotMultiPlanPlanner.\n"
-                          "This error can be resolved by installing aiqtoolkit-langchain.")
+                          "This error can be resolved by installing nvidia-nat-langchain.")
 
     # Get the augmented function's description
     augmented_function = builder.get_function(config.augmented_fn)

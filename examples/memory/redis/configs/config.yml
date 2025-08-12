@@ -41,7 +41,7 @@ memory:
     host: localhost
     db: "0"
     port: "6379"
-    key_prefix: aiq
+    key_prefix: nat
     embedder: nv-embedqa-e5-v5
 
 functions:

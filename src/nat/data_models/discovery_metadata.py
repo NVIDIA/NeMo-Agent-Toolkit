@@ -95,7 +95,7 @@ class DiscoveryMetadata(BaseModel):
         mapping = importlib.metadata.packages_distributions()
         try:
             distro_names = mapping.get(root_package_name, [None])
-            distro_name = DiscoveryMetadata.get_preferred_item(distro_names, "aiqtoolkit")
+            distro_name = DiscoveryMetadata.get_preferred_item(distro_names, "nvidia-nat")
         except KeyError:
             return root_package_name
 
@@ -130,14 +130,14 @@ class DiscoveryMetadata(BaseModel):
         from nat.runtime.loader import get_all_entrypoints_distro_mapping
 
         if module is None:
-            return "aiqtoolkit"
+            return "nvidia-nat"
 
         # Get the mapping of module names to distro names
         mapping = get_all_entrypoints_distro_mapping()
         module_package = module.__package__
 
         if module_package is None:
-            return "aiqtoolkit"
+            return "nvidia-nat"
 
         # Traverse the module package parts in reverse order to find the distro name
         # This is because the module package is the root package for the NAT component
@@ -169,8 +169,8 @@ class DiscoveryMetadata(BaseModel):
     @lru_cache
     def get_distribution_name(root_package: str) -> str:
         """
-        The aiq library packages use a distro name 'aiqtoolkit[]' and
-        root package name 'aiq'. They provide mapping in a metadata file
+        The NAT library packages use a distro name 'nvidia-nat[]' and
+        root package name 'nat'. They provide mapping in a metadata file
         for optimized installation.
         """
 

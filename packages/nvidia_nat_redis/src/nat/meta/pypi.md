@@ -20,4 +20,4 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit Subpackage
 This is a subpackage for Redis memory integration in NeMo Agent toolkit.
 
-For more information about NeMo Agent toolkit, please visit the [NeMo Agent toolkit package](https://pypi.org/project/aiqtoolkit/).
+For more information about NeMo Agent toolkit, please visit the [NeMo Agent toolkit package](https://pypi.org/project/nvidia-nat/).

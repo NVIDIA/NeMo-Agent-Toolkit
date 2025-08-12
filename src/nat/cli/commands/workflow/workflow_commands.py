@@ -129,7 +129,7 @@ def get_workflow_path_from_name(workflow_name: str):
     "--description",
     default="NAT function template. Please update the description.",
     help="""A description of the component being created. Will be used to populate the docstring and will describe the
-         component when inspecting installed components using 'aiq info component'""")
+         component when inspecting installed components using 'nat info component'""")
 # pylint: disable=missing-param-doc
 def create_command(workflow_name: str, install: bool, workflow_dir: str, description: str):
     """

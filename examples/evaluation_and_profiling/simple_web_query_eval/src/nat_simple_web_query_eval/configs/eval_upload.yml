@@ -74,7 +74,7 @@ eval:
             output: workflow.csv
       s3:
         endpoint_url: http://10.185.X.X:9000
-        bucket: aiq-simple-bucket
+        bucket: nat-simple-bucket
         access_key: fake-access-key
         secret_key: fake-secret-key
     dataset:
@@ -83,7 +83,7 @@ eval:
       file_path: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
       s3:
         endpoint_url: http://10.185.X.X:9000
-        bucket: aiq-simple-bucket
+        bucket: nat-simple-bucket
         access_key: fake-access-key
         secret_key: fake-secret-key
     profiler:
