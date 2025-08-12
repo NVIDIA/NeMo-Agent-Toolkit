@@ -327,7 +327,7 @@ To run the agent live, follow these steps:
    Provide a live alert in JSON format and invoke the agent using:
 
    ```bash
-   aiq run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml --input {your_alert_in_json_format}
+   nat run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml --input {your_alert_in_json_format}
    ```
 This will trigger a full end-to-end triage process using live data sources.
 
@@ -445,13 +445,13 @@ To run in offline mode:
     To run the agent in offline mode with a test question, use the following command structure. Test questions can be found in `examples/advanced_agents/alert_triage_agent/data/offline_data.json`.
 
    ```bash
-   aiq run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml --input "{your_alert_in_json_format}"
+   nat run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml --input "{your_alert_in_json_format}"
    ```
 
    **Example:** To run the agent with a test question, use the following command:
 
    ```bash
-   aiq run \
+   nat run \
      --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml \
      --input '{
        "alert_id": 0,
@@ -518,7 +518,7 @@ To run in offline mode:
    To evaluate the agent, use the following command:
 
    ```bash
-   aiq eval --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml
+   nat eval --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml
    ```
 
   The agent will:

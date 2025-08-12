@@ -62,7 +62,7 @@ eval:
   general:
     workflow_alias: nat-simple-gpt-4o-mini
     output:
-      dir: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/openai/
+      dir: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/openai/
       cleanup: true
     dataset:
       _type: json

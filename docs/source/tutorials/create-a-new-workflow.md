@@ -233,7 +233,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
 - **Dependencies**: Ensure all required libraries are listed under `[project]`.
   In the example, the tool was created inside the NeMo Agent toolkit repo and simply needed to declare a dependency on `aiqtoolkit[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of NeMo Agent toolkit that it was built against. To determine the version of NeMo Agent toolkit run:
   ```bash
-  aiq --version
+  nat --version
   ```
 
   Use the first two digits of the version number. For example, if the version is `1.1.0`, then the dependency would be `aiqtoolkit[langchain]~=1.1`.

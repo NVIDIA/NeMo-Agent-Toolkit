@@ -62,7 +62,7 @@ eval:
   general:
     workflow_alias: nat-simple-llama-33-70b
     output:
-      dir: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/llama-33-70b
+      dir: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/llama-33-70b
       cleanup: true
     dataset:
       _type: json

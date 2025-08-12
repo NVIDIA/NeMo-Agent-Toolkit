@@ -350,14 +350,14 @@ class ChatResponseChunk(ResponseBaseModelOutput):
         valid_finish_reasons = ['stop', 'length', 'tool_calls', 'content_filter', 'function_call']
         final_finish_reason = finish_reason if finish_reason in valid_finish_reasons else None
 
-        return ChatResponseChunk(id=id_,
-                                 choices=[Choice(index=0, message=None, delta=delta,
-                                               finish_reason=final_finish_reason)],
-                                 created=created,
-                                 model=model,
-                                 object="chat.completion.chunk",
-                                 usage=usage,
-                                 system_fingerprint=system_fingerprint)
+        return ChatResponseChunk(
+            id=id_,
+            choices=[Choice(index=0, message=None, delta=delta, finish_reason=final_finish_reason)],
+            created=created,
+            model=model,
+            object="chat.completion.chunk",
+            usage=usage,
+            system_fingerprint=system_fingerprint)
 
 
 class ResponseIntermediateStep(ResponseBaseModelIntermediate):
@@ -611,33 +611,33 @@ GlobalTypeConverter.register_converter(_generate_response_to_chat_response)
 
 
 # ======== ChatRequest Converters ========
-def _aiq_chat_request_to_string(data: ChatRequest) -> str:
+def _nat_chat_request_to_string(data: ChatRequest) -> str:
     if isinstance(data.messages[-1].content, str):
         return data.messages[-1].content
     return str(data.messages[-1].content)
 
 
-GlobalTypeConverter.register_converter(_aiq_chat_request_to_string)
+GlobalTypeConverter.register_converter(_nat_chat_request_to_string)
 
 
-def _string_to_aiq_chat_request(data: str) -> ChatRequest:
+def _string_to_nat_chat_request(data: str) -> ChatRequest:
     return ChatRequest.from_string(data, model="")
 
 
-GlobalTypeConverter.register_converter(_string_to_aiq_chat_request)
+GlobalTypeConverter.register_converter(_string_to_nat_chat_request)
 
 
 # ======== ChatResponse Converters ========
-def _aiq_chat_response_to_string(data: ChatResponse) -> str:
+def _nat_chat_response_to_string(data: ChatResponse) -> str:
     if data.choices and data.choices[0].message:
         return data.choices[0].message.content or ""
     return ""
 
 
-GlobalTypeConverter.register_converter(_aiq_chat_response_to_string)
+GlobalTypeConverter.register_converter(_nat_chat_response_to_string)
 
 
-def _string_to_aiq_chat_response(data: str) -> ChatResponse:
+def _string_to_nat_chat_response(data: str) -> ChatResponse:
     '''Converts a string to an ChatResponse object'''
 
     # Simulate usage
@@ -650,7 +650,7 @@ def _string_to_aiq_chat_response(data: str) -> ChatResponse:
     return ChatResponse.from_string(data, usage=usage)
 
 
-GlobalTypeConverter.register_converter(_string_to_aiq_chat_response)
+GlobalTypeConverter.register_converter(_string_to_nat_chat_response)
 
 
 def _chat_response_to_chat_response_chunk(data: ChatResponse) -> ChatResponseChunk:
@@ -675,18 +675,18 @@ def _chat_response_chunk_to_string(data: ChatResponseChunk) -> str:
 GlobalTypeConverter.register_converter(_chat_response_chunk_to_string)
 
 
-def _string_to_aiq_chat_response_chunk(data: str) -> ChatResponseChunk:
+def _string_to_nat_chat_response_chunk(data: str) -> ChatResponseChunk:
     '''Converts a string to an ChatResponseChunk object'''
 
     # Build and return the response
     return ChatResponseChunk.from_string(data)
 
 
-GlobalTypeConverter.register_converter(_string_to_aiq_chat_response_chunk)
+GlobalTypeConverter.register_converter(_string_to_nat_chat_response_chunk)
 
 
 # ======== AINodeMessageChunk Converters ========
-def _ai_message_chunk_to_aiq_chat_response_chunk(data) -> ChatResponseChunk:
+def _ai_message_chunk_to_nat_chat_response_chunk(data) -> ChatResponseChunk:
     '''Converts LangChain AINodeMessageChunk to ChatResponseChunk'''
     content = ""
     if hasattr(data, 'content') and data.content is not None:

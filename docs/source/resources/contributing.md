@@ -113,8 +113,8 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 1. Verify that you've installed the NeMo Agent toolkit library.
 
      ```bash
-     aiq --help
-     aiq --version
+     nat --help
+     nat --version
      ```
 
      If the installation succeeded, the `aiq` command will log the help message and its current version.

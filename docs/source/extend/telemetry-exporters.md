@@ -1363,7 +1363,7 @@ logging.getLogger("aiq.observability").setLevel(logging.DEBUG)
    - Implement export_processed() with error handling
    - Implement _cleanup() for resource management
 
-3. Register with AIQ (register_telemetry_exporter decorator)
+3. Register with NAT (register_telemetry_exporter decorator)
    - Create async factory function
    - Instantiate exporter with config values
    - Yield exporter instance

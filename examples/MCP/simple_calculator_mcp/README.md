@@ -95,14 +95,14 @@ You can publish the simple calculator tools via MCP using the `aiq mcp` command.
 1. **Start the MCP server**: Follow the setup instructions in [README](./deploy_external_mcp/README.md) to start the containerized time server on port 8080
 2. **Run the workflow**:
    ```bash
-   aiq run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date.yml --input "What is the current hour of the day?"
+   nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date.yml --input "What is the current hour of the day?"
    ```
 
 **Math Server Example:**
 1. **Start the MCP server**: Use `aiq mcp --config_file ./examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
 2. **Run the workflow**:
    ```bash
-   aiq run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "What is the product of 2 * 4?"
+   nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "What is the product of 2 * 4?"
    ```
 
 **Combined Example:**
@@ -111,5 +111,5 @@ You can publish the simple calculator tools via MCP using the `aiq mcp` command.
    - **NeMo Agent Toolkit MCP server**: Use `aiq mcp --config_file examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
 2. **Run the workflow**:
    ```bash
-   aiq run --config_file examples/MCP/simple_calculator_mcp/configs/config-combined.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+   nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-combined.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
    ```

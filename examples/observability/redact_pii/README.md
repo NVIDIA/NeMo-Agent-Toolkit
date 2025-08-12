@@ -20,9 +20,9 @@ limitations under the License.
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# Testing Weave PII Redaction in AIQ using W&B Weave
+# Testing Weave PII Redaction in NAT using W&B Weave
 
-This example demonstrates how to use Weights & Biases (W&B) Weave with PII redaction in your AIQ workflows.
+This example demonstrates how to use Weights & Biases (W&B) Weave with PII redaction in your NAT workflows.
 
 ## Table of Contents
 

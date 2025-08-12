@@ -47,7 +47,7 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
     async def run(self):
 
         # Write the entire config to a temporary file
-        with tempfile.NamedTemporaryFile(mode="w", prefix="aiq_config", suffix=".yml", delete=False) as config_file:
+        with tempfile.NamedTemporaryFile(mode="w", prefix="nat_config", suffix=".yml", delete=False) as config_file:
 
             # Get as dict
             config_dict = self.full_config.model_dump(mode="json", by_alias=True, round_trip=True)

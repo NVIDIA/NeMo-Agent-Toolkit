@@ -42,7 +42,7 @@ Follow these rules when working with any documentation in the NeMo Agent toolkit
   - "In the NeMo Agent toolkit, you can…"
   - "Change directory to the NeMo Agent toolkit repo root…"
 - Consistently use this terminology throughout all documentation
-- NeMo Agent toolkit was previously known as the Agent Intelligence toolkit, and AgentIQ. You should NEVER use the deprecated names, including Agent Intelligence toolkit, AgentIQ, or AIQ/aiq. If you see any of these names in the documentation, you MUST update it based on the latest naming convention above, unless those names are intentionally used to refer to the deprecated names, or implementing a compatibility layer for the deprecated names.
+- NeMo Agent toolkit was previously known as the Agent Intelligence toolkit, and AgentIQ. You should NEVER use the deprecated names, including Agent Intelligence toolkit, aiqtoolkit, AgentIQ, or AIQ/aiq. If you see any of these names in the documentation, you MUST update it based on the latest naming convention above, unless those names are intentionally used to refer to the deprecated names, or implementing a compatibility layer for the deprecated names.
 
 ### Style Guide Compliance
 When creating, updating, or reviewing documentation, follow the comprehensive style guide rules listed in the Referenced Documentation section above. These rules cover:

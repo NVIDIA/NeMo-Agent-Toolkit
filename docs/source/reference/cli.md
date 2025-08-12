@@ -69,8 +69,8 @@ production as the entrypoint of a containerized application. Additional options 
 are made available via the `aiq start fastapi --help` utility:
 
 ```console
-$ aiq start fastapi --help
-Usage: aiq start fastapi [OPTIONS]
+$ nat start fastapi --help
+Usage: nat start fastapi [OPTIONS]
 
 Options:
   --config_file FILE              A JSON/YAML file that sets the parameters
@@ -123,8 +123,8 @@ other workflow launch commands. This simplifies the debugging process when trans
 The `aiq start console` help utility provides a brief description of each option to describe is usage.
 
 ```console
-$ aiq start console --help
-Usage: aiq start console [OPTIONS]
+$ nat start console --help
+Usage: nat start console [OPTIONS]
 
 Options:
   --config_file FILE         A JSON/YAML file that sets the parameters for the
@@ -144,8 +144,8 @@ The `aiq start mcp` command (or simply `aiq mcp`) will start a Model Context Pro
 The MCP front-end can be configured using the following options:
 
 ```console
-$ aiq mcp --help
-Usage: aiq mcp [OPTIONS]
+$ nat mcp --help
+Usage: nat mcp [OPTIONS]
 
 Options:
   --config_file FILE         A JSON/YAML file that sets the parameters for the
@@ -182,8 +182,8 @@ other workflow launch commands. This simplifies the debugging process when trans
 The `aiq run` help utility provides a brief description of each option to describe is usage.
 
 ```console
-$ aiq run --help
-Usage: aiq run [OPTIONS]
+$ nat run --help
+Usage: nat run [OPTIONS]
 
 Options:
   --config_file FILE         A JSON/YAML file that sets the parameters for the
@@ -204,8 +204,8 @@ when deploying this workflow into production as the entrypoint of a containerize
 available to serve this workflow are made available via the `aiq serve --help` utility:
 
 ```console
-$ aiq serve --help
-Usage: aiq serve [OPTIONS]
+$ nat serve --help
+Usage: nat serve [OPTIONS]
 
 Options:
   --config_file FILE              A JSON/YAML file that sets the parameters
@@ -254,8 +254,8 @@ suite of evaluation capabilities.
 The `aiq eval --help` utility provides a brief overview of the command and its available options.
 
 ```console
-$ aiq eval --help
-Usage: aiq eval [OPTIONS] COMMAND [ARGS]...
+$ nat eval --help
+Usage: nat eval [OPTIONS] COMMAND [ARGS]...
 
   Evaluate a workflow with the specified dataset.
 
@@ -292,8 +292,8 @@ the `aiq uninstall` command. This command can be used with one or more packages.
 illustrates is usage:
 
 ```console
-$ aiq uninstall --help
-Usage: aiq uninstall [OPTIONS] PACKAGES COMMAND [ARGS]...
+$ nat uninstall --help
+Usage: nat uninstall [OPTIONS] PACKAGES COMMAND [ARGS]...
 
   Uninstall plugin packages from the local environment.
 
@@ -309,8 +309,8 @@ each components valid configuration settings using the `aiq info components` com
 The `aiq validate` help utility illustrates its usage.
 
 ```console
-$ aiq validate --help
-Usage: aiq validate [OPTIONS]
+$ nat validate --help
+Usage: nat validate [OPTIONS]
 
   Validate a configuration file
 
@@ -334,8 +334,8 @@ should be further customized to implement the desired custom workflow and necess
 `aiq workflow create --help` utility provides a description of its usage.
 
 ```console
-$ aiq workflow create --help
-Usage: aiq workflow create [OPTIONS] WORKFLOW_NAME
+$ nat workflow create --help
+Usage: nat workflow create [OPTIONS] WORKFLOW_NAME
 
   Create a new NeMo Agent toolkit workflow using templates.
 
@@ -377,8 +377,8 @@ When you modify a workflow's code or update its dependencies, you need to reinst
 The `aiq workflow reinstall --help` utility provides a description of its usage:
 
 ```console
-$ aiq workflow reinstall --help
-Usage: aiq workflow reinstall [OPTIONS] WORKFLOW_NAME
+$ nat workflow reinstall --help
+Usage: nat workflow reinstall [OPTIONS] WORKFLOW_NAME
 
   Reinstall an NeMo Agent toolkit workflow package.
 
@@ -411,8 +411,8 @@ By default, unless the `--no-install` flag is set, the `aiq workflow create` com
 into the local environment. To remove a workflow package from the local environment, use the `aiq workflow delete` command.
 
 ```console
-$ aiq workflow delete --help
-Usage: aiq workflow delete [OPTIONS] WORKFLOW_NAME
+$ nat workflow delete --help
+Usage: nat workflow delete [OPTIONS] WORKFLOW_NAME
 
   Delete an NeMo Agent toolkit workflow and uninstall its package.
 
@@ -447,8 +447,8 @@ parameters are what will need to be specified in the configuration object.
 The `aiq info components --help` utility provides an overview of usage and filter options:
 
 ```console
-$ aiq info components --help
-Usage: aiq info components [OPTIONS] COMMAND [ARGS]...
+$ nat info components --help
+Usage: nat info components [OPTIONS] COMMAND [ARGS]...
 
   List the locally registered NeMo Agent toolkit components.
 
@@ -474,8 +474,8 @@ will be returned when invoking the `aiq info channels` command.
 The `aiq info channels --help` provides an overview of its usage:
 
 ```console
-$ aiq info channels --help
-Usage: aiq info channels [OPTIONS] COMMAND [ARGS]...
+$ nat info channels --help
+Usage: nat info channels [OPTIONS] COMMAND [ARGS]...
 
   List the configured remote registry channels.
 
@@ -510,7 +510,7 @@ Here we provide a example that configures a remote rest channel. To use this cha
 registry that adheres to the contracts defined in the rest handler in NeMo Agent toolkit.
 
 ```console
-$ aiq configure channel add rest
+$ nat configure channel add rest
 Channel Name: my_rest_channel  # A user defined locally unique name used to reference this configured channel
 Endpoint: http://my_rest_channel_url.com  # The endpoint to the remote rest registry service
 Token: my_rest_token  # The authentication token to interact with this rest registry service
@@ -523,7 +523,7 @@ Remove Route: remove  # The route to use when removing a published package from 
 Here we provide a example that configures a remote `pypi` channel. This assumes there exists a private PyPI registry.
 
 ```console
-$ aiq configure channel add pypi
+$ nat configure channel add pypi
 Channel Name: my_pypi_channel  # A user defined locally unique name used to reference this configured channel
 Endpoint: http://my_pypi_channel_url.com  # The endpoint to the private pypi registry service
 Token: my_pypi_token  # The authentication token to interact with this pypi registry service
@@ -541,7 +541,7 @@ the developer to override the configuration settings.
 A usage example is provided below:
 
 ```console
-$ aiq configure channel update my_rest_channel
+$ nat configure channel update my_rest_channel
 Endpoint: http://my_updated_rest_channel_url.com  # The overridden endpoint to the remote rest registry service
 Token: my_rest_token
 Publish Route: publish
@@ -577,8 +577,8 @@ Refer to [Adding a Remote Registry Channel](#adding-a-remote-registry-channel) f
 The `aiq registry` help command will provide the available commands in this group.
 
 ```console
-$ aiq registry --help
-Usage: aiq registry [OPTIONS] COMMAND [ARGS]...
+$ nat registry --help
+Usage: nat registry [OPTIONS] COMMAND [ARGS]...
 
   Utility to configure NeMo Agent toolkit remote registry channels.
 
@@ -603,8 +603,8 @@ installed locally so the discovery hooks can pull in necessary NeMo Agent toolki
 The `aiq registry publish --help` utility provides an overview of its usage:
 
 ```console
-$ aiq registry publish --help
-Usage: aiq registry publish [OPTIONS] PACKAGE_ROOT COMMAND [ARGS]...
+$ nat registry publish --help
+Usage: nat registry publish [OPTIONS] PACKAGE_ROOT COMMAND [ARGS]...
 
   Publish local NeMo Agent toolkit artifacts to a remote registry from package
   repository.
@@ -629,8 +629,8 @@ by an `aiq registry pull` command, once a useful package has been identified.
 The `aiq registry search --help` utility provides an overview of its usage:
 
 ```console
-$ aiq registry search --help
-Usage: aiq registry search [OPTIONS] COMMAND [ARGS]...
+$ nat registry search --help
+Usage: nat registry search [OPTIONS] COMMAND [ARGS]...
 
   Search for NeMo Agent toolkit artifacts from remote registry.
 
@@ -659,8 +659,8 @@ In many cases, components can be stitched together in YAML without having to wri
 The `aiq registry pull --help` command provides an overview of its usage:
 
 ```console
-$ aiq registry pull --help
-Usage: aiq registry pull [OPTIONS] PACKAGES COMMAND [ARGS]...
+$ nat registry pull --help
+Usage: nat registry pull [OPTIONS] PACKAGES COMMAND [ARGS]...
 
   Pull NeMo Agent toolkit artifacts from a remote registry by package name.
 
@@ -682,8 +682,8 @@ allows this interaction.
 The `aiq registry remove --help` utility provides an overview of its usage.
 
 ```console
-$ aiq registry remove --help
-Usage: aiq registry remove [OPTIONS] PACKAGES COMMAND [ARGS]...
+$ nat registry remove --help
+Usage: nat registry remove [OPTIONS] PACKAGES COMMAND [ARGS]...
 
   Remove NeMo Agent toolkit artifact from a remote registry by name and version.
 

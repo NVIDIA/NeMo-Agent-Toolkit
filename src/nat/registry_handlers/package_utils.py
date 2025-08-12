@@ -89,13 +89,13 @@ def resolve_extras_to_packages(package_name: str, extras: list[str]) -> set[str]
     """Resolve package extras to their actual package dependencies.
 
     Args:
-        package_name (str): The base package name (e.g., 'aiqtoolkit')
+        package_name (str): The base package name (e.g., 'nat')
         extras (list[str]): List of extra names (e.g., ['langchain', 'telemetry'])
 
     Returns:
         set[str]: Set of additional package names that the extras resolve to
-        (e.g., {'aiqtoolkit-langchain', 'aiqtoolkit-opentelemetry', 'aiqtoolkit-phoenix',
-        'aiqtoolkit-weave', 'aiqtoolkit-ragaai'})
+        (e.g., {'nat-langchain', 'nat-opentelemetry', 'nat-phoenix',
+        'nat-weave', 'nat-ragaai'})
     """
     resolved_packages = set()
 
@@ -149,8 +149,8 @@ def extract_dependencies_with_extras_resolved(pyproject_path: str) -> set[str]:
         set[str]: Set of all dependency names including those resolved from extras
 
     Example:
-        For a dependency like "aiqtoolkit[langchain,telemetry]~=1.2", this will return:
-        {'aiqtoolkit', 'aiqtoolkit-langchain', 'aiqtoolkit-opentelemetry', 'aiqtoolkit-phoenix', ...}
+        For a dependency like "nat[langchain,telemetry]~=1.2", this will return:
+        {'nat', 'nat-langchain', 'nat-opentelemetry', 'nat-phoenix', ...}
 
     Raises:
         FileNotFoundError: If the pyproject.toml file doesn't exist
@@ -449,7 +449,7 @@ def build_wheel(package_root: str) -> WheelData:
 
     toml_project: dict = data.get("project", {})
     toml_project_name = toml_project.get("name", None)
-    toml_packages = set(i for i in data.get("project", {}).get("entry-points", {}).get("aiq.plugins", {}))
+    toml_packages = set(i for i in data.get("project", {}).get("entry-points", {}).get("nat.plugins", {}))
 
     # Extract dependencies using the robust requirement parser with extras resolution
     try:
@@ -494,7 +494,7 @@ def build_wheel(package_root: str) -> WheelData:
                      package_name=toml_project_name,
                      toml_project=toml_project,
                      toml_dependencies=toml_dependencies,
-                     toml_aiq_packages=toml_packages,
+                     toml_nat_packages=toml_packages,
                      union_dependencies=union_dependencies,
                      whl_path=whl_path,
                      whl_base64=whl_base64,
@@ -520,11 +520,11 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[ComponentEnum, 
 
     registry = GlobalTypeRegistry.get()
 
-    aiq_plugins = discover_entrypoints(PluginTypes.ALL)
+    nat_plugins = discover_entrypoints(PluginTypes.ALL)
 
     if (wheel_data is not None):
         registry.register_package(package_name=wheel_data.package_name, package_version=wheel_data.whl_version)
-        for entry_point in aiq_plugins:
+        for entry_point in nat_plugins:
             package_name = entry_point.dist.name
             if (package_name == wheel_data.package_name):
                 continue
@@ -532,7 +532,7 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[ComponentEnum, 
                 registry.register_package(package_name=package_name)
 
     else:
-        for entry_point in aiq_plugins:
+        for entry_point in nat_plugins:
             registry.register_package(package_name=entry_point.dist.name)
 
     discovery_metadata = {}

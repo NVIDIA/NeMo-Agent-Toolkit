@@ -54,10 +54,10 @@ def test_build_package_metadata(use_wheel_data):
     wheel_data: WheelData | None = None
     if (use_wheel_data):
         wheel_data = WheelData(package_root=".",
-                               package_name="aiq",
+                               package_name="nat",
                                toml_project={},
                                toml_dependencies=set(),
-                               toml_aiq_packages=set(),
+                               toml_nat_packages=set(),
                                union_dependencies=set(),
                                whl_path="whl/path.whl",
                                whl_base64="",
@@ -74,7 +74,7 @@ def test_build_package_metadata(use_wheel_data):
             DiscoveryMetadata(**discovery_metadata)
 
 
-def test_build_aiq_artifact():
+def test_build_nat_artifact():
 
     package_root = "."
 

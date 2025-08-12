@@ -37,7 +37,7 @@ class AbstractRegistryHandler(ABC):
 
     def __init__(self):
         self._discovery_metadata: dict[ComponentEnum, list[dict | DiscoveryMetadata]] = {}
-        self._aiq_artifact: Artifact | None = None
+        self._nat_artifact: Artifact | None = None
         self._whl_bytes: bytes
         self._whl_path: str
         self._whl_base64: str

@@ -62,9 +62,9 @@ def get_app():
         # Create an instance of the front end worker class
         front_end_worker = front_end_worker_class(config)
 
-        aiq_app = front_end_worker.build_app()
+        nat_app = front_end_worker.build_app()
 
-        return aiq_app
+        return nat_app
 
     except ImportError as e:
         raise ValueError(f"Front end worker {front_end_worker_full_name} not found.") from e

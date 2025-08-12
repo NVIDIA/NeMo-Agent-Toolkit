@@ -115,8 +115,8 @@ NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run 
 1. Verify that you've installed the NeMo Agent toolkit library.
 
      ```bash
-     aiq --help
-     aiq --version
+     nat --help
+     nat --version
      ```
 
      If the installation succeeded, the `aiq` command will log the help message and its current version.
@@ -156,14 +156,14 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 2. Run the `aiq_simple_web_query` Workflow
 
     ```bash
-    aiq run --config_file=examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith"
+    nat run --config_file=examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith"
     ```
 
 3. **Run and evaluate the `aiq_simple_web_query` Workflow**
 
     The `eval_config.yml` YAML is a super-set of the `config.yml` containing additional fields for evaluation. To evaluate the `aiq_simple_web_query` workflow, run the following command:
     ```bash
-    aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
+    nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
     ```
 
 

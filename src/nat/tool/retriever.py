@@ -30,7 +30,7 @@ from nat.retriever.models import RetrieverOutput
 logger = logging.getLogger(__name__)
 
 
-class RetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
+class RetrieverConfig(FunctionBaseConfig, name="nat_retriever"):
     """
     Retriever tool which provides a common interface for different vectorstores. Its
     configuration uses clients, which are the vectorstore-specific implementaiton of the retriever interface.
@@ -91,4 +91,4 @@ async def retriever_tool(config: RetrieverConfig, builder: Builder):
 
 # Compatibility aliases with previous releases
 AIQRetrieverConfig = RetrieverConfig
-aiq_retriever_tool = retriever_tool
+nat_retriever_tool = retriever_tool

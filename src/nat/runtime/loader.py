@@ -88,9 +88,9 @@ def load_config(config_file: StrPath) -> Config:
     config_yaml = yaml_load(config_file)
 
     # Validate configuration adheres to NAT schemas
-    validated_aiq_config = validate_schema(config_yaml, Config)
+    validated_nat_config = validate_schema(config_yaml, Config)
 
-    return validated_aiq_config
+    return validated_nat_config
 
 
 @asynccontextmanager
@@ -152,8 +152,8 @@ def get_all_entrypoints_distro_mapping() -> dict[str, str]:
     """
 
     mapping = {}
-    aiq_entrypoints = discover_entrypoints(PluginTypes.ALL)
-    for ep in aiq_entrypoints:
+    nat_entrypoints = discover_entrypoints(PluginTypes.ALL)
+    for ep in nat_entrypoints:
         ep_module_parts = ep.module.split(".")
         current_parts = []
         for part in ep_module_parts:
@@ -171,14 +171,14 @@ def discover_and_register_plugins(plugin_type: PluginTypes):
     """
 
     # Get the entry points for the specified groups
-    aiq_plugins = discover_entrypoints(plugin_type)
+    nat_plugins = discover_entrypoints(plugin_type)
 
     count = 0
 
     # Pause registration hooks for performance. This is useful when loading a large number of plugins.
     with GlobalTypeRegistry.get().pause_registration_changed_hooks():
 
-        for entry_point in aiq_plugins:
+        for entry_point in nat_plugins:
             try:
                 logger.debug("Loading module '%s' from entry point '%s'...", entry_point.module, entry_point.name)
 
@@ -216,4 +216,4 @@ def discover_and_register_plugins(plugin_type: PluginTypes):
 
 
 # Compatibility alias
-get_all_aiq_entrypoints_distro_mapping = get_all_entrypoints_distro_mapping
+get_all_nat_entrypoints_distro_mapping = get_all_entrypoints_distro_mapping
