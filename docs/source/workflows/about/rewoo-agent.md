@@ -89,7 +89,7 @@ functions:
 
 * `max_history`:  Defaults to 15. Maximum number of messages to keep in the conversation history.
 
-* `use_openai_api`: Defaults to False. If set to True, the ReWOO agent will output in OpenAI API spec. If set to False, strings will be used.
+* `use_openai_api`**[Deprecated]** : This option is deprecated and will be removed in a future release. This option will NOT take any effect.
 
 * `additional_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base prompt.
 
