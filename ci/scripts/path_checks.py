@@ -203,7 +203,7 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                 continue
             if "path-check-skip-file" in line:
                 break
-            elif "path-check-skip-next-line" in line:
+            if "path-check-skip-next-line" in line:
                 skip_next_line = True
                 continue
             elif "path-check-skip-end" in line:
@@ -297,6 +297,7 @@ def check_files() -> list[tuple[str, PathInfo]]:
 
             Args:
                 path: The path to check.
+                path_info: The PathInfo object associated with the path.
 
             Returns:
                 True if we performed an action based on the path
