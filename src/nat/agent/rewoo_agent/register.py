@@ -66,6 +66,7 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
 
 @register_function(config_type=ReWOOAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builder):
+async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builder):
     from langchain.schema import BaseMessage
     from langchain_core.messages import trim_messages
     from langchain_core.messages.human import HumanMessage
@@ -142,15 +143,4 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
                 return ChatResponse.from_string(str(ex))
             return ChatResponse.from_string("I seem to be having a problem.")
 
-    if (config.use_openai_api):
-        yield FunctionInfo.from_fn(_response_fn, description=config.description)
-
-    else:
-
-        async def _str_api_fn(input_message: str) -> str:
-            oai_input = GlobalTypeConverter.get().try_convert(input_message, to_type=ChatRequest)
-            oai_output = await _response_fn(oai_input)
-
-            return GlobalTypeConverter.get().try_convert(oai_output, to_type=str)
-
-        yield FunctionInfo.from_fn(_str_api_fn, description=config.description)
+    yield FunctionInfo.from_fn(_response_fn, description=config.description)
