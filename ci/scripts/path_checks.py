@@ -276,7 +276,8 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                         section.append(block_type)
                 else:
                     # if it's empty, then we're done with the section
-                    section.pop()
+                    if section:
+                        section.pop()
 
             if filename.endswith("yml") or filename.endswith("yaml") or (section and section[-1] in ["yml", "yaml"]):
                 if any((key in line) for key in YAML_WHITELISTED_KEYS):
