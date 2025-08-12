@@ -16,5 +16,5 @@
 
 set -e
 
-# create a docker network for aiq if it does not exist
-docker network inspect aiq >/dev/null 2>&1 || docker network create aiq
+# create a docker network for nat if it does not exist
+docker network inspect nat >/dev/null 2>&1 || docker network create nat

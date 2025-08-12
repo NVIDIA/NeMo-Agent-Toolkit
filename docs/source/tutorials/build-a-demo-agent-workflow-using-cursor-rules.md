@@ -67,14 +67,14 @@ Follow the steps below for a comprehensive example that demonstrates creating an
 
 ### Install NeMo Agent Toolkit
 
-Before you begin, make sure you have cloned the NeMo Agent toolkit repository and opened the project in Cursor, by selecting `File > Open Workspace from File... > select the aiq.code-workspace in the repository`.
+Before you begin, make sure you have cloned the NeMo Agent toolkit repository and opened the project in Cursor, by selecting `File > Open Workspace from File... > select the nat.code-workspace in the repository`.
 
 Prompt:
 ```
 Install AIQ Toolkit with all required dependencies and verify the installation
 ```
 
-The assistant will reference and apply the [toolkit-installation](../../../.cursor/rules/aiq-setup/aiq-toolkit-installation.mdc) rule to validate prerequisites and install the toolkit, followed by installation verification.
+The assistant will reference and apply the [toolkit-installation](../../../.cursor/rules/nat-setup/nat-toolkit-installation.mdc) rule to validate prerequisites and install the toolkit, followed by installation verification.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/install.gif" width="600">
@@ -86,7 +86,7 @@ Prompt:
 ```
 Find datetime-related functions and tools available in AIQ Toolkit
 ```
-The assistant will reference and apply the [info](../../../.cursor/rules/aiq-cli/aiq-info.mdc) rule to discover available tools and functions.
+The assistant will reference and apply the [info](../../../.cursor/rules/nat-cli/nat-info.mdc) rule to discover available tools and functions.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/find_tool.gif" width="600">
@@ -100,7 +100,7 @@ Prompt:
 Create a new workflow named `demo_workflow` in the examples folder
 ```
 
-The assistant will reference and apply the [general](../../../.cursor/rules/aiq-workflows/general.mdc) rule to generate a new workflow using the `aiq workflow create` command.
+The assistant will reference and apply the [general](../../../.cursor/rules/nat-workflows/general.mdc) rule to generate a new workflow using the `nat workflow create` command.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/create_workflow.gif" width="600">
@@ -113,7 +113,7 @@ Prompt:
 Add the current_datetime function to the demo_workflow
 ```
 
-The assistant will reference and apply the [add-functions](../../../.cursor/rules/aiq-workflows/add-functions.mdc) rule to integrate the function into the workflow.
+The assistant will reference and apply the [add-functions](../../../.cursor/rules/nat-workflows/add-functions.mdc) rule to integrate the function into the workflow.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/add_tool.gif" width="600">
@@ -126,7 +126,7 @@ Prompt:
 ```
 Integrate ReAct agent to the workflow
 ```
-The assistant will reference and apply the [general](../../../.cursor/rules/aiq-agents/general.mdc) rule to integrate a ReAct agent within the workflow.
+The assistant will reference and apply the [general](../../../.cursor/rules/nat-agents/general.mdc) rule to integrate a ReAct agent within the workflow.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/react_agent.gif" width="600">
@@ -139,7 +139,7 @@ Prompt:
 Run the demo_workflow
 ```
 
-The assistant will reference and apply the [run-serve](../../../.cursor/rules/aiq-cli/aiq-run-serve.mdc) rule to run the workflow.
+The assistant will reference and apply the [run-serve](../../../.cursor/rules/nat-cli/nat-run-serve.mdc) rule to run the workflow.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/run_workflow.gif" width="600">

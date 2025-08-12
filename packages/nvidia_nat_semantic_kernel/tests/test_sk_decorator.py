@@ -16,7 +16,7 @@
 from pydantic import BaseModel
 
 # Import the semantic_kernel_tool_wrapper from tool_wrapper.py
-from aiq.plugins.semantic_kernel.tool_wrapper import semantic_kernel_tool_wrapper
+from nat.plugins.semantic_kernel.tool_wrapper import semantic_kernel_tool_wrapper
 
 # ----------------------------
 # Dummy Models for Testing

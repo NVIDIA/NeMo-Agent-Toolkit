@@ -22,11 +22,11 @@ This documentation presumes familiarity with the NeMo Agent toolkit plugin archi
 ## Key Object Store Module Components
 
 * **Object Store Data Models**
-   - **{py:class}`~aiq.data_models.object_store.ObjectStoreBaseConfig`**: A Pydantic base class that all object store config classes must extend. This is used for specifying object store registration in the AIQ toolkit config file.
-   - **{py:class}`~aiq.data_models.object_store.ObjectStoreBaseConfigT`**: A generic type alias for object store config classes.
+   - **{py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig`**: A Pydantic base class that all object store config classes must extend. This is used for specifying object store registration in the AIQ toolkit config file.
+   - **{py:class}`~nat.data_models.object_store.ObjectStoreBaseConfigT`**: A generic type alias for object store config classes.
 
 * **Object Store Interfaces**
-   - **{py:class}`~aiq.object_store.interfaces.ObjectStore`** (abstract interface): The core interface for object store operations, including put, upsert, get, and delete operations.
+   - **{py:class}`~nat.object_store.interfaces.ObjectStore`** (abstract interface): The core interface for object store operations, including put, upsert, get, and delete operations.
      ```python
      class ObjectStore(ABC):
         @abstractmethod
@@ -47,7 +47,7 @@ This documentation presumes familiarity with the NeMo Agent toolkit plugin archi
      ```
 
 * **Object Store Models**
-   - **{py:class}`~aiq.object_store.models.ObjectStoreItem`**: The main object representing an item in the object store.
+   - **{py:class}`~nat.object_store.models.ObjectStoreItem`**: The main object representing an item in the object store.
      ```python
      class ObjectStoreItem:
         data: bytes  # The binary data to store
@@ -56,18 +56,18 @@ This documentation presumes familiarity with the NeMo Agent toolkit plugin archi
      ```
 
 * **Object Store Exceptions**
-   - **{py:class}`~aiq.data_models.object_store.KeyAlreadyExistsError`**: Raised when trying to store an object with a key that already exists (for `put_object`)
-   - **{py:class}`~aiq.data_models.object_store.NoSuchKeyError`**: Raised when trying to retrieve or delete an object with a non-existent key
+   - **{py:class}`~nat.data_models.object_store.KeyAlreadyExistsError`**: Raised when trying to store an object with a key that already exists (for `put_object`)
+   - **{py:class}`~nat.data_models.object_store.NoSuchKeyError`**: Raised when trying to retrieve or delete an object with a non-existent key
 
 ## Adding an Object Store Provider
 
-In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_models.object_store.ObjectStoreBaseConfig` and is declared with a `name="some_object_store"` can be discovered as an *Object Store type* by the NeMo Agent toolkit global type registry. This allows you to define a custom object store class to handle your own backends (for example, Redis, custom database, or cloud storage). Then your object store class can be selected in the NeMo Agent toolkit config YAML using `_type: <your object store type>`.
+In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig` and is declared with a `name="some_object_store"` can be discovered as an *Object Store type* by the NeMo Agent toolkit global type registry. This allows you to define a custom object store class to handle your own backends (for example, Redis, custom database, or cloud storage). Then your object store class can be selected in the NeMo Agent toolkit config YAML using `_type: <your object store type>`.
 
 ### Basic Steps
 
-1. **Create a config Class** that extends {py:class}`~aiq.data_models.object_store.ObjectStoreBaseConfig`:
+1. **Create a config Class** that extends {py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig`:
    ```python
-   from aiq.data_models.object_store import ObjectStoreBaseConfig
+   from nat.data_models.object_store import ObjectStoreBaseConfig
 
    class MyCustomObjectStoreConfig(ObjectStoreBaseConfig, name="my_custom_object_store"):
        # You can define any fields you want. For example:
@@ -77,12 +77,12 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_mod
    ```
    > **Note**: The `name="my_custom_object_store"` ensures that AIQ toolkit can recognize it when the user places `_type: my_custom_object_store` in the object store config.
 
-2. **Implement an {py:class}`~aiq.object_store.interfaces.ObjectStore`** that uses your backend:
+2. **Implement an {py:class}`~nat.object_store.interfaces.ObjectStore`** that uses your backend:
    ```python
-   from aiq.object_store.interfaces import ObjectStore
-   from aiq.object_store.models import ObjectStoreItem
-   from aiq.data_models.object_store import KeyAlreadyExistsError, NoSuchKeyError
-   from aiq.utils.type_utils import override
+   from nat.object_store.interfaces import ObjectStore
+   from nat.object_store.models import ObjectStoreItem
+   from nat.data_models.object_store import KeyAlreadyExistsError, NoSuchKeyError
+   from nat.utils.type_utils import override
 
    class MyCustomObjectStore(ObjectStore):
        def __init__(self, config: MyCustomObjectStoreConfig):
@@ -90,7 +90,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_mod
            self._conn_url = config.connection_url
            self._bucket_name = config.bucket_name
            # Set up connections to your backend here
-       
+
        @override
        async def put_object(self, key: str, item: ObjectStoreItem) -> None:
            # Check if key already exists
@@ -139,8 +139,8 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_mod
 
 3. **Register your object store with AIQ toolkit** using the `@register_object_store` decorator:
    ```python
-   from aiq.builder.builder import Builder
-   from aiq.cli.register_workflow import register_object_store
+   from nat.builder.builder import Builder
+   from nat.cli.register_workflow import register_object_store
 
    @register_object_store(config_type=MyCustomObjectStoreConfig)
    async def my_custom_object_store(config: MyCustomObjectStoreConfig, builder: Builder):
@@ -164,8 +164,8 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_mod
 ## Bringing Your Own Object Store Implementation
 
 A typical pattern is:
-- You define a *config class* that extends {py:class}`~aiq.data_models.object_store.ObjectStoreBaseConfig` (giving it a unique `_type` / name).
-- You define the actual *runtime logic* in an "Object Store" class that implements {py:class}`~aiq.object_store.interfaces.ObjectStore`.
+- You define a *config class* that extends {py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig` (giving it a unique `_type` / name).
+- You define the actual *runtime logic* in an "Object Store" class that implements {py:class}`~nat.object_store.interfaces.ObjectStore`.
 - You connect them together using the `@register_object_store` decorator.
 
 ### Example: Minimal Skeleton
@@ -180,11 +180,11 @@ my_custom_object_store
 
 `my_custom_object_store.py` contents:
 ```python
-from aiq.data_models.object_store import KeyAlreadyExistsError
-from aiq.data_models.object_store import NoSuchKeyError
-from aiq.object_store.interfaces import ObjectStore
-from aiq.object_store.models import ObjectStoreItem
-from aiq.utils.type_utils import override
+from nat.data_models.object_store import KeyAlreadyExistsError
+from nat.data_models.object_store import NoSuchKeyError
+from nat.object_store.interfaces import ObjectStore
+from nat.object_store.models import ObjectStoreItem
+from nat.utils.type_utils import override
 
 class MyCustomObjectStore(ObjectStore):
     def __init__(self, cfg: MyCustomObjectStoreConfig):
@@ -216,7 +216,7 @@ class MyCustomObjectStore(ObjectStore):
 
 `object_store.py` contents:
 ```python
-from aiq.data_models.object_store import ObjectStoreBaseConfig
+from nat.data_models.object_store import ObjectStoreBaseConfig
 
 class MyCustomObjectStoreConfig(ObjectStoreBaseConfig, name="my_custom_object_store"):
     url: str
@@ -258,7 +258,7 @@ print(item.data.decode("utf-8"))
 **Inside Functions**: Functions that read or write to object stores simply call the object store client. For example:
 
 ```python
-from aiq.object_store.models import ObjectStoreItem
+from nat.object_store.models import ObjectStoreItem
 from langchain_core.tools import ToolException
 
 async def store_file_tool_action(file_data: bytes, key: str, object_store_name: str):

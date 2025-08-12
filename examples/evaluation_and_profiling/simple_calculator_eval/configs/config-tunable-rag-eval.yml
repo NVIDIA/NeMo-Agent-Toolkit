@@ -74,7 +74,7 @@ workflow:
 
 eval:
   general:
-    output_dir: .tmp/aiq/examples/getting_started/simple_web_query
+    output_dir: .tmp/nat/examples/getting_started/simple_web_query
     dataset:
       _type: json
       file_path: examples/getting_started/simple_calculator/data/simple_calculator.json

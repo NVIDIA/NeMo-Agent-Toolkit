@@ -17,7 +17,7 @@ import json
 from unittest.mock import patch
 
 import pytest
-from aiq_alert_triage_agent import run
+from nat_alert_triage_agent import run
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def test_hsts_header(client):
                           }])
 def test_receive_single_alert(client, alert):
     """Test receiving a single alert with different alert types."""
-    with patch('aiq_alert_triage_agent.run.start_process') as mock_start_process:
+    with patch('nat_alert_triage_agent.run.start_process') as mock_start_process:
         response = client.post('/alerts', data=json.dumps(alert), content_type='application/json')
 
         data = json.loads(response.data)
@@ -83,7 +83,7 @@ def test_receive_multiple_alerts(client):
         "timestamp": "2025-04-28T05:00:00.000000"
     } for i in range(alert_count)]
 
-    with patch('aiq_alert_triage_agent.run.start_process') as mock_start_process:
+    with patch('nat_alert_triage_agent.run.start_process') as mock_start_process:
         response = client.post('/alerts', data=json.dumps(test_alerts), content_type='application/json')
 
         data = json.loads(response.data)

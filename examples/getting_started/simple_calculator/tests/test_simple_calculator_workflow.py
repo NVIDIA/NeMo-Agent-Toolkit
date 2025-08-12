@@ -20,11 +20,11 @@ import logging
 from pathlib import Path
 
 import pytest
-from aiq_simple_calculator.register import DivisionToolConfig
-from aiq_simple_calculator.register import InequalityToolConfig
-from aiq_simple_calculator.register import MultiplyToolConfig
+from nat_simple_calculator.register import DivisionToolConfig
+from nat_simple_calculator.register import InequalityToolConfig
+from nat_simple_calculator.register import MultiplyToolConfig
 
-from aiq.runtime.loader import load_workflow
+from nat.runtime.loader import load_workflow
 
 logger = logging.getLogger(__name__)
 
