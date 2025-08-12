@@ -22,7 +22,7 @@ dependencies = [
   "authlib~=1.3.1",
   "click~=8.1",
   "colorama~=0.4.6",
-  "datasets~=4.0",                              # workaround for uv's solver choosing different versions of datasets based on sys_platform
+  "datasets~=4.0", # workaround for uv's solver choosing different versions of datasets based on sys_platform
   "expandvars~=1.0",
   "fastapi~=0.115.5",
   "httpx~=0.27",
@@ -36,7 +36,7 @@ dependencies = [
   "pkce==1.0.3",
   "pkginfo~=1.12",
   "platformdirs~=4.3",
-  "pydantic==2.10.*",                           # work-around for arize-phoenix==6.1.0 incompatibility with pydantic==2.11.*, remove once we update arize-phoenix
+  "pydantic==2.10.*", # work-around for arize-phoenix==6.1.0 incompatibility with pydantic==2.11.*, remove once we update arize-phoenix
   "pymilvus~=2.4",
   "PyYAML~=6.0",
   "ragas~=0.2.14",
@@ -105,10 +105,16 @@ examples = [
   "nat_user_report",
 ]
 
-profiling = ["matplotlib~=3.9", "prefixspan~=0.5.2", "scikit-learn~=1.6"]
+profiling = [
+  "matplotlib~=3.9",
+  "prefixspan~=0.5.2",
+  "scikit-learn~=1.6",
+]
 
 # Optional dependency needed when use_gunicorn is set to true
-gunicorn = ["gunicorn~=23.0"]
+gunicorn = [
+  "gunicorn~=23.0"
+]
 
 
 [tool.uv]
@@ -247,7 +253,7 @@ filterwarnings = [
   # trigger the warnings. In Python 3.12 this triggers a SyntaxWarning, in Python 3.11 it triggers a DeprecationWarning
   # which unfortunately pytest is unable to filter.
   # Remove once https://github.com/qdrant/qdrant-client/issues/983 is resolved.
-  "ignore:^invalid escape sequence:SyntaxWarning",
+  "ignore:^invalid escape sequence:SyntaxWarning"
 ]
 testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
 asyncio_mode = "auto"
@@ -649,12 +655,12 @@ confidence = [
 # --disable=W".
 disable = [
   "bad-inline-option",
-  "broad-exception-caught",        # Allow catching base Exception class
+  "broad-exception-caught", # Allow catching base Exception class
   "deprecated-pragma",
-  "duplicate-code",                # This is too restrictive for our codebase
+  "duplicate-code", # This is too restrictive for our codebase
   "file-ignored",
-  "import-error",                  # pylint gets confused by tests for our examples
-  "import-outside-toplevel",       # Allow lazy imports inside of methods
+  "import-error", # pylint gets confused by tests for our examples
+  "import-outside-toplevel", # Allow lazy imports inside of methods
   "locally-disabled",
   "missing-class-docstring",
   "missing-function-docstring",
@@ -663,7 +669,7 @@ disable = [
   "raw-checker-failed",
   "superfluous-parens",
   "suppressed-message",
-  "too-few-public-methods",        # Disable all the "too-*" checks, as they are too strict for our codebase
+  "too-few-public-methods", # Disable all the "too-*" checks, as they are too strict for our codebase
   "too-many-ancestors",
   "too-many-arguments",
   "too-many-branches",
@@ -675,11 +681,11 @@ disable = [
   "too-many-public-methods",
   "too-many-return-statements",
   "too-many-statements",
-  "unnecessary-lambda",            # We pass lambdas around a lot, so this is not useful
-  "unnecessary-pass",              # Allow empty classes/methods with only a `pass` statement in the body
+  "unnecessary-lambda", # We pass lambdas around a lot, so this is not useful
+  "unnecessary-pass", # Allow empty classes/methods with only a `pass` statement in the body
   "use-symbolic-message-instead",
   "useless-suppression",
-  "wrong-import-order",            # pylint mistakenly thinks that the test utils are third party, and we have isort for this
+  "wrong-import-order", # pylint mistakenly thinks that the test utils are third party, and we have isort for this
 ]
 
 # Enable the message, report, category or checker with the given id(s). You can
