@@ -20,7 +20,7 @@ from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 
 
-def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
+def extract_nested_questions(file_path: Path, difficulty: str | None = None, max_rows: int | None = None) -> EvalInput:
     """
     This is a sample custom dataset parser that:
     1. Loads a nested JSON file
@@ -49,7 +49,7 @@ def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: 
     """
 
     # Load the nested JSON
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     # Extract questions array from the nested structure

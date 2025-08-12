@@ -222,7 +222,7 @@ def temp_nested_json_file(sample_nested_data):
     temp_path.unlink()
 
 
-def sample_custom_parser(file_path: Path, difficulty: str = None) -> EvalInput:
+def sample_custom_parser(file_path: Path, difficulty: str = "") -> EvalInput:
     """
     Test implementation of a custom dataset parser that:
     """

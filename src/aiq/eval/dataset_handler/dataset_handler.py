@@ -40,7 +40,7 @@ class DatasetHandler:
                  dataset_config: EvalDatasetConfig,
                  reps: int,
                  concurrency: int,
-                 num_passes: int | None = None,
+                 num_passes: int = 1,
                  adjust_dataset_size: bool = False):
         from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
 
@@ -321,7 +321,7 @@ class DatasetHandler:
 
     def filter_intermediate_steps(self,
                                   intermediate_steps: list[IntermediateStep],
-                                  event_filter: list[IntermediateStepType] = None) -> list[dict]:
+                                  event_filter: list[IntermediateStepType] | None = None) -> list[dict]:
         """
         Filter out the intermediate steps that are not relevant for evaluation.
         The output is written with with the intention of re-running the evaluation using the original config file.
@@ -331,7 +331,9 @@ class DatasetHandler:
         filtered_steps = self.intermediate_step_adapter.filter_intermediate_steps(intermediate_steps, event_filter)
         return self.intermediate_step_adapter.serialize_intermediate_steps(filtered_steps)
 
-    def publish_eval_input(self, eval_input, workflow_output_step_filter: list[IntermediateStepType] = None) -> str:
+    def publish_eval_input(self,
+                           eval_input,
+                           workflow_output_step_filter: list[IntermediateStepType] | None = None) -> str:
         """
         Convert the EvalInput object to a JSON output for storing in a file. Use the orginal keys to
         allow re-running evaluation using the orignal config file and '--skip_workflow' option.
