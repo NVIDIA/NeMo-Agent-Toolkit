@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import os
 import time
 import uuid
 from enum import Enum
@@ -24,6 +25,8 @@ from pydantic import Field
 from pydantic import field_validator
 
 logger = logging.getLogger(__name__)
+
+_SPAN_PREFIX = os.getenv("NAT_SPAN_PREFIX", "nat")
 
 
 class SpanKind(Enum):
@@ -87,7 +90,7 @@ def event_type_to_span_kind(event_type: str) -> SpanKind:
 
 
 class SpanAttributes(Enum):
-    NAT_SPAN_KIND = "nat.span.kind"
+    NAT_SPAN_KIND = f"{_SPAN_PREFIX}.span.kind"
     INPUT_VALUE = "input.value"
     INPUT_MIME_TYPE = "input.mime_type"
     LLM_TOKEN_COUNT_PROMPT = "llm.token_count.prompt"
@@ -95,12 +98,12 @@ class SpanAttributes(Enum):
     LLM_TOKEN_COUNT_TOTAL = "llm.token_count.total"
     OUTPUT_VALUE = "output.value"
     OUTPUT_MIME_TYPE = "output.mime_type"
-    NAT_USAGE_NUM_LLM_CALLS = "nat.usage.num_llm_calls"
-    NAT_USAGE_SECONDS_BETWEEN_CALLS = "nat.usage.seconds_between_calls"
-    NAT_USAGE_TOKEN_COUNT_PROMPT = "nat.usage.token_count.prompt"
-    NAT_USAGE_TOKEN_COUNT_COMPLETION = "nat.usage.token_count.completion"
-    NAT_USAGE_TOKEN_COUNT_TOTAL = "nat.usage.token_count.total"
-    NAT_EVENT_TYPE = "nat.event_type"
+    NAT_USAGE_NUM_LLM_CALLS = f"{_SPAN_PREFIX}.usage.num_llm_calls"
+    NAT_USAGE_SECONDS_BETWEEN_CALLS = f"{_SPAN_PREFIX}.usage.seconds_between_calls"
+    NAT_USAGE_TOKEN_COUNT_PROMPT = f"{_SPAN_PREFIX}.usage.token_count.prompt"
+    NAT_USAGE_TOKEN_COUNT_COMPLETION = f"{_SPAN_PREFIX}.usage.token_count.completion"
+    NAT_USAGE_TOKEN_COUNT_TOTAL = f"{_SPAN_PREFIX}.usage.token_count.total"
+    NAT_EVENT_TYPE = f"{_SPAN_PREFIX}.event_type"
 
 
 class MimeTypes(Enum):

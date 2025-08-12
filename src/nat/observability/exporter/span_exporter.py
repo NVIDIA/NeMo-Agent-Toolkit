@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import logging
+import os
 import re
+import typing
 from abc import abstractmethod
 from typing import TypeVar
 
@@ -32,6 +34,9 @@ from nat.observability.mixin.serialize_mixin import SerializeMixin
 from nat.observability.utils.dict_utils import merge_dicts
 from nat.observability.utils.time_utils import ns_timestamp
 from nat.utils.type_utils import override
+
+if typing.TYPE_CHECKING:
+    from nat.builder.context import ContextState
 
 logger = logging.getLogger(__name__)
 
@@ -69,12 +74,21 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
     Args:
         context_state (ContextState, optional): The context state to use for the exporter. Defaults to None.
+        span_prefix (str, optional): The prefix name to use for span attributes. If `None` the value of the
+            `NAT_SPAN_PREFIX` environment variable is used. Defaults to "nat" if neither are defined.
     """
 
     # Use descriptors for automatic isolation of span-specific state
     _outstanding_spans: IsolatedAttribute[dict] = IsolatedAttribute(dict)
     _span_stack: IsolatedAttribute[dict] = IsolatedAttribute(dict)
     _metadata_stack: IsolatedAttribute[dict] = IsolatedAttribute(dict)
+
+    def __init__(self, context_state: "ContextState | None" = None, span_prefix: str | None = None):
+        super().__init__(context_state=context_state)
+        if span_prefix is None:
+            span_prefix = os.getenv("NAT_SPAN_PREFIX", "nat")
+
+        self._span_prefix = span_prefix
 
     @abstractmethod
     async def export_processed(self, item: OutputSpanT) -> None:
@@ -137,22 +151,27 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         else:
             sub_span_name = f"{event.payload.event_type}"
 
-        sub_span = Span(
-            name=sub_span_name,
-            parent=parent_span,
-            context=span_ctx,
-            attributes={
-                "nat.event_type": event.payload.event_type.value,
-                "nat.function.id": event.function_ancestry.function_id if event.function_ancestry else "unknown",
-                "nat.function.name": event.function_ancestry.function_name if event.function_ancestry else "unknown",
-                "nat.subspan.name": event.payload.name or "",
-                "nat.event_timestamp": event.event_timestamp,
-                "nat.framework": event.payload.framework.value if event.payload.framework else "unknown",
-            },
-            start_time=start_ns)
+        sub_span = Span(name=sub_span_name,
+                        parent=parent_span,
+                        context=span_ctx,
+                        attributes={
+                            f"{self._span_prefix}.event_type":
+                                event.payload.event_type.value,
+                            f"{self._span_prefix}.function.id":
+                                event.function_ancestry.function_id if event.function_ancestry else "unknown",
+                            f"{self._span_prefix}.function.name":
+                                event.function_ancestry.function_name if event.function_ancestry else "unknown",
+                            f"{self._span_prefix}.subspan.name":
+                                event.payload.name or "",
+                            f"{self._span_prefix}.event_timestamp":
+                                event.event_timestamp,
+                            f"{self._span_prefix}.framework":
+                                event.payload.framework.value if event.payload.framework else "unknown",
+                        },
+                        start_time=start_ns)
 
         span_kind = event_type_to_span_kind(event.event_type)
-        sub_span.set_attribute("nat.span.kind", span_kind.value)
+        sub_span.set_attribute(f"{self._span_prefix}.span.kind", span_kind.value)
 
         if event.payload.data and event.payload.data.input:
             match = re.search(r"Human:\s*Question:\s*(.*)", str(event.payload.data.input))
@@ -239,8 +258,9 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         merged_metadata = merge_dicts(start_metadata, end_metadata)
         serialized_metadata, is_json = self._serialize_payload(merged_metadata)
-        sub_span.set_attribute("nat.metadata", serialized_metadata)
-        sub_span.set_attribute("nat.metadata.mime_type", MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
+        sub_span.set_attribute(f"{self._span_prefix}.metadata", serialized_metadata)
+        sub_span.set_attribute(f"{self._span_prefix}.metadata.mime_type",
+                               MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
 
         end_ns = ns_timestamp(event.payload.event_timestamp)
 
