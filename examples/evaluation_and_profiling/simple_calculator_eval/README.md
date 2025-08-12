@@ -62,7 +62,7 @@ The configuration file specified above contains configurations for the NeMo Agen
 This command:
 - Uses the test dataset from `examples/getting_started/simple_calculator/data/simple_calculator.json`
 - Applies the Tunable RAG Evaluator to measure response accuracy
-- Saves detailed results to `.tmp/aiq/examples/getting_started/simple_calculator/tuneable_eval_output.json`
+- Saves detailed results to `.tmp/nat/examples/getting_started/simple_calculator/tuneable_eval_output.json`
 
 ### Understanding Results
 

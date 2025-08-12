@@ -118,7 +118,7 @@ def start_process(alert: dict, env_file: str) -> None:
         "-f",
         env_file,
         "run",
-        "aiq",
+        "nat",
         "run",
         "--config_file=examples/advanced_agents/alert_triage_agent/src/nat_alert_triage_agent/configs/config.yml",
         "--input",

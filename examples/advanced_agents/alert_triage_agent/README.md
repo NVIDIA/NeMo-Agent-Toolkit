@@ -255,7 +255,7 @@ The `eval` section defines how the system evaluates pipeline outputs using prede
 ```yaml
 eval:
   general:
-    output_dir: .tmp/aiq/examples/advanced_agents/alert_triage_agent/output/
+    output_dir: .tmp/nat/examples/advanced_agents/alert_triage_agent/output/
     dataset:
       _type: json
       file_path: examples/advanced_agents/alert_triage_agent/data/offline_data.json
@@ -512,7 +512,7 @@ To run in offline mode:
 
    The diagnostic checks, including network connectivity, monitoring processes, hardware health, and telemetry metrics analysis, all indicate that the host is operational and healthy, with no evidence to support the "InstanceDown" alert being a true indication of a problem.
    --------------------------------------------------
-   2025-07-21 17:14:45,234 - aiq_alert_triage_agent - INFO - Cleaning up
+   2025-07-21 17:14:45,234 - nat_alert_triage_agent - INFO - Cleaning up
    ```
 
    To evaluate the agent, use the following command:

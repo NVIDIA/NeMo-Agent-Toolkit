@@ -63,7 +63,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
 The NeMo Agent toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
 into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enabled by leveraging a reusable plugin developed in the `examples/HITL/por_to_jiratickets` example. We can view the implementation in the
-`aiq_por_to_jiratickets.hitl_approval_tool.py` file. The implementation is shown below:
+`nat_por_to_jiratickets.hitl_approval_tool.py` file. The implementation is shown below:
 
 ```python
 @register_function(config_type=HITLApprovalFnConfig)
@@ -75,8 +75,8 @@ async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder)
 
     async def _arun(unused: str = "") -> bool:
 
-        aiq_context = Context.get()
-        user_input_manager = aiq_context.user_interaction_manager
+        nat_context = Context.get()
+        user_input_manager = nat_context.user_interaction_manager
 
         human_prompt_text = HumanPromptText(text=prompt, required=True, placeholder="<your response here>")
         response: InteractionResponse = await user_input_manager.prompt_user_input(human_prompt_text)
@@ -109,10 +109,10 @@ nat run --config_file examples/HITL/simple_calculator_hitl/configs/config-hitl.y
 
 langgraph.errors.GraphRecursionError: Recursion limit of 4 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.
 For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/GRAPH_RECURSION_LIMIT
-2025-07-03 17:04:54,696 - aiq_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
+2025-07-03 17:04:54,696 - nat_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
 You have reached the maximum number of iterations.
  Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: yes
-2025-07-03 17:04:56,267 - aiq_simple_calculator_hitl.retry_react_agent - INFO - Attempt 2: Increasing max_iterations to 2
+2025-07-03 17:04:56,267 - nat_simple_calculator_hitl.retry_react_agent - INFO - Attempt 2: Increasing max_iterations to 2
 
 <snipped for brevity>
 
@@ -128,7 +128,7 @@ Workflow Result:
 
 langgraph.errors.GraphRecursionError: Recursion limit of 4 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.
 For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/GRAPH_RECURSION_LIMIT
-2025-07-03 17:07:04,105 - aiq_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
+2025-07-03 17:07:04,105 - nat_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
 You have reached the maximum number of iterations.
  Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: no
 

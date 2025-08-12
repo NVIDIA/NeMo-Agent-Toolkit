@@ -99,7 +99,7 @@ class RAGEvaluator:
         return EvaluationDataset(samples=samples)
 
     def ragas_to_eval_output(self, eval_input: EvalInput, results_dataset: EvaluationResult | None) -> EvalOutput:
-        """Converts the ragas EvaluationResult to aiq EvalOutput"""
+        """Converts the ragas EvaluationResult to nat EvalOutput"""
 
         if not results_dataset:
             logger.error("Ragas evaluation failed with no results")

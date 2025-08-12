@@ -71,7 +71,7 @@ The 3 worker agents are:
 
 the multi-agents architecture looks like the below
 
-![LangGraph multi-agents workflow](../../../docs/source/_static/aiq_multi_frameworks_agentic_schema.png)
+![LangGraph multi-agents workflow](../../../docs/source/_static/nat_multi_frameworks_agentic_schema.png)
 
 ## Installation and Setup
 

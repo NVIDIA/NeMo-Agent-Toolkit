@@ -83,7 +83,7 @@ class LocalRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def search(self, query: SearchQuery) -> AsyncGenerator[SearchResponse]:
-        """Searches the local aiq registry for relevant NAT components.
+        """Searches the local nat registry for relevant NAT components.
 
         Args:
             query (SearchQuery): Parameters of the search to be performed.

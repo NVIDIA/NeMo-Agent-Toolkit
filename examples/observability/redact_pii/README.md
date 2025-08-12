@@ -81,7 +81,7 @@ telemetry:
   tracing:
     weave:
       _type: weave
-      project: "aiqtoolkit-pii"
+      project: "nvidia-nat-pii"
       redact_pii: true
       redact_pii_fields:
         - EMAIL_ADDRESS
@@ -114,7 +114,7 @@ curl -X 'POST'   'http://localhost:8000/generate'
 {"value":"John Doe's contact information is:\n\n* Email: test@example.com\n* Phone: 555-123-4567"}
 ```
 
-4. Go to your Weights & Biases dashboard (https://wandb.ai) and navigate to the "aiqtoolkit-pii" project.
+4. Go to your Weights & Biases dashboard (https://wandb.ai) and navigate to the "nattoolkit-pii" project.
 
 Note: Because observability does not block workflow execution, PII redacted traces might take a few minutes to arrive in the Weights & Biases dashboard.
 

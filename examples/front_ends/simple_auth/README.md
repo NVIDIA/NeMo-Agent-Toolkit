@@ -119,8 +119,8 @@ to deploy the UI that works with the agent in this example. Configure it accordi
 Export your saved client ID and secret to the following environment variables:
 
 ```bash
-export AIQ_OAUTH_CLIENT_ID=<your_client_id>
-export AIQ_OAUTH_CLIENT_SECRET=<your_client_secret>
+export NAT_OAUTH_CLIENT_ID=<your_client_id>
+export NAT_OAUTH_CLIENT_SECRET=<your_client_secret>
 ```
 
 ## Serve The Agent

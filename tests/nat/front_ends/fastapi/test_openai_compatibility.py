@@ -63,7 +63,7 @@ def test_fastapi_config_openai_api_v1_path_field():
     assert config.openai_api_v1_path is None
 
 
-def test_aiq_chat_request_openai_fields():
+def test_nat_chat_request_openai_fields():
     """Test that ChatRequest includes all OpenAI Chat Completions API fields"""
     # Test with minimal required fields
     request = ChatRequest(messages=[Message(content="Hello", role="user")])
@@ -120,7 +120,7 @@ def test_aiq_chat_request_openai_fields():
     assert request.user == "user123"
 
 
-def test_aiq_choice_delta_class():
+def test_nat_choice_delta_class():
     """Test that ChoiceDelta class works correctly"""
     # Test empty delta
     delta = ChoiceDelta()
@@ -143,7 +143,7 @@ def test_aiq_choice_delta_class():
     assert delta.role == "assistant"
 
 
-def test_aiq_chat_response_chunk_create_streaming_chunk():
+def test_nat_chat_response_chunk_create_streaming_chunk():
     """Test the new create_streaming_chunk method"""
     # Test basic streaming chunk
     chunk = ChatResponseChunk.create_streaming_chunk(content="Hello", role="assistant")
@@ -161,7 +161,7 @@ def test_aiq_chat_response_chunk_create_streaming_chunk():
     assert chunk.choices[0].finish_reason == "stop"
 
 
-def test_aiq_chat_response_timestamp_serialization():
+def test_nat_chat_response_timestamp_serialization():
     """Test that timestamps are serialized as Unix timestamps for OpenAI compatibility"""
     import datetime
 

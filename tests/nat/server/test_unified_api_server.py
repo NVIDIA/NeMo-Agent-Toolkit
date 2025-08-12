@@ -285,7 +285,7 @@ system_interaction_multiple_choice_dropdown_message = {
 
 
 @pytest.fixture(scope="session", name="config")
-def server_config(file_path: str = "tests/aiq/server/config.yml") -> BaseModel:
+def server_config(file_path: str = "tests/nat/server/config.yml") -> BaseModel:
     data = None
     with open(file_path, "r", encoding="utf-8") as file:
         data = yaml.safe_load(file)
@@ -355,9 +355,9 @@ async def test_user_attributes_from_http_request(client: httpx.AsyncClient, conf
         headers=headers,
         params=query_params,
     )
-    aiq_context = Context.get()
-    assert aiq_context.metadata.headers['header-test'] == headers["Header-Test"]
-    assert aiq_context.metadata.query_params['param1'] == query_params["param1"]
+    nat_context = Context.get()
+    assert nat_context.metadata.headers['header-test'] == headers["Header-Test"]
+    assert nat_context.metadata.query_params['param1'] == query_params["param1"]
     assert response.status_code == 200
 
 
@@ -423,19 +423,19 @@ async def test_invalid_websocket_message():
     assert message.content.code == ErrorTypes.INVALID_MESSAGE
 
 
-aiq_response_payload_output_test = ResponsePayloadOutput(payload="TEST")
-aiq_chat_response_test = ChatResponse(id="default",
+nat_response_payload_output_test = ResponsePayloadOutput(payload="TEST")
+nat_chat_response_test = ChatResponse(id="default",
                                       object="default",
                                       created=datetime.datetime.now(datetime.timezone.utc),
                                       choices=[Choice(message=ChoiceMessage(), index=0)],
                                       usage=None)
-aiq_chat_response_chunk_test = ChatResponseChunk(id="default",
+nat_chat_response_chunk_test = ChatResponseChunk(id="default",
                                                  choices=[Choice(message=ChoiceMessage(), index=0)],
                                                  created=datetime.datetime.now(datetime.timezone.utc))
-aiq_response_intermediate_step_test = ResponseIntermediateStep(id="default", name="default", payload="default")
+nat_response_intermediate_step_test = ResponseIntermediateStep(id="default", name="default", payload="default")
 
 validated_response_data_models = [
-    aiq_response_payload_output_test, aiq_chat_response_test, aiq_chat_response_chunk_test
+    nat_response_payload_output_test, nat_chat_response_test, nat_chat_response_chunk_test
 ]
 
 
@@ -454,7 +454,7 @@ async def test_resolve_intermediate_step_message_type_by_input_data():
     ResponseIntermediateStep input data."""
     message_validator = MessageValidator()
 
-    message_type = await message_validator.resolve_message_type_by_data(aiq_response_intermediate_step_test)
+    message_type = await message_validator.resolve_message_type_by_data(nat_response_intermediate_step_test)
     assert message_type == WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE
 
 
@@ -495,57 +495,57 @@ async def test_resolve_error_message_type_by_invalid_input_data():
     assert message_type == WebSocketMessageType.ERROR_MESSAGE
 
 
-async def test_aiq_response_to_websocket_message():
+async def test_nat_response_to_websocket_message():
     """Tests ResponsePayloadOutput can be converted to a WebSocketSystemResponseTokenMessage"""
     message_validator = MessageValidator()
 
-    aiq_response_content = await message_validator.convert_data_to_message_content(aiq_response_payload_output_test)
+    nat_response_content = await message_validator.convert_data_to_message_content(nat_response_payload_output_test)
 
-    aiq_response_to_system_response = await message_validator.create_system_response_token_message(
-        message_id="TEST", parent_id="TEST", content=aiq_response_content, status="in_progress")
+    nat_response_to_system_response = await message_validator.create_system_response_token_message(
+        message_id="TEST", parent_id="TEST", content=nat_response_content, status="in_progress")
 
-    assert isinstance(aiq_response_content, SystemResponseContent)
-    assert isinstance(aiq_response_to_system_response, WebSocketSystemResponseTokenMessage)
+    assert isinstance(nat_response_content, SystemResponseContent)
+    assert isinstance(nat_response_to_system_response, WebSocketSystemResponseTokenMessage)
 
 
-async def test_aiq_chat_response_to_websocket_message():
+async def test_nat_chat_response_to_websocket_message():
     """Tests ChatResponse can be converted to a WebSocketSystemResponseTokenMessage"""
     message_validator = MessageValidator()
 
-    aiq_chat_response_content = await message_validator.convert_data_to_message_content(aiq_chat_response_test)
+    nat_chat_response_content = await message_validator.convert_data_to_message_content(nat_chat_response_test)
 
-    aiq_chat_response_to_system_response = await message_validator.create_system_response_token_message(
-        message_id="TEST", parent_id="TEST", content=aiq_chat_response_content, status="in_progress")
+    nat_chat_response_to_system_response = await message_validator.create_system_response_token_message(
+        message_id="TEST", parent_id="TEST", content=nat_chat_response_content, status="in_progress")
 
-    assert isinstance(aiq_chat_response_content, SystemResponseContent)
-    assert isinstance(aiq_chat_response_to_system_response, WebSocketSystemResponseTokenMessage)
+    assert isinstance(nat_chat_response_content, SystemResponseContent)
+    assert isinstance(nat_chat_response_to_system_response, WebSocketSystemResponseTokenMessage)
 
 
 async def test_chat_response_chunk_to_websocket_message():
     """Tests ChatResponseChunk can be converted to a WebSocketSystemResponseTokenMessage"""
     message_validator = MessageValidator()
 
-    aiq_chat_repsonse_chunk_content = await message_validator.convert_data_to_message_content(
-        aiq_chat_response_chunk_test)
+    nat_chat_repsonse_chunk_content = await message_validator.convert_data_to_message_content(
+        nat_chat_response_chunk_test)
 
-    aiq_chat_repsonse_chunk_to_system_response = await message_validator.create_system_response_token_message(
-        message_id="TEST", parent_id="TEST", content=aiq_chat_repsonse_chunk_content, status="in_progress")
+    nat_chat_repsonse_chunk_to_system_response = await message_validator.create_system_response_token_message(
+        message_id="TEST", parent_id="TEST", content=nat_chat_repsonse_chunk_content, status="in_progress")
 
-    assert isinstance(aiq_chat_repsonse_chunk_content, SystemResponseContent)
-    assert isinstance(aiq_chat_repsonse_chunk_to_system_response, WebSocketSystemResponseTokenMessage)
+    assert isinstance(nat_chat_repsonse_chunk_content, SystemResponseContent)
+    assert isinstance(nat_chat_repsonse_chunk_to_system_response, WebSocketSystemResponseTokenMessage)
 
 
-async def test_aiq_intermediate_step_to_websocket_message():
+async def test_nat_intermediate_step_to_websocket_message():
     """Tests ResponseIntermediateStep can be converted to a WebSocketSystemIntermediateStepMessage"""
     message_validator = MessageValidator()
 
-    aiq_intermediate_step_content = await message_validator.convert_data_to_message_content(
-        aiq_response_intermediate_step_test)
+    nat_intermediate_step_content = await message_validator.convert_data_to_message_content(
+        nat_response_intermediate_step_test)
 
     intermediate_step_content_to_message = await message_validator.create_system_intermediate_step_message(
-        message_id="TEST", parent_id="TEST", content=aiq_intermediate_step_content, status="in_progress")
+        message_id="TEST", parent_id="TEST", content=nat_intermediate_step_content, status="in_progress")
 
-    assert isinstance(aiq_intermediate_step_content, SystemIntermediateStepContent)
+    assert isinstance(nat_intermediate_step_content, SystemIntermediateStepContent)
     assert isinstance(intermediate_step_content_to_message, WebSocketSystemIntermediateStepMessage)
 
 

@@ -107,7 +107,7 @@ Tool's response:
 Edsger Wybe Dijkstra ( DYKE-strə; Dutch: [ˈɛtsxər ˈʋibə ˈdɛikstraː] ; 11 May 1930 – 6 August 2002) was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist.
 Born in Rotterdam in the Netherlands, Dijkstra studied mathematics and physics and then theoretical physics at the University of Leiden. Adriaan van Wijngaarden offered him a job as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam, where he worked from 1952 until 1962. He formulated and solved the shortest path problem in 1956, and in 1960 developed the first compiler for the programming language ALGOL 60 in conjunction with colleague Jaap A. Zonneveld. In 1962 he moved to Eindhoven, and later to Nuenen, where he became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. In the late 1960s he built the THE multiprogramming system, which influence...
 ------------------------------
-2025-04-23 14:59:26,159 - aiq.agent.react_agent.agent - INFO -
+2025-04-23 14:59:26,159 - nat.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: who was Djikstra?
@@ -116,7 +116,7 @@ Thought: I now know the final answer
 
 Final Answer: Edsger Wybe Dijkstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist who made significant contributions to the field of computer science, including formulating and solving the shortest path problem and developing the first compiler for the programming language ALGOL 60.
 ------------------------------
-2025-04-23 14:59:26,164 - aiq.front_ends.console.console_front_end_plugin - INFO -
+2025-04-23 14:59:26,164 - nat.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
 ['Edsger Wybe Dijkstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist who made significant contributions to the field of computer science, including formulating and solving the shortest path problem and developing the first compiler for the programming language ALGOL 60.']

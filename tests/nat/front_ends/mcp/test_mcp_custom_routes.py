@@ -54,15 +54,15 @@ class CustomMCPWorker(MCPFrontEndPluginWorker):
 
 
 @pytest.fixture
-def mcp_aiq_config() -> AIQConfig:
+def mcp_nat_config() -> AIQConfig:
     """Fixture to provide a minimal AIQ configuration."""
     general_config = GeneralConfig(front_end=MCPFrontEndConfig(name="Test MCP", host="localhost", port=9902))
     return AIQConfig(general=general_config)
 
 
-async def test_custom_mcp_worker(mcp_aiq_config: AIQConfig):
+async def test_custom_mcp_worker(mcp_nat_config: AIQConfig):
     """Test that custom MCP worker can add routes without breaking functionality."""
-    worker = CustomMCPWorker(mcp_aiq_config)
+    worker = CustomMCPWorker(mcp_nat_config)
     mcp = FastMCP("Test Server")
 
     # Mock out the function registration since we're only testing custom routes
@@ -91,15 +91,15 @@ async def test_custom_mcp_worker(mcp_aiq_config: AIQConfig):
     assert len(health_routes) > 0, "Health route /health should be added"
 
 
-def test_runner_class_configuration(mcp_aiq_config: AIQConfig):
+def test_runner_class_configuration(mcp_nat_config: AIQConfig):
     """Test that the runner_class configuration works correctly."""
     # Test with no runner_class (should use default)
-    plugin_default = MCPFrontEndPlugin(mcp_aiq_config)
+    plugin_default = MCPFrontEndPlugin(mcp_nat_config)
     assert "MCPFrontEndPluginWorker" in plugin_default.get_worker_class_name()
 
     # Test with custom runner_class (should return the custom class name)
-    custom_aiq_config = AIQConfig(general=GeneralConfig(front_end=MCPFrontEndConfig(
+    custom_nat_config = AIQConfig(general=GeneralConfig(front_end=MCPFrontEndConfig(
         runner_class="nat.front_ends.mcp.test_mcp_custom_routes.CustomMCPWorker")))
 
-    plugin_custom = MCPFrontEndPlugin(custom_aiq_config)
+    plugin_custom = MCPFrontEndPlugin(custom_nat_config)
     assert "CustomMCPWorker" in plugin_custom.get_worker_class_name()

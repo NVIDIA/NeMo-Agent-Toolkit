@@ -36,7 +36,7 @@ Before starting, ensure you have:
 - Node.js v18+ installed (required for the web interface)
 
 
-The NeMo Agent toolkit UI is located in a Git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the Git submodules by running the following:
+The NeMo Agent toolkit UI is located in a Git submodule at `external/nat-ui`. Ensure you have checked out all of the Git submodules by running the following:
 ```bash
 git submodule update --init --recursive
 ```
@@ -77,7 +77,7 @@ Running this command will produce the following expected output:
 After the NeMo Agent toolkit server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official [Node.js documentation](https://nodejs.org/en/download).
 
 ```bash
-cd external/aiqtoolkit-opensource-ui
+cd external/nat-ui
 npm install
 npm run dev
 ```

@@ -103,7 +103,7 @@ nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/c
 
 #### Evaluation-Only Mode
 ```bash
-nat eval --skip_workflow --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml --dataset ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/eval/workflow_output.json
+nat eval --skip_workflow --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml --dataset ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval/workflow_output.json
 ```
 
 

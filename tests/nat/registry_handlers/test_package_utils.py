@@ -78,9 +78,9 @@ def test_build_nat_artifact():
 
     package_root = "."
 
-    aiq_artifact = build_artifact(package_root=package_root)
+    nat_artifact = build_artifact(package_root=package_root)
 
-    assert isinstance(aiq_artifact, Artifact)
+    assert isinstance(nat_artifact, Artifact)
 
 
 class TestParseRequirement:
@@ -102,7 +102,7 @@ class TestParseRequirement:
         """Test parsing packages with extras."""
         assert parse_requirement("requests[security]") == "requests"
         assert parse_requirement("uvicorn[standard]~=0.32.0") == "uvicorn"
-        assert parse_requirement("aiqtoolkit[langchain,telemetry]~=1.2") == "aiqtoolkit"
+        assert parse_requirement("nattoolkit[langchain,telemetry]~=1.2") == "nattoolkit"
 
     def test_package_with_comments(self):
         """Test parsing packages with inline comments."""
