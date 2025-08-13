@@ -52,10 +52,8 @@ class TraceAdapterRegistry:
     @classmethod
     def get_adapter(cls, trace_source: TraceSource) -> TraceSourceAdapter | None:
         """Get the appropriate adapter for a trace source."""
-        for adapter in cls._adapters.values():
-            if adapter.can_handle(trace_source):
-                return adapter
-        return None
+        framework_provider = f"{trace_source.source.framework}_{trace_source.source.provider}"
+        return cls._adapters.get(framework_provider)
 
     @classmethod
     def list_supported_frameworks(cls) -> list[str]:
