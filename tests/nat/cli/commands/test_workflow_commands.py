@@ -14,9 +14,29 @@
 # limitations under the License.
 
 from pathlib import Path
+from unittest.mock import patch
 
+from nat.cli.commands.workflow.workflow_commands import _get_nat_dependency
 from nat.cli.commands.workflow.workflow_commands import get_repo_root
 
 
 def test_get_repo_root(project_dir: str):
     assert get_repo_root() == Path(project_dir)
+
+
+@patch('nat.cli.entrypoint.get_version')
+def test_get_nat_dependency_non_editable_with_version(mock_get_version):
+    """Test that non-editable mode with valid version returns versioned dependency."""
+    mock_get_version.return_value = "1.2.3"
+
+    result = _get_nat_dependency(editable=False)
+    assert result == "aiqtoolkit[langchain]~=1.2"
+
+
+@patch('nat.cli.entrypoint.get_version')
+def test_get_nat_dependency_non_editable_unknown_version(mock_get_version):
+    """Test that non-editable mode with unknown version returns unversioned dependency."""
+    mock_get_version.return_value = "unknown"
+
+    result = _get_nat_dependency(editable=False)
+    assert result == "aiqtoolkit[langchain]"
