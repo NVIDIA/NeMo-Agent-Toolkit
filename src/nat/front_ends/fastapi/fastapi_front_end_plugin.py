@@ -70,7 +70,7 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
                 reload_excludes = ["./.*"]
 
-                uvicorn.run("aiq.front_ends.fastapi.main:get_app",
+                uvicorn.run("nat.front_ends.fastapi.main:get_app",
                             host=self.front_end_config.host,
                             port=self.front_end_config.port,
                             workers=self.front_end_config.workers,
