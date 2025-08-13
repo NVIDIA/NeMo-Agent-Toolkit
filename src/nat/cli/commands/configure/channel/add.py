@@ -20,7 +20,7 @@ import click
 logger = logging.getLogger(__name__)
 
 
-@click.group(name=__name__, invoke_without_command=True, help="Utility to add an AIQ Toolkit remote registry channel.")
+@click.group(name=__name__, invoke_without_command=True, help="Utility to add a NAT remote registry channel.")
 @click.argument("channel_type", type=str)
 def add(channel_type: str) -> None:
     from nat.utils.settings.global_settings import add_channel_interative

@@ -123,7 +123,7 @@ class SweBenchEvaluator:
                             for s in swebench_inputs if s not in supported_inputs})
 
         # Write SWEBenchInput to file
-        workflow_input_file = self.output_dir / "aiq_workflow_input.json"
+        workflow_input_file = self.output_dir / "nat_workflow_input.json"
         workflow_input_file.parent.mkdir(parents=True, exist_ok=True)
         Path(workflow_input_file).write_text(json.dumps([swebench.model_dump() for swebench in supported_inputs],
                                                         indent=2),
@@ -139,7 +139,7 @@ class SweBenchEvaluator:
             return None, None
 
         # Write SWEBenchOutput to file
-        workflow_output_file = self.output_dir / "aiq_workflow_output.json"
+        workflow_output_file = self.output_dir / "nat_workflow_output.json"
         Path(workflow_output_file).write_text(json.dumps([output.model_dump() for output in filtered_outputs],
                                                          indent=2),
                                               encoding="utf-8")

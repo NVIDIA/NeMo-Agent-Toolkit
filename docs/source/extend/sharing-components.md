@@ -27,7 +27,7 @@ To begin building a sharable component, do the following:
 This section emphasizes the details of configuration objects that facilitate component discovery.
 
 After installing the NeMo Agent toolkit library, and potentially other NeMo Agent toolkit plugin packages, a developer may want to know what
-components are available for workflow development or evaluation. A great tool for this is the `aiq info components` CLI
+components are available for workflow development or evaluation. A great tool for this is the `nat info components` CLI
 utility described in [Components Information](../reference/cli.md#components-information). This command produces a
 table containing information dynamically accumulated from each NeMo Agent toolkit component. The `details` column is sourced from
 each configuration object's docstring and field descriptions. Behind the scenes, these data (and others) are aggregated
@@ -66,15 +66,15 @@ class MyFnConfig(FunctionBaseConfig, name="my_fn_name"):  # includes a name
     a: str = Field(default="my_default_value", description="Notational description of what this field represents")  # includes a field description
 ```
 
-By incorporating these elements, the `description` field in the `aiq info components` provides the following
+By incorporating these elements, the `description` field in the `nat info components` provides the following
 information:
 
 ```bash
-                                                                                        AIQ toolkit Search Results
+                                                                                        NeMo Agent toolkit Search Results
 ┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ package                ┃ version                ┃ component_type ┃ component_name          ┃ description                                                                                        ┃
 ┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ aiq_notional_pkg_name  │ 0.1.1                  │ function       │ my_fn_name              │ The docstring should provide a description of the components utility.                              │
+│ nat_notional_pkg_name  │ 0.1.1                  │ function       │ my_fn_name              │ The docstring should provide a description of the components utility.                              │
 │                        │                        │                │                         │                                                                                                    │
 │                        │                        │                │                         │   Args:                                                                                            │
 │                        │                        │                │                         │     _type (str): The type of the object.                                                           │
@@ -98,14 +98,14 @@ When building the `pyproject.toml` file, there are two critical sections:
 
     ```
     dependencies = [
-    "aiq[langchain]",
+    "nat[langchain]",
     ]
     ```
 * Entrypoints: Provide the path to your plugins so they are registered with NeMo Agent toolkit when installed.
 An example is provided below:
     ```
-    [project.entry-points.'aiq.components']
-    aiq_notional_pkg_name = "aiq_notional_pkg_name.register"
+    [project.entry-points.'nat.components']
+    nat_notional_pkg_name = "nat_notional_pkg_name.register"
     ```
 
 ### Building a Wheel Package

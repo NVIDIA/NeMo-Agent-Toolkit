@@ -92,7 +92,7 @@ def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_ad
 
 
 def test_ragas_to_eval_output(rag_evaluator, rag_eval_input, rag_user_inputs, metric_name):
-    """Test ragas ouput mapping to AIQ Toolkit's EvalOuput"""
+    """Test ragas ouput mapping to NAT's EvalOuput"""
     mock_results_dataset = MagicMock()
 
     # Mock scores
@@ -211,7 +211,7 @@ async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_l
     Test evaluate function to verify the following functions are called
     1. rag_evaluator.eval_input_to_ragas
     2. ragas.evaluate
-    3. aiq.eval.evaluator.rag_evaluator.ragas_to_eval_output
+    3. nat.eval.evaluator.rag_evaluator.ragas_to_eval_output
 
     Only limited coverage is possible via unit tests as most of the functionality is
     implemented within the ragas framework. The simple example's end-to-end test covers functional

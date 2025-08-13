@@ -64,7 +64,7 @@ class SingleShotMultiPlanPlanner(StrategyBase):
             from langchain_core.prompts import PromptTemplate
         except ImportError:
             raise ImportError("langchain-core is not installed. Please install it to use SingleShotMultiPlanPlanner.\n"
-                              "This error can be resolve by installing aiqtoolkit-langchain.")
+                              "This error can be resolve by installing nvidia-nat-langchain.")
 
         planning_template = PromptTemplate(template=self.config.planning_template,
                                            input_variables=["context", "prompt"],

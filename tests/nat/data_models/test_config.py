@@ -29,7 +29,7 @@ def do_register_test_workflow(register_test_workflow):
     yield
 
 
-def test_aiq_config_print_summary(workflow_config: WorkflowTestConfig):
+def test_nat_config_print_summary(workflow_config: WorkflowTestConfig):
 
     c = Config(workflow=workflow_config)
 

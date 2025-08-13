@@ -18,11 +18,11 @@ limitations under the License.
 # Run NVIDIA NeMo Agent Toolkit Workflows
 
 A workflow is defined by a YAML configuration file that specifies the tools and models to use. NeMo Agent toolkit provides the following ways to run a workflow:
-- Using the `aiq run` command.
+- Using the `nat run` command.
    - This is the simplest and most common way to run a workflow.
-- Using the `aiq serve` command.
+- Using the `nat serve` command.
    - This starts a web server that listens for incoming requests and runs the specified workflow.
-- Using the `aiq eval` command.
+- Using the `nat eval` command.
    - In addition to running the workflow, it also evaluates the accuracy of the workflow.
 - Using the Python API
    - This is the most flexible way to run a workflow.
@@ -46,34 +46,34 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
 
-## Using the `aiq run` Command
-The `aiq run` command is the simplest way to run a workflow. `aiq run` receives a configuration file as specified by the `--config_file` flag, along with input that can be specified either directly with the `--input` flag or by providing a file path with the `--input_file` flag.
+## Using the `nat run` Command
+The `nat run` command is the simplest way to run a workflow. `nat run` receives a configuration file as specified by the `--config_file` flag, along with input that can be specified either directly with the `--input` flag or by providing a file path with the `--input_file` flag.
 
-A typical invocation of the `aiq run` command follows this pattern:
+A typical invocation of the `nat run` command follows this pattern:
 ```
-aiq run --config_file <path/to/config.yml> [--input "question?" | --input_file <path/to/input.txt>]
+nat run --config_file <path/to/config.yml> [--input "question?" | --input_file <path/to/input.txt>]
 ```
 
 The following command runs the `examples/getting_started/simple_web_query` workflow with a single input question "What is LangSmith?":
 ```bash
-aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"
+nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"
 ```
 
 The following command runs the same workflow with the input question provided in a file:
 ```bash
 echo "What is LangSmith?" > .tmp/input.txt
-aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input_file .tmp/input.txt
+nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input_file .tmp/input.txt
 ```
 
-## Using the `aiq eval` Command
-The `aiq eval` command is similar to the `aiq run` command. However, in addition to running the workflow, it also evaluates the accuracy of the workflow, refer to [Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) for more information.
+## Using the `nat eval` Command
+The `nat eval` command is similar to the `nat run` command. However, in addition to running the workflow, it also evaluates the accuracy of the workflow, refer to [Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) for more information.
 
-## Using the `aiq serve` Command
-The `aiq serve` command starts a web server that listens for incoming requests and runs the specified workflow. The server can be accessed with a web browser or by sending a POST request to the server's endpoint. Similar to the `aiq run` command, the `aiq serve` command requires a configuration file specified by the `--config_file` flag.
+## Using the `nat serve` Command
+The `nat serve` command starts a web server that listens for incoming requests and runs the specified workflow. The server can be accessed with a web browser or by sending a POST request to the server's endpoint. Similar to the `nat run` command, the `nat serve` command requires a configuration file specified by the `--config_file` flag.
 
 The following command runs the `examples/getting_started/simple_web_query` workflow on a web server listening to the default port `8000` and default endpoint of `/generate`:
 ```bash
-aiq serve --config_file examples/getting_started/simple_web_query/configs/config.yml
+nat serve --config_file examples/getting_started/simple_web_query/configs/config.yml
 ```
 
 In a separate terminal, run the following command to send a POST request to the server:
@@ -86,7 +86,7 @@ curl --request POST \
 }'
 ```
 
-Refer to `aiq serve --help` for more information on how to customize the server.
+Refer to `nat serve --help` for more information on how to customize the server.
 
 ## Using the Python API
 
@@ -115,6 +115,6 @@ print(result)
 In this example:
 - `config_file`: A string or {py:class}`~pathlib.Path` pointing to your workflow YAML file
 - `input_str`: A string containing the input for your workflow
-- The `workflow.run(input_str)` method returns an instance of {py:class}`~nat.runtime.runner.AIQRunner`
+- The `workflow.run(input_str)` method returns an instance of {py:class}`~nat.runtime.runner.Runner`
 
-For detailed information about the `AIQRunner` class and its capabilities, please refer to the Python API documentation for the {py:class}`~nat.runtime.runner.AIQRunner` class.
+For detailed information about the `Runner` class and its capabilities, please refer to the Python API documentation for the {py:class}`~nat.runtime.runner.Runner` class.

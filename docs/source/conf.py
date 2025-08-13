@@ -128,6 +128,7 @@ numpydoc_class_members_toctree = False
 # Ignore openai.com links, as these always report a 403 when requested by the linkcheck agent
 # mysql.com  reports a 403 when requested by linkcheck
 # api.service.com is a placeholder for a service example
+# Once v1.2 is merged into main, remove the ignore for the banner.png
 linkcheck_ignore = [
     r'http://localhost:\d+/',
     r'https://localhost:\d+/',
@@ -136,7 +137,9 @@ linkcheck_ignore = [
     r'https://(platform\.)?openai.com',
     r'https://code.visualstudio.com',
     r'https://www.mysql.com',
-    r'https://api.service.com'
+    r'https://api.service.com',
+    r'https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png',  # noqa: E501
+    r'http://custom-server'
 ]
 
 # The suffix(es) of source filenames.

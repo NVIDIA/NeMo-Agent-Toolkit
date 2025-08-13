@@ -95,7 +95,7 @@ class MyFunctionConfig(FunctionBaseConfig, name="my_function"):
                                       description="A dictionary of floats")
 ```
 
-This additional metadata will ensure that the configuration object is properly validated and the descriptions can be seen when using `aiq info`.
+This additional metadata will ensure that the configuration object is properly validated and the descriptions can be seen when using `nat info`.
 
 ### Function Registration
 

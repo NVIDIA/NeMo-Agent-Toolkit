@@ -1,19 +1,19 @@
 ---
-description: Follow these rules when the user requests information about AIQ components, including: functions, tools, etc.
-globs: 
+description: Follow these rules when the user requests information about NeMo Agent Toolkit components, including: functions, tools, etc.
+globs:
 alwaysApply: false
 ---
-# AIQ Info Commands
+# NeMo Agent Toolkit Info Commands
 
-This rule provides guidance for using `aiq info` commands to discover locally registered AIQ toolkit components and configured registry channels.
+This rule provides guidance for using `nat info` commands to discover locally registered NeMo Agent Toolkit components and configured registry channels.
 
-## aiq info components
+## nat info components
 
-Lists the locally registered AIQ toolkit components with filtering and search capabilities.
+Lists the locally registered NeMo Agent Toolkit components with filtering and search capabilities.
 
 ### Basic Usage
 ```bash
-aiq info components [OPTIONS]
+nat info components [OPTIONS]
 ```
 
 ### Available Options
@@ -26,32 +26,32 @@ aiq info components [OPTIONS]
 ### Output Columns
 - `package`: The Python package containing the component
 - `version`: The version of the Python package
-- `component_type`: Type of AIQ toolkit component
+- `component_type`: Type of NeMo Agent Toolkit component
 - `component_name`: Name to use in the `_type` field of configuration
 - `description`: Component description, configuration parameters, and default values
 
 ### Examples
 ```bash
 # List all registered components
-aiq info components
+nat info components
 
 # Filter by component type
-aiq info components --types llm_provider
-aiq info components --types retriever_provider
-aiq info components --types function
+nat info components --types llm_provider
+nat info components --types retriever_provider
+nat info components --types function
 
 # Search for specific components
-aiq info components --query "milvus"
-aiq info components --query "embedding"
+nat info components --query "milvus"
+nat info components --query "embedding"
 
 # Filter multiple component types
-aiq info components --types llm_provider --types embedder_provider
+nat info components --types llm_provider --types embedder_provider
 
 # Limit results and save to file
-aiq info components --query "rag" --num_results 10 --output_path component_search.json
+nat info components --query "rag" --num_results 10 --output_path component_search.json
 
 # Show only specific fields
-aiq info components --fields component_name --fields description
+nat info components --fields component_name --fields description
 ```
 
 ### Use Cases
@@ -60,13 +60,13 @@ aiq info components --fields component_name --fields description
 - **Component Exploration**: Discover available components for workflow development
 - **Documentation**: Generate component inventories and documentation
 
-## aiq info channels
+## nat info channels
 
 Lists the configured remote registry channels and their settings.
 
 ### Basic Usage
 ```bash
-aiq info channels [OPTIONS]
+nat info channels [OPTIONS]
 ```
 
 ### Available Options
@@ -75,11 +75,11 @@ aiq info channels [OPTIONS]
 ### Examples
 ```bash
 # List all configured channels
-aiq info channels
+nat info channels
 
 # Filter by channel type
-aiq info channels --type rest
-aiq info channels --type pypi
+nat info channels --type rest
+nat info channels --type pypi
 ```
 
 ### Use Cases
@@ -92,46 +92,46 @@ aiq info channels --type pypi
 ### 1. Setting Up a New Workflow
 ```bash
 # Find available LLM providers
-aiq info components --types llm_provider
+nat info components --types llm_provider
 
 # Find available retrievers
-aiq info components --types retriever_provider
+nat info components --types retriever_provider
 
 # Search for specific functionality
-aiq info components --query "embedding"
+nat info components --query "embedding"
 ```
 
 ### 2. Debugging Configuration Issues
 ```bash
 # Verify component exists and get exact name
-aiq info components --query "component_name"
+nat info components --query "component_name"
 
 # Check available parameters for a component
-aiq info components --query "specific_component" --fields description
+nat info components --query "specific_component" --fields description
 
 # List all components in a package
-aiq info components --query "package_name"
+nat info components --query "package_name"
 ```
 
 ### 3. Component Discovery
 ```bash
 # Explore all available tools
-aiq info components --types tool_wrapper
+nat info components --types tool_wrapper
 
 # Find evaluation components
-aiq info components --types evaluator
+nat info components --types evaluator
 
 # Search for memory components
-aiq info components --types memory
+nat info components --types memory
 ```
 
 ### 4. Registry Management
 ```bash
 # Check configured registries
-aiq info channels
+nat info channels
 
 # Verify specific registry type
-aiq info channels --type rest
+nat info channels --type rest
 ```
 
 ## Component Types Reference
@@ -154,7 +154,7 @@ aiq info channels --type rest
 
 ## Best Practices
 
-1. **Start with component discovery**: Use `aiq info components` before writing configurations
+1. **Start with component discovery**: Use `nat info components` before writing configurations
 2. **Use type filters**: Narrow down searches with `--types` to find relevant components
 3. **Save search results**: Use `--output_path` for documentation and reference
 4. **Check descriptions carefully**: Component descriptions contain crucial configuration details
@@ -166,29 +166,29 @@ aiq info channels --type rest
 ### Before Configuration
 ```bash
 # Discover components for your workflow
-aiq info components --types llm_provider --types retriever_provider
+nat info components --types llm_provider --types retriever_provider
 
 # Create configuration file using discovered component names
 # Then validate the configuration
-aiq validate --config_file my_config.yml
+nat validate --config_file my_config.yml
 ```
 
 ### Before Registry Operations
 ```bash
 # Check available channels before publishing
-aiq info channels
+nat info channels
 
 # Verify specific channel exists
-aiq info channels --type rest
+nat info channels --type rest
 ```
 
 ### During Development
 ```bash
 # Find tools to integrate
-aiq info components --types tool_wrapper --query "search_term"
+nat info components --types tool_wrapper --query "search_term"
 
 # Check available evaluators
-aiq info components --types evaluator
+nat info components --types evaluator
 ```
 
 ## Output Format Tips

@@ -35,8 +35,7 @@ A configurable Tool Calling agent. This agent leverages the NeMo Agent toolkit p
   - [Starting the NeMo Agent Toolkit Server](#starting-the-nemo-agent-toolkit-server)
   - [Making Requests to the NeMo Agent Toolkit Server](#making-requests-to-the-nemo-agent-toolkit-server)
   - [Evaluating the Tool Calling Agent Workflow](#evaluating-the-tool-calling-agent-workflow)
- - [Evaluating the Tool Calling Agent Workflow](#evaluating-the-tool-calling-agent-workflow)
- - [Using Tool Calling with the OpenAI Responses API](#using-tool-calling-with-the-openai-responses-api)
+- [Using Tool Calling with the OpenAI Responses API](#using-tool-calling-with-the-openai-responses-api)
 
 ## Key Features
 
@@ -75,7 +74,7 @@ From the root directory of the NeMo Agent Toolkit library, run the following com
 uv pip install -e .
 ```
 
-The `code_generation` and `wiki_search` tools are part of the `aiqtoolkit[langchain]` package.  To install the package run the following command:
+The `code_generation` and `wiki_search` tools are part of the `nvidia-nat[langchain]` package.  To install the package run the following command:
 ```bash
 # local package install from source
 uv pip install -e '.[langchain]'
@@ -101,7 +100,7 @@ For more details, refer to the [ReAct Agent documentation](../../../docs/source/
 Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
+nat run --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
 ```
 
 **Expected Workflow Output**
@@ -120,7 +119,7 @@ Tool's response:
 Edsger Wybe Dijkstra ( DYKE-strə; Dutch: [ˈɛtsxər ˈʋibə ˈdɛikstraː] ; 11 May 1930 – 6 August 2002) was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist.
 Born in Rotterdam in the Netherlands, Dijkstra studied mathematics and physics and then theoretical physics at the University of Leiden. Adriaan van Wijngaarden offered him a job as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam, where he worked from 1952 until 1962. He formulated and solved the shortest path problem in 1956, and in 1960 developed the first compiler for the programming language ALGOL 60 in conjunction with colleague Jaap A. Zonneveld. In 1962 he moved to Eindhoven, and later to Nuenen, where he became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. In the late 1960s he built the THE multiprogramming system, which influence...
 ------------------------------
-2025-04-23 15:03:59,211 - aiq.agent.tool_calling_agent.agent - INFO -
+2025-04-23 15:03:59,211 - nat.agent.tool_calling_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: who was Djikstra?
@@ -139,12 +138,12 @@ Workflow Result:
 
 ### Starting the NeMo Agent Toolkit Server
 
-You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
 
 **Starting the Tool Calling Agent Example Workflow**
 
 ```bash
-aiq serve --config_file=examples/agents/tool_calling/configs/config.yml
+nat serve --config_file=examples/agents/tool_calling/configs/config.yml
 ```
 
 ### Making Requests to the NeMo Agent Toolkit Server
@@ -177,7 +176,7 @@ curl --request POST \
 **Run and evaluate the `tool_calling_agent` example Workflow**
 
 ```bash
-aiq eval --config_file=examples/agents/tool_calling/configs/config.yml
+nat eval --config_file=examples/agents/tool_calling/configs/config.yml
 ```
 
 ### Using Tool Calling with the OpenAI Responses API

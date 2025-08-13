@@ -50,7 +50,7 @@ class TestCodeExecutionSandbox:
         except (ConnectionError, Timeout, RequestException):
             pytest.skip(
                 f"Sandbox server is not running at {sandbox_config['url']}. "
-                "Please start it with: cd src/aiq/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
+                "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
 
     def execute_code(self, sandbox_config: dict[str, Any], code: str, language: str = "python") -> dict[str, Any]:
         """

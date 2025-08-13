@@ -68,7 +68,7 @@ class EvalDatasetBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     s3: EvalS3Config | None = None
 
     remote_file_path: str | None = None  # only for s3
-    file_path: Path | str = Path(".tmp/aiq/examples/default/default.json")
+    file_path: Path | str = Path(".tmp/nat/examples/default/default.json")
 
 
 class EvalDatasetJsonConfig(EvalDatasetBaseConfig, name="json"):

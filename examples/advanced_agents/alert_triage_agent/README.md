@@ -255,7 +255,7 @@ The `eval` section defines how the system evaluates pipeline outputs using prede
 ```yaml
 eval:
   general:
-    output_dir: .tmp/aiq/examples/advanced_agents/alert_triage_agent/output/
+    output_dir: .tmp/nat/examples/advanced_agents/alert_triage_agent/output/
     dataset:
       _type: json
       file_path: examples/advanced_agents/alert_triage_agent/data/offline_data.json
@@ -327,7 +327,7 @@ To run the agent live, follow these steps:
    Provide a live alert in JSON format and invoke the agent using:
 
    ```bash
-   aiq run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml --input {your_alert_in_json_format}
+   nat run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml --input {your_alert_in_json_format}
    ```
 This will trigger a full end-to-end triage process using live data sources.
 
@@ -436,7 +436,7 @@ To run in offline mode:
 2. **How offline mode works:**
 
    - The **main CSV offline dataset** (`offline_data_path`) provides both alert details and a mock environment. For each alert, expected tool return values are included. These simulate how the environment would behave if the alert occurred on a real system.
-   - The **JSON offline dataset** (`eval.general.dataset.filepath` in the config) contains a subset of the information from the main CSV: the alert inputs and their associated ground truth root causes. It is used to run `aiq eval`, focusing only on the essential data needed for running the workflow, while the full CSV retains the complete mock environment context.
+   - The **JSON offline dataset** (`eval.general.dataset.filepath` in the config) contains a subset of the information from the main CSV: the alert inputs and their associated ground truth root causes. It is used to run `nat eval`, focusing only on the essential data needed for running the workflow, while the full CSV retains the complete mock environment context.
    - At runtime, the system links each alert in the JSON dataset to its corresponding context in the CSV using the unique host IDs included in both datasets.
    - The **benign fallback dataset** fills in tool responses when the agent calls a tool not explicitly defined in the alert's offline data. These fallback responses mimic healthy system behavior and help provide the "background scenery" without obscuring the true root cause.
 
@@ -445,13 +445,13 @@ To run in offline mode:
     To run the agent in offline mode with a test question, use the following command structure. Test questions can be found in `examples/advanced_agents/alert_triage_agent/data/offline_data.json`.
 
    ```bash
-   aiq run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml --input "{your_alert_in_json_format}"
+   nat run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml --input "{your_alert_in_json_format}"
    ```
 
    **Example:** To run the agent with a test question, use the following command:
 
    ```bash
-   aiq run \
+   nat run \
      --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml \
      --input '{
        "alert_id": 0,
@@ -512,13 +512,13 @@ To run in offline mode:
 
    The diagnostic checks, including network connectivity, monitoring processes, hardware health, and telemetry metrics analysis, all indicate that the host is operational and healthy, with no evidence to support the "InstanceDown" alert being a true indication of a problem.
    --------------------------------------------------
-   2025-07-21 17:14:45,234 - aiq_alert_triage_agent - INFO - Cleaning up
+   2025-07-21 17:14:45,234 - nat_alert_triage_agent - INFO - Cleaning up
    ```
 
    To evaluate the agent, use the following command:
 
    ```bash
-   aiq eval --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml
+   nat eval --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml
    ```
 
   The agent will:

@@ -65,7 +65,7 @@ class MotivationAwareSummarization(StrategyBase):
             from langchain_core.prompts import PromptTemplate
         except ImportError:
             raise ImportError("langchain-core is required for MultiQueryRetrievalSearch. "
-                              "Install aiqtoolkit-langchain or similar.")
+                              "Install nvidia-nat-langchain or similar.")
 
         new_ttc_items: list[TTCItem] = []
 

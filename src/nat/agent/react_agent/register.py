@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
     """
-    Defines an AIQ Toolkit function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the
+    Defines a NAT function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the
     tool names and descriptions to select the optimal tool.
     """
 

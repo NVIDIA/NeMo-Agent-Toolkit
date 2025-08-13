@@ -27,7 +27,7 @@ class RedisMemoryClientConfig(MemoryBaseConfig, name="redis_memory"):
     host: str | None = Field(default="localhost", description="Redis server host")
     db: str | None = Field(default="0", description="Redis DB")
     port: str | None = Field(default="6379", description="Redis server port")
-    key_prefix: str | None = Field(default="aiq", description="Key prefix to use for redis keys")
+    key_prefix: str | None = Field(default="nat", description="Key prefix to use for redis keys")
     embedder: EmbedderRef = Field(description=("Instance name of the memory client instance from the workflow "
                                                "configuration object."))
 

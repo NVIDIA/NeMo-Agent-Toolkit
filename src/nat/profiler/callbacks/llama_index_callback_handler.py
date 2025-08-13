@@ -50,7 +50,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
     - Response data
     - Time intervals between calls
 
-    and appends them to AIQContextState.usage_stats.
+    and appends them to ContextState.usage_stats.
     """
 
     def __init__(self) -> None:
@@ -188,6 +188,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                 except Exception as e:
                     logger.exception("Error getting model name: %s", e, exc_info=True)
 
+                # Append usage data to NAT usage stats
                 tool_outputs_list = []
                 # Check if message.additional_kwargs as tool_outputs indicative of server side tool calling
                 if response and response.additional_kwargs and "built_in_tool_calls" in response.additional_kwargs:

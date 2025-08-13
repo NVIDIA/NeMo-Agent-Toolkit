@@ -43,22 +43,22 @@ uv pip install -e .[profiling]
 The NeMo Agent toolkit Profiler can be broken into the following components:
 
 ### Profiler Decorators and Callbacks
-- `src/aiq/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
-- `src/aiq/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent toolkit usage stats queue. We currently support callback handlers for LangChain,
+- `src/nat/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
+- `src/nat/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent toolkit usage stats queue. We currently support callback handlers for LangChain,
 LLama Index, CrewAI, and Semantic Kernel.
 
 ### Profiler Runner
 
-- `src/aiq/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent toolkit Eval module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
+- `src/nat/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent toolkit Eval module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
 
-- Under `src/aiq/profiler/forecasting`, the code trains scikit-learn style models on the usage data.
+- Under `src/nat/profiler/forecasting`, the code trains scikit-learn style models on the usage data.
 model_trainer.py can train a LinearModel or a RandomForestModel on the aggregated usage data (the raw statistics collected).
 base_model.py, linear_model.py, and random_forest_regressor.py define the abstract base and specific scikit-learn wrappers.
 
-- Under `src/aiq/profiler/inference_optimization` we have several metrics that can be computed out evaluation traces of your workflow including workflow latency, commonly used prompt prefixes for caching, identifying workflow bottlenecks, and concurrency analysis.
+- Under `src/nat/profiler/inference_optimization` we have several metrics that can be computed out evaluation traces of your workflow including workflow latency, commonly used prompt prefixes for caching, identifying workflow bottlenecks, and concurrency analysis.
 
 ### CLI Integrations
-Native integrations with `aiq eval` to allow for running of the profiler through a unified evaluation interface. Configurability is exposed through a workflow YAML configuration file consistent with evaluation configurations.
+Native integrations with `nat eval` to allow for running of the profiler through a unified evaluation interface. Configurability is exposed through a workflow YAML configuration file consistent with evaluation configurations.
 
 
 ## Using the Profiler
@@ -119,12 +119,12 @@ def my_custom_function(a, b):
 ```
 
 ### Step 2: Configuring the Profiler with Eval
-The profiler can be run through the `aiq eval` command. The profiler can be configured through the `profiler` section of the workflow configuration file. The following is an example `eval` configuration section from the `simple` workflow which shows how to enable the profiler:
+The profiler can be run through the `nat eval` command. The profiler can be configured through the `profiler` section of the workflow configuration file. The following is an example `eval` configuration section from the `simple` workflow which shows how to enable the profiler:
 
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/getting_started/simple_web_query/
+    output_dir: ./.tmp/nat/examples/getting_started/simple_web_query/
     dataset:
       _type: json
       file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
@@ -177,10 +177,10 @@ Please also note the `output_dir` parameter which specifies the directory where 
 
 ### Step 3: Running the Profiler
 
-To run the profiler, simply run the `aiq eval` command with the workflow configuration file. The profiler will collect usage statistics and store them in the output directory specified in the configuration file.
+To run the profiler, simply run the `nat eval` command with the workflow configuration file. The profiler will collect usage statistics and store them in the output directory specified in the configuration file.
 
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
+nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
 This will, based on the above configuration, produce the following files in the `output_dir` specified in the configuration file:
@@ -269,11 +269,11 @@ We also we see the `evaluators` section, which includes the following metrics:
 - `rag_relevance`: Evaluates the relevance of the context retrieved by the workflow against the question.
 
 ### Running the Profiler
-To run the profiler, simply run the `aiq eval` command with the workflow configuration file. The profiler will collect usage statistics and store them in the output directory specified in the configuration file.
+To run the profiler, simply run the `nat eval` command with the workflow configuration file. The profiler will collect usage statistics and store them in the output directory specified in the configuration file.
 
 
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/email_phishing_analyzer/configs/<config_file>.yml
+nat eval --config_file examples/evaluation_and_profiling/email_phishing_analyzer/configs/<config_file>.yml
 ```
 
 Among other files, this will produce a `standardized_results_all.csv` file in the `output_dir` specified in the configuration file. This file will contain the profiling results of the workflow that we will use for the rest of the analysis.
@@ -289,9 +289,9 @@ Particularly, we evaluate the following models:
 - `phi-3-medium-4k-instruct`
 - `phi-3-mini-4k-instruct`
 
-We run evaluation of the workflow on a small dataset of emails and compare the performance of the LLMs based on the metrics provided by the profiler. Once we run `aiq eval`, we can analyze the `standardized_results_all.csv` file to compare the performance of the LLMs.
+We run evaluation of the workflow on a small dataset of emails and compare the performance of the LLMs based on the metrics provided by the profiler. Once we run `nat eval`, we can analyze the `standardized_results_all.csv` file to compare the performance of the LLMs.
 
-Henceforth, we assume that you have run the `aiq eval` command and have the `standardized_results_all.csv` file in the `output_dir` specified in the configuration file. Please also take a moment to create a CSV file containing the concatenated results of the LLMs you wish to compare.
+Henceforth, we assume that you have run the `nat eval` command and have the `standardized_results_all.csv` file in the `output_dir` specified in the configuration file. Please also take a moment to create a CSV file containing the concatenated results of the LLMs you wish to compare.
 
 ### Plotting Prompt vs Completion Tokens for LLMs
 One of the first things we can do is to plot the prompt vs completion tokens for each LLM. This will give us an idea of how the LLMs are performing in terms of token usage. We can use the `standardized_results_all.csv` file to plot this data.

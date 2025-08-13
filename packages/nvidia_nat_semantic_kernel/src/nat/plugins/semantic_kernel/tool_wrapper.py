@@ -77,35 +77,35 @@ def semantic_kernel_tool_wrapper(name: str, fn: Function, builder: Builder):
 
     def nat_kernel_function(
         func: Callable[..., object] | None = None,
-        aiq_function: Function | None = None,
+        nat_function: Function | None = None,
         name: str | None = None,
         description: str | None = None,
     ) -> Callable[..., Any]:
         """
         Modified version of Semantic Kernel's kernel_function decorator.
 
-        Uses `aiq` Function properties instead of doing type inference on the function's inner
+        Uses `nat` Function properties instead of doing type inference on the function's inner
         """
 
         def decorator(func: Callable[..., object]) -> Callable[..., object]:
             """The actual decorator function."""
             setattr(func, "__kernel_function__", True)
-            setattr(func, "__kernel_function_description__", description or aiq_function.description)
-            setattr(func, "__kernel_function_name__", name or aiq_function.config.type)
+            setattr(func, "__kernel_function_description__", description or nat_function.description)
+            setattr(func, "__kernel_function_name__", name or nat_function.config.type)
 
             # Always defer to single output schema, if present, for now
             # No need to check streaming output is present given one of the two is always present
-            has_single = aiq_function.has_single_output
-            has_streaming = aiq_function.has_streaming_output
-            output_schema = aiq_function.single_output_schema if has_single else aiq_function.streaming_output_schema
-            setattr(func, "__kernel_function_streaming__", not aiq_function.has_single_output if has_single else True)
+            has_single = nat_function.has_single_output
+            has_streaming = nat_function.has_streaming_output
+            output_schema = nat_function.single_output_schema if has_single else nat_function.streaming_output_schema
+            setattr(func, "__kernel_function_streaming__", not nat_function.has_single_output if has_single else True)
 
             if has_single and has_streaming:
                 logger.warning("Function has both single and streaming output schemas. "
                                "Defaulting to single output schema.")
 
             input_annotations = []
-            for arg_name, annotation in aiq_function.input_schema.model_fields.items():
+            for arg_name, annotation in nat_function.input_schema.model_fields.items():
                 type_obj = resolve_type(annotation.annotation)
                 include_in_choices = True
                 if isinstance(type_obj, type) and (issubclass(type_obj, BaseModel) or is_dataclass(type_obj)):
@@ -156,8 +156,8 @@ def semantic_kernel_tool_wrapper(name: str, fn: Function, builder: Builder):
         return decorator
 
     if fn.has_streaming_output and not fn.has_single_output:
-        kernel_func = nat_kernel_function(func=callable_astream, aiq_function=fn, name=name, description=fn.description)
+        kernel_func = nat_kernel_function(func=callable_astream, nat_function=fn, name=name, description=fn.description)
     else:
-        kernel_func = nat_kernel_function(func=callable_ainvoke, aiq_function=fn, name=name, description=fn.description)
+        kernel_func = nat_kernel_function(func=callable_ainvoke, nat_function=fn, name=name, description=fn.description)
 
     return {name: kernel_func}
