@@ -53,8 +53,8 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
 1. Clone your personal fork of the NeMo Agent toolkit repository to your local machine.
     ```bash
-    git clone <your fork url> nat-toolkit
-    cd nat-toolkit
+    git clone <your fork url> nemo-agent-toolkit
+    cd nemo-agent-toolkit
     ```
 
     Then, set the upstream to the main repository and fetch the latest changes:
