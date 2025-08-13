@@ -145,7 +145,7 @@ You can start the NeMo Agent toolkit server using the `nat serve` command with t
 nat serve --config_file=examples/agents/mixture_of_agents/configs/config.yml
 ```
 
-### Making Requests to the NeMo Agent toolkit Server
+### Making Requests to the NeMo Agent Toolkit Server
 
 Once the server is running, you can make HTTP requests to interact with the workflow.
 
