@@ -58,7 +58,7 @@ def _get_description_from_config(config: RetrieverConfig) -> str:
 @register_function(config_type=RetrieverConfig)
 async def retriever_tool(config: RetrieverConfig, builder: Builder):
     """
-    Configure an NAT Retriever Tool which supports different clients such as Milvus and Nemo Retriever.
+    Configure a NAT Retriever Tool which supports different clients such as Milvus and Nemo Retriever.
 
     Args:
         config: A config object with required parameters 'client' and 'client_config'

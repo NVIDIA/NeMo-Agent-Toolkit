@@ -149,7 +149,7 @@ class StartCommandGroup(click.Group):
 
             # Build the command parameters
             params: list[click.Parameter] = self._build_params(registered_front_end)
-            help_msg = f"Run an NAT workflow using the {registered_front_end.local_name} front end."
+            help_msg = f"Run a NAT workflow using the {registered_front_end.local_name} front end."
 
             cmd = click.Command(name=registered_front_end.local_name,
                                 params=params,
@@ -238,9 +238,9 @@ class StartCommandGroup(click.Group):
 
 @click.command(name=__name__,
                invoke_without_command=False,
-               help="Run an NAT workflow using a front end configuration.",
+               help="Run a NAT workflow using a front end configuration.",
                cls=StartCommandGroup)
 @click.pass_context
 def start_command(ctx: click.Context, **kwargs) -> None:
-    """Run an NAT workflow using a front end configuration."""
+    """Run a NAT workflow using a front end configuration."""
     pass

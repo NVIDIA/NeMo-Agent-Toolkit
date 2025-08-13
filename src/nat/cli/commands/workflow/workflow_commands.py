@@ -234,7 +234,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
 @click.argument('workflow_name')
 def reinstall_command(workflow_name):
     """
-    Reinstall an NAT workflow to update dependencies and code changes.
+    Reinstall a NAT workflow to update dependencies and code changes.
 
     Args:
         workflow_name (str): The name of the workflow to reinstall.
@@ -270,7 +270,7 @@ def reinstall_command(workflow_name):
 @click.argument('workflow_name')
 def delete_command(workflow_name: str):
     """
-    Delete an NAT workflow and uninstall its package.
+    Delete a NAT workflow and uninstall its package.
 
     Args:
         workflow_name (str): The name of the workflow to delete.

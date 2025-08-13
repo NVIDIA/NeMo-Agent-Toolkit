@@ -42,7 +42,7 @@ class LocalRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def publish(self, artifact: Artifact) -> AsyncGenerator[PublishResponse]:
-        """Publishes an NAT artifact to a local registry.
+        """Publishes a NAT artifact to a local registry.
 
         Args:
             artifact (Artifact): An artifact that contain NAT plugin wheel and it's corrosponding discovery

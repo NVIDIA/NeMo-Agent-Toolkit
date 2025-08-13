@@ -62,7 +62,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def publish(self, artifact: Artifact) -> AsyncGenerator[PublishResponse]:
-        """Publishes an NAT artifact to a remote REST registry.
+        """Publishes a NAT artifact to a remote REST registry.
 
         Args:
             artifact (Artifact): An artifact that contain NAT plugin wheel and it's corrosponding discovery

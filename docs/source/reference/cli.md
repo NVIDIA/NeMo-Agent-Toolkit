@@ -380,7 +380,7 @@ The `nat workflow reinstall --help` utility provides a description of its usage:
 $ nat workflow reinstall --help
 Usage: nat workflow reinstall [OPTIONS] WORKFLOW_NAME
 
-  Reinstall an NAT workflow package.
+  Reinstall a NAT workflow package.
 
   Args:
       workflow_name (str): The name of the workflow to reinstall.
@@ -414,7 +414,7 @@ into the local environment. To remove a workflow package from the local environm
 $ nat workflow delete --help
 Usage: nat workflow delete [OPTIONS] WORKFLOW_NAME
 
-  Delete an NAT workflow and uninstall its package.
+  Delete a NAT workflow and uninstall its package.
 
   Args:     workflow_name (str): The name of the workflow to delete.
 

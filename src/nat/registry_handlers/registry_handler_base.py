@@ -45,7 +45,7 @@ class AbstractRegistryHandler(ABC):
     @abstractmethod
     @asynccontextmanager
     async def publish(self, artifact: Artifact) -> AsyncGenerator[PublishResponse]:
-        """Publishes an NAT artifact to a remote registry.
+        """Publishes a NAT artifact to a remote registry.
 
         Args:
             artifact (Artifact): An artifact that contain NAT plugin wheel and it's corrosponding discovery

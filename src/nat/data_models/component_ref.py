@@ -43,7 +43,7 @@ class ComponentRefNode(HashableBaseModel):
 
     Args:
         ref_name (ComponentRef): The name of the component runtime instance.
-        component_group (ComponentGroup): The component group in an NAT configuration object.
+        component_group (ComponentGroup): The component group in a NAT configuration object.
     """
 
     ref_name: "ComponentRef"
@@ -82,7 +82,7 @@ class ComponentRef(str, ABC):
 
 class EmbedderRef(ComponentRef):
     """
-    A reference to an embedder in an NAT configuration object.
+    A reference to an embedder in a NAT configuration object.
     """
 
     @property
@@ -93,7 +93,7 @@ class EmbedderRef(ComponentRef):
 
 class FunctionRef(ComponentRef):
     """
-    A reference to a function in an NAT configuration object.
+    A reference to a function in a NAT configuration object.
     """
 
     @property
@@ -104,7 +104,7 @@ class FunctionRef(ComponentRef):
 
 class LLMRef(ComponentRef):
     """
-    A reference to an LLM in an NAT configuration object.
+    A reference to an LLM in a NAT configuration object.
     """
 
     @property
@@ -115,7 +115,7 @@ class LLMRef(ComponentRef):
 
 class MemoryRef(ComponentRef):
     """
-    A reference to a memory in an NAT configuration object.
+    A reference to a memory in a NAT configuration object.
     """
 
     @property
@@ -126,7 +126,7 @@ class MemoryRef(ComponentRef):
 
 class ObjectStoreRef(ComponentRef):
     """
-    A reference to an object store in an NAT configuration object.
+    A reference to an object store in a NAT configuration object.
     """
 
     @property
@@ -137,7 +137,7 @@ class ObjectStoreRef(ComponentRef):
 
 class RetrieverRef(ComponentRef):
     """
-    A reference to a retriever in an NAT configuration object.
+    A reference to a retriever in a NAT configuration object.
     """
 
     @property
@@ -148,7 +148,7 @@ class RetrieverRef(ComponentRef):
 
 class AuthenticationRef(ComponentRef):
     """
-    A reference to an API Authentication Provider in an NAT configuration object.
+    A reference to an API Authentication Provider in a NAT configuration object.
     """
 
     @property

@@ -60,7 +60,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def publish(self, artifact: Artifact) -> AsyncGenerator[PublishResponse]:
-        """Publishes an NAT artifact to a PyPI remote registry.
+        """Publishes a NAT artifact to a PyPI remote registry.
 
         Args:
             artifact (Artifact): An artifact that contain NAT plugin wheel and it's corrosponding discovery

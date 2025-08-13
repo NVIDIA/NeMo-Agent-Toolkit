@@ -68,7 +68,7 @@ class PluginTypes(IntFlag):
 
 def load_config(config_file: StrPath) -> Config:
     """
-    This is the primary entry point for loading an NAT configuration file. It ensures that all plugins are
+    This is the primary entry point for loading a NAT configuration file. It ensures that all plugins are
     loaded and then validates the configuration file against the Config schema.
 
     Parameters

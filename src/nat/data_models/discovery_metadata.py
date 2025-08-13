@@ -180,7 +180,7 @@ class DiscoveryMetadata(BaseModel):
     @staticmethod
     def from_config_type(config_type: type["TypedBaseModelT"],
                          component_type: ComponentEnum = ComponentEnum.UNDEFINED) -> "DiscoveryMetadata":
-        """Generates discovery metadata from an NAT config object.
+        """Generates discovery metadata from a NAT config object.
 
         Args:
             config_type (type[TypedBaseModelT]): A registered component's configuration object.

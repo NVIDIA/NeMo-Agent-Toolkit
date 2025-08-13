@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 class ReasoningFunctionConfig(FunctionBaseConfig, name="reasoning_agent"):
     """
-    Defines an NAT function that performs reasoning on the input data.
+    Defines a NAT function that performs reasoning on the input data.
     Output is passed to the next function in the workflow.
 
     Designed to be used with an InterceptingFunction.
