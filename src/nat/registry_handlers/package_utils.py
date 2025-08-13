@@ -89,7 +89,7 @@ def resolve_extras_to_packages(package_name: str, extras: list[str]) -> set[str]
     """Resolve package extras to their actual package dependencies.
 
     Args:
-        package_name (str): The base package name (e.g., 'nat')
+        package_name (str): The base package name (e.g., 'nvidia-nat')
         extras (list[str]): List of extra names (e.g., ['langchain', 'telemetry'])
 
     Returns:
