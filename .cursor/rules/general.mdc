@@ -13,6 +13,7 @@ These are the overarching standards that every **source, test, documentation and
 - Make sure to follow this naming convention for all the documentation. If there is any documentation not following this rule, you MUST update it.
 - **Full name on first use**: "NVIDIA NeMo Agent toolkit"
 - **Subsequent references**: "NeMo Agent toolkit"
+  - If the name is part of a heading, use "NeMo Agent Toolkit" in the heading. Capitalize the "T" in "Toolkit".
 - **Abbreviations**: "NAT" or "nat"
   - "nat" for the API namespace and CLI tool
   - "nvidia-nat" for the package name
