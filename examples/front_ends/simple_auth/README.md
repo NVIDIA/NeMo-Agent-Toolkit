@@ -119,8 +119,8 @@ to deploy the UI that works with the agent in this example. Configure it accordi
 Export your saved client ID and secret to the following environment variables:
 
 ```bash
-export AIQ_OAUTH_CLIENT_ID=<your_client_id>
-export AIQ_OAUTH_CLIENT_SECRET=<your_client_secret>
+export NAT_OAUTH_CLIENT_ID=<your_client_id>
+export NAT_OAUTH_CLIENT_SECRET=<your_client_secret>
 ```
 
 ## Serve The Agent
@@ -128,7 +128,7 @@ export AIQ_OAUTH_CLIENT_SECRET=<your_client_secret>
 In a new terminal, serve the agent using the following command:
 
 ```bash
-aiq serve --config_file=examples/front_ends/simple_auth/configs/config.yml
+nat serve --config_file=examples/front_ends/simple_auth/configs/config.yml
 ```
 
 This will start a FastAPI server on `http://localhost:8000` that listens for requests from the UI and

@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq_simple_calculator.register import DivisionToolConfig
-from aiq_simple_calculator.register import InequalityToolConfig
-from aiq_simple_calculator.register import MultiplyToolConfig
-from aiq_simple_calculator.register import SubtractToolConfig
+from nat_simple_calculator.register import DivisionToolConfig
+from nat_simple_calculator.register import InequalityToolConfig
+from nat_simple_calculator.register import MultiplyToolConfig
+from nat_simple_calculator.register import SubtractToolConfig
 
-from aiq.test.tool_test_runner import ToolTestRunner
+from nat.test.tool_test_runner import ToolTestRunner
 
 
 async def test_inequality_tool():
@@ -136,7 +136,7 @@ async def test_tool_with_mocked_dependencies():
     While the calculator tools don't have dependencies, this shows the pattern
     for tools that do (like tools that call LLMs or access memory).
     """
-    from aiq.test.tool_test_runner import with_mocked_dependencies
+    from nat.test.tool_test_runner import with_mocked_dependencies
 
     # This pattern would be used for tools with dependencies:
     async with with_mocked_dependencies() as (runner, mock_builder):

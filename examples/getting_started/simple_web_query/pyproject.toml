@@ -6,7 +6,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_simple_web_query"
+name = "nat_simple_web_query"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.2",
@@ -21,5 +21,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_simple_web_query = "aiq_simple_web_query.register"
+[project.entry-points.'nat.components']
+nat_simple_web_query = "nat_simple_web_query.register"

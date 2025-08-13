@@ -39,7 +39,7 @@ functions:
     _type: get_user_report
     object_store: report_object_store
     description: >
-      Fetches user diagnostic report from S3 bucket given a user ID and date.
+      Fetches user diagnostic report from the bucket given a user ID and date.
       Args:
         user_id: str: The user ID to fetch the report for.
         date: str | null: The date to fetch the report for. Format: YYYY-MM-DD. If not provided, the latest report will be fetched.
@@ -48,10 +48,10 @@ functions:
     _type: put_user_report
     object_store: report_object_store
     description: >
-      Inserts a new user diagnostic report into S3 bucket given a user ID and date. If the report already exists, it will fail.
+      Inserts a new user diagnostic report into the bucket given a user ID and date. If the report already exists, it will fail.
       If it does fail, never delete the existing report to replace it. Just let the user know that the report already exists.
       Args:
-        report: str: The report to put into the S3 bucket.
+        report: str: The report to put into the bucket.
         user_id: str: The user ID to put the report for.
         date: str | null: The date to put the report for. Format: YYYY-MM-DD. If not provided, the report will be named "latest".
 
@@ -59,10 +59,10 @@ functions:
     _type: update_user_report
     object_store: report_object_store
     description: >
-      Updates a user diagnostic report in S3 bucket given a user ID and date. If the report does not exist, it will behave as
+      Updates a user diagnostic report in the bucket given a user ID and date. If the report does not exist, it will behave as
       if the report was created. Do not delete the existing report to replace it.
       Args:
-        report: str: The report to update in the S3 bucket.
+        report: str: The report to update in the bucket.
         user_id: str: The user ID to update the report for.
         date: str | null: The date to update the report for. Format: YYYY-MM-DD. If not provided, the report will be named "latest".
 
@@ -70,7 +70,7 @@ functions:
     _type: delete_user_report
     object_store: report_object_store
     description: >
-      Deletes user diagnostic report from S3 bucket given a user ID and date. If the report does not exist, it will fail.
+      Deletes user diagnostic report from the bucket given a user ID and date. If the report does not exist, it will fail.
       Do not run `delete_user_report` without the explicit intention to delete an existing report, even in the case of an attempt
       to insert a new report which already exists.
       Args:

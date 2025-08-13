@@ -1,6 +1,6 @@
 ---
 description: Follow these rules when the user's request involves creating, modifying, organizing, or structuring Cursor rules within the project
-globs: 
+globs:
 alwaysApply: false
 ---
 # Cursor Rules Location
@@ -47,7 +47,7 @@ How to add new cursor rules to the project
     - Use kebab-case for directory names
     - Always include a `general.mdc` file with overarching guidelines for the topic
     - Place specific rules as separate .mdc files within the subdirectory
-    - Example: `aiq-cli/` folder contains general AIQ CLI rules in `general.mdc` and specific command rules in separate files
+    - Example: `nat-cli/` folder contains general NAT CLI rules in `general.mdc` and specific command rules in separate files
 
 6. For `general.mdc` files in subdirectories:
     - Always include a "Referenced Documentation" section that lists all documentation referenced in the rules
@@ -56,14 +56,14 @@ How to add new cursor rules to the project
     - Example structure:
     ```markdown
     # General Rules for [Topic]
-    
+
     ## Referenced Documentation
-    
+
     - **Documentation Name**: [filename.md](mdc:path/to/filename.md) - Brief description of the documentation
     - **Another Doc**: [another.md](mdc:path/to/another.md) - Description of this documentation
-    
+
     ## Rules
-    
+
     - Rule content referencing "the documentation listed in the Referenced Documentation section above"
     ```
 
@@ -72,12 +72,12 @@ How to add new cursor rules to the project
     - **Use specific trigger conditions**: Clearly define when the rule should be requested by the agent
     - **Include relevant action verbs**: Use precise verbs like "creating", "modifying", "implementing", "configuring", "adding", "installing", "evaluating", etc.
     - **Be comprehensive but concise**: Cover all relevant scenarios without being overly verbose
-    - **Use consistent terminology**: Match the language used in the project (e.g., "AIQ workflows", "AIQ CLI commands")
+    - **Use consistent terminology**: Match the language used in the project (e.g., "NAT workflows", "NAT CLI commands")
     - **Check for typos**: Ensure proper spelling and grammar (avoid errors like "ollow" instead of "Follow")
     - **Examples of good descriptions:**
       - "Follow these rules when the user's request involves creating, modifying, organizing, or structuring Cursor rules within the project"
-      - "Follow these rules when the user's request involves AIQ CLI commands, operations, or functionality"
-      - "Follow these rules when the user's request involves implementing, adding, creating, or modifying functions within AIQ workflows"
+      - "Follow these rules when the user's request involves NAT CLI commands, operations, or functionality"
+      - "Follow these rules when the user's request involves implementing, adding, creating, or modifying functions within NAT workflows"
     - **Avoid overly narrow descriptions**: Don't limit to just one action when the rule covers multiple related scenarios
     - **Use "user's request involves" pattern**: This clearly indicates the trigger condition for the agent
 
@@ -104,7 +104,7 @@ Example:
 ```python
 # Good example
 async def good_example_function():
-    """Implementation following AIQ Toolkit guidelines."""
+    """Implementation following NeMo Agent Toolkit guidelines."""
     # Use async/await for I/O operations
     # Follow snake_case naming convention
     # Include proper type hints and docstrings
