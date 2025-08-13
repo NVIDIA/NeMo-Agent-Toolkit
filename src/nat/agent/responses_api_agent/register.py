@@ -18,30 +18,29 @@ import typing
 
 from pydantic import Field
 
-from aiq.agent.base import AGENT_LOG_PREFIX
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.component_ref import FunctionRef
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.data_models.openai_mcp import OpenAIMCPSchemaTool
+from nat.agent.base import AGENT_LOG_PREFIX
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.openai_mcp import OpenAIMCPSchemaTool
 
 logger = logging.getLogger(__name__)
 
 
 class ResponsesAPIAgentWorkflowConfig(FunctionBaseConfig, name="responses_api_agent"):
     """
-    Defines an AIQ Toolkit function that uses a Responses API
+    Defines an NeMo Agent Toolkit function that uses a Responses API
     Agent performs reasoning inbetween tool calls, and utilizes the
     tool names and descriptions to select the optimal tool.
     """
 
-    llm_name: LLMRef = Field(description="The LLM model to use with the react agent.")
-    verbose: bool = Field(default=False, description="Set the verbosity of the react agent's logging.")
-    aiq_tools: list[FunctionRef] = Field(default_factory=list,
-                                         description="The list of tools to provide to the react agent.")
+    llm_name: LLMRef = Field(description="The LLM model to use with the agent.")
+    verbose: bool = Field(default=False, description="Set the verbosity of the agent's logging.")
+    nat_tools: list[FunctionRef] = Field(default_factory=list, description="The list of tools to provide to the agent.")
     mcp_tools: list[OpenAIMCPSchemaTool] = Field(
         default_factory=list,
         description="List of MCP tools to use with the agent. If empty, no MCP tools will be used.")
@@ -49,8 +48,8 @@ class ResponsesAPIAgentWorkflowConfig(FunctionBaseConfig, name="responses_api_ag
         default_factory=list,
         description="List of built-in tools to use with the agent. If empty, no built-in tools will be used.")
 
-    max_iterations: int = Field(default=15, description="Number of tool calls before stoping the react agent.")
-    description: str = Field(default="ReAct Agent Workflow", description="The description of this functions use.")
+    max_iterations: int = Field(default=15, description="Number of tool calls before stoping the agent.")
+    description: str = Field(default="Agent Workflow", description="The description of this functions use.")
     parallel_tool_calls: bool = Field(default=False,
                                       description="Specify whether to allow parallel tool calls in the agent.")
     handle_tool_errors: bool = Field(
@@ -65,16 +64,16 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
     from langchain_openai import ChatOpenAI
     from langgraph.graph.graph import CompiledGraph
 
-    from aiq.agent.tool_calling_agent.agent import ToolCallAgentGraph
-    from aiq.agent.tool_calling_agent.agent import ToolCallAgentGraphState
+    from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph
+    from nat.agent.tool_calling_agent.agent import ToolCallAgentGraphState
 
     llm: ChatOpenAI = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     assert llm.use_responses_api, "Responses API Agent requires an LLM that supports the Responses API."
 
     # Get tools
     tools = []
-    aiq_tools = builder.get_tools(tool_names=config.aiq_tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    tools.extend(aiq_tools)
+    nat_tools = builder.get_tools(tool_names=config.nat_tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools.extend(nat_tools)
     # MCP tools are optional, if provided they will be used by the agent
     tools.extend([m.model_dump() for m in config.mcp_tools])
     # Built-in tools are optional, if provided they will be used by the agent
@@ -89,7 +88,7 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
 
     agent = ToolCallAgentGraph(
         llm=llm,
-        tools=aiq_tools,  # MCP and built-in tools are already bound to the LLM and need not be handled by graph
+        tools=nat_tools,  # MCP and built-in tools are already bound to the LLM and need not be handled by graph
         detailed_logs=config.verbose,
         handle_tool_errors=config.handle_tool_errors)
 

@@ -20,13 +20,13 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.llm import APITypeEnum
-from aiq.llm.nim_llm import NIMModelConfig
-from aiq.llm.openai_llm import OpenAIModelConfig
-from aiq.plugins.crewai.llm import nim_crewai
-from aiq.plugins.crewai.llm import openai_crewai
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.llm import APITypeEnum
+from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.crewai.llm import nim_crewai
+from nat.plugins.crewai.llm import openai_crewai
 
 # ---------------------------------------------------------------------------
 # NIM → CrewAI wrapper tests
@@ -131,7 +131,7 @@ class TestOpenAICrewAI:
 # ---------------------------------------------------------------------------
 
 
-@patch("aiq.cli.type_registry.GlobalTypeRegistry")
+@patch("nat.cli.type_registry.GlobalTypeRegistry")
 def test_decorator_registration(mock_global_registry):
     """Verify that register_llm_client decorators registered the CrewAI wrappers."""
     registry = MagicMock()

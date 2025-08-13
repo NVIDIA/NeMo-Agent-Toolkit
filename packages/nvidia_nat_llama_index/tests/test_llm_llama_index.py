@@ -19,15 +19,15 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.llm import APITypeEnum
-from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
-from aiq.llm.nim_llm import NIMModelConfig
-from aiq.llm.openai_llm import OpenAIModelConfig
-from aiq.plugins.llama_index.llm import aws_bedrock_llama_index
-from aiq.plugins.llama_index.llm import nim_llama_index
-from aiq.plugins.llama_index.llm import openai_llama_index
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.llm import APITypeEnum
+from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.llama_index.llm import aws_bedrock_llama_index
+from nat.plugins.llama_index.llm import nim_llama_index
+from nat.plugins.llama_index.llm import openai_llama_index
 
 # ---------------------------------------------------------------------------
 # NIM → Llama-Index wrapper tests
@@ -148,7 +148,7 @@ class TestBedrockLlamaIndex:
 # ---------------------------------------------------------------------------
 
 
-@patch("aiq.cli.type_registry.GlobalTypeRegistry")
+@patch("nat.cli.type_registry.GlobalTypeRegistry")
 def test_decorator_registration(mock_global_registry):
     """Ensure register_llm_client decorators registered the Llama-Index wrappers."""
     registry = MagicMock()

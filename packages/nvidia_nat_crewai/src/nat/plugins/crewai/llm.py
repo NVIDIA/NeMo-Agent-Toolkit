@@ -26,7 +26,6 @@ from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 from nat.utils.responses_api import validate_no_responses_api
 
 
-
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
 async def nim_crewai(llm_config: NIMModelConfig, builder: Builder):
 

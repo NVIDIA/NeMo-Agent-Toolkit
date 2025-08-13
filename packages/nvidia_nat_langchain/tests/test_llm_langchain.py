@@ -20,15 +20,15 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.llm import APITypeEnum
-from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
-from aiq.llm.nim_llm import NIMModelConfig
-from aiq.llm.openai_llm import OpenAIModelConfig
-from aiq.plugins.langchain.llm import aws_bedrock_langchain
-from aiq.plugins.langchain.llm import nim_langchain
-from aiq.plugins.langchain.llm import openai_langchain
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.llm import APITypeEnum
+from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.langchain.llm import aws_bedrock_langchain
+from nat.plugins.langchain.llm import nim_langchain
+from nat.plugins.langchain.llm import openai_langchain
 
 # ---------------------------------------------------------------------------
 # NIM → LangChain wrapper tests
@@ -112,7 +112,7 @@ class TestOpenAILangChain:
     async def test_responses_branch(self, mock_chat, oa_cfg_responses, mock_builder):
         """When APIType==RESPONSES, special flags are added and stream is forced False."""
         # Silence the warning that the wrapper logs when it toggles stream.
-        with patch.object(logging.getLogger("aiq.plugins.langchain.llm"), "warning"):
+        with patch.object(logging.getLogger("nat.plugins.langchain.llm"), "warning"):
             async with openai_langchain(oa_cfg_responses, mock_builder):
                 pass
 
@@ -167,7 +167,7 @@ class TestBedrockLangChain:
 # ---------------------------------------------------------------------------
 
 
-@patch("aiq.cli.type_registry.GlobalTypeRegistry")
+@patch("nat.cli.type_registry.GlobalTypeRegistry")
 def test_decorator_registration(mock_global_registry):
     """Ensure register_llm_client decorators registered the LangChain wrappers."""
     registry = MagicMock()

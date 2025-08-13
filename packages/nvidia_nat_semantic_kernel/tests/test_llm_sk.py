@@ -19,11 +19,11 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.llm import APITypeEnum
-from aiq.llm.openai_llm import OpenAIModelConfig
-from aiq.plugins.semantic_kernel.llm import openai_semantic_kernel
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.llm import APITypeEnum
+from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.semantic_kernel.llm import openai_semantic_kernel
 
 # ---------------------------------------------------------------------------
 # OpenAI → Semantic-Kernel wrapper tests
@@ -68,7 +68,7 @@ class TestOpenAISemanticKernel:
 # ---------------------------------------------------------------------------
 
 
-@patch("aiq.cli.type_registry.GlobalTypeRegistry")
+@patch("nat.cli.type_registry.GlobalTypeRegistry")
 def test_decorator_registration(mock_global_registry):
     """Verify that register_llm_client decorated the Semantic-Kernel wrapper."""
     registry = MagicMock()
