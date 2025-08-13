@@ -68,9 +68,9 @@ class ObjectStore(ABC):
 ## Included Object Stores
 The NeMo Agent toolkit includes several object store providers:
 
-- **In-Memory Object Store**: In-memory storage for development and testing. See `src/aiq/object_store/in_memory_object_store.py`
-- **S3 Object Store**: Amazon S3 and S3-compatible storage (like MinIO). See `packages/nvidia_nat_s3/src/aiq/plugins/s3/s3_object_store.py`
-- **MySQL Object Store**: MySQL database-backed storage. See `packages/nvidia_nat_mysql/src/aiq/plugins/mysql/mysql_object_store.py`
+- **In-Memory Object Store**: In-memory storage for development and testing. See `src/nat/object_store/in_memory_object_store.py`
+- **S3 Object Store**: Amazon S3 and S3-compatible storage (like MinIO). See `packages/nvidia_nat_s3/src/nat/plugins/s3/s3_object_store.py`
+- **MySQL Object Store**: MySQL database-backed storage. See `packages/nvidia_nat_mysql/src/nat/plugins/mysql/mysql_object_store.py`
 
 ## Usage
 
