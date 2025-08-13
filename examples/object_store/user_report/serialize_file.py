@@ -16,7 +16,7 @@
 import pickle
 import sys
 
-from aiq.object_store.models import ObjectStoreItem
+from nat.object_store.models import ObjectStoreItem
 
 # Usage: python serialize_file.py <file_path>
 

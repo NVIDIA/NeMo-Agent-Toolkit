@@ -17,9 +17,9 @@ from contextlib import asynccontextmanager
 
 import pytest
 
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.plugins.s3.object_store import S3ObjectStoreClientConfig
-from aiq.test.object_store_tests import ObjectStoreTests
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.plugins.s3.object_store import S3ObjectStoreClientConfig
+from nat.test.object_store_tests import ObjectStoreTests
 
 # NOTE: This test requires a local S3 server to be running.
 # To launch a local server using docker, run the following command:

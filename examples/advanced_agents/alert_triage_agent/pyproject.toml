@@ -6,14 +6,14 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_alert_triage_agent"
+name = "nat_alert_triage_agent"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.2",
-  "langchain-core",             # version determined by nvidia-nat[langchain]
+  "langchain-core", # version determined by nvidia-nat[langchain]
   "pandas>=2.0.0",
   "ansible-runner>=2.3.0",
-  "langgraph>=0.0.10",          # version determined by nvidia-nat[langchain]
+  "langgraph>=0.0.10", # version determined by nvidia-nat[langchain]
   "flask>=3.0.0",
 ]
 requires-python = ">=3.11,<3.13"
@@ -23,5 +23,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_alert_triage_agent = "aiq_alert_triage_agent.register"
+[project.entry-points.'nat.components']
+nat_alert_triage_agent = "nat_alert_triage_agent.register"

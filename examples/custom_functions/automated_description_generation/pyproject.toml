@@ -6,10 +6,10 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_automated_description_generation"
+name = "nat_automated_description_generation"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[ingestion, langchain]~=1.2"
+    "nvidia-nat[ingestion, langchain]~=1.2",
 ]
 requires-python = ">=3.11,<3.13"
 description = "Automated Generation Description AI-Q example"
@@ -19,5 +19,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_automated_description_generation = "aiq_automated_description_generation.register"
+[project.entry-points.'nat.components']
+nat_automated_description_generation = "nat_automated_description_generation.register"

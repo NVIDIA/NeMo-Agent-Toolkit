@@ -5,7 +5,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["aiq.*"]
+include = ["nat.*"]
 
 
 [tool.setuptools_scm]
@@ -17,14 +17,14 @@ name = "nvidia-nat-ragaai"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
-  # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
+  # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat[opentelemetry]~=1.2",
   "ragaai-catalyst>=2.2.0,<2.3",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Subpackage for RagaAI Catalyst integration in AIQtoolkit"
-readme = "src/aiq/meta/pypi.md"
+description = "Subpackage for RagaAI Catalyst integration in NeMo Agent toolkit"
+readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "observability", "ragaai catalyst"]
 classifiers = ["Programming Language :: Python"]
 
@@ -37,5 +37,5 @@ config-settings = { editable_mode = "compat" }
 nvidia-nat = { workspace = true }
 
 
-[project.entry-points.'aiq.components']
-aiq_ragaai = "aiq.plugins.ragaai.register"
+[project.entry-points.'nat.components']
+nat_ragaai = "nat.plugins.ragaai.register"

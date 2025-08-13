@@ -6,19 +6,18 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_simple_auth"
+name = "nat_simple_auth"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat",
-  "nvidia-nat[langchain]",
-  "httpx",
+    "nvidia-nat[langchain]~=1.2",
+    "httpx",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Custom AIQ Toolkit Workflow"
+description = "Custom NeMo Agent toolkit workflow demonstrating auth"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-simple_auth = "aiq_simple_auth.register"
+[project.entry-points.'nat.components']
+simple_auth = "nat_simple_auth.register"
