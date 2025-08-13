@@ -84,7 +84,7 @@ The AWS Bedrock LLM provider is defined by the {py:class}`~nat.llm.aws_bedrock_l
 
 
 ```{toctree}
-:caption: LLMs, Embedders, and Retrievers
+:caption: LLMs
 
 Using Local LLMs <./using-local-llms.md>
 ```

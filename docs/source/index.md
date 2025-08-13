@@ -82,15 +82,14 @@ About Workflows <./workflows/about/index.md>
 ./workflows/run-workflows.md
 Workflow Configuration <./workflows/workflow-configuration.md>
 ./workflows/llms/index.md
-./workflows/embedders/index.md
-./workflows/retrievers/index.md
+./workflows/embedders.md
+./workflows/retrievers.md
 Functions <./workflows/functions/index.md>
 ./workflows/mcp/index.md
 Evaluate Workflows <./workflows/evaluate.md>
 Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 Profiling Workflows <./workflows/profiler.md>
 Sizing Calculator <./workflows/sizing-calc.md>
-./workflows/using-local-llms.md
 ./workflows/observe/index.md
 ```
 
