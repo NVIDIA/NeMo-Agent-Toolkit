@@ -128,16 +128,17 @@ def discover_entrypoints(plugin_type: PluginTypes):
     plugin_groups = []
 
     # Add the specified plugin type to the list of groups to load
+    # The aiq entrypoints are intentionally left in the list to maintain backwards compatibility.
     if (plugin_type & PluginTypes.COMPONENT):
-        plugin_groups.extend(["nat.plugins", "nat.components"])
+        plugin_groups.extend(["aiq.plugins", "aiq.components", "nat.plugins", "nat.components"])
     if (plugin_type & PluginTypes.FRONT_END):
-        plugin_groups.append("nat.front_ends")
+        plugin_groups.append(["aiq.front_ends", "nat.front_ends"])
     if (plugin_type & PluginTypes.REGISTRY_HANDLER):
-        plugin_groups.append("nat.registry_handlers")
+        plugin_groups.append(["aiq.registry_handlers", "nat.registry_handlers"])
     if (plugin_type & PluginTypes.EVALUATOR):
-        plugin_groups.append("nat.evaluators")
+        plugin_groups.append(["aiq.evaluators", "nat.evaluators"])
     if (plugin_type & PluginTypes.AUTHENTICATION):
-        plugin_groups.append("nat.authentication_providers")
+        plugin_groups.append(["aiq.authentication_providers", "nat.authentication_providers"])
 
     # Get the entry points for the specified groups
     nat_plugins = reduce(lambda x, y: list(x) + list(y), [entry_points.select(group=y) for y in plugin_groups])

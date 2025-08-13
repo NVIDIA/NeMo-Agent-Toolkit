@@ -108,7 +108,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
                 completion status message.
         """
 
-        tmp_dir = ".tmp-nat-pull"
+        tmp_dir = "./.tmp/nat-pull"
 
         try:
             async with httpx.AsyncClient(headers=self._headers, timeout=self._timeout) as client:

@@ -50,7 +50,7 @@ This documentation points to the official NVIDIA AIQ Blueprint for building an A
 
 This blueprint provides comprehensive guidance and resources for:
 
-- Building enterprise-grade AI agents using AIQ
+- Building enterprise-grade AI agents using NeMo Agent toolkit
 - Implementing research-focused workflows
 - Leveraging NVIDIA NIM for scalable AI solutions
 - Best practices for enterprise deployment
