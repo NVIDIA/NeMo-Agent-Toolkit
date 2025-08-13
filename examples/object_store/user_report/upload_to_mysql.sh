@@ -69,7 +69,6 @@ echo "Starting to process files..."
 # Process each file
 find "$DIR" -type f | while IFS= read -r filepath; do
   relpath="${filepath#$DIR/}"
-  filepath_abs=$(realpath "$filepath")
 
   echo "Processing file: ${relpath}"
   fsize=$(stat -c%s "$filepath")
@@ -82,10 +81,10 @@ USE \`$DB\`;
 START TRANSACTION;
 
 INSERT INTO object_meta (path, size)
-VALUES ('${relpath}', ${fsize})
+VALUES ('/${relpath}', ${fsize})
 ON DUPLICATE KEY UPDATE size=VALUES(size), created_at=CURRENT_TIMESTAMP;
 
-SET @obj_id := (SELECT id FROM object_meta WHERE path='${relpath}' FOR UPDATE);
+SET @obj_id := (SELECT id FROM object_meta WHERE path='/${relpath}' FOR UPDATE);
 
 REPLACE INTO object_data (id, data)
 VALUES (
