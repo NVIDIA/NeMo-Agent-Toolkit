@@ -67,7 +67,7 @@ nat serve --config_file CONFIG_FILE [OPTIONS]
 - `--reload BOOLEAN`: Enable auto-reload for development
 - `--workers INTEGER`: Number of workers to run
 - `--use_gunicorn BOOLEAN`: Use Gunicorn to run the FastAPI app
-- `--runner_class TEXT`: The NAT toolkit runner class to use when launching from multiple processes
+- `--runner_class TEXT`: The NAT runner class to use when launching from multiple processes
 
 ### Examples
 ```bash

@@ -9,7 +9,7 @@ This rule provides guidance for using `nat workflow create`, `nat workflow reins
 
 ## nat workflow create
 
-Creates a new NAT toolkit workflow using templates with boilerplate code.
+Creates a new NAT workflow using templates with boilerplate code.
 
 ### Basic Usage
 ```bash
@@ -35,7 +35,7 @@ nat workflow create my_rag_workflow --workflow-dir ./my_workflows --description 
 
 ### What it generates
 - Valid `pyproject.toml` file with plugin section
-- `register.py` file with NAT toolkit boilerplate code
+- `register.py` file with NAT boilerplate code
 - Configuration file for launching the workflow
 
 ## nat workflow reinstall

@@ -102,7 +102,7 @@ class TestParseRequirement:
         """Test parsing packages with extras."""
         assert parse_requirement("requests[security]") == "requests"
         assert parse_requirement("uvicorn[standard]~=0.32.0") == "uvicorn"
-        assert parse_requirement("nattoolkit[langchain,telemetry]~=1.2") == "nattoolkit"
+        assert parse_requirement("nvidia-nat[langchain,telemetry]~=1.2") == "nvidia-nat"
 
     def test_package_with_comments(self):
         """Test parsing packages with inline comments."""

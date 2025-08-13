@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA NeMo Agent Toolkit](./docs/source/_static/aiqtoolkit_banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](./docs/source/_static/banner.png "NeMo Agent toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit
 
@@ -50,7 +50,7 @@ With NeMo Agent toolkit, you can move quickly, experiment freely, and ensure rel
 
 The following diagram illustrates the key components of NeMo Agent toolkit and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend NeMo Agent toolkit in your projects.
 
-![NeMo Agent toolkit Components Diagram](docs/source/_static/aiqtoolkit_gitdiagram.png)
+![NeMo Agent toolkit Components Diagram](docs/source/_static/gitdiagram.png)
 
 ## Links
 

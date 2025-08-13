@@ -104,7 +104,7 @@ Example:
 ```python
 # Good example
 async def good_example_function():
-    """Implementation following NAT Toolkit guidelines."""
+    """Implementation following NeMo Agent Toolkit guidelines."""
     # Use async/await for I/O operations
     # Follow snake_case naming convention
     # Include proper type hints and docstrings

@@ -26,7 +26,7 @@ nat info components [OPTIONS]
 ### Output Columns
 - `package`: The Python package containing the component
 - `version`: The version of the Python package
-- `component_type`: Type of NAT toolkit component
+- `component_type`: Type of NeMo Agent Toolkit component
 - `component_name`: Name to use in the `_type` field of configuration
 - `description`: Component description, configuration parameters, and default values
 

@@ -32,8 +32,8 @@ An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hyperv
   - [Install this Workflow](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
   - [Run the Workflow](#run-the-workflow)
-  - [Starting the NeMo Agent toolkit Server](#starting-the-nat-toolkit-server)
-  - [Making Requests to the NeMo Agent toolkit Server](#making-requests-to-the-nat-toolkit-server)
+  - [Starting the NeMo Agent toolkit Server](#starting-the-nemo-agent-toolkit-server)
+  - [Making Requests to the NeMo Agent toolkit Server](#making-requests-to-the-nemo-agent-toolkit-server)
 
 ## Key Features
 
