@@ -297,7 +297,7 @@ def execute_agno_tool(name: str,
 @register_tool_wrapper(wrapper_type=LLMFrameworkEnum.AGNO)
 def agno_tool_wrapper(name: str, fn: Function, builder: Builder):
     """
-    Wraps an NAT Function to be usable as an Agno tool.
+    Wraps a NAT Function to be usable as an Agno tool.
 
     This wrapper handles the conversion of async NAT functions to
     the format expected by Agno tools. It properly handles input schema,
