@@ -337,7 +337,9 @@ async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
     input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
     response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
     assert response.status_code == 200
-    data_match: re.Match[str] | None = re.search(r'data:\s*(.*)', response.text)
+    # only match the explicit `data:` json response
+    data_match: re.Match[str] | None = re.search(r'\bdata:\s*(.[^\n]*)\n', response.text)
+    assert data_match is not None
     data_match_dict: dict = json.loads(data_match.group(1))
     validated_response = ChatResponseChunk(**data_match_dict)
     assert isinstance(validated_response, ChatResponseChunk)
