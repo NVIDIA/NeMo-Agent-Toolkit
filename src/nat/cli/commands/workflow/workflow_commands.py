@@ -53,11 +53,9 @@ def _get_nat_dependency(editable: bool = False) -> str:
         # Extract major.minor (e.g., "1.2.3" -> "1.2")
         major_minor = ".".join(current_version.split(".")[:2])
         version_spec = f"~={major_minor}"
-        logger.debug("Auto-detected NAT version %s, using version spec: %s", current_version, version_spec)
     else:
         # Fallback if version detection fails
         version_spec = ""
-        logger.warning("Could not detect NAT version, using unversioned dependency")
 
     # Build the dependency string
     dependency = f"aiqtoolkit[{framework}]"
