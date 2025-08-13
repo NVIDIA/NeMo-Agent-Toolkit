@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,14 +16,18 @@
 import logging
 from abc import ABC
 from abc import abstractmethod
+from typing import Generic
+from typing import TypeVar
 
-from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
 from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
+from nat.utils.type_utils import DecomposedType
 
 logger = logging.getLogger(__name__)
 
+OutputT = TypeVar("OutputT")
 
-class TraceSourceAdapter(ABC):
+
+class TraceSourceAdapter(ABC, Generic[OutputT]):
     """Abstract base class for trace source adapters."""
 
     @abstractmethod
@@ -32,7 +36,7 @@ class TraceSourceAdapter(ABC):
         pass
 
     @abstractmethod
-    def convert(self, trace_source: TraceSource, client_id: str) -> DFWRecord | None:
+    def convert(self, trace_source: TraceSource, client_id: str) -> OutputT | None:
         """Convert trace source to DFW record."""
         pass
 
@@ -41,3 +45,9 @@ class TraceSourceAdapter(ABC):
     def framework_identifier(self) -> str:
         """Return the framework identifier this adapter handles."""
         pass
+
+    @property
+    def output_type(self) -> type[OutputT]:
+        """Return the output type this adapter produces."""
+        params = DecomposedType.extract_generic_parameters_from_class(self.__class__, expected_param_count=1)
+        return params[0]

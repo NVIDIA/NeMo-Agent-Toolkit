@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,7 +40,7 @@ def span_to_dfw_record(span: Span, client_id: str = "nat_client") -> DFWRecord |
     """Convert a span to DFW record using registered adapters."""
     trace_source = get_trace_source(span)
 
-    adapter = TraceAdapterRegistry.get_adapter(trace_source)
+    adapter = TraceAdapterRegistry.get_adapter(trace_source, DFWRecord)
     if adapter is None:
         framework_provider = f"{trace_source.source.framework}_{trace_source.source.provider}"
         logger.warning("No adapter found for framework: %s. Supported frameworks: %s",
