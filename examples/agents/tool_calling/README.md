@@ -201,22 +201,7 @@ For current capabilities and model support, see OpenAI's documentation for the R
 An example configuration is provided at `examples/agents/tool_calling/configs/config-responses-api.yml`. Run it from the NeMo Agent toolkit repo root:
 
 ```bash
-aiq run --config_file=examples/agents/tool_calling/configs/config-responses-api.yml --input "What day is it today?"
-```
-
-Start a server instead:
-
-```bash
-aiq serve --config_file=examples/agents/tool_calling/configs/config-responses-api.yml
-```
-
-Make a non-streaming request:
-
-```bash
-curl --request POST \
-  --url http://localhost:8000/generate \
-  --header 'Content-Type: application/json' \
-  --data '{"input_message": "What day is it today?"}'
+nat run --config_file=examples/agents/tool_calling/configs/config-responses-api.yml --input "How many 0s are in the current time?"
 ```
 
 #### Configure the agent for Responses
@@ -227,7 +212,8 @@ llms:
   openai_llm:
     _type: openai
     model_name: gpt-5-mini-2025-08-07
-    api_type: responses   # must be 'responses' for this agent
+    # Setting the `api_type` to responses uses the Responses API
+    api_type: responses
 
 workflow:
   _type: responses_api_agent
@@ -243,9 +229,9 @@ workflow:
   mcp_tools: []                     # Optional: remote tools over MCP (see below)
 ```
 
-- **nat_tools**: Tools implemented in this repository (for example, `current_datetime`). These run via the tool node in the agent graph.
-- **builtin_tools**: Tools provided by OpenAI's Responses API and executed by the model runtime. The agent binds them to the LLM; the graph does not run them directly.
-- **mcp_tools**: Remote tools exposed via MCP. The agent passes the schema to the LLM; the model orchestrates calls to the remote server.
+- **`nat_tools`**: Tools implemented in NeMo Agent toolkit (for example, `current_datetime`). These run via the tool node in the agent graph.
+- **`builtin_tools`**: Tools provided by OpenAI's Responses API and executed by the model runtime. The agent binds them to the LLM; the graph does not run them directly.
+- **`mcp_tools`**: Remote tools exposed via MCP. The agent passes the schema to the LLM; the model orchestrates calls to the remote server.
 
 #### Built-in tools for OpenAI models
 Built-in tool availability depends on model and account features. Common built-ins include:
@@ -284,10 +270,10 @@ workflow:
 
 Field reference (MCP):
 - **type**: Must be `mcp`.
-- **server_label**: A short label for the server. Used in model outputs and logs.
-- **server_url**: The MCP server endpoint URL.
-- **allowed_tools**: Optional allowlist of tool names the model may call. Omit or set empty to allow all server tools.
-- **require_approval**: `never`, `always`, or `auto` (defaults to `never`). Controls whether tool invocations require approval.
+- **`server_label`**: A short label for the server. Used in model outputs and logs.
+- **`server_url`**: The MCP server endpoint URL.
+- **`allowed_tools`**: Optional allowlist of tool names the model may call. Omit or set empty to allow all server tools.
+- **`require_approval`**: `never`, `always`, or `auto` (defaults to `never`). Controls whether tool invocations require approval.
 - **headers**: Optional HTTP headers to include on MCP requests.
 
 #### Tips and troubleshooting
