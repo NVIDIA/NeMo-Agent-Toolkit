@@ -40,7 +40,7 @@ retrievers:
 
 functions:
   cuda_tool:
-    _type: aiq_retriever
+    _type: nat_retriever
     retriever: retriever
     # Intentionally mislabelled to show the effects of poor descriptions
     topic: NVIDIA CUDA

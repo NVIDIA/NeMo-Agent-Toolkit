@@ -44,7 +44,7 @@ class AgnoProfilerHandler(BaseProfilerCallback):
       - LLM Calls
 
     to collect usage statistics (tokens, inputs, outputs, time intervals, etc.)
-    and store them in AIQ Toolkit's usage_stats queue for subsequent analysis.
+    and store them in NAT's usage_stats queue for subsequent analysis.
     """
 
     def __init__(self) -> None:
@@ -73,8 +73,8 @@ class AgnoProfilerHandler(BaseProfilerCallback):
 
         # Note: Agno doesn't have a class-based tool structure to patch directly.
         # Instead, it uses decorators to convert functions to tools.
-        # In AIQ Toolkit, tool executions are captured at the execute_agno_tool level
-        # in packages/aiqtoolkit_agno/src/aiq/plugins/agno/tool_wrapper.py
+        # In NAT, tool executions are captured at the execute_agno_tool level
+        # in packages/nvidia_nat_agno/src/nat/plugins/agno/tool_wrapper.py
 
         # To properly monitor Agno tool executions, we would need to either:
         # 1. Patch the execute_agno_tool function in tool_wrapper.py
@@ -83,7 +83,7 @@ class AgnoProfilerHandler(BaseProfilerCallback):
         #    to patch those classes
 
         # Recommended future enhancement:
-        # The execute_agno_tool function in packages/aiqtoolkit_agno/src/aiq/plugins/agno/tool_wrapper.py
+        # The execute_agno_tool function in packages/nvidia_nat_agno/src/nat/plugins/agno/tool_wrapper.py
         # should be updated to directly push IntermediateStepPayload events to the step manager
         # at the beginning and end of tool execution, similar to what this handler does for LLM calls.
 

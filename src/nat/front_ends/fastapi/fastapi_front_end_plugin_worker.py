@@ -99,7 +99,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         @asynccontextmanager
         async def lifespan(starting_app: FastAPI):
 
-            logger.debug("Starting AIQ Toolkit server from process %s", os.getpid())
+            logger.debug("Starting NAT server from process %s", os.getpid())
 
             async with WorkflowBuilder.from_config(self.config) as builder:
 
@@ -121,20 +121,20 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
                     self._cleanup_tasks.clear()
 
-            logger.debug("Closing AIQ Toolkit server from process %s", os.getpid())
+            logger.debug("Closing NAT server from process %s", os.getpid())
 
-        aiq_app = FastAPI(lifespan=lifespan)
+        nat_app = FastAPI(lifespan=lifespan)
 
         # Configure app CORS.
-        self.set_cors_config(aiq_app)
+        self.set_cors_config(nat_app)
 
-        @aiq_app.middleware("http")
+        @nat_app.middleware("http")
         async def authentication_log_filter(request: Request, call_next: Callable[[Request], Awaitable[Response]]):
             return await self._suppress_authentication_logs(request, call_next)
 
-        return aiq_app
+        return nat_app
 
-    def set_cors_config(self, aiq_app: FastAPI) -> None:
+    def set_cors_config(self, nat_app: FastAPI) -> None:
         """
         Set the cross origin resource sharing configuration.
         """
@@ -161,7 +161,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         if self.front_end_config.cors.max_age is not None:
             cors_kwargs["max_age"] = self.front_end_config.cors.max_age
 
-        aiq_app.add_middleware(
+        nat_app.add_middleware(
             CORSMiddleware,
             **cors_kwargs,
         )
@@ -322,7 +322,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 return EvaluateResponse(job_id=job_id, status="submitted")
 
         def translate_job_to_response(job: JobInfo) -> EvaluateStatusResponse:
-            """Translate a JobInfo object to an AIQEvaluateStatusResponse."""
+            """Translate a JobInfo object to an EvaluateStatusResponse."""
             return EvaluateStatusResponse(job_id=job.job_id,
                                           status=job.status,
                                           config_file=str(job.config_file),
@@ -527,7 +527,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         GenerateSingleResponseType = workflow.single_output_schema  # pylint: disable=invalid-name
 
         # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
-        # Consider prefixing these with "aiq_" to avoid conflicts
+        # Consider prefixing these with "nat_" to avoid conflicts
         class AsyncGenerateRequest(GenerateBodyType):
             job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
             sync_timeout: int = Field(
@@ -820,7 +820,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             session_id = websocket.query_params.get("session")
             if session_id:
                 headers = list(websocket.scope.get("headers", []))
-                cookie_header = f"aiqtoolkit-session={session_id}"
+                cookie_header = f"nat-session={session_id}"
 
                 # Check if the session cookie already exists to avoid duplicates
                 cookie_exists = False
@@ -831,8 +831,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         cookie_exists = True
                         cookie_str = value.decode()
 
-                        # Check if aiqtoolkit-session already exists in cookies
-                        if "aiqtoolkit-session=" in cookie_str:
+                        # Check if nat-session already exists in cookies
+                        if "nat-session=" in cookie_str:
                             existing_session_cookie = True
                             logger.info("WebSocket: Session cookie already present in headers (same-origin)")
                         else:

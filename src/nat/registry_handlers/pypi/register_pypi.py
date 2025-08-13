@@ -25,9 +25,9 @@ class PypiRegistryHandlerConfig(RegistryHandlerBaseConfig, name="pypi"):
     endpoint: str = Field(description="A string representing the remote endpoint.")
     token: str | None = Field(default=None,
                               description="The authentication token to use when interacting with the registry.")
-    publish_route: str = Field(description="The route to the AIQ Toolkit publish service.")
-    pull_route: str = Field(description="The route to the AIQ Toolkit pull service.")
-    search_route: str = Field(default="simple", description="The route to the AIQ Toolkit search service.")
+    publish_route: str = Field(description="The route to the NAT publish service.")
+    pull_route: str = Field(description="The route to the NAT pull service.")
+    search_route: str = Field(default="simple", description="The route to the NAT search service.")
 
 
 @register_registry_handler(config_type=PypiRegistryHandlerConfig)

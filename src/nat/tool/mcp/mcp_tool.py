@@ -50,7 +50,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
 @register_function(config_type=MCPToolConfig)
 async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=unused-argument
     """
-    Generate an AIQ Toolkit Function that wraps a tool provided by the MCP server.
+    Generate a NAT Function that wraps a tool provided by the MCP server.
     """
 
     from nat.tool.mcp.mcp_client import MCPBuilder

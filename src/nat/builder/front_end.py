@@ -27,11 +27,11 @@ class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
 
     def __init__(self, full_config: "Config"):
         """
-        Initializes the FrontEndBase object with the specified AIQ Toolkit configuration.
+        Initializes the FrontEndBase object with the specified NAT configuration.
 
         Parameters
         ----------
-        full_config : AIQConfig
+        full_config : Config
             The configuration object to use for the front end.
         """
 
@@ -43,7 +43,7 @@ class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
     @property
     def front_end_config(self) -> FrontEndConfigT:
         """
-        Returns the front end configuration object extracted from the AIQ Toolkit configuration.
+        Returns the front end configuration object extracted from the NAT configuration.
 
         Returns
         -------
@@ -55,12 +55,12 @@ class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
     @property
     def full_config(self) -> "Config":
         """
-        Returns the full AIQ Toolkit configuration object.
+        Returns the full NAT configuration object.
 
         Returns
         -------
-        AIQConfig
-            The full AIQ Toolkit configuration object.
+        Config
+            The full NAT configuration object.
         """
 
         return self._full_config

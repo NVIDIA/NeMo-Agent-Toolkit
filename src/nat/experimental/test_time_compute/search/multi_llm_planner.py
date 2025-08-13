@@ -96,7 +96,7 @@ class MultiLLMPlanner(StrategyBase):
             from langchain_core.prompts import PromptTemplate
         except ImportError:
             raise ImportError("langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
-                              "This error can be resolve by installing aiqtoolkit-langchain.")
+                              "This error can be resolve by installing nvidia-nat-langchain.")
 
         # Create a single PromptTemplate
         planning_template = PromptTemplate(template=self.config.planning_template,

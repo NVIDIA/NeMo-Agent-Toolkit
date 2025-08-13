@@ -77,7 +77,7 @@ uv pip install -e examples/observability/simple_calculator_observability/
 
 # Run the workflow with Catalyst telemetry settings
 # Note, you may have to update configuration settings based on your Catalyst account
-aiq run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "What is 1*2?"
+nat run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "What is 1*2?"
 ```
 As the workflow runs, telemetry data will start showing up in Catalyst.
 

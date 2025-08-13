@@ -1,9 +1,9 @@
 ---
-description: Follow these rules when the user's request involves adding, integrating, implementing, or configuring tools for AIQ workflows
+description: Follow these rules when the user's request involves adding, integrating, implementing, or configuring tools for NeMo Agent Toolkit workflows
 globs:
 alwaysApply: false
 ---
-# Adding Tools to AIQ Workflows
+# Adding Tools to NeMo Agent Toolkit Workflows
 
 ## Overview
 
@@ -14,10 +14,10 @@ Adding tools to workflows requires copying and modifying the workflow configurat
 ### 1. Identify Available Tools
 ```bash
 # Query all available function types
-aiq info components -t function
+nat info components -t function
 
 # Query specific function details
-aiq info components -t function -q webpage_query
+nat info components -t function -q webpage_query
 ```
 
 ### 2. Update Configuration File
@@ -139,7 +139,7 @@ datetime_tool:
 4. **Testing**:
    ```bash
    # Test the updated workflow
-   aiq run --config_file path/to/updated_config.yml --input "Test question"
+   nat run --config_file path/to/updated_config.yml --input "Test question"
    ```
 
 ## Common Issues and Solutions

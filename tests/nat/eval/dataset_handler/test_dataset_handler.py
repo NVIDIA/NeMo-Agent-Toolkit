@@ -125,7 +125,7 @@ def dataset_config():
 def dataset_swe_bench_id_key():
     """
     Fixture for swe dataset id key. swe_bench uses 'unstructured' data i.e.
-    the aiq-lib doesn't look beyond the id.
+    the nat-lib doesn't look beyond the id.
     """
     return "instance_id"
 

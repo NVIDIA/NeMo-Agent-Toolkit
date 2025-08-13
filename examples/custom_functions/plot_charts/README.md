@@ -22,7 +22,7 @@ limitations under the License.
 
 # Plot Charts Agent
 
-A simple and reusable example that demonstrates creating charts from data using the AIQ Toolkit. This workflow can generate line charts, bar charts, and scatter plots from JSON data files based on user requests. The implementation follows AIQ Toolkit best practices for configuration-driven, reusable workflows.
+A simple and reusable example that demonstrates creating charts from data using the NeMo Agent toolkit. This workflow can generate line charts, bar charts, and scatter plots from JSON data files based on user requests. The implementation follows NeMo Agent toolkit best practices for configuration-driven, reusable workflows.
 
 ## Table of Contents
 
@@ -41,7 +41,7 @@ A simple and reusable example that demonstrates creating charts from data using 
 
 ## Installation and Setup
 
-### Setup Virtual Environment and Install AIQ Toolkit
+### Setup Virtual Environment and Install NeMo Agent Toolkit
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
@@ -114,22 +114,22 @@ The data file should be in JSON format with the following structure:
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow:
 
 ```bash
-aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml --input "create a line chart"
+nat run --config_file examples/custom_functions/plot_charts/configs/config.yml --input "create a line chart"
 ```
 
 **Expected Workflow Output**
 ```console
 <snipped for brevity>
 
-2025-07-18 14:48:28,247 - aiq_plot_charts.register - INFO - Processing chart request: create a line chart
-2025-07-18 14:48:28,249 - aiq_plot_charts.register - INFO - Successfully loaded data from /Users/yuchenz/Desktop/Work/Project/AgentIQ/examples/custom_functions/plot_charts/src/nat_plot_charts/../../example_data.json
-2025-07-18 14:48:28,249 - aiq_plot_charts.register - INFO - Selected chart type: line
+2025-07-18 14:48:28,247 - nat_plot_charts.register - INFO - Processing chart request: create a line chart
+2025-07-18 14:48:28,249 - nat_plot_charts.register - INFO - Successfully loaded data from examples/custom_functions/plot_charts/data/plot_charts_questions.json
+2025-07-18 14:48:28,249 - nat_plot_charts.register - INFO - Selected chart type: line
 2025-07-18 14:48:28,522 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
 2025-07-18 14:48:28,523 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
 2025-07-18 14:48:28,523 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
 2025-07-18 14:48:28,523 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
-2025-07-18 14:48:30,092 - aiq_plot_charts.register - INFO - Successfully created chart: outputs/line_chart_1752875308.png
-2025-07-18 14:48:30,093 - aiq.front_ends.console.console_front_end_plugin - INFO -
+2025-07-18 14:48:30,092 - nat_plot_charts.register - INFO - Successfully created chart: outputs/line_chart_1752875308.png
+2025-07-18 14:48:30,093 - nat.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
 ['Successfully created line chart saved to: outputs/line_chart_1752875308.png\n\nChart description: The line chart shows the trend of two regions, USA and EMEA, over a 5-year period from 2020 to 2024, with both regions experiencing fluctuations in their values. The USA region appears to have a more stable trend, while the EMEA region shows a more significant increase in 2021 and 2023, followed by a sharp decline in 2024.']
@@ -141,10 +141,10 @@ You can request different chart types:
 
 ```bash
 # Bar chart
-aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml --input "create a bar chart comparing the data"
+nat run --config_file examples/custom_functions/plot_charts/configs/config.yml --input "create a bar chart comparing the data"
 
 # Scatter plot
-aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml --input "show me a scatter plot"
+nat run --config_file examples/custom_functions/plot_charts/configs/config.yml --input "show me a scatter plot"
 ```
 
 ### Launch the Workflow Server
@@ -152,7 +152,7 @@ aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml -
 Run the following command from the root of the NeMo Agent toolkit repo to serve this workflow:
 
 ```bash
-aiq serve --config_file examples/custom_functions/plot_charts/configs/config.yml
+nat serve --config_file examples/custom_functions/plot_charts/configs/config.yml
 ```
 
 **Triggering the Workflow Server**

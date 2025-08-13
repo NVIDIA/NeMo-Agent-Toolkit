@@ -61,7 +61,7 @@ functions:
   calculator_inequality:
     _type: calculator_inequality
   calculator_divide:
-    _type: aiq_simple_calculator/calculator_divide
+    _type: nat_simple_calculator/calculator_divide
   math_agent:
     _type: rewoo_agent
     tool_names:

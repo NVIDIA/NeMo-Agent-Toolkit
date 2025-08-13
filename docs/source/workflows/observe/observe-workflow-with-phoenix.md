@@ -64,7 +64,7 @@ From the root directory of the NeMo Agent toolkit library, install dependencies 
 uv pip install -e examples/observability/simple_calculator_observability/
 
 # Run the workflow with Phoenix telemetry settings
-aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "What is 1*2?"
+nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "What is 1*2?"
 ```
 As the workflow runs, telemetry data will start showing up in Phoenix.
 

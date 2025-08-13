@@ -89,13 +89,13 @@ def resolve_extras_to_packages(package_name: str, extras: list[str]) -> set[str]
     """Resolve package extras to their actual package dependencies.
 
     Args:
-        package_name (str): The base package name (e.g., 'aiqtoolkit')
+        package_name (str): The base package name (e.g., 'nvidia-nat')
         extras (list[str]): List of extra names (e.g., ['langchain', 'telemetry'])
 
     Returns:
         set[str]: Set of additional package names that the extras resolve to
-        (e.g., {'aiqtoolkit-langchain', 'aiqtoolkit-opentelemetry', 'aiqtoolkit-phoenix',
-        'aiqtoolkit-weave', 'aiqtoolkit-ragaai'})
+        (e.g., {'nvidia-nat-langchain', 'nvidia-nat-opentelemetry', 'nvidia-nat-phoenix',
+        'nvidia-nat-weave', 'nvidia-nat-ragaai'})
     """
     resolved_packages = set()
 
@@ -149,8 +149,8 @@ def extract_dependencies_with_extras_resolved(pyproject_path: str) -> set[str]:
         set[str]: Set of all dependency names including those resolved from extras
 
     Example:
-        For a dependency like "aiqtoolkit[langchain,telemetry]~=1.2", this will return:
-        {'aiqtoolkit', 'aiqtoolkit-langchain', 'aiqtoolkit-opentelemetry', 'aiqtoolkit-phoenix', ...}
+        For a dependency like "nat[langchain,telemetry]~=1.2", this will return:
+        {'nvidia-nat', 'nvidia-nat-langchain', 'nvidia-nat-opentelemetry', 'nvidia-nat-phoenix', ...}
 
     Raises:
         FileNotFoundError: If the pyproject.toml file doesn't exist
@@ -287,7 +287,7 @@ def get_transitive_dependencies(distribution_names: list[str]) -> dict[str, set[
     This function recursively resolves all dependencies for the given distribution names,
     returning a mapping of each package to its complete set of transitive dependencies.
     This is useful when publishing plugins to remote registries that contain with nested dependencies,
-    ensuring that all dependencies are included in the AIQArtifact's metadata.
+    ensuring that all dependencies are included in the Artifact's metadata.
 
     Args:
         distribution_names (list[str]): List of Python distribution names (package names) to analyze.
@@ -408,7 +408,7 @@ def get_all_transitive_dependencies(distribution_names: list[str]) -> set[str]:
 
     Returns a flattened set of all unique dependencies across all the provided distribution names.
     This is useful when publishing plugins to remote registries that contain with nested dependencies,
-    ensuring that all dependencies are included in the AIQArtifact's metadata.
+    ensuring that all dependencies are included in the Artifact's metadata.
 
     Args:
         distribution_names: List of Python distribution names (package names) to analyze
@@ -449,7 +449,7 @@ def build_wheel(package_root: str) -> WheelData:
 
     toml_project: dict = data.get("project", {})
     toml_project_name = toml_project.get("name", None)
-    toml_packages = set(i for i in data.get("project", {}).get("entry-points", {}).get("aiq.plugins", {}))
+    toml_packages = set(i for i in data.get("project", {}).get("entry-points", {}).get("nat.plugins", {}))
 
     # Extract dependencies using the robust requirement parser with extras resolution
     try:
@@ -488,13 +488,13 @@ def build_wheel(package_root: str) -> WheelData:
 
     os.chdir(working_dir)
 
-    whl_version = Wheel(whl_path).version
+    whl_version = Wheel(whl_path).version or "unknown"
 
     return WheelData(package_root=package_root,
                      package_name=toml_project_name,
                      toml_project=toml_project,
                      toml_dependencies=toml_dependencies,
-                     toml_aiq_packages=toml_packages,
+                     toml_nat_packages=toml_packages,
                      union_dependencies=union_dependencies,
                      whl_path=whl_path,
                      whl_base64=whl_base64,
@@ -502,13 +502,13 @@ def build_wheel(package_root: str) -> WheelData:
 
 
 def build_package_metadata(wheel_data: WheelData | None) -> dict[ComponentEnum, list[dict | DiscoveryMetadata]]:
-    """Loads discovery metadata for all registered AIQ Toolkit components included in this Python package.
+    """Loads discovery metadata for all registered NAT components included in this Python package.
 
     Args:
         wheel_data (WheelData): Data model containing a built python wheel and its corresponding metadata.
 
     Returns:
-        dict[AIQComponentEnum, list[typing.Union[dict, DiscoveryMetadata]]]: List containing each components discovery
+        dict[ComponentEnum, list[typing.Union[dict, DiscoveryMetadata]]]: List containing each components discovery
         metadata.
     """
 
@@ -520,11 +520,11 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[ComponentEnum, 
 
     registry = GlobalTypeRegistry.get()
 
-    aiq_plugins = discover_entrypoints(PluginTypes.ALL)
+    nat_plugins = discover_entrypoints(PluginTypes.ALL)
 
     if (wheel_data is not None):
         registry.register_package(package_name=wheel_data.package_name, package_version=wheel_data.whl_version)
-        for entry_point in aiq_plugins:
+        for entry_point in nat_plugins:
             package_name = entry_point.dist.name
             if (package_name == wheel_data.package_name):
                 continue
@@ -532,7 +532,7 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[ComponentEnum, 
                 registry.register_package(package_name=package_name)
 
     else:
-        for entry_point in aiq_plugins:
+        for entry_point in nat_plugins:
             registry.register_package(package_name=entry_point.dist.name)
 
     discovery_metadata = {}
@@ -549,13 +549,13 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[ComponentEnum, 
 
 
 def build_artifact(package_root: str) -> Artifact:
-    """Builds a complete AIQ Toolkit Artifact that can be published for discovery and reuse.
+    """Builds a complete NeMo Agent toolkit Artifact that can be published for discovery and reuse.
 
     Args:
         package_root (str): Path to root of python package
 
     Returns:
-        AIQArtifact: An publishabla AIQArtifact containing package wheel and discovery metadata.
+        Artifact: A publishable Artifact containing package wheel and discovery metadata.
     """
 
     from nat.registry_handlers.schemas.publish import BuiltArtifact

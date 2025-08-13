@@ -31,7 +31,7 @@ llms:
 eval:
   general:
     output:
-      dir: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/eval_only/
+      dir: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval_only/
       cleanup: true
     dataset:
       _type: json

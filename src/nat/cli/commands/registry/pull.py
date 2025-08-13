@@ -74,7 +74,7 @@ async def pull_artifact(registry_handler_config: RegistryHandlerBaseConfig, pack
 
 @click.group(name=__name__,
              invoke_without_command=True,
-             help=("Pull AIQ Toolkit artifacts from a remote registry "
+             help=("Pull NAT artifacts from a remote registry "
                    "by package name."))
 @click.option(
     "--config_file",
@@ -88,12 +88,12 @@ async def pull_artifact(registry_handler_config: RegistryHandlerBaseConfig, pack
     "--channel",
     type=str,
     required=True,
-    help=("The remote registry channel to use when pulling the AIQ Toolkit artifact."),
+    help=("The remote registry channel to use when pulling the NAT artifact."),
 )
 @click.argument("packages", type=str)
 def pull(channel: str, config_file: str, packages: str) -> None:
     """
-    Pull AIQ Toolkit artifacts from a remote registry channel.
+    Pull NAT artifacts from a remote registry channel.
     """
 
     from nat.settings.global_settings import GlobalSettings

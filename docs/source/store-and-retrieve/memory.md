@@ -23,9 +23,9 @@ The memory module is designed to be extensible, allowing developers to create cu
 
 ## Included Memory Modules
 The NeMo Agent toolkit includes three memory module providers, all of which are available as plugins:
-* [Mem0](https://mem0.ai/) which is provided by the [`aiqtoolkit-mem0ai`](https://pypi.org/project/aiqtoolkit-mem0ai/) plugin.
-* [Redis](https://redis.io/) which is provided by the [`aiqtoolkit-redis`](https://pypi.org/project/aiqtoolkit-redis/) plugin.
-* [Zep](https://www.getzep.com/) which is provided by the [`aiqtoolkit-zep-cloud`](https://pypi.org/project/aiqtoolkit-zep-cloud/) plugin.
+* [Mem0](https://mem0.ai/) which is provided by the [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) plugin.
+* [Redis](https://redis.io/) which is provided by the [`nvidia-nat-redis`](https://pypi.org/project/nvidia-nat-redis/) plugin.
+* [Zep](https://www.getzep.com/) which is provided by the [`nvidia-nat-zep-cloud`](https://pypi.org/project/nvidia-nat-zep-cloud/) plugin.
 
 ## Examples
 The following examples demonstrate how to use the memory module in the NeMo Agent toolkit:

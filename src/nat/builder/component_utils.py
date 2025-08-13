@@ -56,7 +56,7 @@ class ComponentInstanceData(BaseModel):
     """A data model to hold component runtime instance metadata to support generating build sequences.
 
     Args:
-        component_group (ComponentGroup): The component group in an AIQ Toolkit configuration object.
+        component_group (ComponentGroup): The component group in a NAT configuration object.
         name (ComponentRef): The name of the component runtime instance.
         config (TypedBaseModel): The runtime instance's configuration object.
         instance_id (str): Unique identifier for each runtime instance.
@@ -166,7 +166,7 @@ def update_dependency_graph(config: "Config", instance_config: TypedBaseModel,
     """Updates the hierarchical component instance dependency graph from a configuration runtime instance.
 
     Args:
-        config (AIQConfig): An AIQ Toolkit configuration object with runtime instance details.
+        config (Config): A NAT configuration object with runtime instance details.
         instance_config (TypedBaseModel): A component's runtime instance configuration object.
         dependency_graph (nx.DiGraph): A graph tracking runtime instance component dependencies.
 
@@ -196,7 +196,7 @@ def config_to_dependency_objects(config: "Config") -> tuple[dict[str, ComponentI
     """Generates a map of component runtime instance IDs to use when generating a build sequence.
 
     Args:
-        config (AIQConfig): The AIQ Toolkit workflow configuration object.
+        config (Config): The NAT workflow configuration object.
 
     Returns:
         tuple[dict[str, ComponentInstanceData], nx.DiGraph]: A tuple containing a map of component runtime instance
@@ -244,10 +244,10 @@ def config_to_dependency_objects(config: "Config") -> tuple[dict[str, ComponentI
 
 
 def build_dependency_sequence(config: "Config") -> list[ComponentInstanceData]:
-    """Generates the depencency sequence from an AIQ Toolkit configuration object
+    """Generates the depencency sequence from a NAT configuration object
 
     Args:
-        config (AIQConfig): An AIQ Toolkit configuration object.
+        config (Config): A NAT configuration object.
 
     Returns:
         list[ComponentInstanceData]: A list representing the instatiation sequence to ensure all valid

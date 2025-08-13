@@ -45,7 +45,7 @@ In this guide, you will learn how to:
 
     exporters:
       file:
-        path: /tmp/llm_spans.json
+        path: ./.tmp/llm_spans.json
         format: json
 
     service:
@@ -92,9 +92,9 @@ general:
 ### Run the workflow
 
 ```bash
-# ensure you have installed aiqtoolkit with telemetry, eg uv pip install -e '.[telemetry]'
+# ensure you have installed nvidia-nat with telemetry, eg uv pip install -e '.[telemetry]'
 uv pip install -e <path/to/your/workflow/root>
-aiq run --config_file <path/to/your/config/file.yml> --input "your notional input"
+nat run --config_file <path/to/your/config/file.yml> --input "your notional input"
 ```
 
 As the workflow runs, spans are sent to the OTel Collector which in turn exports them based on the exporter you configured. In this example, you can view the exported traces in the local file:

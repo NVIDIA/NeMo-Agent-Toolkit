@@ -36,12 +36,12 @@ The following are frequently used prompts to begin development:
 
 **Installing NeMo Agent Toolkit:**
 ```
-Install AIQ Toolkit with all dependencies and verify the installation is working correctly.
+Install NeMo Agent toolkit with all dependencies and verify the installation is working correctly.
 ```
 
 **Environment setup:**
 ```
-Help me set up AIQ Toolkit development environment with all required dependencies and configurations.
+Help me set up NeMo Agent toolkit development environment with all required dependencies and configurations.
 ```
 
 **Workflow creation:**
@@ -71,7 +71,7 @@ Before you begin, make sure you have cloned the NeMo Agent toolkit repository an
 
 Prompt:
 ```
-Install AIQ Toolkit with all required dependencies and verify the installation
+Install NeMo Agent toolkit with all required dependencies and verify the installation
 ```
 
 The assistant will reference and apply the [toolkit-installation](../../../.cursor/rules/nat-setup/nat-toolkit-installation.mdc) rule to validate prerequisites and install the toolkit, followed by installation verification.
@@ -84,7 +84,7 @@ The assistant will reference and apply the [toolkit-installation](../../../.curs
 
 Prompt:
 ```
-Find datetime-related functions and tools available in AIQ Toolkit
+Find datetime-related functions and tools available in NeMo Agent toolkit
 ```
 The assistant will reference and apply the [info](../../../.cursor/rules/nat-cli/nat-info.mdc) rule to discover available tools and functions.
 

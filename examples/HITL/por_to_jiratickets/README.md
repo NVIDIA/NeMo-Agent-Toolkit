@@ -79,7 +79,7 @@ export JIRA_TOKEN=<YOUR_JIRA_TOKEN>
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
 The NeMo Agent toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
 into the agent itself. For instance, this example asks for user permission to create Jira issues and tickets before creating them. We can view the implementation in the
-`aiq_por_to_jiratickets.jira_tickets_tool.py` file. The implementation is below:
+`examples/HITL/por_to_jiratickets/src/nat_por_to_jiratickets/jira_tickets_tool.py` file. The implementation is below:
 
 ```python
 ### The reusable HITL function
@@ -92,8 +92,8 @@ async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder)
 
     async def _arun(unused: str = "") -> bool:
 
-        aiq_context = AIQContext.get()
-        user_input_manager = aiq_context.user_interaction_manager
+        nat_context = Context.get()
+        user_input_manager = nat_context.user_interaction_manager
 
         human_prompt_text = HumanPromptText(text=prompt, required=True, placeholder="<your response here>")
         response: InteractionResponse = await user_input_manager.prompt_user_input(human_prompt_text)
@@ -142,7 +142,7 @@ This can occur in any tool or function in the workflow, allowing for dynamic int
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/HITL/por_to_jiratickets/configs/config.yml  --input "Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?"
+nat run --config_file examples/HITL/por_to_jiratickets/configs/config.yml  --input "Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?"
 ```
 
 **Expected Workflow Result When Giving Permission**
@@ -178,8 +178,8 @@ Workflow Result:
 
 Action: create_jira_tickets_tool
 Action Input: {'input_text': 'epics'}
-2025-03-12 16:49:54,916 - aiq.agent.react_agent.agent - INFO - Calling tool create_jira_tickets_tool with input: {'input_text': 'epics'}
-2025-03-12 16:49:54,916 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
+2025-03-12 16:49:54,916 - nat.agent.react_agent.agent - INFO - Calling tool create_jira_tickets_tool with input: {'input_text': 'epics'}
+2025-03-12 16:49:54,916 - nat.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
 I would like to create Jira tickets for the extracted data. Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: no
 
 <snipped for brevity>

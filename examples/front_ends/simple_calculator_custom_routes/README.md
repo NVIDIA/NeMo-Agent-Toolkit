@@ -33,8 +33,8 @@ This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications w
 ## Key Features
 
 - **Custom API Route Registration:** Demonstrates how to define and register custom endpoints through YAML configuration that are dynamically added to the FastAPI server alongside standard Agent toolkit endpoints.
-- **HTTP Request Metadata Access:** Shows comprehensive capture of HTTP request context including method, URL path, headers, query parameters, client information, and cookies through the `AIQContext` system.
-- **Context Management Integration:** Uses the `aiq.builder.context.AIQContext.get()` method to access request metadata throughout function execution, enabling sophisticated request-aware business logic.
+- **HTTP Request Metadata Access:** Shows comprehensive capture of HTTP request context including method, URL path, headers, query parameters, client information, and cookies through the `Context` system.
+- **Context Management Integration:** Uses the `nat.builder.context.Context.get()` method to access request metadata throughout function execution, enabling sophisticated request-aware business logic.
 - **Production API Extension Patterns:** Provides patterns for building production-ready APIs with specialized endpoints for authentication, routing, and custom business logic while maintaining Agent toolkit workflow capabilities.
 - **FastAPI Integration:** Demonstrates seamless integration with FastAPI framework features while leveraging Agent toolkit workflow execution and function registration system.
 
@@ -79,18 +79,18 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
     async def _get_request_attributes(unused: str) -> str:
 
         from nat.builder.context import Context
-        aiq_context = Context.get()
+        nat_context = Context.get()
 
-        method: str | None = aiq_context.metadata.method
-        url_path: str | None = aiq_context.metadata.url_path
-        url_scheme: str | None = aiq_context.metadata.url_scheme
-        headers: Headers | None = aiq_context.metadata.headers
-        query_params: QueryParams | None = aiq_context.metadata.query_params
-        path_params: dict[str, str] | None = aiq_context.metadata.path_params
-        client_host: str | None = aiq_context.metadata.client_host
-        client_port: int | None = aiq_context.metadata.client_port
-        cookies: dict[str, str] | None = aiq_context.metadata.cookies
-        conversation_id: str | None = aiq_context.conversation_id
+        method: str | None = nat_context.metadata.method
+        url_path: str | None = nat_context.metadata.url_path
+        url_scheme: str | None = nat_context.metadata.url_scheme
+        headers: Headers | None = nat_context.metadata.headers
+        query_params: QueryParams | None = nat_context.metadata.query_params
+        path_params: dict[str, str] | None = nat_context.metadata.path_params
+        client_host: str | None = nat_context.metadata.client_host
+        client_port: int | None = nat_context.metadata.client_port
+        cookies: dict[str, str] | None = nat_context.metadata.cookies
+        conversation_id: str | None = nat_context.conversation_id
 
     yield FunctionInfo.from_fn(_get_request_attributes,
                                description="Returns the acquired user defined request attributes.")
@@ -120,7 +120,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 ### Run the Workflow
 
 ```bash
-aiq serve --config_file examples/front_ends/simple_calculator_custom_routes/configs/config-metadata.yml
+nat serve --config_file examples/front_ends/simple_calculator_custom_routes/configs/config-metadata.yml
 ```
 
 The server starts with both standard and custom endpoints:

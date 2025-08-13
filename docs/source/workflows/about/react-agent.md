@@ -34,7 +34,7 @@ paper.
 ---
 
 ## Requirements
-The ReAct agent requires the `aiqtoolkit[langchain]` plugin to be installed.
+The ReAct agent requires the `nvidia-nat[langchain]` plugin to be installed.
 
 If you have performed a source code checkout, you can install this with the following command:
 
@@ -64,7 +64,7 @@ functions:
   calculator_inequality:
     _type: calculator_inequality
   calculator_divide:
-    _type: aiq_simple_calculator/calculator_divide
+    _type: nat_simple_calculator/calculator_divide
   math_agent:
     _type: react_agent
     tool_names:

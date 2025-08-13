@@ -66,7 +66,7 @@ class IntermediateStepState(str, Enum):
 
 class StreamEventData(BaseModel):
     """
-    AIQStreamEventData is a data model that represents the data field in an streaming event.
+    StreamEventData is a data model that represents the data field in an streaming event.
     """
 
     # Allow extra fields in the model_config to support derived models
@@ -121,7 +121,7 @@ class TraceMetadata(BaseModel):
 
 class IntermediateStepPayload(BaseModel):
     """
-    AIQIntermediateStep is a data model that represents an intermediate step in the AIQ Toolkit. Intermediate steps are
+    IntermediateStep is a data model that represents an intermediate step in the NAT. Intermediate steps are
     captured while a request is running and can be used to show progress or to evaluate the path a workflow took to get
     a response.
     """
@@ -226,7 +226,7 @@ class IntermediateStepPayload(BaseModel):
 
 class IntermediateStep(BaseModel):
     """
-    AIQIntermediateStep is a data model that represents an intermediate step in the AIQ Toolkit. Intermediate steps are
+    IntermediateStep is a data model that represents an intermediate step in the NAT. Intermediate steps are
     captured while a request is running and can be used to show progress or to evaluate the path a workflow took to get
     a response.
     """
@@ -243,7 +243,7 @@ class IntermediateStep(BaseModel):
 
     function_ancestry: InvocationNode
     """
-    The function ancestry for the current step showing the current AIQ function that was being executed when the step
+    The function ancestry for the current step showing the current NAT function that was being executed when the step
     was created.
     """
 

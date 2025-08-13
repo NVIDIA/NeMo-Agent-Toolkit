@@ -25,14 +25,14 @@ logger = logging.getLogger(__name__)
 
 def get_app():
 
-    config_file_path = os.getenv("AIQ_CONFIG_FILE")
-    front_end_worker_full_name = os.getenv("AIQ_FRONT_END_WORKER")
+    config_file_path = os.getenv("NAT_CONFIG_FILE")
+    front_end_worker_full_name = os.getenv("NAT_FRONT_END_WORKER")
 
     if (not config_file_path):
-        raise ValueError("Config file not found in environment variable AIQ_CONFIG_FILE.")
+        raise ValueError("Config file not found in environment variable NAT_CONFIG_FILE.")
 
     if (not front_end_worker_full_name):
-        raise ValueError("Front end worker not found in environment variable AIQ_FRONT_END_WORKER.")
+        raise ValueError("Front end worker not found in environment variable NAT_FRONT_END_WORKER.")
 
     # Try to import the front end worker class
     try:
@@ -62,9 +62,9 @@ def get_app():
         # Create an instance of the front end worker class
         front_end_worker = front_end_worker_class(config)
 
-        aiq_app = front_end_worker.build_app()
+        nat_app = front_end_worker.build_app()
 
-        return aiq_app
+        return nat_app
 
     except ImportError as e:
         raise ValueError(f"Front end worker {front_end_worker_full_name} not found.") from e

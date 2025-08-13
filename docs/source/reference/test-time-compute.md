@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Test Time Compute With NVIDIA NeMo Agent Toolkit
-Test time compute reallocates compute after a model has been trained, trading extra inference cycles for much better reasoning, factuality, and robustness, often without any additional training data. The new **`aiq.experimental.test_time_compute`** package codifies this idea as four strategy types (Search ▶ Editing ▶ Scoring ▶ Selection) that operate on a lightweight `TTCItem` record.  Developers can compose these strategies manually or use several **pre‑built TTC functions** that wire everything up automatically. To add your own strategy, you can simply follow these steps:
+Test time compute reallocates compute after a model has been trained, trading extra inference cycles for much better reasoning, factuality, and robustness, often without any additional training data. The new **`nat.experimental.test_time_compute`** package codifies this idea as four strategy types (Search ▶ Editing ▶ Scoring ▶ Selection) that operate on a lightweight `TTCItem` record.  Developers can compose these strategies manually or use several **pre‑built TTC functions** that wire everything up automatically. To add your own strategy, you can simply follow these steps:
 1. Write a config subclass.
 2. Implement a `StrategyBase` child.
 3. Register it with the `@register_ttc_strategy` decorator.
@@ -114,7 +114,7 @@ NeMo Agent toolkit ships higher‑level wrappers that hide all orchestration.
 | **`execute_score_select_function`**   | Run a function *k* times, score each output, pick the best.                                                         |
 | **`plan_select_execute_function`**    | End‑to‑end: plan → optionally edit/score → select plan → feed downstream agent.                                     |
 
-These are declared in `aiq.experimental.test_time_compute.functions.*` and can be referenced in your `AIQConfig` just like any other function.
+These are declared in `nat.experimental.test_time_compute.functions.*` and can be referenced in your `Config` just like any other function.
 
 ## Creating and Registering a New Strategy
 
@@ -147,11 +147,11 @@ Follow the steps below to create and register a new strategy.
        yield strat
    ```
 
-Your strategy is now discoverable by `TypeRegistry` and can be referenced in `AIQConfig` fields.
+Your strategy is now discoverable by `TypeRegistry` and can be referenced in `Config` fields.
 
 ---
 
-## Composing Strategies in an `AIQConfig`
+## Composing Strategies in a `Config`
 
 TTC Strategies can be part of workflow configurations, just like other components such as `LLMs`. For example, the following configuration excerpt shows how an TTC strategy can be
 configured in a `config.yml` file and used in a workflow function:
@@ -173,7 +173,7 @@ workflow:
 
 * **Multiple stages**: Nothing stops you from chaining *search → edit → search* again, as long as each stage returns `List[TTCItem]`.
 * **Streaming**: Strategies themselves are non‑streaming, but you can wrap a streaming LLM in an TTC pipeline by choosing an appropriate pre‑built function such as `plan_select_execute_function`, which keeps streaming support if the downstream agent streams.
-* **Debugging**: Log levels are respected through the standard `logging` module; export `AIQ_LOG_LEVEL=DEBUG` for verbose traces, including every intermediate `TTCItem`.
+* **Debugging**: Log levels are respected through the standard `logging` module; export `NAT_LOG_LEVEL=DEBUG` for verbose traces, including every intermediate `TTCItem`.
 
 
 ## Testing your strategy

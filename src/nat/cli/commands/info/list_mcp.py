@@ -248,11 +248,11 @@ def list_mcp(ctx: click.Context, direct: bool, url: str, tool: str | None, detai
         json_output (bool): Whether to output tool metadata in JSON format instead of text
 
     Examples:
-        aiq info mcp                           # List tool names only
-        aiq info mcp --detail                  # Show all tools with full details
-        aiq info mcp --tool my_tool            # Show details for specific tool
-        aiq info mcp --json-output             # Get JSON format output
-        aiq info mcp --direct --url http://...  # Use direct protocol with custom URL
+        nat info mcp                           # List tool names only
+        nat info mcp --detail                  # Show all tools with full details
+        nat info mcp --tool my_tool            # Show details for specific tool
+        nat info mcp --json-output             # Get JSON format output
+        nat info mcp --direct --url http://...  # Use direct protocol with custom URL
     """
     if ctx.invoked_subcommand is not None:
         return
@@ -288,10 +288,10 @@ def ping(url: str, timeout: int, json_output: bool) -> None:
         json_output (bool): Whether to output the result in JSON format
 
     Examples:
-        aiq info mcp ping                                    # Ping default server
-        aiq info mcp ping --url http://custom-server:9901/sse # Ping custom server
-        aiq info mcp ping --timeout 10                      # Use 10 second timeout
-        aiq info mcp ping --json-output                     # Get JSON format output
+        nat info mcp ping                                    # Ping default server
+        nat info mcp ping --url http://custom-server:9901/sse # Ping custom server
+        nat info mcp ping --timeout 10                      # Use 10 second timeout
+        nat info mcp ping --json-output                     # Get JSON format output
     """
     result = asyncio.run(ping_mcp_server(url, timeout))
 

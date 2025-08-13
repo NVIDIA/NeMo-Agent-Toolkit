@@ -48,14 +48,14 @@ general:
     tracing:
       weave:
         _type: weave
-        project: "aiqtoolkit-demo"
+        project: "nat-demo"
 ```
 
 This setup enables logging trace data to W&B weave. The weave integration requires one parameter and one optional parameter:
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
-| `project` | The name of your W&B Weave project | `"aiqtoolkit-demo"` |
+| `project` | The name of your W&B Weave project | `"nat-demo"` |
 | `entity` (optional) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
 
 ### Step 4: Run Your Workflow
@@ -63,7 +63,7 @@ Install `simple_calculator` example using the instructions in the `examples/obse
 Run the workflow using `config-weave.yml` configuration file:
 
 ```bash
-aiq run --config_file examples/observability/simple_calculator_observability/configs/config-weave.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/observability/simple_calculator_observability/configs/config-weave.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 If it is your first time running the workflow, you will be prompted to login to W&B Weave.
@@ -72,11 +72,11 @@ If it is your first time running the workflow, you will be prompted to login to 
 
 As the workflow runs, you will find a Weave URL (starting with a 🍩 emoji). Click on the URL to access your logged trace timeline.
 
-Note how the integration captures not only the `aiq` intermediate steps but also the underlying framework. This is because [Weave has integrations](https://weave-docs.wandb.ai/guides/integrations/) with many of your favorite frameworks.
+Note how the integration captures not only the `nat` intermediate steps but also the underlying framework. This is because [Weave has integrations](https://weave-docs.wandb.ai/guides/integrations/) with many of your favorite frameworks.
 
 ## Redacting Sensitive Data
 
-When tracing LLM workflows, you may be processing sensitive information like personal identifiers, credit card numbers, or API keys. AIQ Toolkit Weave integration supports automatic redaction of Personally Identifiable Information (PII) and sensitive keys from your traces.
+When tracing LLM workflows, you may be processing sensitive information like personal identifiers, credit card numbers, or API keys. NeMo Agent toolkit Weave integration supports automatic redaction of Personally Identifiable Information (PII) and sensitive keys from your traces.
 
 **Prerequisites**: To enable PII redaction, you need `presidio-analyzer` and `presidio-anonymizer` installed. Installing the weave plugin will install these packages for you.
 
@@ -93,7 +93,7 @@ general:
     tracing:
       weave:
         _type: weave
-        project: "aiqtoolkit-demo"
+        project: "nat-demo"
         redact_pii: true                    # Enable PII redaction
         redact_pii_fields:                  # Optional: specify which entity types to redact
           - EMAIL_ADDRESS

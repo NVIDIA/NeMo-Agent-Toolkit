@@ -147,7 +147,7 @@ def default_eval_config(mock_evaluator):
     eval_config.general.dataset = EvalDatasetJsonConfig()
     eval_config.general.output = EvalOutputConfig()
     eval_config.general.max_concurrency = 1
-    eval_config.general.output.dir = Path(".tmp/aiq/examples/mock/")
+    eval_config.general.output.dir = Path(".tmp/nat/examples/mock/")
     eval_config.evaluators = {"MockEvaluator": mock_evaluator}
 
     return eval_config
@@ -171,7 +171,7 @@ def mock_pull_intermediate(tool_end_intermediate_step, llm_end_intermediate_step
 @pytest.fixture
 def session_manager(generated_answer, mock_pull_intermediate):
     """
-    Fixture to provide a mocked AIQSessionManager instance.
+    Fixture to provide a mocked SessionManager instance.
 
     DONT REMOVE mock_pull_intermediate arg. Although it is not used in this function,
     it is needed to ensure that pull_intermediate is mocked for all tests that use session_manager.
@@ -454,7 +454,7 @@ def test_write_output_handles_none_output(evaluation_run, eval_input):
     """This test ensures that write_output does not access .output without a None check."""
     # Setup minimal eval_config with output = None
     evaluation_run.eval_config = SimpleNamespace(
-        general=SimpleNamespace(output=None, output_dir=Path(".tmp/aiq/examples/mock/")))
+        general=SimpleNamespace(output=None, output_dir=Path(".tmp/nat/examples/mock/")))
     evaluation_run.eval_input = eval_input
     # Mock dataset handler
     mock_dataset_handler = MagicMock()
@@ -483,10 +483,10 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
     5. writes output.
     """
     evaluation_run.config.skip_workflow = skip_workflow
-    # Patch load_config to return an AIQConfig instance with eval_config set
-    mock_aiq_config = Config()
-    mock_aiq_config.eval = default_eval_config
-    mock_load_config = MagicMock(return_value=mock_aiq_config)
+    # Patch load_config to return an Config instance with eval_config set
+    mock_nat_config = Config()
+    mock_nat_config.eval = default_eval_config
+    mock_load_config = MagicMock(return_value=mock_nat_config)
 
     # Mock dataset handler
     mock_dataset_handler = MagicMock()

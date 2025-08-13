@@ -212,7 +212,7 @@ object_stores:
 
 You can start the server by running:
 ```bash
-aiq serve --config_file examples/object_store/user_report/configs/config_s3.yml
+nat serve --config_file examples/object_store/user_report/configs/config_s3.yml
 ```
 
 ### Using the Object Store Backed File Server (Optional)
@@ -233,7 +233,7 @@ For each of the following examples, a command is provided to run the workflow wi
 
 ### Get User Report
 ```
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
+nat run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
 ```
 
 **Expected Workflow Output**
@@ -253,7 +253,7 @@ Workflow Result:
 In the case of a non-existent report, the workflow will return an error message.
 
 ```
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 12345"
+nat run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 12345"
 ```
 
 **Expected Workflow Output**
@@ -266,7 +266,7 @@ Workflow Result:
 
 ### Put User Report
 ```bash
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Create a latest report for user 6789 with the following JSON contents:
+nat run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Create a latest report for user 6789 with the following JSON contents:
     {
         "recommendations": [
             "Update graphics driver",
@@ -313,7 +313,7 @@ Workflow Result:
 
 ### Update User Report
 ```bash
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Update the latest report for user 6789 with the following JSON contents:
+nat run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Update the latest report for user 6789 with the following JSON contents:
     {
         "recommendations": [
             "Update graphics driver",
@@ -342,7 +342,7 @@ Workflow Result:
 
 ### Delete User Report
 ```bash
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Delete the latest report for user 6789'
+nat run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Delete the latest report for user 6789'
 ```
 
 **Expected Workflow Output**
