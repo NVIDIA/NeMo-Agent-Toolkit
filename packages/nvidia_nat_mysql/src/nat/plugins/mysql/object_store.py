@@ -31,10 +31,10 @@ class MySQLObjectStoreClientConfig(ObjectStoreBaseConfig, name="mysql"):
     DEFAULT_HOST: ClassVar[str] = "localhost"
     DEFAULT_PORT: ClassVar[int] = 3306
 
-    HOST_ENV: ClassVar[str] = "AIQ_MYSQL_OBJECT_STORE_HOST"
-    PORT_ENV: ClassVar[str] = "AIQ_MYSQL_OBJECT_STORE_PORT"
-    USERNAME_ENV: ClassVar[str] = "AIQ_MYSQL_OBJECT_STORE_USERNAME"
-    PASSWORD_ENV: ClassVar[str] = "AIQ_MYSQL_OBJECT_STORE_PASSWORD"
+    HOST_ENV: ClassVar[str] = "NAT_MYSQL_OBJECT_STORE_HOST"
+    PORT_ENV: ClassVar[str] = "NAT_MYSQL_OBJECT_STORE_PORT"
+    USERNAME_ENV: ClassVar[str] = "NAT_MYSQL_OBJECT_STORE_USERNAME"
+    PASSWORD_ENV: ClassVar[str] = "NAT_MYSQL_OBJECT_STORE_PASSWORD"
 
     bucket_name: str = Field(description="The name of the bucket to use for the object store")
     host: str = Field(
