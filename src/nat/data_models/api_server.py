@@ -201,7 +201,7 @@ class Choice(BaseModel):
 
     message: ChoiceMessage | None = None
     delta: ChoiceDelta | None = None
-    finish_reason: typing.Literal[FINISH_REASONS] | None = None
+    finish_reason: typing.Literal['stop', 'length', 'tool_calls', 'content_filter', 'function_call'] | None = None
     index: int
     # logprobs: ChoiceLogprobs | None = None
 
