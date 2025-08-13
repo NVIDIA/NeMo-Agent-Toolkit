@@ -17,8 +17,8 @@ import json
 import logging
 
 from nat.data_models.intermediate_step import ToolSchema
-from nat.plugins.data_flywheel.observability.processor.dfw_record import extract_timestamp
-from nat.plugins.data_flywheel.observability.processor.dfw_record import extract_usage_info
+from nat.plugins.data_flywheel.observability.processor.dfw_record.common import extract_timestamp
+from nat.plugins.data_flywheel.observability.processor.dfw_record.common import extract_usage_info
 from nat.plugins.data_flywheel.observability.schema.dfw_record import AssistantMessage
 from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
 from nat.plugins.data_flywheel.observability.schema.dfw_record import FinishReason

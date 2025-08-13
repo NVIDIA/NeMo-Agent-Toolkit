@@ -15,7 +15,7 @@
 
 import logging
 
-from nat.plugins.data_flywheel.observability.processor.dfw_record.langchain.openai_converter import \
+from nat.plugins.data_flywheel.observability.processor.dfw_record.adapters.langchain.openai_converter import \
     convert_langchain_openai
 from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
 from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource

@@ -14,25 +14,17 @@
 # limitations under the License.
 
 import logging
-from enum import Enum
 
 from nat.data_models.span import Span
-from nat.plugins.data_flywheel.observability.processor.dfw_record.langchain import convert_langchain_nim
-from nat.plugins.data_flywheel.observability.processor.dfw_record.langchain import convert_langchain_openai
+from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import TraceAdapterRegistry
 from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
 from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
 
 logger = logging.getLogger(__name__)
 
 
-class TraceProviderFramework(Enum):
-    LANGCHAIN_NIM = "langchain_nim"
-    LANGCHAIN_OPENAI = "langchain_openai"
-
-
 def get_trace_source(span: Span) -> TraceSource:
     """Get the source of a span."""
-
     source_dict = {
         "source": {
             "framework": span.attributes.get("nat.framework", "unknown"),
@@ -41,26 +33,23 @@ def get_trace_source(span: Span) -> TraceSource:
         },
         "span": span
     }
-
     return TraceSource(**source_dict)
 
 
 def span_to_dfw_record(span: Span, client_id: str = "nat_client") -> DFWRecord | None:
-
+    """Convert a span to DFW record using registered adapters."""
     trace_source = get_trace_source(span)
-    try:
-        trace_provider_framework = TraceProviderFramework(trace_source.source.framework + "_" +
-                                                          trace_source.source.provider)
-    except ValueError:
-        logger.warning("Unsupported trace provider framework: `%s`",
-                       trace_source.source.framework + "_" + trace_source.source.provider)
+
+    adapter = TraceAdapterRegistry.get_adapter(trace_source)
+    if adapter is None:
+        framework_provider = f"{trace_source.source.framework}_{trace_source.source.provider}"
+        logger.warning("No adapter found for framework: %s. Supported frameworks: %s",
+                       framework_provider,
+                       TraceAdapterRegistry.list_supported_frameworks())
         return None
 
-    match trace_provider_framework:
-        case TraceProviderFramework.LANGCHAIN_NIM:
-            return convert_langchain_nim(trace_source, client_id)
-        case TraceProviderFramework.LANGCHAIN_OPENAI:
-            return convert_langchain_openai(trace_source, client_id)
-        case _:
-            logger.warning("Unsupported trace provider framework: `%s`", trace_provider_framework)
-            return None
+    try:
+        return adapter.convert(trace_source, client_id)
+    except Exception as e:
+        logger.error("Error converting trace source with adapter %s: %s", adapter.framework_identifier, str(e))
+        return None

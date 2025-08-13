@@ -13,14 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Import adapters first to trigger auto-registration
+from . import adapters  # noqa: F401
+
 from .common import extract_timestamp
 from .common import extract_usage_info
 from .common import extract_token_usage
 from .span_to_dfw_record import span_to_dfw_record
+from .trace_adapter_registry import TraceAdapterRegistry
+from .trace_adapter_registry import register_span_adapter
+from .trace_adapter_registry import unregister_span_adapter
 
 __all__ = [
     "extract_timestamp",
     "extract_usage_info",
     "extract_token_usage",
     "span_to_dfw_record",
+    "TraceAdapterRegistry",
+    "register_span_adapter",
+    "unregister_span_adapter",
 ]

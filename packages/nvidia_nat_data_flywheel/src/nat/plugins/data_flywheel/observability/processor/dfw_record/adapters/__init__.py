@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .nim_converter import convert_langchain_nim
-from .openai_converter import convert_langchain_openai
+from .trace_source_adapter import TraceSourceAdapter
+from .langchain import LangChainNimAdapter
+from .langchain import LangChainOpenAIAdapter
+
+# Auto-register default adapters
+# Import here to avoid circular dependencies
+from ..trace_adapter_registry import register_span_adapter
+
+register_span_adapter(LangChainNimAdapter())
+register_span_adapter(LangChainOpenAIAdapter())
 
 __all__ = [
-    "convert_langchain_nim",
-    "convert_langchain_openai",
+    "TraceSourceAdapter",
+    "LangChainNimAdapter",
+    "LangChainOpenAIAdapter",
 ]
