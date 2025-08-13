@@ -22,6 +22,7 @@ from nat.data_models.openai_mcp import OpenAIMCPSchemaTool
 
 
 class _MockBuilder:
+
     def __init__(self, llm, tools):
         self._llm = llm
         self._tools = tools
