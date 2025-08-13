@@ -132,7 +132,7 @@ class DiscoveryMetadata(BaseModel):
             if candidate_distro_name is not None:
                 return candidate_distro_name
 
-        return "aiqtoolkit"
+        return "nvidia-nat"
 
     @staticmethod
     @lru_cache
