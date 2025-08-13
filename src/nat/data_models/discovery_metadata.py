@@ -15,12 +15,10 @@
 
 import importlib.metadata
 import inspect
-import json
 import logging
 import typing
 from enum import Enum
 from functools import lru_cache
-from pathlib import Path
 from types import ModuleType
 from typing import TYPE_CHECKING
 

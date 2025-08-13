@@ -128,6 +128,7 @@ numpydoc_class_members_toctree = False
 # Ignore openai.com links, as these always report a 403 when requested by the linkcheck agent
 # mysql.com  reports a 403 when requested by linkcheck
 # api.service.com is a placeholder for a service example
+# Once v1.2 is merged into main, remove the ignore for the banner.png
 linkcheck_ignore = [
     r'http://localhost:\d+/',
     r'https://localhost:\d+/',
