@@ -89,13 +89,13 @@ def resolve_extras_to_packages(package_name: str, extras: list[str]) -> set[str]
     """Resolve package extras to their actual package dependencies.
 
     Args:
-        package_name (str): The base package name (e.g., 'nat')
+        package_name (str): The base package name (e.g., 'nvidia-nat')
         extras (list[str]): List of extra names (e.g., ['langchain', 'telemetry'])
 
     Returns:
         set[str]: Set of additional package names that the extras resolve to
-        (e.g., {'nat-langchain', 'nat-opentelemetry', 'nat-phoenix',
-        'nat-weave', 'nat-ragaai'})
+        (e.g., {'nvidia-nat-langchain', 'nvidia-nat-opentelemetry', 'nvidia-nat-phoenix',
+        'nvidia-nat-weave', 'nvidia-nat-ragaai'})
     """
     resolved_packages = set()
 
@@ -150,7 +150,7 @@ def extract_dependencies_with_extras_resolved(pyproject_path: str) -> set[str]:
 
     Example:
         For a dependency like "nat[langchain,telemetry]~=1.2", this will return:
-        {'nat', 'nat-langchain', 'nat-opentelemetry', 'nat-phoenix', ...}
+        {'nvidia-nat', 'nvidia-nat-langchain', 'nvidia-nat-opentelemetry', 'nvidia-nat-phoenix', ...}
 
     Raises:
         FileNotFoundError: If the pyproject.toml file doesn't exist

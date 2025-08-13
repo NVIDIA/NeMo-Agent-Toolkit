@@ -103,21 +103,6 @@ class DiscoveryMetadata(BaseModel):
 
     @staticmethod
     @lru_cache
-    def get_distribution_name_from_private_data(root_package: str) -> str | None:
-        # Locate distibution mapping stored in the packages private data
-        module = __import__(root_package)
-        for path in module.__path__:
-            package_dir = Path(path).resolve()
-            distinfo_path = package_dir / "meta" / "module_to_distro.json"
-
-            if distinfo_path.exists():
-                with distinfo_path.open("r") as f:
-                    data = json.load(f)
-                    return data.get(root_package, None)
-        return None
-
-    @staticmethod
-    @lru_cache
     def get_distribution_name_from_module(module: ModuleType | None) -> str:
         """Get the distribution name from the config type using the mapping of module names to distro names.
 
@@ -164,18 +149,6 @@ class DiscoveryMetadata(BaseModel):
         """
         module = inspect.getmodule(config_type)
         return DiscoveryMetadata.get_distribution_name_from_module(module)
-
-    @staticmethod
-    @lru_cache
-    def get_distribution_name(root_package: str) -> str:
-        """
-        The NAT library packages use a distro name 'nvidia-nat[]' and
-        root package name 'nat'. They provide mapping in a metadata file
-        for optimized installation.
-        """
-
-        distro_name = DiscoveryMetadata.get_distribution_name_from_private_data(root_package)
-        return distro_name if distro_name else root_package
 
     @staticmethod
     def from_config_type(config_type: type["TypedBaseModelT"],

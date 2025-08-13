@@ -20,9 +20,9 @@ limitations under the License.
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# Testing Weave PII Redaction in NAT using W&B Weave
+# Testing Weave PII Redaction in NeMo Agent Toolkit using W&B Weave
 
-This example demonstrates how to use Weights & Biases (W&B) Weave with PII redaction in your NAT workflows.
+This example demonstrates how to use Weights & Biases (W&B) Weave with PII redaction in your NeMo Agent toolkit workflows.
 
 ## Table of Contents
 
@@ -114,7 +114,7 @@ curl -X 'POST'   'http://localhost:8000/generate'
 {"value":"John Doe's contact information is:\n\n* Email: test@example.com\n* Phone: 555-123-4567"}
 ```
 
-4. Go to your Weights & Biases dashboard (https://wandb.ai) and navigate to the "nvidia-nat-pii" project.
+4. Go to your Weights & Biases dashboard (https://wandb.ai) and navigate to the `nvidia-nat-pii` project.
 
 Note: Because observability does not block workflow execution, PII redacted traces might take a few minutes to arrive in the Weights & Biases dashboard.
 
