@@ -21,3 +21,4 @@
 
 from . import llm
 from . import tool_wrapper
+from . import embedder
