@@ -135,7 +135,7 @@ Workflow Result:
 ```
 ---
 
-### Starting the NeMo Agent toolkit Server
+### Starting the NeMo Agent Toolkit Server
 
 You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
 
