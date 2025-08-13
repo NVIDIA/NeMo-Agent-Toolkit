@@ -12,19 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=unused-argument
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_embedder_client
+from nat.data_models.retry_mixin import RetryMixin
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
-
-
-@register_embedder_client(config_type=NIMEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def nim_langchain(embedder_config: NIMEmbedderModelConfig, builder: Builder):
-
-    from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
-
-    yield NVIDIAEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
+from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
 @register_embedder_client(config_type=NIMEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -38,4 +33,12 @@ async def nim_llamaindex(embedder_config: NIMEmbedderModelConfig, builder: Build
             embedder_config.model_name,
     }
 
-    yield NVIDIAEmbedding(**config_obj)
+    client = NVIDIAEmbedding(**config_obj)
+
+    if isinstance(embedder_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=embedder_config.num_retries,
+                                  retry_codes=embedder_config.retry_on_status_codes,
+                                  retry_on_messages=embedder_config.retry_on_errors)
+
+    yield client
