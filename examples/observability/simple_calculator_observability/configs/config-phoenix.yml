@@ -23,7 +23,7 @@ general:
         level: WARN
       file:
         _type: file
-        path: /tmp/nat_simple_calculator.log
+        path: ./.tmp/nat_simple_calculator.log
         level: DEBUG
     tracing:
       phoenix:

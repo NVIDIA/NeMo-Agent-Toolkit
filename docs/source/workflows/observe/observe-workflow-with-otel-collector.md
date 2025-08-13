@@ -45,7 +45,7 @@ In this guide, you will learn how to:
 
     exporters:
       file:
-        path: /tmp/llm_spans.json
+        path: ./.tmp/llm_spans.json
         format: json
 
     service:

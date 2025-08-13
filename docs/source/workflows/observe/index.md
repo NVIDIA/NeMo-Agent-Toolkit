@@ -73,7 +73,7 @@ general:
         level: WARN
       file:
         _type: file
-        path: /tmp/workflow.log
+        path: ./.tmp/workflow.log
         level: DEBUG
     tracing:
       # Multiple exporters can run simultaneously
