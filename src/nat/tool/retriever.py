@@ -91,4 +91,4 @@ async def retriever_tool(config: RetrieverConfig, builder: Builder):
 
 # Compatibility aliases with previous releases
 AIQRetrieverConfig = RetrieverConfig
-nat_retriever_tool = retriever_tool
+aiq_retriever_tool = retriever_tool
