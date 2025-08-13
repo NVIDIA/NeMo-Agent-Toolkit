@@ -21,9 +21,9 @@ from nat.builder.context import AIQContextState
 from nat.data_models.span import Span
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.observability.processor.batching_processor import BatchingProcessor
-from nat.plugins.data_flywheel.observability.processor.dfw_record_processor import DFWToDictProcessor
-from nat.plugins.data_flywheel.observability.processor.dfw_record_processor import SpanToDFWRecordProcessor
-from nat.plugins.data_flywheel.observability.processor.falsy_batch_filter_processor import DictBatchFilterProcessor
+from nat.plugins.data_flywheel.observability.processor import DFWToDictProcessor
+from nat.plugins.data_flywheel.observability.processor import DictBatchFilterProcessor
+from nat.plugins.data_flywheel.observability.processor import SpanToDFWRecordProcessor
 
 logger = logging.getLogger(__name__)
 

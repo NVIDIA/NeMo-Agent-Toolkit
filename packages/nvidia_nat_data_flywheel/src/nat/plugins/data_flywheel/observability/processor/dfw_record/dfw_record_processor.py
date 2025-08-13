@@ -18,7 +18,7 @@ import logging
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.span import Span
 from nat.observability.processor.processor import Processor
-from nat.plugins.data_flywheel.observability.processor.span_to_dfw_record import span_to_dfw_record
+from nat.plugins.data_flywheel.observability.processor.dfw_record import span_to_dfw_record
 from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
 from nat.utils.type_utils import override
 
@@ -62,10 +62,10 @@ class SpanToDFWRecordProcessor(Processor[Span, DFWRecord | None]):
             DFWRecord: The converted DFW record.
         """
 
-        match item.attributes.get("aiq.event_type"):
+        match item.attributes.get("nat.event_type"):
             case IntermediateStepType.LLM_START:
                 dfw_record = span_to_dfw_record(span=item, client_id=self._client_id)
                 return dfw_record
             case _:
-                logger.warning("Unsupported event type: %s", item.attributes.get("aiq.event_type"))
+                logger.warning("Unsupported event type: %s", item.attributes.get("nat.event_type"))
                 return None

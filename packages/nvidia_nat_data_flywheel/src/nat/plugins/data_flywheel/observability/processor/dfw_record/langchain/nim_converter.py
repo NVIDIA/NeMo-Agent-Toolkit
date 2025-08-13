@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import logging
+
+from nat.plugins.data_flywheel.observability.processor.dfw_record.langchain.openai_converter import \
+    convert_langchain_openai
+from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
+from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
+
+logger = logging.getLogger(__name__)
+
+
+def convert_langchain_nim(trace_source: TraceSource, client_id: str = "nat_test") -> DFWRecord | None:
+    return convert_langchain_openai(trace_source, client_id)
