@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
-from langchain_core.prompts.chat import ChatPromptTemplate
-
 PLANNER_SYSTEM_PROMPT = """
 For the following task, make plans that can solve the problem step by step. For each plan, indicate \
 which external tool together with tool input to retrieve evidence. You can store the evidence into a \
@@ -87,8 +84,6 @@ PLANNER_USER_PROMPT = """
 task: {task}
 """
 
-rewoo_planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
-
 SOLVER_SYSTEM_PROMPT = """
 Solve the following task or problem. To solve the problem, we have made step-by-step Plan and \
 retrieved corresponding Evidence to each Plan. Use them with caution since long evidence might \
@@ -104,5 +99,3 @@ task: {task}
 
 Response:
 """
-
-rewoo_solver_prompt = ChatPromptTemplate([("system", SOLVER_SYSTEM_PROMPT), ("user", SOLVER_USER_PROMPT)])
