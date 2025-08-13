@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 class PlanSelectExecuteFunctionConfig(FunctionBaseConfig, name="plan_select_execute_function"):
     """
-    Defines a NeMo Agent toolkit function that performs reasoning on the input data.
+    Defines a NAT function that performs reasoning on the input data.
     Output is passed to the next function in the workflow.
 
     Designed to be used with an InterceptingFunction.
