@@ -16,8 +16,8 @@
 import logging
 from typing import TypeVar
 
-from aiq.observability.processor.processor import Processor
-from aiq.utils.type_utils import override
+from nat.observability.processor.processor import Processor
+from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 

@@ -17,10 +17,10 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_telemetry_exporter
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.observability.mixin.batch_config_mixin import BatchConfigMixin
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class DFWElasticsearchTelemetryExporter(TelemetryExporterBaseConfig,
 
 @register_telemetry_exporter(config_type=DFWElasticsearchTelemetryExporter)
 async def dfw_elasticsearch_telemetry_exporter(config: DFWElasticsearchTelemetryExporter, builder: Builder):  # pylint: disable=unused-argument # noqa: E501
-    from aiq.plugins.data_flywheel.observability.exporter.dfw_elasticsearch_exporter import \
+    from nat.plugins.data_flywheel.observability.exporter.dfw_elasticsearch_exporter import \
         DFWElasticsearchExporter  # noqa: F401
 
     yield DFWElasticsearchExporter(client_id=config.client_id,

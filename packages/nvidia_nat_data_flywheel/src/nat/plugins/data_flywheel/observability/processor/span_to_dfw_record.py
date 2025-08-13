@@ -17,25 +17,25 @@ import json
 import logging
 import typing
 
-from aiq.data_models.intermediate_step import TokenUsageBaseModel
-from aiq.data_models.intermediate_step import UsageInfo
-from aiq.data_models.span import Span
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import AssistantMessage
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import FinishReason
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import Function
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import FunctionDetails
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import FunctionMessage
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import Message
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import Request
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import RequestTool
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import Response
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import ResponseChoice
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import ResponseMessage
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import SystemMessage
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import ToolCall
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import ToolMessage
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import UserMessage
+from nat.data_models.intermediate_step import TokenUsageBaseModel
+from nat.data_models.intermediate_step import UsageInfo
+from nat.data_models.span import Span
+from nat.plugins.data_flywheel.observability.schema.dfw_record import AssistantMessage
+from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
+from nat.plugins.data_flywheel.observability.schema.dfw_record import FinishReason
+from nat.plugins.data_flywheel.observability.schema.dfw_record import Function
+from nat.plugins.data_flywheel.observability.schema.dfw_record import FunctionDetails
+from nat.plugins.data_flywheel.observability.schema.dfw_record import FunctionMessage
+from nat.plugins.data_flywheel.observability.schema.dfw_record import Message
+from nat.plugins.data_flywheel.observability.schema.dfw_record import Request
+from nat.plugins.data_flywheel.observability.schema.dfw_record import RequestTool
+from nat.plugins.data_flywheel.observability.schema.dfw_record import Response
+from nat.plugins.data_flywheel.observability.schema.dfw_record import ResponseChoice
+from nat.plugins.data_flywheel.observability.schema.dfw_record import ResponseMessage
+from nat.plugins.data_flywheel.observability.schema.dfw_record import SystemMessage
+from nat.plugins.data_flywheel.observability.schema.dfw_record import ToolCall
+from nat.plugins.data_flywheel.observability.schema.dfw_record import ToolMessage
+from nat.plugins.data_flywheel.observability.schema.dfw_record import UserMessage
 
 logger = logging.getLogger(__name__)
 

@@ -15,12 +15,12 @@
 
 import logging
 
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.span import Span
-from aiq.observability.processor.processor import Processor
-from aiq.plugins.data_flywheel.observability.processor.span_to_dfw_record import span_to_dfw_record
-from aiq.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
-from aiq.utils.type_utils import override
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.span import Span
+from nat.observability.processor.processor import Processor
+from nat.plugins.data_flywheel.observability.processor.span_to_dfw_record import span_to_dfw_record
+from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
+from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 

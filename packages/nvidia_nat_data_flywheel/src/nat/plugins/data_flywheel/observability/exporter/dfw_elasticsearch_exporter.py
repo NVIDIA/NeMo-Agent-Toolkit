@@ -15,9 +15,9 @@
 
 import logging
 
-from aiq.builder.context import AIQContextState
-from aiq.plugins.data_flywheel.observability.exporter.dfw_exporter import DFWExporter
-from aiq.plugins.data_flywheel.observability.mixin.elasticsearch_mixin import ElasticsearchMixin
+from nat.builder.context import AIQContextState
+from nat.plugins.data_flywheel.observability.exporter.dfw_exporter import DFWExporter
+from nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin import ElasticsearchMixin
 
 logger = logging.getLogger(__name__)
 

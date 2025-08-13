@@ -17,13 +17,13 @@ import logging
 from abc import abstractmethod
 from typing import TypeVar
 
-from aiq.builder.context import AIQContextState
-from aiq.data_models.span import Span
-from aiq.observability.exporter.span_exporter import SpanExporter
-from aiq.observability.processor.batching_processor import BatchingProcessor
-from aiq.plugins.data_flywheel.observability.processor.dfw_record_processor import DFWToDictProcessor
-from aiq.plugins.data_flywheel.observability.processor.dfw_record_processor import SpanToDFWRecordProcessor
-from aiq.plugins.data_flywheel.observability.processor.falsy_batch_filter_processor import DictBatchFilterProcessor
+from nat.builder.context import AIQContextState
+from nat.data_models.span import Span
+from nat.observability.exporter.span_exporter import SpanExporter
+from nat.observability.processor.batching_processor import BatchingProcessor
+from nat.plugins.data_flywheel.observability.processor.dfw_record_processor import DFWToDictProcessor
+from nat.plugins.data_flywheel.observability.processor.dfw_record_processor import SpanToDFWRecordProcessor
+from nat.plugins.data_flywheel.observability.processor.falsy_batch_filter_processor import DictBatchFilterProcessor
 
 logger = logging.getLogger(__name__)
 
