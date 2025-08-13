@@ -15,6 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<!-- This document is explicitly retaining the name "AIQ" -->
 # AIQ Blueprint - Enterprise Research Agent
 
 ## Overview

@@ -49,9 +49,9 @@ env:
   GH_TOKEN: "${{ github.token }}"
   GIT_COMMIT: "${{ github.sha }}"
   BASE_SHA: "${{ inputs.base_sha }}"
-  BUILD_AIQ_COMPAT: "true"
+  BUILD_NAT_COMPAT: "true"
   RAPIDS_CONDA_RETRY_MAX: "5"
-  WORKSPACE: "${{ github.workspace }}/aiqtoolkit"
+  WORKSPACE: "${{ github.workspace }}/nat"
   WORKSPACE_TMP: "${{ github.workspace }}/tmp"
   UV_CACHE_DIR: .uv-cache
 
@@ -85,11 +85,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          path: 'aiqtoolkit'
+          path: 'nat'
 
       - name: Check
         shell: bash
-        run: ./aiqtoolkit/ci/scripts/github/checks.sh
+        run: ./nat/ci/scripts/github/checks.sh
 
   test:
     name: Test
@@ -115,11 +115,11 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          path: 'aiqtoolkit'
+          path: 'nat'
 
       - name: Test:linux:${{ matrix.arch }}:py${{ matrix.python-version }}
         shell: bash
-        run: ./aiqtoolkit/ci/scripts/github/tests.sh
+        run: ./nat/ci/scripts/github/tests.sh
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
@@ -146,11 +146,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-tags: true
-          path: 'aiqtoolkit'
+          path: 'nat'
 
       - name: build_docs
         shell: bash
-        run: ./aiqtoolkit/ci/scripts/github/docs.sh
+        run: ./nat/ci/scripts/github/docs.sh
 
       - name: Upload Documentation
         uses: actions/upload-artifact@v4
@@ -177,11 +177,11 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          path: 'aiqtoolkit'
+          path: 'nat'
 
       - name: build_wheels
         shell: bash
-        run: ./aiqtoolkit/ci/scripts/github/build_wheel.sh
+        run: ./nat/ci/scripts/github/build_wheel.sh
 
       - name: Upload Wheels
         uses: actions/upload-artifact@v4

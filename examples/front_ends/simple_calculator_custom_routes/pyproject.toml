@@ -9,9 +9,9 @@ packages = []
 root = "../../.."
 
 [project]
-name = "aiq_simple_calculator_custom_routes"
+name = "nat_simple_calculator_custom_routes"
 dynamic = ["version"]
-dependencies = ["nvidia-nat[langchain]~=1.2", "aiq_simple_calculator"]
+dependencies = ["nvidia-nat[langchain]~=1.2", "nat_simple_calculator"]
 requires-python = ">=3.11,<3.13"
 description = "Simple Calculator Custom Routes - demonstrates NeMo Agent toolkit custom API routes and metadata access"
 keywords = ["ai", "api", "routes", "metadata", "agents"]
@@ -19,4 +19,4 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
-aiq_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }
+nat_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }

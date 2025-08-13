@@ -18,7 +18,7 @@ SCRIPT_DIR=$( dirname ${GITLAB_SCRIPT_DIR} )
 
 source ${SCRIPT_DIR}/common.sh
 
-export AIQ_AVOID_GH_CLI=1 # gh cli not working with gitlab, todo look into seeing if this can be fixed
+export NAT_AVOID_GH_CLI=1 # gh cli not working with gitlab, todo look into seeing if this can be fixed
 
 function get_git_tag() {
     FT=$(git fetch --all --tags)
@@ -77,6 +77,8 @@ function create_env() {
     rapids-logger "Creating Environment with extras: ${@}"
 
     UV_SYNC_STDERROUT=$(uv sync ${extras[@]} 2>&1)
+    # Explicitly filter the warning about multiple packages providing a tests module, work-around for issue #611
+    UV_SYNC_STDERROUT=$(echo "${UV_SYNC_STDERROUT}" | grep -v "warning: The module \`tests\` is provided by more than one package")
 
     # Environment should have already been created in the before_script
     if [[ "${UV_SYNC_STDERROUT}" =~ "warning:" ]]; then
