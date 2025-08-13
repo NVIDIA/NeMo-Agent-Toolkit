@@ -150,7 +150,7 @@ def extract_dependencies_with_extras_resolved(pyproject_path: str) -> set[str]:
 
     Example:
         For a dependency like "nat[langchain,telemetry]~=1.2", this will return:
-        {'nat', 'nat-langchain', 'nat-opentelemetry', 'nat-phoenix', ...}
+        {'nvidia-nat', 'nvidia-nat-langchain', 'nvidia-nat-opentelemetry', 'nvidia-nat-phoenix', ...}
 
     Raises:
         FileNotFoundError: If the pyproject.toml file doesn't exist
