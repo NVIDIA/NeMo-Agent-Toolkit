@@ -1,19 +1,19 @@
 ---
-description: Follow these rules when the user's request involves running, serving, or executing AIQ workflows
-globs: 
+description: Follow these rules when the user's request involves running, serving, or executing NeMo Agent Toolkit workflows
+globs:
 alwaysApply: false
 ---
-# AIQ Run and Serve Commands
+# NeMo Agent Toolkit Run and Serve Commands
 
-This rule provides guidance for using `aiq run` and `aiq serve` commands to execute and deploy AIQ toolkit workflows.
+This rule provides guidance for using `nat run` and `nat serve` commands to execute and deploy NeMo Agent Toolkit workflows.
 
-## aiq run
+## nat run
 
-Runs an AIQ toolkit workflow from a configuration file with command-line inputs. This is an alias for `aiq start console`.
+Runs a NeMo Agent Toolkit workflow from a configuration file with command-line inputs. This is an alias for `nat start console`.
 
 ### Basic Usage
 ```bash
-aiq run --config_file CONFIG_FILE [OPTIONS]
+nat run --config_file CONFIG_FILE [OPTIONS]
 ```
 
 ### Required Arguments
@@ -27,16 +27,16 @@ aiq run --config_file CONFIG_FILE [OPTIONS]
 ### Examples
 ```bash
 # Basic workflow execution with single input
-aiq run --config_file configs/rag_config.yml --input "What is machine learning?"
+nat run --config_file configs/rag_config.yml --input "What is machine learning?"
 
 # Run with input file
-aiq run --config_file configs/rag_config.yml --input_file inputs/questions.json
+nat run --config_file configs/rag_config.yml --input_file inputs/questions.json
 
 # Override configuration parameters
-aiq run --config_file configs/rag_config.yml --input "Hello" --override llms.nim_llm.temperature 0.5
+nat run --config_file configs/rag_config.yml --input "Hello" --override llms.nim_llm.temperature 0.5
 
 # Multiple configuration overrides
-aiq run --config_file configs/rag_config.yml --input "Test query" \
+nat run --config_file configs/rag_config.yml --input "Test query" \
   --override llms.nim_llm.temperature 0.7 \
   --override retriever.top_k 10
 ```
@@ -47,13 +47,13 @@ aiq run --config_file configs/rag_config.yml --input "Test query" \
 - Batch processing with input files
 - Quick validation of workflow configurations
 
-## aiq serve
+## nat serve
 
-Serves a FastAPI endpoint for the workflow. This is an alias for `aiq start fastapi`.
+Serves a FastAPI endpoint for the workflow. This is an alias for `nat start fastapi`.
 
 ### Basic Usage
 ```bash
-aiq serve --config_file CONFIG_FILE [OPTIONS]
+nat serve --config_file CONFIG_FILE [OPTIONS]
 ```
 
 ### Required Arguments
@@ -67,21 +67,21 @@ aiq serve --config_file CONFIG_FILE [OPTIONS]
 - `--reload BOOLEAN`: Enable auto-reload for development
 - `--workers INTEGER`: Number of workers to run
 - `--use_gunicorn BOOLEAN`: Use Gunicorn to run the FastAPI app
-- `--runner_class TEXT`: The AIQ toolkit runner class to use when launching from multiple processes
+- `--runner_class TEXT`: The NAT runner class to use when launching from multiple processes
 
 ### Examples
 ```bash
 # Basic local development server
-aiq serve --config_file configs/rag_config.yml --host 0.0.0.0 --port 8000
+nat serve --config_file configs/rag_config.yml --host 0.0.0.0 --port 8000
 
 # Production server with multiple workers
-aiq serve --config_file configs/rag_config.yml --host 0.0.0.0 --port 8000 --workers 4 --use_gunicorn true
+nat serve --config_file configs/rag_config.yml --host 0.0.0.0 --port 8000 --workers 4 --use_gunicorn true
 
 # Development server with auto-reload
-aiq serve --config_file configs/rag_config.yml --host localhost --port 8000 --reload true
+nat serve --config_file configs/rag_config.yml --host localhost --port 8000 --reload true
 
 # Serve with configuration overrides
-aiq serve --config_file configs/rag_config.yml --port 8080 \
+nat serve --config_file configs/rag_config.yml --port 8080 \
   --override llms.nim_llm.max_tokens 2048 \
   --override retriever.top_k 5
 ```
@@ -102,7 +102,7 @@ Example: `http://localhost:8000/docs`
 Both commands require a valid workflow configuration file that:
 - Defines the workflow components and their parameters
 - Uses proper YAML or JSON format
-- Maps to registered AIQ toolkit components
+- Maps to registered NeMo Agent Toolkit components
 
 ### Example Configuration Structure
 ```yaml
@@ -127,19 +127,19 @@ workflow:
 ## Best Practices
 
 1. **Use descriptive config names**: Name configuration files clearly (e.g., `rag_config.yml`, `qa_config.yml`)
-2. **Validate configs first**: Use `aiq validate --config_file CONFIG` before running
-3. **Start with run command**: Test workflows with `aiq run` before serving
+2. **Validate configs first**: Use `nat validate --config_file CONFIG` before running
+3. **Start with run command**: Test workflows with `nat run` before serving
 4. **Use overrides for testing**: Test different parameters without modifying config files
 5. **Enable reload in development**: Use `--reload true` when developing
 6. **Use proper ports**: Choose appropriate ports for your deployment environment
 7. **Check API docs**: Always verify endpoints at `/docs` after serving
 
 ## Common Development Workflow
-1. **Validate**: `aiq validate --config_file config.yml`
-2. **Test**: `aiq run --config_file config.yml --input "test input"`
-3. **Serve locally**: `aiq serve --config_file config.yml --host localhost --port 8000 --reload true`
+1. **Validate**: `nat validate --config_file config.yml`
+2. **Test**: `nat run --config_file config.yml --input "test input"`
+3. **Serve locally**: `nat serve --config_file config.yml --host localhost --port 8000 --reload true`
 4. **Check API**: Open `http://localhost:8000/docs` in browser
-5. **Deploy**: `aiq serve --config_file config.yml --host 0.0.0.0 --port 8000 --workers 4`
+5. **Deploy**: `nat serve --config_file config.yml --host 0.0.0.0 --port 8000 --workers 4`
 
 ## Input File Format
 

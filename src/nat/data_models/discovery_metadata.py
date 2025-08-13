@@ -15,12 +15,10 @@
 
 import importlib.metadata
 import inspect
-import json
 import logging
 import typing
 from enum import Enum
 from functools import lru_cache
-from pathlib import Path
 from types import ModuleType
 from typing import TYPE_CHECKING
 
@@ -56,11 +54,11 @@ class DiscoveryMetadata(BaseModel):
     """A data model representing metadata about each registered component to faciliate its discovery.
 
     Args:
-        package (str): The name of the package containing the AIQ Toolkit component.
-        version (str): The version number of the package containing the AIQ Toolkit component.
-        component_type (AIQComponentEnum): The type of AIQ Toolkit component this metadata represents.
-        component_name (str): The registered name of the AIQ Toolkit component.
-        description (str): Description of the AIQ Toolkit component pulled from its config objects docstrings.
+        package (str): The name of the package containing the NAT component.
+        version (str): The version number of the package containing the NAT component.
+        component_type (ComponentEnum): The type of NAT component this metadata represents.
+        component_name (str): The registered name of the NAT component.
+        description (str): Description of the NAT component pulled from its config objects docstrings.
         developer_notes (str): Other notes to a developers to aid in the use of the component.
         status (DiscoveryStatusEnum): Provides the status of the metadata discovery process.
     """
@@ -95,26 +93,11 @@ class DiscoveryMetadata(BaseModel):
         mapping = importlib.metadata.packages_distributions()
         try:
             distro_names = mapping.get(root_package_name, [None])
-            distro_name = DiscoveryMetadata.get_preferred_item(distro_names, "aiqtoolkit")
+            distro_name = DiscoveryMetadata.get_preferred_item(distro_names, "nvidia-nat")
         except KeyError:
             return root_package_name
 
         return distro_name if distro_name else root_package_name
-
-    @staticmethod
-    @lru_cache
-    def get_distribution_name_from_private_data(root_package: str) -> str | None:
-        # Locate distibution mapping stored in the packages private data
-        module = __import__(root_package)
-        for path in module.__path__:
-            package_dir = Path(path).resolve()
-            distinfo_path = package_dir / "meta" / "module_to_distro.json"
-
-            if distinfo_path.exists():
-                with distinfo_path.open("r") as f:
-                    data = json.load(f)
-                    return data.get(root_package, None)
-        return None
 
     @staticmethod
     @lru_cache
@@ -125,22 +108,22 @@ class DiscoveryMetadata(BaseModel):
             module (ModuleType): A registered component's module.
 
         Returns:
-            str: The distribution name of the AIQ Toolkit component.
+            str: The distribution name of the NAT component.
         """
         from nat.runtime.loader import get_all_entrypoints_distro_mapping
 
         if module is None:
-            return "aiqtoolkit"
+            return "nvidia-nat"
 
         # Get the mapping of module names to distro names
         mapping = get_all_entrypoints_distro_mapping()
         module_package = module.__package__
 
         if module_package is None:
-            return "aiqtoolkit"
+            return "nvidia-nat"
 
         # Traverse the module package parts in reverse order to find the distro name
-        # This is because the module package is the root package for the AIQ Toolkit component
+        # This is because the module package is the root package for the NAT component
         # and the distro name is the name of the package that contains the component
         module_package_parts = module_package.split(".")
         for part_idx in range(len(module_package_parts), 0, -1):
@@ -149,7 +132,7 @@ class DiscoveryMetadata(BaseModel):
             if candidate_distro_name is not None:
                 return candidate_distro_name
 
-        return "aiqtoolkit"
+        return "nvidia-nat"
 
     @staticmethod
     @lru_cache
@@ -160,32 +143,20 @@ class DiscoveryMetadata(BaseModel):
             config_type (type[TypedBaseModelT]): A registered component's configuration object.
 
         Returns:
-            str: The distribution name of the AIQ Toolkit component.
+            str: The distribution name of the NAT component.
         """
         module = inspect.getmodule(config_type)
         return DiscoveryMetadata.get_distribution_name_from_module(module)
 
     @staticmethod
-    @lru_cache
-    def get_distribution_name(root_package: str) -> str:
-        """
-        The aiq library packages use a distro name 'aiqtoolkit[]' and
-        root package name 'aiq'. They provide mapping in a metadata file
-        for optimized installation.
-        """
-
-        distro_name = DiscoveryMetadata.get_distribution_name_from_private_data(root_package)
-        return distro_name if distro_name else root_package
-
-    @staticmethod
     def from_config_type(config_type: type["TypedBaseModelT"],
                          component_type: ComponentEnum = ComponentEnum.UNDEFINED) -> "DiscoveryMetadata":
-        """Generates discovery metadata from an AIQ Toolkit config object.
+        """Generates discovery metadata from a NAT config object.
 
         Args:
             config_type (type[TypedBaseModelT]): A registered component's configuration object.
-            component_type (AIQComponentEnum, optional): The type of the registered component. Defaults to
-            AIQComponentEnum.UNDEFINED.
+            component_type (ComponentEnum, optional): The type of the registered component. Defaults to
+            ComponentEnum.UNDEFINED.
 
         Returns:
             DiscoveryMetadata: A an object containing component metadata to facilitate discovery and reuse.
@@ -228,8 +199,8 @@ class DiscoveryMetadata(BaseModel):
             wrapper_type (LLMFrameworkEnum): The wrapper to apply to the callable to faciliate inter-framwork
             interoperability.
 
-            component_type (AIQComponentEnum, optional): The type of the registered component. Defaults to
-            AIQComponentEnum.TOOL_WRAPPER.
+            component_type (ComponentEnum, optional): The type of the registered component. Defaults to
+            ComponentEnum.TOOL_WRAPPER.
 
         Returns:
             DiscoveryMetadata: A an object containing component metadata to facilitate discovery and reuse.
@@ -263,7 +234,7 @@ class DiscoveryMetadata(BaseModel):
         """Generates discovery metadata from an installed package name.
 
         Args:
-            package_name (str): The name of the AIQ Toolkit plugin package containing registered components.
+            package_name (str): The name of the NAT plugin package containing registered components.
             package_version (str, optional): The version of the package, Defaults to None.
 
         Returns:
@@ -302,9 +273,9 @@ class DiscoveryMetadata(BaseModel):
             wrapper_type (LLMFrameworkEnum | str): The wrapper to apply to the callable to faciliate inter-framwork
             interoperability.
 
-            provider_type (AIQComponentEnum): The type of provider the registered component supports.
-            component_type (AIQComponentEnum, optional): The type of the registered component. Defaults to
-            AIQComponentEnum.UNDEFINED.
+            provider_type (ComponentEnum): The type of provider the registered component supports.
+            component_type (ComponentEnum, optional): The type of the registered component. Defaults to
+            ComponentEnum.UNDEFINED.
 
         Returns:
             DiscoveryMetadata: A an object containing component metadata to facilitate discovery and reuse.

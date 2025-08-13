@@ -131,11 +131,11 @@ Configure your Agent to use the Milvus collections for RAG. We have pre-configur
 
     functions:
       cuda_retriever_tool:
-        _type: aiq_retriever
+        _type: nat_retriever
         retriever: cuda_retriever
         topic: Retrieve documentation for NVIDIA's CUDA library
       mcp_retriever_tool:
-        _type: aiq_retriever
+        _type: nat_retriever
         retriever: mcp_retriever
         topic: Retrieve information about Model Context Protocol (MCP)
 
@@ -167,7 +167,7 @@ Configure your Agent to use the Milvus collections for RAG. We have pre-configur
 #### Run the Workflow
 
 ```bash
-aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --input "How do I install CUDA"
+nat run --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --input "How do I install CUDA"
 ```
 
 The expected workflow result of running the above command is:
@@ -211,11 +211,11 @@ retrievers:
 
 functions:
   cuda_retriever_tool:
-    _type: aiq_retriever
+    _type: nat_retriever
     retriever: cuda_retriever
     topic: Retrieve documentation for NVIDIA's CUDA library
   mcp_retriever_tool:
-    _type: aiq_retriever
+    _type: nat_retriever
     retriever: mcp_retriever
     topic: Retrieve information about Model Context Protocol (MCP)
   add_memory:
@@ -269,7 +269,7 @@ Each function was given a description that helps the agent know when to use it a
 This time, we will tell the agent about how we like our responses formatted, and notice if it stores that fact to long term memory.
 
 ```bash
-aiq run --config_file=examples/RAG/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA? I like responses with a lot of emojis in them! :)"
+nat run --config_file=examples/RAG/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA? I like responses with a lot of emojis in them! :)"
 ```
 
 The expected workflow result of the above run is:
@@ -298,7 +298,7 @@ These workflows demonstrate how agents can use multiple tools in tandem to provi
 We can now run one of these workflows with a slightly more complex input.
 
 ```bash
-aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
+nat run --config_file examples/RAG/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
 ```
 The expected workflow result of the above run is:
 ```console
@@ -316,7 +316,7 @@ An example configuration can be found in the `configs/milvus_rag_config_ttc.yml`
 
 To run this workflow, you can use the following command:
 ```bash
-aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_config_ttc.yml --input "What is the difference between CUDA and MCP?"
+nat run --config_file examples/RAG/simple_rag/configs/milvus_rag_config_ttc.yml --input "What is the difference between CUDA and MCP?"
 ```
 
 You should see several concurrent agent runs in the intermediate output which include output similar to:
@@ -348,8 +348,8 @@ Action: None
 
 Near the end of the output you should see the following lines indicating that the Test Time Compute feature is working as expected.
 ```console
-2025-07-31 15:01:06,939 - aiq.experimental.test_time_compute.functions.execute_score_select_function - INFO - Beginning selection
-2025-07-31 15:01:08,633 - aiq.experimental.test_time_compute.selection.llm_based_output_merging_selector - INFO - Merged output: The main difference between CUDA and MCP is their purpose and scope. CUDA is a general-purpose parallel computing platform and programming model developed by NVIDIA, while MCP stands for Model Context Protocol, which is a protocol that enables large language models (LLMs) to securely access tools and data sources. In essence, CUDA is designed for parallel computing and programming, whereas MCP is specifically designed to facilitate secure access to tools and data sources for Large Language Models. This distinction highlights the unique objectives and applications of each technology, with CUDA focusing on computation and MCP focusing on secure data access for AI models.
+2025-07-31 15:01:06,939 - nat.experimental.test_time_compute.functions.execute_score_select_function - INFO - Beginning selection
+2025-07-31 15:01:08,633 - nat.experimental.test_time_compute.selection.llm_based_output_merging_selector - INFO - Merged output: The main difference between CUDA and MCP is their purpose and scope. CUDA is a general-purpose parallel computing platform and programming model developed by NVIDIA, while MCP stands for Model Context Protocol, which is a protocol that enables large language models (LLMs) to securely access tools and data sources. In essence, CUDA is designed for parallel computing and programming, whereas MCP is specifically designed to facilitate secure access to tools and data sources for Large Language Models. This distinction highlights the unique objectives and applications of each technology, with CUDA focusing on computation and MCP focusing on secure data access for AI models.
 ```
 
 The final workflow result should look similar to the following:

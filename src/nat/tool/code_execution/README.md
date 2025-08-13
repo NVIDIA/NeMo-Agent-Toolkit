@@ -35,7 +35,7 @@ The Code Execution Sandbox provides:
 Navigate to the local sandbox directory and start the server:
 
 ```bash
-cd src/aiq/tool/code_execution/local_sandbox
+cd src/nat/tool/code_execution/local_sandbox
 ./start_local_sandbox.sh
 ```
 
@@ -62,7 +62,7 @@ export OUTPUT_DATA_PATH=/path/to/output
 Run the comprehensive test suite to verify everything is working:
 
 ```bash
-cd src/aiq/tool/code_execution
+cd src/nat/tool/code_execution
 pytest test_code_execution_sandbox.py
 ```
 

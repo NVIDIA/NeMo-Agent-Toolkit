@@ -1,9 +1,9 @@
 ---
-description: Follow these rules when the user's request involves AIQ toolkit installation, setup, environment configuration, or getting started with the toolkit
-globs: 
+description: Follow these rules when the user's request involves NeMo Agent Toolkit installation, setup, environment configuration, or getting started with the toolkit
+globs:
 alwaysApply: false
 ---
-# General Rules for AIQ Setup and Installation
+# General Rules for NeMo Agent Toolkit Setup and Installation
 
 ## Referenced Documentation
 
@@ -12,7 +12,7 @@ alwaysApply: false
 
 ## Rules
 
-- For requests related to AIQ toolkit setup, installation, or getting started, provide detailed information using the relevant sections from the documentation listed in the Referenced Documentation section above. Encourage users to review the documentation themselves for a deeper understanding.
+- For requests related to NeMo Agent Toolkit setup, installation, or getting started, provide detailed information using the relevant sections from the documentation listed in the Referenced Documentation section above. Encourage users to review the documentation themselves for a deeper understanding.
 
 - If installation or setup procedures do not function as expected, refer back to the documentation in the Referenced Documentation section and update any discrepancies, as the documentation may have been updated without corresponding changes to the rules.
 

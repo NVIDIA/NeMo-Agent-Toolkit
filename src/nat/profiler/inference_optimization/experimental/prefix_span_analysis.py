@@ -212,7 +212,7 @@ def run_prefixspan(sequences_map: dict[int, list[PrefixCallNode]],
         from prefixspan import PrefixSpan
     except ImportError:
         logger.error("prefixspan is not installed. Please install prefixspan to run the prefix analysis in the "
-                     "profiler or install `aiq[profiler]` to install all necessary profiling packages.")
+                     "profiler or install `nvidia-nat[profiler]` to install all necessary profiling packages.")
 
         raise
 

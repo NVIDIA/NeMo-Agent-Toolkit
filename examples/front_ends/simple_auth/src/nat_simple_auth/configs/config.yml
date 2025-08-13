@@ -54,8 +54,8 @@ authentication:
       - openid
       - profile
       - email
-    client_id: ${AIQ_OAUTH_CLIENT_ID}
-    client_secret: ${AIQ_OAUTH_CLIENT_SECRET}
+    client_id: ${NAT_OAUTH_CLIENT_ID}
+    client_secret: ${NAT_OAUTH_CLIENT_SECRET}
     use_pkce: false
 
 workflow:

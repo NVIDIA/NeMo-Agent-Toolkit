@@ -31,7 +31,7 @@ A tool calling agent is an AI system that directly invokes external tools based 
 ---
 
 ## Requirements
-The tool calling agent requires the `aiqtoolkit[langchain]` plugin to be installed.
+The tool calling agent requires the `nvidia-nat[langchain]` plugin to be installed.
 
 After you've performed a source code checkout, install this with the following command:
 
@@ -61,7 +61,7 @@ functions:
   calculator_inequality:
     _type: calculator_inequality
   calculator_divide:
-    _type: aiq_simple_calculator/calculator_divide
+    _type: nat_simple_calculator/calculator_divide
   math_agent:
     _type: tool_calling_agent
     tool_names:

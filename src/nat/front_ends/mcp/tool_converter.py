@@ -34,27 +34,26 @@ def create_function_wrapper(
     schema: type[BaseModel],
     is_workflow: bool = False,
 ):
-    """Create a wrapper function that exposes the actual parameters of an AIQ Function as an MCP tool.
+    """Create a wrapper function that exposes the actual parameters of a NAT Function as an MCP tool.
 
     Args:
         function_name: The name of the function/tool
-        function: The AIQ Function object
+        function: The NAT Function object
         schema: The input schema of the function
         is_workflow: Whether the function is a Workflow
 
     Returns:
         A wrapper function suitable for registration with MCP
     """
-    # Check if we're dealing with AIQChatRequest - special case
+    # Check if we're dealing with ChatRequest - special case
     is_chat_request = False
 
-    # Check if the schema name is AIQChatRequest
-    if schema.__name__ == "AIQChatRequest" or (hasattr(schema, "__qualname__")
-                                               and "AIQChatRequest" in schema.__qualname__):
+    # Check if the schema name is ChatRequest
+    if schema.__name__ == "ChatRequest" or (hasattr(schema, "__qualname__") and "ChatRequest" in schema.__qualname__):
         is_chat_request = True
-        logger.info("Function %s uses AIQChatRequest - creating simplified interface", function_name)
+        logger.info("Function %s uses ChatRequest - creating simplified interface", function_name)
 
-        # For AIQChatRequest, we'll create a simple wrapper with just a query parameter
+        # For ChatRequest, we'll create a simple wrapper with just a query parameter
         parameters = [Parameter(
             name="query",
             kind=Parameter.KEYWORD_ONLY,
@@ -102,7 +101,7 @@ def create_function_wrapper(
                 await ctx.report_progress(0, 100)
 
             try:
-                # Special handling for AIQChatRequest
+                # Special handling for ChatRequest
                 if is_chat_request:
                     from nat.data_models.api_server import ChatRequest
 
@@ -113,7 +112,7 @@ def create_function_wrapper(
                     # Special handling for Workflow objects
                     if is_workflow:
                         # Workflows have a run method that is an async context manager
-                        # that returns an AIQRunner
+                        # that returns a Runner
                         async with function.run(chat_request) as runner:
                             # Get the result from the runner
                             result = await runner.result(to_type=str)
@@ -136,13 +135,13 @@ def create_function_wrapper(
                             # Call with the nested object
                             kwargs = {field_name: nested_obj}
 
-                    # Call the AIQ function with the parameters - special handling for Workflow
+                    # Call the NAT function with the parameters - special handling for Workflow
                     if is_workflow:
                         # For workflow with regular input, we'll assume the first parameter is the input
                         input_value = list(kwargs.values())[0] if kwargs else ""
 
                         # Workflows have a run method that is an async context manager
-                        # that returns an AIQRunner
+                        # that returns a Runner
                         async with function.run(input_value) as runner:
                             # Get the result from the runner
                             result = await runner.result(to_type=str)
@@ -180,7 +179,7 @@ def create_function_wrapper(
 
 def get_function_description(function: FunctionBase) -> str:
     """
-    Retrieve a human-readable description for an AIQ function or workflow.
+    Retrieve a human-readable description for a NAT function or workflow.
 
     The description is determined using the following precedence:
        1. If the function is a Workflow and has a 'description' attribute, use it.
@@ -189,7 +188,7 @@ def get_function_description(function: FunctionBase) -> str:
        4. If the function is a regular Function, use its 'description' attribute.
 
     Args:
-        function: The AIQ FunctionBase instance (Function or Workflow).
+        function: The NAT FunctionBase instance (Function or Workflow).
 
     Returns:
         The best available description string for the function.
@@ -216,12 +215,12 @@ def get_function_description(function: FunctionBase) -> str:
 
 
 def register_function_with_mcp(mcp: FastMCP, function_name: str, function: FunctionBase) -> None:
-    """Register an AIQ Function as an MCP tool.
+    """Register a NAT Function as an MCP tool.
 
     Args:
         mcp: The FastMCP instance
         function_name: The name to register the function under
-        function: The AIQ Function to register
+        function: The NAT Function to register
     """
     logger.info("Registering function %s with MCP", function_name)
 

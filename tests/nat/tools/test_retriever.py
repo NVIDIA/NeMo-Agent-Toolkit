@@ -38,7 +38,7 @@ from nat.tool.retriever import RetrieverConfig
                          ])
 def test_retriever_config(config_values: dict[str, typing.Any]):
     """
-    Test the AIQRetrieverConfig class.
+    Test the RetrieverConfig class.
     """
 
     RetrieverConfig.model_validate(config_values, strict=True)

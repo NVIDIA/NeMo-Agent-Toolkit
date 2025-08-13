@@ -19,7 +19,7 @@ limitations under the License.
 
 ## Overview
 
-Use `aiq.test.ToolTestRunner` to test tools in complete isolation without requiring spinning up entire workflows, agents, and external services. This allows you to validate tool functionality quickly and reliably during development.
+Use `nat.test.ToolTestRunner` to test tools in complete isolation without requiring spinning up entire workflows, agents, and external services. This allows you to validate tool functionality quickly and reliably during development.
 
 ## Basic Usage
 

@@ -46,7 +46,7 @@ def mock_intermediate_steps(llm_name, tool_name):
 
     framework = LLMFrameworkEnum.LANGCHAIN
     token_cnt = 10
-    user_input = "Question: What is AIQ Toolkit?"
+    user_input = "Question: What is NeMo Agent toolkit?"
     tool_input = "Tool query input"
     tool_output = "Tool output response"
     generated_output = "Final AI-generated response"

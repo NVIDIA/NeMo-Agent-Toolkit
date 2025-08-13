@@ -30,7 +30,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.invocation_node import InvocationNode
 
 # --------------------------------------------------------------------------- #
-# Minimal stubs so the tests do not need the whole aiq code-base
+# Minimal stubs so the tests do not need the whole NAT code-base
 # --------------------------------------------------------------------------- #
 
 

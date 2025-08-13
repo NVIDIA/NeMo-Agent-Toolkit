@@ -69,7 +69,7 @@ export OPENAI_API_KEY=<YOUR_API_KEY>  # OPTIONAL
 Return to your original terminal, and run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/getting_started/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/getting_started/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 **Expected Workflow Output**
@@ -90,7 +90,7 @@ Prior to building the Docker image ensure that you have followed the steps in th
 From the root directory of the Simple Calculator repository, build the Docker image:
 
 ```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_calculator/Dockerfile .
+docker build --build-arg NAT_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_calculator/Dockerfile .
 ```
 
 ### Run the Docker Container

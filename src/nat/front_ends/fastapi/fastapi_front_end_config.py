@@ -119,7 +119,7 @@ class AsyncGenerationStatusResponse(BaseAsyncStatusResponse):
 
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     """
-    A FastAPI based front end that allows an NAT workflow to be served as a microservice.
+    A FastAPI based front end that allows a NAT workflow to be served as a microservice.
     """
 
     class EndpointBase(BaseModel):
@@ -192,7 +192,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         websocket_path="/websocket",
         openai_api_path="/chat",
         openai_api_v1_path="/v1/chat/completions",
-        description="Executes the default AIQ Toolkit workflow from the loaded configuration ",
+        description="Executes the default NAT workflow from the loaded configuration ",
     )
 
     evaluate: typing.Annotated[EndpointBase, Field(description="Endpoint for evaluating workflows.")] = EndpointBase(
@@ -207,9 +207,8 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
 
     endpoints: list[Endpoint] = Field(
         default_factory=list,
-        description=(
-            "Additional endpoints to add to the FastAPI app which run functions within the AIQ Toolkit configuration. "
-            "Each endpoint must have a unique path."))
+        description=("Additional endpoints to add to the FastAPI app which run functions within the NAT configuration. "
+                     "Each endpoint must have a unique path."))
 
     cors: CrossOriginResourceSharing = Field(
         default_factory=CrossOriginResourceSharing,
@@ -221,8 +220,8 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     )
     runner_class: str | None = Field(
         default=None,
-        description=("The AIQ Toolkit runner class to use when launching the FastAPI app from multiple processes. "
-                     "Each runner is responsible for loading and running the AIQ Toolkit workflow. "
+        description=("The NAT runner class to use when launching the FastAPI app from multiple processes. "
+                     "Each runner is responsible for loading and running the NAT workflow. "
                      "Note: This is different from the worker class used by Gunicorn."),
     )
 

@@ -152,7 +152,7 @@ class Settings(HashableBaseModel):
     @staticmethod
     def from_file():
 
-        configuration_directory = os.getenv("AIQ_CONFIG_DIR", user_config_dir(appname="aiq"))
+        configuration_directory = os.getenv("NAT_CONFIG_DIR", user_config_dir(appname="nat"))
 
         if not os.path.exists(configuration_directory):
             os.makedirs(configuration_directory, exist_ok=True)
@@ -181,7 +181,7 @@ class Settings(HashableBaseModel):
         if (remove):
             if os.path.exists(self.configuration_directory):
                 os.rmdir(self.configuration_directory)
-        self._configuration_directory = os.getenv("AIQ_CONFIG_DIR", user_config_dir(appname="aiq"))
+        self._configuration_directory = os.getenv("NAT_CONFIG_DIR", user_config_dir(appname="nat"))
 
     def _save_settings(self) -> None:
 

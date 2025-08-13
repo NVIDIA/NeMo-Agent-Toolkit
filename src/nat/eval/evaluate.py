@@ -397,7 +397,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             return self.eval_config.general.workflow_alias
 
         if not workflow_type or workflow_type == "EmptyFunctionConfig":
-            return "aiqtoolkit-eval"
+            return "nat-eval"
 
         return workflow_type
 

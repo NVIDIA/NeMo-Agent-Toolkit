@@ -231,14 +231,14 @@ async def test_rest_handler_remove(rest_registry_channel: dict,
                                    httpserver: HTTPServer):
 
     route = "/remove"
-    response_request_dict = {"packages": [{"name": "aiq_package_name", "version": "1.2.3"}]}
+    response_request_dict = {"packages": [{"name": "nat_package_name", "version": "1.2.3"}]}
 
     remove_response_dict = {
         "status": {
             "status": status, "message": "", "action": "remove"
         },
         "packages": [{
-            "name": "aiq_package_name", "version": "1.2.3"
+            "name": "nat_package_name", "version": "1.2.3"
         }]
     }
 

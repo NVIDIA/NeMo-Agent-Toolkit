@@ -29,7 +29,7 @@ from nat.data_models.authentication import BearerTokenCred
 
 
 def _patch_context(monkeypatch: pytest.MonkeyPatch, callback):
-    """Replace AIQContext.get() so the exchanger sees *our* callback."""
+    """Replace Context.get() so the exchanger sees *our* callback."""
 
     class _DummyCtx:
 

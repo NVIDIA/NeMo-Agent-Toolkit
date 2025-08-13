@@ -1,11 +1,11 @@
 ---
-description: Follow these rules when the user's request involves implementing, adding, creating, or modifying functions within AIQ workflows
+description: Follow these rules when the user's request involves implementing, adding, creating, or modifying functions within NeMo Agent Toolkit workflows
 globs:
 alwaysApply: false
 ---
-# Creating AIQ Toolkit Functions
+# Creating NeMo Agent Toolkit Functions
 
-This document provides rules and guidelines for creating functions (also referred to as tools) in the AIQ Toolkit. Functions are the core building blocks for defining workflow logic.
+This document provides rules and guidelines for creating functions (also referred to as tools) in the NeMo Agent Toolkit. Functions are the core building blocks for defining workflow logic.
 
 ## Core Concepts
 
@@ -19,7 +19,7 @@ This document provides rules and guidelines for creating functions (also referre
 
 ### 1. Define the Configuration Class
 
-Every function needs a configuration class that inherits from `aiq.data_models.function.FunctionBaseConfig`. This class defines the function's configuration parameters.
+Every function needs a configuration class that inherits from `nat.data_models.function.FunctionBaseConfig`. This class defines the function's configuration parameters.
 
 - The class must have a `name` attribute, which is the unique identifier for the function.
 - Use Pydantic's `Field` to provide default values, descriptions, and validation for configuration options.
@@ -70,7 +70,7 @@ async def _my_streaming_function(message: str) -> AsyncGenerator[str, None]:
 
 #### B. As a `Function` Subclass (For complex state or logic)
 
-Inherit from `aiq.builder.function.Function` and implement `_ainvoke` and/or `_astream`.
+Inherit from `nat.builder.function.Function` and implement `_ainvoke` and/or `_astream`.
 
 - Generic parameters `Function[InputType, StreamOutputType, SingleOutputType]`. Use `None` or `NoneType` if an output type is not supported.
 
@@ -146,7 +146,7 @@ The input schema will be `class MultiArgFnInput(BaseModel): text: str; count: in
 
 To call other functions, use the `builder` object passed to the registration function.
 
-- In the config class, declare references to other functions using `aiq.data_models.component_ref.FunctionRef`.
+- In the config class, declare references to other functions using `nat.data_models.component_ref.FunctionRef`.
 - Use `builder.get_function()` inside the registration function to get instances of other functions.
 
 **Example:**

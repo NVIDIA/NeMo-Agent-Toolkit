@@ -47,7 +47,7 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
     async def run(self):
 
         # Write the entire config to a temporary file
-        with tempfile.NamedTemporaryFile(mode="w", prefix="aiq_config", suffix=".yml", delete=False) as config_file:
+        with tempfile.NamedTemporaryFile(mode="w", prefix="nat_config", suffix=".yml", delete=False) as config_file:
 
             # Get as dict
             config_dict = self.full_config.model_dump(mode="json", by_alias=True, round_trip=True)
@@ -59,10 +59,10 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
             config_file_name = config_file.name
 
             # Set the config file in the environment
-            os.environ["AIQ_CONFIG_FILE"] = str(config_file.name)
+            os.environ["NAT_CONFIG_FILE"] = str(config_file.name)
 
             # Set the worker class in the environment
-            os.environ["AIQ_FRONT_END_WORKER"] = self.get_worker_class_name()
+            os.environ["NAT_FRONT_END_WORKER"] = self.get_worker_class_name()
 
         try:
             if not self.front_end_config.use_gunicorn:
@@ -70,7 +70,7 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
                 reload_excludes = ["./.*"]
 
-                uvicorn.run("aiq.front_ends.fastapi.main:get_app",
+                uvicorn.run("nat.front_ends.fastapi.main:get_app",
                             host=self.front_end_config.host,
                             port=self.front_end_config.port,
                             workers=self.front_end_config.workers,
