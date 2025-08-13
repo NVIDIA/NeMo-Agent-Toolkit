@@ -160,12 +160,12 @@ class WeaveMixin:
                         break
 
         # Generate a meaningful operation name based on event type
-        span_event_type = span.attributes.get(SpanAttributes.AIQ_EVENT_TYPE.value, "unknown")
+        span_event_type = span.attributes.get(SpanAttributes.NAT_EVENT_TYPE.value, "unknown")
         event_type = span_event_type.split(".")[-1]
         if span.name:
-            op_name = f"aiq.{event_type}.{span.name}"
+            op_name = f"nat.{event_type}.{span.name}"
         else:
-            op_name = f"aiq.{event_type}"
+            op_name = f"nat.{event_type}"
 
         # Create input dictionary
         inputs = {}
@@ -234,8 +234,8 @@ class WeaveMixin:
         outputs["prompt_tokens"] = span.attributes.get(SpanAttributes.LLM_TOKEN_COUNT_PROMPT.value)
         outputs["completion_tokens"] = span.attributes.get(SpanAttributes.LLM_TOKEN_COUNT_COMPLETION.value)
         outputs["total_tokens"] = span.attributes.get(SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value)
-        outputs["num_llm_calls"] = span.attributes.get(SpanAttributes.AIQ_USAGE_NUM_LLM_CALLS.value)
-        outputs["seconds_between_calls"] = span.attributes.get(SpanAttributes.AIQ_USAGE_SECONDS_BETWEEN_CALLS.value)
+        outputs["num_llm_calls"] = span.attributes.get(SpanAttributes.NAT_USAGE_NUM_LLM_CALLS.value)
+        outputs["seconds_between_calls"] = span.attributes.get(SpanAttributes.NAT_USAGE_SECONDS_BETWEEN_CALLS.value)
 
         try:
             # Finish the call with outputs

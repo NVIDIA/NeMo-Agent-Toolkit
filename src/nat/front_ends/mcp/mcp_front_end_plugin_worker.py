@@ -23,7 +23,7 @@ from starlette.requests import Request
 from nat.builder.function import Function
 from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.data_models.config import AIQConfig
+from nat.data_models.config import Config
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 
 logger = logging.getLogger(__name__)
@@ -32,11 +32,11 @@ logger = logging.getLogger(__name__)
 class MCPFrontEndPluginWorkerBase(ABC):
     """Base class for MCP front end plugin workers."""
 
-    def __init__(self, config: AIQConfig):
+    def __init__(self, config: Config):
         """Initialize the MCP worker with configuration.
 
         Args:
-            config: The full AIQ configuration
+            config: The full NAT configuration
         """
         self.full_config = config
         self.front_end_config: MCPFrontEndConfig = config.general.front_end
@@ -86,7 +86,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
         """Get all functions from the workflow.
 
         Args:
-            workflow: The AIQ workflow.
+            workflow: The NAT workflow.
 
         Returns:
             Dict mapping function names to Function objects.
