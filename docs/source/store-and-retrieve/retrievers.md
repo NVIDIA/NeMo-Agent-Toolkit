@@ -65,7 +65,7 @@ In this example the `uri`, `collection_name`, and `top_k` are specified, while t
 This configured retriever can then be used as an argument for a function which uses a retriever (such as the `retriever_tool` function). The `retriever_tool` function is a simple function to provide the configured retriever as an LLM tool. Its config is shown below
 
 ```python
-class RetrieverConfig(FunctionBaseConfig, name="retriever_tool"):
+class RetrieverConfig(FunctionBaseConfig, name="nat_retriever"):
     """
     Retriever tool which provides a common interface for different vectorstores. Its
     configuration uses clients, which are the vectorstore-specific implementaiton of the retriever interface.

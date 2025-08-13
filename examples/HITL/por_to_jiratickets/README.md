@@ -79,7 +79,7 @@ export JIRA_TOKEN=<YOUR_JIRA_TOKEN>
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
 The NeMo Agent toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
 into the agent itself. For instance, this example asks for user permission to create Jira issues and tickets before creating them. We can view the implementation in the
-`nat_por_to_jiratickets.jira_tickets_tool.py` file. The implementation is below:
+`examples/HITL/por_to_jiratickets/src/nat_por_to_jiratickets/jira_tickets_tool.py` file. The implementation is below:
 
 ```python
 ### The reusable HITL function
