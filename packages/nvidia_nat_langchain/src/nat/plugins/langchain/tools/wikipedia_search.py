@@ -41,7 +41,7 @@ async def wiki_search(tool_config: WikiSearchToolConfig, builder: Builder):
         ])
         return wiki_search_results
 
-    # Create an AIQ Toolkit wiki search tool that can be used with any supported LLM framework
+    # Create a NAT wiki search tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
         _wiki_search,
         description=("""This tool retrieves relevant contexts from wikipedia search for the given question.

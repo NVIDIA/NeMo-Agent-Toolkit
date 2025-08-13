@@ -24,9 +24,9 @@ from nat.retriever.models import retriever_output_to_str
 def test_document_methods():
     data = {"page_content": "Here is the document text", "metadata": {"title": "My Document", "type": "test_document"}}
 
-    doc = Document(page_content="My AIQ Toolkit Document", metadata={})
+    doc = Document(page_content="My NAT Document", metadata={})
     assert isinstance(doc, Document)
-    assert doc.page_content == "My AIQ Toolkit Document"
+    assert doc.page_content == "My NAT Document"
     assert not doc.metadata
 
     doc = Document.from_dict(data)

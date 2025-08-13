@@ -37,7 +37,7 @@ class RawExporter(ProcessingExporter[InputT, OutputT]):
     The flow is: IntermediateStep -> [Processing Pipeline] -> OutputT -> Export
 
     Args:
-        context_state (AIQContextState, optional): The context state to use for the exporter. Defaults to None.
+        context_state (ContextState, optional): The context state to use for the exporter. Defaults to None.
     """
 
     @abstractmethod

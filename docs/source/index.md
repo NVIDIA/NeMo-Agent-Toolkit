@@ -23,7 +23,7 @@ limitations under the License.
    :class: highlight
 ```
 
-![NVIDIA NeMo Agent Toolkit](./_static/aiqtoolkit_banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](./_static/banner.png "NeMo Agent toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit Overview
 
@@ -31,7 +31,7 @@ NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that 
 
 
 :::{note}
-NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. The transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
+NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `nvidia-nat` instead of `aiqtoolkit` or `agentiq`. The transitional packages named `aiqtoolkit` and `agentiq` are available for backwards compatibility, but will be removed in the future.
 :::
 
 ## Key Features

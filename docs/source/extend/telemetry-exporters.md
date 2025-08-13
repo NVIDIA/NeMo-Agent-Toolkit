@@ -62,7 +62,7 @@ Telemetry exporters solve critical observability challenges in Agentic AI workfl
 To view the list of locally installed and registered telemetry exporters, run the following command:
 
 ```bash
-aiq info components -t tracing
+nat info components -t tracing
 ```
 
 Examples of existing telemetry exporters include:
@@ -409,7 +409,7 @@ class CustomSpanExporter(SpanExporter[Span, dict]):
 
 #### OpenTelemetry Exporter (for OTLP compatibility)
 
-> **Note**: OpenTelemetry exporters require the `aiqtoolkit-opentelemetry` subpackage. Install it with:
+> **Note**: OpenTelemetry exporters require the `nvidia-nat-opentelemetry` subpackage. Install it with:
 
 > ```bash
 > pip install nvidia-nat[opentelemetry]
@@ -849,7 +849,7 @@ exporter1._processing_queue.append("item1")
 exporter1._export_metrics['success'] = 5
 
 # Create isolated instance
-context_state = AIQContextState.get()
+context_state = ContextState.get()
 exporter2 = exporter1.create_isolated_instance(context_state)
 
 # Isolated state - each has independent data
@@ -1319,7 +1319,7 @@ Enable debug logging to troubleshoot issues:
 
 ```python
 import logging
-logging.getLogger("aiq.observability").setLevel(logging.DEBUG)
+logging.getLogger("nat.observability").setLevel(logging.DEBUG)
 ```
 
 ### FAQ
@@ -1363,7 +1363,7 @@ logging.getLogger("aiq.observability").setLevel(logging.DEBUG)
    - Implement export_processed() with error handling
    - Implement _cleanup() for resource management
 
-3. Register with AIQ (register_telemetry_exporter decorator)
+3. Register with NAT (register_telemetry_exporter decorator)
    - Create async factory function
    - Instantiate exporter with config values
    - Yield exporter instance

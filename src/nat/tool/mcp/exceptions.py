@@ -108,7 +108,7 @@ class MCPToolNotFoundError(MCPError):
                          url=url,
                          category=MCPErrorCategory.TOOL_NOT_FOUND,
                          suggestions=[
-                             "Use 'aiq info mcp --detail' to see available tools",
+                             "Use 'nat info mcp --detail' to see available tools",
                              "Check that the tool name is spelled correctly"
                          ],
                          original_exception=original_exception)

@@ -97,8 +97,8 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server):
     )
 
     # ----------------- build front‑end worker & FastAPI app ------------- #
-    cfg_aiq = Config(workflow=EchoFunctionConfig())
-    worker = FastApiFrontEndPluginWorker(cfg_aiq)
+    cfg_nat = Config(workflow=EchoFunctionConfig())
+    worker = FastApiFrontEndPluginWorker(cfg_nat)
     # we need the add/remove‑flow callbacks but NOT the worker’s WS endpoint
     add_flow = worker._add_flow  # pylint: disable=protected-access
     remove_flow = worker._remove_flow  # pylint: disable=protected-access

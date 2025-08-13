@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class LocalRegistryHandlerConfig(RegistryHandlerBaseConfig, name="local"):
-    """Interact with the local AIQ Toolkit environment to search and uninstall AIQ Toolkit components."""
+    """Interact with the local NAT environment to search and uninstall NAT components."""
 
     pass
 

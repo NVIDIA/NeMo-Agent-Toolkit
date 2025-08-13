@@ -33,11 +33,11 @@ from nat.registry_handlers.schemas.search import VisualizeFields
 
 
 class AbstractRegistryHandler(ABC):
-    """Base class outlining the interfaces for remote AIQ Toolkit registry interactions."""
+    """Base class outlining the interfaces for remote NAT registry interactions."""
 
     def __init__(self):
         self._discovery_metadata: dict[ComponentEnum, list[dict | DiscoveryMetadata]] = {}
-        self._aiq_artifact: Artifact | None = None
+        self._nat_artifact: Artifact | None = None
         self._whl_bytes: bytes
         self._whl_path: str
         self._whl_base64: str
@@ -45,10 +45,10 @@ class AbstractRegistryHandler(ABC):
     @abstractmethod
     @asynccontextmanager
     async def publish(self, artifact: Artifact) -> AsyncGenerator[PublishResponse]:
-        """Publishes an AIQ Toolkit artifact to a remote registry.
+        """Publishes a NAT artifact to a remote registry.
 
         Args:
-            artifact (AIQArtifact): An artifact that contain AIQ Toolkit plugin wheel and it's corrosponding discovery
+            artifact (Artifact): An artifact that contain NAT plugin wheel and it's corrosponding discovery
             metadata.
 
         Yields:
@@ -61,10 +61,10 @@ class AbstractRegistryHandler(ABC):
     @abstractmethod
     @asynccontextmanager
     async def pull(self, packages: PullRequestPackages) -> AsyncGenerator[PullResponse]:
-        """Download and install AIQ Toolkit artifacts from a remote registry.
+        """Download and install NAT artifacts from a remote registry.
 
         Args:
-            packages (PullRequestPackages): Parameters used to pull the AIQ Toolkit artifact.
+            packages (PullRequestPackages): Parameters used to pull the NAT artifact.
 
         Yields:
             Iterator[AsyncGenerator[PullResponse]]: A response message that includes a the pulled packages and a
@@ -76,7 +76,7 @@ class AbstractRegistryHandler(ABC):
     @abstractmethod
     @asynccontextmanager
     async def search(self, query: SearchQuery) -> AsyncGenerator[SearchResponse]:
-        """Searches the local aiq registry for relevant AIQ Toolkit components.
+        """Searches the local nat registry for relevant NAT components.
 
         Args:
             query (SearchQuery): Parameters of the search to be performed.
@@ -118,7 +118,7 @@ class AbstractRegistryHandler(ABC):
         from rich.table import Table
         from rich.text import Text
 
-        table = Table(title="AIQ Toolkit Search Results", padding=(0, 1), show_lines=True)
+        table = Table(title="NAT Search Results", padding=(0, 1), show_lines=True)
         for column in VisualizeFields:
             table.add_column(column.value)
 

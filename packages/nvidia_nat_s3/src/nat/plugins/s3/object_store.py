@@ -28,8 +28,8 @@ class S3ObjectStoreClientConfig(ObjectStoreBaseConfig, name="s3"):
     Object store that stores objects in an S3 bucket.
     """
 
-    ACCESS_KEY_ENV: ClassVar[str] = "AIQ_S3_OBJECT_STORE_ACCESS_KEY"
-    SECRET_KEY_ENV: ClassVar[str] = "AIQ_S3_OBJECT_STORE_SECRET_KEY"
+    ACCESS_KEY_ENV: ClassVar[str] = "NAT_S3_OBJECT_STORE_ACCESS_KEY"
+    SECRET_KEY_ENV: ClassVar[str] = "NAT_S3_OBJECT_STORE_SECRET_KEY"
 
     bucket_name: str = Field(..., description="The name of the bucket to use for the object store")
     endpoint_url: str | None = Field(default=None, description="The URL of the S3 server to connect to")

@@ -30,9 +30,9 @@ from nat.retriever.models import RetrieverOutput
 logger = logging.getLogger(__name__)
 
 
-class RetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
+class RetrieverConfig(FunctionBaseConfig, name="nat_retriever"):
     """
-    AIQRetriever tool which provides a common interface for different vectorstores. Its
+    Retriever tool which provides a common interface for different vectorstores. Its
     configuration uses clients, which are the vectorstore-specific implementaiton of the retriever interface.
     """
     retriever: RetrieverRef = Field(description="The retriever instance name from the workflow configuration object.")
@@ -58,7 +58,7 @@ def _get_description_from_config(config: RetrieverConfig) -> str:
 @register_function(config_type=RetrieverConfig)
 async def retriever_tool(config: RetrieverConfig, builder: Builder):
     """
-    Configure an AIQ Toolkit Retriever Tool which supports different clients such as Milvus and Nemo Retriever.
+    Configure a NAT Retriever Tool which supports different clients such as Milvus and Nemo Retriever.
 
     Args:
         config: A config object with required parameters 'client' and 'client_config'

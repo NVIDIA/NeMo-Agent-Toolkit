@@ -1,15 +1,15 @@
 ---
-description: Follow these rules when the user's request involves installing, setting up, or configuring AIQ Toolkit or its plugins
+description: Follow these rules when the user's request involves installing, setting up, or configuring NeMo Agent Toolkit or its plugins
 globs:
 alwaysApply: false
 ---
-# AIQ Toolkit Installation Guide
+# NeMo Agent Toolkit Installation Guide
 
-This rule provides comprehensive instructions for installing NVIDIA Agent Intelligence (AIQ) toolkit from source, including prerequisites, installation options, and verification steps.
+This rule provides comprehensive instructions for installing NeMo Agent Toolkit from source, including prerequisites, installation options, and verification steps.
 
 ## Prerequisites Check
 
-Before installing AIQ toolkit, verify all prerequisites are installed:
+Before installing NeMo Agent Toolkit, verify all prerequisites are installed:
 
 1. **Check Git installation:**
    ```bash
@@ -37,7 +37,7 @@ If any prerequisite is missing, install them:
 
 ```bash
 # Assuming the repository is cloned in the current directory. If not, ask user to input the path to the repository.
-cd aiqtoolkit
+cd nemo-agent-toolkit
 
 # Initialize, fetch, and update submodules
 git submodule update --init --recursive
@@ -74,7 +74,7 @@ uv sync --all-groups --all-extras
 ```
 
 #### Option B: Core Only Installation
-Install just the core AIQ toolkit without plugins:
+Install just the core NeMo Agent Toolkit without plugins:
 ```bash
 uv sync
 ```
@@ -124,14 +124,14 @@ When installing dependencies, you can use the following groups:
 
 ## Verification Steps
 
-After installation, verify AIQ toolkit is properly installed:
+After installation, verify NeMo Agent Toolkit is properly installed:
 
 ```bash
 # Check version
-aiq --version
+nat --version
 
 # Check help
-aiq --help
+nat --help
 ```
 
 Expected output should show version information and help text without errors.
@@ -177,15 +177,15 @@ workflow:
 EOF
 
 # Test the workflow
-aiq run --config_file workflow.yaml --input "List five subspecies of Aardvarks"
+nat run --config_file workflow.yaml --input "List five subspecies of Aardvarks"
 ```
 
 ## Ready State Checklist
 
-AIQ toolkit is ready for development when:
+NeMo Agent Toolkit is ready for development when:
 
-- [ ] `aiq --version` returns version information
-- [ ] `aiq --help` shows command options
+- [ ] `nat --version` returns version information
+- [ ] `nat --help` shows command options
 - [ ] NVIDIA_API_KEY environment variable is set
 - [ ] Virtual environment is activated
 - [ ] Required plugins are installed for your use case
@@ -203,35 +203,35 @@ AIQ toolkit is ready for development when:
 
 ### For LangChain Development:
 ```bash
-git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit && cd aiqtoolkit
+git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit && cd nemo-agent-toolkit
 git submodule update --init --recursive
 git lfs install && git lfs fetch && git lfs pull
 uv venv --seed .venv && source .venv/bin/activate
 uv sync
 uv pip install -e '.[langchain]'
 export NVIDIA_API_KEY=<your_key>
-aiq --version
+nat --version
 ```
 
 ### For Full Development Environment:
 ```bash
-git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit && cd aiqtoolkit
+git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit && cd nemo-agent-toolkit
 git submodule update --init --recursive
 git lfs install && git lfs fetch && git lfs pull
 uv venv --seed .venv && source .venv/bin/activate
 uv sync --all-groups --all-extras
 export NVIDIA_API_KEY=<your_key>
-aiq --version
+nat --version
 ```
 
 ### For Testing Existing Workflows:
 ```bash
-git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit && cd aiqtoolkit
+git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit && cd nemo-agent-toolkit
 git submodule update --init --recursive
 git lfs install && git lfs fetch && git lfs pull
 uv venv --seed .venv && source .venv/bin/activate
 uv sync
 uv pip install -e examples/simple
 export NVIDIA_API_KEY=<your_key>
-aiq run --config_file=examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith"
+nat run --config_file=examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith"
 ```

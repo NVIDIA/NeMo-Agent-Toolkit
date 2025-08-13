@@ -48,7 +48,7 @@ async def remove_artifact(registry_handler_config: RegistryHandlerBaseConfig, pa
 
 @click.group(name=__name__,
              invoke_without_command=True,
-             help=("Remove AIQ Toolkit artifact from a remote registry by name and version."))
+             help=("Remove NAT artifact from a remote registry by name and version."))
 @click.argument("packages", type=str)
 @click.option(
     "--config_file",
@@ -62,11 +62,11 @@ async def remove_artifact(registry_handler_config: RegistryHandlerBaseConfig, pa
     "--channel",
     type=str,
     required=True,
-    help=("The remote registry channel that will remove the AIQ Toolkit artifact."),
+    help=("The remote registry channel that will remove the NAT artifact."),
 )
 def remove(channel: str, config_file: str, packages: str) -> None:
     """
-    Remove AIQ Toolkit artifacts from a remote registry.
+    Remove NAT artifacts from a remote registry.
     """
 
     from nat.settings.global_settings import GlobalSettings

@@ -58,7 +58,7 @@ class PluginTypes(IntFlag):
     # Convenience flag for groups of plugin types
     CONFIG_OBJECT = COMPONENT | FRONT_END | EVALUATOR | AUTHENTICATION
     """
-    Any plugin that can be specified in the AIQ Toolkit configuration file.
+    Any plugin that can be specified in the NAT configuration file.
     """
     ALL = COMPONENT | FRONT_END | EVALUATOR | REGISTRY_HANDLER | AUTHENTICATION
     """
@@ -68,8 +68,8 @@ class PluginTypes(IntFlag):
 
 def load_config(config_file: StrPath) -> Config:
     """
-    This is the primary entry point for loading an AIQ Toolkit configuration file. It ensures that all plugins are
-    loaded and then validates the configuration file against the AIQConfig schema.
+    This is the primary entry point for loading a NAT configuration file. It ensures that all plugins are
+    loaded and then validates the configuration file against the Config schema.
 
     Parameters
     ----------
@@ -78,8 +78,8 @@ def load_config(config_file: StrPath) -> Config:
 
     Returns
     -------
-    AIQConfig
-        The validated AIQConfig object
+    Config
+        The validated Config object
     """
 
     # Ensure all of the plugins are loaded
@@ -87,17 +87,17 @@ def load_config(config_file: StrPath) -> Config:
 
     config_yaml = yaml_load(config_file)
 
-    # Validate configuration adheres to AIQ Toolkit schemas
-    validated_aiq_config = validate_schema(config_yaml, Config)
+    # Validate configuration adheres to NAT schemas
+    validated_nat_config = validate_schema(config_yaml, Config)
 
-    return validated_aiq_config
+    return validated_nat_config
 
 
 @asynccontextmanager
 async def load_workflow(config_file: StrPath, max_concurrency: int = -1):
     """
-    Load the AIQ Toolkit configuration file and create an AIQRunner object. This is the primary entry point for running
-    AIQ Toolkit workflows.
+    Load the NAT configuration file and create an Runner object. This is the primary entry point for running
+    NAT workflows.
 
     Parameters
     ----------
@@ -128,16 +128,17 @@ def discover_entrypoints(plugin_type: PluginTypes):
     plugin_groups = []
 
     # Add the specified plugin type to the list of groups to load
+    # The aiq entrypoints are intentionally left in the list to maintain backwards compatibility.
     if (plugin_type & PluginTypes.COMPONENT):
-        plugin_groups.extend(["nat.plugins", "nat.components"])
+        plugin_groups.extend(["aiq.plugins", "aiq.components", "nat.plugins", "nat.components"])
     if (plugin_type & PluginTypes.FRONT_END):
-        plugin_groups.append("nat.front_ends")
+        plugin_groups.extend(["aiq.front_ends", "nat.front_ends"])
     if (plugin_type & PluginTypes.REGISTRY_HANDLER):
-        plugin_groups.append("nat.registry_handlers")
+        plugin_groups.extend(["aiq.registry_handlers", "nat.registry_handlers"])
     if (plugin_type & PluginTypes.EVALUATOR):
-        plugin_groups.append("nat.evaluators")
+        plugin_groups.extend(["aiq.evaluators", "nat.evaluators"])
     if (plugin_type & PluginTypes.AUTHENTICATION):
-        plugin_groups.append("nat.authentication_providers")
+        plugin_groups.extend(["aiq.authentication_providers", "nat.authentication_providers"])
 
     # Get the entry points for the specified groups
     nat_plugins = reduce(lambda x, y: list(x) + list(y), [entry_points.select(group=y) for y in plugin_groups])
@@ -148,12 +149,12 @@ def discover_entrypoints(plugin_type: PluginTypes):
 @lru_cache
 def get_all_entrypoints_distro_mapping() -> dict[str, str]:
     """
-    Get the mapping of all AIQ entry points to their distribution names.
+    Get the mapping of all NAT entry points to their distribution names.
     """
 
     mapping = {}
-    aiq_entrypoints = discover_entrypoints(PluginTypes.ALL)
-    for ep in aiq_entrypoints:
+    nat_entrypoints = discover_entrypoints(PluginTypes.ALL)
+    for ep in nat_entrypoints:
         ep_module_parts = ep.module.split(".")
         current_parts = []
         for part in ep_module_parts:
@@ -171,14 +172,14 @@ def discover_and_register_plugins(plugin_type: PluginTypes):
     """
 
     # Get the entry points for the specified groups
-    aiq_plugins = discover_entrypoints(plugin_type)
+    nat_plugins = discover_entrypoints(plugin_type)
 
     count = 0
 
     # Pause registration hooks for performance. This is useful when loading a large number of plugins.
     with GlobalTypeRegistry.get().pause_registration_changed_hooks():
 
-        for entry_point in aiq_plugins:
+        for entry_point in nat_plugins:
             try:
                 logger.debug("Loading module '%s' from entry point '%s'...", entry_point.module, entry_point.name)
 

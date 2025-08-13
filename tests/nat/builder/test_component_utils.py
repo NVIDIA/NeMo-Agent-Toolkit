@@ -62,10 +62,10 @@ from nat.runtime.session import SessionManager
 from nat.test.memory import DummyMemoryConfig
 
 
-@pytest.fixture(name="nested_aiq_config", scope="function")
-def nested_aiq_config_fixture():
+@pytest.fixture(name="nested_nat_config", scope="function")
+def nested_nat_config_fixture():
 
-    # Setup nested AIQ Toolkit config
+    # Setup nested NAT config
     class FnConfig(FunctionBaseConfig, name="test_fn"):
         llm_name: LLMRef
         embedder_name: EmbedderRef
@@ -148,9 +148,9 @@ def nested_aiq_config_fixture():
         "workflow": nested_workflow_config
     }
 
-    aiq_config = Config.model_validate(config)
+    nat_config = Config.model_validate(config)
 
-    return aiq_config
+    return nat_config
 
 
 @pytest.fixture(name="mock_env_vars", scope="module", autouse=True)
@@ -272,53 +272,53 @@ def test_recursive_componentref_discovery():
         assert len(result_set.difference(expected_result)) == 0
 
 
-def test_update_dependency_graph(nested_aiq_config: Config):
+def test_update_dependency_graph(nested_nat_config: Config):
 
     dependency_graph = nx.DiGraph()
 
     assert len(dependency_graph.nodes) == 0
 
     # Test adding an unused leaf
-    dependency_graph = update_dependency_graph(nested_aiq_config, nested_aiq_config.llms["llm0"], dependency_graph)
+    dependency_graph = update_dependency_graph(nested_nat_config, nested_nat_config.llms["llm0"], dependency_graph)
 
     assert len(dependency_graph.nodes) == 0
 
     # Add a function that depends on leaf nodes (llm/embedder/retriever)
-    dependency_graph = update_dependency_graph(nested_aiq_config,
-                                               nested_aiq_config.functions["leaf_fn0"],
+    dependency_graph = update_dependency_graph(nested_nat_config,
+                                               nested_nat_config.functions["leaf_fn0"],
                                                dependency_graph)
 
     assert len(dependency_graph.nodes) == 7
-    assert dependency_graph.out_degree(generate_instance_id(nested_aiq_config.functions["leaf_fn0"])) == 3
-    assert dependency_graph.out_degree(generate_instance_id(nested_aiq_config.llms["llm0"])) == 0
-    assert dependency_graph.out_degree(generate_instance_id(nested_aiq_config.embedders["embedder0"])) == 0
-    assert dependency_graph.out_degree(generate_instance_id(nested_aiq_config.retrievers["retriever0"])) == 0
+    assert dependency_graph.out_degree(generate_instance_id(nested_nat_config.functions["leaf_fn0"])) == 3
+    assert dependency_graph.out_degree(generate_instance_id(nested_nat_config.llms["llm0"])) == 0
+    assert dependency_graph.out_degree(generate_instance_id(nested_nat_config.embedders["embedder0"])) == 0
+    assert dependency_graph.out_degree(generate_instance_id(nested_nat_config.retrievers["retriever0"])) == 0
 
     # Add a function that depends on other components (leaf and non-leaf nodes)
-    dependency_graph = update_dependency_graph(nested_aiq_config,
-                                               nested_aiq_config.functions["nested_fn0"],
+    dependency_graph = update_dependency_graph(nested_nat_config,
+                                               nested_nat_config.functions["nested_fn0"],
                                                dependency_graph)
 
-    assert dependency_graph.out_degree(generate_instance_id(nested_aiq_config.functions["leaf_fn0"])) == 3
-    assert dependency_graph.out_degree(generate_instance_id(nested_aiq_config.llms["llm0"])) == 0
-    assert dependency_graph.out_degree(generate_instance_id(nested_aiq_config.embedders["embedder0"])) == 0
-    assert dependency_graph.out_degree(generate_instance_id(nested_aiq_config.retrievers["retriever0"])) == 0
-    assert dependency_graph.out_degree(generate_instance_id(nested_aiq_config.functions["nested_fn0"])) == 4
+    assert dependency_graph.out_degree(generate_instance_id(nested_nat_config.functions["leaf_fn0"])) == 3
+    assert dependency_graph.out_degree(generate_instance_id(nested_nat_config.llms["llm0"])) == 0
+    assert dependency_graph.out_degree(generate_instance_id(nested_nat_config.embedders["embedder0"])) == 0
+    assert dependency_graph.out_degree(generate_instance_id(nested_nat_config.retrievers["retriever0"])) == 0
+    assert dependency_graph.out_degree(generate_instance_id(nested_nat_config.functions["nested_fn0"])) == 4
 
 
-def test_config_to_dependency_objects(nested_aiq_config: Config):
+def test_config_to_dependency_objects(nested_nat_config: Config):
 
     # Setup some expected output
-    functions_set = set(str(id(value)) for value in nested_aiq_config.functions.values())
-    embedders_set = set(str(id(value)) for value in nested_aiq_config.embedders.values())
-    llms_set = set(str(id(value)) for value in nested_aiq_config.llms.values())
-    retrievers_set = set(str(id(value)) for value in nested_aiq_config.retrievers.values())
-    memory_set = set(str(id(value)) for value in nested_aiq_config.memory.values())
-    object_stores_set = set(str(id(value)) for value in nested_aiq_config.object_stores.values())
+    functions_set = set(str(id(value)) for value in nested_nat_config.functions.values())
+    embedders_set = set(str(id(value)) for value in nested_nat_config.embedders.values())
+    llms_set = set(str(id(value)) for value in nested_nat_config.llms.values())
+    retrievers_set = set(str(id(value)) for value in nested_nat_config.retrievers.values())
+    memory_set = set(str(id(value)) for value in nested_nat_config.memory.values())
+    object_stores_set = set(str(id(value)) for value in nested_nat_config.object_stores.values())
     expected_instance_ids = functions_set | embedders_set | llms_set | retrievers_set | memory_set | object_stores_set
-    expected_instance_ids.add(str(id(nested_aiq_config.workflow)))
+    expected_instance_ids.add(str(id(nested_nat_config.workflow)))
 
-    dependency_map, dependency_graph = config_to_dependency_objects(nested_aiq_config)
+    dependency_map, dependency_graph = config_to_dependency_objects(nested_nat_config)
 
     # Validate dependency object types
     assert isinstance(dependency_map, dict)
@@ -337,10 +337,10 @@ def test_config_to_dependency_objects(nested_aiq_config: Config):
         if isinstance(node, str):
             assert node in expected_instance_ids
         else:
-            assert node.ref_name in getattr(nested_aiq_config, node.component_group.value)
+            assert node.ref_name in getattr(nested_nat_config, node.component_group.value)
 
 
-def test_build_dependency_sequence(nested_aiq_config: Config):
+def test_build_dependency_sequence(nested_nat_config: Config):
 
     # Setup expected outputs
     expected_dependency_sequence = [
@@ -386,14 +386,14 @@ def test_build_dependency_sequence(nested_aiq_config: Config):
     ]
 
     noref_order = {
-        generate_instance_id(nested_aiq_config.memory["memory0"]): -1,
-        generate_instance_id(nested_aiq_config.object_stores["object_store0"]): -1,
-        generate_instance_id(nested_aiq_config.functions["leaf_fn2"]): -1,
-        generate_instance_id(nested_aiq_config.functions["leaf_fn3"]): -1,
-        generate_instance_id(nested_aiq_config.functions["leaf_fn4"]): -1,
+        generate_instance_id(nested_nat_config.memory["memory0"]): -1,
+        generate_instance_id(nested_nat_config.object_stores["object_store0"]): -1,
+        generate_instance_id(nested_nat_config.functions["leaf_fn2"]): -1,
+        generate_instance_id(nested_nat_config.functions["leaf_fn3"]): -1,
+        generate_instance_id(nested_nat_config.functions["leaf_fn4"]): -1,
     }
 
-    dependency_sequence = build_dependency_sequence(nested_aiq_config)
+    dependency_sequence = build_dependency_sequence(nested_nat_config)
 
     # Validate correct length of dependency sequence
     assert len(dependency_sequence) == len(expected_dependency_sequence)
@@ -429,8 +429,8 @@ def test_build_dependency_sequence(nested_aiq_config: Config):
 
 
 @pytest.mark.usefixtures("set_test_api_keys")
-async def test_load_hierarchial_workflow(nested_aiq_config: Config):
+async def test_load_hierarchial_workflow(nested_nat_config: Config):
 
     # Validate nested workflow instantiation
-    async with WorkflowBuilder.from_config(config=nested_aiq_config) as workflow:
+    async with WorkflowBuilder.from_config(config=nested_nat_config) as workflow:
         assert SessionManager(workflow.build(), max_concurrency=1)

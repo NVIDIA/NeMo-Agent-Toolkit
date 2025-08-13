@@ -24,12 +24,10 @@ from nat.cli.commands.info.list_mcp import list_mcp
 logger = logging.getLogger(__name__)
 
 
-@click.group(name=__name__,
-             invoke_without_command=False,
-             help="Provide information about the local AIQ Toolkit environment.")
+@click.group(name=__name__, invoke_without_command=False, help="Provide information about the local NAT environment.")
 def info_command(**kwargs):
     """
-    Provide information about the local AIQ Toolkit environment.
+    Provide information about the local NAT environment.
     """
     pass
 

@@ -25,7 +25,7 @@ def test_mcp_front_end_config_default_values():
     """Test that the default values are set correctly."""
     config = MCPFrontEndConfig()
 
-    assert config.name == "AIQ MCP"
+    assert config.name == "NeMo Agent Toolkit MCP"
     assert config.host == "localhost"
     assert config.port == 9901
     assert config.debug is False

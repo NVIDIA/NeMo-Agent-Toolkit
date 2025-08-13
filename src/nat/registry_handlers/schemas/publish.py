@@ -25,10 +25,10 @@ logger = logging.getLogger(__name__)
 
 
 class BuiltArtifact(BaseModel):
-    """An NAT artifact including base64 encoded string of wheel package and corrosponding discovery metadata.
+    """A NAT artifact including base64 encoded string of wheel package and corrosponding discovery metadata.
 
     Args:
-        whl (str): A base64 encoded string of an NAT package wheel (.whl).
+        whl (str): A base64 encoded string of a NAT package wheel (.whl).
 
         metadata (dict[ComponentEnum, list[DiscoveryMetadata]]): Provides rich discover metadata for developers to
         quickly find useful components.
@@ -39,10 +39,10 @@ class BuiltArtifact(BaseModel):
 
 
 class Artifact(BaseModel):
-    """An AIQ Toolkit artifact including base64 encoded string of wheel package and corrosponding discovery metadata.
+    """A NAT artifact including base64 encoded string of wheel package and corrosponding discovery metadata.
 
     Args:
-        artifact (BuiltArtifact): An NAT artifact including base64 encoded string of wheel package and
+        artifact (BuiltArtifact): A NAT artifact including base64 encoded string of wheel package and
         corrosponding discovery metadata.
 
         whl_path (str): A local path to the built wheel package.

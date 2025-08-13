@@ -31,7 +31,7 @@ NeMo Agent toolkit provides a set of evaluators to run and evaluate NeMo Agent t
 ## Existing Evaluators
 You can view the list of existing evaluators by running the following command:
 ```bash
-aiq info components -t evaluator
+nat info components -t evaluator
 ```
 `ragas` is an example of an existing evaluator. The `ragas` evaluator is used to evaluate the accuracy of a workflow output.
 
@@ -46,7 +46,7 @@ The evaluator configuration defines the evaluator name and any evaluator-specifi
 The following example shows how to define and register a custom evaluator. The code is added to a new `evaluator_register.py` file in the simple example directory for testing purposes.
 
 <!-- path-check-skip-next-line -->
-`examples/getting_started/simple_web_query/src/aiq_simple_web_query/evaluator_register.py`:
+`examples/getting_started/simple_web_query/src/nat_simple_web_query/evaluator_register.py`:
 ```python
 from pydantic import Field
 
@@ -78,7 +78,7 @@ The evaluator logic is implemented in the `SimilarityEvaluator` class described 
 
 ### Importing for registration
 To ensure the evaluator is registered at runtime, import the evaluator function in the example project's register.py file — even if the function is not called directly.
-`examples/getting_started/simple_web_query/src/aiq_simple_web_query/register.py`:
+`examples/getting_started/simple_web_query/src/nat_simple_web_query/register.py`:
 ```python
 from .evaluator_register import register_similarity_evaluator  # pylint: disable=unused-import
 ```
@@ -116,7 +116,7 @@ The following example defines a SimilarityEvaluator that computes the cosine sim
 
 We define the evaluator in the `similarity_evaluator.py` file:
 <!-- path-check-skip-next-line -->
-`examples/getting_started/simple_web_query/src/aiq_simple_web_query/similarity_evaluator.py`:
+`examples/getting_started/simple_web_query/src/nat_simple_web_query/similarity_evaluator.py`:
 ```python
 from typing import override
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -154,7 +154,7 @@ class SimilarityEvaluator(BaseEvaluator):
 ### Display all evaluators
 To display all evaluators, run the following command:
 ```bash
-aiq info components -t evaluator
+nat info components -t evaluator
 ```
 This will now display the custom evaluator `similarity` in the list of evaluators.
 
@@ -173,7 +173,7 @@ The `_type` field specifies the evaluator name. The keyword `similarity_eval` ca
 ### Evaluating the workflow
 Run and evaluate the workflow using the following command:
 ```bash
-aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
 ### Evaluation results
@@ -182,11 +182,11 @@ The evaluation results are stored in the output directory specified in the workf
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/getting_started/simple_web_query/
+    output_dir: ./.tmp/nat/examples/getting_started/simple_web_query/
 ```
 
 The results of each evaluator is stored in a separate file with name `<keyword>_eval_output.json`. The following is an example of the similarity evaluator output file:
-`examples/getting_started/simple_web_query/.tmp/aiq/examples/getting_started/simple_web_query/similarity_eval_output.json`:
+`examples/getting_started/simple_web_query/.tmp/nat/examples/getting_started/simple_web_query/similarity_eval_output.json`:
 ```json
 {
   "average_score": 0.63,

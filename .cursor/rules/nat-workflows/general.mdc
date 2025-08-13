@@ -1,19 +1,19 @@
 ---
-description: Follow these rules when the user's request involves adding functions or tools to AIQ workflows
-globs: 
+description: Follow these rules when the user's request involves adding functions or tools to NeMo Agent Toolkit workflows
+globs:
 alwaysApply: false
 ---
-# General Rules for AIQ Workflows
+# General Rules for NeMo Agent Toolkit Workflows
 
 ## Referenced Documentation
 
-- **Functions Overview**: [index.md](mdc:docs/source/workflows/functions/index.md) - Overview of functions as the main building blocks of AIQ toolkit workflows
-- **Writing Custom Functions**: [functions.md](mdc:docs/source/extend/functions.md) - Comprehensive guide for creating and registering custom functions in AIQ workflows
-- **Adding Tools Tutorial**: [add-tools-to-a-workflow.md](mdc:docs/source/tutorials/add-tools-to-a-workflow.md) - Tutorial on how to add new tools to existing AIQ workflows
+- **Functions Overview**: [index.md](mdc:docs/source/workflows/functions/index.md) - Overview of functions as the main building blocks of NeMo Agent Toolkit workflows
+- **Writing Custom Functions**: [functions.md](mdc:docs/source/extend/functions.md) - Comprehensive guide for creating and registering custom functions in NeMo Agent Toolkit workflows
+- **Adding Tools Tutorial**: [add-tools-to-a-workflow.md](mdc:docs/source/tutorials/add-tools-to-a-workflow.md) - Tutorial on how to add new tools to existing NeMo Agent Toolkit workflows
 
 ## Rules
 
-- For requests related to adding functions or tools to AIQ workflow, provide detailed information using the relevant sections from the workflow documentation listed in the Referenced Documentation section above. Encourage users to review the documentation themselves for a deeper understanding.
+- For requests related to adding functions or tools to NeMo Agent Toolkit workflow, provide detailed information using the relevant sections from the workflow documentation listed in the Referenced Documentation section above. Encourage users to review the documentation themselves for a deeper understanding.
 
 - When helping users create custom functions, refer to the Writing Custom Functions documentation in the Referenced Documentation section for comprehensive guidance on function registration, input/output types, and best practices.
 

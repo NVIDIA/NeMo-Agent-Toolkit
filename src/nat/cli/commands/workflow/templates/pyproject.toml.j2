@@ -12,11 +12,11 @@ dependencies = [
   "{{ nat_dependency }}",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Custom AIQ Toolkit Workflow"
+description = "Custom NeMo Agent Toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 
 {% if editable %}[tool.uv.sources]
-aiqtoolkit = { path = "{{ rel_path_to_repo_root}}", editable = true }{% endif %}
+nvidia-nat = { path = "{{ rel_path_to_repo_root}}", editable = true }{% endif %}
 
-[project.entry-points.'aiq.components']
+[project.entry-points.'nat.components']
 {{ package_name }} = "{{ package_name }}.register"

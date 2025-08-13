@@ -54,7 +54,7 @@ class JobManagementConfig(BaseModel):
 
 class EvalOutputConfig(BaseModel):
     # Output directory for the workflow and evaluation results
-    dir: Path = Path("/tmp/aiq/examples/default/")
+    dir: Path = Path("./.tmp/nat/examples/default/")
     # S3 prefix for the workflow and evaluation results
     remote_dir: str | None = None
     # Custom scripts to run after the workflow and evaluation results are saved
@@ -77,7 +77,7 @@ class EvalGeneralConfig(BaseModel):
     workflow_alias: str | None = None
 
     # Output directory for the workflow and evaluation results
-    output_dir: Path = Path("/tmp/aiq/examples/default/")
+    output_dir: Path = Path("./.tmp/nat/examples/default/")
 
     # If present overrides output_dir
     output: EvalOutputConfig | None = None

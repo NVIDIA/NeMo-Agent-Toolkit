@@ -56,10 +56,10 @@ For a complete list of logging and tracing plugins and corresponding configurati
 
 ```bash
 # For all registered logging plugins
-aiq info components -t logging
+nat info components -t logging
 
 # For all registered tracing plugins
-aiq info components -t tracing
+nat info components -t tracing
 ```
 
 Illustrated below is a sample configuration file demonstrating multiple exporters configured to run concurrently.
@@ -73,7 +73,7 @@ general:
         level: WARN
       file:
         _type: file
-        path: /tmp/workflow.log
+        path: ./.tmp/workflow.log
         level: DEBUG
     tracing:
       # Multiple exporters can run simultaneously

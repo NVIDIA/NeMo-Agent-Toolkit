@@ -131,7 +131,7 @@ workflow:
 ### Running the NeMo Agent Toolkit Workflow
 To run the workflow using the locally hosted LLMs, run the following command:
 ```bash
-aiq run --config_file examples/documentation_guides/locally_hosted_llms/nim_config.yml --input "What is LangSmith?"
+nat run --config_file examples/documentation_guides/locally_hosted_llms/nim_config.yml --input "What is LangSmith?"
 ```
 
 
@@ -209,5 +209,5 @@ workflow:
 ### Running the NeMo Agent Toolkit Workflow
 To run the workflow using the locally hosted LLMs, run the following command:
 ```bash
-aiq run --config_file examples/documentation_guides/locally_hosted_llms/vllm_config.yml --input "What is LangSmith?"
+nat run --config_file examples/documentation_guides/locally_hosted_llms/vllm_config.yml --input "What is LangSmith?"
 ```

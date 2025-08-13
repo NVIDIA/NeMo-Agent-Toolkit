@@ -88,7 +88,7 @@ async def test_upload_directory_upload_failure(output_config):
 def test_run_custom_scripts_success(tmp_path):
     """Test that the run_custom_scripts runs the custom scripts successfully."""
     script = tmp_path / "dummy_script.py"
-    script.write_text("print('Hello aiq')")
+    script.write_text("print('Hello nat')")
 
     config = EvalOutputConfig(dir=tmp_path,
                               s3=None,
