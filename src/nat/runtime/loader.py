@@ -216,4 +216,4 @@ def discover_and_register_plugins(plugin_type: PluginTypes):
 
 
 # Compatibility alias
-get_all_nat_entrypoints_distro_mapping = get_all_entrypoints_distro_mapping
+get_all_aiq_entrypoints_distro_mapping = get_all_entrypoints_distro_mapping
