@@ -22,7 +22,7 @@ limitations under the License.
 
 # Testing Weave PII Redaction in NeMo Agent Toolkit using W&B Weave
 
-This example demonstrates how to use Weights & Biases (W&B) Weave with PII redaction in your NAT workflows.
+This example demonstrates how to use Weights & Biases (W&B) Weave with PII redaction in your NeMo Agent toolkit workflows.
 
 ## Table of Contents
 
