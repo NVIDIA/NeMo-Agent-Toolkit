@@ -33,6 +33,8 @@ from pydantic_core.core_schema import ValidationInfo
 from nat.data_models.interactive import HumanPrompt
 from nat.utils.type_converter import GlobalTypeConverter
 
+FINISH_REASONS = frozenset({'stop', 'length', 'tool_calls', 'content_filter', 'function_call'})
+
 
 class Request(BaseModel):
     """
@@ -199,7 +201,7 @@ class Choice(BaseModel):
 
     message: ChoiceMessage | None = None
     delta: ChoiceDelta | None = None
-    finish_reason: typing.Literal['stop', 'length', 'tool_calls', 'content_filter', 'function_call'] | None = None
+    finish_reason: typing.Literal[FINISH_REASONS] | None = None
     index: int
     # logprobs: ChoiceLogprobs | None = None
 
@@ -347,8 +349,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
 
         delta = ChoiceDelta(content=content, role=role) if content is not None or role is not None else ChoiceDelta()
 
-        valid_finish_reasons = ['stop', 'length', 'tool_calls', 'content_filter', 'function_call']
-        final_finish_reason = finish_reason if finish_reason in valid_finish_reasons else None
+        final_finish_reason = finish_reason if finish_reason in FINISH_REASONS else None
 
         return ChatResponseChunk(
             id=id_,
