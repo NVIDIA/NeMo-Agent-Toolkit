@@ -467,8 +467,9 @@ async def custom_telemetry_exporter(config: CustomTelemetryExporter, builder: Bu
 
 In production code, structure your telemetry exporter as follows:
 
+<!-- path-check-skip-next-line -->
+`my_plugin/exporters.py`:
 ```python
-# my_plugin/exporters.py
 import aiohttp
 
 from nat.data_models.span import Span
@@ -491,8 +492,11 @@ class MyCustomExporter(SpanExporter[Span, dict]):
         """Clean up resources when the exporter is stopped."""
         # Clean up HTTP sessions, file handles, etc.
         await super()._cleanup()
+```
 
-# my_plugin/register.py
+<!-- path-check-skip-next-line -->
+`my_plugin/register.py`:
+```python
 from pydantic import Field
 
 from nat.cli.register_workflow import register_telemetry_exporter

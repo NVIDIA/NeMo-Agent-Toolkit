@@ -26,6 +26,7 @@ uv sync --all-groups --all-extras
 ```
 
 ## Build Documentation
+<!-- path-check-skip-begin -->
 ```bash
 cd docs
 make
@@ -33,8 +34,9 @@ make
 # verify
 firefox build/html/index.html
 ```
-<!-- path-check-skip-next-line -->
+
 Outputs to `build/docs/html`
+<!-- path-check-skip-end -->
 
 ## Contributing
 Refer to the [Contributing to NeMo Agent toolkit](./source/resources/contributing.md) guide.

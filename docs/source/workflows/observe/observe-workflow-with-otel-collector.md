@@ -99,6 +99,8 @@ nat run --config_file <path/to/your/config/file.yml> --input "your notional inpu
 
 As the workflow runs, spans are sent to the OTel Collector which in turn exports them based on the exporter you configured. In this example, you can view the exported traces in the local file:
 
+<!-- path-check-skip-begin -->
 ```bash
 cat otellogs/llm_spans.json
 ```
+<!-- path-check-skip-end -->

@@ -104,10 +104,11 @@ that will run data through the hosted workflow. To access documentation on the a
 documentation are made available at the <HOST>:<IP>/docs endpoint. For example, if serving locally, with
 the following command:
 
-
+<!-- path-check-skip-begin -->
 ```bash
 nat start fastapi --config_file=path/to/config --host 0.0.0.0 --port 8000
 ```
+<!-- path-check-skip-end -->
 
 The Swagger API docs will be available at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
@@ -239,9 +240,11 @@ run data through the hosted workflow. To access documentation on the available r
 documentation are made available at the <HOST>:<IP>/docs endpoint. For example, if serving locally, with
 the following command:
 
+<!-- path-check-skip-begin -->
 ```bash
 nat serve --config_file=path/to/config --host 0.0.0.0 --port 8000
 ```
+<!-- path-check-skip-end -->
 
 The Swagger API docs will be available at: [http://localhost:8000/docs](http://localhost:8000/docs)
 

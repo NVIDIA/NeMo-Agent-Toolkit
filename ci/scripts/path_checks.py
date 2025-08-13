@@ -30,7 +30,11 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/agents/data/",
     ),
     (
-        r"^examples/advanced_agents/alert_triage_agent/src/nat_alert_triage_agent/configs/config.*\.yml",
+        r"^examples/",
+        r"^examples/deploy/",
+    ),
+    (
+        r"^examples/advanced_agents/alert_triage_agent/.*configs/config.*\.yml",
         r"^examples/advanced_agents/alert_triage_agent/data/",
     ),
     (
@@ -61,6 +65,18 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/evaluation_and_profiling/simple_web_query_eval/.*configs",
         r"^examples/evaluation_and_profiling/simple_web_query_eval/.*/workflow_to_csv.py",
     ),
+    (
+        r"^examples/MCP/simple_calculator_mcp/README.md",
+        r"^examples/getting_started/simple_calculator/configs/config.yml",
+    ),
+    (
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/README.md",
+        r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
+    ),
+    (
+        r"^docs/source/",
+        r"^docs/source/_static",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
@@ -70,30 +86,49 @@ ALLOWLISTED_WORDS: set[str] = {
     "commit/push",
     "Continue/Cancel",
     "conversation/chat",
+    "create/reinstall/delete",
     "copy/paste",
     "edit/score",
     "file/console",
     "I/O",
+    "Input/Observation",
     "input/output",
     "inputs/outputs",
     "JavaScript/TypeScript",
+    "JSON/YAML",
     "output/jobs/job_",
     "predictions/forecasts",
     "provider/method.",
     "RagaAI/Catalyst",
     "read/write",
+    "run/serve",
     "search/edit/score/select",
+    "size/time",
     "string/array",
     "string/object",
     "success/failure",
+    "Thought/Action/Action",
     "thinking/reasoning",
     "tool/workflow",
     "tooling/vector",
     "true/false",
     "try/except",
+    "user/assistant",
     "validate/sanitize",
     "Workflows/tools",
-    "Yes/No",
+    "Yes/No",  #
+    # numbers
+    r"\d+/\d+(/\d+)*",  #
+    # LLM model names
+    "meta/[Ll]lama.*",
+    "nvidia/([Ll]lama|[Nn][Vv]-).*",
+    "mistralai/[Mm]ixtral.*",
+    "microsoft/[Pp]hi.*",
+    "ssmits/[Qq]wen.*",  #
+    # MIME types
+    "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
+    # Time zones
+    "[A-Z][a-z]+(_[A-Z][a-z]+)*/[A-Z][a-z]+(_[A-Z][a-z]+)*",
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
@@ -102,24 +137,36 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/evaluation_and_profiling/simple_web_query_eval/.*configs/eval_upload.yml",
         r"^input/langsmith.json",
     ),
+    # ignore generated files
+    (
+        r"^docs/",
+        r"\.rst$",
+    )
 }
 
 # Files to ignore -- regex pattern
 IGNORED_FILES: set[str] = {
-    r"^\.",
-    r"^ci/",
-    r"pyproject\.toml$",
-    r"Dockerfile",
-    r"docker-compose([A-Za-z0-9_\-\.]+)?\.ya?ml$",
+    # hidden files
+    r"^\.",  #
+    # CI files
+    r"^ci/",  #
+    # project files
+    r"pyproject\.toml$",  #
+    # docker files
+    r"Dockerfile",  #
+    r"docker-compose([A-Za-z0-9_\-\.]+)?\.ya?ml$",  #
+    # top-level markdown files with no related content
     r"(CHANGELOG|CONTRIBUTING|LICENSE|SECURITY)\.md",
-    r"^manifest.yaml$",
-    r"data/.*$"
+    r"^manifest.yaml$",  #
+    # files located within data directories
+    r"data/.*$",  #
 }
 
 # Paths to ignore -- regex pattern
 IGNORED_PATHS: set[str] = {
+    # temporary files
     r"\.tmp/",  #
-    r"/?\.?venv",  # files that are located in the directory of the file being checked
+    # files that are located in the directory of the file being checked
     r"^\./upload_to_minio\.sh$",
     r"^\./upload_to_mysql\.sh$",
     r"^\./start_local_sandbox\.sh$",  #
@@ -127,9 +174,10 @@ IGNORED_PATHS: set[str] = {
     r"^scripts/langchain_web_ingest\.py$",
     r"^scripts/bootstrap_milvus\.sh$",  #
     # generated files
-    r"^\.venv/bin/activate$",
     r"^\./run_service\.sh$",
-    r"^outputs/line_chart_\d+\.png$",
+    r"^outputs/line_chart_\d+\.png$",  #
+    # virtual environment directories
+    r"(\.[a-z_]*env$|^\.[a-z_]*env)",
 }
 
 ALLOWLISTED_FILE_PATH_PAIRS_REGEX = list(
@@ -139,6 +187,14 @@ ALLOWLISTED_WORDS_REGEX = re.compile(r"^(" + "|".join(ALLOWLISTED_WORDS) + r")$"
 IGNORED_FILE_PATH_PAIRS_REGEX = list(map(lambda x: (re.compile(x[0]), re.compile(x[1])), IGNORED_FILE_PATH_PAIRS))
 IGNORED_FILES_REGEX = list(map(re.compile, IGNORED_FILES))
 IGNORED_PATHS_REGEX = list(map(re.compile, IGNORED_PATHS))
+
+YAML_WHITELISTED_KEYS: set[str] = {
+    "model_name",
+    "llm_name",
+    "tool_name",
+    "_type",
+    "remote_file_path",
+}
 
 # Paths to consider referential -- string
 # referential paths are ones that should not only be checked for existence, but also for referential integrity
@@ -151,12 +207,12 @@ REFERENTIAL_PATHS: set[str] = {
 # File extensions to check paths
 EXTENSIONS: tuple[str, ...] = ('.md', '.rst', '.yml', '.yaml', '.json', '.toml', '.ini', '.conf', '.cfg')
 
-URI_OR_PATH_REGEX = re.compile(r'((([^:/?# ]+):)?(//([^/?# ]*))?([^?# ]*)(\?([^# ]*))?(#([^ ]*))?'
-                               r'|(\.?\.?/?)(([$A-Za-z0-9_\-\.]+/)*[$A-Za-z0-9_\-\.]+))')
+URI_OR_PATH_REGEX = re.compile(r'((([^:/?# ]+):)?(//([^/?# ]*))([^?# ]*)(\?([^# ]*))?(#([^ ]*))?'
+                               r'|(\.?\.?/?)(([^ \t`=\'"]+/)+[^ \t`=\'"]+))')
 
-PATH_REGEX = re.compile(r'^(\.?\.?/?)(([$A-Za-z0-9_\-\.]+/)*[$A-Za-z0-9_\-\.]+)$')
+PATH_REGEX = re.compile(r'^(\.?\.?/?)(([^ \t`=\'"]+/)+[^ \t`=\'"]+)$')
 
-YAML_BLOCK_REGEX = re.compile(r":\s*\|\s*$")
+VALID_PATH_REGEX = re.compile(r'^[A-Za-z0-9_\-\./]+$')
 
 
 def list_broken_symlinks() -> list[str]:
@@ -191,38 +247,41 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
     """
     paths = []
     with open(filename, "r", encoding="utf-8") as f:
-        in_skipped_section: int | bool = False
+        section: list[str] = []
+        in_skipped_section: bool = False
         skip_next_line: bool = False
         for line_number, line in enumerate(f, start=1):
             if skip_next_line:
                 skip_next_line = False
                 continue
             if "path-check-skip-file" in line:
-                break
-            elif "path-check-skip-next-line" in line:
+                return []
+            if "path-check-skip-next-line" in line:
                 skip_next_line = True
                 continue
-            elif "path-check-skip-end" in line:
+            if "path-check-skip-end" in line:
                 in_skipped_section = False
             elif "path-check-skip-begin" in line:
                 in_skipped_section = True
-            if filename.endswith(".md"):
-                if line.lstrip().startswith("```"):
-                    in_skipped_section = not in_skipped_section
-            elif filename.endswith(".yml") or filename.endswith(".yaml"):
-                # skip lines that contain model_name or _type since they are often used to indicate
-                # the model, llm name, or tool name -- none of which are paths
-                if "model_name" in line or "_type" in line or "llm_name" in line:
+                continue
+
+            # Handle code blocks in markdown files
+            if filename.endswith(".md") and "```" in line:
+                index = line.index("```")
+                block_type = line[index + 3:].strip()
+                # if we have a block type
+                if block_type or not section:
+                    # ensure that we don't push a single-line block
+                    if "```" not in block_type:
+                        section.append(block_type)
+                else:
+                    # if it's empty, then we're done with the section
+                    if section:
+                        section.pop()
+
+            if filename.endswith("yml") or filename.endswith("yaml") or (section and section[-1] in ["yml", "yaml"]):
+                if any((key in line) for key in YAML_WHITELISTED_KEYS):
                     continue
-                # YAML blocks are delimited by a line that ends with a pipe
-                if YAML_BLOCK_REGEX.search(line):
-                    # keep track of the number of leading spaces
-                    in_skipped_section = len(line) - len(line.lstrip())
-                elif in_skipped_section:
-                    # if we are in a skipped section, and the number of leading spaces is the same as
-                    # the number of leading spaces in the skipped section, then we are done
-                    if len(line) - len(line.lstrip()) == in_skipped_section:
-                        in_skipped_section = False
             if in_skipped_section:
                 continue
             for match in URI_OR_PATH_REGEX.finditer(line):
@@ -242,6 +301,8 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                     continue
                 # Exclude empty after stripping
                 if not path:
+                    continue
+                if not VALID_PATH_REGEX.match(path):
                     continue
                 if ALLOWLISTED_WORDS_REGEX.search(path):
                     continue
@@ -287,12 +348,14 @@ def check_files() -> list[tuple[str, PathInfo]]:
             continue
         paths = extract_paths_from_file(f)
 
-        def check_path(path: str, path_info: PathInfo) -> bool:
+        def check_path(path: str, path_info: PathInfo, f: str) -> bool:
             """
             Checks if a path is valid.
 
             Args:
                 path: The path to check.
+                path_info: The path info object.
+                f: The filename of the file being checked.
 
             Returns:
                 True if we performed an action based on the path
@@ -313,10 +376,10 @@ def check_files() -> list[tuple[str, PathInfo]]:
         for path_info in paths:
             # attempt to resolve the path relative to the file
             resolved_path = os.path.join(os.path.dirname(f), path_info.path)
-            if check_path(resolved_path, path_info):
+            if check_path(resolved_path, path_info, f):
                 continue
             # attempt to use the path as-is
-            if check_path(path_info.path, path_info):
+            if check_path(path_info.path, path_info, f):
                 continue
 
             # if it still doesn't exist then it's broken

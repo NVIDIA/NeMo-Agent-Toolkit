@@ -141,6 +141,8 @@ curl -X 'POST' \
 
 Expected Response:
 
+<!-- path-check-skip-begin -->
 ```console
 {"value":"Method: POST, URL Path: /get_request_metadata, URL Scheme: http, Headers: {'host': 'localhost:8000', 'user-agent': 'curl/8.7.1', 'accept': 'application/json', 'content-type': 'application/json', 'authorization': 'Bearer token123', 'content-length': '37'}, Query Params: {}, Path Params: {}, Client Host: ::1, Client Port: 56922, Cookies: {}, Conversation Id: None"}
 ```
+<!-- path-check-skip-end -->
