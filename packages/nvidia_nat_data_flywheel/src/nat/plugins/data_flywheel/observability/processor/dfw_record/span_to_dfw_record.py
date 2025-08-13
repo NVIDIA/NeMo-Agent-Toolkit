@@ -50,6 +50,9 @@ def span_to_dfw_record(span: Span, client_id: str = "nat_client") -> DFWRecord |
 
     try:
         return adapter.convert(trace_source, client_id)
+    except (ValueError, TypeError) as e:
+        logger.error("Invalid input for adapter `%s`: %s", adapter.framework_identifier, str(e))
+        return None
     except Exception as e:
-        logger.error("Error converting trace source with adapter %s: %s", adapter.framework_identifier, str(e))
+        logger.error("Unexpected error in adapter `%s`: %s", adapter.framework_identifier, str(e))
         return None

@@ -52,6 +52,12 @@ class TraceAdapterRegistry:
     @classmethod
     def get_adapter(cls, trace_source: TraceSource) -> TraceSourceAdapter | None:
         """Get the appropriate adapter for a trace source."""
+        # Input validation: Ensure required fields are present and valid
+        if not trace_source.source.framework or not trace_source.source.provider:
+            logger.warning("Invalid trace source: missing framework ('%s') or provider ('%s')",
+                           trace_source.source.framework,
+                           trace_source.source.provider)
+            return None
         framework_provider = f"{trace_source.source.framework}_{trace_source.source.provider}"
         return cls._adapters.get(framework_provider)
 
