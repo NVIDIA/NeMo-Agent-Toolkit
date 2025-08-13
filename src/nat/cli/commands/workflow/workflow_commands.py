@@ -27,6 +27,45 @@ from jinja2 import FileSystemLoader
 logger = logging.getLogger(__name__)
 
 
+def _get_nat_dependency(editable: bool = False) -> str:
+    """
+    Get the NAT dependency string with version and framework selection.
+
+    Args:
+        editable: Whether this is for an editable/development install
+                 (determined by get_repo_root() is not None)
+
+    Returns:
+        str: The dependency string to use in pyproject.toml
+    """
+    # Get framework from environment or use default
+    framework = "langchain"
+
+    if editable:
+        dependency = f"nvidia-nat[{framework}]"
+        logger.info("Using unversioned NAT dependency for editable install: %s", dependency)
+        return dependency
+
+    # Get the current NAT version
+    from nat.cli.entrypoint import get_version
+    current_version = get_version()
+    if current_version != "unknown":
+        # Extract major.minor (e.g., "1.2.3" -> "1.2")
+        major_minor = ".".join(current_version.split(".")[:2])
+        version_spec = f"~={major_minor}"
+    else:
+        # Fallback if version detection fails
+        version_spec = ""
+
+    # Build the dependency string
+    dependency = f"nvidia-nat[{framework}]"
+    if version_spec:
+        dependency += version_spec
+
+    logger.info("Using NAT dependency: %s", dependency)
+    return dependency
+
+
 class PackageError(Exception):
     pass
 
@@ -170,6 +209,8 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         (new_workflow_dir / 'src' / package_name).mkdir(parents=True)
         # Create config directory
         (new_workflow_dir / 'src' / package_name / 'configs').mkdir(parents=True)
+        # Create data directory
+        (new_workflow_dir / 'src' / package_name / 'data').mkdir(parents=True)
         # Create package level configs directory
         (new_workflow_dir / 'configs').mkdir(parents=True)
 
@@ -199,7 +240,8 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
             'package_name': package_name,
             'rel_path_to_repo_root': rel_path_to_repo_root,
             'workflow_class_name': f"{_generate_valid_classname(workflow_name)}FunctionConfig",
-            'workflow_description': description
+            'workflow_description': description,
+            'nat_dependency': _get_nat_dependency(editable=editable)
         }
 
         for template_name, output_path in files_to_render.items():
@@ -212,6 +254,14 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         config_source = new_workflow_dir / 'src' / package_name / 'configs' / 'config.yml'
         config_link = new_workflow_dir / 'configs' / 'config.yml'
         os.symlink(config_source, config_link)
+
+        # Create symlinks for config and data directories
+        config_dir_source = new_workflow_dir / 'src' / package_name / 'configs'
+        config_dir_link = new_workflow_dir / 'config'
+        data_dir_source = new_workflow_dir / 'src' / package_name / 'data'
+        data_dir_link = new_workflow_dir / 'data'
+        os.symlink(config_dir_source, config_dir_link)
+        os.symlink(data_dir_source, data_dir_link)
 
         if install:
             # Install the new package without changing directories
