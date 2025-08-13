@@ -26,6 +26,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from nat.authentication.interfaces import FlowHandlerBase
 from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
 from nat.data_models.api_server import ResponsePayloadOutput
@@ -39,6 +40,7 @@ from nat.data_models.api_server import WebSocketSystemIntermediateStepMessage
 from nat.data_models.api_server import WebSocketSystemResponseTokenMessage
 from nat.data_models.api_server import WebSocketUserInteractionResponseMessage
 from nat.data_models.api_server import WebSocketUserMessage
+from nat.data_models.api_server import WorkflowSchemaType
 from nat.data_models.interactive import HumanPromptNotification
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import HumanResponseNotification
@@ -66,6 +68,13 @@ class WebSocketMessageHandler:
         self._user_interaction_response: asyncio.Future[HumanResponse] | None = None
 
         self._flow_handler: FlowHandlerBase | None = None
+
+        self._schema_output_mapping: dict[str, type[BaseModel] | None] = {
+            WorkflowSchemaType.GENERATE: self._session_manager.workflow.single_output_schema,
+            WorkflowSchemaType.CHAT: ChatResponse,
+            WorkflowSchemaType.CHAT_STREAM: ChatResponseChunk,
+            WorkflowSchemaType.GENERATE_STREAM: self._session_manager.workflow.streaming_output_schema,
+        }
 
     def set_flow_handler(self, flow_handler: FlowHandlerBase) -> None:
         self._flow_handler = flow_handler
@@ -156,10 +165,12 @@ class WebSocketMessageHandler:
                 def _done_callback(task: asyncio.Task):  # pylint: disable=unused-argument
                     self._running_workflow_task = None
 
-                # await self._process_response()
                 self._running_workflow_task = asyncio.create_task(
-                    self._run_workflow(content.text, self._conversation_id,
-                                       result_type=ChatResponse)).add_done_callback(_done_callback)
+                    self._run_workflow(content.text,
+                                       self._conversation_id,
+                                       result_type=self._schema_output_mapping[self._workflow_schema_type],
+                                       output_type=self._schema_output_mapping[
+                                           self._workflow_schema_type])).add_done_callback(_done_callback)
 
         except ValueError as e:
             logger.error("User message content not found: %s", str(e), exc_info=True)
