@@ -136,7 +136,8 @@ linkcheck_ignore = [
     r'https://(platform\.)?openai.com',
     r'https://code.visualstudio.com',
     r'https://www.mysql.com',
-    r'https://api.service.com'
+    r'https://api.service.com',
+    r'https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png'
 ]
 
 # The suffix(es) of source filenames.
