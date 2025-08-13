@@ -28,8 +28,7 @@ llms:
     _type: openai
     api_key: "EMPTY"
     base_url: "http://localhost:8000/v1"
-    model_name: microsoft/Phi-3-mini-4k-instruct
-    max_tokens: 4096
+    model_name: nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1
 
 embedders:
   vllm_embedder:
