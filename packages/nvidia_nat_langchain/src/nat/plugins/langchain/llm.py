@@ -58,7 +58,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
     # will not include this.
     default_kwargs = {"stream_usage": True}
     exclude = {"type"}
-    if llm_config.model_name.startswith('o'):
+    if llm_config.model_name.startswith('o') or llm_config.model_name.startswith('gpt-5'):
         exclude.add("temperature")
 
     kwargs = {**default_kwargs, **llm_config.model_dump(exclude=exclude, by_alias=True)}

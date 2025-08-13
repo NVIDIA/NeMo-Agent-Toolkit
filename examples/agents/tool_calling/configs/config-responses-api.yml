@@ -24,22 +24,17 @@ llms:
     api_type: responses
 
 functions:
-  wikipedia_search:
-    _type: wiki_search
-    max_results: 3
   current_datetime:
     _type: current_datetime
-  code_generation:
-    _type: code_generation
-    programming_language: "Python"
-    description: "Useful to generate Python code. For any questions about code generation, you must only use this tool!"
-    llm_name: nim_llm
-    verbose: true
 
 workflow:
-  _type: tool_calling_agent
-  tool_names: [wikipedia_search, current_datetime, code_generation]
-  llm_name: nim_llm
+  _type: responses_api_agent
+  nat_tools: [current_datetime]
+  builtin_tools:
+    - type: code_interpreter
+      container:
+        type: "auto"
+  llm_name: openai_llm
   verbose: true
   handle_tool_errors: true
 
