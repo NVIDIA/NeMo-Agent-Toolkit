@@ -17,6 +17,9 @@
         },
         {
             "pattern": "^https://docs\\.nvidia\\.com/nemo/agent-toolkit"
+        },
+        {
+            "pattern": "^https://media\\.githubusercontent\\.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner\\.png"
         }
     ]
 }
