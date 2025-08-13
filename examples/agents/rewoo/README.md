@@ -17,15 +17,52 @@ limitations under the License.
 
 # ReWOO Agent Example
 
-This example demonstrates how to use A configurable [ReWOO](https://arxiv.org/abs/2305.18323) (Reasoning WithOut Observation) Agent with the AIQ toolkit. For this purpose AIQ toolkit provides a [`rewoo_agent`](../../../docs/source/workflows/about/rewoo-agent.md) workflow type.
+This example demonstrates how to use A configurable [ReWOO](https://arxiv.org/abs/2305.18323) (Reasoning WithOut Observation) Agent with the NeMo Agent toolkit. For this purpose NeMo Agent toolkit provides a [`rewoo_agent`](../../../docs/source/workflows/about/rewoo-agent.md) workflow type.
+
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Graph Structure](#graph-structure)
+- [Installation and Setup](#installation-and-setup)
+  - [Install this Workflow](#install-this-workflow)
+  - [Set Up API Keys](#set-up-api-keys)
+- [Run the Workflow](#run-the-workflow)
+  - [Starting the NeMo Agent Toolkit Server](#starting-the-nemo-agent-toolkit-server)
+  - [Making Requests to the NeMo Agent Toolkit Server](#making-requests-to-the-nemo-agent-toolkit-server)
+  - [Evaluating the ReWOO Agent Workflow](#evaluating-the-rewoo-agent-workflow)
+
+## Key Features
+
+- **ReWOO Agent Architecture:** Demonstrates the unique `rewoo_agent` workflow type that implements Reasoning Without Observation, separating planning, execution, and solving into distinct phases.
+- **Three-Node Graph Structure:** Uses a distinctive architecture with Planner Node (creates complete execution plan), Executor Node (executes tools systematically), and Solver Node (synthesizes final results).
+- **Systematic Tool Execution:** Shows how ReWOO first plans all necessary steps upfront, then executes them systematically without dynamic re-planning, leading to more predictable tool usage patterns.
+- **Calculator and Internet Search Integration:** Includes `calculator_inequality` and `internet_search` tools to demonstrate multi-step reasoning that requires both mathematical computation and web research.
+- **Plan-Execute-Solve Pattern:** Demonstrates the ReWOO approach of complete upfront planning followed by systematic execution and final result synthesis.
+
+## Graph Structure
+
+The ReWOO agent uses a unique three-node graph architecture that separates planning, execution, and solving into distinct phases. The following diagram illustrates the agent's workflow:
+
+<div align="center">
+<img src="../../../docs/source/_static/rewoo_agent.png" alt="ReWOO Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+</div>
+
+**Workflow Overview:**
+- **Start**: The agent begins processing with user input
+- **Planner Node**: Creates a complete execution plan with all necessary steps upfront
+- **Executor Node**: Executes tools according to the plan, looping until all steps are completed
+- **Solver Node**: Takes all execution results and generates the final answer
+- **End**: Process completes with the final response
+
+This architecture differs from other agents by separating reasoning (planning) from execution, allowing for more systematic and predictable tool usage patterns. The ReWOO approach first plans all steps, then executes them systematically, and finally synthesizes the results.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
-### Install this Workflow:
+### Install this Workflow
 
-From the root directory of the AIQ toolkit library, run the following commands:
+From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
 uv sync --all-groups --all-extras
@@ -43,33 +80,20 @@ Prior to using the `tavily_internet_search` tool, create an account at [`tavily.
 ```bash
 export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 ```
----
 
-Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
+## Run the Workflow
+
+Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run  --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
+aiq run --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
 ```
 
-**Expected Output**
-
+**Expected Workflow Output**
 ```console
-$ aiq run  --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
-2025-04-23 15:02:08,778 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (498.780251 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:02:09,024 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/agents/rewoo/configs/config.yml'
-2025-04-23 15:02:09,032 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-2025-04-23 15:02:09,088 - haystack.tracing.tracer - INFO - Auto-enabled tracing for 'OpenTelemetryTracer'
+<snipped for brevity>
 
-Configuration Summary:
---------------------
-Workflow Type: rewoo_agent
-Number of Functions: 6
-Number of LLMs: 1
-Number of Embedders: 0
-Number of Memory: 0
-Number of Retrievers: 0
-
-2025-04-23 15:02:11,038 - aiq.agent.rewoo_agent.agent - INFO - ReWOO agent planner output:
+- ReWOO agent planner output:
 ------------------------------
 [AGENT]
 Agent input: Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?
@@ -142,11 +166,10 @@ Workflow Result:
 ['Athens']
 --------------------------------------------------
 ```
----
 
-### Starting the AIQ Toolkit Server
+### Starting the NeMo Agent Toolkit Server
 
-You can start the AIQ toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 **Starting the ReWOO Agent Example Workflow**
 
@@ -154,7 +177,7 @@ You can start the AIQ toolkit server using the `aiq serve` command with the appr
 aiq serve --config_file=examples/agents/rewoo/configs/config.yml
 ```
 
-### Making Requests to the AIQ Toolkit Server
+### Making Requests to the NeMo Agent Toolkit Server
 
 Once the server is running, you can make HTTP requests to interact with the workflow.
 

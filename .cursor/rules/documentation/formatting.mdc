@@ -1,0 +1,171 @@
+---
+description: 
+globs: **/*.md
+alwaysApply: false
+---
+# Formatting Guidelines
+
+Use consistent formatting to help convey meaning and improve readability. All formatting should be consistent throughout technical content.
+
+## Formatting Reference
+
+### Code and Technical Elements
+
+#### Code Samples and Command-Line Arguments
+- **Format**: Monospaced font (markdown code blocks or inline code)
+- **Example**: 
+  ```
+  npm install @nvidia/aicore
+  ```
+- **Inline example**: Use `npm install` to add packages
+
+#### Configuration File Parameters
+- **Format**: Inline monospaced font
+- **Example**: Set the `timeout` parameter to `30`
+
+#### Expressions and Code Variables
+- **Format**: Inline monospaced font
+- **Example**: Ensure `delay > 10` evaluates to True
+
+#### File Names
+- **Format**: Inline monospaced font
+- **Example**: Navigate to the `config.json` file
+
+#### File Paths and Directories
+- **Format**: Inline monospaced font
+- **Variables**: Surround changeable variables with angle brackets
+- **Example (correct)**: `/home/<username>/.login`
+- **Example (incorrect)**: `/home/[username]/.login`
+
+#### Knowledge Objects (fields, event types, lookups, tags, etc.)
+- **Format**: Inline monospaced font
+- **Example**: The default field `index` identifies the index location
+
+#### Source Types
+- **Format**: Inline monospaced font
+- **Example**: This entry defines the `access_combined` source type
+
+#### Simple XML Elements
+- **Format**: Inline monospaced font
+- **Example**: Find the `<title>all</title>` element
+
+#### REST API Requests and Responses
+- **Format**: Monospaced font block (code blocks)
+
+#### Simple XML Source Code
+- **Format**: Monospaced font block (code blocks)
+
+### User Interface Elements
+
+#### Menu Items and UI Elements
+- **Format**: Italic text
+- **Examples**: 
+  - Select *Settings* > *Data Inputs*
+  - In the *Name* field, enter your name
+  - Click the *Save* button
+
+#### User Input and Actions
+- **Format**: Bold text
+- **Examples**:
+  - For the *Destination* field, enter **ca_counties**
+  - From the *Set Source* step, click **Timestamp**
+
+#### Keyboard Shortcuts
+- **Format**: No special formatting
+- **Example**: Press Ctrl+Alt+Delete
+
+### Text Formatting
+
+#### Guide Titles and Document References
+- **Format**: Italic text
+- **Example**: Refer to the *Quick Start Guide*
+
+#### Domain-Specific Terms
+- **Format**: Italic text on first use or when emphasis is needed
+- **Example**: Access permissions are handled through *projects*, *applications*, and *roles*
+- **Note**: Don't capitalize unless it's a proper name
+
+#### In-text Emphasis
+- **Format**: Italic text
+- **Examples**:
+  - What users did *after* a starting event
+  - What users did *before* an ending event
+
+#### Error Messages
+- **Format**: Quotation marks
+- **Examples**:
+  - If you see "Invalid input value," the add-on was unable to generate a certificate
+  - The payload is keyed with "d" whose value is an array
+
+#### Offset Words (not part of sentence meaning)
+- **Format**: Quotation marks
+- **Example**: Search for "Query Tables" on the website
+
+#### Speech and Dialogue
+- **Format**: Quotation marks
+- **Examples**:
+  - User speech: "Hey Riva"
+  - Bot response: "My name is Riva. I was created by engineers at NVIDIA."
+
+### Special Cases
+
+#### User Roles and Capabilities
+- **Format**: No special formatting
+- **Examples**:
+  - You need the admin role to configure settings
+  - If the user holds the admin_all_objects capability
+
+#### Variables in Paths
+- **Format**: Angle brackets (< >)
+- **Example (correct)**: `/home/<username>/.login`
+- **Example (incorrect)**: `/home/[username]/.login`
+
+#### Equations
+- **Format**: MathML for complex equations
+- **Simple expressions**: Use inline code formatting
+
+#### Article Citations
+- **Format**: APA style
+- **Example**: Include proper author, year, title, and source information
+
+## Formatting Best Practices
+
+### Consistency Rules
+- Use the same formatting for the same type of element throughout a document
+- Don't mix formatting styles (e.g., don't use both bold and italic for the same purpose)
+- Follow the hierarchy: headings, subheadings, body text, code, emphasis
+
+### Readability Guidelines
+- Use formatting to enhance meaning, not just for decoration
+- Don't overuse formatting - too much emphasis reduces impact
+- Leave white space around formatted elements for better readability
+- Group related formatted elements together
+
+### Code Formatting
+- Use syntax highlighting when available
+- Keep code examples concise and focused
+- Include only relevant parts of longer code samples
+- Use comments in code to explain complex parts
+- Format code consistently with project standards
+
+### UI Element Formatting
+- Match the exact capitalization and spelling of UI elements
+- Use consistent formatting for similar UI elements (all buttons bold, all menus italic)
+- Include enough context to help users locate elements
+- Use parallel structure when listing UI steps
+
+## Common Formatting Mistakes
+
+### Don't Do These
+- Don't use quotation marks for emphasis (use italic instead)
+- Don't use ALL CAPS for emphasis
+- Don't mix square brackets [ ] and angle brackets < > for variables
+- Don't use bold for code elements (use monospace instead)
+- Don't skip formatting for technical terms that need it
+- Don't overformat simple text
+
+### Alternative Approaches
+- Instead of "IMPORTANT", use **Important** or *Important*
+- Instead of [variable], use `<variable>`
+- Instead of **code**, use `code`
+- Instead of plain text for filenames, use `filename.txt`

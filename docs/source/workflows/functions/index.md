@@ -17,9 +17,9 @@ limitations under the License.
 
 # Functions
 
-Functions (tools) are the main building blocks of AIQ toolkit and define the logic of your workflow.
+Functions (tools) are the main building blocks of NeMo Agent toolkit and define the logic of your workflow.
 
-In AIQ toolkit, functions are a core abstraction that offer type-safe, asynchronous operations with support for both single and streaming outputs. They wrap callable objects (like Python functions or coroutines) and enhance them with:
+In NeMo Agent toolkit, functions are a core abstraction that offer type-safe, asynchronous operations with support for both single and streaming outputs. They wrap callable objects (like Python functions or coroutines) and enhance them with:
 
 * Type validation and conversion
 * Schema-based input/output validation via Pydantic models
@@ -55,8 +55,8 @@ These schemas are Pydantic BaseModel classes that provide runtime validation and
 ### Asynchronous Operation
 
 All function operations are asynchronous. To invoke a function, use one of the following methods:
-- {py:meth}`~aiq.builder.function.Function.ainvoke` - For single output operations
-- {py:meth}`~aiq.builder.function.Function.astream` - For streaming output operations
+- {py:meth}`~nat.builder.function.Function.ainvoke` - For single output operations
+- {py:meth}`~nat.builder.function.Function.astream` - For streaming output operations
 
 Using asynchronous operations allows for better performance and scalability when processing a large number of functions in parallel. In most cases, applications that integrate LLMs are IO bound and can benefit from cooperative multitasking. Asynchronous operations also provide a natural mechanism (using `ContextVar`s) for maintaining application state between multiple function invocations simultaneously.
 
