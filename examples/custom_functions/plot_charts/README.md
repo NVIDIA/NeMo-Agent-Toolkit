@@ -41,7 +41,7 @@ A simple and reusable example that demonstrates creating charts from data using 
 
 ## Installation and Setup
 
-### Setup Virtual Environment and Install NeMo Agent toolkit
+### Setup Virtual Environment and Install NeMo Agent Toolkit
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
