@@ -169,7 +169,6 @@ members = ["packages/*"]
 exclude = ["packages/compat"]
 
 [dependency-groups]
-# Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
   "nvidia-nat_test",
   "asgi-lifespan~=2.1",
@@ -186,12 +185,13 @@ dev = [
   "pytest-pretty~=1.2.0",
   "pytest~=8.3",
   "python-docx~=1.1.0",
+  "ruff~=0.12",
   "setuptools >= 64",
   "setuptools_scm>=8",
   "tomlkit~=0.13.2",
   "twine~=6.0",
   "yapf==0.43.*",
-]
+] # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 
 docs = [
   "ipython~=8.31",
