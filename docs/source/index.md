@@ -146,5 +146,5 @@ Code of Conduct <./resources/code-of-conduct.md>
 Contributing <./resources/contributing.md>
 ./resources/running-ci-locally.md
 ./support.md
-./resources/licensing
+./resources/licensing.md
 ```

@@ -98,8 +98,10 @@ usage: langchain_web_ingest.py [-h] [--urls URLS] [--collection_name COLLECTION_
 
 options:
 -h, --help            show this help message and exit
---urls URLS           Urls to scrape for RAG context (default: ['https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html', 'https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html', 'https://docs.nvidia.com/cuda/cuda-c-
-                        best-practices-guide/index.html', 'https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html'])
+--urls URLS           Urls to scrape for RAG context (default: ['https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html',
+                                                                'https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html',
+                                                                'https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html',
+                                                                'https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html'])
 --collection_name COLLECTION_NAME, -n COLLECTION_NAME
                         Collection name for the data. (default: cuda_docs)
 --milvus_uri MILVUS_URI, -u MILVUS_URI

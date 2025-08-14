@@ -63,7 +63,7 @@ The completed code for this example can be found in the `examples/documentation_
 <!-- path-check-skip-next-line -->
 By convention, tool implementations are defined within or imported into the `register.py` file. In this example, the tool implementation exists within the `text_file_ingest_function.py` file and is imported into the `register.py` file. The `pyproject.toml` file contains the package metadata and dependencies for the tool. The `text_file_ingest_function.py` that was created for us will contain a configuration object (`TextFileIngestFunctionConfig`) along with the tool function (`text_file_ingest_function`). The next two sections will walk through customizing these.
 
-<!-- path-check-skip-next-line -->
+<!-- path-check-skip-begin -->
 Many of these tools contain an associated workflow configuration file stored in a `config` directory, along with example data stored in a `data` directory. Since these tools are installable Python packages and the workflow configuration file and data must be included in the package, they need to be located under the `examples/text_file_ingest/src/text_file_ingest` directory. For convenience, symlinks can be created at the root of the project directory pointing to the actual directories. Lastly, a `README.md` file is often included in the root of the project. Resulting in a directory structure similar to the following:
 ```
 examples/
@@ -91,6 +91,7 @@ ln -s src/text_file_ingest/data
 ln -s src/text_file_ingest/configs
 popd
 ```
+<!-- path-check-skip-end -->
 
 ## Customizing the Configuration Object
 Given that the purpose of this tool will be similar to that of the `webpage_query` tool, you can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/getting_started/simple_web_query/src/nat_simple_web_query/register.py`:

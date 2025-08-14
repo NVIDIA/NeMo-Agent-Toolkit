@@ -274,7 +274,7 @@ Note: In your evaluation dataset, make sure that the `answer` field is a descrip
 
 **Sample Usage:**
 ```bash
-nat eval --config_file=examples/getting_started/simple_web_query/configs/config-tunable-rag-eval.yml
+aiq eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
 ```
 
 ## Adding Custom Evaluators
