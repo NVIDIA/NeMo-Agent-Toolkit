@@ -31,7 +31,17 @@ async def aws_bedrock_crewai(llm_config: AWSBedrockModelConfig, _builder: Builde
 
     from crewai import LLM
 
-    client = LLM(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+    config_obj = {
+        **llm_config.model_dump(exclude={"type"}, by_alias=True),
+    }
+
+    if "AWS_DEFAULT_REGION" not in os.environ:
+        if llm_config.region_name is None:
+            llm_config.region_name = os.getenv("AWS_REGION_NAME")
+        if llm_config.region_name is not None:
+            os.environ["AWS_DEFAULT_REGION"] = llm_config.region_name
+
+    client = LLM(**config_obj)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,

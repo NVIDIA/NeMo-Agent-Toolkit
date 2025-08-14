@@ -87,6 +87,7 @@ You can use the following environment variables to configure the AWS Bedrock LLM
 
 * `AWS_ACCESS_KEY_ID` - The AWS access key ID to access AWS resources
 * `AWS_SECRET_ACCESS_KEY` - The AWS secret access key to access AWS resources
+* `AWS_REGION_NAME` - The AWS region name to access AWS resources
 
 The AWS Bedrock LLM provider is defined by the {py:class}`~nat.llm.aws_bedrock_llm.AWSBedrockModelConfig` class.
 

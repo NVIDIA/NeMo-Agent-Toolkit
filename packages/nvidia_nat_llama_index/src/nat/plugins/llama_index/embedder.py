@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_embedder_client
@@ -29,7 +31,9 @@ async def aws_bedrock_llama_index(embedder_config: AWSBedrockEmbedderModelConfig
 
     from llama_index.embeddings.bedrock import BedrockEmbedding
 
-    client = BedrockEmbedding(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
+    client = BedrockEmbedding.from_credentials(aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                                               aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                                               aws_region=os.getenv("AWS_REGION_NAME"))
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,
