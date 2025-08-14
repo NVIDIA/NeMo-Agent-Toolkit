@@ -3601,7 +3601,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "nat-por-to-jiratickets" },
+    { name = "nat-por-to-jiratickets", editable = "examples/HITL/por_to_jiratickets" },
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "nvidia-nat", extras = ["langchain"], editable = "." },
 ]
