@@ -25,56 +25,31 @@ class OptimizerMetric(BaseModel):
     weight: float = Field(description="Weight of the metric in the optimization process.", default=1.0)
 
 
-class OptimizerConfig(BaseModel):
+class NumericOptimizationConfig(BaseModel):
     """
-    Parameters used by the workflow optimizer.
+    Configuration for numeric/enum optimization (Optuna).
     """
-    output_path: Path | None = Field(
-        default=None,
-        description="Path to the output directory where the results will be saved.",
-    )
+    enabled: bool = Field(default=True, description="Enable numeric optimization")
+    n_trials: int = Field(description="Number of trials for numeric optimization.", default=20)
 
-    eval_metrics: dict[str, OptimizerMetric] | None = Field(description="List of evaluation metrics to optimize.",
-                                                            default=None)
 
-    n_trials_numeric: int = Field(description="Number of trials for the optimization.", default=20)
-
-    n_trials_prompt: int = Field(description="Number of trials for the prompt optimization.", default=20)
-
-    reps_per_param_set: int = Field(default=3,
-                                    description="Number of repetitions per parameter set for the optimization.")
-
-    target: float | None = Field(description="Target value for the optimization. "
-                                 "If set, the optimization will stop when this value is reached.",
-                                 default=None)
-
-    do_prompt_optimization: bool = Field(
-        description="Flag to indicate if prompt optimization should be performed.",
-        default=False,
-    )
-
-    do_numeric_optimization: bool = Field(
-        description="Flag to indicate if numeric optimization should be performed.",
-        default=True,
-    )
-
-    num_feedback: int = Field(default=3, description="Number of feedbacks to use for the optimization.")
-
-    multi_objective_combination_mode: str = Field(
-        description="Method to combine multiple objectives into a single score.",
-        default="harmonic",
-    )
+class PromptGAOptimizationConfig(BaseModel):
+    """
+    Configuration for prompt optimization using a Genetic Algorithm.
+    """
+    enabled: bool = Field(default=False, description="Enable GA-based prompt optimization")
 
     # Prompt optimization function hooks
     prompt_population_init_function: str | None = Field(
         default=None,
-        description=("Optional function name to initialize candidate prompts. "))
+        description="Optional function name to initialize/mutate candidate prompts.",
+    )
     prompt_recombination_function: str | None = Field(
         default=None,
         description="Optional function name to recombine two parent prompts into a child.",
     )
 
-    # Genetic algorithm configuration (for prompt optimization)
+    # Genetic algorithm configuration
     ga_population_size: int = Field(
         description="Population size for genetic algorithm prompt optimization.",
         default=24,
@@ -120,6 +95,42 @@ class OptimizerConfig(BaseModel):
         default=0.0,
         ge=0.0,
     )
+
+
+class OptimizerConfig(BaseModel):
+    """
+    Parameters used by the workflow optimizer.
+    """
+    output_path: Path | None = Field(
+        default=None,
+        description="Path to the output directory where the results will be saved.",
+    )
+
+    eval_metrics: dict[str, OptimizerMetric] | None = Field(
+        description="List of evaluation metrics to optimize.",
+        default=None,
+    )
+
+    reps_per_param_set: int = Field(
+        default=3,
+        description="Number of repetitions per parameter set for the optimization.",
+    )
+
+    target: float | None = Field(
+        description=(
+            "Target value for the optimization. If set, the optimization will stop when this value is reached."
+        ),
+        default=None,
+    )
+
+    multi_objective_combination_mode: str = Field(
+        description="Method to combine multiple objectives into a single score.",
+        default="harmonic",
+    )
+
+    # Nested configs
+    numeric: NumericOptimizationConfig = NumericOptimizationConfig()
+    prompt: PromptGAOptimizationConfig = PromptGAOptimizationConfig()
 
 
 class OptimizerRunConfig(BaseModel):

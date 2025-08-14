@@ -104,24 +104,27 @@ Here is an example of an `optimizer` section in a YAML configuration file:
 ```yaml
 optimizer:
   output_path: "optimizer_results"
-  # Numeric optimization (Optuna)
-  do_numeric_optimization: true
-  n_trials_numeric: 50
 
-  # Prompt optimization (Genetic Algorithm)
-  do_prompt_optimization: true
-  ga_population_size: 16
-  ga_generations: 8
-  ga_offspring_size: 12        # optional; defaults to pop_size - elitism
-  ga_crossover_rate: 0.7
-  ga_mutation_rate: 0.2
-  ga_elitism: 2
-  ga_selection_method: "tournament"  # or "roulette"
-  ga_tournament_size: 3
-  ga_parallel_evaluations: 8
-  ga_diversity_lambda: 0.0
-  prompt_population_init_function: "prompt_optimizer"
-  prompt_recombination_function: "prompt_recombiner"   # optional
+  # Numeric (Optuna)
+  numeric:
+    enabled: true
+    n_trials: 50
+
+  # Prompt (Genetic Algorithm)
+  prompt:
+    enabled: true
+    prompt_population_init_function: "prompt_optimizer"
+    prompt_recombination_function: "prompt_recombiner"  # optional
+    ga_population_size: 16
+    ga_generations: 8
+    ga_offspring_size: 12        # optional; defaults to pop_size - elitism
+    ga_crossover_rate: 0.7
+    ga_mutation_rate: 0.2
+    ga_elitism: 2
+    ga_selection_method: "tournament"  # or "roulette"
+    ga_tournament_size: 3
+    ga_parallel_evaluations: 8
+    ga_diversity_lambda: 0.0
 
   # Evaluation
   reps_per_param_set: 5
@@ -142,19 +145,21 @@ This is the main configuration object for the optimizer.
 
 -   `output_path: Path | None`: The directory where optimization results will be saved, for example, `optimizer_results/`. Defaults to `None`.
 -   `eval_metrics: dict[str, OptimizerMetric] | None`: A dictionary of evaluation metrics to optimize. The keys are custom names for the metrics, and the values are `OptimizerMetric` objects.
--   `n_trials_numeric: int`: The number of trials for numeric optimization. A larger number of trials increases the chance of finding a better optimum but takes longer to run. Defaults to `20`.
--   `ga_population_size: int`: Population size for GA prompt optimization. Larger populations increase diversity but cost more per generation. Defaults to `10`.
--   `ga_generations: int`: Number of generations for GA prompt optimization. Logically equivalent to `n_trials_numeric`. Defaults to `5`.
--   `ga_offspring_size: int | None`: Number of offspring produced per generation. If `null`, defaults to `ga_population_size - ga_elitism`.
--   `ga_crossover_rate: float`: Probability of recombination between two parents for each prompt parameter. Defaults to `0.7`.
--   `ga_mutation_rate: float`: Probability of mutating a child's prompt parameter using the LLM optimizer. Defaults to `0.1`.
--   `ga_elitism: int`: Number of elite individuals copied unchanged to the next generation. Defaults to `1`.
--   `ga_selection_method: str`: Parent selection scheme. `tournament` (default) or `roulette`.
--   `ga_tournament_size: int`: Tournament size when `ga_selection_method` is `tournament`. Defaults to `3`.
--   `ga_parallel_evaluations: int`: Maximum number of concurrent evaluations. Controls async concurrency. Defaults to `8`.
--   `ga_diversity_lambda: float`: Diversity penalty strength to discourage duplicate prompt sets. `0.0` disables it. Defaults to `0.0`.
--   `prompt_population_init_function: str | None`: Function name used to mutate base prompts to seed the initial population and perform mutations.
--   `prompt_recombination_function: str | None`: Optional function name used to recombine two parent prompts into a child prompt.
+-   `numeric.enabled: bool`: Enable numeric optimization (Optuna). Defaults to `true`.
+-   `numeric.n_trials: int`: Number of numeric trials. Defaults to `20`.
+-   `prompt.enabled: bool`: Enable GA-based prompt optimization. Defaults to `false`.
+-   `prompt.ga_population_size: int`: Population size for GA prompt optimization. Larger populations increase diversity but cost more per generation. Defaults to `10`.
+-   `prompt.ga_generations: int`: Number of generations for GA prompt optimization. Replaces `n_trials_prompt`. Defaults to `5`.
+-   `prompt.ga_offspring_size: int | null`: Number of offspring produced per generation. If `null`, defaults to `ga_population_size - ga_elitism`.
+-   `prompt.ga_crossover_rate: float`: Probability of recombination between two parents for each prompt parameter. Defaults to `0.7`.
+-   `prompt.ga_mutation_rate: float`: Probability of mutating a child's prompt parameter using the LLM optimizer. Defaults to `0.1`.
+-   `prompt.ga_elitism: int`: Number of elite individuals copied unchanged to the next generation. Defaults to `1`.
+-   `prompt.ga_selection_method: str`: Parent selection scheme. `tournament` (default) or `roulette`.
+-   `prompt.ga_tournament_size: int`: Tournament size when `ga_selection_method` is `tournament`. Defaults to `3`.
+-   `prompt.ga_parallel_evaluations: int`: Maximum number of concurrent evaluations. Controls async concurrency. Defaults to `8`.
+-   `prompt.ga_diversity_lambda: float`: Diversity penalty strength to discourage duplicate prompt sets. `0.0` disables it. Defaults to `0.0`.
+-   `prompt.prompt_population_init_function: str | null`: Function name used to mutate base prompts to seed the initial population and perform mutations.
+-   `prompt.prompt_recombination_function: str | null`: Optional function name used to recombine two parent prompts into a child prompt.
 -   `reps_per_param_set: int`: The number of times to run the workflow for each set of parameters to get a more stable evaluation. This is important for noisy evaluations where the result might vary even with the same parameters. Defaults to `3`.
 -   `target: float | None`: If set, the optimization will stop when the combined score for a trial reaches this value. This is useful if you have a specific performance target and want to save time. The score is normalized between 0 and 1. Defaults to `None`.
 -   `do_prompt_optimization: bool`: A flag to enable or disable prompt optimization. Use this when you want the optimizer to experiment with different phrasings of your prompts to improve performance. Defaults to `False`.

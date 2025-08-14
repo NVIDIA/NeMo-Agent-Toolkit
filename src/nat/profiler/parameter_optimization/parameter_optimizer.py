@@ -15,7 +15,7 @@
 
 import asyncio
 import logging
-from typing import Dict
+from collections.abc import Mapping as Dict  # deprecations workaround for typing.Dict
 
 import optuna
 import yaml
@@ -74,7 +74,7 @@ def optimize_parameters(
         suggestions = {p: spec.suggest(trial, p) for p, spec in space.items()}
         cfg_trial = apply_suggestions(base_cfg, suggestions)
 
-        async def _single_eval(trial_idx: int) -> list[float]:
+        async def _single_eval(trial_idx: int) -> list[float]:  # noqa: ARG001
             eval_cfg = EvaluationRunConfig(
                 config_file=cfg_trial,
                 dataset=opt_run_config.dataset,
@@ -104,7 +104,7 @@ def optimize_parameters(
         return [sum(run[i] for run in all_scores) / reps for i in range(len(eval_metrics))]
 
     logger.info("Starting numeric / enum parameter optimization...")
-    study.optimize(_objective, n_trials=optimizer_config.n_trials_numeric)
+    study.optimize(_objective, n_trials=optimizer_config.numeric.n_trials)
     logger.info("Numeric optimization finished")
 
     best_params = pick_trial(

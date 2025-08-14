@@ -105,16 +105,18 @@ optimizer:
         evaluator_name: rag_relevance
         direction: maximize
 
-  n_trials_numeric: 3
-  do_numeric_optimization: false
+  numeric:
+    enabled: true
+    n_trials: 3
 
-  do_prompt_optimization: true
-  prompt_population_init_function: prompt_init
-  prompt_recombination_function: prompt_recombination
-  ga_generations: 3
-  ga_population_size: 5
-  ga_diversity_lambda: 0.3
-  ga_parallel_evaluations: 1
+  prompt:
+    enabled: true
+    prompt_population_init_function: prompt_init
+    prompt_recombination_function: prompt_recombination
+    ga_generations: 3
+    ga_population_size: 5
+    ga_diversity_lambda: 0.3
+    ga_parallel_evaluations: 1
 
 
 

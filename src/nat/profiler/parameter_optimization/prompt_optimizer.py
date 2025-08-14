@@ -181,7 +181,7 @@ async def optimize_prompts(
     async with WorkflowBuilder(general_config=base_cfg.general, registry=None) as builder:
         await builder.populate_builder(base_cfg)
         init_fn_name = (
-            optimizer_config.prompt_population_init_function
+            optimizer_config.prompt.prompt_population_init_function
         )
         if not init_fn_name:
             raise ValueError(
@@ -190,26 +190,29 @@ async def optimize_prompts(
         init_fn = builder.get_function(init_fn_name)
 
         recombine_fn = None
-        if optimizer_config.prompt_recombination_function:
-            recombine_fn = builder.get_function(optimizer_config.prompt_recombination_function)
+        if optimizer_config.prompt.prompt_recombination_function:
+            recombine_fn = builder.get_function(optimizer_config.prompt.prompt_recombination_function)
 
         logger.info(
             "GA Prompt optimization ready: init_fn=%s, recombine_fn=%s",
             init_fn_name,
-            optimizer_config.prompt_recombination_function,
+            optimizer_config.prompt.prompt_recombination_function,
         )
 
         # ------------- GA parameters ------------- #
-        pop_size = max(2, int(optimizer_config.ga_population_size))
-        generations = max(1, int(optimizer_config.ga_generations))
-        offspring_size = optimizer_config.ga_offspring_size or max(0, pop_size - optimizer_config.ga_elitism)
-        crossover_rate = float(optimizer_config.ga_crossover_rate)
-        mutation_rate = float(optimizer_config.ga_mutation_rate)
-        elitism = max(0, int(optimizer_config.ga_elitism))
-        selection_method = optimizer_config.ga_selection_method.lower()
-        tournament_size = max(2, int(optimizer_config.ga_tournament_size))
-        max_eval_concurrency = max(1, int(optimizer_config.ga_parallel_evaluations))
-        diversity_lambda = float(optimizer_config.ga_diversity_lambda)
+        pop_size = max(2, int(optimizer_config.prompt.ga_population_size))
+        generations = max(1, int(optimizer_config.prompt.ga_generations))
+        offspring_size = (
+            optimizer_config.prompt.ga_offspring_size
+            or max(0, pop_size - optimizer_config.prompt.ga_elitism)
+        )
+        crossover_rate = float(optimizer_config.prompt.ga_crossover_rate)
+        mutation_rate = float(optimizer_config.prompt.ga_mutation_rate)
+        elitism = max(0, int(optimizer_config.prompt.ga_elitism))
+        selection_method = optimizer_config.prompt.ga_selection_method.lower()
+        tournament_size = max(2, int(optimizer_config.prompt.ga_tournament_size))
+        max_eval_concurrency = max(1, int(optimizer_config.prompt.ga_parallel_evaluations))
+        diversity_lambda = float(optimizer_config.prompt.ga_diversity_lambda)
 
         # ------------- population init ------------- #
         async def _mutate_prompt(original_prompt: str, purpose: str) -> str:

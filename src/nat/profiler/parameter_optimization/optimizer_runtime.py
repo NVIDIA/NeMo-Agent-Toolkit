@@ -44,7 +44,7 @@ async def optimize_config(opt_run_config: OptimizerRunConfig):
 
     # ---------------- 3. numeric / enum tuning ----------- #
     tuned_cfg = base_cfg
-    if base_cfg.optimizer.do_numeric_optimization:
+    if base_cfg.optimizer.numeric.enabled:
         tuned_cfg = optimize_parameters(
             base_cfg=base_cfg,
             full_space=full_space,
@@ -53,7 +53,7 @@ async def optimize_config(opt_run_config: OptimizerRunConfig):
         )
 
     # ---------------- 4. prompt optimization ------------- #
-    if base_cfg.optimizer.do_prompt_optimization:
+    if base_cfg.optimizer.prompt.enabled:
         await optimize_prompts(
             base_cfg=tuned_cfg,
             full_space=full_space,
