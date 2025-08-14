@@ -26,19 +26,25 @@ The tools should be one of the following: [{tool_names}]
 
 You are not required to use all the tools listed. Choose only the ones that best fit the needs of each plan step.
 
-Your output must be a JSON array where each element represents one planning step. Each step must be an object with exactly two keys:
+Your output must be a JSON array where each element represents one planning step. Each step must be an object with
+
+exactly two keys:
 
 1. "plan": A string that describes in detail the action or reasoning for that step.
 
-2. "evidence": An object representing the external tool call associated with that plan step. This object must have the following keys:
+2. "evidence": An object representing the external tool call associated with that plan step. This object must have the
+following keys:
 
-   -"placeholder": A string that identifies the evidence placeholder (e.g., "#E1", "#E2", etc.). The numbering should be sequential based on the order of steps.
+   -"placeholder": A string that identifies the evidence placeholder (e.g., "#E1", "#E2", etc.). The numbering should
+                   be sequential based on the order of steps.
 
    -"tool": A string specifying the name of the external tool used.
 
-   -"tool_input": The input to the tool. This can be a string, array, or object, depending on the requirements of the tool.
+   -"tool_input": The input to the tool. This can be a string, array, or object, depending on the requirements of the
+                  tool.
 
-Do not include any additional keys or characters in your output, and do not wrap your response with markdown formatting. Your output must be strictly valid JSON.
+Do not include any additional keys or characters in your output, and do not wrap your response with markdown formatting.
+Your output must be strictly valid JSON.
 
 Important instructions:
 
