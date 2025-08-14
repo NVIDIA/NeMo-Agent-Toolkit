@@ -54,6 +54,10 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/evaluation_and_profiling/simple_web_query_eval/data/",
     ),
     (
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/.*configs/",
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/data/",
+    ),
+    (
         r"^examples/evaluation_and_profiling/swe_bench/.*configs/",
         r"^examples/evaluation_and_profiling/swe_bench/data/",
     ),

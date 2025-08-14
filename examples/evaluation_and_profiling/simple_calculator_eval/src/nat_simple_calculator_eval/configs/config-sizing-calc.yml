@@ -46,7 +46,7 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: meta/llama-3.1-70b-instruct
     temperature: 0.2
     max_tokens: 2048
 
