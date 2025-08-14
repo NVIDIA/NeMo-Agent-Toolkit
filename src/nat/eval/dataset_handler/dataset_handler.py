@@ -15,10 +15,12 @@
 
 import json
 import math
+from pathlib import Path
 
 import pandas as pd
 
 from nat.data_models.dataset_handler import EvalDatasetConfig
+from nat.data_models.dataset_handler import EvalDatasetCustomConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -38,7 +40,7 @@ class DatasetHandler:
                  dataset_config: EvalDatasetConfig,
                  reps: int,
                  concurrency: int,
-                 num_passes: int | None = None,
+                 num_passes: int = 1,
                  adjust_dataset_size: bool = False):
         from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
 
@@ -184,6 +186,10 @@ class DatasetHandler:
         # if a dataset file has been provided in the command line, use that
         dataset_config = EvalDatasetJsonConfig(file_path=dataset) if dataset else self.dataset_config
 
+        # Handle custom dataset type with special processing
+        if isinstance(self.dataset_config, EvalDatasetCustomConfig):
+            return self._handle_custom_dataset(dataset)
+
         # Download the dataset if it is remote
         downloader = DatasetDownloader(dataset_config=dataset_config)
         downloader.download_dataset()
@@ -192,6 +198,19 @@ class DatasetHandler:
         # Parse the dataset into a DataFrame
         input_df = parser(dataset_config.file_path, **kwargs)
 
+        # Apply standard preprocessing and convert to EvalInput
+        return self._preprocess_eval_dataframe(input_df)
+
+    def _preprocess_dataframe(self, input_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Apply standard preprocessing to a DataFrame: filters, deduplication, repetitions, and size adjustment.
+
+        Args:
+            input_df: DataFrame to preprocess
+
+        Returns:
+            Preprocessed DataFrame
+        """
         # Apply filters and deduplicate
         input_df = self.dataset_filter.apply_filters(input_df)
         input_df.drop_duplicates(subset=[self.dataset_config.id_key], inplace=True)
@@ -205,12 +224,104 @@ class DatasetHandler:
         elif self.adjust_dataset_size:
             input_df = self.adjust_dataset(input_df)
 
-        # Convert the DataFrame to a list of EvalInput objects
-        return self.get_eval_input_from_df(input_df)
+        return input_df
+
+    def _preprocess_eval_dataframe(self, input_df: pd.DataFrame) -> EvalInput:
+        """
+        Apply standard preprocessing to a DataFrame and convert to EvalInput.
+
+        Args:
+            input_df: DataFrame to preprocess
+
+        Returns:
+            Preprocessed EvalInput object
+        """
+        processed_df = self._preprocess_dataframe(input_df)
+        return self.get_eval_input_from_df(processed_df)
+
+    def _preprocess_eval_input(self, eval_input: EvalInput) -> EvalInput:
+        """
+        Apply standard preprocessing to an EvalInput object.
+
+        Thin wrapper that converts EvalInput to DataFrame, processes it, and converts back.
+
+        Args:
+            eval_input: EvalInput object to preprocess
+
+        Returns:
+            Preprocessed EvalInput object
+        """
+        if not eval_input.eval_input_items:
+            return eval_input
+
+        input_df = self._eval_input_to_dataframe(eval_input)
+        return self._preprocess_eval_dataframe(input_df)
+
+    def _handle_custom_dataset(self, dataset: str | None) -> EvalInput:
+        """
+        Handle custom dataset type by calling the user-defined function
+        and applying standard preprocessing to the result.
+
+        Args:
+            dataset: Optional dataset file path from command line
+
+        Returns:
+            Preprocessed EvalInput object
+        """
+        # Determine input path - use command line dataset or config file_path
+        input_path = Path(dataset) if dataset else Path(self.dataset_config.file_path)
+
+        # Download the dataset if it is remote (for custom datasets too)
+        downloader = DatasetDownloader(dataset_config=self.dataset_config)
+        downloader.download_dataset()
+
+        # Load and call custom function
+        custom_function, kwargs = self.dataset_config.parser()
+
+        try:
+            # Call the custom function with file_path and kwargs
+            eval_input = custom_function(file_path=input_path, **kwargs)
+
+            if not isinstance(eval_input, EvalInput):
+                raise ValueError(f"Custom function must return an EvalInput object, "
+                                 f"but returned {type(eval_input)}")
+
+        except Exception as e:
+            raise RuntimeError(f"Error calling custom dataset function: {e}") from e
+
+        # Apply standard preprocessing (filters, deduplication, repetitions)
+        return self._preprocess_eval_input(eval_input)
+
+    def _eval_input_to_dataframe(self, eval_input: EvalInput) -> pd.DataFrame:
+        """
+        Convert an EvalInput object to a pandas DataFrame for processing.
+
+        Args:
+            eval_input: EvalInput object to convert
+
+        Returns:
+            DataFrame representation of the EvalInput
+        """
+        data = []
+        for item in eval_input.eval_input_items:
+            row = item.full_dataset_entry.copy() if item.full_dataset_entry else {}
+
+            # Ensure key fields are present
+            row[self.id_key] = item.id
+            if self.is_structured_input():
+                row[self.question_key] = item.input_obj
+                row[self.answer_key] = item.expected_output_obj
+                row[self.generated_answer_key] = item.output_obj
+                row[self.trajectory_key] = item.trajectory
+                row[self.expected_trajectory_key] = item.expected_trajectory
+
+            data.append(row)
+
+        return pd.DataFrame(data)
 
     def filter_intermediate_steps(self,
                                   intermediate_steps: list[IntermediateStep],
-                                  event_filter: list[IntermediateStepType] = None) -> list[dict]:
+                                  event_filter: list[IntermediateStepType] | None = None) -> list[dict]:
         """
         Filter out the intermediate steps that are not relevant for evaluation.
         The output is written with with the intention of re-running the evaluation using the original config file.
@@ -220,7 +331,9 @@ class DatasetHandler:
         filtered_steps = self.intermediate_step_adapter.filter_intermediate_steps(intermediate_steps, event_filter)
         return self.intermediate_step_adapter.serialize_intermediate_steps(filtered_steps)
 
-    def publish_eval_input(self, eval_input, workflow_output_step_filter: list[IntermediateStepType] = None) -> str:
+    def publish_eval_input(self,
+                           eval_input,
+                           workflow_output_step_filter: list[IntermediateStepType] | None = None) -> str:
         """
         Convert the EvalInput object to a JSON output for storing in a file. Use the orginal keys to
         allow re-running evaluation using the orignal config file and '--skip_workflow' option.

@@ -14,10 +14,13 @@
 # limitations under the License.
 
 import json
+import tempfile
+from pathlib import Path
 
 import pandas as pd
 import pytest
 
+from nat.data_models.dataset_handler import EvalDatasetCustomConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
 from nat.data_models.dataset_handler import EvalDatasetStructureConfig
 from nat.data_models.intermediate_step import IntermediateStep
@@ -151,6 +154,112 @@ def mock_swe_bench_input_df(dataset_swe_bench_id_key):
     }])
 
 
+@pytest.fixture
+def sample_nested_data():
+    """Fixture providing sample nested JSON data for testing."""
+    return {
+        "metadata": {
+            "dataset_name": "simple_calculator_test",
+            "version": "1.0",
+            "description": "Test dataset for calculator operations"
+        },
+        "configuration": {
+            "format": "nested", "encoding": "utf-8"
+        },
+        "questions": [{
+            "id": 1,
+            "question": "What is 2 + 3?",
+            "answer": "5",
+            "category": "addition",
+            "difficulty": "easy",
+            "tags": ["basic", "arithmetic"]
+        },
+                      {
+                          "id": 2,
+                          "question": "What is 12 * 7?",
+                          "answer": "84",
+                          "category": "multiplication",
+                          "difficulty": "medium",
+                          "tags": ["multiplication", "arithmetic"]
+                      },
+                      {
+                          "id": 3,
+                          "question": "What is 144 / 12?",
+                          "answer": "12",
+                          "category": "division",
+                          "difficulty": "medium",
+                          "tags": ["division", "arithmetic"]
+                      },
+                      {
+                          "id": 4,
+                          "question": "What is 15 - 8?",
+                          "answer": "7",
+                          "category": "subtraction",
+                          "difficulty": "easy",
+                          "tags": ["subtraction", "arithmetic"]
+                      },
+                      {
+                          "id": 5,
+                          "question": "What is 25 * 25?",
+                          "answer": "625",
+                          "category": "multiplication",
+                          "difficulty": "hard",
+                          "tags": ["multiplication", "square"]
+                      }]
+    }
+
+
+@pytest.fixture
+def temp_nested_json_file(sample_nested_data):
+    """Create a temporary JSON file with sample data."""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(sample_nested_data, f)
+        temp_path = Path(f.name)
+
+    yield temp_path
+
+    # Cleanup
+    temp_path.unlink()
+
+
+def sample_custom_parser(file_path: Path, difficulty: str = "") -> EvalInput:
+    """
+    Test implementation of a custom dataset parser that:
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    # Extract questions array from the nested structure
+    questions = data.get('questions', [])
+
+    # Apply filtering if specified
+    if difficulty:
+        filtered_questions = []
+        for question in questions:
+            # Check if filter_by_tag matches category or difficulty (case insensitive)
+            if question.get('difficulty', '').lower() == difficulty.lower():
+                filtered_questions.append(question)
+        questions = filtered_questions
+
+    eval_items = []
+
+    for item in questions:
+        eval_item = EvalInputItem(id=item['id'],
+                                  input_obj=item['question'],
+                                  expected_output_obj=item['answer'],
+                                  full_dataset_entry=item)
+        eval_items.append(eval_item)
+
+    return EvalInput(eval_input_items=eval_items)
+
+
+@pytest.fixture
+def custom_dataset_config():
+    """Fixture for dataset configuration."""
+    function_str = f"{__name__}.sample_custom_parser"
+    return EvalDatasetCustomConfig(function=function_str, kwargs={"difficulty": "medium"})
+
+
 def test_get_eval_input_from_df_with_additional_fields(mock_input_df_with_extras,
                                                        input_entry_with_extras,
                                                        dataset_id_key,
@@ -221,7 +330,7 @@ def test_get_eval_input_from_swe_bench_df(dataset_swe_bench_handler, mock_swe_be
         f"Expected input '{mock_swe_bench_input_df.iloc[1].to_json()}', got '{second_item.input_obj}'"
 
 
-def test_get_eval_input_from_df_ignore_invalid_rows(dataset_handler, mock_input_df, dataset_id_key):
+def test_get_eval_input_from_df_ignore_invalid_rows(dataset_handler, mock_input_df):
     """
     Test that
     1. Unknown columns are ignored.
@@ -378,3 +487,13 @@ def test_publish_eval_input_unstructured_string_and_json():
     assert isinstance(output[2], dict)
     assert output[2] == {"id": "3", "score": 42, "reasoning": "The answer is 42"}
     assert output[3] == 42
+
+
+def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
+    dataset_handler = DatasetHandler(custom_dataset_config, reps=1, concurrency=1)
+
+    eval_input = dataset_handler.get_eval_input_from_dataset(temp_nested_json_file)
+
+    # check that there are two medium entries in the eval_input
+    assert len(eval_input.eval_input_items) == 2
+    assert all(item.full_dataset_entry['difficulty'] == 'medium' for item in eval_input.eval_input_items)
