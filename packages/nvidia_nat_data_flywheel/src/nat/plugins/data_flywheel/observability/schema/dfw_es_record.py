@@ -165,7 +165,7 @@ class Response(BaseModel):
     usage: dict[str, Any] | None = Field(None, description="Token usage information")
 
 
-class DFWRecord(BaseModel):
+class DFWESRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
     # Contract versioning

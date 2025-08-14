@@ -13,15 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+from .nim_converter import convert_langchain_nim
+from .openai_converter import convert_langchain_openai
+from .nim_adapter import ESLangChainNimAdapter
+from .openai_adapter import ESLangChainOpenAIAdapter
 
-from nat.plugins.data_flywheel.observability.processor.dfw_record.adapters.langchain.openai_converter import \
-    convert_langchain_openai
-from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
-from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
-
-logger = logging.getLogger(__name__)
-
-
-def convert_langchain_nim(trace_source: TraceSource, client_id: str = "nat_test") -> DFWRecord | None:
-    return convert_langchain_openai(trace_source, client_id)
+__all__ = [
+    "convert_langchain_nim",
+    "convert_langchain_openai",
+    "ESLangChainNimAdapter",
+    "ESLangChainOpenAIAdapter",
+]

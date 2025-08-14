@@ -14,18 +14,18 @@
 # limitations under the License.
 
 from .trace_source_adapter import TraceSourceAdapter
-from .langchain import LangChainNimAdapter
-from .langchain import LangChainOpenAIAdapter
+from .elasticsearch.langchain import ESLangChainNimAdapter
+from .elasticsearch.langchain import ESLangChainOpenAIAdapter
 
 # Auto-register default adapters
 # Import here to avoid circular dependencies
 from ..trace_adapter_registry import register_span_adapter
 
-register_span_adapter(LangChainNimAdapter())
-register_span_adapter(LangChainOpenAIAdapter())
+register_span_adapter(ESLangChainNimAdapter())
+register_span_adapter(ESLangChainOpenAIAdapter())
 
 __all__ = [
     "TraceSourceAdapter",
-    "LangChainNimAdapter",
-    "LangChainOpenAIAdapter",
+    "ESLangChainNimAdapter",
+    "ESLangChainOpenAIAdapter",
 ]

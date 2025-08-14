@@ -15,9 +15,10 @@
 
 import logging
 
+from pydantic import BaseModel
+
 from nat.data_models.span import Span
 from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import TraceAdapterRegistry
-from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
 from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
 
 logger = logging.getLogger(__name__)
@@ -36,13 +37,12 @@ def get_trace_source(span: Span) -> TraceSource:
     return TraceSource(**source_dict)
 
 
-def span_to_dfw_record(span: Span, client_id: str = "nat_client") -> DFWRecord | None:
+def span_to_dfw_record(span: Span, to_type: type[BaseModel], client_id: str = "nat_client") -> BaseModel | None:
     """Convert a span to DFW record using registered adapters."""
     trace_source = get_trace_source(span)
-
-    adapter = TraceAdapterRegistry.get_adapter(trace_source, DFWRecord)
+    adapter = TraceAdapterRegistry.get_adapter(trace_source, to_type)
     if adapter is None:
-        framework_provider = f"{trace_source.source.framework}_{trace_source.source.provider}"
+        framework_provider = f"{trace_source.source.framework.value}_{trace_source.source.provider}"
         logger.warning("No adapter found for framework: %s. Supported frameworks: %s",
                        framework_provider,
                        TraceAdapterRegistry.list_supported_frameworks())

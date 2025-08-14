@@ -42,8 +42,10 @@ class DFWElasticsearchTelemetryExporter(TelemetryExporterBaseConfig,
 async def dfw_elasticsearch_telemetry_exporter(config: DFWElasticsearchTelemetryExporter, builder: Builder):  # pylint: disable=unused-argument # noqa: E501
     from nat.plugins.data_flywheel.observability.exporter.dfw_elasticsearch_exporter import \
         DFWElasticsearchExporter  # noqa: F401
+    from nat.plugins.data_flywheel.observability.schema.dfw_es_record import DFWESRecord
 
-    yield DFWElasticsearchExporter(client_id=config.client_id,
+    yield DFWElasticsearchExporter(to_type=DFWESRecord | None,
+                                   client_id=config.client_id,
                                    index=config.index,
                                    endpoint=config.endpoint,
                                    elasticsearch_auth=config.elasticsearch_auth,

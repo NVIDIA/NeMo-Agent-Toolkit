@@ -16,23 +16,24 @@
 import logging
 
 from nat.plugins.data_flywheel.observability.processor.dfw_record.adapters import TraceSourceAdapter
-from nat.plugins.data_flywheel.observability.processor.dfw_record.adapters.langchain import convert_langchain_nim
-from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
+from nat.plugins.data_flywheel.observability.processor.dfw_record.adapters.elasticsearch.langchain import \
+    convert_langchain_openai
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import DFWESRecord
 from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
 
 logger = logging.getLogger(__name__)
 
 
-class LangChainNimAdapter(TraceSourceAdapter[DFWRecord]):
-    """Adapter for LangChain NIM trace sources."""
+class ESLangChainOpenAIAdapter(TraceSourceAdapter[DFWESRecord | None]):
+    """Adapter for LangChain OpenAI trace sources."""
 
     def can_handle(self, trace_source: TraceSource) -> bool:
         framework_provider = f"{trace_source.source.framework}_{trace_source.source.provider}"
-        return framework_provider == "langchain_nim"
+        return framework_provider == "langchain_openai"
 
-    def convert(self, trace_source: TraceSource, client_id: str) -> DFWRecord | None:
-        return convert_langchain_nim(trace_source, client_id)
+    def convert(self, trace_source: TraceSource, client_id: str) -> DFWESRecord | None:
+        return convert_langchain_openai(trace_source, client_id)
 
     @property
     def framework_identifier(self) -> str:
-        return "langchain_nim"
+        return "langchain_openai"

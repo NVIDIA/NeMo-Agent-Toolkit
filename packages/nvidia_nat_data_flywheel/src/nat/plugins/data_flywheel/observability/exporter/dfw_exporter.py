@@ -15,6 +15,7 @@
 
 import logging
 from abc import abstractmethod
+from typing import Any
 from typing import TypeVar
 
 from nat.builder.context import AIQContextState
@@ -24,6 +25,8 @@ from nat.observability.processor.batching_processor import BatchingProcessor
 from nat.plugins.data_flywheel.observability.processor import DFWToDictProcessor
 from nat.plugins.data_flywheel.observability.processor import DictBatchFilterProcessor
 from nat.plugins.data_flywheel.observability.processor import SpanToDFWRecordProcessor
+from nat.plugins.data_flywheel.observability.processor import processor_factory_from_type
+from nat.plugins.data_flywheel.observability.processor import processor_factory_to_type
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +46,7 @@ class DFWExporter(SpanExporter[Span, dict]):
     """Abstract base class for Data Flywheel exporters."""
 
     def __init__(self,
+                 to_type: type[Any],
                  context_state: AIQContextState | None = None,
                  batch_size: int = 100,
                  flush_interval: float = 5.0,
@@ -62,8 +66,11 @@ class DFWExporter(SpanExporter[Span, dict]):
         """
         super().__init__(context_state)
 
-        self.add_processor(SpanToDFWRecordProcessor(client_id=client_id))
-        self.add_processor(DFWToDictProcessor())
+        SpanToDFWESRecordProcessor = processor_factory_to_type(SpanToDFWRecordProcessor, to_type=to_type)
+        DFWToDictESProcessor = processor_factory_from_type(DFWToDictProcessor, from_type=to_type)
+
+        self.add_processor(SpanToDFWESRecordProcessor(client_id=client_id))  # type: ignore
+        self.add_processor(DFWToDictESProcessor())
 
         self.add_processor(
             DictBatchingProcessor(batch_size=batch_size,

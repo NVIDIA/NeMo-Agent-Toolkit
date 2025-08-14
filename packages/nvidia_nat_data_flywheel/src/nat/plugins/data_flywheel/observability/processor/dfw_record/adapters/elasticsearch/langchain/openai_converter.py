@@ -19,22 +19,22 @@ import logging
 from nat.data_models.intermediate_step import ToolSchema
 from nat.plugins.data_flywheel.observability.processor.dfw_record.common import extract_timestamp
 from nat.plugins.data_flywheel.observability.processor.dfw_record.common import extract_usage_info
-from nat.plugins.data_flywheel.observability.schema.dfw_record import AssistantMessage
-from nat.plugins.data_flywheel.observability.schema.dfw_record import DFWRecord
-from nat.plugins.data_flywheel.observability.schema.dfw_record import FinishReason
-from nat.plugins.data_flywheel.observability.schema.dfw_record import Function
-from nat.plugins.data_flywheel.observability.schema.dfw_record import FunctionDetails
-from nat.plugins.data_flywheel.observability.schema.dfw_record import FunctionMessage
-from nat.plugins.data_flywheel.observability.schema.dfw_record import Message
-from nat.plugins.data_flywheel.observability.schema.dfw_record import Request
-from nat.plugins.data_flywheel.observability.schema.dfw_record import RequestTool
-from nat.plugins.data_flywheel.observability.schema.dfw_record import Response
-from nat.plugins.data_flywheel.observability.schema.dfw_record import ResponseChoice
-from nat.plugins.data_flywheel.observability.schema.dfw_record import ResponseMessage
-from nat.plugins.data_flywheel.observability.schema.dfw_record import SystemMessage
-from nat.plugins.data_flywheel.observability.schema.dfw_record import ToolCall
-from nat.plugins.data_flywheel.observability.schema.dfw_record import ToolMessage
-from nat.plugins.data_flywheel.observability.schema.dfw_record import UserMessage
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import AssistantMessage
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import DFWESRecord
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import FinishReason
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import Function
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import FunctionDetails
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import FunctionMessage
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import Message
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import Request
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import RequestTool
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import Response
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import ResponseChoice
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import ResponseMessage
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import SystemMessage
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import ToolCall
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import ToolMessage
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import UserMessage
 from nat.plugins.data_flywheel.observability.schema.langchain.langchain_message import LangChainMessage
 from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
 
@@ -247,7 +247,7 @@ def _convert_chat_response(chat_response: dict, span_name: str = "", index: int 
     return response_choice
 
 
-def convert_langchain_openai(trace_source: TraceSource, client_id: str = "nat_test") -> DFWRecord | None:
+def convert_langchain_openai(trace_source: TraceSource, client_id: str = "nat_test") -> DFWESRecord | None:
 
     # Convert messages
     messages = []
@@ -309,12 +309,12 @@ def convert_langchain_openai(trace_source: TraceSource, client_id: str = "nat_te
     workload_id = trace_source.span.attributes.get("nat.function.name", "unknown")
 
     try:
-        dfw_payload = DFWRecord(request=request,
-                                response=responses,
-                                timestamp=timestamp_int,
-                                workload_id=str(workload_id),
-                                client_id=client_id,
-                                error_details=None)
+        dfw_payload = DFWESRecord(request=request,
+                                  response=responses,
+                                  timestamp=timestamp_int,
+                                  workload_id=str(workload_id),
+                                  client_id=client_id,
+                                  error_details=None)
         logger.debug("Successfully converted span %s to DFW record", trace_source.span.name)
         return dfw_payload
     except Exception as e:

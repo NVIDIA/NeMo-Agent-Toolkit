@@ -14,15 +14,49 @@
 # limitations under the License.
 
 import logging
+from functools import lru_cache
 from typing import Any
 from typing import TypeVar
 
 from nat.plugins.data_flywheel.observability.processor.dfw_record.adapters import TraceSourceAdapter
 from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
+from nat.utils.type_utils import DecomposedType
 
 OutputT = TypeVar("OutputT")
 
 logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=128)
+def _get_output_type_name(output_type: type[Any]) -> str:
+    """Extract a registry-friendly name from an output type, handling unions and optionals.
+
+    Recursively handles nested optionals and unions to extract meaningful type names.
+
+    Args:
+        output_type: The type to extract a name from
+
+    Returns:
+        str: Registry-friendly type name (e.g., "DFWESRecord", "TypeA_or_TypeB")
+    """
+    decomposed = DecomposedType(output_type)
+
+    if decomposed.is_optional:
+        # Handle Optional[T] -> recursively process T
+        inner_type = decomposed.get_optional_type()
+        return _get_output_type_name(inner_type.type)
+    if decomposed.is_union:
+        # Handle Union[A, B, C] -> "A_or_B_or_C"
+        non_none_types = [arg for arg in decomposed.args if arg is not type(None)]
+        if non_none_types:
+            # Recursively process each union member
+            type_names = [_get_output_type_name(arg) for arg in non_none_types]
+            return "_or_".join(sorted(type_names))
+        return 'Unknown'
+    if hasattr(output_type, '__name__'):
+        return output_type.__name__
+
+    return str(output_type)
 
 
 class TraceAdapterRegistry:
@@ -44,7 +78,7 @@ class TraceAdapterRegistry:
             adapter: The adapter to register
         """
         framework_id = adapter.framework_identifier
-        output_type_name = adapter.output_type.__name__
+        output_type_name = _get_output_type_name(adapter.output_type)
 
         if framework_id not in cls._adapters:
             cls._adapters[framework_id] = {}
@@ -75,7 +109,7 @@ class TraceAdapterRegistry:
             return True
 
         # Remove specific output type adapter
-        output_type_name = output_type.__name__
+        output_type_name = _get_output_type_name(output_type)
         if output_type_name in cls._adapters[framework_identifier]:
             cls._adapters[framework_identifier].pop(output_type_name)
 
@@ -106,12 +140,13 @@ class TraceAdapterRegistry:
                            trace_source.source.provider)
             return None
 
-        framework_provider = f"{trace_source.source.framework}_{trace_source.source.provider}"
-        output_type_name = output_type.__name__
+        framework_provider = f"{trace_source.source.framework.value}_{trace_source.source.provider}"
+        output_type_name = _get_output_type_name(output_type)
 
         framework_adapters = cls._adapters.get(framework_provider)
         if framework_adapters:
             return framework_adapters.get(output_type_name)  # type: ignore
+
         return None
 
     @classmethod
@@ -126,15 +161,16 @@ class TraceAdapterRegistry:
         Args:
             framework_identifier: If provided, list output types for this framework only
         """
+        # Return output types for a specific framework
         if framework_identifier:
             framework_adapters = cls._adapters.get(framework_identifier, {})
             return list(framework_adapters.keys())
-        else:
-            # Return all unique output types across all frameworks
-            output_types = set()
-            for framework_adapters in cls._adapters.values():
-                output_types.update(framework_adapters.keys())
-            return list(output_types)
+
+        # Return all unique output types across all frameworks
+        output_types = set()
+        for framework_adapters in cls._adapters.values():
+            output_types.update(framework_adapters.keys())
+        return list(output_types)
 
     @classmethod
     def list_adapters(cls) -> dict[str, dict[str, str]]:
