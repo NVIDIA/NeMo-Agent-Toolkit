@@ -52,12 +52,12 @@ def _get_nat_dependency(editable: bool = False) -> str:
         # Extract major.minor (e.g., "1.2.3" -> "1.2")
         major_minor = ".".join(current_version.split(".")[:2])
         dependency += f"~={major_minor}"
+        logger.info("Using NAT dependency: %s", dependency)
+        return dependency
     else:
         # Fallback if version detection fails
+        logger.warning("Could not detect NAT version, using unversioned dependency")
         return dependency
-
-    logger.info("Using NAT dependency: %s", dependency)
-    return dependency
 
 
 class PackageError(Exception):
