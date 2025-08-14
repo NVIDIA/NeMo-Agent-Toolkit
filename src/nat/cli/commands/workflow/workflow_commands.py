@@ -252,7 +252,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
 
         # Create symlinks for config and data directories
         config_dir_source = config_dir
-        config_dir_link = new_workflow_dir / 'config'
+        config_dir_link = new_workflow_dir / 'configs'
         data_dir_source = data_dir
         data_dir_link = new_workflow_dir / 'data'
         os.symlink(config_dir_source, config_dir_link)
