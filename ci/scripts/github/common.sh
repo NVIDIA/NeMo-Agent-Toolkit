@@ -54,6 +54,10 @@ function create_env() {
 
     UV_SYNC_STDERROUT=$(uv sync --active ${extras[@]} 2>&1)
 
+    # Explicitly filter the warning about multiple packages providing a tests module, work-around for issue #611
+    UV_SYNC_STDERROUT=$(echo "${UV_SYNC_STDERROUT}" | grep -v "warning: The module \`tests\` is provided by more than one package")
+
+
     # Environment should have already been created in the before_script
     if [[ "${UV_SYNC_STDERROUT}" =~ "warning:" ]]; then
         echo "Error, uv sync emitted warnings. These are usually due to missing lower bound constraints."

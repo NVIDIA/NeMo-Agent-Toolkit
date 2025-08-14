@@ -24,15 +24,15 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 import yaml
-from aiq_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
-from aiq_alert_triage_agent.utils import _DATA_CACHE
-from aiq_alert_triage_agent.utils import _LLM_CACHE
-from aiq_alert_triage_agent.utils import _get_llm
-from aiq_alert_triage_agent.utils import load_column_or_static
-from aiq_alert_triage_agent.utils import preload_offline_data
-from aiq_alert_triage_agent.utils import run_ansible_playbook
+from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
+from nat_alert_triage_agent.utils import _DATA_CACHE
+from nat_alert_triage_agent.utils import _LLM_CACHE
+from nat_alert_triage_agent.utils import _get_llm
+from nat_alert_triage_agent.utils import load_column_or_static
+from nat_alert_triage_agent.utils import preload_offline_data
+from nat_alert_triage_agent.utils import run_ansible_playbook
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.framework_enum import LLMFrameworkEnum
 
 
 async def test_get_llm():

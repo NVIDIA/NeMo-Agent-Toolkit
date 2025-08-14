@@ -1,13 +1,32 @@
 ---
 description: Follow these rules when creating, modifying, or generating any code, tests, documentation, or configuration files
-globs: 
+globs:
 alwaysApply: false
 ---
-# AIQToolkit General Coding Guidelines
+# NeMo Agent Toolkit General Coding Guidelines
 
 These are the overarching standards that every **source, test, documentation and CI file** in this repository must follow.  Adhering to these rules locally ensures the project's automated checks and pipelines succeed on your first push.
 
 ---
+
+## Terminology and Naming
+- Make sure to follow this naming convention for all the documentation. If there is any documentation not following this rule, you MUST update it.
+- **Full name on first use**: "NVIDIA NeMo Agent toolkit"
+- **Subsequent references**: "NeMo Agent toolkit"
+  - If the name is part of a heading, use "NeMo Agent Toolkit" in the heading. Capitalize the "T" in "Toolkit".
+- **Abbreviations**: "NAT" or "nat"
+  - "nat" for the API namespace and CLI tool
+  - "nvidia-nat" for the package name
+  - "NAT" for environment variable prefixes, and informal usage in comments
+  - This should be used for all abbreviations in the comments in the code.
+  - This should NEVER be used in the documentation.
+- Examples:
+  - "In the NeMo Agent toolkit, you can…"
+  - "Change directory to the NeMo Agent toolkit repo root…"
+- Consistently use this terminology throughout all documentation
+- NeMo Agent toolkit was previously known as the Agent Intelligence toolkit, and AgentIQ. You should NEVER use the deprecated names, including Agent Intelligence toolkit, aiqtoolkit, AgentIQ, or AIQ/aiq. If you see any of these names in the documentation, you should update it based on the latest naming convention above, unless those names are intentionally used to refer to the deprecated names, or implementing a compatibility layer for the deprecated names.
+- DO NOT change the content of `CHANGELOG.md`
+- AIQ Blueprint is the intended name for the blueprint. DO NOT change it.
 
 ## Project Structure
 

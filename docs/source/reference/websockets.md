@@ -172,6 +172,7 @@ Definition: This message contains the intermediate step content from a running w
   "thread_id": "thread_456",
   "parent_id": "id from user message",
   "intermediate_parent_id": "default",
+  "conversation_id": "string",
   "content": {
     "name": "name of the step - example Query rephrasal",
     "payload": "Step information, it can be json or code block or it can be plain text"
@@ -191,6 +192,7 @@ Definition: This message contains the final response content from a running work
   "id": "token_001",
   "thread_id": "thread_456",
   "parent_id": "id from user message",
+  "conversation_id": "string",
   "content": {
     "text": "Response token can be json, code block or plain text"
   },
@@ -208,6 +210,7 @@ Definition: This message sends various types of error content to the client.
   "id": "token_001",
   "thread_id": "thread_456",
   "parent_id": "id from user message",
+  "conversation_id": "string",
   "content": {
       "code": "111", "message": "ValidationError", "details": "The provided email format is invalid."
   },
@@ -227,6 +230,7 @@ System Human Interaction messages are sent from the server to the client contain
   "id": "interaction_303",
   "thread_id": "thread_456",
   "parent_id": "id from user message",
+  "conversation_id": "string",
   "content": {
       "input_type": "text",
       "text": "Hello, how are you today?",
@@ -245,6 +249,7 @@ System Human Interaction messages are sent from the server to the client contain
   "id": "interaction_304",
   "thread_id": "thread_456",
   "parent_id": "msg_123",
+  "conversation_id": "string",
   "content": {
       "input_type": "binary_choice",
       "text": "Should I continue or cancel?",
@@ -268,10 +273,11 @@ System Human Interaction messages are sent from the server to the client contain
 #### Radio Multiple Choice Interaction Example:
 ```json
 {
-  "type": "system_human_interaction",
+  "type": "system_interaction_message",
   "id": "interaction_305",
   "thread_id": "thread_456",
   "parent_id": "msg_123",
+  "conversation_id": "string",
   "content": {
     "input_type": "radio",
     "text": "I'll send you updates about the analysis progress. Please select your preferred notification method:",
@@ -306,10 +312,11 @@ System Human Interaction messages are sent from the server to the client contain
 #### Checkbox Multiple Choice Interaction Example:
 ```json
 {
-  "type": "system_human_interaction_name",
+  "type": "system_interaction_message",
   "id": "interaction_306",
   "thread_id": "thread_456",
   "parent_id": "msg_123",
+  "conversation_id": "string",
   "content": {
     "input_type": "checkbox",
     "text": "The analysis will take approximately 30 minutes to complete. Select all notification methods you'd like to enable:",
@@ -344,12 +351,12 @@ System Human Interaction messages are sent from the server to the client contain
 #### Dropdown Multiple Choice Interaction Example:
 ```json
 {
-  "type": "system_human_interaction",
-  "id": "interaction_305",
+  "type": "system_interaction_message",
+  "id": "interaction_307",
   "thread_id": "thread_456",
   "parent_id": "msg_123",
+  "conversation_id": "string",
   "content": {
-    "interaction": "system_human_interaction_name",
     "input_type": "dropdown",
     "text": "I'll send you updates about the analysis progress. Please select your preferred notification method:",
     "options": [

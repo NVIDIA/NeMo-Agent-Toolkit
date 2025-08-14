@@ -19,7 +19,7 @@ limitations under the License.
 
 > **Note**: The code examples in this guide are pseudo code designed to illustrate the programming interface and key concepts. They focus on demonstrating the structure and flow rather than providing complete, runnable implementations. Use these examples to understand the interface patterns and adapt them to your specific use case.
 
-Telemetry exporters are plugins that send telemetry data (traces, spans, and intermediate steps) from NeMo Agent toolkit workflows to external observability services. This guide provides a comprehensive overview of how to create and register custom telemetry exporters.
+Telemetry exporters are plugins that send telemetry data (e.g., traces, spans, and intermediate steps, etc.) from NeMo Agent toolkit workflows to external observability services. The NeMo Agent toolkit uses a flexible, plugin-based observability system that allows you to configure multiple exporters simultaneously and create custom integrations for any observability platform. This guide provides a comprehensive overview of how to create and register custom telemetry exporters.
 
 ## Why Use Telemetry Exporters?
 
@@ -62,16 +62,20 @@ Telemetry exporters solve critical observability challenges in Agentic AI workfl
 To view the list of locally installed and registered telemetry exporters, run the following command:
 
 ```bash
-aiq info components -t tracing
+nat info components -t tracing
 ```
 
 Examples of existing telemetry exporters include:
 
+- **File**: Exports traces to local files
 - **Phoenix**: Exports traces to Arize Phoenix for visualization
 - **Weave**: Exports traces to Weights & Biases Weave
-- **OtelCollector**: Exports traces to OpenTelemetry-compatible services
-- **Catalyst**: Exports traces to RagaAI Catalyst
-- **File**: Exports traces to local files
+- **Langfuse**: Exports traces to Langfuse via OTLP
+- **LangSmith**: Exports traces to LangSmith via OTLP
+- **OpenTelemetry Collector**: Exports traces to OpenTelemetry-compatible services
+- **Patronus**: Exports traces to Patronus via OTLP
+- **Galileo**: Exports traces to Galileo via OTLP
+- **RagaAI Catalyst**: Exports traces to RagaAI Catalyst
 
 ## Quick Start: Your First Telemetry Exporter
 
@@ -80,11 +84,11 @@ Want to get started quickly? Here's a minimal working example that creates a con
 ```python
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_telemetry_exporter
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.observability.exporter.raw_exporter import RawExporter
-from aiq.data_models.intermediate_step import IntermediateStep
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.observability.exporter.raw_exporter import RawExporter
+from nat.data_models.intermediate_step import IntermediateStep
 
 # Step 1: Define configuration
 class ConsoleTelemetryExporter(TelemetryExporterBaseConfig, name="console"):
@@ -121,7 +125,7 @@ general:
   telemetry:
     tracing:
       console_exporter:
-        type: console
+        _type: console
         prefix: "[MY_APP]"
 ```
 
@@ -154,7 +158,7 @@ Telemetry exporters in NeMo Agent toolkit are responsible for:
 
 ### Telemetry Data Flow
 
-The telemetry export system routes workflow events through different exporter types to various destinations:
+The flexible telemetry export system routes workflow events through different exporter types to various destinations:
 
 ```{mermaid}
 graph TD
@@ -261,15 +265,15 @@ Before creating a custom exporter, check if your observability service is alread
 
 | Service | Type | Installation | Configuration |
 |---------|------|-------------|---------------|
-| **File** | `file` | `pip install aiqtoolkit` | local file or directory |
-| **Langfuse** | `langfuse` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API keys |
-| **LangSmith** | `LangSmith` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
-| **OpenTelemetry Collector** | `otelcollector` | `pip install aiqtoolkit[opentelemetry]` | endpoint + headers |
-| **Patronus** | `patronus` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
-| **Galileo** | `galileo` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
-| **Phoenix** | `phoenix` | `pip install aiqtoolkit[phoenix]` | endpoint |
-| **RagaAI/Catalyst** | `catalyst` | `pip install aiqtoolkit[ragaai]` | API key + project |
-| **Weave** | `weave` | `pip install aiqtoolkit[weave]` | project name |
+| **File** | `file` | `pip install nvidia-nat` | local file or directory |
+| **Langfuse** | `langfuse` | `pip install nvidia-nat[opentelemetry]` | endpoint + API keys |
+| **LangSmith** | `langsmith` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
+| **OpenTelemetry Collector** | `otelcollector` | `pip install nvidia-nat[opentelemetry]` | endpoint + headers |
+| **Patronus** | `patronus` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
+| **Galileo** | `galileo` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
+| **Phoenix** | `phoenix` | `pip install nvidia-nat[phoenix]` | endpoint |
+| **RagaAI/Catalyst** | `catalyst` | `pip install nvidia-nat[ragaai]` | API key + project |
+| **Weave** | `weave` | `pip install nvidia-nat[weave]` | project name |
 
 ### Simple Configuration Example
 
@@ -279,10 +283,10 @@ general:
   telemetry:
     tracing:
       langfuse:
-        type: langfuse
-        endpoint: "https://cloud.langfuse.com/api/public/otel/v1/traces"
-        public_key: "${LANGFUSE_PUBLIC_KEY}"
-        secret_key: "${LANGFUSE_SECRET_KEY}"
+        _type: langfuse
+        endpoint: https://cloud.langfuse.com/api/public/otel/v1/traces
+        public_key: ${LANGFUSE_PUBLIC_KEY}
+        secret_key: ${LANGFUSE_SECRET_KEY}
 ```
 
 > **Most services use OTLP**: If your service supports OpenTelemetry Protocol (OTLP), you can often subclass `OtelSpanExporter` or use the generic `otelcollector` type with appropriate headers.
@@ -298,7 +302,7 @@ Create a configuration class that inherits from `TelemetryExporterBaseConfig`:
 ```python
 from pydantic import Field
 
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 
 class CustomTelemetryExporter(TelemetryExporterBaseConfig, name="custom"):
     """A simple custom telemetry exporter for sending traces to a custom service."""
@@ -317,8 +321,8 @@ Choose the appropriate base class based on your needs:
 #### Raw Exporter (for simple trace exports)
 
 ```python
-from aiq.observability.exporter.raw_exporter import RawExporter
-from aiq.data_models.intermediate_step import IntermediateStep
+from nat.observability.exporter.raw_exporter import RawExporter
+from nat.data_models.intermediate_step import IntermediateStep
 
 class CustomRawExporter(RawExporter[IntermediateStep, IntermediateStep]):
     """A custom raw exporter that processes intermediate steps directly."""
@@ -351,9 +355,9 @@ class CustomRawExporter(RawExporter[IntermediateStep, IntermediateStep]):
 #### Span Exporter (for span-based tracing)
 
 ```python
-from aiq.data_models.span import Span
-from aiq.observability.exporter.span_exporter import SpanExporter
-from aiq.observability.processor.processor import Processor
+from nat.data_models.span import Span
+from nat.observability.exporter.span_exporter import SpanExporter
+from nat.observability.processor.processor import Processor
 
 class SpanToDictProcessor(Processor[Span, dict]):
     """Processor that transforms Span objects to dictionaries."""
@@ -405,16 +409,16 @@ class CustomSpanExporter(SpanExporter[Span, dict]):
 
 #### OpenTelemetry Exporter (for OTLP compatibility)
 
-> **Note**: OpenTelemetry exporters require the `aiqtoolkit-opentelemetry` subpackage. Install it with:
+> **Note**: OpenTelemetry exporters require the `nvidia-nat-opentelemetry` subpackage. Install it with:
 
 > ```bash
-> pip install aiqtoolkit[opentelemetry]
+> pip install nvidia-nat[opentelemetry]
 > ```
 
 For most OTLP-compatible services, use the pre-built `OTLPSpanAdapterExporter`:
 
 ```python
-from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
 # See Pattern 3 in Common Integration Patterns for full example
 ```
@@ -429,8 +433,8 @@ Create a registration function using the `@register_telemetry_exporter` decorato
 ```python
 import logging
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_telemetry_exporter
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_telemetry_exporter
 
 logger = logging.getLogger(__name__)
 
@@ -463,12 +467,13 @@ async def custom_telemetry_exporter(config: CustomTelemetryExporter, builder: Bu
 
 In production code, structure your telemetry exporter as follows:
 
+<!-- path-check-skip-next-line -->
+`my_plugin/exporters.py`:
 ```python
-# my_plugin/exporters.py
 import aiohttp
 
-from aiq.data_models.span import Span
-from aiq.observability.exporter.span_exporter import SpanExporter
+from nat.data_models.span import Span
+from nat.observability.exporter.span_exporter import SpanExporter
 
 class MyCustomExporter(SpanExporter[Span, dict]):
     """Custom exporter implementation."""
@@ -487,13 +492,16 @@ class MyCustomExporter(SpanExporter[Span, dict]):
         """Clean up resources when the exporter is stopped."""
         # Clean up HTTP sessions, file handles, etc.
         await super()._cleanup()
+```
 
-# my_plugin/register.py
+<!-- path-check-skip-next-line -->
+`my_plugin/register.py`:
+```python
 from pydantic import Field
 
-from aiq.cli.register_workflow import register_telemetry_exporter
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.builder.builder import Builder
+from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.builder.builder import Builder
 
 # Configuration class can be in the same file as registration
 class MyTelemetryExporter(TelemetryExporterBaseConfig, name="my_exporter"):
@@ -527,8 +535,8 @@ async def my_telemetry_exporter(config: MyTelemetryExporter, builder: Builder):
 If your exporter needs to transform data before export, add processors to the pipeline. This is especially important when using `SpanExporter[Span, dict]` to convert `Span` objects to dictionaries:
 
 ```python
-from aiq.data_models.span import Span
-from aiq.observability.processor.processor import Processor
+from nat.data_models.span import Span
+from nat.observability.processor.processor import Processor
 
 class SpanToDictProcessor(Processor[Span, dict]):
     """Processor that transforms Span objects to dictionaries."""
@@ -587,17 +595,24 @@ class CustomSpanExporter(SpanExporter[Span, dict]):
 
 ### Step 5: Configure in Workflow
 
-Once registered, configure your telemetry exporter in your workflow configuration:
+Once registered, configure your telemetry exporter in your workflow configuration. The flexible observability system allows you to configure multiple exporters simultaneously by adding them to the `tracing` section:
 
 ```yaml
 # workflow.yaml
 general:
   telemetry:
     tracing:
+      # Your custom exporter
       custom_exporter:
-        type: custom
-        endpoint: "https://api.custom-service.com/traces"
-        api_key: "${CUSTOM_API_KEY}"
+        _type: custom
+        endpoint: https://api.custom-service.com/traces
+        api_key: ${CUSTOM_API_KEY}
+
+      # Multiple exporters can be configured simultaneously
+      phoenix_local:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: my-project
 ```
 
 > **Next Steps**: You now have a complete custom telemetry exporter! For real-world implementation examples, see the [Common Integration Patterns](#common-integration-patterns) section. For advanced features like concurrent execution and performance optimization, see the [Advanced Features](#advanced-features) section.
@@ -613,9 +628,9 @@ Most observability services use HTTP APIs with token authentication:
 ```python
 import aiohttp
 
-from aiq.data_models.span import Span
-from aiq.observability.exporter.span_exporter import SpanExporter
-from aiq.observability.processor.processor import Processor
+from nat.data_models.span import Span
+from nat.observability.exporter.span_exporter import SpanExporter
+from nat.observability.processor.processor import Processor
 
 class SpanToDictProcessor(Processor[Span, dict]):
     """Processor that transforms Span objects to dictionaries."""
@@ -664,8 +679,8 @@ For local development and debugging:
 import asyncio
 import aiofiles
 
-from aiq.observability.exporter.raw_exporter import RawExporter
-from aiq.observability.processor.intermediate_step_serializer import IntermediateStepSerializer
+from nat.observability.exporter.raw_exporter import RawExporter
+from nat.observability.processor.intermediate_step_serializer import IntermediateStepSerializer
 
 class FileExporter(RawExporter[IntermediateStep, str]):
     def __init__(self, filepath: str, **kwargs):
@@ -688,7 +703,7 @@ For standard OTLP services, use the pre-built adapter:
 @register_telemetry_exporter(config_type=MyTelemetryExporter)
 async def my_telemetry_exporter(config: MyTelemetryExporter, builder: Builder):
     # Import inside the function for lazy loading
-    from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+    from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
     yield OTLPSpanAdapterExporter(
         endpoint=config.endpoint,
@@ -736,9 +751,9 @@ Without isolation, concurrent workflows would share the same exporter instance, 
 `IsolatedAttribute` creates separate state for each workflow while sharing expensive resources:
 
 ```python
-from aiq.data_models.span import Span
-from aiq.observability.exporter.base_exporter import IsolatedAttribute
-from aiq.observability.exporter.span_exporter import SpanExporter
+from nat.data_models.span import Span
+from nat.observability.exporter.base_exporter import IsolatedAttribute
+from nat.observability.exporter.span_exporter import SpanExporter
 
 class MyExporter(SpanExporter[Span, dict]):
 
@@ -768,9 +783,9 @@ import uuid
 import aiohttp
 from collections import deque
 
-from aiq.data_models.span import Span
-from aiq.observability.exporter.base_exporter import IsolatedAttribute
-from aiq.observability.exporter.span_exporter import SpanExporter
+from nat.data_models.span import Span
+from nat.observability.exporter.base_exporter import IsolatedAttribute
+from nat.observability.exporter.span_exporter import SpanExporter
 
 class MyCustomExporter(SpanExporter[Span, dict]):
     """Custom exporter with isolated state management."""
@@ -838,7 +853,7 @@ exporter1._processing_queue.append("item1")
 exporter1._export_metrics['success'] = 5
 
 # Create isolated instance
-context_state = AIQContextState.get()
+context_state = ContextState.get()
 exporter2 = exporter1.create_isolated_instance(context_state)
 
 # Isolated state - each has independent data
@@ -870,16 +885,16 @@ assert exporter1.session is exporter2.session  # Same session
 - Database connections
 - Logger instances
 
- **Example with Common Patterns:**
+**Example with Common Patterns:**
 
- ```python
+```python
 from collections import deque
 
 import aiohttp
 
-from aiq.data_models.span import Span
-from aiq.observability.exporter.base_exporter import IsolatedAttribute
-from aiq.observability.exporter.span_exporter import SpanExporter
+from nat.data_models.span import Span
+from nat.observability.exporter.base_exporter import IsolatedAttribute
+from nat.observability.exporter.span_exporter import SpanExporter
 
 class BatchingExporter(SpanExporter[Span, dict]):
     """Exporter demonstrating common IsolatedAttribute patterns."""
@@ -962,7 +977,7 @@ For OpenTelemetry exporters with custom protocols, create a simple mixin that ha
 # In production, define these classes in a separate module (e.g., exporters.py)
 import aiohttp
 
-from aiq.plugins.opentelemetry.otel_span import OtelSpan
+from nat.plugins.opentelemetry.otel_span import OtelSpan
 
 class CustomProtocolMixin:
     """Simple mixin for custom authentication and HTTP transport."""
@@ -1013,7 +1028,7 @@ class CustomProtocolMixin:
         await super()._cleanup()
 
 # In production, you would define this in a separate module and import OtelSpanExporter there
-# For example: from aiq.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
+# For example: from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 # class CustomServiceExporter(CustomProtocolMixin, OtelSpanExporter):
 #     """Simple exporter combining custom protocol with OpenTelemetry span processing."""
 #     def __init__(self, endpoint: str, api_key: str, **kwargs):
@@ -1027,7 +1042,7 @@ async def custom_telemetry_exporter(config: CustomTelemetryExporter, builder: Bu
     # from .exporters import CustomServiceExporter
 
     # For this example, we'll create a simple combined class here
-    from aiq.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
+    from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 
     class CustomServiceExporter(CustomProtocolMixin, OtelSpanExporter):
         """Simple exporter combining custom protocol with OpenTelemetry span processing."""
@@ -1180,7 +1195,7 @@ Create tests for your exporter:
 ```python
 import pytest
 from unittest.mock import AsyncMock, patch
-from aiq.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStep
 
 @pytest.fixture
 def custom_exporter():
@@ -1205,7 +1220,7 @@ async def test_export_processed(custom_exporter):
 
 def test_isolated_attributes():
     """Test that isolated attributes work correctly across instances."""
-    from aiq.builder.context import AIQContextState
+    from nat.builder.context import ContextState
 
     # Create original exporter
     exporter1 = CustomSpanExporter(
@@ -1220,7 +1235,7 @@ def test_isolated_attributes():
     exporter1._export_metrics["success"] = 5
 
     # Create isolated instance
-    context_state = AIQContextState.get()
+    context_state = ContextState.get()
     exporter2 = exporter1.create_isolated_instance(context_state)
 
     # Add different data to second exporter
@@ -1308,7 +1323,7 @@ Enable debug logging to troubleshoot issues:
 
 ```python
 import logging
-logging.getLogger("aiq.observability").setLevel(logging.DEBUG)
+logging.getLogger("nat.observability").setLevel(logging.DEBUG)
 ```
 
 ### FAQ
@@ -1352,7 +1367,7 @@ logging.getLogger("aiq.observability").setLevel(logging.DEBUG)
    - Implement export_processed() with error handling
    - Implement _cleanup() for resource management
 
-3. Register with AIQ (register_telemetry_exporter decorator)
+3. Register with NAT (register_telemetry_exporter decorator)
    - Create async factory function
    - Instantiate exporter with config values
    - Yield exporter instance
@@ -1364,12 +1379,12 @@ Here's a complete example of a custom telemetry exporter:
 import logging
 from pydantic import Field
 import aiohttp
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_telemetry_exporter
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.observability.exporter.span_exporter import SpanExporter
-from aiq.observability.exporter.base_exporter import IsolatedAttribute
-from aiq.data_models.span import Span
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.observability.exporter.span_exporter import SpanExporter
+from nat.observability.exporter.base_exporter import IsolatedAttribute
+from nat.data_models.span import Span
 
 logger = logging.getLogger(__name__)
 

@@ -38,10 +38,10 @@ A configurable Tool Calling agent. This agent leverages the NeMo Agent toolkit p
 
 ## Key Features
 
-- **Tool Calling Agent Framework:** Demonstrates a `tool_calling_agent` that leverages tool/function input schemas to make precise tool selections and structured function calls.
+- **Tool Calling Agent Framework:** Demonstrates a `tool_calling_agent` that leverages tool or function input schemas to make precise tool selections and structured function calls.
 - **Wikipedia Search Integration:** Shows integration with the `wikipedia_search` tool for retrieving factual information from Wikipedia sources.
 - **Code Generation Capabilities:** Includes the `code_generation_tool` for generating code examples and technical content.
-- **Schema-Driven Tool Selection:** Uses structured input schemas to appropriately route to the correct tool, providing more deterministic tool calling compared to name/description-based routing.
+- **Schema-Driven Tool Selection:** Uses structured input schemas to appropriately route to the correct tool, providing more deterministic tool calling compared to name or description-based routing.
 - **Dual-Node Graph Architecture:** Implements the same operational pattern as other NeMo Agent toolkit agents, alternating between reasoning and tool execution while using schema-based tool selection.
 
 ## Graph Structure
@@ -54,7 +54,7 @@ The Tool Calling agent uses the same dual-node graph architecture as other agent
 
 **Workflow Overview:**
 - **Start**: The agent begins processing with user input
-- **Agent Node**: Leverages tool/function input schemas to decide which tool to call or provide a final answer
+- **Agent Node**: Leverages tool or function input schemas to decide which tool to call or provide a final answer
 - **Conditional Edge**: Routes the flow based on the agent's decision
 - **Tool Node**: Executes the selected tool using structured input schemas
 - **Cycle**: The agent can loop between reasoning and tool execution until it reaches a final answer
@@ -73,7 +73,7 @@ From the root directory of the NeMo Agent Toolkit library, run the following com
 uv pip install -e .
 ```
 
-The `code_generation` and `wiki_search` tools are part of the `aiqtoolkit[langchain]` package.  To install the package run the following command:
+The `code_generation` and `wiki_search` tools are part of the `nvidia-nat[langchain]` package.  To install the package run the following command:
 ```bash
 # local package install from source
 uv pip install -e '.[langchain]'
@@ -99,7 +99,7 @@ For more details, refer to the [ReAct Agent documentation](../../../docs/source/
 Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
+nat run --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
 ```
 
 **Expected Workflow Output**
@@ -118,7 +118,7 @@ Tool's response:
 Edsger Wybe Dijkstra ( DYKE-strə; Dutch: [ˈɛtsxər ˈʋibə ˈdɛikstraː] ; 11 May 1930 – 6 August 2002) was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist.
 Born in Rotterdam in the Netherlands, Dijkstra studied mathematics and physics and then theoretical physics at the University of Leiden. Adriaan van Wijngaarden offered him a job as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam, where he worked from 1952 until 1962. He formulated and solved the shortest path problem in 1956, and in 1960 developed the first compiler for the programming language ALGOL 60 in conjunction with colleague Jaap A. Zonneveld. In 1962 he moved to Eindhoven, and later to Nuenen, where he became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. In the late 1960s he built the THE multiprogramming system, which influence...
 ------------------------------
-2025-04-23 15:03:59,211 - aiq.agent.tool_calling_agent.agent - INFO -
+2025-04-23 15:03:59,211 - nat.agent.tool_calling_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: who was Djikstra?
@@ -137,12 +137,12 @@ Workflow Result:
 
 ### Starting the NeMo Agent Toolkit Server
 
-You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
 
 **Starting the Tool Calling Agent Example Workflow**
 
 ```bash
-aiq serve --config_file=examples/agents/tool_calling/configs/config.yml
+nat serve --config_file=examples/agents/tool_calling/configs/config.yml
 ```
 
 ### Making Requests to the NeMo Agent Toolkit Server
@@ -175,6 +175,5 @@ curl --request POST \
 **Run and evaluate the `tool_calling_agent` example Workflow**
 
 ```bash
-aiq eval --config_file=examples/agents/tool_calling/configs/config.yml
+nat eval --config_file=examples/agents/tool_calling/configs/config.yml
 ```
-

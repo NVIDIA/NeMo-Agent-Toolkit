@@ -64,7 +64,7 @@ export SERVICE_ARGS=--"local-timezone \"America/New_York\""
 
 ```bash
 export SERVICE_DIR=./.tmp/mcp/${SERVICE_BRIEF_NAME}_service
-export CONTAINER_NAME=mcp-proxy-aiq-${SERVICE_BRIEF_NAME}
+export CONTAINER_NAME=mcp-proxy-nat-${SERVICE_BRIEF_NAME}
 export SERVER_PORT=8080
 ```
 

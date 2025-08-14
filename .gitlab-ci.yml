@@ -109,12 +109,12 @@ package:wheel:
     - ./ci/scripts/gitlab/build_wheel.sh
   artifacts:
     paths:
-      # match - .tmp/wheels/aiqtoolkit/aiqtoolkit/<version>/*.whl, .tmp/wheels/aiqtoolkit/aiqtoolkit-crewai/<version>/*.whl etc.
-      - .tmp/wheels/aiqtoolkit/*/*/*.whl
+      # match - .tmp/wheels/aiqtoolkit/nvidia-nat/<version>/*.whl, .tmp/wheels/nvidia-nat/nvidia-nat-crewai/<version>/*.whl etc.
+      - .tmp/wheels/nvidia-nat/*/*/*.whl
       # Match the example wheels
-      - .tmp/wheels/aiqtoolkit/examples/*.whl
+      - .tmp/wheels/nvidia-nat/examples/*.whl
       # Match  the transitional wheels
-      - .tmp/wheels/agentiq/*/*/*.whl
+      - .tmp/wheels/aiqtoolkit/*/*/*.whl
     expire_in: 1 week
 
 

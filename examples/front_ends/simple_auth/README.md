@@ -19,7 +19,7 @@ limitations under the License.
 
 This example demonstrates how to use the library's native support for authentication to allow agents to use tools that require
 authentication to use. Particularly, this example highlights how to use the `OAuth 2.0 Authorization Code Flow` to authenticate
-with a demonstrative `OAuth 2.0` provider and then return information from the authorization server's demonstrative `api/me` endpoint
+with a demonstrative `OAuth 2.0` provider and then return information from the authorization server's demonstrative `/api/me` endpoint
 which provides information about the authenticated user.
 
 ## How the OAuth2.0 Authorization‑Code Flow Works
@@ -119,8 +119,8 @@ to deploy the UI that works with the agent in this example. Configure it accordi
 Export your saved client ID and secret to the following environment variables:
 
 ```bash
-export AIQ_OAUTH_CLIENT_ID=<your_client_id>
-export AIQ_OAUTH_CLIENT_SECRET=<your_client_secret>
+export NAT_OAUTH_CLIENT_ID=<your_client_id>
+export NAT_OAUTH_CLIENT_SECRET=<your_client_secret>
 ```
 
 ## Serve The Agent
@@ -128,7 +128,7 @@ export AIQ_OAUTH_CLIENT_SECRET=<your_client_secret>
 In a new terminal, serve the agent using the following command:
 
 ```bash
-aiq serve --config_file=examples/front_ends/simple_auth/configs/config.yml
+nat serve --config_file=examples/front_ends/simple_auth/configs/config.yml
 ```
 
 This will start a FastAPI server on `http://localhost:8000` that listens for requests from the UI and

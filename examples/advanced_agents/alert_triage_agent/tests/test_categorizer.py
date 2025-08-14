@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import pytest
-from aiq_alert_triage_agent.categorizer import _extract_markdown_heading_level
+from nat_alert_triage_agent.categorizer import _extract_markdown_heading_level
 
 
 @pytest.mark.parametrize(
