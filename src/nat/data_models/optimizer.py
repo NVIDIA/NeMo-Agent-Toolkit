@@ -58,19 +58,20 @@ class OptimizerConfig(BaseModel):
         default=True,
     )
 
-    prompt_optimization_function: str | None = Field(
-        default=None,
-        description="Name of the function to use for prompt evaluation.",
-    )
-
-    trajectory_eval_metric_name: str | None = Field(default=None,
-                                                    description="Name of the trajectory evaluation metric to use.")
-
     num_feedback: int = Field(default=3, description="Number of feedbacks to use for the optimization.")
 
     multi_objective_combination_mode: str = Field(
         description="Method to combine multiple objectives into a single score.",
         default="harmonic",
+    )
+
+    # Prompt optimization function hooks
+    prompt_population_init_function: str | None = Field(
+        default=None,
+        description=("Optional function name to initialize candidate prompts. "))
+    prompt_recombination_function: str | None = Field(
+        default=None,
+        description="Optional function name to recombine two parent prompts into a child.",
     )
 
     # Genetic algorithm configuration (for prompt optimization)
@@ -118,18 +119,6 @@ class OptimizerConfig(BaseModel):
         description="Strength of diversity penalty (0 disables). Penalizes identical/near-identical prompts.",
         default=0.0,
         ge=0.0,
-    )
-    # Optional custom function hooks
-    prompt_population_init_function: str | None = Field(
-        default=None,
-        description=(
-            "Optional function name to initialize candidate prompts. "
-            "Falls back to prompt_optimization_function."
-        ),
-    )
-    prompt_recombination_function: str | None = Field(
-        default=None,
-        description="Optional function name to recombine two parent prompts into a child.",
     )
 
 

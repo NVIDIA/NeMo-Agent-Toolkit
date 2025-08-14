@@ -25,8 +25,12 @@ functions:
     embedder_name: nv-embedqa-e5-v5
   current_datetime:
     _type: current_datetime
-  prompt_optimizer:
-    _type: prompt_optimizer
+  prompt_init:
+    _type: prompt_init
+    optimizer_llm: nim_rag_eval_llm
+    system_objective: Retrieve information about langsmith.
+  prompt_recombination:
+    _type: prompt_recombiner
     optimizer_llm: nim_rag_eval_llm
     system_objective: Retrieve information about langsmith.
 
@@ -86,13 +90,10 @@ eval:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm
-    trajectory_accuracy:
-      _type: trajectory
-      llm_name: nim_trajectory_eval_llm
 
 optimizer:
   output_path: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/optimizer/
-  reps_per_param_set: 1
+  reps_per_param_set: 2
   eval_metrics:
     rag_accuracy:
       evaluator_name: rag_accuracy
@@ -107,9 +108,13 @@ optimizer:
   n_trials_numeric: 3
   do_numeric_optimization: false
 
-  n_trials_prompt: 3
   do_prompt_optimization: true
-  prompt_optimization_function: prompt_optimizer
-  trajectory_eval_metric_name: trajectory_accuracy
+  prompt_population_init_function: prompt_init
+  prompt_recombination_function: prompt_recombination
+  ga_generations: 3
+  ga_population_size: 5
+  ga_diversity_lambda: 0.3
+  ga_parallel_evaluations: 1
+
 
 

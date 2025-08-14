@@ -9,7 +9,7 @@ from nat.data_models.function import FunctionBaseConfig
 from nat.profiler.parameter_optimization.prompt_optimizer import PromptOptimizerInputSchema
 
 
-class PromptOptimizerConfig(FunctionBaseConfig, name="prompt_optimizer"):
+class PromptOptimizerConfig(FunctionBaseConfig, name="prompt_init"):
 
     optimizer_llm: LLMRef = Field(description="LLM to use for prompt optimization")
     optimizer_prompt: str = Field(
@@ -33,10 +33,8 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
     try:
         from langchain_core.prompts import PromptTemplate
     except ImportError as exc:
-        raise ImportError(
-            "langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
-            "This error can be resolve by installing nat-langchain."
-        ) from exc
+        raise ImportError("langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
+                          "This error can be resolve by installing nat-langchain.") from exc
 
     llm = await builder.get_llm(config.optimizer_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
@@ -64,6 +62,7 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
 
         prompt += (
             "Please suggest an optimized version of the prompt that produces high accuracy at the correct times. "
+            "Be creative in your modifications to suggest considerations for edge cases, or other helpful information. "
             "Only respond with the optimized prompt and no other text. Do not introduce new variables or change "
             "the existing variables in the prompt. Only modify the instructions in the prompt that are "
             "not variables. ")

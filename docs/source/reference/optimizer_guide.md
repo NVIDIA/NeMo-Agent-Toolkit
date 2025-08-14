@@ -1,10 +1,10 @@
-# AIQ Optimizer Guide
+# NeMo Agent toolkit Optimizer Guide
 
-Welcome to the AIQ Optimizer guide. This document provides a comprehensive overview of how to use the AIQ Optimizer to tune your AIQ workflows.
+Welcome to the NeMo Agent toolkit Optimizer guide. This document provides a comprehensive overview of how to use the NeMo Agent toolkit Optimizer to tune your NeMo Agent toolkit workflows.
 
 ## Introduction
 
-The AIQ Optimizer is a powerful tool for automated hyperparameter tuning and prompt engineering for your AIQ workflows. It allows you to define a search space for your workflow's parameters and then intelligently searches for the best combination of parameters based on the evaluation metrics you specify.
+The NeMo Agent toolkit Optimizer is a powerful tool for automated hyperparameter tuning and prompt engineering for your NeMo Agent toolkit workflows. It allows you to define a search space for your workflow's parameters and then intelligently searches for the best combination of parameters based on the evaluation metrics you specify.
 
 This guide will walk you through:
 - Configuring the optimizer.
@@ -14,7 +14,10 @@ This guide will walk you through:
 
 ## How it Works
 
-The AIQ Optimizer uses a combination of techniques to find the best parameters for your workflow. At its core, it uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and can leverage large language models (LLMs) for prompt optimization.
+The NeMo Agent toolkit Optimizer uses a combination of techniques to find the best parameters for your workflow:
+
+- Numerical hyperparameter optimization uses [Optuna](https://optuna.org/).
+- Prompt optimization uses a genetic algorithm (GA) that evolves a population of prompt candidates over multiple generations using LLM-powered mutation and optional recombination.
 
 ```
 ┌─────────────────┐
@@ -30,20 +33,20 @@ The AIQ Optimizer uses a combination of techniques to find the best parameters f
           ▼
 ┌─────────────────┐
 │ Initialize      │
-│ Optuna Study    │
+│ Optimizers      │
 └─────────┬───────┘
           │
           ▼
-┌─────────────────┐     ┌─────────────────┐
-│ Loop N Trials   │────▶│ Suggest         │
-│                 │     │ Parameters      │
-└─────────┬───────┘     └─────────┬───────┘
+┌──────────────────────────┐     ┌─────────────────┐
+│ Loop Numeric N Trials    │────▶│ Suggest         │
+│ (Optuna)                 │     │ Parameters      │
+└─────────┬────────────────┘     └─────────┬───────┘
           ▲                       │
           │                       ▼
-┌─────────┴───────┐     ┌─────────────────┐
-│ Record Trial    │◀────│ Run Workflow    │
-│                 │     │ with Parameters │
-└─────────┬───────┘     └─────────┬───────┘
+┌─────────┴──────────────┐     ┌─────────────────┐
+│ Record Numeric Trial   │◀────│ Run Workflow    │
+│                        │     │ with Parameters │
+└─────────┬──────────────┘     └─────────┬───────┘
           │                       │
           │                       ▼
           │             ┌─────────────────┐
@@ -74,15 +77,19 @@ The optimization process follows the steps outlined in the diagram above:
 
 2.  **Study Initialization**: An [Optuna study](https://optuna.readthedocs.io/en/stable/reference/study.html) is created to manage the optimization process. This study keeps track of all the trials, their parameters, and their resulting scores.
 
-3.  **Optimization Loop**: The optimizer then enters a loop that runs for the number of trials specified in `n_trials_numeric` and/or `n_trials_prompt`.
+3.  **Optimization Loops**:
+    - Numerical parameters: loop for `n_trials_numeric` trials (Optuna).
+    - Prompt parameters: loop for `ga_generations` generations (Genetic Algorithm).
 
-4.  **Parameter Suggestion**: In each trial, Optuna's sampler suggests a new set of hyperparameters from the `SearchSpace` you defined with `OptimizableField`. For prompt optimization, a new prompt is generated based on the `prompt_purpose` and feedback from previous trials.
+4.  **Parameter Suggestion**: In each numeric trial, Optuna's sampler suggests a new set of hyperparameters from the `SearchSpace` you defined with `OptimizableField`. For prompt optimization, a population of prompts is evolved each generation using LLM-powered mutation and optional recombination guided by the `prompt_purpose`. No trajectory feedback is used.
 
-5.  **Workflow Execution**: The AIQ workflow is executed using the suggested parameters for that trial. This is repeated `reps_per_param_set` times to ensure the results are statistically stable.
+5.  **Workflow Execution**: The NeMo Agent toolkit workflow is executed using the suggested parameters for that trial. This is repeated `reps_per_param_set` times to ensure the results are statistically stable.
 
 6.  **Evaluation**: The output of each workflow run is passed to the evaluators defined in the `eval_metrics` configuration. Each evaluator calculates a score for a specific objective (such as correctness, latency, or creativity).
 
-7.  **Trial Recording**: The scores from the evaluators are combined into a single score for the trial, based on the `multi_objective_combination_mode`. This score, along with the parameters, is recorded in the Optuna study. Optuna uses this information to make better parameter suggestions in subsequent trials.
+7.  **Recording Results**:
+    - Numeric trials: scores are combined per `multi_objective_combination_mode` and recorded in the Optuna study.
+    - Prompt GA: each individual's metrics are normalized per generation and scalarized per `multi_objective_combination_mode`; the best individuals are checkpointed each generation.
 
 8.  **Analysis and Output**: Once all trials are complete, the optimizer analyzes the study to find the best-performing trial. It then generates the output files, including `best_params.json` and the various plots, to help you understand the results.
 
@@ -97,10 +104,27 @@ Here is an example of an `optimizer` section in a YAML configuration file:
 ```yaml
 optimizer:
   output_path: "optimizer_results"
-  n_trials_numeric: 50
-  reps_per_param_set: 5
+  # Numeric optimization (Optuna)
   do_numeric_optimization: true
-  do_prompt_optimization: false
+  n_trials_numeric: 50
+
+  # Prompt optimization (Genetic Algorithm)
+  do_prompt_optimization: true
+  ga_population_size: 16
+  ga_generations: 8
+  ga_offspring_size: 12        # optional; defaults to pop_size - elitism
+  ga_crossover_rate: 0.7
+  ga_mutation_rate: 0.2
+  ga_elitism: 2
+  ga_selection_method: "tournament"  # or "roulette"
+  ga_tournament_size: 3
+  ga_parallel_evaluations: 8
+  ga_diversity_lambda: 0.0
+  prompt_population_init_function: "prompt_optimizer"
+  prompt_recombination_function: "prompt_recombiner"   # optional
+
+  # Evaluation
+  reps_per_param_set: 5
   eval_metrics:
     latency:
       evaluator_name: "latency"
@@ -119,15 +143,23 @@ This is the main configuration object for the optimizer.
 -   `output_path: Path | None`: The directory where optimization results will be saved, for example, `optimizer_results/`. Defaults to `None`.
 -   `eval_metrics: dict[str, OptimizerMetric] | None`: A dictionary of evaluation metrics to optimize. The keys are custom names for the metrics, and the values are `OptimizerMetric` objects.
 -   `n_trials_numeric: int`: The number of trials for numeric optimization. A larger number of trials increases the chance of finding a better optimum but takes longer to run. Defaults to `20`.
--   `n_trials_prompt: int`: The number of trials for prompt optimization. Prompt optimization is often more expensive, so you might use fewer trials than for numeric optimization. Defaults to `20`.
+-   `ga_population_size: int`: Population size for GA prompt optimization. Larger populations increase diversity but cost more per generation. Defaults to `10`.
+-   `ga_generations: int`: Number of generations for GA prompt optimization. Logically equivalent to `n_trials_numeric`. Defaults to `5`.
+-   `ga_offspring_size: int | None`: Number of offspring produced per generation. If `null`, defaults to `ga_population_size - ga_elitism`.
+-   `ga_crossover_rate: float`: Probability of recombination between two parents for each prompt parameter. Defaults to `0.7`.
+-   `ga_mutation_rate: float`: Probability of mutating a child's prompt parameter using the LLM optimizer. Defaults to `0.1`.
+-   `ga_elitism: int`: Number of elite individuals copied unchanged to the next generation. Defaults to `1`.
+-   `ga_selection_method: str`: Parent selection scheme. `tournament` (default) or `roulette`.
+-   `ga_tournament_size: int`: Tournament size when `ga_selection_method` is `tournament`. Defaults to `3`.
+-   `ga_parallel_evaluations: int`: Maximum number of concurrent evaluations. Controls async concurrency. Defaults to `8`.
+-   `ga_diversity_lambda: float`: Diversity penalty strength to discourage duplicate prompt sets. `0.0` disables it. Defaults to `0.0`.
+-   `prompt_population_init_function: str | None`: Function name used to mutate base prompts to seed the initial population and perform mutations.
+-   `prompt_recombination_function: str | None`: Optional function name used to recombine two parent prompts into a child prompt.
 -   `reps_per_param_set: int`: The number of times to run the workflow for each set of parameters to get a more stable evaluation. This is important for noisy evaluations where the result might vary even with the same parameters. Defaults to `3`.
 -   `target: float | None`: If set, the optimization will stop when the combined score for a trial reaches this value. This is useful if you have a specific performance target and want to save time. The score is normalized between 0 and 1. Defaults to `None`.
 -   `do_prompt_optimization: bool`: A flag to enable or disable prompt optimization. Use this when you want the optimizer to experiment with different phrasings of your prompts to improve performance. Defaults to `False`.
 -   `do_numeric_optimization: bool`: A flag to enable or disable numeric parameter optimization. This is the standard hyperparameter tuning for values like `temperature` or other numerical settings. Defaults to `True`.
--   `prompt_evaluation_function: str | None`: The name of the function to use for evaluating generated prompts. This is required if `do_prompt_optimization` is `True`. This evaluator should be designed to score the quality of the prompt itself.
--   `trajectory_eval_metric_name: str | None`: The name of the trajectory evaluation metric to use for prompt optimization. This metric is used to generate feedback for the prompt generator. Required if `do_prompt_optimization` is `True`.
--   `num_feedback: int`: The number of feedback examples to use for prompt optimization. The optimizer will use the `num_feedback` best-performing and `num_feedback` worst-performing examples from previous trials to generate new prompt candidates. Defaults to `3`.
--   `multi_objective_combination_mode: str`: How to combine multiple objective scores into a single one. Currently, only `harmonic` mean is supported, which is a good way to balance multiple objectives. It tends to favor solutions where all objectives are reasonably good, rather than solutions where one objective is excellent and others are poor. Defaults to `harmonic`.
+-   `multi_objective_combination_mode: str`: How to combine multiple objective scores into a single scalar. Supported: `harmonic`, `sum`, `chebyshev`. Defaults to `harmonic`.
 
 ### `OptimizerMetric`
 
@@ -162,8 +194,8 @@ Here's how you can define optimizable fields in your workflow's data models:
 ```python
 from pydantic import BaseModel
 
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.data_models.optimizable import OptimizableField, SearchSpace
+from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.optimizable import OptimizableField, SearchSpace
 
 class SomeImageAgentConfig(FunctionBaseConfig, name="some_image_agent_config"):
     quality: int = OptimizableField(
@@ -197,7 +229,7 @@ In this example:
 
 ## Default Optimizable LLM Parameters
 
-Many of the LLM providers in the AIQ Toolkit come with pre-configured optimizable parameters. This means you can start tuning common hyperparameters like `temperature` and `top_p` without any extra configuration.
+Many of the LLM providers in the NeMo Agent toolkit Toolkit come with pre-configured optimizable parameters. This means you can start tuning common hyperparameters like `temperature` and `top_p` without any extra configuration.
 
 Here is a matrix of the default optimizable parameters for some of the built-in LLM providers:
 
@@ -211,14 +243,55 @@ Here is a matrix of the default optimizable parameters for some of the built-in 
 
 To use these defaults, you just need to enable numeric optimization in your `config.yaml`. The optimizer will automatically find these `OptimizableField`s in the LLM configuration and start tuning them. You can always override these defaults by defining your own `OptimizableField` on the LLM configuration in your workflow.
 
+## Prompt Optimization with Genetic Algorithm (GA)
+
+This section explains how the GA evolves prompt parameters when `do_prompt_optimization` is enabled.
+
+### Workflow
+
+1. Seed an initial population:
+   - The first individual uses your original prompts.
+   - The remaining `ga_population_size - 1` individuals are created by applying `prompt_population_init_function` to each prompt parameter with its `prompt_purpose`.
+2. Evaluate all individuals with your configured `eval_metrics` and `reps_per_param_set`. Metrics are averaged per evaluator.
+3. Normalize metrics per generation so that higher is always better, respecting each metric's `direction`.
+4. Scalarize normalized scores per `multi_objective_combination_mode` to compute a fitness value. Optionally subtract a diversity penalty if `ga_diversity_lambda > 0`.
+5. Create the next generation:
+   - Elitism: carry over the top `ga_elitism` individuals.
+   - Selection: choose parents using `ga_selection_method` (`tournament` with `ga_tournament_size`, or `roulette`).
+   - Crossover: with probability `ga_crossover_rate`, recombine two parent prompts for a parameter using `prompt_recombination_function` (if provided), otherwise pick from a parent.
+   - Mutation: with probability `ga_mutation_rate`, apply `prompt_population_init_function` to mutate the child's parameter.
+   - Repeat until the new population reaches `ga_population_size` (or `ga_offspring_size` offspring plus elites).
+6. Repeat steps 2–5 for `ga_generations` generations.
+
+All LLM calls and evaluations are executed asynchronously with a concurrency limit of `ga_parallel_evaluations`.
+
+### Tuning Guidance
+
+- Population and generations (`ga_population_size`, `ga_generations`): increase to explore more of the search space at higher cost.
+- Crossover (`ga_crossover_rate`) and mutation (`ga_mutation_rate`): higher mutation increases exploration; higher crossover helps combine good parts of prompts.
+- Elitism (`ga_elitism`): preserves top performers; too high can reduce diversity.
+- Selection (`ga_selection_method`, `ga_tournament_size`): tournament is robust; larger tournaments increase selection pressure.
+- Diversity (`ga_diversity_lambda`): penalizes duplicate prompt sets to encourage variety.
+- Concurrency (`ga_parallel_evaluations`): tune based on your environment to balance throughput and rate limits.
+
+### Outputs
+
+During GA prompt optimization, the optimizer saves:
+
+- `optimized_prompts_gen<N>.json`: Best prompt set after generation N.
+- `optimized_prompts.json`: Final best prompt set after all generations.
+- `ga_history_prompts.csv`: Per-individual fitness and metric history across generations.
+
+Numeric optimization outputs (Optuna) remain unchanged and can be used alongside GA outputs.
+
 ## Running the Optimizer
 
-Once you have your optimizer configuration and optimizable fields set up, you can run the optimizer from the command line using the `aiq optimizer` command.
+Once you have your optimizer configuration and optimizable fields set up, you can run the optimizer from the command line using the `nat optimizer` command.
 
 ### CLI Command
 
 ```bash
-aiq optimizer --config_file <path_to_config>
+nat optimizer --config_file <path_to_config>
 ```
 
 ### Options
@@ -231,7 +304,7 @@ aiq optimizer --config_file <path_to_config>
 
 Example:
 ```bash
-aiq optimizer --config_file my_workflow/config.yaml
+nat optimizer --config_file my_workflow/config.yaml
 ```
 
 This command will start the optimization process. You will see logs in your terminal showing the progress of the optimization, including the parameters being tested and the scores for each trial.
@@ -251,19 +324,19 @@ By examining these output files, you can understand the results of the optimizat
 
 ## Advanced Topics
 
-This section covers more advanced usage of the AIQ Optimizer, including creating custom evaluators and performing deeper analysis of the results.
+This section covers more advanced usage of the NeMo Agent toolkit Optimizer, including creating custom evaluators and performing deeper analysis of the results.
 
 ### Creating a Custom Evaluator
 
-While AIQ provides several built-in evaluators, you may need to create your own to measure performance specific to your use case. To create a custom evaluator, you need to:
+While NeMo Agent toolkit provides several built-in evaluators, you may need to create your own to measure performance specific to your use case. To create a custom evaluator, you need to:
 
-1.  **Define the Evaluator Class**: Create a Python class that inherits from `aiq.eval.Evaluator` and implements the `evaluate` method.
-2.  **Register the Evaluator**: Use the `@register_evaluator` decorator to make your evaluator available to the AIQ Toolkit.
+1.  **Define the Evaluator Class**: Create a Python class that inherits from `nat.eval.Evaluator` and implements the `evaluate` method.
+2.  **Register the Evaluator**: Use the `@register_evaluator` decorator to make your evaluator available to the NeMo Agent toolkit Toolkit.
 
 Here is an example of a custom evaluator that checks if the output contains a specific keyword:
 
 ```python
-from aiq.eval import Evaluator, register_evaluator, EvaluationResult
+from nat.eval import Evaluator, register_evaluator, EvaluationResult
 
 @register_evaluator("keyword_match")
 class KeywordMatchEvaluator(Evaluator):
@@ -295,19 +368,3 @@ optimizer:
       evaluator_name: "my_keyword_evaluator"
       direction: "maximize"
 ```
-
-### Deeper Analysis with Optuna
-
-The `study.db` file is a standard SQLite database that can be analyzed with Optuna's visualization tools. This allows you to generate more detailed plots and analyses than the ones provided by default.
-
-First, make sure you have `optuna-dashboard` installed:
-```bash
-pip install optuna-dashboard
-```
-
-Then, you can launch the dashboard with your study file:
-```bash
-optuna-dashboard sqlite:///path/to/your/optimizer_results/study.db
-```
-
-Happy optimizing! 

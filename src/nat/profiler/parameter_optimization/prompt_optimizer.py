@@ -17,7 +17,7 @@ Genetic Algorithm based Prompt Optimization
 
 It evolves a population of prompt configurations
 over multiple generations. Fitness is computed solely from the evaluation
-metrics – any trajectory evaluator reasoning is ignored by design.
+metrics.
 
 Highlights:
 - Initial population seeded using the configured `prompt_optimizer` function
@@ -91,7 +91,7 @@ async def optimize_prompts(
         metrics: dict[str, float] | None = None  # evaluator_name -> average score
         scalar_fitness: float | None = None
 
-    def _normalise_generation(
+    def _normalize_generation(
         individuals: Sequence[Individual],
         metric_names: Sequence[str],
         directions: Sequence[str],
@@ -119,7 +119,7 @@ async def optimize_prompts(
             normed.append(entry)
         return normed
 
-    def _scalarise(norm_scores: dict[str, float], *, mode: str, weights: Sequence[float] | None) -> float:
+    def _scalarize(norm_scores: dict[str, float], *, mode: str, weights: Sequence[float] | None) -> float:
         """Collapse normalised scores to a single scalar (higher is better)."""
         vals = list(norm_scores.values())
         if not vals:
@@ -181,11 +181,11 @@ async def optimize_prompts(
     async with WorkflowBuilder(general_config=base_cfg.general, registry=None) as builder:
         await builder.populate_builder(base_cfg)
         init_fn_name = (
-            optimizer_config.prompt_population_init_function or optimizer_config.prompt_optimization_function
+            optimizer_config.prompt_population_init_function
         )
         if not init_fn_name:
             raise ValueError(
-                "No prompt optimization function configured. Set optimizer.prompt_optimization_function."
+                "No prompt optimization function configured. Set optimizer.prompt_population_init_function"
             )
         init_fn = builder.get_function(init_fn_name)
 
@@ -297,11 +297,11 @@ async def optimize_prompts(
                 # in-place update
                 for ind, ev in zip(unevaluated, evaluated):
                     ind.metrics = ev.metrics
-            # Scalarise
-            norm_per_ind = _normalise_generation(pop, eval_metrics, directions)
+            # Scalarize
+            norm_per_ind = _normalize_generation(pop, eval_metrics, directions)
             penalties = _apply_diversity_penalty(pop, diversity_lambda)
             for ind, norm_scores, penalty in zip(pop, norm_per_ind, penalties):
-                ind.scalar_fitness = _scalarise(norm_scores, mode=optimizer_config.multi_objective_combination_mode,
+                ind.scalar_fitness = _scalarize(norm_scores, mode=optimizer_config.multi_objective_combination_mode,
                                                 weights=weights) - penalty
             return pop
 
