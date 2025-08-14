@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 def _get_nat_dependency(editable: bool = False) -> str:
     """
-    Get the NAT dependency string with version and framework selection.
+    Get the NAT dependency string with version.
 
     Args:
         editable: Whether this is for an editable/development install
@@ -38,6 +38,7 @@ def _get_nat_dependency(editable: bool = False) -> str:
     Returns:
         str: The dependency string to use in pyproject.toml
     """
+    # Assume the default dependency is langchain
     dependency = "nvidia-nat[langchain]"
 
     if editable:
