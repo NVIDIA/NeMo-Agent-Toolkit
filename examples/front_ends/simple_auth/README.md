@@ -22,6 +22,14 @@ authentication to use. Particularly, this example highlights how to use the `OAu
 with a demonstrative `OAuth 2.0` provider and then return information from the authorization server's demonstrative `/api/me` endpoint
 which provides information about the authenticated user.
 
+## Installation
+
+First, install the `simple_auth` example:
+
+```bash
+uv pip install -e examples/front_ends/simple_auth
+```
+
 ## How the OAuth2.0 Authorization‑Code Flow Works
 
 1. **Agent launches login** – it sends the user’s browser to the OAuth provider’s
