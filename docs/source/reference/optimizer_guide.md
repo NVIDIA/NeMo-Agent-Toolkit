@@ -232,7 +232,7 @@ In this example:
 - `model_name` is a categorical parameter, and the optimizer will choose from the provided list of models.
 - `system_prompt` is a prompt parameter that can be optimized using an LLM if `do_prompt_optimization` is enabled.
 
-# Enabling Optimization of Fields in the Config File
+## Enabling Optimization of Fields in the Config File
 Once `OptimizableField`s have been created in your workflow's data models, you need to enable optimization for these fields in your workflow configuration file.
 This can be enabled using the `optimizable_params` field of your configuration file.
     
