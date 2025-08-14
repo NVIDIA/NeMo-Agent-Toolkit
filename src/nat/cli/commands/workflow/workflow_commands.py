@@ -39,10 +39,9 @@ def _get_nat_dependency(editable: bool = False) -> str:
         str: The dependency string to use in pyproject.toml
     """
     # Get framework from environment or use default
-    framework = "langchain"
+    dependency = "nvidia-nat[langchain]"
 
     if editable:
-        dependency = f"nvidia-nat[{framework}]"
         logger.info("Using unversioned NAT dependency for editable install: %s", dependency)
         return dependency
 
@@ -52,15 +51,10 @@ def _get_nat_dependency(editable: bool = False) -> str:
     if current_version != "unknown":
         # Extract major.minor (e.g., "1.2.3" -> "1.2")
         major_minor = ".".join(current_version.split(".")[:2])
-        version_spec = f"~={major_minor}"
+        dependency += f"~={major_minor}"
     else:
         # Fallback if version detection fails
-        version_spec = ""
-
-    # Build the dependency string
-    dependency = f"nvidia-nat[{framework}]"
-    if version_spec:
-        dependency += version_spec
+        return dependency
 
     logger.info("Using NAT dependency: %s", dependency)
     return dependency
