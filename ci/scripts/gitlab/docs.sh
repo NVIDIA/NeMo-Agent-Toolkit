@@ -21,8 +21,7 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
 rapids-logger "Installing non-pip deps"
-apt update
-apt install --no-install-recommends -y make
+get_lfs_files
 
 create_env group:dev group:docs
 
