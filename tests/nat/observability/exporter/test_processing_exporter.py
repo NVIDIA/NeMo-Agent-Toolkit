@@ -777,7 +777,7 @@ class TestTypeIntrospection:
     def test_input_output_types(self, processing_exporter):
         """Test that type introspection works correctly."""
         assert processing_exporter.input_type is str
-        assert processing_exporter.output_type == int
+        assert processing_exporter.output_type is int
         assert processing_exporter.input_class is str
         assert processing_exporter.output_class is int
 

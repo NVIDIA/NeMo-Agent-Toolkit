@@ -884,7 +884,7 @@ async def test_create_single_to_stream_conversion():
     info = FunctionInfo.create(single_fn=fn_int_to_str, single_to_stream_fn=convert_to_stream)
 
     assert info.stream_fn is not None
-    assert info.stream_output_type == int
+    assert info.stream_output_type is int
     assert info.stream_output_schema is not None
 
     async for value in info.stream_fn(10):
@@ -931,7 +931,7 @@ async def test_create_stream_to_single_conversion():
     info = FunctionInfo.create(stream_fn=fn_int_to_str_stream, stream_to_single_fn=convert_to_single)
 
     assert info.single_fn is not None
-    assert info.single_output_type == int
+    assert info.single_output_type is int
     assert info.single_output_schema is not None
 
     assert await info.single_fn(10) == 10

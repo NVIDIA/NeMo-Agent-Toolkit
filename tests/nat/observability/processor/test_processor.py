@@ -51,7 +51,7 @@ class TestProcessorTypeIntrospection:
 
         processor = StringToIntProcessor()
         assert processor.input_type is str
-        assert processor.output_type == int
+        assert processor.output_type is int
         assert processor.input_class is str
         assert processor.output_class is int
 
