@@ -1,0 +1,14 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "../../.."
+
+[project]
+name = "aiqtoolkit"
+dynamic = ["version"]
+dependencies = ["nvidia-nat~=1.2"]
+readme = "pypi.md"
+description = "Transitional package for nvidia-nat, this package is deprecated and will be removed in the future."
+classifiers = ["Programming Language :: Python"]

@@ -41,7 +41,7 @@ Ensure that Docker is installed and the Docker service is running before proceed
 
 - Install Docker: Follow the official installation guide for your platform: [Docker Installation Guide](https://docs.docker.com/engine/install/)
 - Start Docker Service:
-  - Linux: Run`sudo systemctl start docker` (ensure your user has permission to run Docker).
+  - Linux: Run `sudo systemctl start docker` (ensure your user has permission to run Docker).
   - Mac & Windows: Docker Desktop should be running in the background.
 - Verify Docker Installation: Run the following command to verify that Docker is installed and running correctly:
 ```bash
@@ -51,6 +51,11 @@ docker info
 ## Installation and Setup
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+
+To run this example, install the required dependencies by running the following command:
+```bash
+uv sync --extra langchain --extra redis --extra telemetry
+```
 
 ### Start Services
 
@@ -68,7 +73,7 @@ docker compose -f examples/deploy/docker-compose.phoenix.yml up
 
 ## Run the Workflow
 
-This examples shows how to have a simple chat that uses a redis memory backend for creating and retrieving memories.
+This example shows how to have a simple chat that uses a Redis memory backend for creating and retrieving memories.
 
 An embeddings model is used to create embeddings for queries and for stored memories. Uses HNSW and L2 distance metric.
 
@@ -77,7 +82,7 @@ An embeddings model is used to create embeddings for queries and for stored memo
 Here we will add a memory for the workflow to use in following invocations. The memory tool will automatically determine the intent as to whether or not an input should be stored as a "fact" or if the input should be used to query the memory.
 
 ```bash
-aiq run --config_file=examples/memory/redis/configs/config.yml --input "my favorite flavor is strawberry"
+nat run --config_file=examples/memory/redis/configs/config.yml --input "my favorite flavor is strawberry"
 ```
 
 **Expected Workflow Output**
@@ -93,7 +98,7 @@ Workflow Result:
 Once we have established something in the memory, we can use the workflow to give us a response based on its input.
 
 ```bash
-aiq run --config_file=examples/memory/redis/configs/config.yml --input "what flavor of ice-cream should I get?"
+nat run --config_file=examples/memory/redis/configs/config.yml --input "what flavor of ice-cream should I get?"
 ```
 
 **Expected Workflow Output**

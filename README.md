@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA NeMo Agent Toolkit](./docs/source/_static/aiqtoolkit_banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](./docs/source/_static/banner.png "NeMo Agent toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit
 
@@ -36,7 +36,7 @@ NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that 
 
 - [**Profiling:**](./docs/source/workflows/profiler.md) Use the profiler to profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks. While we encourage you to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate your tools, agents, and workflows to whatever level you want. You start small and go to where you believe you'll see the most value and expand from there.
 
-- [**Observability:**](./docs/source/workflows/observe/index.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool, with examples using [Phoenix](./docs/source/workflows/observe/observe-workflow-with-phoenix.md) and [W&B Weave](./docs/source/workflows/observe/observe-workflow-with-weave.md).
+- [**Observability:**](./docs/source/workflows/observe/index.md) Monitor and debug your workflows with dedicated integrations for popular observability platforms such as Phoenix, Weave, and Langfuse, plus compatibility with OpenTelemetry-based observability platforms. Track performance, trace execution flows, and gain insights into your agent behaviors.
 
 - [**Evaluation System:**](./docs/source/workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
@@ -50,11 +50,11 @@ With NeMo Agent toolkit, you can move quickly, experiment freely, and ensure rel
 
 The following diagram illustrates the key components of NeMo Agent toolkit and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend NeMo Agent toolkit in your projects.
 
-![NeMo Agent toolkit Components Diagram](docs/source/_static/aiqtoolkit_gitdiagram.png)
+![NeMo Agent toolkit Components Diagram](docs/source/_static/gitdiagram.png)
 
 ## Links
 
- * [Documentation](https://docs.nvidia.com/aiqtoolkit): Explore the full documentation for NeMo Agent toolkit.
+ * [Documentation](https://docs.nvidia.com/nemo/agent-toolkit): Explore the full documentation for NeMo Agent toolkit.
  * [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with NeMo Agent toolkit.
  * [Examples](./examples/README.md): Explore examples of NeMo Agent toolkit workflows located in the [`examples`](./examples) directory of the source repository.
  * [Create and Customize NeMo Agent toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent toolkit workflows.
@@ -70,15 +70,15 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 
 - Install [Git](https://git-scm.com/)
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
-- Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Install [uv](https://docs.astral.sh/uv/getting-started/installation/) (version 0.5.4 or later, latest version is recommended)
 - Install [Python (3.11 or 3.12)](https://www.python.org/downloads/)
 
 ### Install From Source
 
 1. Clone the NeMo Agent toolkit repository to your local machine.
    ```bash
-   git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git aiqtoolkit
-   cd aiqtoolkit
+   git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit
+   cd nemo-agent-toolkit
    ```
 
 2. Initialize, fetch, and update submodules in the Git repository.
@@ -123,7 +123,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
    ```
 
    > [!NOTE]
-   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
+   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
 
 
 
@@ -135,7 +135,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 6. Verify the installation using the NeMo Agent toolkit CLI
 
    ```bash
-   aiq --version
+   nat --version
    ```
 
    This should output the NeMo Agent toolkit version which is currently installed.
@@ -177,10 +177,10 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
       parse_agent_response_max_retries: 3
    ```
 
-3. Run the Hello World example using the `aiq` CLI and the `workflow.yaml` file.
+3. Run the Hello World example using the `nat` CLI and the `workflow.yaml` file.
 
    ```bash
-   aiq run --config_file workflow.yaml --input "List five subspecies of Aardvarks"
+   nat run --config_file workflow.yaml --input "List five subspecies of Aardvarks"
    ```
 
    This will run the workflow and output the results to the console.

@@ -45,10 +45,10 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 Each agent example contains its own installation and usage instructions. Navigate to the specific example directory and follow the README instructions:
 
-- **ReAct Agent**: See [react/README.md](./react/README.md) for step-by-step reasoning agent implementation
-- **Tool Calling Agent**: See [tool_calling/README.md](./tool_calling/README.md) for direct tool invocation agent
-- **Mixture of Agents**: See [mixture_of_agents/README.md](./mixture_of_agents/README.md) for multi-agent orchestration
-- **ReWOO Agent**: See [rewoo/README.md](./rewoo/README.md) for planning-based agent workflow
+- **ReAct Agent**: See [react/README.md](react/README.md) for step-by-step reasoning agent implementation
+- **Tool Calling Agent**: See [tool_calling/README.md](tool_calling/README.md) for direct tool invocation agent
+- **Mixture of Agents**: See [mixture_of_agents/README.md](mixture_of_agents/README.md) for multi-agent orchestration
+- **ReWOO Agent**: See [rewoo/README.md](rewoo/README.md) for planning-based agent workflow
 
 ## Learn More
 

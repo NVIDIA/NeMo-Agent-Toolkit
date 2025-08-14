@@ -70,3 +70,4 @@ workflow:
     - calculator_subtract
     - mcp_time_tool
   llm_name: nim_llm
+  parse_agent_response_max_retries: 3

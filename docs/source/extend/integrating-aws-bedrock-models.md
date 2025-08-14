@@ -17,7 +17,7 @@ limitations under the License.
 
 # AWS Bedrock Integration
 
-The NeMo Agent toolkit supports integration with multiple LLM providers, including AWS Bedrock. This documentation provides a comprehensive guide on how to integrate AWS Bedrock models into your NeMo Agent toolkit workflow. To view the full list of supported LLM providers, run `aiq info components -t llm_provider`.
+The NeMo Agent toolkit supports integration with multiple LLM providers, including AWS Bedrock. This documentation provides a comprehensive guide on how to integrate AWS Bedrock models into your NeMo Agent toolkit workflow. To view the full list of supported LLM providers, run `nat info components -t llm_provider`.
 
 
 ## Configuration

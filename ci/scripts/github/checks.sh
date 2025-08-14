@@ -24,10 +24,3 @@ create_env group:dev group:docs extra:examples
 
 rapids-logger "Running checks"
 ${SCRIPT_DIR}/checks.sh
-
-rapids-logger "Checking copyright headers"
-python ${SCRIPT_DIR}/copyright.py --verify-apache-v2
-
-
-rapids-logger "Runing Documentation checks"
-${SCRIPT_DIR}/documentation_checks.sh
