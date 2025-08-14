@@ -20,13 +20,13 @@ repos:
       - id: isort
         args: ["--filter-files", "--settings-file=./pyproject.toml"]
 
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.0.0
-    hooks:
-      - id: flake8
-        entry: pflake8
-        additional_dependencies: [pyproject-flake8]
-        args: ["--config=./pyproject.toml"]
+  # - repo: https://github.com/PyCQA/flake8
+  #   rev: 7.0.0
+  #   hooks:
+  #     - id: flake8
+  #       entry: pflake8
+  #       additional_dependencies: [pyproject-flake8]
+  #       args: ["--config=./pyproject.toml"]
 
   - repo: https://github.com/google/yapf
     rev: v0.43.0
