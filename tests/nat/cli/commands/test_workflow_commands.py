@@ -16,6 +16,8 @@
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from nat.cli.commands.workflow.workflow_commands import _get_nat_dependency
 from nat.cli.commands.workflow.workflow_commands import get_repo_root
 
@@ -25,18 +27,11 @@ def test_get_repo_root(project_dir: str):
 
 
 @patch('nat.cli.entrypoint.get_version')
-def test_get_nat_dependency_non_editable_with_version(mock_get_version):
-    """Test that non-editable mode with valid version returns versioned dependency."""
+@pytest.mark.parametrize(
+    "versioned, expected_dep",
+    [(True, "nvidia-nat[langchain]~=1.2"), (False, "nvidia-nat[langchain]")],
+)
+def test_get_nat_dependency(mock_get_version, versioned, expected_dep):
     mock_get_version.return_value = "1.2.3"
-
-    result = _get_nat_dependency(versioned=True)
-    assert result == "nvidia-nat[langchain]~=1.2"
-
-
-@patch('nat.cli.entrypoint.get_version')
-def test_get_nat_dependency_non_editable_unknown_version(mock_get_version):
-    """Test that non-editable mode with unknown version returns unversioned dependency."""
-    mock_get_version.return_value = "unknown"
-
-    result = _get_nat_dependency(versioned=False)
-    assert result == "nvidia-nat[langchain]"
+    result = _get_nat_dependency(versioned=versioned)
+    assert result == expected_dep
