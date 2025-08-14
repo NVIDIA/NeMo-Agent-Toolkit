@@ -299,9 +299,6 @@ def test_validate_solver_prompt():
     assert ReWOOAgentGraph.validate_solver_prompt(mock_prompt)
 
 
-# New tests for additional instructions functionality
-
-
 def test_additional_planner_instructions_are_appended():
     """Test that additional planner instructions are properly appended to the base planner prompt."""
     from langchain_core.prompts import ChatPromptTemplate
