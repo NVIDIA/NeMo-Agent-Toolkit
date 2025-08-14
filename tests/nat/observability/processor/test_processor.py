@@ -50,7 +50,7 @@ class TestProcessorTypeIntrospection:
                 return len(item)
 
         processor = StringToIntProcessor()
-        assert processor.input_type == str
+        assert processor.input_type is str
         assert processor.output_type == int
         assert processor.input_class is str
         assert processor.output_class == int
@@ -276,7 +276,7 @@ class TestProcessorInheritance:
 
         processor = ExtendedStringProcessor()
         # Type introspection should still work
-        assert processor.input_type == str
+        assert processor.input_type is str
         assert processor.output_type is str
 
     async def test_inherited_processor_functionality(self):
@@ -318,7 +318,7 @@ class TestProcessorInheritance:
                 return f"{processed} - {timestamp}"
 
         processor = TimestampProcessor()
-        assert processor.input_type == str
+        assert processor.input_type is str
         assert processor.output_type is str
 
 
@@ -346,7 +346,7 @@ class TestProcessorEdgeCases:
                 return item
 
         processor = IdentityProcessor()
-        assert processor.input_type == str
+        assert processor.input_type is str
         assert processor.output_type is str
 
         result = await processor.process("test")
