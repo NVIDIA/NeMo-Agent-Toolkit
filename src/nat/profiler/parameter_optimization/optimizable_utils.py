@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-from typing import Dict
 from typing import get_args
 from typing import get_origin
 
@@ -25,7 +24,7 @@ from nat.data_models.optimizable import SearchSpace
 logger = logging.getLogger(__name__)
 
 
-def walk_optimizables(obj: BaseModel, path: str = "") -> Dict[str, SearchSpace]:
+def walk_optimizables(obj: BaseModel, path: str = "") -> dict[str, SearchSpace]:
     """
     Recursively build ``{flattened.path: SearchSpace}`` for every optimizable
     field inside *obj*.
@@ -35,7 +34,7 @@ def walk_optimizables(obj: BaseModel, path: str = "") -> Dict[str, SearchSpace]:
     * If a model contains optimizable fields **but** omits
       ``optimizable_params``, we emit a warning and skip them.
     """
-    spaces: Dict[str, SearchSpace] = {}
+    spaces: dict[str, SearchSpace] = {}
 
     allowed_params_raw = getattr(obj, "optimizable_params", None)
     allowed_params = set(allowed_params_raw) if allowed_params_raw is not None else None
@@ -71,7 +70,7 @@ def walk_optimizables(obj: BaseModel, path: str = "") -> Dict[str, SearchSpace]:
         # 4. static-type fallback for class-level annotations
         elif isinstance(obj, type):
             ann = fld.annotation
-            if get_origin(ann) in (dict, Dict):
+            if get_origin(ann) in (dict, dict):
                 _, val_t = get_args(ann) or (None, None)
                 if isinstance(val_t, type) and issubclass(val_t, BaseModel):
                     if allowed_params is None or name in allowed_params:

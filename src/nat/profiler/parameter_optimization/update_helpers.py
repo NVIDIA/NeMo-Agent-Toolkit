@@ -15,18 +15,26 @@
 
 from collections import defaultdict
 from typing import Any
-from typing import Dict
 
 from pydantic import BaseModel
 
 
-def nest_updates(flat: Dict[str, Any]) -> Dict[str, Any]:
+def _deep_merge_dict(target: dict[str, Any], updates: dict[str, Any]) -> None:
+    """In-place deep merge of nested dictionaries."""
+    for key, value in updates.items():
+        if key in target and isinstance(target[key], dict) and isinstance(value, dict):
+            _deep_merge_dict(target[key], value)
+        else:
+            target[key] = value
+
+
+def nest_updates(flat: dict[str, Any]) -> dict[str, Any]:
     """
     Convert ``{'a.b.c': 1, 'd.x.y': 2}`` ➜
     ``{'a': {'b': {'c': 1}}, 'd': {'x': {'y': 2}}}``.
     Works even when the middle segment is a dict key.
     """
-    root: Dict[str, Any] = defaultdict(dict)
+    root: dict[str, Any] = defaultdict(dict)
 
     for dotted, value in flat.items():
         head, *rest = dotted.split(".", 1)
@@ -37,13 +45,13 @@ def nest_updates(flat: Dict[str, Any]) -> Dict[str, Any]:
         tail = rest[0]
         child_updates = nest_updates({tail: value})
         if isinstance(root[head], dict):
-            root[head].update(child_updates)
+            _deep_merge_dict(root[head], child_updates)
         else:
             root[head] = child_updates
     return dict(root)
 
 
-def apply_suggestions(cfg: BaseModel, flat: Dict[str, Any]) -> BaseModel:
+def apply_suggestions(cfg: BaseModel, flat: dict[str, Any]) -> BaseModel:
     """
     Return a **new** config where only the dotted-path keys in *flat*
     have been modified. Preserves all unrelated siblings.
