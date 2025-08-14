@@ -38,7 +38,6 @@ def _get_nat_dependency(editable: bool = False) -> str:
     Returns:
         str: The dependency string to use in pyproject.toml
     """
-    # Get framework from environment or use default
     dependency = "nvidia-nat[langchain]"
 
     if editable:
