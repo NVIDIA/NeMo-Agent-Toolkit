@@ -419,7 +419,7 @@ class TestCreateIsolatedExporters:
         mock_exporter = MockExporter("test")
         exporter_manager.add_exporter("test", mock_exporter)
 
-        with patch('nat.builder.context.AIQContextState.get') as mock_get:
+        with patch('nat.builder.context.ContextState.get') as mock_get:
             mock_context = Mock(spec=ContextState)
             mock_get.return_value = mock_context
 

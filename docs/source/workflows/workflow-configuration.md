@@ -73,16 +73,20 @@ The `functions` section contains the tools used in the workflow, in our example 
 
 
 ### `llms`
-This section contains the models used in the workflow. The `_type` value refers to the API hosting the model, in this case `nim` refers to an NIM model hosted on [`build.nvidia.com`](https://build.nvidia.com). The supported API types are `nim`, and `openai`.
+This section contains the models used in the workflow. The `_type` value refers to the API hosting the model, in this case `nim` refers to an NIM model hosted on [`build.nvidia.com`](https://build.nvidia.com).
 
 <!-- path-check-skip-next-line -->
 The `model_name` value then needs to match a model hosted by the API, in our example we are using the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model.
 
-Both the `nim` and `openai` APIs support API specific attributes. For `nim` these are defined in the {py:class}`~nat.llm.nim_llm.NIMModelConfig` class, and for `openai` these are defined in the {py:class}`~nat.llm.openai_llm.OpenAIModelConfig` class.
+Each type of API supports specific attributes. For `nim` these are defined in the {py:class}`~nat.llm.nim_llm.NIMModelConfig` class.
+
+See the [LLMs](./llms/index.md) documentation for more information.
 
 ### `embedders`
 <!-- path-check-skip-next-line -->
 This section follows a the same structure as the `llms` section and serves as a way to separate the embedding models from the LLM models. In our example, we are using the [`nvidia/nv-embedqa-e5-v5`](https://build.nvidia.com/nvidia/nv-embedqa-e5-v5) model.
+
+See the [Embedders](./embedders.md) documentation for more information.
 
 ### `workflow`
 
@@ -112,6 +116,8 @@ This section configures integration of memory layers with tools such as the [Mem
 ### `retrievers`
 
 This section configures retrievers for vector stores. It follows the same format as the `llms` section. Refer to the `examples/RAG/simple_rag` example workflow for an example on how this is used.
+
+See the [Retrievers](./retrievers.md) documentation for more information.
 
 ### Environment Variable Interpolation
 

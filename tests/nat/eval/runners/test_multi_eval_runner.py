@@ -87,7 +87,7 @@ async def test_run_all_with_overrides(base_eval_run_config, mock_evaluation_run_
 
     # Create config with multiple overrides
     config1 = copy.deepcopy(base_eval_run_config)
-    config1.override = (("eval.general.max_concurrency", "1"), ("eval.general.output_dir", "/tmp/test1"))
+    config1.override = (("eval.general.max_concurrency", "1"), ("eval.general.output_dir", "./.tmp/test1"))
     configs["complex_1"] = config1
 
     # Create config with different overrides

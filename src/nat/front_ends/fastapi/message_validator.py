@@ -39,7 +39,6 @@ from nat.data_models.api_server import WebSocketSystemIntermediateStepMessage
 from nat.data_models.api_server import WebSocketSystemResponseTokenMessage
 from nat.data_models.api_server import WebSocketUserInteractionResponseMessage
 from nat.data_models.api_server import WebSocketUserMessage
-from nat.data_models.api_server import WorkflowSchemaType
 from nat.data_models.interactive import BinaryHumanPromptOption
 from nat.data_models.interactive import HumanPrompt
 from nat.data_models.interactive import HumanPromptBase
@@ -70,12 +69,7 @@ class MessageValidator:
             WebSocketMessageType.USER_INTERACTION_MESSAGE: WebSocketUserInteractionResponseMessage,
             WebSocketMessageType.ERROR_MESSAGE: Error
         }
-        self._data_type_schema_mapping: dict[str, type[BaseModel]] = {
-            WorkflowSchemaType.GENERATE: ResponsePayloadOutput,
-            WorkflowSchemaType.CHAT: ChatResponse,
-            WorkflowSchemaType.CHAT_STREAM: ChatResponseChunk,
-            WorkflowSchemaType.GENERATE_STREAM: ResponseIntermediateStep,
-        }
+
         self._message_parent_id: str = "default_id"
 
     async def validate_message(self, message: dict[str, Any]) -> BaseModel:
@@ -139,7 +133,11 @@ class MessageValidator:
         validated_message_content: BaseModel = None
         try:
             if (isinstance(data_model, ResponsePayloadOutput)):
-                validated_message_content = SystemResponseContent(text=data_model.payload)
+                if hasattr(data_model.payload, 'model_dump_json'):
+                    text_content: str = data_model.payload.model_dump_json()
+                else:
+                    text_content: str = str(data_model.payload)
+                validated_message_content = SystemResponseContent(text=text_content)
 
             elif (isinstance(data_model, (ChatResponse, ChatResponseChunk))):
                 validated_message_content = SystemResponseContent(text=data_model.choices[0].message.content)

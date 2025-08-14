@@ -45,7 +45,7 @@ async def generate_streaming_response_as_str(payload: typing.Any,
         if (isinstance(item, ResponseSerializable)):
             yield item.get_stream_data()
         else:
-            raise ValueError("Unexpected item type in stream. Expected AIQChatResponseSerializable, got: " +
+            raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                              str(type(item)))
 
 
@@ -125,7 +125,7 @@ async def generate_streaming_response_full(payload: typing.Any,
                                            output_type: type | None = None,
                                            filter_steps: str | None = None) -> AsyncGenerator[ResponseSerializable]:
     """
-    Similar to generate_streaming_response but provides raw AIQResponseIntermediateStep objects
+    Similar to generate_streaming_response but provides raw ResponseIntermediateStep objects
     without any step adaptor translations.
     """
     # Parse filter_steps into a set of allowed types if provided
@@ -191,5 +191,5 @@ async def generate_streaming_response_full_as_str(payload: typing.Any,
         if (isinstance(item, ResponseIntermediateStep) or isinstance(item, ResponsePayloadOutput)):
             yield item.get_stream_data()
         else:
-            raise ValueError("Unexpected item type in stream. Expected AIQChatResponseSerializable, got: " +
+            raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                              str(type(item)))

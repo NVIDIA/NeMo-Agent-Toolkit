@@ -33,7 +33,7 @@ WORKDIR /workspace
 # Copy the project into the container
 COPY ./ /workspace
 
-# Install the NAT toolkit package and the example package
+# Install the NAT package and the example package
 RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION=${NAT_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_NVIDIA_NAT=${NAT_VERSION} && \

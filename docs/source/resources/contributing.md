@@ -53,8 +53,8 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
 1. Clone your personal fork of the NeMo Agent toolkit repository to your local machine.
     ```bash
-    git clone <your fork url> aiqtoolkit
-    cd aiqtoolkit
+    git clone <your fork url> nemo-agent-toolkit
+    cd nemo-agent-toolkit
     ```
 
     Then, set the upstream to the main repository and fetch the latest changes:
@@ -92,7 +92,7 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
 1. Open the NeMo Agent toolkit Workspace in Visual Studio Code.
     ```bash
-    code ./aiq.code-workspace
+    code ./nat.code-workspace
     ```
 
 ### Install the NeMo Agent toolkit Library
@@ -113,11 +113,11 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 1. Verify that you've installed the NeMo Agent toolkit library.
 
      ```bash
-     aiq --help
-     aiq --version
+     nat --help
+     nat --version
      ```
 
-     If the installation succeeded, the `aiq` command will log the help message and its current version.
+     If the installation succeeded, the `nat` command will log the help message and its current version.
 
 
 ## Code contributions
@@ -219,9 +219,9 @@ Refer to the [Get Started](../quick-start/installing.md) guide to quickly begin 
 All NeMo Agent toolkit documentation should be written in Markdown format. The documentation located under the `docs/source` directory is included in the documentation builds, refer to `docs/README.md` for information on how to build the documentation. In addition to this, each example should contain a `README.md` file that describes the example.
 
 ### Checks
-All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `aiq` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
+All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `nat` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
 
-The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/aiq/accept.txt` and `ci/vale/styles/config/vocabularies/aiq/reject.txt` files.
+The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/nat/accept.txt` and `ci/vale/styles/config/vocabularies/nat/reject.txt` files.
 
 ### Path Checks
 

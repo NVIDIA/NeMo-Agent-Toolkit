@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-AIQ Toolkit Object Store Module
+NAT Object Store Module
 
 This package provides foundational classes and interfaces
-for managing object storage in AIQ Toolkit's LLM-based agents.
+for managing object storage in NAT's LLM-based agents.
 """

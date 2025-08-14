@@ -1,11 +1,11 @@
 ---
-description: Follow these rules when the user's request involves integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within AIQ workflows
+description: Follow these rules when the user's request involves integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within NeMo Agent Toolkit workflows
 globs:
 alwaysApply: false
 ---
-# AIQ Agents Integration & Selection Rules
+# NeMo Agent Toolkit Agents Integration & Selection Rules
 
-These rules standardise how the four built-in AIQ agents are configured inside YAML‐based workflows/functions and provide guidance for choosing the most suitable agent for a task.
+These rules standardise how the four built-in NeMo Agent Toolkit agents are configured inside YAML‐based workflows/functions and provide guidance for choosing the most suitable agent for a task.
 
 ## Referenced Documentation
 

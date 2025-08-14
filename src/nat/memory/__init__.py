@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-AIQ Toolkit Memory Module
+NAT Memory Module
 
 This package provides foundational classes and interfaces
-for managing text-based memory in AIQ Toolkit's LLM-based agents.
+for managing text-based memory in NAT's LLM-based agents.
 """

@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Solving problems in a SWE bench dataset using AIQ Toolkit
+# Solving problems in a SWE bench dataset using NeMo Agent Toolkit
 This example provides a skeleton workflow which can be used to implement predictors to solve problems in a SWE bench dataset.
 
 ## Table of Contents
@@ -66,9 +66,9 @@ uv pip install -e examples/evaluation_and_profiling/swe_bench
 ```
 
 ## Quickstart
-Run the example via the `aiq eval` CLI command:
+Run the example via the `nat eval` CLI command:
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
+nat eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 ```
 
 The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
@@ -98,7 +98,7 @@ eval:
 ```
 
 
-The input to the workflow is a [Pydantic](https://docs.pydantic.dev) model, `SWEBenchInput`. Refer to `src/aiq/data_models/swe_bench_model.py` for the model definition.
+The input to the workflow is a [Pydantic](https://docs.pydantic.dev) model, `SWEBenchInput`. Refer to `src/nat/data_models/swe_bench_model.py` for the model definition.
 
 ### Filtering dataset entries
 You can limit the number of `swe_bench` instances in the dataset, that are solved and evaluated, via a filter in the configuration file. For example:
@@ -180,21 +180,21 @@ The evaluation results, logs and reports, are stored in the output directory spe
 ### Sample evaluation output
 Run:
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
+nat eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 ```
 Expected output:
 ```console
-2025-07-31 19:39:37,616 - aiq.eval.evaluate - INFO - Starting evaluation run with config file: examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
-2025-07-31 19:39:38,764 - aiq.runtime.loader - WARNING - Loading module 'aiq_profiler_agent.register' from entry point 'aiq_profiler_agent' took a long time (1084.733009 ms). Ensure all imports are inside your registered functions.
-2025-07-31 19:39:39,160 - aiq.runtime.loader - WARNING - Loading module 'aiq_multi_frameworks.register' from entry point 'aiq_multi_frameworks' took a long time (226.987600 ms). Ensure all imports are inside your registered functions.
-2025-07-31 19:39:40,652 - aiq.runtime.loader - WARNING - Loading module 'aiq.agent.register' from entry point 'aiq_agents' took a long time (1482.537985 ms). Ensure all imports are inside your registered functions.
-2025-07-31 19:39:41,135 - aiq.runtime.loader - WARNING - Loading module 'aiq.experimental.inference_time_scaling.register' from entry point 'aiq_inference_time_scaling' took a long time (266.962051 ms). Ensure all imports are inside your registered functions.
-2025-07-31 19:39:41,430 - aiq.runtime.loader - WARNING - Loading module 'aiq.tool.register' from entry point 'aiq_tools' took a long time (192.843914 ms). Ensure all imports are inside your registered functions.
-2025-07-31 19:39:41,515 - aiq.data_models.discovery_metadata - WARNING - Package metadata not found for simple_auth
-2025-07-31 19:39:42,001 - aiq.runtime.loader - WARNING - Loading module 'aiq_alert_triage_agent.register' from entry point 'aiq_alert_triage_agent' took a long time (457.817078 ms). Ensure all imports are inside your registered functions.
-2025-07-31 19:39:42,179 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (168.121815 ms). Ensure all imports are inside your registered functions.
-2025-07-31 19:39:42,386 - aiq.runtime.loader - WARNING - Loading module 'aiq.plugins.agno.register' from entry point 'aiq_agno' took a long time (206.707001 ms). Ensure all imports are inside your registered functions.
-2025-07-31 19:39:43,111 - aiq.runtime.loader - WARNING - Loading module 'aiq.plugins.redis.register' from entry point 'aiq_redis' took a long time (260.392904 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:37,616 - nat.eval.evaluate - INFO - Starting evaluation run with config file: examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
+2025-07-31 19:39:38,764 - nat.runtime.loader - WARNING - Loading module 'nat_profiler_agent.register' from entry point 'nat_profiler_agent' took a long time (1084.733009 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:39,160 - nat.runtime.loader - WARNING - Loading module 'nat_multi_frameworks.register' from entry point 'nat_multi_frameworks' took a long time (226.987600 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:40,652 - nat.runtime.loader - WARNING - Loading module 'nat.agent.register' from entry point 'nat_agents' took a long time (1482.537985 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:41,135 - nat.runtime.loader - WARNING - Loading module 'nat.experimental.inference_time_scaling.register' from entry point 'nat_inference_time_scaling' took a long time (266.962051 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:41,430 - nat.runtime.loader - WARNING - Loading module 'nat.tool.register' from entry point 'nat_tools' took a long time (192.843914 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:41,515 - nat.data_models.discovery_metadata - WARNING - Package metadata not found for simple_auth
+2025-07-31 19:39:42,001 - nat.runtime.loader - WARNING - Loading module 'nat_alert_triage_agent.register' from entry point 'nat_alert_triage_agent' took a long time (457.817078 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:42,179 - nat.runtime.loader - WARNING - Loading module 'nat_automated_description_generation.register' from entry point 'nat_automated_description_generation' took a long time (168.121815 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:42,386 - nat.runtime.loader - WARNING - Loading module 'nat.plugins.agno.register' from entry point 'nat_agno' took a long time (206.707001 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:43,111 - nat.runtime.loader - WARNING - Loading module 'nat.plugins.redis.register' from entry point 'nat_redis' took a long time (260.392904 ms). Ensure all imports are inside your registered functions.
 
 <snipped for brevity>
 
@@ -202,9 +202,9 @@ Running workflow:   0%|                                                         
 
 <snipped for brevity>
 
-2025-07-31 19:39:46,347 - aiq.eval.swe_bench_evaluator.evaluate - INFO - Workflow input written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/gold/aiq_workflow_input.json
-2025-07-31 19:39:46,352 - aiq.eval.swe_bench_evaluator.evaluate - INFO - Workflow output written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/gold/aiq_workflow_output.json
-2025-07-31 19:39:46,364 - aiq.eval.swe_bench_evaluator.evaluate - INFO - Starting swe_bench run aiq_1
+2025-07-31 19:39:46,347 - nat.eval.swe_bench_evaluator.evaluate - INFO - Workflow input written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/nat_workflow_input.json
+2025-07-31 19:39:46,352 - nat.eval.swe_bench_evaluator.evaluate - INFO - Workflow output written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/nat_workflow_output.json
+2025-07-31 19:39:46,364 - nat.eval.swe_bench_evaluator.evaluate - INFO - Starting swe_bench run nat_1
 Running 2 unevaluated instances...
 Base image sweb.base.py.arm64:latest already exists, skipping build.
 Base images built successfully.
@@ -224,10 +224,10 @@ Instances with empty patches: 0
 Instances with errors: 0
 Unstopped containers: 0
 Unremoved images: 0
-Report written to nv_predictor.aiq_1.json
-2025-07-31 19:40:44,591 - aiq.eval.swe_bench_evaluator.evaluate - INFO - Completed swe_bench run aiq_1
-2025-07-31 19:40:44,592 - aiq.eval.swe_bench_evaluator.evaluate - INFO - SWE_bench report and logs written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_reports directory
-2025-07-31 19:40:44,596 - aiq.eval.evaluate - INFO - Profiler is not enabled. Skipping profiling.
-2025-07-31 19:40:44,600 - aiq.eval.evaluate - INFO - Workflow output written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/gold/workflow_output.json
-2025-07-31 19:40:44,602 - aiq.eval.evaluate - INFO - Evaluation results written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_output.json
+Report written to nv_predictor.nat_1.json
+2025-07-31 19:40:44,591 - nat.eval.swe_bench_evaluator.evaluate - INFO - Completed swe_bench run nat_1
+2025-07-31 19:40:44,592 - nat.eval.swe_bench_evaluator.evaluate - INFO - SWE_bench report and logs written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_reports directory
+2025-07-31 19:40:44,596 - nat.eval.evaluate - INFO - Profiler is not enabled. Skipping profiling.
+2025-07-31 19:40:44,600 - nat.eval.evaluate - INFO - Workflow output written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/workflow_output.json
+2025-07-31 19:40:44,602 - nat.eval.evaluate - INFO - Evaluation results written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_output.json
 ```

@@ -68,6 +68,7 @@ For the up-to-date installation instructions of MinIO, see [MinIO Page](https://
 
 #### macOS
 To install MinIO on your macOS machine, run the following commands:
+<!-- path-check-skip-begin -->
 ```bash
 brew install minio/stable/mc
 mc --help
@@ -75,9 +76,11 @@ mc alias set myminio http://localhost:9000 minioadmin minioadmin
 
 brew install minio/stable/minio
 ```
+<!-- path-check-skip-end -->
 
 #### Linux
 To install MinIO on your Linux machine, run the following commands:
+<!-- path-check-skip-begin -->
 ```bash
 curl https://dl.min.io/client/mc/release/linux-amd64/mc \
   --create-dirs \
@@ -91,6 +94,7 @@ mc alias set myminio http://localhost:9000 minioadmin minioadmin
 wget https://dl.min.io/server/minio/release/linux-amd64/archive/minio_20250422221226.0.0_amd64.deb -O minio.deb
 sudo dpkg -i minio.deb
 ```
+<!-- path-check-skip-end -->
 
 ### Start the MinIO Server
 To start the MinIO server, run the following command:
@@ -106,9 +110,11 @@ mc ls myminio
 ```
 
 List all files in a bucket:
+<!-- path-check-skip-begin -->
 ```bash
 mc ls --recursive myminio/my-bucket
 ```
+<!-- path-check-skip-end -->
 
 ### Load Mock Data to MiniIO
 To load mock data to minIO, use the `upload_to_minio.sh` script in this directory. For this example, we will load the mock user reports in the `data/object_store` directory.
@@ -206,7 +212,7 @@ object_stores:
 
 You can start the server by running:
 ```bash
-aiq serve --config_file examples/object_store/user_report/configs/config_s3.yml
+nat serve --config_file examples/object_store/user_report/configs/config_s3.yml
 ```
 
 ### Using the Object Store Backed File Server (Optional)
@@ -227,7 +233,7 @@ For each of the following examples, a command is provided to run the workflow wi
 
 ### Get User Report
 ```
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
+nat run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
 ```
 
 **Expected Workflow Output**
@@ -247,7 +253,7 @@ Workflow Result:
 In the case of a non-existent report, the workflow will return an error message.
 
 ```
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 12345"
+nat run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 12345"
 ```
 
 **Expected Workflow Output**
@@ -260,7 +266,7 @@ Workflow Result:
 
 ### Put User Report
 ```bash
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Create a latest report for user 6789 with the following JSON contents:
+nat run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Create a latest report for user 6789 with the following JSON contents:
     {
         "recommendations": [
             "Update graphics driver",
@@ -307,7 +313,7 @@ Workflow Result:
 
 ### Update User Report
 ```bash
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Update the latest report for user 6789 with the following JSON contents:
+nat run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Update the latest report for user 6789 with the following JSON contents:
     {
         "recommendations": [
             "Update graphics driver",
@@ -336,7 +342,7 @@ Workflow Result:
 
 ### Delete User Report
 ```bash
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Delete the latest report for user 6789'
+nat run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Delete the latest report for user 6789'
 ```
 
 **Expected Workflow Output**

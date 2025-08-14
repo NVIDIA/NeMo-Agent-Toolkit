@@ -22,10 +22,10 @@ from nat.cli.commands.configure.channel.channel import channel
 logger = logging.getLogger(__name__)
 
 
-@click.group(name=__name__, invoke_without_command=False, help="Configure AIQ Toolkit developer preferences.")
+@click.group(name=__name__, invoke_without_command=False, help="Configure NAT developer preferences.")
 def configure_command(**kwargs):
     """
-    Publish AIQ Toolkit artifacts with the specified configuration
+    Publish NAT artifacts with the specified configuration
     """
     pass
 

@@ -46,8 +46,8 @@ async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder)
 
     async def _arun(unused: str = "") -> bool:
 
-        aiq_context = Context.get()
-        user_input_manager = aiq_context.user_interaction_manager
+        nat_context = Context.get()
+        user_input_manager = nat_context.user_interaction_manager
 
         human_prompt_text = HumanPromptText(text=prompt, required=True, placeholder="<your response here>")
         response: InteractionResponse = await user_input_manager.prompt_user_input(human_prompt_text)

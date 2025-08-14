@@ -42,10 +42,10 @@ class LocalRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def publish(self, artifact: Artifact) -> AsyncGenerator[PublishResponse]:
-        """Publishes an AIQ Toolkit artifact to a local registry.
+        """Publishes a NAT artifact to a local registry.
 
         Args:
-            artifact (AIQArtifact): An artifact that contain AIQ Toolkit plugin wheel and it's corrosponding discovery
+            artifact (Artifact): An artifact that contain NAT plugin wheel and it's corrosponding discovery
             metadata.
 
         Yields:
@@ -62,10 +62,10 @@ class LocalRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def pull(self, packages: PullRequestPackages) -> AsyncGenerator[PullResponse]:
-        """Download and install AIQ Toolkit artifacts from a local registry.
+        """Download and install NAT artifacts from a local registry.
 
         Args:
-            packages (PullRequestPackages): Parameters used to pull the AIQ Toolkit artifact.
+            packages (PullRequestPackages): Parameters used to pull the NAT artifact.
 
         Yields:
             Iterator[AsyncGenerator[PullResponse]]: A response message that includes a the pulled packages and a
@@ -83,7 +83,7 @@ class LocalRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def search(self, query: SearchQuery) -> AsyncGenerator[SearchResponse]:
-        """Searches the local aiq registry for relevant AIQ Toolkit components.
+        """Searches the local nat registry for relevant NAT components.
 
         Args:
             query (SearchQuery): Parameters of the search to be performed.

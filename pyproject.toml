@@ -113,7 +113,7 @@ profiling = [
 
 # Optional dependency needed when use_gunicorn is set to true
 gunicorn = [
-  "gunicorn~=23.0"
+  "gunicorn~=23.0",
 ]
 
 
@@ -234,9 +234,6 @@ nat = "nat.cli.main:run_cli"
 [tool.setuptools]
 include-package-data = true
 
-[tool.setuptools.package-data]
-nat = ["meta/module_to_distro.json"]
-
 # List any markers that users would reasonably want to filter by.
 # These show up when querying `pytest --markers`
 [tool.pytest.ini_options]
@@ -253,7 +250,7 @@ filterwarnings = [
   # trigger the warnings. In Python 3.12 this triggers a SyntaxWarning, in Python 3.11 it triggers a DeprecationWarning
   # which unfortunately pytest is unable to filter.
   # Remove once https://github.com/qdrant/qdrant-client/issues/983 is resolved.
-  "ignore:^invalid escape sequence:SyntaxWarning"
+  "ignore:^invalid escape sequence:SyntaxWarning",
 ]
 testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
 asyncio_mode = "auto"

@@ -1,19 +1,19 @@
 ---
-description: Follow these rules when the user's request involves creating, reinstalling, or deleting AIQ workflows
-globs: 
+description: Follow these rules when the user's request involves creating, reinstalling, or deleting NeMo Agent Toolkit workflows
+globs:
 alwaysApply: false
 ---
-# AIQ Workflow Commands
+# NeMo Agent Toolkit Workflow Commands
 
-This rule provides guidance for using `aiq workflow create`, `aiq workflow reinstall`, and `aiq workflow delete` commands effectively.
+This rule provides guidance for using `nat workflow create`, `nat workflow reinstall`, and `nat workflow delete` commands effectively.
 
-## aiq workflow create
+## nat workflow create
 
-Creates a new AIQ toolkit workflow using templates with boilerplate code.
+Creates a new NAT workflow using templates with boilerplate code.
 
 ### Basic Usage
 ```bash
-aiq workflow create WORKFLOW_NAME
+nat workflow create WORKFLOW_NAME
 ```
 
 ### Available Options
@@ -24,27 +24,27 @@ aiq workflow create WORKFLOW_NAME
 ### Examples
 ```bash
 # Create a basic workflow with default settings
-aiq workflow create my_rag_workflow
+nat workflow create my_rag_workflow
 
 # Create workflow with custom description and don't install immediately
-aiq workflow create my_rag_workflow --no-install --description "A custom RAG workflow for document processing"
+nat workflow create my_rag_workflow --no-install --description "A custom RAG workflow for document processing"
 
 # Create workflow in specific directory
-aiq workflow create my_rag_workflow --workflow-dir ./my_workflows --description "Custom workflow for data analysis"
+nat workflow create my_rag_workflow --workflow-dir ./my_workflows --description "Custom workflow for data analysis"
 ```
 
 ### What it generates
 - Valid `pyproject.toml` file with plugin section
-- `register.py` file with AIQ toolkit boilerplate code
+- `register.py` file with NAT boilerplate code
 - Configuration file for launching the workflow
 
-## aiq workflow reinstall
+## nat workflow reinstall
 
 Rebuilds and reinstalls a workflow package after modifications.
 
 ### Basic Usage
 ```bash
-aiq workflow reinstall WORKFLOW_NAME
+nat workflow reinstall WORKFLOW_NAME
 ```
 
 ### When to use
@@ -56,35 +56,35 @@ aiq workflow reinstall WORKFLOW_NAME
 ### Example
 ```bash
 # Reinstall after making code changes
-aiq workflow reinstall my_rag_workflow
+nat workflow reinstall my_rag_workflow
 ```
 
-## aiq workflow delete
+## nat workflow delete
 
 Removes a workflow package from the local environment and uninstalls it.
 
 ### Basic Usage
 ```bash
-aiq workflow delete WORKFLOW_NAME
+nat workflow delete WORKFLOW_NAME
 ```
 
 ### Example
 ```bash
 # Remove workflow completely
-aiq workflow delete my_rag_workflow
+nat workflow delete my_rag_workflow
 ```
 
 ## Best Practices
 
 1. **Use descriptive workflow names**: Choose names that clearly indicate the workflow's purpose
-2. **Always reinstall after code changes**: Use `aiq workflow reinstall` when modifying workflow code
+2. **Always reinstall after code changes**: Use `nat workflow reinstall` when modifying workflow code
 3. **Use custom descriptions**: Provide meaningful descriptions when creating workflows
 4. **Organize workflows**: Use `--workflow-dir` to organize workflows in dedicated directories
-5. **Clean up unused workflows**: Use `aiq workflow delete` to remove workflows no longer needed
+5. **Clean up unused workflows**: Use `nat workflow delete` to remove workflows no longer needed
 
 ## Common Workflow
-1. Create: `aiq workflow create my_workflow --description "Description of what it does"`
+1. Create: `nat workflow create my_workflow --description "Description of what it does"`
 2. Develop: Modify the generated code in `register.py` and configuration
-3. Test: Use `aiq run` or `aiq serve` to test the workflow
-4. Update: Use `aiq workflow reinstall my_workflow` after code changes
-5. Clean up: Use `aiq workflow delete my_workflow` when no longer needed
+3. Test: Use `nat run` or `nat serve` to test the workflow
+4. Update: Use `nat workflow reinstall my_workflow` after code changes
+5. Clean up: Use `nat workflow delete my_workflow` when no longer needed

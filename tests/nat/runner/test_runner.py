@@ -64,7 +64,7 @@ async def _register_stream_output_fn():
 
 
 async def test_runner_result_successful_type_conversion():
-    """Test that AIQRunner.result() successfully converts output when compatible to_type is provided."""
+    """Test that Runner.result() successfully converts output when compatible to_type is provided."""
 
     async with WorkflowBuilder() as builder:
         entry_fn = await builder.add_function(name="test_function", config=SingleOutputConfig())
@@ -90,7 +90,7 @@ async def test_runner_result_successful_type_conversion():
 
 
 async def test_runner_result_type_conversion_failure():
-    """Test that AIQRunner.result() raises ValueError when output cannot be converted to specified to_type."""
+    """Test that Runner.result() raises ValueError when output cannot be converted to specified to_type."""
 
     class UnconvertibleOutput(BaseModel):
         value: str
@@ -130,7 +130,7 @@ async def test_runner_result_type_conversion_failure():
 
 
 async def test_runner_result_primitive_type_conversion_failure():
-    """Test that AIQRunner.result() raises ValueError when primitive output cannot be converted to incompatible type."""
+    """Test that Runner.result() raises ValueError when primitive output cannot be converted to incompatible type."""
 
     async with WorkflowBuilder() as builder:
         entry_fn = await builder.add_function(name="test_function", config=SingleOutputConfig())
@@ -156,7 +156,7 @@ async def test_runner_result_primitive_type_conversion_failure():
 
 
 async def test_runner_result_stream_successful_type_conversion():
-    """Test that AIQRunner.result_stream() successfully converts output when compatible to_type is provided."""
+    """Test that Runner.result_stream() successfully converts output when compatible to_type is provided."""
 
     async with WorkflowBuilder() as builder:
         entry_fn = await builder.add_function(name="test_function", config=StreamOutputConfig())
@@ -186,7 +186,7 @@ async def test_runner_result_stream_successful_type_conversion():
 
 
 async def test_runner_result_stream_type_conversion_failure():
-    """Test that AIQRunner.result_stream() raises ValueError when output cannot be converted to specified to_type."""
+    """Test that Runner.result_stream() raises ValueError when output cannot be converted to specified to_type."""
 
     class UnconvertibleOutput(BaseModel):
         value: str
@@ -230,7 +230,7 @@ async def test_runner_result_stream_type_conversion_failure():
 
 async def test_runner_result_stream_primitive_type_conversion_failure():
     """
-    Test that AIQRunner.result_stream() raises ValueError when primitive output cannot
+    Test that Runner.result_stream() raises ValueError when primitive output cannot
     be converted to incompatible type.
     """
 
@@ -261,7 +261,7 @@ async def test_runner_result_stream_primitive_type_conversion_failure():
 
 
 async def test_runner_state_management():
-    """Test that AIQRunner properly manages state transitions during execution."""
+    """Test that Runner properly manages state transitions during execution."""
 
     async with WorkflowBuilder() as builder:
         entry_fn = await builder.add_function(name="test_function", config=SingleOutputConfig())

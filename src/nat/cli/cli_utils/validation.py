@@ -26,7 +26,7 @@ def validate_config(config_file: Path) -> Config:
     try:
         from nat.runtime.loader import load_config
 
-        # Load using the AIQ Toolkit loader functions. This performs validation
+        # Load using the NAT loader functions. This performs validation
         config = load_config(config_file)
 
         return config

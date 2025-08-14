@@ -69,7 +69,7 @@ class LLMBasedOutputMergingSelector(StrategyBase):
             from langchain_core.prompts import PromptTemplate
         except ImportError:
             raise ImportError("langchain-core is not installed. Please install it to use SingleShotMultiPlanPlanner.\n"
-                              "This error can be resolved by installing aiqtoolkit-langchain.")
+                              "This error can be resolved by installing nvidia-nat-langchain.")
 
         from typing import Callable
 

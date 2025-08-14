@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 class PlanSelectExecuteFunctionConfig(FunctionBaseConfig, name="plan_select_execute_function"):
     """
-    Defines an aiqtoolkit function that performs reasoning on the input data.
+    Defines a NAT function that performs reasoning on the input data.
     Output is passed to the next function in the workflow.
 
     Designed to be used with an InterceptingFunction.
@@ -83,7 +83,7 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
         from langchain_core.prompts import PromptTemplate
     except ImportError:
         raise ImportError("langchain-core is not installed. Please install it to use SingleShotMultiPlanPlanner.\n"
-                          "This error can be resolved by installing aiqtoolkit-langchain.")
+                          "This error can be resolved by installing nvidia-nat-langchain.")
 
     # Get the augmented function's description
     augmented_function = builder.get_function(config.augmented_fn)
@@ -159,7 +159,7 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
             Perform reasoning on the input text.
 
             Args:
-                input_message (AIQChatRequest): The input text to reason on.
+                input_message (ChatRequest): The input text to reason on.
             """
 
             input_text = "".join([str(message.model_dump()) + "\n" for message in input_message.messages])
@@ -192,7 +192,7 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
             Perform reasoning on the input text.
 
             Args:
-                input_message (AIQChatRequest): The input text to reason on.
+                input_message (ChatRequest): The input text to reason on.
             """
 
             input_text = "".join([str(message.model_dump()) + "\n" for message in input_message.messages])

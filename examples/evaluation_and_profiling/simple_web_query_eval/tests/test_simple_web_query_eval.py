@@ -104,8 +104,8 @@ def validate_trajectory_accuracy(trajectory_output_file: Path):
 @pytest.mark.e2e
 async def test_eval():
     """
-    1. aiq-eval writes the workflow output to workflow_output.json
-    2. aiq-eval creates a file with scores for each evaluation metric.
+    1. nat-eval writes the workflow output to workflow_output.json
+    2. nat-eval creates a file with scores for each evaluation metric.
     3. This test audits -
        a. the rag accuracy metric
        b. the trajectory score (if present)

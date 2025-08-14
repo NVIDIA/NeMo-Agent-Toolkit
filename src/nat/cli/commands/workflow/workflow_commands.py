@@ -98,7 +98,7 @@ def find_package_root(package_name: str) -> Path | None:
 
 def get_workflow_path_from_name(workflow_name: str):
     """
-    Look up the location of an installed AIQ Toolkit workflow and retrieve the root directory of the installed workflow.
+    Look up the location of an installed NAT workflow and retrieve the root directory of the installed workflow.
 
     Args:
         workflow_name: The name of the workflow.
@@ -127,13 +127,13 @@ def get_workflow_path_from_name(workflow_name: str):
     "within. Defaults to the present working directory.")
 @click.option(
     "--description",
-    default="AIQ Toolkit function template. Please update the description.",
+    default="NAT function template. Please update the description.",
     help="""A description of the component being created. Will be used to populate the docstring and will describe the
-         component when inspecting installed components using 'aiq info component'""")
+         component when inspecting installed components using 'nat info component'""")
 # pylint: disable=missing-param-doc
 def create_command(workflow_name: str, install: bool, workflow_dir: str, description: str):
     """
-    Create a new AIQ Toolkit workflow using templates.
+    Create a new NAT workflow using templates.
 
     Args:
         workflow_name (str): The name of the new workflow.
@@ -234,7 +234,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
 @click.argument('workflow_name')
 def reinstall_command(workflow_name):
     """
-    Reinstall an AIQ Toolkit workflow to update dependencies and code changes.
+    Reinstall a NAT workflow to update dependencies and code changes.
 
     Args:
         workflow_name (str): The name of the workflow to reinstall.
@@ -270,7 +270,7 @@ def reinstall_command(workflow_name):
 @click.argument('workflow_name')
 def delete_command(workflow_name: str):
     """
-    Delete an AIQ Toolkit workflow and uninstall its package.
+    Delete a NAT workflow and uninstall its package.
 
     Args:
         workflow_name (str): The name of the workflow to delete.

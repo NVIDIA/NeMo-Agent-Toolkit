@@ -34,8 +34,9 @@ class RandomForestModel(ForecastingBaseModel):
         try:
             from sklearn.ensemble import RandomForestRegressor
         except ImportError:
-            logger.error("scikit-learn is not installed. Please install scikit-learn to use the RandomForest "
-                         "profiling model or install `aiq[profiler]` to install all necessary profiling packages.")
+            logger.error(
+                "scikit-learn is not installed. Please install scikit-learn to use the RandomForest "
+                "profiling model or install `nvidia-nat[profiler]` to install all necessary profiling packages.")
 
             raise
 

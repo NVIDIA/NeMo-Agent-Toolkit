@@ -47,7 +47,7 @@ class HTTPBasicAuthProvider(AuthProviderBase):
 
         if user_id is None and hasattr(context, "metadata") and hasattr(
                 context.metadata, "cookies") and context.metadata.cookies is not None:
-            session_id = context.metadata.cookies.get("aiqtoolkit-session", None)
+            session_id = context.metadata.cookies.get("nat-session", None)
             if not session_id:
                 raise RuntimeError("Authentication failed. No session ID found. Cannot identify user.")
 

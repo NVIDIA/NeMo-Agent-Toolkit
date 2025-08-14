@@ -82,7 +82,7 @@ An embeddings model is used to create embeddings for queries and for stored memo
 Here we will add a memory for the workflow to use in following invocations. The memory tool will automatically determine the intent as to whether or not an input should be stored as a "fact" or if the input should be used to query the memory.
 
 ```bash
-aiq run --config_file=examples/memory/redis/configs/config.yml --input "my favorite flavor is strawberry"
+nat run --config_file=examples/memory/redis/configs/config.yml --input "my favorite flavor is strawberry"
 ```
 
 **Expected Workflow Output**
@@ -98,7 +98,7 @@ Workflow Result:
 Once we have established something in the memory, we can use the workflow to give us a response based on its input.
 
 ```bash
-aiq run --config_file=examples/memory/redis/configs/config.yml --input "what flavor of ice-cream should I get?"
+nat run --config_file=examples/memory/redis/configs/config.yml --input "what flavor of ice-cream should I get?"
 ```
 
 **Expected Workflow Output**

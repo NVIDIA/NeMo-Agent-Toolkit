@@ -294,7 +294,7 @@ class TestFileExporterEdgeCases:
         """Test initialization fails when project is missing."""
         with pytest.raises(TypeError):
             FileExporter(context_state=mock_context_state,
-                         output_path="/tmp/test.jsonl"
+                         output_path="./.tmp/test.jsonl"
                          # Missing project - but this should use tmp_path too
                          )
 
@@ -339,7 +339,9 @@ class TestFileExporterEdgeCases:
 
     def test_processor_type_checking(self, mock_context_state):
         """Test that the processor is of the correct type."""
-        exporter = FileExporter(context_state=mock_context_state, output_path="/tmp/test.jsonl", project="test_project")
+        exporter = FileExporter(context_state=mock_context_state,
+                                output_path="./.tmp/test.jsonl",
+                                project="test_project")
 
         assert isinstance(exporter._processor, IntermediateStepSerializer)
         assert hasattr(exporter._processor, 'process')

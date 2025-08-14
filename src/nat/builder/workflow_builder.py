@@ -183,7 +183,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Store them in a dict so we can un-register them if needed
             self._logging_handlers[key] = handler
 
-            # Now attach to AIQ Toolkit's root logger
+            # Now attach to NAT's root logger
             logging.getLogger().addHandler(handler)
 
         # Add the telemetry exporters
@@ -865,7 +865,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         Populate the builder with components and optionally set up the workflow.
 
         Args:
-            config (AIQConfig): The configuration object containing component definitions.
+            config (Config): The configuration object containing component definitions.
             skip_workflow (bool): If True, skips the workflow instantiation step. Defaults to False.
 
         """
