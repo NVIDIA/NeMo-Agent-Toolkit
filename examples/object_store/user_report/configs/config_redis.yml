@@ -22,11 +22,10 @@ general:
 
 object_stores:
   report_object_store:
-    _type: mysql
+    _type: redis
     host: localhost
-    port: 3306
-    username: root
-    password: ${MYSQL_ROOT_PASSWORD:-my_password}
+    db: 0
+    port: 6379
     bucket_name: my-bucket
 
 llms:

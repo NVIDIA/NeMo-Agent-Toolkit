@@ -8,8 +8,12 @@ root = "../../.."
 [project]
 name = "nat_user_report"
 dynamic = ["version"]
-dependencies = ["nvidia-nat[s3]", "nvidia-nat[mysql]"]
-requires-python = ">=3.12"
+dependencies = [
+    "nvidia-nat[mysql]",
+    "nvidia-nat[redis]",
+    "nvidia-nat[s3]",
+]
+requires-python = ">=3.11,<3.13"
 description = "NeMo Agent toolkit example that uses an Object Store"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
