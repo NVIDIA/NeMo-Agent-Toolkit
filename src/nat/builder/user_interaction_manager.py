@@ -30,12 +30,12 @@ class UserInteractionManager:
     """
     UserInteractionManager is responsible for requesting user input
     at runtime. It delegates the actual prompting to a callback function
-    stored in AIQContextState.user_input_callback.
+    stored in ContextState.user_input_callback.
 
     Type is not imported in __init__ to prevent partial import.
     """
 
-    def __init__(self, context_state: "AIQContextState") -> None:  # noqa: F821
+    def __init__(self, context_state: "ContextState") -> None:  # noqa: F821
         self._context_state = context_state
 
     @staticmethod
@@ -54,7 +54,7 @@ class UserInteractionManager:
         """
         Ask the user a question and wait for input. This calls out to
         the callback from user_input_callback, which is typically
-        set by AIQSessionManager.
+        set by SessionManager.
 
         Returns the user's typed-in answer as a string.
         """

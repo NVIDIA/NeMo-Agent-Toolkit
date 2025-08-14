@@ -38,18 +38,18 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
     async def _get_request_attributes(unused: str) -> str:
 
         from nat.builder.context import Context
-        aiq_context = Context.get()
+        nat_context = Context.get()
 
-        method: str | None = aiq_context.metadata.method
-        url_path: str | None = aiq_context.metadata.url_path
-        url_scheme: str | None = aiq_context.metadata.url_scheme
-        headers: Headers | None = aiq_context.metadata.headers
-        query_params: QueryParams | None = aiq_context.metadata.query_params
-        path_params: dict[str, str] | None = aiq_context.metadata.path_params
-        client_host: str | None = aiq_context.metadata.client_host
-        client_port: int | None = aiq_context.metadata.client_port
-        cookies: dict[str, str] | None = aiq_context.metadata.cookies
-        conversation_id: str | None = aiq_context.conversation_id
+        method: str | None = nat_context.metadata.method
+        url_path: str | None = nat_context.metadata.url_path
+        url_scheme: str | None = nat_context.metadata.url_scheme
+        headers: Headers | None = nat_context.metadata.headers
+        query_params: QueryParams | None = nat_context.metadata.query_params
+        path_params: dict[str, str] | None = nat_context.metadata.path_params
+        client_host: str | None = nat_context.metadata.client_host
+        client_port: int | None = nat_context.metadata.client_port
+        cookies: dict[str, str] | None = nat_context.metadata.cookies
+        conversation_id: str | None = nat_context.conversation_id
 
         return (f"Method: {method}, "
                 f"URL Path: {url_path}, "

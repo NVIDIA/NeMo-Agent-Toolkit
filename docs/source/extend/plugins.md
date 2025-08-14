@@ -87,16 +87,16 @@ The `wrapper_type` argument can also be used with the library's `Builder` class 
 
 ### Entry Point
 
-Determining which plugins are available in a given environment is done through the use of [python entry points](https://packaging.python.org/en/latest/specifications/entry-points/). In NeMo Agent toolkit, we scan the python environment for entry points which have the name `aiqtoolkit.components`. The value of the entry point is a python module that will be imported when the entry point is loaded.
+Determining which plugins are available in a given environment is done through the use of [python entry points](https://packaging.python.org/en/latest/specifications/entry-points/). In NeMo Agent toolkit, we scan the python environment for entry points which have the name `nat.plugins`. The value of the entry point is a python module that will be imported when the entry point is loaded.
 
-For example, the `aiqtoolkit-langchain` distribution has the following entry point specified in the `pyproject.toml` file:
+For example, the `nvidia-nat-langchain` distribution has the following entry point specified in the `pyproject.toml` file:
 
 ```toml
-[project.entry-points.'aiq.components']
-aiq_langchain = "aiq.plugins.langchain.register"
+[project.entry-points.'nat.plugins']
+nat_langchain = "nat.plugins.langchain.register"
 ```
 
-What this means is that when the `aiqtoolkit-langchain` distribution is installed, the `aiq.plugins.langchain.register` module will be imported when the entry point is loaded. This module must contain all the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
+What this means is that when the `nvidia-nat-langchain` distribution is installed, the `nat.plugins.langchain.register` module will be imported when the entry point is loaded. This module must contain all the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
 
 > [!NOTE]
 > The above syntax in the `pyproject.toml` file is specific to [uv](https://docs.astral.sh/uv/concepts/projects/config/#plugin-entry-points). Other package managers may have a different syntax for specifying entry points.
@@ -104,7 +104,7 @@ What this means is that when the `aiqtoolkit-langchain` distribution is installe
 
 #### Multiple Plugins in a Single Distribution
 
-It is possible to have multiple plugins in a single distribution. For example, the `aiqtoolkit-langchain` distribution contains both the LangChain LLM client and the LangChain embedder client.
+It is possible to have multiple plugins in a single distribution. For example, the `nvidia-nat-langchain` distribution contains both the LangChain LLM client and the LangChain embedder client.
 
 To register multiple plugins in a single distribution, there are two options:
 
@@ -122,7 +122,7 @@ To register multiple plugins in a single distribution, there are two options:
    * For example, you could have two entry points in the `pyproject.toml` file:`
 
       ```toml
-      [project.entry-points.'aiq.components']
-      aiq_langchain = "aiq.plugins.langchain.register"
-      aiq_langchain_tools = "aiq.plugins.langchain.tools.register"
+      [project.entry-points.'nat.plugins']
+      nat_langchain = "nat.plugins.langchain.register"
+      nat_langchain_tools = "nat.plugins.langchain.tools.register"
       ```

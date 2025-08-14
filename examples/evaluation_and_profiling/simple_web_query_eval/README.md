@@ -36,7 +36,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 - **Web Query Agent Evaluation:** Demonstrates comprehensive evaluation of the `simple_web_query` agent that retrieves and processes LangSmith documentation using `webpage_query` tools and `react_agent` reasoning.
 - **Multi-Model Performance Testing:** Shows systematic comparison across different LLM providers including OpenAI models, Llama 3.1, and Llama 3.3 to identify optimal configurations for documentation retrieval tasks.
-- **Evaluation Framework Integration:** Uses the NeMo Agent toolkit `aiq eval` command with various evaluation configurations to measure response quality, accuracy scores, and documentation retrieval effectiveness.
+- **Evaluation Framework Integration:** Uses the NeMo Agent toolkit `nat eval` command with various evaluation configurations to measure response quality, accuracy scores, and documentation retrieval effectiveness.
 - **Question-by-Question Analysis:** Provides detailed breakdown of individual agent responses with comprehensive metrics for identifying failure patterns in LangSmith documentation queries.
 - **Dataset Management Workflow:** Demonstrates working with evaluation datasets for consistent testing and performance tracking over time, including evaluation-only modes and result upload capabilities.
 
@@ -83,27 +83,27 @@ Evaluate the Simple LangSmith-Documentation agent's accuracy using different con
 The configuration files specified below contain configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
 
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
+nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
 #### OpenAI Model Evaluation
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_openai.yml
+nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_openai.yml
 ```
 
 #### Llama 3.1 Model Evaluation
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_llama31.yml
+nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_llama31.yml
 ```
 
 #### Llama 3.3 Model Evaluation
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_llama33.yml
+nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_llama33.yml
 ```
 
 #### Evaluation-Only Mode
 ```bash
-aiq eval --skip_workflow --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml --dataset ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/eval/workflow_output.json
+nat eval --skip_workflow --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml --dataset ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval/workflow_output.json
 ```
 
 
@@ -138,7 +138,7 @@ For more information about using remote files for evaluation, refer to the [eval
 
 #### Running Evaluation
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_upload.yml
+nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_upload.yml
 ```
 
 ### Understanding Results

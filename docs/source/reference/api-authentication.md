@@ -77,7 +77,7 @@ API configurations are
 
 ### Authentication YAML Configuration Example
 
-The following example shows how to configure the authentication credentials for the OAuth 2.0 Authorization Code Grant Flow and API Key authentication. More information about each field can be queried using the `aiq info components -t auth_provider` command.
+The following example shows how to configure the authentication credentials for the OAuth 2.0 Authorization Code Grant Flow and API Key authentication. More information about each field can be queried using the `nat info components -t auth_provider` command.
 
 ```yaml
 authentication:
@@ -90,8 +90,8 @@ authentication:
       - openid
       - profile
       - email
-    client_id: ${AIQ_OAUTH_CLIENT_ID}
-    client_secret: ${AIQ_OAUTH_CLIENT_SECRET}
+    client_id: ${NAT_OAUTH_CLIENT_ID}
+    client_secret: ${NAT_OAUTH_CLIENT_SECRET}
     use_pkce: false
 
   example_provider_name_api_key:
@@ -154,7 +154,7 @@ front-end UI is responsible for rendering the consent prompt.
 
 Below is a table listing the current support for the various authentication methods based on the application
 
-| # | Authentication Method                                | `aiq run` | `aiq serve` | Support Level                                         |
+| # | Authentication Method                                | `nat run` | `nat serve` | Support Level                                         |
 |---|------------------------------------------------------|-----------|-------------|-------------------------------------------------------|
 | 1 | OAuth2.0 Authorization Code Grant Flow               | ✅         | ✅           | Full support with front-end UI only in websocket mode |
 | 2 | API Key Authentication                               | ✅         | ✅           | Full support across all configurations                |

@@ -22,7 +22,7 @@ This documentation presumes familiarity with the NeMo Agent toolkit plugin archi
 ## Key Object Store Module Components
 
 * **Object Store Data Models**
-   - **{py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig`**: A Pydantic base class that all object store config classes must extend. This is used for specifying object store registration in the AIQ toolkit config file.
+   - **{py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig`**: A Pydantic base class that all object store config classes must extend. This is used for specifying object store registration in the NeMo Agent toolkit config file.
    - **{py:class}`~nat.data_models.object_store.ObjectStoreBaseConfigT`**: A generic type alias for object store config classes.
 
 * **Object Store Interfaces**
@@ -75,7 +75,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
        api_key: str
        bucket_name: str
    ```
-   > **Note**: The `name="my_custom_object_store"` ensures that AIQ toolkit can recognize it when the user places `_type: my_custom_object_store` in the object store config.
+   > **Note**: The `name="my_custom_object_store"` ensures that NeMo Agent toolkit can recognize it when the user places `_type: my_custom_object_store` in the object store config.
 
 2. **Implement an {py:class}`~nat.object_store.interfaces.ObjectStore`** that uses your backend:
    ```python
@@ -137,7 +137,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
            pass
    ```
 
-3. **Register your object store with AIQ toolkit** using the `@register_object_store` decorator:
+3. **Register your object store with NeMo Agent toolkit** using the `@register_object_store` decorator:
    ```python
    from nat.builder.builder import Builder
    from nat.cli.register_workflow import register_object_store
@@ -337,11 +337,11 @@ When developing your object store provider, consider testing:
 
 ## Plugin Integration
 
-To integrate your object store provider as a plugin, follow the standard AIQ toolkit plugin structure:
+To integrate your object store provider as a plugin, follow the standard NeMo Agent toolkit plugin structure:
 
 1. Create a plugin package with the appropriate structure
 2. Include your config, implementation, and registration code
 3. Add the necessary dependencies to your plugin's `pyproject.toml`
-4. Ensure your plugin is discoverable by AIQ toolkit
+4. Ensure your plugin is discoverable by NeMo Agent toolkit
 
 For more information on creating plugins, see the [Plugins](../extend/plugins.md) documentation.

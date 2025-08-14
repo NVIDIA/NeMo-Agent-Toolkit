@@ -67,7 +67,7 @@ async def multi_frameworks_workflow(config: MultiFrameworksWorkflowConfig, build
     Given the user input below, classify it as either being about 'Research', 'Retrieve' or 'General' topic.
     Just use one of these words as your response. \
     'Research' - any question related to a need to do research on arxiv papers and get a summary. such as "find research papers about RAG for me" or " what is Compound AI?"...etc
-    'Retrieve' - any question related to the topic of AIQ Toolkit or its workflows, especially concerning the particular workflow called multi_frameworks which show case using multiple frameworks such as langchain, llama-index ..etc
+    'Retrieve' - any question related to the topic of NAT or its workflows, especially concerning the particular workflow called multi_frameworks which show case using multiple frameworks such as langchain, llama-index ..etc
     'General' - answering small greeting or chitchat type of questions or everything else that does not fall into any of the above topics.
     User query: {input}
     Classifcation topic:"""  # noqa: E501

@@ -44,7 +44,7 @@ async def serp_api_tool(tool_config: SerpApiToolConfig, builder: Builder):
 
     Args:
         tool_config (SerpApiToolConfig): Configuration for the SerpAPI tool.
-        builder (Builder): The AIQ Toolkit builder instance.
+        builder (Builder): The NAT builder instance.
 
     Returns:
         FunctionInfo: A FunctionInfo object wrapping the SerpAPI search functionality.

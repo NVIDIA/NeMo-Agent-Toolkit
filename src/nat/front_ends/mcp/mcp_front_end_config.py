@@ -21,10 +21,11 @@ from nat.data_models.front_end import FrontEndBaseConfig
 class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     """MCP front end configuration.
 
-    A simple MCP (Modular Communication Protocol) front end for AIQ.
+    A simple MCP (Modular Communication Protocol) front end for NeMo Agent toolkit.
     """
 
-    name: str = Field(default="AIQ MCP", description="Name of the MCP server (default: AIQ MCP)")
+    name: str = Field(default="NeMo Agent Toolkit MCP",
+                      description="Name of the MCP server (default: NeMo Agent Toolkit MCP)")
     host: str = Field(default="localhost", description="Host to bind the server to (default: localhost)")
     port: int = Field(default=9901, description="Port to bind the server to (default: 9901)", ge=0, le=65535)
     debug: bool = Field(default=False, description="Enable debug mode (default: False)")

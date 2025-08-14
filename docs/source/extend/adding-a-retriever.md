@@ -20,7 +20,7 @@ New retrievers can be added to NeMo Agent toolkit by creating a plugin. The gene
 
 First, create a retriever for the provider that implements the Retriever interface:
 ```python
-class AIQRetriever(ABC):
+class Retriever(ABC):
     """
     Abstract interface for interacting with data stores.
 
@@ -56,7 +56,7 @@ class ExampleRetrieverConfig(RetrieverBaseConfig, name="example_retriever"):
 @register_retriever_provider(config_type=ExampleRetrieverConfig)
 async def example_retriever(retriever_config: ExampleRetrieverConfig, builder: Builder):
     yield RetrieverProviderInfo(config=retriever_config,
-                                description="AIQ retriever provider for...")
+                                description="NeMo Agent toolkit retriever provider for...")
 ```
 Lastly, implement and register the retriever client:
 

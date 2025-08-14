@@ -304,7 +304,7 @@ def save_gantt_chart(all_nodes: list[CallNode], output_path: str) -> None:
         import matplotlib.pyplot as plt
     except ImportError:
         logger.error("matplotlib is not installed. Please install matplotlib to use generate plots for the profiler "
-                     "or install `aiq[profiler]` to install all necessary profiling packages.")
+                     "or install `nvidia-nat[profiler]` to install all necessary profiling packages.")
 
         raise
 

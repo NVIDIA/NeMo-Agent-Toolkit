@@ -66,11 +66,11 @@ class ObjectStore(ABC):
 ```
 
 ## Included Object Stores
-The AIQ toolkit includes several object store providers:
+The NeMo Agent toolkit includes several object store providers:
 
-- **In-Memory Object Store**: In-memory storage for development and testing. See `src/aiq/object_store/in_memory_object_store.py`
-- **S3 Object Store**: Amazon S3 and S3-compatible storage (like MinIO). See `packages/aiqtoolkit_s3/src/aiq/plugins/s3/s3_object_store.py`
-- **MySQL Object Store**: MySQL database-backed storage. See `packages/aiqtoolkit_mysql/src/aiq/plugins/mysql/mysql_object_store.py`
+- **In-Memory Object Store**: In-memory storage for development and testing. See `src/nat/object_store/in_memory_object_store.py`
+- **S3 Object Store**: Amazon S3 and S3-compatible storage (like MinIO). See `packages/nvidia_nat_s3/src/nat/plugins/s3/s3_object_store.py`
+- **MySQL Object Store**: MySQL database-backed storage. See `packages/nvidia_nat_mysql/src/nat/plugins/mysql/mysql_object_store.py`
 
 ## Usage
 
@@ -183,7 +183,7 @@ This enables HTTP endpoints for object store operations:
   ```
 
 ## Examples
-The following examples demonstrate how to use the object store module in the AIQ toolkit:
+The following examples demonstrate how to use the object store module in the NeMo Agent toolkit:
 * `examples/object_store/user_report` - A complete workflow that stores and retrieves user diagnostic reports using different object store backends
 
 ## Error Handling

@@ -70,7 +70,7 @@ async def email_phishing_analyzer(config: EmailPhishingAnalyzerConfig, builder: 
         except json.JSONDecodeError:
             return "Error: Could not parse LLM response as JSON"
 
-    # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
+    # Create a Generic NAT tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(_analyze_email_phishing,
                                description=("This tool analyzes email content to detect signs of phishing "
                                             "attempts. It evaluates factors like urgency, generic greetings, "

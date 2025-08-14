@@ -56,7 +56,7 @@ workflow:
 eval:
   general:
     output:
-      dir: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/eval/
+      dir: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval/
       cleanup: true
     dataset:
       _type: json

@@ -62,10 +62,10 @@ class RestRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def publish(self, artifact: Artifact) -> AsyncGenerator[PublishResponse]:
-        """Publishes an AIQ Toolkit artifact to a remote REST registry.
+        """Publishes a NAT artifact to a remote REST registry.
 
         Args:
-            artifact (AIQArtifact): An artifact that contain AIQ Toolkit plugin wheel and it's corrosponding discovery
+            artifact (Artifact): An artifact that contain NAT plugin wheel and it's corrosponding discovery
             metadata.
 
         Yields:
@@ -98,17 +98,17 @@ class RestRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def pull(self, packages: PullRequestPackages) -> AsyncGenerator[PullResponse]:
-        """Download and install AIQ Toolkit artifacts from a remote REST registry.
+        """Download and install NAT artifacts from a remote REST registry.
 
         Args:
-            packages (PullRequestPackages): Parameters used to pull the AIQ Toolkit artifact.
+            packages (PullRequestPackages): Parameters used to pull the NAT artifact.
 
         Yields:
             Iterator[AsyncGenerator[PullResponse]]: A response message that includes a the pulled packages and a
                 completion status message.
         """
 
-        tmp_dir = ".tmp-aiq-pull"
+        tmp_dir = "./.tmp/nat-pull"
 
         try:
             async with httpx.AsyncClient(headers=self._headers, timeout=self._timeout) as client:
@@ -165,7 +165,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def search(self, query: SearchQuery) -> AsyncGenerator[SearchResponse]:
-        """Searches a remote REST registry for relevant AIQ Toolkit components.
+        """Searches a remote REST registry for relevant NAT components.
 
         Args:
             query (SearchQuery): Parameters of the search to be performed.

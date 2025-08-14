@@ -49,7 +49,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
     - Response data
     - Time intervals between calls
 
-    and appends them to AIQContextState.usage_stats.
+    and appends them to ContextState.usage_stats.
     """
 
     def __init__(self) -> None:
@@ -167,7 +167,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                 except Exception as e:
                     logger.exception("Error getting model name: %s", e, exc_info=True)
 
-                # Append usage data to AIQ Toolkit usage stats
+                # Append usage data to NAT usage stats
                 with self._lock:
                     stats = IntermediateStepPayload(
                         event_type=IntermediateStepType.LLM_END,

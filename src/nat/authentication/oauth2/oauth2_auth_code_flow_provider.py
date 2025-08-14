@@ -65,7 +65,7 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
     async def authenticate(self, user_id: str | None = None) -> AuthResult:
         if user_id is None and hasattr(Context.get(), "metadata") and hasattr(
                 Context.get().metadata, "cookies") and Context.get().metadata.cookies is not None:
-            session_id = Context.get().metadata.cookies.get("aiqtoolkit-session", None)
+            session_id = Context.get().metadata.cookies.get("nat-session", None)
             if not session_id:
                 raise RuntimeError("Authentication failed. No session ID found. Cannot identify user.")
 
@@ -82,7 +82,7 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
 
         auth_callback = self._context.user_auth_callback
         if not auth_callback:
-            raise RuntimeError("Authentication callback not set on AIQContext.")
+            raise RuntimeError("Authentication callback not set on Context.")
 
         try:
             authenticated_context = await auth_callback(self.config, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)

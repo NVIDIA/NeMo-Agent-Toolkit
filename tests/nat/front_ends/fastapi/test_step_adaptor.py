@@ -104,7 +104,7 @@ def make_intermediate_step():
 def test_process_llm_events_in_default(step_adaptor_default, make_intermediate_step, event_type):
     """
     In DEFAULT mode, LLM_START, LLM_NEW_TOKEN, and LLM_END events are processed.
-    We expect a valid AIQResponseIntermediateStep for each.
+    We expect a valid ResponseIntermediateStep for each.
     """
     step = make_intermediate_step(event_type=event_type, data_input="LLM Input", data_output="LLM Output")
 
@@ -189,7 +189,7 @@ def test_process_custom_events_in_custom_mode(step_adaptor_custom, make_intermed
     result_llm = step_adaptor_custom.process(step_llm)
     result_tool = step_adaptor_custom.process(step_tool)
 
-    # Validate the custom events produce an AIQResponseIntermediateStep
+    # Validate the custom events produce an ResponseIntermediateStep
     assert result_start is not None
     assert isinstance(result_start, ResponseIntermediateStep)
     assert result_end is not None
@@ -336,7 +336,7 @@ def test_custom_end_markdown_structure(step_adaptor_custom, make_intermediate_st
 # --------------------
 def test_process_function_start_in_default(step_adaptor_default, make_intermediate_step):
     """
-    In DEFAULT mode, FUNCTION_START events should be processed and return a valid AIQResponseIntermediateStep.
+    In DEFAULT mode, FUNCTION_START events should be processed and return a valid ResponseIntermediateStep.
     """
     step = make_intermediate_step(
         event_type=IntermediateStepType.FUNCTION_START,

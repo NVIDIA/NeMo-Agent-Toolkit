@@ -26,7 +26,7 @@ functions:
   calculator_inequality:
     _type: calculator_inequality
   calculator_divide:
-    _type: aiq_simple_calculator/calculator_divide
+    _type: nat_simple_calculator/calculator_divide
   mcp_time_tool:
     _type: mcp_tool_wrapper
     url: "http://localhost:8080/sse"
