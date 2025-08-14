@@ -24,7 +24,7 @@ which provides information about the authenticated user.
 
 ## Installation
 
-First, install the simple_auth example:
+First, install the `simple_auth` example:
 
 ```bash
 uv pip install -e examples/front_ends/simple_auth
