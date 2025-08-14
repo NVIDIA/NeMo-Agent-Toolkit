@@ -301,8 +301,6 @@ def test_validate_solver_prompt():
 
 def test_additional_planner_instructions_are_appended():
     """Test that additional planner instructions are properly appended to the base planner prompt."""
-    from langchain_core.prompts import ChatPromptTemplate
-
     from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
 
     base_prompt = PLANNER_SYSTEM_PROMPT
@@ -325,8 +323,6 @@ def test_additional_planner_instructions_are_appended():
 
 def test_additional_solver_instructions_are_appended():
     """Test that additional solver instructions are properly appended to the base solver prompt."""
-    from langchain_core.prompts import ChatPromptTemplate
-
     from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
 
     base_prompt = SOLVER_SYSTEM_PROMPT
@@ -572,7 +568,6 @@ def test_tool_input_parsing_edge_cases():
 
 def test_configuration_integration_with_additional_instructions():
     """Test integration with ReWOOAgentWorkflowConfig for additional instructions."""
-    from nat.agent.rewoo_agent.register import ReWOOAgentWorkflowConfig
 
     # Test config with additional planner instructions
     config = ReWOOAgentWorkflowConfig(tool_names=["test_tool"],
