@@ -485,7 +485,7 @@ def test_constructor():
     assert info.single_output_schema == schema_out
     assert info.stream_output_schema is NoneType
     assert info.input_type == int
-    assert info.single_output_type == str
+    assert info.single_output_type is str
     assert info.stream_output_type is NoneType
 
     # Positive stream only test
@@ -501,7 +501,7 @@ def test_constructor():
     assert info.stream_output_schema == schema_out
     assert info.input_type == int
     assert info.single_output_type is NoneType
-    assert info.stream_output_type == str
+    assert info.stream_output_type is str
 
     # Positive single and stream test
     info = FunctionInfo(single_fn=fn_int_to_str,
@@ -516,8 +516,8 @@ def test_constructor():
     assert info.single_output_schema == schema_out
     assert info.stream_output_schema == schema_out
     assert info.input_type == int
-    assert info.single_output_type == str
-    assert info.stream_output_type == str
+    assert info.single_output_type is str
+    assert info.stream_output_type is str
 
 
 @pytest.mark.parametrize("function, input_type, output_type",

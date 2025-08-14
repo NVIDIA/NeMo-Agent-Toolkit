@@ -65,7 +65,7 @@ class TestProcessorTypeIntrospection:
 
         processor = ListToStringProcessor()
         assert processor.input_type == list[int]
-        assert processor.output_type == str
+        assert processor.output_type is str
         assert processor.input_class is list  # Generic origin is list
         assert processor.output_class is str
 
@@ -277,7 +277,7 @@ class TestProcessorInheritance:
         processor = ExtendedStringProcessor()
         # Type introspection should still work
         assert processor.input_type == str
-        assert processor.output_type == str
+        assert processor.output_type is str
 
     async def test_inherited_processor_functionality(self):
         """Test that inherited processors work correctly."""
@@ -319,7 +319,7 @@ class TestProcessorInheritance:
 
         processor = TimestampProcessor()
         assert processor.input_type == str
-        assert processor.output_type == str
+        assert processor.output_type is str
 
 
 class TestProcessorEdgeCases:
@@ -335,7 +335,7 @@ class TestProcessorEdgeCases:
 
         processor = OptionalProcessor()
         assert processor.input_type == str | None
-        assert processor.output_type == str
+        assert processor.output_type is str
 
     async def test_processor_with_same_input_output_type(self):
         """Test processor where input and output types are the same."""
@@ -347,7 +347,7 @@ class TestProcessorEdgeCases:
 
         processor = IdentityProcessor()
         assert processor.input_type == str
-        assert processor.output_type == str
+        assert processor.output_type is str
 
         result = await processor.process("test")
         assert result == "test"
@@ -387,7 +387,7 @@ class TestProcessorEdgeCases:
 
         processor = UnionProcessor()
         assert processor.input_type == str | int
-        assert processor.output_type == str
+        assert processor.output_type is str
         # Union types have Union as their origin, not the full str | int
         assert processor.input_class is get_origin(str | int)  # This is just Union
         assert processor.output_class is str
