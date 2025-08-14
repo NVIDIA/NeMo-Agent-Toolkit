@@ -149,7 +149,7 @@ eval:
     dataset:
       _type: custom
       file_path: examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_nested.json
-      function: aiq_simple_calculator_eval.scripts.custom_dataset_parser.extract_nested_questions
+      function: nat_simple_calculator_eval.scripts.custom_dataset_parser.extract_nested_questions
       kwargs:
         difficulty: "medium"
         max_rows: 5
@@ -164,8 +164,8 @@ The example dataset `simple_calculator_nested.json` is a nested JSON file with q
 def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
 ```
 
-{py:class}`~aiq.eval.evaluator.evaluator_model.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
-{py:class}`~aiq.eval.evaluator.evaluator_model.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
+{py:class}`~nat.eval.evaluator.evaluator_model.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
+{py:class}`~nat.eval.evaluator.evaluator_model.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
 The custom dataset parser function should fill the following fields in the `EvalInputItem` object:
 - `id`: The id of the item. Every item in the dataset must have a unique id of type `str` or `int`.
 - `input_obj`: This is the question.
@@ -174,7 +174,7 @@ The custom dataset parser function should fill the following fields in the `Eval
 
 To run the evaluation using the custom dataset parser, run the following command:
 ```bash
-aiq eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-custom-dataset-format.yml
+nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-custom-dataset-format.yml
 ```
 
 ## NeMo Agent Toolkit Built-in Evaluators
@@ -313,7 +313,7 @@ Note: In your evaluation dataset, make sure that the `answer` field is a descrip
 
 **Sample Usage:**
 ```bash
-aiq eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
+nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
 ```
 
 ## Adding Custom Evaluators

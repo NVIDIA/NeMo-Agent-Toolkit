@@ -22,7 +22,7 @@ functions:
   calculator_inequality:
     _type: calculator_inequality
   calculator_divide:
-    _type: aiq_simple_calculator/calculator_divide
+    _type: nat_simple_calculator/calculator_divide
   current_datetime:
     _type: current_datetime
   calculator_subtract:
@@ -56,11 +56,11 @@ workflow:
 
 eval:
   general:
-    output_dir: .tmp/aiq/examples/simple_calculator/eval
+    output_dir: .tmp/nat/examples/simple_calculator/eval
     dataset:
       _type: custom
       file_path: examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_nested.json
-      function: aiq_simple_calculator_eval.scripts.custom_dataset_parser.extract_nested_questions
+      function: nat_simple_calculator_eval.scripts.custom_dataset_parser.extract_nested_questions
       kwargs:
         difficulty: "medium"
         max_rows: 5
