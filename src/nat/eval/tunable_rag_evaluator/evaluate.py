@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
 from typing import Callable
 
@@ -23,7 +22,6 @@ from langchain.schema import HumanMessage
 from langchain.schema import SystemMessage
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import RunnableLambda
-from tqdm import tqdm
 
 from nat.eval.evaluator.base_evaluator import BaseEvaluator
 from nat.eval.evaluator.evaluator_model import EvalInputItem
