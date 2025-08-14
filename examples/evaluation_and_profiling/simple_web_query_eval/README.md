@@ -136,6 +136,10 @@ To enable the `eval_upload.yml` workflow, you must configure an S3-compatible bu
 
 For more information about using remote files for evaluation, refer to the [evaluation guide](../../../docs/source/reference/evaluate.md).
 
+#### Upload dataset to the S3 bucket
+To use the sample config file `eval_upload.yml`, you need to upload the following dataset files to the S3 bucket at path `input/`:
+- `examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json`
+
 #### Running Evaluation
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_upload.yml
