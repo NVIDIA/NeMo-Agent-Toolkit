@@ -71,7 +71,7 @@ async def nim_llamaindex(embedder_config: NIMEmbedderModelConfig, _builder: Buil
 
 
 @register_embedder_client(config_type=OpenAIEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
-async def openai_llama_index(embedder_config: OpenAIEmbedderModelConfig, builder: Builder):
+async def openai_llama_index(embedder_config: OpenAIEmbedderModelConfig, _builder: Builder):
 
     from llama_index.embeddings.openai import OpenAIEmbedding
 

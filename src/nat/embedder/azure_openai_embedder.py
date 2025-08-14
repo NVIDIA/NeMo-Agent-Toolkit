@@ -41,6 +41,6 @@ class AzureOpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="azure
 
 
 @register_embedder_provider(config_type=AzureOpenAIEmbedderModelConfig)
-async def azure_openai_embedder(config: AzureOpenAIEmbedderModelConfig, builder: Builder):
+async def azure_openai_embedder(config: AzureOpenAIEmbedderModelConfig, _builder: Builder):
 
     yield EmbedderProviderInfo(config=config, description="An Azure OpenAI model for use with an Embedder client.")

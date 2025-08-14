@@ -27,7 +27,7 @@ from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
-async def aws_bedrock_crewai(llm_config: AWSBedrockModelConfig, builder: Builder):
+async def aws_bedrock_crewai(llm_config: AWSBedrockModelConfig, _builder: Builder):
 
     from crewai import LLM
 
@@ -43,7 +43,7 @@ async def aws_bedrock_crewai(llm_config: AWSBedrockModelConfig, builder: Builder
 
 
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
-async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, builder: Builder):
+async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Builder):
 
     from crewai import LLM
 
@@ -71,7 +71,7 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, builder: Build
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
-async def nim_crewai(llm_config: NIMModelConfig, builder: Builder):
+async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
 
     from crewai import LLM
 
@@ -106,7 +106,7 @@ async def nim_crewai(llm_config: NIMModelConfig, builder: Builder):
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
-async def openai_crewai(llm_config: OpenAIModelConfig, builder: Builder):
+async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from crewai import LLM
 

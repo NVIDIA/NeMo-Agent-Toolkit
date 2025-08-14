@@ -37,6 +37,6 @@ class OpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="openai"):
 
 
 @register_embedder_provider(config_type=OpenAIEmbedderModelConfig)
-async def openai_llm(config: OpenAIEmbedderModelConfig, builder: Builder):
+async def openai_llm(config: OpenAIEmbedderModelConfig, _builder: Builder):
 
     yield EmbedderProviderInfo(config=config, description="An OpenAI model for use with an Embedder client.")

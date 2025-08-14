@@ -22,6 +22,7 @@ from llama_index.core.tools import FunctionTool
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 
@@ -96,6 +97,22 @@ async def test_aws_bedrock_minimal_agent():
                                        context_size=1024,
                                        credentials_profile_name="default")
     agent = await create_minimal_agent("aws_bedrock_llm", llm_config)
+
+    response = await agent.achat("What is 1+2?")
+    assert response is not None
+    assert hasattr(response, 'response')
+    assert "3" in response.response.lower()
+
+
+@pytest.mark.integration
+async def test_azure_openai_minimal_agent():
+    """
+    Test Azure OpenAI LLM with minimal LlamaIndex agent.
+    Requires AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT to be set.
+    See https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart for more information.
+    """
+    llm_config = AzureOpenAIModelConfig(azure_deployment="meta/llama-3.1-70b-instruct")
+    agent = await create_minimal_agent("azure_openai_llm", llm_config)
 
     response = await agent.achat("What is 1+2?")
     assert response is not None

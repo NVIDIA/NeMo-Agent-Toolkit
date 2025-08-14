@@ -27,9 +27,9 @@ from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, _builder: Builder):
 
-    from langchain_aws import ChatBedrockConverse
+    from langchain_aws import ChatBedrock
 
-    client = ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))
+    client = ChatBedrock(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,
