@@ -17,13 +17,12 @@ Data visualization tools for retail sales analysis.
 """
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.function import FunctionBaseConfig
-
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.function import FunctionBaseConfig
 
 
 class PlotSalesTrendForStoresConfig(FunctionBaseConfig, name="plot_sales_trend_for_stores"):
@@ -34,31 +33,30 @@ class PlotSalesTrendForStoresConfig(FunctionBaseConfig, name="plot_sales_trend_f
 @register_function(config_type=PlotSalesTrendForStoresConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def plot_sales_trend_for_stores_function(config: PlotSalesTrendForStoresConfig, builder: Builder):
     """Create a visualization of sales trends over time."""
-    import pandas as pd
     import matplotlib.pyplot as plt
-        
+    import pandas as pd
+
     df = pd.read_csv(config.data_path)
 
-    
     async def _plot_sales_trend_for_stores(store_id: str) -> str:
         """
         Create a line chart showing sales trends over time.
-        
+
         Args:
             start_date: Start date in YYYY-MM-DD format
             end_date: End date in YYYY-MM-DD format
             product_name: Optional product name to filter by
-            
+
         Returns:
             Dictionary containing chart data and image
         """
         if store_id not in df["StoreID"].unique():
             data = df
-            title = f"Sales Trend for All Stores"
+            title = "Sales Trend for All Stores"
         else:
             data = df[df["StoreID"] == store_id]
             title = f"Sales Trend for Store {store_id}"
-            
+
         plt.figure(figsize=(10, 5))
         trend = data.groupby("Date")["Revenue"].sum()
         trend.plot(title=title)
@@ -66,14 +64,14 @@ async def plot_sales_trend_for_stores_function(config: PlotSalesTrendForStoresCo
         plt.ylabel("Revenue")
         plt.tight_layout()
         plt.savefig("sales_trend.png")
-        
+
         return "Sales trend plot saved to sales_trend.png"
-    
+
     yield FunctionInfo.from_fn(
         _plot_sales_trend_for_stores,
-        description=("This tool can be used to plot the sales trend for a specific store or all stores. "
-                    "It takes in a store ID creates and saves an image of a plot of the revenue trend for that store.")
-    )
+        description=(
+            "This tool can be used to plot the sales trend for a specific store or all stores. "
+            "It takes in a store ID creates and saves an image of a plot of the revenue trend for that store."))
 
 
 class PlotAndCompareRevenueAcrossStoresConfig(FunctionBaseConfig, name="plot_and_compare_revenue_across_stores"):
@@ -84,18 +82,18 @@ class PlotAndCompareRevenueAcrossStoresConfig(FunctionBaseConfig, name="plot_and
 @register_function(config_type=PlotAndCompareRevenueAcrossStoresConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def plot_revenue_across_stores_function(config: PlotAndCompareRevenueAcrossStoresConfig, builder: Builder):
     """Create a visualization comparing sales trends between stores."""
-    import pandas as pd
     import matplotlib.pyplot as plt
-    
+    import pandas as pd
+
     df = pd.read_csv(config.data_path)
 
     async def _plot_revenue_across_stores(input_message: str) -> str:
         """
         Create a multi-line chart comparing sales trends between stores.
-        
+
         Args:
             input_message: Input message to plot the revenue across stores
-            
+
         Returns:
             Dictionary containing comparison chart data and image
         """
@@ -111,9 +109,11 @@ async def plot_revenue_across_stores_function(config: PlotAndCompareRevenueAcros
 
     yield FunctionInfo.from_fn(
         _plot_revenue_across_stores,
-        description=("This tool can be used to plot and compare the revenue trends across stores. Use this tool only if the user asks for a comparison of revenue trends across stores."
-                    "It takes in an input message and creates and saves an image of a plot of the revenue trends across stores.")
-    )
+        description=(
+            "This tool can be used to plot and compare the revenue trends across stores. Use this tool only if the "
+            "user asks for a comparison of revenue trends across stores."
+            "It takes in an input message and creates and saves an image of a plot of the revenue trends across stores."
+        ))
 
 
 class PlotAverageDailyRevenueConfig(FunctionBaseConfig, name="plot_average_daily_revenue"):
@@ -124,19 +124,19 @@ class PlotAverageDailyRevenueConfig(FunctionBaseConfig, name="plot_average_daily
 @register_function(config_type=PlotAverageDailyRevenueConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def plot_average_daily_revenue_function(config: PlotAverageDailyRevenueConfig, builder: Builder):
     """Create a bar chart showing average daily revenue by day of week."""
-    import pandas as pd
     import matplotlib.pyplot as plt
-    
+    import pandas as pd
+
     df = pd.read_csv(config.data_path)
 
     async def _plot_average_daily_revenue(input_message: str) -> str:
         """
         Create a bar chart showing average revenue by day of the week.
-        
+
         Args:
             start_date: Start date in YYYY-MM-DD format
             end_date: End date in YYYY-MM-DD format
-            
+
         Returns:
             Dictionary containing revenue chart data and image
         """
@@ -151,14 +151,15 @@ async def plot_average_daily_revenue_function(config: PlotAverageDailyRevenueCon
         plt.legend(title="Product", bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.tight_layout()
         plt.savefig("average_daily_revenue.png")
-        
+
         return "Average daily revenue plot saved to average_daily_revenue.png"
-    
+
     yield FunctionInfo.from_fn(
         _plot_average_daily_revenue,
         description=("This tool can be used to plot the average daily revenue for stores and products "
-                    "It takes in an input message and creates and saves an image of a grouped bar chart of the average daily revenue")
-    )
+                     "It takes in an input message and creates and saves an image of a grouped bar chart "
+                     "of the average daily revenue"))
+
 
 class GraphSummarizerConfig(FunctionBaseConfig, name="graph_summarizer"):
     """Analyze and summarize chart data."""
@@ -168,23 +169,25 @@ class GraphSummarizerConfig(FunctionBaseConfig, name="graph_summarizer"):
 @register_function(config_type=GraphSummarizerConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def graph_summarizer_function(config: GraphSummarizerConfig, builder: Builder):
     """Analyze chart data and provide natural language summaries."""
-    from openai import OpenAI
     import base64
+
+    from openai import OpenAI
 
     client = OpenAI()
 
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    
+
     async def _graph_summarizer(image_path: str) -> str:
         """
         Analyze chart data and provide insights and summaries.
-        
+
         Args:
             image_path: The path to the image to analyze
-            
+
         Returns:
             Dictionary containing analysis and insights
         """
+
         def encode_image(image_path: str):
             with open(image_path, "rb") as image_file:
                 return base64.b64encode(image_file.read()).decode('utf-8')
@@ -192,16 +195,17 @@ async def graph_summarizer_function(config: GraphSummarizerConfig, builder: Buil
         base64_image = encode_image(image_path)
 
         response = client.responses.create(
-            model="gpt-4o",
-            input=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "input_text", "text": "Please summarize the key insights from this graph in natural language."},
-                        {"type": "input_image", "image_url": f"data:image/png;base64,{base64_image}"}
-                    ]
-                }
-            ],
+            model=llm.model_name,
+            input=[{
+                "role":
+                    "user",
+                "content": [{
+                    "type": "input_text",
+                    "text": "Please summarize the key insights from this graph in natural language."
+                }, {
+                    "type": "input_image", "image_url": f"data:image/png;base64,{base64_image}"
+                }]
+            }],
             temperature=0.3,
         )
 
@@ -210,5 +214,4 @@ async def graph_summarizer_function(config: GraphSummarizerConfig, builder: Buil
     yield FunctionInfo.from_fn(
         _graph_summarizer,
         description=("This tool can be used to summarize the key insights from a graph in natural language. "
-                    "It takes in the path to an image and returns a summary of the key insights from the graph.")
-    )
+                     "It takes in the path to an image and returns a summary of the key insights from the graph."))

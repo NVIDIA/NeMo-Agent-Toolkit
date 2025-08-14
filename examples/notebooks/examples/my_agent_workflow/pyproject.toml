@@ -6,7 +6,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../../.."
 
 [project]
-name = "aiq_my_agent_workflow"
+name = "nat_my_agent_workflow"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.2",
@@ -23,5 +23,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-my_agent_workflow = "aiq_my_agent_workflow.register"
+[project.entry-points.'nat.components']
+my_agent_workflow = "nat_my_agent_workflow.register"

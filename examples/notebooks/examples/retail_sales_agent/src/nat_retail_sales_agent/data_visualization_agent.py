@@ -16,21 +16,21 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function import Function
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.component_ref import FunctionRef
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function import Function
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
 
 class DataVisualizationAgentConfig(FunctionBaseConfig, name="data_visualization_agent"):
     """
-    AIQ Toolkit function config for data visualization.
+    NeMo Agent toolkit function config for data visualization.
     """
     llm_name: LLMRef = Field(description="The name of the LLM to use")
     tool_names: list[FunctionRef] = Field(description="The names of the tools to use")
@@ -42,19 +42,20 @@ class DataVisualizationAgentConfig(FunctionBaseConfig, name="data_visualization_
 
 
 @register_function(config_type=DataVisualizationAgentConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def data_visualization_agent(
-    config: DataVisualizationAgentConfig, builder: Builder
-):
-    from pydantic import BaseModel
-    from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage, ToolMessage 
+async def data_visualization_agent(config: DataVisualizationAgentConfig, builder: Builder):
+    from langchain_core.messages import AIMessage
+    from langchain_core.messages import BaseMessage
+    from langchain_core.messages import HumanMessage
+    from langchain_core.messages import SystemMessage
+    from langchain_core.messages import ToolMessage
     from langgraph.graph import StateGraph
-    from langgraph.prebuilt import ToolNode    
+    from langgraph.prebuilt import ToolNode
+    from pydantic import BaseModel
 
     class AgentState(BaseModel):
         retry_count: int = 0
         messages: list[BaseMessage]
         approved: bool = True
-
 
     tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     llm = await builder.get_llm(llm_name=config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -62,7 +63,6 @@ async def data_visualization_agent(
 
     hitl_approval_fn: Function = builder.get_function(config.hitl_approval_fn)
     graph_summarizer_fn: Function = builder.get_function(config.graph_summarizer_fn)
-
 
     async def conditional_edge(state: AgentState):
         try:
@@ -73,10 +73,8 @@ async def data_visualization_agent(
             logger.info(f"Has tool_calls: {hasattr(last_message, 'tool_calls')}")
             if hasattr(last_message, 'tool_calls'):
                 logger.info(f"Tool calls: {last_message.tool_calls}")
-            
-            if (hasattr(last_message, 'tool_calls') and 
-                last_message.tool_calls and 
-                len(last_message.tool_calls) > 0):
+
+            if (hasattr(last_message, 'tool_calls') and last_message.tool_calls and len(last_message.tool_calls) > 0):
                 logger.info("Routing to tools - found non-empty tool calls")
                 return "tools"
             else:
@@ -105,19 +103,20 @@ async def data_visualization_agent(
         else:
             return "summarize"
 
-    def data_visualization_agent(state: AgentState):        
+    def data_visualization_agent(state: AgentState):
         sys_msg = SystemMessage(content=config.prompt)
         messages = state.messages
-        
+
         if messages and isinstance(messages[-1], ToolMessage):
             last_tool_msg = messages[-1]
             logger.info(f"Processing tool result: {last_tool_msg.content}")
             summary_content = f"I've successfully created the visualization. {last_tool_msg.content}"
             return {"messages": [AIMessage(content=summary_content)]}
         else:
-            logger.info(f"Normal agent operation - generating response for: {messages[-1] if messages else 'no messages'}")
+            logger.info(
+                f"Normal agent operation - generating response for: {messages[-1] if messages else 'no messages'}")
             return {"messages": [llm_n_tools.invoke([sys_msg] + state.messages)]}
-    
+
     async def check_hitl_approval(state: AgentState):
         messages = state.messages
         last_message = messages[-1]
@@ -136,15 +135,16 @@ async def data_visualization_agent(
             if hasattr(msg, 'content') and msg.content:
                 content = str(msg.content)
                 import re
-                pattern = r'saved to ([a-zA-Z0-9_.-]+\.(?:png|jpg|jpeg|gif|svg))|([a-zA-Z0-9_.-]+\.(?:png|jpg|jpeg|gif|svg))'
+                img_ext = r'[a-zA-Z0-9_.-]+\.(?:png|jpg|jpeg|gif|svg)'
+                pattern = rf'saved to ({img_ext})|({img_ext})'
                 match = re.search(pattern, content)
                 if match:
                     image_path = match.group(1) or match.group(2)
                     break
-        
+
         if not image_path:
             image_path = "sales_trend.png"
-            
+
         logger.info(f"Extracted image path for summarization: {image_path}")
         response = await graph_summarizer_fn.ainvoke(image_path)
         return {"messages": [response]}
@@ -158,18 +158,13 @@ async def data_visualization_agent(
         builder_graph.add_node("check_hitl_approval", check_hitl_approval)
         builder_graph.add_node("summarize", summarize_graph)
 
-        builder_graph.add_conditional_edges(
-            "data_visualization_agent",
-            conditional_edge)
+        builder_graph.add_conditional_edges("data_visualization_agent", conditional_edge)
 
         builder_graph.set_entry_point("data_visualization_agent")
         builder_graph.add_edge("tools", "data_visualization_agent")
-        
-        builder_graph.add_conditional_edges(
-            "check_hitl_approval",
-            approval_conditional_edge
-        )
-        
+
+        builder_graph.add_conditional_edges("check_hitl_approval", approval_conditional_edge)
+
         builder_graph.add_edge("summarize", "__end__")
 
         agent_executor = builder_graph.compile()
@@ -179,8 +174,6 @@ async def data_visualization_agent(
     except Exception as ex:
         logger.exception("Failed to build Data Visualization Agent Graph: %s", ex, exc_info=ex)
         raise ex
-
-
 
     async def _arun(user_query: str) -> str:
         """
@@ -198,8 +191,7 @@ async def data_visualization_agent(
         return response
 
     try:
-        yield FunctionInfo.from_fn(_arun,
-        description=config.description)
+        yield FunctionInfo.from_fn(_arun, description=config.description)
 
     except GeneratorExit:
         print("Function exited early!")

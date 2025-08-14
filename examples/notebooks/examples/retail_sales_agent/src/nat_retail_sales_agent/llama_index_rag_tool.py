@@ -17,13 +17,13 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.component_ref import EmbedderRef
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import EmbedderRef
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,7 @@ class LlamaIndexRAGConfig(FunctionBaseConfig, name="local_llama_index_rag"):
     uri: str = Field(default="http://localhost:19530", description="The URI of the Milvus vector store.")
     use_milvus: bool = Field(default=False, description="Whether to use Milvus for the RAG engine.")
     collection_name: str = Field(default="context", description="The name of the collection to use for the RAG engine.")
+
 
 @register_function(config_type=LlamaIndexRAGConfig, framework_wrappers=[LLMFrameworkEnum.LLAMA_INDEX])
 async def llama_index_rag_tool(config: LlamaIndexRAGConfig, builder: Builder):
@@ -58,7 +59,7 @@ async def llama_index_rag_tool(config: LlamaIndexRAGConfig, builder: Builder):
     logger.info(f"Loaded {len(docs)} documents from {config.data_dir}")
 
     parser = SentenceSplitter(
-        chunk_size=400, 
+        chunk_size=400,
         chunk_overlap=20,
         separator=" ",
     )
@@ -76,16 +77,14 @@ async def llama_index_rag_tool(config: LlamaIndexRAGConfig, builder: Builder):
             storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
             index = VectorStoreIndex(nodes, storage_context=storage_context)
-        
+
         except MilvusException as e:
             logger.error(f"Error initializing Milvus vector store: {e}. Falling back to default vector store.")
             index = VectorStoreIndex(nodes)
     else:
         index = VectorStoreIndex(nodes)
 
-    query_engine = index.as_query_engine(
-        similarity_top_k=3,
-    )
+    query_engine = index.as_query_engine(similarity_top_k=3, )
 
     async def _arun(inputs: str) -> str:
         """
@@ -101,7 +100,4 @@ async def llama_index_rag_tool(config: LlamaIndexRAGConfig, builder: Builder):
             logger.error(f"RAG query failed: {e}")
             return f"Sorry, I couldn't retrieve information about that product. Error: {str(e)}"
 
-    yield FunctionInfo.from_fn(
-        _arun,
-        description=config.description
-    )
+    yield FunctionInfo.from_fn(_arun, description=config.description)

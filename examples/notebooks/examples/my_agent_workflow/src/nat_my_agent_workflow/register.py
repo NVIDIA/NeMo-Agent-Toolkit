@@ -12,12 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-general:
-  use_uvloop: true
-  logging:
-    console:
-      _type: console
-      level: WARN
 
-workflow:
-  _type: my_first_aiq_agent
+# pylint: disable=unused-import
+# flake8: noqa
+
+from nat_my_agent_workflow import my_agent_workflow_function
+from nat_my_agent_workflow import my_first_nat_agent_workflow_function

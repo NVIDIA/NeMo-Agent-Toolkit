@@ -16,32 +16,31 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
 
-class MyAgentWorkflowFunctionConfig(FunctionBaseConfig, name="my_first_aiq_agent"):
+class MyAgentWorkflowFunctionConfig(FunctionBaseConfig, name="my_first_nat_agent"):
     """
-    AIQ Toolkit function template. Please update the description.
+    NeMo Agent toolkit function template. Please update the description.
     """
     parameter: str = Field(default="default_value", description="Notional description for this parameter")
 
 
 @register_function(config_type=MyAgentWorkflowFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def my_first_aiq_agent_workflow_function(
-    config: MyAgentWorkflowFunctionConfig, builder: Builder
-):
+async def my_first_nat_agent_workflow_function(config: MyAgentWorkflowFunctionConfig, builder: Builder):
     import os
+
     from langchain import hub
     from langchain.agents import AgentExecutor
     from langchain.agents import create_react_agent
-    from langchain_nvidia_ai_endpoints import ChatNVIDIA
     from langchain_community.tools.tavily_search import TavilySearchResults
+    from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
     # Initialize a tool to search the web
     tavily_kwargs = {"max_results": 2, "api_key": os.getenv("TAVILY_API_KEY")}
@@ -67,10 +66,10 @@ async def my_first_aiq_agent_workflow_function(
 
     # Initialize an agent executor to iterate through reasoning steps
     agent_executor = AgentExecutor(agent=react_agent,
-                                tools=tools,
-                                max_iterations=15,
-                                handle_parsing_errors=True,
-                                verbose=True)    
+                                   tools=tools,
+                                   max_iterations=15,
+                                   handle_parsing_errors=True,
+                                   verbose=True)
 
     async def _response_fn(input_message: str) -> str:
         response = agent_executor.invoke({"input": input_message, "chat_history": []})

@@ -6,7 +6,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../../.."
 
 [project]
-name = "aiq_retail_sales_agent"
+name = "nat_retail_sales_agent"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.2",
@@ -25,5 +25,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-retail_sales_agent = "aiq_retail_sales_agent.register"
+[project.entry-points.'nat.components']
+retail_sales_agent = "nat_retail_sales_agent.register"
