@@ -22,7 +22,6 @@ from langchain_core.tools import BaseTool
 from nat.eval.evaluator.base_evaluator import BaseEvaluator
 from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.eval.evaluator.evaluator_model import EvalOutputItem
-from nat.eval.trajectory_evaluator.output_parser import CustomTrajectoryOutputParser
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +41,7 @@ class TrajectoryEvaluator(BaseEvaluator):
         self.traj_eval_chain = TrajectoryEvalChain.from_llm(llm=self.llm,
                                                             tools=self.tools,
                                                             return_reasoning=True,
-                                                            requires_reference=True,
-                                                            output_parser=CustomTrajectoryOutputParser())
+                                                            requires_reference=True)
         logger.debug("Trajectory evaluation chain initialized.")
 
     async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
