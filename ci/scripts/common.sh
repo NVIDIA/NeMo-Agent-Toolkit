@@ -120,6 +120,74 @@ function build_package_wheel()
     build_wheel "${pkg}" "${pkg_dir_name}/${GIT_TAG}"
 }
 
+function create_env() {
+
+    extras=()
+    for arg in "$@"; do
+        if [[ "${arg}" == "extra:all" ]]; then
+            extras+=("--all-extras")
+        elif [[ "${arg}" == "group:all" ]]; then
+            extras+=("--all-groups")
+        elif [[ "${arg}" == extra:* ]]; then
+            extras+=("--extra" "${arg#extra:}")
+        elif [[ "${arg}" == group:* ]]; then
+            extras+=("--group" "${arg#group:}")
+        else
+            # Error out if we don't know what to do with the argument
+            rapids-logger "Unknown argument to create_env: ${arg}. Must start with 'extra:' or 'group:'"
+            exit 1
+        fi
+    done
+
+    rapids-logger "Creating uv env"
+    VENV_DIR="${WORKSPACE_TMP}/.venv"
+    uv venv --seed ${VENV_DIR}
+    source ${VENV_DIR}/bin/activate
+
+    rapids-logger "Creating Environment with extras: ${@}"
+
+    UV_SYNC_STDERROUT=$(uv sync --active ${extras[@]} 2>&1)
+
+    # Explicitly filter the warning about multiple packages providing a tests module, work-around for issue #611
+    UV_SYNC_STDERROUT=$(echo "${UV_SYNC_STDERROUT}" | grep -v "warning: The module \`tests\` is provided by more than one package")
+
+
+    # Environment should have already been created in the before_script
+    if [[ "${UV_SYNC_STDERROUT}" =~ "warning:" ]]; then
+        echo "Error, uv sync emitted warnings. These are usually due to missing lower bound constraints."
+        echo "StdErr output:"
+        echo "${UV_SYNC_STDERROUT}"
+        exit 1
+    fi
+
+    rapids-logger "Final Environment"
+    uv pip list
+}
+
+function install_rapids_gha_tools()
+{
+   echo "Installing Rapids GHA tools"
+   wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
+}
+
+function get_lfs_files() {
+    rapids-logger "Installing git-lfs from apt"
+    apt update
+    apt install --no-install-recommends -y git-lfs
+
+    if [[ "${USE_HOST_GIT}" == "1" ]]; then
+        rapids-logger "Using host git, skipping git-lfs install"
+    else
+        rapids-logger "Fetching LFS files"
+        git lfs install
+        git lfs fetch
+        git lfs pull
+    fi
+
+    rapids-logger "git lfs ls-files"
+    git lfs ls-files
+}
+
 function cleanup {
    # Restore the original directory
    popd &> /dev/null
