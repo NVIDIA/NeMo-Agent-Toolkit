@@ -21,6 +21,7 @@ on:
       - 'pull-request/**'
       - 'develop'
       - 'main'
+      - 'release/**'
 
 # This allows a subsequently queued workflow run to interrupt previous runs
 concurrency:
@@ -65,6 +66,7 @@ jobs:
       is_pr: ${{ startsWith(github.ref_name, 'pull-request/') }}
       is_main_branch: ${{ github.ref_name == 'main' }}
       is_dev_branch: ${{ startsWith(github.ref_name, 'develop') }}
+      is_release_branch: ${{ startsWith(github.ref_name, 'release/') }}
       has_skip_ci_label: ${{ steps.get-pr-info.outcome == 'success' && contains(fromJSON(steps.get-pr-info.outputs.pr-info).labels.*.name, 'skip-ci') || false }}
       pr_info: ${{ steps.get-pr-info.outcome == 'success' && steps.get-pr-info.outputs.pr-info || '' }}
       base_sha: ${{ steps.get-pr-info.outcome == 'success' && fromJSON(steps.get-pr-info.outputs.pr-info).base.sha || '' }}
