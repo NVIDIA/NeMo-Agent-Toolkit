@@ -48,16 +48,15 @@ def _get_nat_dependency(editable: bool = False) -> str:
     # Get the current NAT version
     from nat.cli.entrypoint import get_version
     current_version = get_version()
-    if current_version != "unknown":
-        # Extract major.minor (e.g., "1.2.3" -> "1.2")
-        major_minor = ".".join(current_version.split(".")[:2])
-        dependency += f"~={major_minor}"
-        logger.info("Using NAT dependency: %s", dependency)
-        return dependency
-    else:
-        # Fallback if version detection fails
+    if current_version == "unknown":
         logger.warning("Could not detect NAT version, using unversioned dependency")
         return dependency
+
+    # Extract major.minor (e.g., "1.2.3" -> "1.2")
+    major_minor = ".".join(current_version.split(".")[:2])
+    dependency += f"~={major_minor}"
+    logger.info("Using NAT dependency: %s", dependency)
+    return dependency
 
 
 class PackageError(Exception):
