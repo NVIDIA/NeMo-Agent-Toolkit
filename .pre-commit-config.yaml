@@ -34,6 +34,14 @@ repos:
       - id: yapf
         args: ["-i", "--style", "./pyproject.toml"]
 
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.9
+    hooks:
+      # Run the linter.
+      - id: ruff-check
+      # Run the formatter.
+      # - id: ruff-format
+
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.6.2
     hooks:
