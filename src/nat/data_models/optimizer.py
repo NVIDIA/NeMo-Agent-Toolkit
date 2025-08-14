@@ -118,8 +118,7 @@ class OptimizerConfig(BaseModel):
 
     target: float | None = Field(
         description=(
-            "Target value for the optimization. If set, the optimization will stop when this value is reached."
-        ),
+            "Target value for the optimization. If set, the optimization will stop when this value is reached."),
         default=None,
     )
 

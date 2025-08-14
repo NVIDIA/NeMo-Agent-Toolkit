@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# flake8: noqa: W293
 """
 Pareto Front Visualization Utilities
 
@@ -29,7 +30,6 @@ Key Features:
 """
 
 import logging
-import warnings
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -43,7 +43,6 @@ logger = logging.getLogger(__name__)
 class ParetoVisualizer:
     """
     Visualizer for Pareto optimal solutions from multi-objective optimization.
-    
     This class can create various types of plots to visualize the trade-offs
     between different objectives in multi-objective optimization problems.
     """
@@ -51,7 +50,6 @@ class ParetoVisualizer:
     def __init__(self, metric_names: list[str], directions: list[str], title_prefix: str = "Optimization Results"):
         """
         Initialize the Pareto visualizer.
-        
         Args:
             metric_names: Names of the optimization metrics
             directions: Optimization directions ("minimize" or "maximize") for each metric

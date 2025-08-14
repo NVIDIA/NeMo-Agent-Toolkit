@@ -35,9 +35,9 @@ import asyncio
 import json
 import logging
 import random
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
-from collections.abc import Sequence
 
 from pydantic import BaseModel
 
@@ -180,13 +180,10 @@ async def optimize_prompts(
     # ------------- builder & functions ------------- #
     async with WorkflowBuilder(general_config=base_cfg.general, registry=None) as builder:
         await builder.populate_builder(base_cfg)
-        init_fn_name = (
-            optimizer_config.prompt.prompt_population_init_function
-        )
+        init_fn_name = (optimizer_config.prompt.prompt_population_init_function)
         if not init_fn_name:
             raise ValueError(
-                "No prompt optimization function configured. Set optimizer.prompt_population_init_function"
-            )
+                "No prompt optimization function configured. Set optimizer.prompt_population_init_function")
         init_fn = builder.get_function(init_fn_name)
 
         recombine_fn = None
@@ -202,10 +199,8 @@ async def optimize_prompts(
         # ------------- GA parameters ------------- #
         pop_size = max(2, int(optimizer_config.prompt.ga_population_size))
         generations = max(1, int(optimizer_config.prompt.ga_generations))
-        offspring_size = (
-            optimizer_config.prompt.ga_offspring_size
-            or max(0, pop_size - optimizer_config.prompt.ga_elitism)
-        )
+        offspring_size = (optimizer_config.prompt.ga_offspring_size
+                          or max(0, pop_size - optimizer_config.prompt.ga_elitism))
         crossover_rate = float(optimizer_config.prompt.ga_crossover_rate)
         mutation_rate = float(optimizer_config.prompt.ga_mutation_rate)
         elitism = max(0, int(optimizer_config.prompt.ga_elitism))
@@ -217,11 +212,12 @@ async def optimize_prompts(
         # ------------- population init ------------- #
         async def _mutate_prompt(original_prompt: str, purpose: str) -> str:
             # Use LLM-based optimizer with no feedback
-            return await init_fn.acall_invoke(PromptOptimizerInputSchema(
-                original_prompt=original_prompt,
-                objective=purpose,
-                oracle_feedback=None,
-            ))
+            return await init_fn.acall_invoke(
+                PromptOptimizerInputSchema(
+                    original_prompt=original_prompt,
+                    objective=purpose,
+                    oracle_feedback=None,
+                ))
 
         async def _recombine_prompts(a: str, b: str, purpose: str) -> str:
             if recombine_fn is None:
@@ -304,8 +300,8 @@ async def optimize_prompts(
             norm_per_ind = _normalize_generation(pop, eval_metrics, directions)
             penalties = _apply_diversity_penalty(pop, diversity_lambda)
             for ind, norm_scores, penalty in zip(pop, norm_per_ind, penalties):
-                ind.scalar_fitness = _scalarize(norm_scores, mode=optimizer_config.multi_objective_combination_mode,
-                                                weights=weights) - penalty
+                ind.scalar_fitness = _scalarize(
+                    norm_scores, mode=optimizer_config.multi_objective_combination_mode, weights=weights) - penalty
             return pop
 
         # ------------- reproduction ops ------------- #

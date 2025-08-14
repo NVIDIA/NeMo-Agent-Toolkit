@@ -81,11 +81,9 @@ class PromptRecombinerConfig(FunctionBaseConfig, name="prompt_recombiner"):
     optimizer_llm: LLMRef = Field(description="LLM to use for prompt recombination")
     optimizer_prompt: str = Field(
         description="Prompt template for the recombiner",
-        default=(
-            "You are an expert at combining prompt instructions for LLMs. "
-            "Your task is to merge two prompts for the same objective into a single, stronger prompt. "
-            "Do not introduce new variables or modify existing placeholders."
-        ),
+        default=("You are an expert at combining prompt instructions for LLMs. "
+                 "Your task is to merge two prompts for the same objective into a single, stronger prompt. "
+                 "Do not introduce new variables or modify existing placeholders."),
     )
     system_objective: str = Field(description="Objective of the workflow")
 
@@ -100,10 +98,8 @@ async def prompt_recombiner_function(config: PromptRecombinerConfig, builder: Bu
     try:
         from langchain_core.prompts import PromptTemplate
     except ImportError as exc:
-        raise ImportError(
-            "langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
-            "This error can be resolve by installing agentiq-langchain."
-        ) from exc
+        raise ImportError("langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
+                          "This error can be resolve by installing agentiq-langchain.") from exc
 
     llm = await builder.get_llm(config.optimizer_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
@@ -130,8 +126,7 @@ async def prompt_recombiner_function(config: PromptRecombinerConfig, builder: Bu
             "Combine the strongest instructions and phrasing from both parents to produce a single, coherent child "
             "prompt.\n"
             "Maintain variables and placeholders unchanged.\n"
-            "Return only the child prompt text, with no additional commentary."
-        )
+            "Return only the child prompt text, with no additional commentary.")
 
         child_prompt = await llm.ainvoke(prompt)
         return child_prompt.content

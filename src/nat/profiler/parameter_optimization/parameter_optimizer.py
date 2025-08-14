@@ -15,7 +15,7 @@
 
 import asyncio
 import logging
-from collections.abc import Mapping as Dict  # deprecations workaround for typing.Dict
+from collections.abc import Mapping as Dict
 
 import optuna
 import yaml
@@ -119,12 +119,10 @@ def optimize_parameters(
         yaml.dump(tuned_cfg.model_dump(), fh)
     with (out_dir / "trials_dataframe_params.csv").open("w") as fh:
         # Include user attributes so the `rep_scores` metadata is exported.
-        df = study.trials_dataframe(attrs=("user_attrs",))
+        df = study.trials_dataframe(attrs=("user_attrs", ))
         # Flatten user_attrs -> rep_scores into its own column for convenience.
         if "rep_scores" not in df.columns and "user_attrs" in df.columns:
-            df["rep_scores"] = df["user_attrs"].apply(
-                lambda d: d.get("rep_scores") if isinstance(d, dict) else None
-            )
+            df["rep_scores"] = df["user_attrs"].apply(lambda d: d.get("rep_scores") if isinstance(d, dict) else None)
             df = df.drop(columns=["user_attrs"])
         df.to_csv(fh, index=False)
 
