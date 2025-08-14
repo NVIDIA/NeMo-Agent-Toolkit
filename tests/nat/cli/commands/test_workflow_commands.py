@@ -29,7 +29,7 @@ def test_get_nat_dependency_non_editable_with_version(mock_get_version):
     """Test that non-editable mode with valid version returns versioned dependency."""
     mock_get_version.return_value = "1.2.3"
 
-    result = _get_nat_dependency(editable=False)
+    result = _get_nat_dependency(versioned=True)
     assert result == "nvidia-nat[langchain]~=1.2"
 
 
@@ -38,5 +38,5 @@ def test_get_nat_dependency_non_editable_unknown_version(mock_get_version):
     """Test that non-editable mode with unknown version returns unversioned dependency."""
     mock_get_version.return_value = "unknown"
 
-    result = _get_nat_dependency(editable=False)
+    result = _get_nat_dependency(versioned=False)
     assert result == "nvidia-nat[langchain]"
