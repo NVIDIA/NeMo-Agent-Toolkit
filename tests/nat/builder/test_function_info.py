@@ -484,7 +484,7 @@ def test_constructor():
     assert info.input_schema == schema_in
     assert info.single_output_schema == schema_out
     assert info.stream_output_schema is NoneType
-    assert info.input_type == int
+    assert info.input_type is int
     assert info.single_output_type is str
     assert info.stream_output_type is NoneType
 
@@ -499,7 +499,7 @@ def test_constructor():
     assert info.input_schema == schema_in
     assert info.single_output_schema is NoneType
     assert info.stream_output_schema == schema_out
-    assert info.input_type == int
+    assert info.input_type is int
     assert info.single_output_type is NoneType
     assert info.stream_output_type is str
 
@@ -515,7 +515,7 @@ def test_constructor():
     assert info.input_schema == schema_in
     assert info.single_output_schema == schema_out
     assert info.stream_output_schema == schema_out
-    assert info.input_type == int
+    assert info.input_type is int
     assert info.single_output_type is str
     assert info.stream_output_type is str
 

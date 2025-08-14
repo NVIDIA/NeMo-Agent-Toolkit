@@ -100,7 +100,7 @@ class TestTypeIntrospectionMixin:
     def test_indirect_generic_input_type(self):
         """Test input_type property with indirect generic resolution"""
         instance = IndirectGenericChild()
-        assert instance.input_type == int
+        assert instance.input_type is int
 
     def test_indirect_generic_output_type(self):
         """Test output_type property with indirect generic resolution"""
@@ -182,7 +182,7 @@ class TestTypeIntrospectionMixin:
         """Test _substitute_type_var method with TypeVar"""
         instance = IndirectGenericChild()
         result = instance._substitute_type_var(T, int)
-        assert result == int
+        assert result is int
 
     def test_substitute_type_var_with_generic_type(self):
         """Test _substitute_type_var method with generic type containing TypeVar"""
@@ -201,7 +201,7 @@ class TestTypeIntrospectionMixin:
         """Test _substitute_type_var method with non-TypeVar type"""
         instance = IndirectGenericChild()
         result = instance._substitute_type_var(str, int)
-        assert result == str
+        assert result is str
 
     def test_substitute_type_var_with_complex_nested_type(self):
         """Test _substitute_type_var method with complex nested type"""
