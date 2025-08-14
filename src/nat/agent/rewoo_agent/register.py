@@ -15,6 +15,7 @@
 
 import logging
 
+from pydantic import AliasChoices
 from pydantic import Field
 
 from nat.builder.builder import Builder
@@ -54,51 +55,48 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
     use_openai_api: bool = Field(default=False,
                                  description=("Use OpenAI API for the input/output types to the function. "
                                               "If False, strings will be used."))
-    additional_instructions: str | None = Field(
-        default=None, description="Additional instructions to provide to the agent in addition to the base prompt.")
+    additional_planner_instructions: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("additional_planner_instructions", "additional_instructions"),
+        description="Additional instructions to provide to the agent in addition to the base planner prompt.")
+    additional_solver_instructions: str | None = Field(
+        default=None,
+        description="Additional instructions to provide to the agent in addition to the base solver prompt.")
 
 
 @register_function(config_type=ReWOOAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builder):
+async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builder):
     from langchain.schema import BaseMessage
     from langchain_core.messages import trim_messages
     from langchain_core.messages.human import HumanMessage
     from langchain_core.prompts import ChatPromptTemplate
     from langgraph.graph.graph import CompiledGraph
 
+    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
     from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
     from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
 
     from .agent import ReWOOAgentGraph
     from .agent import ReWOOGraphState
-    from .prompt import rewoo_planner_prompt
-    from .prompt import rewoo_solver_prompt
 
-    # the ReWOO Agent prompt comes from prompt.py, and can be customized there or via config option planner_prompt and
-    # solver_prompt.
-    if config.planner_prompt:
-        planner_prompt = config.planner_prompt
-        if config.additional_instructions:
-            planner_prompt += f"{config.additional_instructions}"
-        valid = ReWOOAgentGraph.validate_planner_prompt(config.planner_prompt)
-        if not valid:
-            logger.exception("Invalid planner_prompt")
-            raise ValueError("Invalid planner_prompt")
-        planner_prompt = ChatPromptTemplate([("system", config.planner_prompt), ("user", PLANNER_USER_PROMPT)])
-    else:
-        planner_prompt = rewoo_planner_prompt
+    # the ReWOO Agent prompts are defined in prompt.py, and can be customized there or by modifying the config option
+    # planner_prompt and solver_prompt.
+    planner_system_prompt = PLANNER_SYSTEM_PROMPT if config.planner_prompt is None else config.planner_prompt
+    if config.additional_planner_instructions:
+        planner_system_prompt += f"{config.additional_planner_instructions}"
+    if not ReWOOAgentGraph.validate_planner_prompt(planner_system_prompt):
+        logger.exception("Invalid planner prompt")
+        raise ValueError("Invalid planner prompt")
+    planner_prompt = ChatPromptTemplate([("system", planner_system_prompt), ("user", PLANNER_USER_PROMPT)])
 
-    if config.solver_prompt:
-        solver_prompt = config.solver_prompt
-        if config.additional_instructions:
-            solver_prompt += f"{config.additional_instructions}"
-        valid = ReWOOAgentGraph.validate_solver_prompt(config.solver_prompt)
-        if not valid:
-            logger.exception("Invalid solver_prompt")
-            raise ValueError("Invalid solver_prompt")
-        solver_prompt = ChatPromptTemplate([("system", config.solver_prompt), ("user", SOLVER_USER_PROMPT)])
-    else:
-        solver_prompt = rewoo_solver_prompt
+    solver_system_prompt = SOLVER_SYSTEM_PROMPT if config.solver_prompt is None else config.solver_prompt
+    if config.additional_solver_instructions:
+        solver_system_prompt += f"{config.additional_solver_instructions}"
+    if not ReWOOAgentGraph.validate_solver_prompt(solver_system_prompt):
+        logger.exception("Invalid solver prompt")
+        raise ValueError("Invalid solver prompt")
+    solver_prompt = ChatPromptTemplate([("system", solver_system_prompt), ("user", SOLVER_USER_PROMPT)])
 
     # we can choose an LLM for the ReWOO agent in the config file
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

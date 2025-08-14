@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+
 from langchain import hub
 from langchain.agents import AgentExecutor
 from langchain.agents import create_react_agent
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
 # Initialize a tool to search the web
 tavily_kwargs = {"max_results": 2, "api_key": os.getenv("TAVILY_API_KEY")}

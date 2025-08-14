@@ -24,9 +24,9 @@ class EvalInputItem(BaseModel):
     id: typing.Any
     input_obj: typing.Any
     expected_output_obj: typing.Any
-    output_obj: typing.Any
-    expected_trajectory: list[IntermediateStep]
-    trajectory: list[IntermediateStep]
+    output_obj: typing.Any = None  # populated by the workflow
+    expected_trajectory: list[IntermediateStep] = []
+    trajectory: list[IntermediateStep] = []  # populated by the workflow
     full_dataset_entry: typing.Any
 
 
