@@ -187,7 +187,7 @@ async def test_functions_single_dict_input_pod_output():
         fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
 
         assert fn_obj.input_type == dict[int, typing.Any]
-        assert fn_obj.input_class == dict
+        assert fn_obj.input_class is dict
         assert fn_obj.single_output_type == str
         assert fn_obj.streaming_output_type == str
 
@@ -312,7 +312,7 @@ async def test_stream_functions_single_dict_input_pod_output():
         fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
 
         assert fn_obj.input_type == dict[int, typing.Any]
-        assert fn_obj.input_class == dict
+        assert fn_obj.input_class is dict
         assert fn_obj.single_output_type == NoneType
         assert fn_obj.streaming_output_type == str
 

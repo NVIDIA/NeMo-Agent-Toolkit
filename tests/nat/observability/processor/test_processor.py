@@ -52,7 +52,7 @@ class TestProcessorTypeIntrospection:
         processor = StringToIntProcessor()
         assert processor.input_type == str
         assert processor.output_type == int
-        assert processor.input_class == str
+        assert processor.input_class is str
         assert processor.output_class == int
 
     def test_generic_type_introspection(self):
@@ -66,7 +66,7 @@ class TestProcessorTypeIntrospection:
         processor = ListToStringProcessor()
         assert processor.input_type == list[int]
         assert processor.output_type == str
-        assert processor.input_class == list  # Generic origin is list
+        assert processor.input_class is list  # Generic origin is list
         assert processor.output_class == str
 
     def test_complex_generic_type_introspection(self):
@@ -80,7 +80,7 @@ class TestProcessorTypeIntrospection:
         processor = DictToListProcessor()
         assert processor.input_type == dict[str, Any]
         assert processor.output_type == list[str]
-        assert processor.input_class == dict
+        assert processor.input_class is dict
         assert processor.output_class == list
 
     def test_type_introspection_error_handling(self):
@@ -373,7 +373,7 @@ class TestProcessorEdgeCases:
         processor = CustomProcessor()
         assert processor.input_type == CustomInput
         assert processor.output_type == CustomOutput
-        assert processor.input_class == CustomInput
+        assert processor.input_class is CustomInput
         assert processor.output_class == CustomOutput
 
     def test_processor_with_union_types(self):
@@ -389,7 +389,7 @@ class TestProcessorEdgeCases:
         assert processor.input_type == str | int
         assert processor.output_type == str
         # Union types have Union as their origin, not the full str | int
-        assert processor.input_class == get_origin(str | int)  # This is just Union
+        assert processor.input_class is get_origin(str | int)  # This is just Union
         assert processor.output_class == str
 
     async def test_processor_with_empty_string(self):

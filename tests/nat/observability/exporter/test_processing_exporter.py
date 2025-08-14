@@ -778,7 +778,7 @@ class TestTypeIntrospection:
         """Test that type introspection works correctly."""
         assert processing_exporter.input_type == str
         assert processing_exporter.output_type == int
-        assert processing_exporter.input_class == str
+        assert processing_exporter.input_class is str
         assert processing_exporter.output_class == int
 
 
