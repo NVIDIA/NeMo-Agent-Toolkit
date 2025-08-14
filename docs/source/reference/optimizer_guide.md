@@ -1,4 +1,4 @@
-# NeMo Agent toolkit Optimizer Guide
+# NeMo Agent Toolkit Optimizer Guide
 
 Welcome to the NeMo Agent toolkit Optimizer guide. This document provides a comprehensive overview of how to use the NeMo Agent toolkit Optimizer to tune your NeMo Agent toolkit workflows.
 
@@ -200,9 +200,9 @@ Here's how you can define optimizable fields in your workflow's data models:
 from pydantic import BaseModel
 
 from nat.data_models.function import FunctionBaseConfig
-from nat.data_models.optimizable import OptimizableField, SearchSpace
+from nat.data_models.optimizable import OptimizableField, SearchSpace, OptimizableMixin
 
-class SomeImageAgentConfig(FunctionBaseConfig, name="some_image_agent_config"):
+class SomeImageAgentConfig(FunctionBaseConfig, OptimizableMixin, name="some_image_agent_config"):
     quality: int = OptimizableField(
         default=90,
         space=SearchSpace(low=75, high=100)
@@ -231,6 +231,26 @@ In this example:
 - `quality and sharpening` is a continuous float  and integer parameters.
 - `model_name` is a categorical parameter, and the optimizer will choose from the provided list of models.
 - `system_prompt` is a prompt parameter that can be optimized using an LLM if `do_prompt_optimization` is enabled.
+
+# Enabling Optimization of Fields in the Config File
+Once `OptimizableField`s have been created in your workflow's data models, you need to enable optimization for these fields in your workflow configuration file.
+This can be enabled using the `optimizable_params` field of your configuration file.
+    
+For example:
+```yaml
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    optimizable_params:
+      - temperature
+      - top_p
+      - max_tokens
+```
+
+**NOTE:** Ensure your configuration object inherits from `OptimizableMixin` to enable the `optimizable_params` field.
 
 ## Default Optimizable LLM Parameters
 
