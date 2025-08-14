@@ -311,12 +311,12 @@ Numeric optimization outputs (Optuna) remain unchanged and can be used alongside
 
 ## Running the Optimizer
 
-Once you have your optimizer configuration and optimizable fields set up, you can run the optimizer from the command line using the `nat optimizer` command.
+Once you have your optimizer configuration and optimizable fields set up, you can run the optimizer from the command line using the `nat optimize` command.
 
 ### CLI Command
 
 ```bash
-nat optimizer --config_file <path_to_config>
+nat optimize --config_file <path_to_config>
 ```
 
 ### Options
@@ -329,7 +329,7 @@ nat optimizer --config_file <path_to_config>
 
 Example:
 ```bash
-nat optimizer --config_file my_workflow/config.yaml
+nat optimize --config_file my_workflow/config.yaml
 ```
 
 This command will start the optimization process. You will see logs in your terminal showing the progress of the optimization, including the parameters being tested and the scores for each trial.
