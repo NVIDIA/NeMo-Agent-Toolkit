@@ -14,12 +14,11 @@ from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Field
-from pydantic import model_validator
 
 
 class OptimizerMetric(BaseModel):
     """
-    Parameters used by the aiq workflow optimizer.
+    Parameters used by the workflow optimizer to define a metric to optimize.
     """
     evaluator_name: str = Field(description="Name of the metric to optimize.")
     direction: str = Field(description="Direction of the optimization. Can be 'maximize' or 'minimize'.")
@@ -28,7 +27,7 @@ class OptimizerMetric(BaseModel):
 
 class OptimizerConfig(BaseModel):
     """
-    Parameters used by the aiq workflow optimizer.
+    Parameters used by the workflow optimizer.
     """
     output_path: Path | None = Field(
         default=None,
@@ -72,6 +71,65 @@ class OptimizerConfig(BaseModel):
     multi_objective_combination_mode: str = Field(
         description="Method to combine multiple objectives into a single score.",
         default="harmonic",
+    )
+
+    # Genetic algorithm configuration (for prompt optimization)
+    ga_population_size: int = Field(
+        description="Population size for genetic algorithm prompt optimization.",
+        default=24,
+    )
+    ga_generations: int = Field(
+        description="Number of generations to evolve in GA prompt optimization.",
+        default=15,
+    )
+    ga_offspring_size: int | None = Field(
+        description="Number of offspring to produce per generation. Defaults to population_size - elitism.",
+        default=None,
+    )
+    ga_crossover_rate: float = Field(
+        description="Probability of applying crossover during reproduction.",
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+    )
+    ga_mutation_rate: float = Field(
+        description="Probability of mutating a child after crossover.",
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+    )
+    ga_elitism: int = Field(
+        description="Number of top individuals carried over unchanged each generation.",
+        default=2,
+    )
+    ga_selection_method: str = Field(
+        description="Parent selection strategy: 'tournament' or 'roulette'.",
+        default="tournament",
+    )
+    ga_tournament_size: int = Field(
+        description="Tournament size when using tournament selection.",
+        default=3,
+    )
+    ga_parallel_evaluations: int = Field(
+        description="Max number of individuals to evaluate concurrently per generation.",
+        default=8,
+    )
+    ga_diversity_lambda: float = Field(
+        description="Strength of diversity penalty (0 disables). Penalizes identical/near-identical prompts.",
+        default=0.0,
+        ge=0.0,
+    )
+    # Optional custom function hooks
+    prompt_population_init_function: str | None = Field(
+        default=None,
+        description=(
+            "Optional function name to initialize candidate prompts. "
+            "Falls back to prompt_optimization_function."
+        ),
+    )
+    prompt_recombination_function: str | None = Field(
+        default=None,
+        description="Optional function name to recombine two parent prompts into a child.",
     )
 
 

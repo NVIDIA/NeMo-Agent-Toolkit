@@ -20,26 +20,26 @@ from typing import Dict
 import optuna
 import yaml
 
-from aiq.data_models.config import AIQConfig
-from aiq.data_models.optimizable import SearchSpace
-from aiq.data_models.optimizer import OptimizerConfig
-from aiq.data_models.optimizer import OptimizerRunConfig
-from aiq.eval.evaluate import EvaluationRun
-from aiq.eval.evaluate import EvaluationRunConfig
-from aiq.profiler.parameter_optimization.parameter_selection import pick_trial
-from aiq.profiler.parameter_optimization.pareto_visualizer import create_pareto_visualization
-from aiq.profiler.parameter_optimization.update_helpers import apply_suggestions
+from nat.data_models.config import Config
+from nat.data_models.optimizable import SearchSpace
+from nat.data_models.optimizer import OptimizerConfig
+from nat.data_models.optimizer import OptimizerRunConfig
+from nat.eval.evaluate import EvaluationRun
+from nat.eval.evaluate import EvaluationRunConfig
+from nat.profiler.parameter_optimization.parameter_selection import pick_trial
+from nat.profiler.parameter_optimization.pareto_visualizer import create_pareto_visualization
+from nat.profiler.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
 
 
 def optimize_parameters(
     *,
-    base_cfg: AIQConfig,
+    base_cfg: Config,
     full_space: Dict[str, SearchSpace],
     optimizer_config: OptimizerConfig,
     opt_run_config: OptimizerRunConfig,
-) -> AIQConfig:
+) -> Config:
     """Tune all *non-prompt* hyper-parameters and persist the best config."""
     space = {k: v for k, v in full_space.items() if not v.is_prompt}
 

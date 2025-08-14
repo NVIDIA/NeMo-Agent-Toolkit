@@ -20,7 +20,7 @@ from typing import get_origin
 
 from pydantic import BaseModel
 
-from aiq.data_models.optimizable import SearchSpace
+from nat.data_models.optimizable import SearchSpace
 
 logger = logging.getLogger(__name__)
 
