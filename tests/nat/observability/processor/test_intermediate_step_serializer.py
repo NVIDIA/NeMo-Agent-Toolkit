@@ -391,7 +391,7 @@ class TestIntermediateStepSerializerTypeIntrospection:
         assert serializer.input_type == IntermediateStep
         assert serializer.output_type == str
         assert serializer.input_class is IntermediateStep
-        assert serializer.output_class == str
+        assert serializer.output_class is str
 
     def test_processor_inheritance_properties(self):
         """Test that all processor properties are available."""

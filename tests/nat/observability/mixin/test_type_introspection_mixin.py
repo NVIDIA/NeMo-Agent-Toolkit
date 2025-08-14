@@ -125,7 +125,7 @@ class TestTypeIntrospectionMixin:
     def test_output_class_simple_type(self):
         """Test output_class property with simple type"""
         instance = ConcreteDirectClass()
-        assert instance.output_class == str
+        assert instance.output_class is str
 
     def test_output_class_generic_type(self):
         """Test output_class property with generic type"""

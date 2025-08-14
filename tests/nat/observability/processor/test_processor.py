@@ -67,7 +67,7 @@ class TestProcessorTypeIntrospection:
         assert processor.input_type == list[int]
         assert processor.output_type == str
         assert processor.input_class is list  # Generic origin is list
-        assert processor.output_class == str
+        assert processor.output_class is str
 
     def test_complex_generic_type_introspection(self):
         """Test type introspection with complex generic types."""
@@ -390,7 +390,7 @@ class TestProcessorEdgeCases:
         assert processor.output_type == str
         # Union types have Union as their origin, not the full str | int
         assert processor.input_class is get_origin(str | int)  # This is just Union
-        assert processor.output_class == str
+        assert processor.output_class is str
 
     async def test_processor_with_empty_string(self):
         """Test processor edge case with empty input."""
