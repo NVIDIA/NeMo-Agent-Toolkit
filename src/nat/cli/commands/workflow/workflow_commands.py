@@ -206,8 +206,6 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         config_dir.mkdir(parents=True)
         # Create data directory
         data_dir.mkdir(parents=True)
-        # Create package level configs directory
-        (new_workflow_dir / 'configs').mkdir(parents=True)
 
         # Initialize Jinja2 environment
         env = Environment(loader=FileSystemLoader(str(template_dir)))
