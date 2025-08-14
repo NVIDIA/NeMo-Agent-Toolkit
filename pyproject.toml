@@ -256,6 +256,14 @@ testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 
+[tool.ruff]
+# Set the maximum line length to 120.
+line-length = 120
+
+[tool.ruff.lint]
+# Add the `line-too-long` rule to the enforced rule set.
+extend-select = ["E501"]
+
 
 ## Pylint configuration begins here
 
