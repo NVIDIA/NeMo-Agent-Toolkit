@@ -18,6 +18,7 @@ import logging
 from pydantic import BaseModel
 
 from nat.data_models.optimizer import OptimizerRunConfig
+from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.profiler.parameter_optimization.optimizable_utils import walk_optimizables
 from nat.profiler.parameter_optimization.parameter_optimizer import optimize_parameters
 from nat.profiler.parameter_optimization.prompt_optimizer import optimize_prompts
@@ -26,6 +27,7 @@ from nat.runtime.loader import load_config
 logger = logging.getLogger(__name__)
 
 
+@experimental(feature_name="Optimizer")
 async def optimize_config(opt_run_config: OptimizerRunConfig):
     """Entry-point called by the CLI or runtime."""
     # ---------------- 1. load / normalise ---------------- #

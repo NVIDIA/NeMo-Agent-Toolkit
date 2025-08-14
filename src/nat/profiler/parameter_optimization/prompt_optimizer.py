@@ -48,6 +48,7 @@ from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
+from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.profiler.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,7 @@ class PromptOptimizerInputSchema(BaseModel):
     oracle_feedback: str | None = None
 
 
+@experimental(feature_name="Optimizer")
 async def optimize_prompts(
     *,
     base_cfg: Config,
