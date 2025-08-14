@@ -30,7 +30,7 @@ def test_get_nat_dependency_non_editable_with_version(mock_get_version):
     mock_get_version.return_value = "1.2.3"
 
     result = _get_nat_dependency(editable=False)
-    assert result == "aiqtoolkit[langchain]~=1.2"
+    assert result == "nvidia-nat[langchain]~=1.2"
 
 
 @patch('nat.cli.entrypoint.get_version')
@@ -39,4 +39,4 @@ def test_get_nat_dependency_non_editable_unknown_version(mock_get_version):
     mock_get_version.return_value = "unknown"
 
     result = _get_nat_dependency(editable=False)
-    assert result == "aiqtoolkit[langchain]"
+    assert result == "nvidia-nat[langchain]"
