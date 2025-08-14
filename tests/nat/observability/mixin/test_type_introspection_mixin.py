@@ -130,7 +130,7 @@ class TestTypeIntrospectionMixin:
     def test_output_class_generic_type(self):
         """Test output_class property with generic type"""
         instance = ConcreteDirectComplexClass()
-        assert instance.output_class == list
+        assert instance.output_class is list
 
     def test_output_class_non_generic_type(self):
         """Test output_class property with non-generic type"""
@@ -140,7 +140,7 @@ class TestTypeIntrospectionMixin:
             # Clear the cache by accessing the property function
             instance.__class__.output_type.fget.cache_clear()
             instance.__class__.output_class.fget.cache_clear()
-            assert instance.output_class == int
+            assert instance.output_class is int
 
     def test_non_generic_class_input_type_error(self):
         """Test that non-generic class raises error for input_type"""

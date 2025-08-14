@@ -779,7 +779,7 @@ class TestTypeIntrospection:
         assert processing_exporter.input_type is str
         assert processing_exporter.output_type == int
         assert processing_exporter.input_class is str
-        assert processing_exporter.output_class == int
+        assert processing_exporter.output_class is int
 
 
 class TestAbstractMethod:

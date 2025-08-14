@@ -53,7 +53,7 @@ class TestProcessorTypeIntrospection:
         assert processor.input_type is str
         assert processor.output_type == int
         assert processor.input_class is str
-        assert processor.output_class == int
+        assert processor.output_class is int
 
     def test_generic_type_introspection(self):
         """Test type introspection with generic types."""
@@ -81,7 +81,7 @@ class TestProcessorTypeIntrospection:
         assert processor.input_type == dict[str, Any]
         assert processor.output_type == list[str]
         assert processor.input_class is dict
-        assert processor.output_class == list
+        assert processor.output_class is list
 
     def test_type_introspection_error_handling(self):
         """Test error handling when type introspection fails."""
