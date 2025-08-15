@@ -24,6 +24,7 @@ from weave.trace.weave_client import Call
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.span import Span
+from nat.eval.utils.eval_trace_ctx import EvalExporterBase
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.utils.log_utils import LogFilter
@@ -41,7 +42,7 @@ presidio_filter = LogFilter([
 ])
 
 
-class WeaveExporter(SpanExporter[Span, Span]):
+class WeaveExporter(SpanExporter[Span, Span], EvalExporterBase):
     """A Weave exporter that exports telemetry traces to Weights & Biases Weave using OpenTelemetry."""
 
     _weave_calls: IsolatedAttribute[dict[str, Call]] = IsolatedAttribute(dict)
@@ -51,7 +52,8 @@ class WeaveExporter(SpanExporter[Span, Span]):
                  entity: str | None = None,
                  project: str | None = None,
                  verbose: bool = False):
-        super().__init__(context_state=context_state)
+        SpanExporter.__init__(self, context_state=context_state)
+        EvalExporterBase.__init__(self)  # Initialize the evaluation context integration
         self._entity = entity
         self._project = project
         self._gc = weave_client_context.require_weave_client()
@@ -60,6 +62,10 @@ class WeaveExporter(SpanExporter[Span, Span]):
         if not verbose:
             presidio_logger = logging.getLogger('presidio-analyzer')
             presidio_logger.addFilter(presidio_filter)
+
+    def get_current_call_context(self):
+        """Get the current call context from Weave."""
+        return get_current_call()
 
     @override
     async def export_processed(self, item: Span | list[Span]) -> None:
@@ -81,6 +87,10 @@ class WeaveExporter(SpanExporter[Span, Span]):
         if span is None:
             logger.warning("No span found for event %s", event.UUID)
             return
+
+        # Track export operation start for evaluation coordination
+        self.eval_context.track_export_start()
+
         self._create_weave_call(event, span)
 
     def _process_end_event(self, event: IntermediateStep):
@@ -91,6 +101,9 @@ class WeaveExporter(SpanExporter[Span, Span]):
         """
         super()._process_end_event(event)
         self._finish_weave_call(event)
+
+        # Track export operation completion for evaluation coordination
+        self.eval_context.track_export_complete()
 
     @contextmanager
     def parent_call(self, trace_id: str, parent_call_id: str) -> Generator[None]:
@@ -119,19 +132,11 @@ class WeaveExporter(SpanExporter[Span, Span]):
         Returns:
             Call: The Weave call created from the span and step data.
         """
-        # Check for existing Weave trace/call
-        existing_call = get_current_call()
+        # Use the generic method to get the best parent call
+        parent_call = self.get_evaluation_parent_call()
 
-        # Extract parent call if applicable
-        parent_call = None
-
-        # If we have an existing Weave call from another framework (e.g., LangChain),
-        # use it as the parent
-        if existing_call is not None:
-            parent_call = existing_call
-            logger.debug("Found existing Weave call: %s from trace: %s", existing_call.id, existing_call.trace_id)
-        # Otherwise, check our internal stack for parent relationships
-        elif len(self._weave_calls) > 0 and len(self._span_stack) > 1:
+        # If no parent from evaluation context, check our internal stack for parent relationships
+        if not parent_call and len(self._weave_calls) > 0 and len(self._span_stack) > 1:
             # Get the parent span using stack position (one level up)
             parent_span_id = self._span_stack[-2].context.span_id
             # Find the corresponding weave call for this parent span

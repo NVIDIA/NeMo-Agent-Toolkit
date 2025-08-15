@@ -22,6 +22,7 @@ from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.usage_stats import UsageStats
 from nat.eval.usage_stats import UsageStatsItem
+from nat.eval.utils.eval_trace_ctx import get_eval_trace_context
 from nat.profiler.data_models import ProfilerResults
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         self.client = None
         self.eval_logger = None
         self.pred_loggers = {}
+        self.eval_trace_context = get_eval_trace_context()
 
         try:
             from weave.flow.eval_imperative import EvaluationLogger
@@ -92,6 +94,17 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             self.eval_logger = self.EvaluationLogger(model=config_dict, dataset=weave_dataset)
             self.pred_loggers = {}
 
+            # Capture the current evaluation call for context propagation
+            if self.available:
+                # Always try to get and set the current call regardless of context type
+                from weave.trace.context.call_context import get_current_call
+                current_call = get_current_call()
+                if not current_call:
+                    # try to use weave_client._evaluate_call
+                    current_call = self.eval_logger._evaluate_call
+                if current_call:
+                    self.eval_trace_context.set_eval_call(current_call)
+
             return True
         except Exception as e:
             self.eval_logger = None
@@ -136,8 +149,12 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         if coros:
             await asyncio.gather(*coros)
 
+    def evaluation_context(self):
+        """Get the evaluation context manager from the trace context."""
+        return self.eval_trace_context.evaluation_context()
+
     async def afinish_loggers(self):
-        """Finish all prediction loggers."""
+        """Finish all prediction loggers and wait for exports."""
         if not self.eval_logger:
             return
 
@@ -148,6 +165,9 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             await asyncio.to_thread(pred_logger.finish)
 
         await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
+
+        # Wait for any pending exports to complete using the generic context
+        await self.eval_trace_context.wait_for_exports()
 
     def _log_profiler_metrics(self, profiler_results: ProfilerResults, usage_stats: UsageStats) -> dict[str, Any]:
         """Log profiler metrics to Weave."""
