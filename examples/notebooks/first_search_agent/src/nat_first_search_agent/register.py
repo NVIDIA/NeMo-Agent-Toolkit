@@ -1,5 +1,4 @@
-#!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,14 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+# pylint: disable=unused-import
+# flake8: noqa
 
-GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
-source ${GITHUB_SCRIPT_DIR}/common.sh
-get_lfs_files
-
-create_env group:dev group:docs extra:examples
-
-rapids-logger "Running checks"
-${SCRIPT_DIR}/checks.sh
+from nat_first_search_agent import first_search_agent_function
+from nat_first_search_agent import second_search_agent_function

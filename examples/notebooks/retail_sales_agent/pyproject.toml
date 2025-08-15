@@ -1,0 +1,29 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "../../.."
+
+[project]
+name = "nat_retail_sales_agent"
+dynamic = ["version"]
+dependencies = [
+  "nvidia-nat[langchain]~=1.2",
+  "pandas==2.3.1",
+  "llama-index-vector-stores-milvus",
+  "jupyter~=1.1",
+  "jupyterlab~=4.3",
+  "notebook~=7.3",
+  "ipykernel~=6.29",
+  "ipywidgets~=8.1"
+]
+requires-python = ">=3.11,<3.13"
+description = "Custom AIQ Toolkit Workflow"
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+
+[project.entry-points.'nat.components']
+retail_sales_agent = "nat_retail_sales_agent.register"
