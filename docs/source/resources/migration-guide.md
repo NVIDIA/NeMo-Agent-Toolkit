@@ -1,4 +1,4 @@
-# Compatibility
+# Migration Guide
 
 NeMo Agent toolkit is designed to be backwards compatible with the previous version of the toolkit except for changes documented on this page.
 
@@ -12,13 +12,37 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ### v1.2.0
 
+#### Package Changes
+* The `aiqtoolkit` package has been renamed to `nvidia-nat`.
+
+:::{warning}
+`aiqtoolkit` will be removed in a future release and is published as a transitional package.
+:::
+
+#### Module Changes
 * The {py:mod}`aiq` module has been deprecated. Use {py:mod}`nat` instead.
-  * {py:mod}`aiq` will be removed in a future release.
+
+:::{warning}
+{py:mod}`aiq` will be removed in a future release.
+:::
+
+#### CLI Changes
 * The `aiq` command has been deprecated. Use `nat` instead.
-  * `aiq` will be removed in a future release.
-* Types which previously contained `AIQ` have had their `AIQ` prefix removed. **Compatibility aliases are in place to ensure backwards compatibility.**
-  * {py:class}`aiq.builder.context.AIQContextState` -> {py:class}`nat.builder.context.ContextState`
+
+:::{warning}
+The `aiq` command will be removed in a future release.
+:::
+
+#### API Changes
+
+:::{note}
+Compatibility aliases are in place to ensure backwards compatibility, however it is strongly encouraged to migrate to the new names.
+:::
+
+* Types which previously contained `AIQ` have had their `AIQ` prefix removed.
+  * {py:class}`aiq.data_models.config.AIQConfig` -> {py:class}`nat.data_models.config.Config`
   * {py:class}`aiq.builder.context.AIQContext` -> {py:class}`nat.builder.context.Context`
+  * {py:class}`aiq.builder.context.AIQContextState` -> {py:class}`nat.builder.context.ContextState`
   * {py:class}`aiq.builder.user_interaction_manager.AIQUserInteractionManager` -> {py:class}`nat.builder.user_interaction_manager.UserInteractionManager`
   * {py:class}`aiq.cli.commands.workflow.workflow_commands.AIQPackageError` -> {py:class}`nat.cli.commands.workflow.workflow_commands.PackageError`
   * {py:class}`aiq.data_models.api_server.AIQChatRequest` -> {py:class}`nat.data_models.api_server.ChatRequest`
@@ -35,7 +59,6 @@ It is strongly encouraged to migrate any existing code to the latest conventions
   * {py:class}`aiq.data_models.api_server.AIQResponsePayloadOutput` -> {py:class}`nat.data_models.api_server.ResponsePayloadOutput`
   * {py:class}`aiq.data_models.api_server.AIQGenerateResponse` -> {py:class}`nat.data_models.api_server.GenerateResponse`
   * {py:class}`aiq.data_models.component.AIQComponentEnum` -> {py:class}`nat.data_models.component.ComponentEnum`
-  * {py:class}`aiq.data_models.config.AIQConfig` -> {py:class}`nat.data_models.config.Config`
   * {py:class}`aiq.front_ends.fastapi.fastapi_front_end_config.AIQEvaluateRequest` -> {py:class}`nat.front_ends.fastapi.fastapi_front_end_config.EvaluateRequest`
   * {py:class}`aiq.front_ends.fastapi.fastapi_front_end_config.AIQEvaluateResponse` -> {py:class}`nat.front_ends.fastapi.fastapi_front_end_config.EvaluateResponse`
   * {py:class}`aiq.front_ends.fastapi.fastapi_front_end_config.AIQAsyncGenerateResponse` -> {py:class}`nat.front_ends.fastapi.fastapi_front_end_config.AsyncGenerateResponse`
@@ -54,3 +77,12 @@ It is strongly encouraged to migrate any existing code to the latest conventions
   * {py:func}`aiq.registry_handlers.package_utils.build_aiq_artifact` -> {py:func}`nat.registry_handlers.package_utils.build_artifact`
   * {py:func}`aiq.runtime.loader.get_all_aiq_entrypoints_distro_mapping` -> {py:func}`nat.runtime.loader.get_all_entrypoints_distro_mapping`
   * {py:func}`aiq.tool.retriever.aiq_retriever_tool` -> {py:func}`nat.tool.retriever.retriever_tool`
+
+### v1.1.0
+
+#### Package Changes
+* The `agentiq` package has been renamed to `aiqtoolkit`.
+
+:::{warning}
+`agentiq` will be removed in a future release and is published as a transitional package.
+:::
