@@ -39,26 +39,26 @@ embedders:
 functions:
   get_total_product_sales_data:
     _type: get_total_product_sales_data
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
   get_sales_per_day:
     _type: get_sales_per_day
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
-  detect_outliers_iqr:  
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+  detect_outliers_iqr:
     _type: detect_outliers_iqr
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
 
   product_catalog_rag:
     _type: local_llama_index_rag
     llm_name: nim_llm
     embedder_name: nim_embedder
     collection_name: product_catalog_rag
-    data_dir: ./examples/retail_sales_agent/data/rag/product_catalog.md
+    data_dir: ./retail_sales_agent/data/rag/product_catalog.md
     description: "Search product catalog for TabZen tablet, AeroBook laptop, NovaPhone specifications"
 
   rag_agent:
     _type: react_agent
     llm_name: nim_llm
-    tool_names: 
+    tool_names:
       - product_catalog_rag
     max_history: 3
     max_iterations: 5

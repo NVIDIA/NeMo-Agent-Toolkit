@@ -21,7 +21,7 @@ general:
         level: WARN
       file:
         _type: file
-        path: .tmp/nat_retail_sales_agent.log
+        path: ../../.tmp/nat_retail_sales_agent.log
         level: DEBUG
 
 llms:
@@ -64,13 +64,13 @@ embedders:
 functions:
   get_total_product_sales_data:
     _type: get_total_product_sales_data
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
   get_sales_per_day:
     _type: get_sales_per_day
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
   detect_outliers_iqr:
     _type: detect_outliers_iqr
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
 
   data_analysis_agent:
     _type: tool_calling_agent
@@ -86,13 +86,13 @@ functions:
 
   plot_sales_trend_for_stores:
     _type: plot_sales_trend_for_stores
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
   plot_and_compare_revenue_across_stores:
     _type: plot_and_compare_revenue_across_stores
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
   plot_average_daily_revenue:
     _type: plot_average_daily_revenue
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
 
   hitl_approval_tool:
     _type: hitl_approval_tool
@@ -127,7 +127,7 @@ functions:
     llm_name: nim_llm
     embedder_name: nim_embedder
     collection_name: product_catalog_rag
-    data_dir: ./examples/retail_sales_agent/data/rag/product_catalog.md
+    data_dir: ./retail_sales_agent/data/rag/product_catalog.md
     description: "Search product catalog for TabZen tablet, AeroBook laptop, NovaPhone specifications"
 
   rag_agent:
@@ -172,11 +172,11 @@ workflow:
 
 eval:
   general:
-    output_dir: ./.tmp/eval/examples/retail_sales_agent/
+    output_dir: ./.tmp/notebooks/eval/retail_sales_agent/
     verbose: true
     dataset:
         _type: json
-        file_path: ./examples/retail_sales_agent/data/eval_data.json
+        file_path: ./retail_sales_agent/data/eval_data.json
 
     profiler:
         token_uniqueness_forecast: true

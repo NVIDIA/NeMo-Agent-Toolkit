@@ -29,14 +29,14 @@ llms:
 functions:
   get_total_product_sales_data:
     _type: get_total_product_sales_data
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
   get_sales_per_day:
     _type: get_sales_per_day
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
-  detect_outliers_iqr:  
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+  detect_outliers_iqr:
     _type: detect_outliers_iqr
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
-    
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+
 workflow:
   _type: react_agent
   tool_names:
