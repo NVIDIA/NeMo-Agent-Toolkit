@@ -21,7 +21,7 @@ from nat.data_models.function import FunctionBaseConfig
 
 class CurrentTimeToolConfig(FunctionBaseConfig, name="current_datetime"):
     """
-    Simple tool which returns the current date and time in human readable format.
+    Simple tool which returns the current date and time in human readable format in UTC timezone.
     """
     pass
 
@@ -31,12 +31,14 @@ async def current_datetime(config: CurrentTimeToolConfig, builder: Builder):
 
     import datetime
 
+    import pytz
+
     async def _get_current_time(unused: str) -> str:
 
-        now = datetime.datetime.now()  # Get current time
+        now = datetime.datetime.now(pytz.utc)  # Get current time in UTC
         now_human_readable = now.strftime(("%Y-%m-%d %H:%M:%S"))
 
         return f"The current time of day is {now_human_readable}"  # Format time in H:MM AM/PM format
 
-    yield FunctionInfo.from_fn(_get_current_time,
-                               description="Returns the current date and time in human readable format.")
+    yield FunctionInfo.from_fn(
+        _get_current_time, description="Returns the current date and time in human readable format in UTC timezone.")
