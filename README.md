@@ -19,14 +19,48 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit
 
+<p align="center">
+   <a href="https://opensource.org/licenses/Apache-2.0">
+      <img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License: Apache 2.0">
+   </a>
+   <a href="https://pypi.org/project/nvidia-nat/">
+      <img src="https://img.shields.io/pypi/v/nvidia-nat" alt="PyPI version">
+   </a>
+   <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues">
+      <img src="https://img.shields.io/github/issues/NVIDIA/NeMo-Agent-Toolkit" alt="GitHub issues">
+   </a>
+   <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit/pulls">
+      <img src="https://img.shields.io/github/issues-pr/NVIDIA/NeMo-Agent-Toolkit" alt="GitHub pull requests">
+   </a>
+</p>
+
+<!-- Optional badges still deciding on -->
+<p align="center">
+   <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit/releases">
+      <img alt="GitHub Release" src="https://img.shields.io/github/v/release/NVIDIA/NeMo-Agent-Toolkit">
+   </a>
+   <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">
+      <img src="https://img.shields.io/github/stars/NVIDIA/NeMo-Agent-Toolkit" alt="GitHub Repo stars">
+   </a>
+   <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit/network/members">
+      <img src="https://img.shields.io/github/forks/NVIDIA/NeMo-Agent-Toolkit" alt="GitHub forks">
+   </a>
+   <a href="https://pepy.tech/projects/nvidia-nat">
+      <img src="https://static.pepy.tech/badge/nvidia-nat" alt="PyPI Downloads">
+   </a>
+</p>
+
 NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
+
+> [!WARNING]
+> **LATEST RELEASE / DEVELOPMENT VERSION:** The default branch in Github is `develop` which tracks the latest top of tree and may not be stable. For the latest stable released version, checkout the [`main`](https://github.com/NVIDIA/NeMo-Agent-Toolkit/tree/main) branch.
 
 > [!NOTE]
 > NeMo Agent toolkit was previously known as the Agent Intelligence (AIQ) toolkit, and <!-- vale off -->AgentIQ<!-- vale on -->. The library was renamed to better reflect the purpose of the toolkit and to align with the NVIDIA NeMo family of products. The core technologies, performance and roadmap remain unchanged and the API is fully compatible with previous releases.
 >
 > The rename is still in progress and references to the previous name may still be found in the codebase and documentation.
 
-## Key Features
+## ✨ Key Features
 
 - [**Framework Agnostic:**](./docs/source/quick-start/installing.md#framework-integrations) NeMo Agent toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), and [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
 
@@ -46,11 +80,7 @@ NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that 
 
 With NeMo Agent toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
-## Component Overview
 
-The following diagram illustrates the key components of NeMo Agent toolkit and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend NeMo Agent toolkit in your projects.
-
-![NeMo Agent toolkit Components Diagram](docs/source/_static/gitdiagram.png)
 
 ## Links
 
@@ -62,7 +92,25 @@ The following diagram illustrates the key components of NeMo Agent toolkit and h
  * [Troubleshooting](./docs/source/troubleshooting.md): Get help with common issues.
 
 
-## Get Started
+## Installation
+
+### Install from PyPI
+
+Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11 or 3.12 installed on your system.
+
+```bash
+pip install nvidia-nat
+```
+
+NeMo Agent Toolkit has many optional dependencies which can be installed with the core package. To install the core package and all of the optional dependencies, run the following:
+
+```bash
+pip install nvidia-nat[all]
+```
+
+
+
+
 
 ### Prerequisites
 
@@ -189,6 +237,12 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
    Workflow Result:
    ['Here are five subspecies of Aardvarks:\n\n1. Orycteropus afer afer (Southern aardvark)\n2. O. a. adametzi  Grote, 1921 (Western aardvark)\n3. O. a. aethiopicus  Sundevall, 1843\n4. O. a. angolensis  Zukowsky & Haltenorth, 1957\n5. O. a. erikssoni  Lönnberg, 1906']
    ```
+
+## Component Overview
+
+The following diagram illustrates the key components of NeMo Agent toolkit and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend NeMo Agent toolkit in your projects.
+
+![NeMo Agent toolkit Components Diagram](docs/source/_static/gitdiagram.png)
 
 ## Feedback
 
