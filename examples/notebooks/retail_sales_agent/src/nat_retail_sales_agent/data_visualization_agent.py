@@ -42,7 +42,7 @@ class DataVisualizationAgentConfig(FunctionBaseConfig, name="data_visualization_
 
 
 @register_function(config_type=DataVisualizationAgentConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def data_visualization_agent(config: DataVisualizationAgentConfig, builder: Builder):
+async def data_visualization_agent_function(config: DataVisualizationAgentConfig, builder: Builder):
     from langchain_core.messages import AIMessage
     from langchain_core.messages import BaseMessage
     from langchain_core.messages import HumanMessage
@@ -69,39 +69,36 @@ async def data_visualization_agent(config: DataVisualizationAgentConfig, builder
             logger.debug("Starting the Tool Calling Conditional Edge")
             messages = state.messages
             last_message = messages[-1]
-            logger.info(f"Last message type: {type(last_message)}")
-            logger.info(f"Has tool_calls: {hasattr(last_message, 'tool_calls')}")
+            logger.info("Last message type: %s", type(last_message))
+            logger.info("Has tool_calls: %s", hasattr(last_message, 'tool_calls'))
             if hasattr(last_message, 'tool_calls'):
-                logger.info(f"Tool calls: {last_message.tool_calls}")
+                logger.info("Tool calls: %s", last_message.tool_calls)
 
             if (hasattr(last_message, 'tool_calls') and last_message.tool_calls and len(last_message.tool_calls) > 0):
                 logger.info("Routing to tools - found non-empty tool calls")
                 return "tools"
-            else:
-                logger.info("Routing to check_hitl_approval - no tool calls to execute")
-                return "check_hitl_approval"
+            logger.info("Routing to check_hitl_approval - no tool calls to execute")
+            return "check_hitl_approval"
         except Exception as ex:
-            logger.error(f"Error in conditional_edge: {ex}")
+            logger.error("Error in conditional_edge: %s", ex)
             if hasattr(state, 'retry_count') and state.retry_count >= config.max_retries:
                 logger.warning("Max retries reached, returning without meaningful output")
                 return "__end__"
-            else:
-                state.retry_count = getattr(state, 'retry_count', 0) + 1
-                logger.warning(
-                    "Error in the conditional edge: %s, retrying %d times out of %d",
-                    ex,
-                    state.retry_count,
-                    config.max_retries,
-                )
-                return "data_visualization_agent"
+            state.retry_count = getattr(state, 'retry_count', 0) + 1
+            logger.warning(
+                "Error in the conditional edge: %s, retrying %d times out of %d",
+                ex,
+                state.retry_count,
+                config.max_retries,
+            )
+            return "data_visualization_agent"
 
     def approval_conditional_edge(state: AgentState):
         """Route to summarizer if user approved, otherwise end"""
-        logger.info(f"Approval conditional edge: {state.approved}")
+        logger.info("Approval conditional edge: %s", state.approved)
         if hasattr(state, 'approved') and not state.approved:
             return "__end__"
-        else:
-            return "summarize"
+        return "summarize"
 
     def data_visualization_agent(state: AgentState):
         sys_msg = SystemMessage(content=config.prompt)
@@ -109,24 +106,21 @@ async def data_visualization_agent(config: DataVisualizationAgentConfig, builder
 
         if messages and isinstance(messages[-1], ToolMessage):
             last_tool_msg = messages[-1]
-            logger.info(f"Processing tool result: {last_tool_msg.content}")
+            logger.info("Processing tool result: %s", last_tool_msg.content)
             summary_content = f"I've successfully created the visualization. {last_tool_msg.content}"
             return {"messages": [AIMessage(content=summary_content)]}
-        else:
-            logger.info(
-                f"Normal agent operation - generating response for: {messages[-1] if messages else 'no messages'}")
-            return {"messages": [llm_n_tools.invoke([sys_msg] + state.messages)]}
+        logger.info("Normal agent operation - generating response for: %s", messages[-1] if messages else 'no messages')
+        return {"messages": [llm_n_tools.invoke([sys_msg] + state.messages)]}
 
     async def check_hitl_approval(state: AgentState):
         messages = state.messages
         last_message = messages[-1]
-        logger.info(f"Checking hitl approval: {state.approved}")
-        logger.info(f"Last message type: {type(last_message)}")
+        logger.info("Checking hitl approval: %s", state.approved)
+        logger.info("Last message type: %s", type(last_message))
         selected_option = await hitl_approval_fn.acall_invoke()
         if selected_option:
             return {"approved": True}
-        else:
-            return {"approved": False}
+        return {"approved": False}
 
     async def summarize_graph(state: AgentState):
         """Summarize the graph using the graph summarizer function"""
@@ -145,7 +139,7 @@ async def data_visualization_agent(config: DataVisualizationAgentConfig, builder
         if not image_path:
             image_path = "sales_trend.png"
 
-        logger.info(f"Extracted image path for summarization: {image_path}")
+        logger.info("Extracted image path for summarization: %s", image_path)
         response = await graph_summarizer_fn.ainvoke(image_path)
         return {"messages": [response]}
 

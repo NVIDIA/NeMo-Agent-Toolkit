@@ -34,7 +34,7 @@ class FirstSearchAgentFunctionConfig(FunctionBaseConfig, name="first_search_agen
 
 
 @register_function(config_type=FirstSearchAgentFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def my_first_nat_agent_workflow_function(config: FirstSearchAgentFunctionConfig, builder: Builder):
+async def first_search_agent_function(_config: FirstSearchAgentFunctionConfig, _builder: Builder):
     import os
 
     from langchain import hub
