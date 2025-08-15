@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from enum import Enum
 from functools import lru_cache
 from typing import Any
 from typing import TypeVar
@@ -25,6 +26,20 @@ from nat.utils.type_utils import DecomposedType
 OutputT = TypeVar("OutputT")
 
 logger = logging.getLogger(__name__)
+
+
+def _get_string_value(value: Any) -> str:
+    """Extract string value from enum or literal type safely.
+
+    Args:
+        value (Any): Could be an Enum, string, or other type
+
+    Returns:
+        str: String representation of the value
+    """
+    if isinstance(value, Enum):
+        return value.value
+    return str(value)
 
 
 @lru_cache(maxsize=128)
@@ -139,13 +154,16 @@ class TraceAdapterRegistry:
             TraceSourceAdapter[OutputT] | None: The appropriate adapter for the trace source and output type
         """
         # Input validation: Ensure required fields are present and valid
-        if not trace_source.source.framework or not trace_source.source.provider:
+        source_obj = trace_source.source
+        if not source_obj.framework or not source_obj.provider:
             logger.warning("Invalid trace source: missing framework '%s' or provider '%s'",
-                           trace_source.source.framework,
-                           trace_source.source.provider)
+                           source_obj.framework,
+                           source_obj.provider)
             return None
 
-        framework_provider = f"{trace_source.source.framework.value}_{trace_source.source.provider}"
+        framework_str = _get_string_value(source_obj.framework)
+        provider_str = _get_string_value(source_obj.provider)
+        framework_provider = f"{framework_str}_{provider_str}"
         output_type_name = _get_output_type_name(output_type)
 
         framework_adapters = cls._adapters.get(framework_provider)

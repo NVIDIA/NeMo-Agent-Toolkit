@@ -13,8 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Generic
+from typing import TypeVar
+
 from pydantic import BaseModel
+from pydantic import Field
+
+FrameworkT = TypeVar("FrameworkT")
+ProviderT = TypeVar("ProviderT")
 
 
-class TraceSourceBase(BaseModel):
-    pass
+class TraceSourceBase(BaseModel, Generic[FrameworkT, ProviderT]):
+    """Base class for trace sources with generic framework and provider types."""
+    framework: FrameworkT = Field(..., description="The framework of the trace source")
+    provider: ProviderT = Field(..., description="The provider of the trace source")

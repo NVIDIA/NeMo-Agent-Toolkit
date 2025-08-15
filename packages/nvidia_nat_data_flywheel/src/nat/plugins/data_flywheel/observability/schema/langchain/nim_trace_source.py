@@ -21,5 +21,5 @@ from nat.plugins.data_flywheel.observability.schema.langchain.openai_trace_sourc
 logger = logging.getLogger(__name__)
 
 
-class NIMTraceSource(OpenAITraceSourceBase):
+class NIMTraceSource(OpenAITraceSourceBase[Literal["nim"]]):
     provider: Literal["nim"] = "nim"

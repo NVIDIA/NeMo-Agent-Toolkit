@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import logging
+from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -22,6 +24,20 @@ from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_
 from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
 
 logger = logging.getLogger(__name__)
+
+
+def _get_string_value(value: Any) -> str:
+    """Extract string value from enum or literal type safely.
+
+    Args:
+        value: Could be an Enum, string, or other type
+
+    Returns:
+        str: String representation of the value
+    """
+    if isinstance(value, Enum):
+        return value.value
+    return str(value)
 
 
 def get_trace_source(span: Span) -> TraceSource:
@@ -58,7 +74,9 @@ def span_to_dfw_record(span: Span, to_type: type[BaseModel], client_id: str = "n
     trace_source = get_trace_source(span)
     adapter = TraceAdapterRegistry.get_adapter(trace_source, to_type)
     if adapter is None:
-        framework_provider = f"{trace_source.source.framework.value}_{trace_source.source.provider}"
+        framework_str = _get_string_value(trace_source.source.framework)  # pylint: disable=no-member
+        provider_str = _get_string_value(trace_source.source.provider)  # pylint: disable=no-member
+        framework_provider = f"{framework_str}_{provider_str}"
         logger.warning("No adapter found for framework: '%s'. Supported frameworks: '%s'",
                        framework_provider,
                        TraceAdapterRegistry.list_supported_frameworks())

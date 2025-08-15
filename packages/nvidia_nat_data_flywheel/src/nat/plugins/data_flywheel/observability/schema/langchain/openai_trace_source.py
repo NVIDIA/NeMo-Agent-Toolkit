@@ -16,6 +16,7 @@
 import logging
 from typing import Any
 from typing import Literal
+from typing import TypeVar
 
 from pydantic import BaseModel
 from pydantic import field_validator
@@ -26,6 +27,8 @@ from nat.plugins.data_flywheel.observability.schema.langchain.langchain_message 
 from nat.plugins.data_flywheel.observability.schema.trace_source_base import TraceSourceBase
 from nat.plugins.data_flywheel.observability.utils.deserialize import deserialize_input_value
 
+ProviderT = TypeVar("ProviderT", bound=str)
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,7 +37,7 @@ class OpenAIMetadata(BaseModel):
     chat_responses: list[dict[str, Any]] | None = None
 
 
-class OpenAITraceSourceBase(TraceSourceBase):
+class OpenAITraceSourceBase(TraceSourceBase[Literal[LLMFrameworkEnum.LANGCHAIN], ProviderT]):
     framework: Literal[LLMFrameworkEnum.LANGCHAIN] = LLMFrameworkEnum.LANGCHAIN
     input_value: list[LangChainMessage]
     metadata: OpenAIMetadata
@@ -82,5 +85,5 @@ class OpenAITraceSourceBase(TraceSourceBase):
         raise ValueError(f"Invalid metadata format: {v}")
 
 
-class OpenAITraceSource(OpenAITraceSourceBase):
+class OpenAITraceSource(OpenAITraceSourceBase[Literal["openai"]]):
     provider: Literal["openai"] = "openai"
