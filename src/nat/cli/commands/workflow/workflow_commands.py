@@ -197,13 +197,15 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
             click.echo(f"Workflow '{workflow_name}' already exists.")
             return
 
-        config_dir = new_workflow_dir / 'src' / package_name / 'configs'
-        data_dir = new_workflow_dir / 'src' / package_name / 'data'
+        base_dir = new_workflow_dir / 'src' / package_name
+
+        configs_dir = base_dir / 'configs'
+        data_dir = base_dir / 'data'
 
         # Create directory structure
-        (new_workflow_dir / 'src' / package_name).mkdir(parents=True)
+        base_dir.mkdir(parents=True)
         # Create config directory
-        config_dir.mkdir(parents=True)
+        configs_dir.mkdir(parents=True)
         # Create data directory
         data_dir.mkdir(parents=True)
 
@@ -216,13 +218,15 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         else:
             install_cmd = ['pip', 'install', '-e', str(new_workflow_dir)]
 
+        config_source = configs_dir / 'config.yml'
+
         # List of templates and their destinations
         files_to_render = {
             'pyproject.toml.j2': new_workflow_dir / 'pyproject.toml',
-            'register.py.j2': new_workflow_dir / 'src' / package_name / 'register.py',
-            'workflow.py.j2': new_workflow_dir / 'src' / package_name / f'{workflow_name}_function.py',
-            '__init__.py.j2': new_workflow_dir / 'src' / package_name / '__init__.py',
-            'config.yml.j2': new_workflow_dir / 'src' / package_name / 'configs' / 'config.yml',
+            'register.py.j2': base_dir / 'register.py',
+            'workflow.py.j2': base_dir / f'{workflow_name}_function.py',
+            '__init__.py.j2': base_dir / '__init__.py',
+            'config.yml.j2': config_source,
         }
 
         # Render templates
@@ -244,12 +248,11 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
                 f.write(content)
 
         # Create symlink for config.yml
-        config_source = new_workflow_dir / 'src' / package_name / 'configs' / 'config.yml'
         config_link = new_workflow_dir / 'configs' / 'config.yml'
         os.symlink(config_source, config_link)
 
         # Create symlinks for config and data directories
-        config_dir_source = config_dir
+        config_dir_source = configs_dir
         config_dir_link = new_workflow_dir / 'configs'
         data_dir_source = data_dir
         data_dir_link = new_workflow_dir / 'data'
