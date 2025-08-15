@@ -122,7 +122,7 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
 ## Code contributions
 
-Please ensure that all new contributions adhere to the compatibility guidelines. See the [Compatibility](./compatibility.md) page for more information.
+Please ensure that all new contributions adhere to the latest version notes within the [Migration Guide](./migration-guide.md).
 
 ### Your first issue
 
