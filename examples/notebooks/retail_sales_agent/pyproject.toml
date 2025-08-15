@@ -3,7 +3,7 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
-root = "../../../.."
+root = "../../.."
 
 [project]
 name = "nat_retail_sales_agent"
@@ -23,7 +23,7 @@ description = "Custom AIQ Toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-nvidia-nat = { path = "../../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'nat.components']
 retail_sales_agent = "nat_retail_sales_agent.register"

@@ -16,5 +16,5 @@
 # pylint: disable=unused-import
 # flake8: noqa
 
-from nat_my_agent_workflow import my_agent_workflow_function
-from nat_my_agent_workflow import my_first_nat_agent_workflow_function
+from nat_first_search_agent import first_search_agent_function
+from nat_first_search_agent import second_search_agent_function

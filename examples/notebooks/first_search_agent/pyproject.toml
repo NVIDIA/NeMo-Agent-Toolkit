@@ -3,10 +3,10 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
-root = "../../../.."
+root = "../../.."
 
 [project]
-name = "nat_my_agent_workflow"
+name = "nat_first_search_agent"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.2",
@@ -21,7 +21,7 @@ description = "Custom AIQ Toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-nvidia-nat = { path = "../../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'nat.components']
-my_agent_workflow = "nat_my_agent_workflow.register"
+first_search_agent = "nat_first_search_agent.register"

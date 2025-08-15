@@ -21,8 +21,13 @@ general:
         level: WARN
       file:
         _type: file
-        path: /tmp/aiq_retail_sales_agent.log
+        path:./tmp/nat_retail_sales_agent.log
         level: DEBUG
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: retail_sales_agent
 
 llms:
   supervisor_llm:
@@ -68,7 +73,7 @@ functions:
   get_sales_per_day:
     _type: get_sales_per_day
     data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
-  detect_outliers_iqr:  
+  detect_outliers_iqr:
     _type: detect_outliers_iqr
     data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
 
@@ -89,13 +94,13 @@ functions:
     data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
   plot_and_compare_revenue_across_stores:
     _type: plot_and_compare_revenue_across_stores
-    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv  
+    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
   plot_average_daily_revenue:
     _type: plot_average_daily_revenue
     data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
-  
+
   hitl_approval_tool:
-    _type: hitl_approval_tool 
+    _type: hitl_approval_tool
     prompt: |
       Do you want to summarize the created graph content?
   graph_summarizer:
@@ -105,7 +110,7 @@ functions:
   data_visualization_agent:
     _type: data_visualization_agent
     llm_name: summarizer_llm
-    tool_names: 
+    tool_names:
       - plot_sales_trend_for_stores
       - plot_and_compare_revenue_across_stores
       - plot_average_daily_revenue
@@ -127,13 +132,13 @@ functions:
     llm_name: nim_llm
     embedder_name: nim_embedder
     collection_name: product_catalog_rag
-    data_dir: ./examples/retail_sales_agent/data/rag/product_catalog.md
+    data_dir: ./examples/retail_sales_agent/data/retail_sales_data.csv
     description: "Search product catalog for TabZen tablet, AeroBook laptop, NovaPhone specifications"
 
   rag_agent:
     _type: react_agent
     llm_name: nim_llm
-    tool_names: 
+    tool_names:
       - product_catalog_rag
     max_history: 3
     max_iterations: 5
@@ -176,7 +181,7 @@ eval:
     verbose: true
     dataset:
         _type: json
-        file_path: ./examples/retail_sales_agent/data/eval_data.json
+        file_path: notebooks/examples/retail_sales_agent/data/eval_data.json
 
     profiler:
         token_uniqueness_forecast: true

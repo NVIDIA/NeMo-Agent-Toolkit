@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import logging
 
 from pydantic import Field
@@ -27,7 +28,7 @@ from nat.data_models.function import FunctionBaseConfig
 logger = logging.getLogger(__name__)
 
 
-class MyAgentWorkflowFunctionConfig(FunctionBaseConfig, name="my_agent_workflow"):
+class SecondSearchAgentFunctionConfig(FunctionBaseConfig, name="second_search_agent"):
     """
     NeMo Agent toolkit function template. Please update the description.
     """
@@ -40,8 +41,8 @@ class MyAgentWorkflowFunctionConfig(FunctionBaseConfig, name="my_agent_workflow"
     description: str = Field(default="", description="Description of the agent")
 
 
-@register_function(config_type=MyAgentWorkflowFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def my_agent_workflow_function(config: MyAgentWorkflowFunctionConfig, builder: Builder):
+@register_function(config_type=SecondSearchAgentFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
+async def second_search_agent_function(config: SecondSearchAgentFunctionConfig, builder: Builder):
     from langchain import hub
     from langchain.agents import AgentExecutor
     from langchain.agents import create_react_agent
@@ -74,4 +75,4 @@ async def my_agent_workflow_function(config: MyAgentWorkflowFunctionConfig, buil
     except GeneratorExit:
         print("Function exited early!")
     finally:
-        print("Cleaning up my_agent_workflow workflow.")
+        print("Cleaning up second_search_agent workflow.")

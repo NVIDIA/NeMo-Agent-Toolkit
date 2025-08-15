@@ -34,7 +34,7 @@ functions:
     api_key: $TAVILY_API_KEY
 
 workflow:
-  _type: my_agent_workflow
+  _type: react_agent
   tool_names:
     - my_internet_search
   llm_name: nim_llm
