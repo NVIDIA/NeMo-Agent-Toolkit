@@ -94,7 +94,7 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`simple_calculator_mcp`](MCP/simple_calculator_mcp/README.md)**: Demonstrates Model Context Protocol support using the basic simple calculator example
 
 ### Notebooks
-- **[`my_agent_workflow`](notebooks/my_agent_workflow/)**: Demonstrates how to bring an existing agent from a framework like LangChain into this toolkit
+- **[`first_search_agent`](notebooks/first_search_agent/)**: Demonstrates how to bring an existing agent from a framework like LangChain into this toolkit
 - **[`retail_sales_agent`](notebooks/retail_sales_agent/)**: A simple retail agent that showcases how to incrementally add tools and agents to build a multi-agent system
 
 ### Object Store
