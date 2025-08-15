@@ -18,7 +18,7 @@ from abc import abstractmethod
 
 from pydantic import BaseModel
 
-from nat.builder.context import AIQContextState
+from nat.builder.context import ContextState
 from nat.data_models.span import Span
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.observability.processor.batching_processor import BatchingProcessor
@@ -44,7 +44,7 @@ class DFWExporter(SpanExporter[Span, dict]):
     """Abstract base class for Data Flywheel exporters."""
 
     def __init__(self,
-                 context_state: AIQContextState | None = None,
+                 context_state: ContextState | None = None,
                  batch_size: int = 100,
                  flush_interval: float = 5.0,
                  max_queue_size: int = 1000,

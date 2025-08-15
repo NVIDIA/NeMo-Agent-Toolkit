@@ -39,7 +39,3 @@ class ESLangChainOpenAIAdapter(TraceSourceAdapter[DFWESRecord]):
     @property
     def framework_identifier(self) -> str:
         return "langchain_openai"
-
-    @property
-    def name(self) -> str:
-        return f"elasticsearch_{self.framework_identifier}_adapter"

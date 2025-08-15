@@ -15,10 +15,12 @@
 
 import logging
 
+from pydantic import BaseModel
+
 from nat.builder.context import AIQContextState
 from nat.plugins.data_flywheel.observability.exporter.dfw_exporter import DFWExporter
 from nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin import ElasticsearchMixin
-from nat.plugins.data_flywheel.observability.schema.dfw_es_record import DFWESRecord
+from nat.plugins.data_flywheel.observability.schema.contract_version import ElasticsearchContractVersion
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,7 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
     def __init__(self,
                  context_state: AIQContextState | None = None,
                  client_id: str = "default",
+                 contract_version: ElasticsearchContractVersion = ElasticsearchContractVersion.VERSION_1_1,
                  batch_size: int = 100,
                  flush_interval: float = 5.0,
                  max_queue_size: int = 1000,
@@ -40,6 +43,7 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
         Args:
             context_state: The context state to use for the exporter.
             client_id: The client ID for the exporter.
+            contract_version: The contract version to use for the exporter.
             batch_size: The batch size for exporting spans.
             flush_interval: The flush interval in seconds for exporting spans.
             max_queue_size: The maximum queue size for exporting spans.
@@ -53,6 +57,7 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
         """
         # Initialize both mixins - ElasticsearchMixin expects elasticsearch_kwargs,
         # DFWExporter expects the standard exporter parameters
+        self.contract_version = contract_version
         super().__init__(context_state=context_state,
                          batch_size=batch_size,
                          flush_interval=flush_interval,
@@ -63,10 +68,10 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
                          **elasticsearch_kwargs)
 
     @property
-    def export_contract(self) -> type[DFWESRecord]:
+    def export_contract(self) -> type[BaseModel]:
         """The export contract for Elasticsearch.
         """
-        return DFWESRecord
+        return self.contract_version.value
 
     async def export_processed(self, item: dict | list[dict]) -> None:
         """Export processed DFW records to Elasticsearch."""

@@ -21,6 +21,7 @@ from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
+from nat.plugins.data_flywheel.observability.schema.contract_version import ElasticsearchContractVersion
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,13 @@ class DFWElasticsearchTelemetryExporter(TelemetryExporterBaseConfig,
                                         BatchConfigMixin,
                                         name="data_flywheel_elasticsearch"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
+
     client_id: str = Field(description="The data flywheel client ID.")
     index: str = Field(description="The elasticsearch index name.")
     endpoint: str = Field(description="The elasticsearch endpoint.")
+    contract_version: ElasticsearchContractVersion = Field(
+        default=ElasticsearchContractVersion.VERSION_1_1,
+        description="The DFW Elasticsearch record schema version to use.")
     elasticsearch_auth: tuple[str, str] = Field(
         default=("elastic", "password"),
         description="The elasticsearch authentication credentials (username, password).")
@@ -48,6 +53,7 @@ async def dfw_elasticsearch_telemetry_exporter(config: DFWElasticsearchTelemetry
                                    endpoint=config.endpoint,
                                    elasticsearch_auth=config.elasticsearch_auth,
                                    headers=config.headers,
+                                   contract_version=config.contract_version,
                                    batch_size=config.batch_size,
                                    flush_interval=config.flush_interval,
                                    max_queue_size=config.max_queue_size,

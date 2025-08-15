@@ -62,12 +62,6 @@ class TraceSourceAdapter(ABC, Generic[OutputT]):
         pass
 
     @property
-    @abstractmethod
-    def name(self) -> str:
-        """Return the name of the adapter."""
-        pass
-
-    @property
     def output_type(self) -> type[OutputT]:
         """Return the output type this adapter produces."""
         params = DecomposedType.extract_generic_parameters_from_class(self.__class__, expected_param_count=1)
