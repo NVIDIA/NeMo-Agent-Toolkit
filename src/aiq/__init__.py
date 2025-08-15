@@ -26,7 +26,7 @@ class CompatFinder(importlib.abc.MetaPathFinder):
         self.alias_prefix = alias_prefix
         self.target_prefix = target_prefix
 
-    def find_spec(self, fullname, path, target=None):
+    def find_spec(self, fullname, path, target=None):  # pylint: disable=unused-argument
         if fullname == self.alias_prefix or fullname.startswith(self.alias_prefix + "."):
             # Map aiq.something -> nat.something
             target_name = self.target_prefix + fullname[len(self.alias_prefix):]
