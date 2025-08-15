@@ -4,7 +4,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["aiq.*", "nat.*"]
+include = ["aiq", "nat.*"]
 
 [tool.setuptools_scm]
 # intentionally empty, the section is required for setuptools_scm to work but we don't need to set anything
