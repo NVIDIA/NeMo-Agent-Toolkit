@@ -52,6 +52,7 @@ ExemptFiles: list[re.Pattern] = [
     re.compile(r"PULL_REQUEST_TEMPLATE.md"),  # Ignore the PR template,
     re.compile(r"[^ \/\n]*conda/environments/.*\.yaml$"),  # Ignore generated environment files
     re.compile(r"^LICENSE\.md$"),  # Ignore the license file itself
+    re.compile(r"^examples/.*/data/.*.md$"),  # Ignore data files in examples
 ]
 
 # this will break starting at year 10000, which is probably OK :)

@@ -86,10 +86,12 @@ examples = [
   "nat_automated_description_generation",
   "nat_email_phishing_analyzer",
   "nat_multi_frameworks",
+  "nat_first_search_agent",
   "nat_plot_charts",
   "nat_por_to_jiratickets",
   "nat_profiler_agent",
   "nat_redact_pii",
+  "nat_retail_sales_agent",
   "nat_semantic_kernel_demo",
   "nat_simple_auth",
   "nat_simple_web_query",
@@ -145,10 +147,12 @@ nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent",
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
 nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }
+nat_first_search_agent = { path = "examples/notebooks/first_search_agent", editable = true }
 nat_plot_charts = { path = "examples/custom_functions/plot_charts", editable = true }
 nat_por_to_jiratickets = { path = "examples/HITL/por_to_jiratickets", editable = true }
 nat_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editable = true }
 nat_redact_pii = { path = "examples/observability/redact_pii", editable = true }
+nat_retail_sales_agent = { path = "examples/notebooks/retail_sales_agent", editable = true }
 nat_semantic_kernel_demo = { path = "examples/frameworks/semantic_kernel_demo", editable = true }
 nat_simple_auth = { path = "examples/front_ends/simple_auth", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }
