@@ -37,7 +37,7 @@ embedders:
     model_name: text-embedding-3-small
   azure_openai_embedder:
     _type: azure_openai
-    model_name: text-embedding-3-small
+    azure_deployment: text-embedding-3-small
 ```
 
 ### NVIDIA NIM

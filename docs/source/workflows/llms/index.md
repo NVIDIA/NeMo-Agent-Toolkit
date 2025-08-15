@@ -44,6 +44,9 @@ llms:
     _type: aws_bedrock
     model_name: meta/llama-3.1-70b-instruct
     region_name: us-east-1
+  azure_openai_llm:
+    _type: azure_openai
+    azure_deployment: gpt-4o-mini
 ```
 
 ### NVIDIA NIM
