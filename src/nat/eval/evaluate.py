@@ -63,7 +63,16 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
-        self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration()
+
+        # Create evaluation trace context
+        try:
+            from nat.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
+            self.eval_trace_context = WeaveEvalTraceContext()
+        except Exception:
+            from nat.eval.utils.eval_trace_ctx import EvalTraceContext
+            self.eval_trace_context = EvalTraceContext()
+
+        self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration(self.eval_trace_context)
         # Metadata
         self.eval_input: EvalInput | None = None
         self.workflow_interrupted: bool = False
@@ -442,11 +451,13 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         dataset_config = self.eval_config.general.dataset  # Currently only one dataset is supported
         if not dataset_config:
             logger.info("No dataset found, nothing to evaluate")
-            return EvaluationRunOutput(
-                workflow_output_file=self.workflow_output_file,
-                evaluator_output_files=self.evaluator_output_files,
-                workflow_interrupted=self.workflow_interrupted,
-            )
+            return EvaluationRunOutput(workflow_output_file=self.workflow_output_file,
+                                       evaluator_output_files=self.evaluator_output_files,
+                                       workflow_interrupted=self.workflow_interrupted,
+                                       eval_input=EvalInput(eval_input_items=[]),
+                                       evaluation_results=[],
+                                       usage_stats=UsageStats(),
+                                       profiler_results=ProfilerResults())
 
         dataset_handler = DatasetHandler(dataset_config=dataset_config,
                                          reps=self.config.reps,
@@ -456,27 +467,45 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         self.eval_input = dataset_handler.get_eval_input_from_dataset(self.config.dataset)
         if not self.eval_input.eval_input_items:
             logger.info("Dataset is empty. Nothing to evaluate.")
-            return EvaluationRunOutput(
-                workflow_output_file=self.workflow_output_file,
-                evaluator_output_files=self.evaluator_output_files,
-                workflow_interrupted=self.workflow_interrupted,
-            )
+            return EvaluationRunOutput(workflow_output_file=self.workflow_output_file,
+                                       evaluator_output_files=self.evaluator_output_files,
+                                       workflow_interrupted=self.workflow_interrupted,
+                                       eval_input=self.eval_input,
+                                       evaluation_results=self.evaluation_results,
+                                       usage_stats=self.usage_stats,
+                                       profiler_results=ProfilerResults())
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
             # Initialize Weave integration
             self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config)
 
-            # Run workflow
-            if self.config.endpoint:
-                await self.run_workflow_remote()
-            else:
-                if not self.config.skip_workflow:
-                    if session_manager is None:
-                        session_manager = SessionManager(eval_workflow.build(),
-                                                         max_concurrency=self.eval_config.general.max_concurrency)
-                    await self.run_workflow_local(session_manager)
+            # Update any WeaveExporter instances with the populated eval context
+            # TODO: This is a hack to get the eval context on the exporters.
+            # We should find a better way to do this.
+            try:
+                from nat.eval.utils.eval_trace_ctx import EvalExporterMixin
 
+                # Access exporter manager through the workflow (if available)
+                if hasattr(eval_workflow, '_exporter_manager'):
+                    all_exporters = await eval_workflow._exporter_manager.get_all_exporters()
+                    for name, exporter in all_exporters.items():
+                        if isinstance(exporter, EvalExporterMixin):
+                            exporter.set_eval_context(self.eval_trace_context)
+                            logger.debug(f"Set eval context on exporter: {name}")
+            except Exception as e:
+                logger.debug(f"Failed to set eval context on exporters: {e}")
+
+            # Run workflow
+            with self.eval_trace_context.evaluation_context():
+                if self.config.endpoint:
+                    await self.run_workflow_remote()
+                else:
+                    if not self.config.skip_workflow:
+                        if session_manager is None:
+                            session_manager = SessionManager(eval_workflow.build(),
+                                                             max_concurrency=self.eval_config.general.max_concurrency)
+                        await self.run_workflow_local(session_manager)
             # Evaluate
             evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
             await self.run_evaluators(evaluators)

@@ -24,6 +24,7 @@ from weave.trace.weave_client import Call
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.span import Span
+from nat.eval.utils.eval_trace_ctx import EvalExporterMixin
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.utils.log_utils import LogFilter
@@ -41,7 +42,7 @@ presidio_filter = LogFilter([
 ])
 
 
-class WeaveExporter(SpanExporter[Span, Span]):
+class WeaveExporter(SpanExporter[Span, Span], EvalExporterMixin):
     """A Weave exporter that exports telemetry traces to Weights & Biases Weave using OpenTelemetry."""
 
     _weave_calls: IsolatedAttribute[dict[str, Call]] = IsolatedAttribute(dict)
@@ -51,7 +52,8 @@ class WeaveExporter(SpanExporter[Span, Span]):
                  entity: str | None = None,
                  project: str | None = None,
                  verbose: bool = False):
-        super().__init__(context_state=context_state)
+        SpanExporter.__init__(self, context_state=context_state)
+        EvalExporterMixin.__init__(self)
         self._entity = entity
         self._project = project
         self._gc = weave_client_context.require_weave_client()
@@ -81,6 +83,10 @@ class WeaveExporter(SpanExporter[Span, Span]):
         if span is None:
             logger.warning("No span found for event %s", event.UUID)
             return
+
+        # Track export operation start for evaluation coordination
+        self.on_export_start()
+
         self._create_weave_call(event, span)
 
     def _process_end_event(self, event: IntermediateStep):
@@ -91,6 +97,9 @@ class WeaveExporter(SpanExporter[Span, Span]):
         """
         super()._process_end_event(event)
         self._finish_weave_call(event)
+
+        # Track export operation completion for evaluation coordination
+        self.on_export_complete()
 
     @contextmanager
     def parent_call(self, trace_id: str, parent_call_id: str) -> Generator[None]:
