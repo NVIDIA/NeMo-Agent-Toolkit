@@ -181,7 +181,7 @@ eval:
     verbose: true
     dataset:
         _type: json
-        file_path: notebooks/retail_sales_agent/data/eval_data.json
+        file_path: ./retail_sales_agent/data/eval_data.json
 
     profiler:
         token_uniqueness_forecast: true
