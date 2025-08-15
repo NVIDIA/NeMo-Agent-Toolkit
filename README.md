@@ -19,37 +19,18 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit
 
-<p align="center">
-   <a href="https://opensource.org/licenses/Apache-2.0">
-      <img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License: Apache 2.0">
-   </a>
-   <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit/releases">
-      <img alt="GitHub Release" src="https://img.shields.io/github/v/release/NVIDIA/NeMo-Agent-Toolkit">
-   </a>
-   <a href="https://pypi.org/project/nvidia-nat/">
-      <img src="https://img.shields.io/pypi/v/nvidia-nat" alt="PyPI version">
-   </a>
-   <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues">
-      <img src="https://img.shields.io/github/issues/NVIDIA/NeMo-Agent-Toolkit" alt="GitHub issues">
-   </a>
-   <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit/pulls">
-      <img src="https://img.shields.io/github/issues-pr/NVIDIA/NeMo-Agent-Toolkit" alt="GitHub pull requests">
-   </a>
-</p>
+<!-- vale off -->
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
+[![GitHub Release](https://img.shields.io/github/v/release/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit/releases)
+[![PyPI version](https://img.shields.io/pypi/v/nvidia-nat)](https://pypi.org/project/nvidia-nat/)
+[![GitHub issues](https://img.shields.io/github/issues/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit/pulls)
 
 <!-- Optional badges still deciding on -->
-<p align="center">
-
-   <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">
-      <img src="https://img.shields.io/github/stars/NVIDIA/NeMo-Agent-Toolkit" alt="GitHub Repo stars">
-   </a>
-   <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit/network/members">
-      <img src="https://img.shields.io/github/forks/NVIDIA/NeMo-Agent-Toolkit" alt="GitHub forks">
-   </a>
-   <a href="https://pepy.tech/projects/nvidia-nat">
-      <img src="https://static.pepy.tech/badge/nvidia-nat" alt="PyPI Downloads">
-   </a>
-</p>
+[![GitHub Repo stars](https://img.shields.io/github/stars/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit)
+[![GitHub forks](https://img.shields.io/github/forks/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit/network/members)
+[![PyPI Downloads](https://static.pepy.tech/badge/nvidia-nat)](https://pepy.tech/projects/nvidia-nat)
+<!-- vale on -->
 
 NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
 
@@ -78,9 +59,11 @@ With NeMo Agent toolkit, you can move quickly, experiment freely, and ensure rel
 
 ## 🚀 Installation
 
+Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11 or 3.12 installed on your system.
+
 ### Stable Version
 
-Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11 or 3.12 installed on your system.
+To install the latest stable version of NeMo Agent Toolkit, run the following command:
 
 ```bash
 pip install nvidia-nat
