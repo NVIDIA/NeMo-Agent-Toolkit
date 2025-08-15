@@ -53,8 +53,8 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
 1. Clone your personal fork of the NeMo Agent toolkit repository to your local machine.
     ```bash
-    git clone <your fork url> aiqtoolkit
-    cd aiqtoolkit
+    git clone <your fork url> nemo-agent-toolkit
+    cd nemo-agent-toolkit
     ```
 
     Then, set the upstream to the main repository and fetch the latest changes:
@@ -83,16 +83,16 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
     uv sync --all-groups --all-extras
     ```
 
-1. Install and configure pre-commit hooks.
+1. Install and configure pre-commit hooks (optional these can also be run manually).
 
     ```bash
     pre-commit install
     ```
     **NOTE**: Running pre-commit for the first time will take longer than normal.
 
-7. Open the NeMo Agent toolkit Workspace in Visual Studio Code.
+1. Open the NeMo Agent toolkit Workspace in Visual Studio Code.
     ```bash
-    code ./aiq.code-workspace
+    code ./nat.code-workspace
     ```
 
 ### Install the NeMo Agent toolkit Library
@@ -110,14 +110,14 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
      uv pip install -e ./examples/getting_started/simple_web_query
      ```
 
-2. Verify that you've installed the NeMo Agent toolkit library.
+1. Verify that you've installed the NeMo Agent toolkit library.
 
      ```bash
-     aiq --help
-     aiq --version
+     nat --help
+     nat --version
      ```
 
-     If the installation succeeded, the `aiq` command will log the help message and its current version.
+     If the installation succeeded, the `nat` command will log the help message and its current version.
 
 
 ## Code contributions
@@ -131,7 +131,16 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 1. Code!
     - Make sure to update unit tests!
     - Ensure the [license headers are set properly](./licensing.md).
-1. Verify your changes by [running CI locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command.
+1. Verify your changes:
+    * Run the style and lint checks, from the root of the repository run:
+        ```bash
+        ./ci/scripts/checks.sh
+        ```
+    * Run all unittests and verify that they are passing, from the root of the repository run:
+        ```bash
+        pytest
+        ```
+    * Optionally [run the entire CI pipeline locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command. This is useful if CI is failing in GitHub Actions and you want to debug the issue locally.
 1. When done, [create your pull request](https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
 1. Wait for other developers to review your code and update code as needed.
@@ -210,9 +219,9 @@ Refer to the [Get Started](../quick-start/installing.md) guide to quickly begin 
 All NeMo Agent toolkit documentation should be written in Markdown format. The documentation located under the `docs/source` directory is included in the documentation builds, refer to `docs/README.md` for information on how to build the documentation. In addition to this, each example should contain a `README.md` file that describes the example.
 
 ### Checks
-All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `aiq` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
+All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `nat` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
 
-The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/aiq/accept.txt` and `ci/vale/styles/config/vocabularies/aiq/reject.txt` files.
+The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/nat/accept.txt` and `ci/vale/styles/config/vocabularies/nat/reject.txt` files.
 
 ### Path Checks
 
@@ -271,18 +280,18 @@ but-this-will-not: /path/to/not/skip
 
 To skip an entire Markdown file, add the following comment to the top of the file:
 ```markdown
-&lt;!-- path-check-skip-file --&gt;
+<!-- path-check-skip-file -->
 ```
 
 To skip a section of a Markdown file, add the following bookend comments:
 ```markdown
-&lt;!-- path-check-skip-begin --&gt;
+<!-- path-check-skip-begin -->
 Here is a list of generated files:
 * /path/to/skip
 * /path/to/skip/too
-&lt;!-- path-check-skip-end --&gt;
+<!-- path-check-skip-end -->
 ...
-&lt;!-- path-check-skip-next-line --&gt;
+<!-- path-check-skip-next-line -->
 For example, the path mentioned here: `/path/to/skip` will be skipped.
 But this path will not be skipped: `/path/to/not/skip`
 ```

@@ -26,6 +26,13 @@ The NeMo Agent toolkit uses a flexible, plugin-based observability system that p
 
 These features enable developers to test their workflows locally and integrate observability seamlessly with their preferred monitoring stack.
 
+
+### Compatibility with Previous Versions
+As of v1.2, the span exporter exports attributes names prefixed with `nat` by default. In prior releases the attribute names were prefixed with `aiq`, to retain compatibility the `NAT_SPAN_PREFIX` environment variable can be set to `aiq`:
+```bash
+export NAT_SPAN_PREFIX=aiq
+```
+
 ## Installation
 
 The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras:
@@ -49,10 +56,10 @@ For a complete list of logging and tracing plugins and corresponding configurati
 
 ```bash
 # For all registered logging plugins
-aiq info components -t logging
+nat info components -t logging
 
 # For all registered tracing plugins
-aiq info components -t tracing
+nat info components -t tracing
 ```
 
 Illustrated below is a sample configuration file demonstrating multiple exporters configured to run concurrently.
@@ -66,7 +73,7 @@ general:
         level: WARN
       file:
         _type: file
-        path: /tmp/workflow.log
+        path: ./.tmp/workflow.log
         level: DEBUG
     tracing:
       # Multiple exporters can run simultaneously
@@ -138,8 +145,8 @@ Each exporter can optionally include a processing pipeline that transforms, filt
 
 #### Integration Components
 
-- **{py:class}`aiq.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
-- **{py:class}`~aiq.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain, LLama Index, CrewAI, and Semantic Kernel frameworks.
+- **{py:class}`nat.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
+- **{py:class}`~nat.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain, LLama Index, CrewAI, and Semantic Kernel frameworks.
 
 ### Registering a New Telemetry Provider as a Plugin
 

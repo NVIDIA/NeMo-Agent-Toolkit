@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# AIQ Profiler Agent
+# NeMo Agent Toolkit Profiler Agent
 
 The profiler agent is a tool that allows you to analyze the performance of NeMo Agent toolkit workflows. It uses the Phoenix server to store and retrieve traces of workflow runs.
 
@@ -70,15 +70,15 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
    Then, run the simple calculator example to generate traces:
    ```bash
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the product of 33 * 4 greater than the current hour of the day?"
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the sum of 44 and 55 greater than the current hour of the day?"
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the difference between 7 and 5 less than the current hour of the day?"
+   nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+   nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the product of 33 * 4 greater than the current hour of the day?"
+   nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the sum of 44 and 55 greater than the current hour of the day?"
+   nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the difference between 7 and 5 less than the current hour of the day?"
    ```
 
 3. Run the profiler agent:
    ```
-   aiq serve --config_file=examples/advanced_agents/profiler_agent/configs/config.yml
+   nat serve --config_file=examples/advanced_agents/profiler_agent/configs/config.yml
    ```
 
 4. Launch the NeMo Agent Toolkit User Interface by using the instructions in the [Launching the User Interface](../../../docs/source/quick-start/launching-ui.md#launch-the-nemo-agent-toolkit-user-interface) guide.

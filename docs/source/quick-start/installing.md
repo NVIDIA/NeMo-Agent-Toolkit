@@ -17,7 +17,7 @@ limitations under the License.
 
 # Installing NVIDIA NeMo Agent Toolkit
 
-This guide will help you set up your NVIDIA NeMo Agent toolkit development environment, run existing workflows, and create your own custom workflows using the `aiq` command-line interface.
+This guide will help you set up your NVIDIA NeMo Agent toolkit development environment, run existing workflows, and create your own custom workflows using the `nat` command-line interface.
 
 ## Supported LLM APIs
 
@@ -29,25 +29,25 @@ The following LLM APIs are supported:
 
 ## Framework Integrations
 
-To keep the library lightweight, many of the first-party plugins supported by NeMo Agent toolkit are located in separate distribution packages. For example, the `aiqtoolkit-langchain` distribution contains all the LangChain-specific plugins and the `aiqtoolkit-mem0ai` distribution contains the Mem0-specific plugins.
+To keep the library lightweight, many of the first-party plugins supported by NeMo Agent toolkit are located in separate distribution packages. For example, the `nvidia-nat-langchain` distribution contains all the LangChain-specific plugins and the `nvidia-nat-mem0ai` distribution contains the Mem0-specific plugins.
 
-To install these first-party plugin libraries, you can use the full distribution name (for example, `aiqtoolkit-langchain`) or use the `aiqtoolkit[langchain]` extra distribution. The following extras are supported:
+To install these first-party plugin libraries, you can use the full distribution name (for example, `nvidia-nat-langchain`) or use the `nvidia-nat[langchain]` extra distribution. The following extras are supported:
 
-- `aiqtoolkit[agno]` or `aiqtoolkit-agno` - [Agno](https://agno.com/)
-- `aiqtoolkit[crewai]` or `aiqtoolkit-crewai` - [CrewAI](https://www.crewai.com/)
-- `aiqtoolkit[langchain]` or `aiqtoolkit-langchain` - [LangChain](https://www.langchain.com/)
-- `aiqtoolkit[llama-index]` or `aiqtoolkit-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
-- `aiqtoolkit[mem0ai]` or `aiqtoolkit-mem0ai` - [Mem0](https://mem0.ai/)
-- `aiqtoolkit[mysql]` or `aiqtoolkit-mysql` - [MySQL](https://www.mysql.com/)
-- `aiqtoolkit[opentelemetry]` or `aiqtoolkit-opentelemetry` - [OpenTelemetry](https://opentelemetry.io/)
-- `aiqtoolkit[phoenix]` or `aiqtoolkit-phoenix` - [Arize Phoenix](https://arize.com/docs/phoenix)
-- `aiqtoolkit[ragaai]` or `aiqtoolkit-ragaai` - [RagaAI Catalyst](https://raga.ai/)
-- `aiqtoolkit[redis]` or `aiqtoolkit-redis` - [Redis](https://redis.io/)
-- `aiqtoolkit[s3]` or `aiqtoolkit-s3` - [Amazon S3](https://aws.amazon.com/s3/)
-- `aiqtoolkit[semantic-kernel]` or `aiqtoolkit-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
-- `aiqtoolkit[test]` or `aiqtoolkit-test` - NeMo Agent toolkit test
-- `aiqtoolkit[weave]` or `aiqtoolkit-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai)
-- `aiqtoolkit[zep-cloud]` or `aiqtoolkit-zep-cloud` - [Zep](https://www.getzep.com/)
+- `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
+- `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/)
+- `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/)
+- `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
+- `nvidia-nat[mem0ai]` or `nvidia-nat-mem0ai` - [Mem0](https://mem0.ai/)
+- `nvidia-nat[mysql]` or `nvidia-nat-mysql` - [MySQL](https://www.mysql.com/)
+- `nvidia-nat[opentelemetry]` or `nvidia-nat-opentelemetry` - [OpenTelemetry](https://opentelemetry.io/)
+- `nvidia-nat[phoenix]` or `nvidia-nat-phoenix` - [Arize Phoenix](https://arize.com/docs/phoenix)
+- `nvidia-nat[ragaai]` or `nvidia-nat-ragaai` - [RagaAI Catalyst](https://raga.ai/)
+- `nvidia-nat[redis]` or `nvidia-nat-redis` - [Redis](https://redis.io/)
+- `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
+- `nvidia-nat[semantic-kernel]` or `nvidia-nat-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
+- `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent toolkit test
+- `nvidia-nat[weave]` or `nvidia-nat-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai)
+- `nvidia-nat[zep-cloud]` or `nvidia-nat-zep-cloud` - [Zep](https://www.getzep.com/)
 
 
 ## Prerequisites
@@ -62,8 +62,8 @@ NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run 
 
 1. Clone the NeMo Agent toolkit repository to your local machine.
     ```bash
-    git clone -b main git@github.com:NVIDIA/NeMo-Agent-Toolkit.git aiqtoolkit
-    cd aiqtoolkit
+    git clone -b main git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit
+    cd nemo-agent-toolkit
     ```
 
 1. Initialize, fetch, and update submodules in the Git repository.
@@ -105,7 +105,7 @@ NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run 
     ```
 
     :::{note}
-    Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
+    Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
     :::
 
     In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
@@ -115,11 +115,11 @@ NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run 
 1. Verify that you've installed the NeMo Agent toolkit library.
 
      ```bash
-     aiq --help
-     aiq --version
+     nat --help
+     nat --version
      ```
 
-     If the installation succeeded, the `aiq` command will log the help message and its current version.
+     If the installation succeeded, the `nat` command will log the help message and its current version.
 
 
 ## Obtaining API Keys
@@ -147,42 +147,42 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 
 ### Running the Simple Workflow
 
-1. Install the `aiq_simple_web_query` Workflow
+1. Install the `nat_simple_web_query` Workflow
 
     ```bash
     uv pip install -e examples/getting_started/simple_web_query
     ```
 
-2. Run the `aiq_simple_web_query` Workflow
+2. Run the `nat_simple_web_query` Workflow
 
     ```bash
-    aiq run --config_file=examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith"
+    nat run --config_file=examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith"
     ```
 
-3. **Run and evaluate the `aiq_simple_web_query` Workflow**
+3. **Run and evaluate the `nat_simple_web_query` Workflow**
 
-    The `eval_config.yml` YAML is a super-set of the `config.yml` containing additional fields for evaluation. To evaluate the `aiq_simple_web_query` workflow, run the following command:
+    The `eval_config.yml` YAML is a super-set of the `config.yml` containing additional fields for evaluation. To evaluate the `nat_simple_web_query` workflow, run the following command:
     ```bash
-    aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
+    nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
     ```
 
 
 ## NeMo Agent Toolkit Packages
-Once a NeMo Agent toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `aiqtoolkit` package, along with the needed plugins. When declaring a dependency on NeMo Agent toolkit it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
+Once a NeMo Agent toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `nvidia-nat` package, along with the needed plugins. When declaring a dependency on NeMo Agent toolkit it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
 
 For more information on the available plugins, refer to [Framework Integrations](#framework-integrations).
 
 Example dependency for NeMo Agent toolkit using the `langchain` plugin for projects using a `pyproject.toml` file:
 ```toml
 dependencies = [
-"aiqtoolkit[langchain]~=1.0",
+"nvidia-nat[langchain]~=1.0",
 # Add any additional dependencies your workflow needs
 ]
 ```
 
 Alternately for projects using a `requirements.txt` file:
 ```
-aiqtoolkit[langchain]==1.0.*
+nvidia-nat[langchain]==1.0.*
 ```
 
 ## Next Steps

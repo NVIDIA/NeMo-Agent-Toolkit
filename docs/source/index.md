@@ -23,7 +23,7 @@ limitations under the License.
    :class: highlight
 ```
 
-![NVIDIA NeMo Agent Toolkit](./_static/aiqtoolkit_banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](./_static/banner.png "NeMo Agent toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit Overview
 
@@ -31,7 +31,7 @@ NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that 
 
 
 :::{note}
-NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. The transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
+NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `nvidia-nat` instead of `aiqtoolkit` or `agentiq`. The transitional packages named `aiqtoolkit` and `agentiq` are available for backwards compatibility, but will be removed in the future.
 :::
 
 ## Key Features
@@ -81,13 +81,15 @@ Tutorials <./tutorials/index.md>
 About Workflows <./workflows/about/index.md>
 ./workflows/run-workflows.md
 Workflow Configuration <./workflows/workflow-configuration.md>
+./workflows/llms/index.md
+./workflows/embedders.md
+./workflows/retrievers.md
 Functions <./workflows/functions/index.md>
 ./workflows/mcp/index.md
 Evaluate Workflows <./workflows/evaluate.md>
 Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 Profiling Workflows <./workflows/profiler.md>
 Sizing Calculator <./workflows/sizing-calc.md>
-./workflows/using-local-llms.md
 ./workflows/observe/index.md
 ```
 
@@ -131,7 +133,7 @@ Command Line Interface (CLI) <./reference/cli.md>
 Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
-Inference Time Scaling <./reference/inference-time-scaling.md>
+Test Time Compute <./reference/test-time-compute.md>
 Troubleshooting <./troubleshooting.md>
 ```
 
@@ -144,5 +146,5 @@ Code of Conduct <./resources/code-of-conduct.md>
 Contributing <./resources/contributing.md>
 ./resources/running-ci-locally.md
 ./support.md
-./resources/licensing
+./resources/licensing.md
 ```

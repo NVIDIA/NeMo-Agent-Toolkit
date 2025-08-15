@@ -17,6 +17,10 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Streamlining API Authentication
 
+:::{warning}
+**Experimental Feature**: The Authentication Provider API is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
+:::
+
 The NeMo Agent toolkit simplifies API authentication by streamlining credential management and validation, enabling secure
 access to API providers across a variety of runtime environments. This functionality allows users to authenticate with
 protected API resources directly from workflow tools, abstracting away low-level authentication logic and enabling
@@ -68,12 +72,12 @@ In the workflow configuration YAML file, user credentials required for API authe
 `authentication` key. Users should provide all required and valid credentials for each authentication method to ensure
 the library can authenticate requests without encountering credential related errors. Examples of currently supported
 API configurations are
-[OAuth 2.0 Authorization Code Grant Flow Configuration](../../../src/aiq/authentication/oauth2/oauth2_auth_code_flow_provider_config.py),
-[API Key Configuration](../../../src/aiq/authentication/api_key/api_key_auth_provider_config.py), and [Basic HTTP Authentication](../../../src/aiq/authentication/http_basic_auth/register.py).
+[OAuth 2.0 Authorization Code Grant Flow Configuration](../../../src/nat/authentication/oauth2/oauth2_auth_code_flow_provider_config.py),
+[API Key Configuration](../../../src/nat/authentication/api_key/api_key_auth_provider_config.py), and [Basic HTTP Authentication](../../../src/nat/authentication/http_basic_auth/register.py).
 
 ### Authentication YAML Configuration Example
 
-The following example shows how to configure the authentication credentials for the OAuth 2.0 Authorization Code Grant Flow and API Key authentication. More information about each field can be queried using the `aiq info components -t auth_provider` command.
+The following example shows how to configure the authentication credentials for the OAuth 2.0 Authorization Code Grant Flow and API Key authentication. More information about each field can be queried using the `nat info components -t auth_provider` command.
 
 ```yaml
 authentication:
@@ -86,8 +90,8 @@ authentication:
       - openid
       - profile
       - email
-    client_id: ${AIQ_OAUTH_CLIENT_ID}
-    client_secret: ${AIQ_OAUTH_CLIENT_SECRET}
+    client_id: ${NAT_OAUTH_CLIENT_ID}
+    client_secret: ${NAT_OAUTH_CLIENT_SECRET}
     use_pkce: false
 
   example_provider_name_api_key:
@@ -140,7 +144,7 @@ class WhoAmIConfig(FunctionBaseConfig, name="who_am_i"):
     timeout: int = Field(default=10, description="Request timeout in seconds")
 ```
 
-Full source code for the above example can be found in `examples/front_ends/simple_auth/src/aiq_simple_auth/ip_lookup.py`.
+Full source code for the above example can be found in `examples/front_ends/simple_auth/src/nat_simple_auth/ip_lookup.py`.
 
 ## 4. Authentication by Application Configuration
 Authentication methods not needing consent prompts, such as API Keys are supported uniformly across all deployment methods.
@@ -150,7 +154,7 @@ front-end UI is responsible for rendering the consent prompt.
 
 Below is a table listing the current support for the various authentication methods based on the application
 
-| # | Authentication Method                                | `aiq run` | `aiq serve` | Support Level                                         |
+| # | Authentication Method                                | `nat run` | `nat serve` | Support Level                                         |
 |---|------------------------------------------------------|-----------|-------------|-------------------------------------------------------|
 | 1 | OAuth2.0 Authorization Code Grant Flow               | ✅         | ✅           | Full support with front-end UI only in websocket mode |
 | 2 | API Key Authentication                               | ✅         | ✅           | Full support across all configurations                |

@@ -26,6 +26,7 @@ uv sync --all-groups --all-extras
 ```
 
 ## Build Documentation
+<!-- path-check-skip-begin -->
 ```bash
 make -C docs
 

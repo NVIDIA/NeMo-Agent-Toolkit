@@ -92,24 +92,24 @@ functions:
 To run the simple calculator workflow using remote MCP tools, follow these steps:
 1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/MCP/simple_calculator_mcp/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
 ```bash
-docker ps --filter "name=mcp-proxy-aiq-time"
+docker ps --filter "name=mcp-proxy-nat-time"
 ```
 Sample output:
 ```
 CONTAINER ID   IMAGE                      COMMAND                  CREATED      STATUS        PORTS                                       NAMES
-4279653533ec   time_service-time_server   "mcp-proxy --pass-en…"   9 days ago   Up 41 hours   0.0.0.0:8080->8080/tcp, :::8080->8080/tcp   mcp-proxy-aiq-time
+4279653533ec   time_service-time_server   "mcp-proxy --pass-en…"   9 days ago   Up 41 hours   0.0.0.0:8080->8080/tcp, :::8080->8080/tcp   mcp-proxy-nat-time
 ```
 
-2. Run the workflow using the `aiq run` command.
+2. Run the workflow using the `nat run` command.
 ```bash
-aiq run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 This will use the `mcp_time_tool` function to get the current hour of the day from the MCP server.
 
 ## Displaying MCP Tools
-The `aiq info mcp` command can be used to list the tools served by an MCP server.
+The `nat info mcp` command can be used to list the tools served by an MCP server.
 ```bash
-aiq info mcp --url http://localhost:8080/sse
+nat info mcp --url http://localhost:8080/sse
 ```
 
 Sample output:
@@ -120,7 +120,7 @@ convert_time
 
 To get more detailed information about a specific tool, you can use the `--tool` flag.
 ```bash
-aiq info mcp --url http://localhost:8080/sse --tool get_current_time
+nat info mcp --url http://localhost:8080/sse --tool get_current_time
 ```
 Sample output:
 ```

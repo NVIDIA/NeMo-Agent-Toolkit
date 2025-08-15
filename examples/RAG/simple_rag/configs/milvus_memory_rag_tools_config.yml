@@ -36,11 +36,11 @@ retrievers:
 
 functions:
   cuda_retriever_tool:
-    _type: aiq_retriever
+    _type: nat_retriever
     retriever: cuda_retriever
     topic: Retrieve documentation for NVIDIA's CUDA library
   mcp_retriever_tool:
-    _type: aiq_retriever
+    _type: nat_retriever
     retriever: mcp_retriever
     topic: Retrieve information about Model Context Protocol (MCP)
 
@@ -58,7 +58,7 @@ functions:
       The question should be about user preferences which will help you format your response.
       For example: "How does the user like responses formatted?"
 
-  # To use these tools you will need to install the aiqtoolkit[langchain] package
+  # To use these tools you will need to install the nvidia-nat[langchain] package
   web_search_tool:
     _type: tavily_internet_search
     max_results: 5

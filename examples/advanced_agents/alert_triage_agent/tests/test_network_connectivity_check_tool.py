@@ -18,7 +18,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from aiq_alert_triage_agent.network_connectivity_check_tool import _check_service_banner
+from nat_alert_triage_agent.network_connectivity_check_tool import _check_service_banner
 
 
 @pytest.fixture
