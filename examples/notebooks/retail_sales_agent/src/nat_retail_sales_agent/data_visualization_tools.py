@@ -31,7 +31,7 @@ class PlotSalesTrendForStoresConfig(FunctionBaseConfig, name="plot_sales_trend_f
 
 
 @register_function(config_type=PlotSalesTrendForStoresConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def plot_sales_trend_for_stores_function(config: PlotSalesTrendForStoresConfig, builder: Builder):
+async def plot_sales_trend_for_stores_function(config: PlotSalesTrendForStoresConfig, builder: Builder):  # pylint: disable=unused-argument
     """Create a visualization of sales trends over time."""
     import matplotlib.pyplot as plt
     import pandas as pd

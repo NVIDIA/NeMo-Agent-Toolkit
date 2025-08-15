@@ -30,7 +30,7 @@ class GetTotalProductSalesDataConfig(FunctionBaseConfig, name="get_total_product
 
 
 @register_function(config_type=GetTotalProductSalesDataConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def get_total_product_sales_data_function(config: GetTotalProductSalesDataConfig, builder: Builder):
+async def get_total_product_sales_data_function(config: GetTotalProductSalesDataConfig, _builder: Builder):
     """Get total sales data for a specific product."""
     import pandas as pd
 
@@ -64,7 +64,7 @@ class GetSalesPerDayConfig(FunctionBaseConfig, name="get_sales_per_day"):
 
 
 @register_function(config_type=GetSalesPerDayConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def get_sales_per_day_function(config: GetSalesPerDayConfig, builder: Builder):
+async def get_sales_per_day_function(config: GetSalesPerDayConfig, builder: Builder):  # pylint: disable=unused-argument
     """Get total sales across all products per day."""
     import pandas as pd
 
@@ -84,9 +84,8 @@ async def get_sales_per_day_function(config: GetSalesPerDayConfig, builder: Buil
         """
         if date == "None":
             return "Please provide a date in YYYY-MM-DD format."
-        else:
-            total_revenue = df[(df['Date'] == date) & (df['Product'] == product)]['Revenue'].sum()
-            total_units_sold = df[(df['Date'] == date) & (df['Product'] == product)]['UnitsSold'].sum()
+        total_revenue = df[(df['Date'] == date) & (df['Product'] == product)]['Revenue'].sum()
+        total_units_sold = df[(df['Date'] == date) & (df['Product'] == product)]['UnitsSold'].sum()
 
         return f"Total revenue for {date} is {total_revenue} and total units sold is {total_units_sold}"
 
@@ -104,7 +103,7 @@ class DetectOutliersIQRConfig(FunctionBaseConfig, name="detect_outliers_iqr"):
 
 
 @register_function(config_type=DetectOutliersIQRConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def detect_outliers_iqr_function(config: DetectOutliersIQRConfig, builder: Builder):
+async def detect_outliers_iqr_function(config: DetectOutliersIQRConfig, _builder: Builder):
     """Detect outliers in sales data using the Interquartile Range (IQR) method."""
     import pandas as pd
 
