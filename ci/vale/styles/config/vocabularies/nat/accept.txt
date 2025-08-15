@@ -54,7 +54,7 @@ DB(s?)
 [Ee]xplainability
 Faiss
 [Gg]eneratable
-Github
+GitHub
 glog
 GPU(s?)
 Grafana
