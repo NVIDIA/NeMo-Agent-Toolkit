@@ -18,8 +18,11 @@ import subprocess
 
 import pytest
 
+# Prevent isort from removing the pylint disable comments
+# isort:skip_file
 
-def test_aiq_sublass_is_nat_subclass():
+
+def test_aiq_subclass_is_nat_subclass():
     with pytest.deprecated_call():
         from aiq.data_models import function as aiq_function  # pylint: disable=no-name-in-module
 
