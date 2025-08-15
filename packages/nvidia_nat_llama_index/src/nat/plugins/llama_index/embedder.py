@@ -13,35 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_embedder_client
 from nat.data_models.retry_mixin import RetryMixin
-from nat.embedder.aws_bedrock_embedder import AWSBedrockEmbedderModelConfig
 from nat.embedder.azure_openai_embedder import AzureOpenAIEmbedderModelConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.embedder.openai_embedder import OpenAIEmbedderModelConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
-
-
-@register_embedder_client(config_type=AWSBedrockEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
-async def aws_bedrock_llama_index(embedder_config: AWSBedrockEmbedderModelConfig, _builder: Builder):
-
-    from llama_index.embeddings.bedrock import BedrockEmbedding
-
-    client = BedrockEmbedding.from_credentials(aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-                                               aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-                                               aws_region=os.getenv("AWS_REGION_NAME"))
-
-    if isinstance(embedder_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=embedder_config.num_retries,
-                                  retry_codes=embedder_config.retry_on_status_codes,
-                                  retry_on_messages=embedder_config.retry_on_errors)
-
-    yield client
 
 
 @register_embedder_client(config_type=AzureOpenAIEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)

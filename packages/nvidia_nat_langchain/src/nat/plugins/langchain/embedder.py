@@ -19,27 +19,10 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_embedder_client
 from nat.data_models.retry_mixin import RetryMixin
-from nat.embedder.aws_bedrock_embedder import AWSBedrockEmbedderModelConfig
 from nat.embedder.azure_openai_embedder import AzureOpenAIEmbedderModelConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.embedder.openai_embedder import OpenAIEmbedderModelConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
-
-
-@register_embedder_client(config_type=AWSBedrockEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def aws_bedrock_langchain(embedder_config: AWSBedrockEmbedderModelConfig, builder: Builder):
-
-    from langchain_aws import BedrockEmbeddings
-
-    client = BedrockEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
-
-    if isinstance(embedder_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=embedder_config.num_retries,
-                                  retry_codes=embedder_config.retry_on_status_codes,
-                                  retry_on_messages=embedder_config.retry_on_errors)
-
-    yield client
 
 
 @register_embedder_client(config_type=AzureOpenAIEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

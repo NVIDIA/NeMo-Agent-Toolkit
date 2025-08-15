@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
@@ -33,10 +31,7 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
 
     kwargs = llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True)
 
-    llm = Bedrock(**kwargs,
-                  aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-                  aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-                  aws_region_name=os.getenv("AWS_REGION_NAME"))
+    llm = Bedrock(**kwargs)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,

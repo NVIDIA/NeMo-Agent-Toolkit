@@ -68,22 +68,6 @@ The OpenAI embedder provider is defined by the {py:class}`~nat.embedder.openai_e
 * `base_url` - The base URL to use for the model
 * `max_retries` - The maximum number of retries for the request
 
-### AWS Bedrock
-
-You can use the following environment variables to configure the AWS Bedrock embedder provider:
-
-* `AWS_ACCESS_KEY_ID` - The AWS access key ID to access AWS resources
-* `AWS_SECRET_ACCESS_KEY` - The AWS secret access key to access AWS resources
-* `AWS_REGION_NAME` - The AWS region name to access AWS resources
-
-The AWS Bedrock embedder provider is defined by the {py:class}`~nat.embedder.aws_bedrock_embedder.AWSBedrockEmbedderModelConfig` class.
-
-* `model_name` - The name of the model to use
-* `region_name` - The region to use for the model
-* `base_url` - The base URL to use for the model
-* `credentials_profile_name` - The credentials profile name to use for the model
-* `max_retries` - The maximum number of retries for the request
-
 ### Azure OpenAI
 
 You can use the following environment variables to configure the Azure OpenAI embedder provider:

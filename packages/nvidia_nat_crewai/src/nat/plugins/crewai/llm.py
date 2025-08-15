@@ -19,37 +19,10 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
 from nat.data_models.retry_mixin import RetryMixin
-from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
-
-
-@register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
-async def aws_bedrock_crewai(llm_config: AWSBedrockModelConfig, _builder: Builder):
-
-    from crewai import LLM
-
-    config_obj = {
-        **llm_config.model_dump(exclude={"type"}, by_alias=True),
-    }
-
-    if "AWS_DEFAULT_REGION" not in os.environ:
-        if llm_config.region_name is None:
-            llm_config.region_name = os.getenv("AWS_REGION_NAME")
-        if llm_config.region_name is not None:
-            os.environ["AWS_DEFAULT_REGION"] = llm_config.region_name
-
-    client = LLM(**config_obj)
-
-    if isinstance(llm_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
-    yield client
 
 
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
