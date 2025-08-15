@@ -31,7 +31,11 @@ class PlotSalesTrendForStoresConfig(FunctionBaseConfig, name="plot_sales_trend_f
 
 
 @register_function(config_type=PlotSalesTrendForStoresConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
+<<<<<<< HEAD
 async def plot_sales_trend_for_stores_function(config: PlotSalesTrendForStoresConfig, builder: Builder):  # pylint: disable=unused-argument
+=======
+async def plot_sales_trend_for_stores_function(config: PlotSalesTrendForStoresConfig, _builder: Builder):
+>>>>>>> ce329938b986be9e5a58c04e4dfae042022c4044
     """Create a visualization of sales trends over time."""
     import matplotlib.pyplot as plt
     import pandas as pd
@@ -80,14 +84,14 @@ class PlotAndCompareRevenueAcrossStoresConfig(FunctionBaseConfig, name="plot_and
 
 
 @register_function(config_type=PlotAndCompareRevenueAcrossStoresConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def plot_revenue_across_stores_function(config: PlotAndCompareRevenueAcrossStoresConfig, builder: Builder):
+async def plot_revenue_across_stores_function(config: PlotAndCompareRevenueAcrossStoresConfig, _builder: Builder):
     """Create a visualization comparing sales trends between stores."""
     import matplotlib.pyplot as plt
     import pandas as pd
 
     df = pd.read_csv(config.data_path)
 
-    async def _plot_revenue_across_stores(input_message: str) -> str:
+    async def _plot_revenue_across_stores(_input_message: str) -> str:
         """
         Create a multi-line chart comparing sales trends between stores.
 
@@ -122,14 +126,14 @@ class PlotAverageDailyRevenueConfig(FunctionBaseConfig, name="plot_average_daily
 
 
 @register_function(config_type=PlotAverageDailyRevenueConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def plot_average_daily_revenue_function(config: PlotAverageDailyRevenueConfig, builder: Builder):
+async def plot_average_daily_revenue_function(config: PlotAverageDailyRevenueConfig, _builder: Builder):
     """Create a bar chart showing average daily revenue by day of week."""
     import matplotlib.pyplot as plt
     import pandas as pd
 
     df = pd.read_csv(config.data_path)
 
-    async def _plot_average_daily_revenue(input_message: str) -> str:
+    async def _plot_average_daily_revenue(_input_message: str) -> str:
         """
         Create a bar chart showing average revenue by day of the week.
 

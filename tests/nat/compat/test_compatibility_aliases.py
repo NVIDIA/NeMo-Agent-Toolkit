@@ -37,7 +37,7 @@ def test_cli_compat():
     expected_deprecation_warning = ("The 'aiq' command is deprecated and will be removed in a future release. "
                                     "Please use the 'nat' command instead.")
 
-    result = subprocess.run("aiq", capture_output=True, check=True)
+    result = subprocess.run(["aiq", "--version"], capture_output=True, check=True)
     assert expected_deprecation_warning in result.stderr.decode(encoding="utf-8")
 
 

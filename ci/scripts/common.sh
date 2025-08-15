@@ -34,6 +34,8 @@ else
    export COMMIT_SHA=${COMMIT_SHA:-${GITHUB_SHA:-HEAD}}
 fi
 
+# ensure that we use the python version in the container
+export UV_PYTHON_DOWNLOADS=never
 
 export PYTHON_FILE_REGEX='^(\.\/)?(?!\.|build|external).*\.(py|pyx|pxd)$'
 
@@ -141,7 +143,7 @@ function create_env() {
 
     rapids-logger "Creating uv env"
     VENV_DIR="${WORKSPACE_TMP}/.venv"
-    uv venv --seed ${VENV_DIR}
+    uv venv --python=${PYTHON_VERSION} --seed ${VENV_DIR}
     source ${VENV_DIR}/bin/activate
 
     rapids-logger "Creating Environment with extras: ${@}"

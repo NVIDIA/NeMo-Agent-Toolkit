@@ -56,7 +56,7 @@ async def llama_index_rag_tool(config: LlamaIndexRAGConfig, builder: Builder):
     Settings.llm = llm
 
     docs = SimpleDirectoryReader(input_files=[config.data_dir]).load_data()
-    logger.info(f"Loaded {len(docs)} documents from {config.data_dir}")
+    logger.info("Loaded %s documents from %s", len(docs), config.data_dir)
 
     parser = SentenceSplitter(
         chunk_size=400,
@@ -79,7 +79,7 @@ async def llama_index_rag_tool(config: LlamaIndexRAGConfig, builder: Builder):
             index = VectorStoreIndex(nodes, storage_context=storage_context)
 
         except MilvusException as e:
-            logger.error(f"Error initializing Milvus vector store: {e}. Falling back to default vector store.")
+            logger.error("Error initializing Milvus vector store: %s. Falling back to default vector store.", e)
             index = VectorStoreIndex(nodes)
     else:
         index = VectorStoreIndex(nodes)
@@ -97,7 +97,7 @@ async def llama_index_rag_tool(config: LlamaIndexRAGConfig, builder: Builder):
             return str(response.response)
 
         except Exception as e:
-            logger.error(f"RAG query failed: {e}")
+            logger.error("RAG query failed: %s", e)
             return f"Sorry, I couldn't retrieve information about that product. Error: {str(e)}"
 
     yield FunctionInfo.from_fn(_arun, description=config.description)
