@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from pydantic import BaseModel
+from pydantic import Field
 
 from nat.data_models.span import Span
 from nat.plugins.data_flywheel.observability.schema.langchain.nim_trace_source import NIMTraceSource
@@ -23,5 +24,5 @@ TraceSourceUnion = OpenAITraceSource | NIMTraceSource
 
 
 class TraceSource(BaseModel):
-    source: TraceSourceUnion
-    span: Span
+    source: TraceSourceUnion = Field(..., description="The matched source of the trace")
+    span: Span = Field(..., description="The span of the trace")

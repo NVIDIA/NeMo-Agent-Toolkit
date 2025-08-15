@@ -34,7 +34,7 @@ def _get_output_type_name(output_type: type[Any]) -> str:
     Recursively handles nested optionals and unions to extract meaningful type names.
 
     Args:
-        output_type: The type to extract a name from
+        output_type (type[Any]): The type to extract a name from
 
     Returns:
         str: Registry-friendly type name (e.g., "DFWESRecord", "TypeA_or_TypeB")
@@ -75,7 +75,7 @@ class TraceAdapterRegistry:
         The output type is automatically determined from the adapter's output_type property.
 
         Args:
-            adapter: The adapter to register
+            adapter (TraceSourceAdapter[Any]): The adapter to register
         """
         framework_id = adapter.framework_identifier
         output_type_name = _get_output_type_name(adapter.output_type)
@@ -84,22 +84,22 @@ class TraceAdapterRegistry:
             cls._adapters[framework_id] = {}
 
         cls._adapters[framework_id][output_type_name] = adapter
-        logger.debug("Registered adapter for framework: %s, output type: %s", framework_id, output_type_name)
+        logger.debug("Registered adapter for framework: '%s', output type: '%s'", framework_id, output_type_name)
 
     @classmethod
     def unregister_adapter(cls, framework_identifier: str, output_type: type[Any] | None = None) -> bool:
         """Unregister an adapter by framework identifier and output type.
 
         Args:
-            framework_identifier: The framework identifier to unregister
-            output_type: The output type to unregister (if None, removes all adapters
+            framework_identifier (str): The framework identifier to unregister
+            output_type (type[Any] | None): The output type to unregister (if None, removes all adapters
                         for this framework)
 
         Returns:
             True if adapter was found and removed, False otherwise
         """
         if framework_identifier not in cls._adapters:
-            logger.warning("Attempted to unregister non-existent framework: %s", framework_identifier)
+            logger.warning("Attempted to unregister non-existent framework: '%s'", framework_identifier)
             return False
 
         if output_type is None:
@@ -122,7 +122,9 @@ class TraceAdapterRegistry:
                          output_type_name)
             return True
 
-        logger.warning("Attempted to unregister non-existent adapter: %s:%s", framework_identifier, output_type_name)
+        logger.warning("Attempted to unregister non-existent adapter for framework: '%s', output type: '%s'",
+                       framework_identifier,
+                       output_type_name)
         return False
 
     @classmethod
@@ -130,12 +132,15 @@ class TraceAdapterRegistry:
         """Get the appropriate adapter for a trace source and output type.
 
         Args:
-            trace_source: The trace source to find an adapter for
-            output_type: The desired output type
+            trace_source (TraceSource): The trace source to find an adapter for
+            output_type (type[OutputT]): The desired output type
+
+        Returns:
+            TraceSourceAdapter[OutputT] | None: The appropriate adapter for the trace source and output type
         """
         # Input validation: Ensure required fields are present and valid
         if not trace_source.source.framework or not trace_source.source.provider:
-            logger.warning("Invalid trace source: missing framework ('%s') or provider ('%s')",
+            logger.warning("Invalid trace source: missing framework '%s' or provider '%s'",
                            trace_source.source.framework,
                            trace_source.source.provider)
             return None
@@ -151,7 +156,11 @@ class TraceAdapterRegistry:
 
     @classmethod
     def list_supported_frameworks(cls) -> list[str]:
-        """List all supported framework identifiers."""
+        """List all supported framework identifiers.
+
+        Returns:
+            list[str]: List of supported framework identifiers
+        """
         return list(cls._adapters.keys())
 
     @classmethod
@@ -159,7 +168,7 @@ class TraceAdapterRegistry:
         """List all supported output types.
 
         Args:
-            framework_identifier: If provided, list output types for this framework only
+            framework_identifier (str | None): If provided, list output types for this framework only
         """
         # Return output types for a specific framework
         if framework_identifier:
@@ -188,23 +197,31 @@ class TraceAdapterRegistry:
         return result
 
 
-def register_span_adapter(adapter: TraceSourceAdapter[Any]):
-    """Register a custom adapter globally.
-
-    The output type is automatically determined from the adapter's output_type property.
+def register_adapter(cls: type[TraceSourceAdapter[Any]]):
+    """Decorator to automatically register an adapter class.
 
     Args:
-        adapter: The adapter to register
+        cls (type[TraceSourceAdapter[Any]]): The adapter class to register
+
+    Returns:
+        The original class
     """
-    TraceAdapterRegistry.register_adapter(adapter)
+    try:
+        adapter_instance = cls()
+        TraceAdapterRegistry.register_adapter(adapter_instance)
+        logger.debug("Registered adapter: '%s'", cls.__name__)
+    except Exception as e:
+        logger.error("Failed to register adapter: '%s'", cls.__name__, exc_info=e)
+
+    return cls
 
 
-def unregister_span_adapter(framework_identifier: str, output_type: type[Any] | None = None) -> bool:
+def unregister_adapter(framework_identifier: str, output_type: type[Any] | None = None) -> bool:
     """Unregister an adapter by framework identifier and output type.
 
     Args:
-        framework_identifier: The framework identifier to unregister
-        output_type: The output type to unregister (if None, removes all adapters
+        framework_identifier (str): The framework identifier to unregister
+        output_type (type[Any] | None): The output type to unregister (if None, removes all adapters
                     for this framework)
 
     Returns:

@@ -21,8 +21,8 @@ from .common import extract_usage_info
 from .common import extract_token_usage
 from .span_to_dfw_record import span_to_dfw_record
 from .trace_adapter_registry import TraceAdapterRegistry
-from .trace_adapter_registry import register_span_adapter
-from .trace_adapter_registry import unregister_span_adapter
+from .trace_adapter_registry import register_adapter
+from .trace_adapter_registry import unregister_adapter
 
 __all__ = [
     "extract_timestamp",
@@ -30,6 +30,6 @@ __all__ = [
     "extract_token_usage",
     "span_to_dfw_record",
     "TraceAdapterRegistry",
-    "register_span_adapter",
-    "unregister_span_adapter",
+    "register_adapter",
+    "unregister_adapter",
 ]

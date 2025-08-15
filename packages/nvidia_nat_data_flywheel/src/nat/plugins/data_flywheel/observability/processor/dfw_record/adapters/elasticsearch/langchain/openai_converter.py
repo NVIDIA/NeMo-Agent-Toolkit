@@ -177,22 +177,22 @@ def _validate_and_convert_tools(tools_schema: list) -> list[RequestTool]:
             tool = tool.model_dump()
 
         if not isinstance(tool, dict):
-            logger.warning("Invalid tool schema: expected dict, got %s", type(tool))
+            logger.warning("Invalid tool schema: expected 'dict', got '%s'", type(tool))
             continue
 
         if "function" not in tool:
-            logger.warning("Tool schema missing 'function' key: %s", tool)
+            logger.warning("Tool schema missing 'function' key: '%s'", tool)
             continue
 
         function_details = tool["function"]
         if not isinstance(function_details, dict):
-            logger.warning("Tool function details must be dict: %s", function_details)
+            logger.warning("Tool function details must be 'dict', got '%s'", function_details)
             continue
 
         # Validate required function fields
         required_fields = ["name", "description", "parameters"]
         if not all(field in function_details for field in required_fields):
-            logger.warning("Tool function missing required fields %s: %s", required_fields, function_details)
+            logger.warning("Tool function missing required fields '%s': '%s'", required_fields, function_details)
             continue
 
         try:
@@ -200,7 +200,7 @@ def _validate_and_convert_tools(tools_schema: list) -> list[RequestTool]:
             function_obj = FunctionDetails(**function_details)
             request_tools.append(RequestTool(type="function", function=function_obj))
         except Exception as e:
-            logger.warning("Failed to create RequestTool: %s", str(e))
+            logger.warning("Failed to create RequestTool: '%s'", str(e))
             continue
 
     return request_tools
@@ -218,7 +218,7 @@ def _convert_chat_response(chat_response: dict, span_name: str = "", index: int 
     """
     message = chat_response.get("message", {})
     if message is None:
-        logger.warning("Chat response missing message for span %s", span_name)
+        logger.warning("Chat response missing message for span: '%s'", span_name)
         return None
 
     # Get content
@@ -247,8 +247,16 @@ def _convert_chat_response(chat_response: dict, span_name: str = "", index: int 
     return response_choice
 
 
-def convert_langchain_openai(trace_source: TraceSource, client_id: str = "nat_test") -> DFWESRecord | None:
+def convert_langchain_openai(trace_source: TraceSource, client_id: str) -> DFWESRecord | None:
+    """Convert a LangChain OpenAI trace source to a DFWESRecord.
 
+    Args:
+        trace_source (TraceSource): The trace source to convert
+        client_id (str): The client ID to use for the DFW record
+
+    Returns:
+        DFWESRecord | None: The converted DFW record
+    """
     # Convert messages
     messages = []
     for message in trace_source.source.input_value:
@@ -284,7 +292,7 @@ def convert_langchain_openai(trace_source: TraceSource, client_id: str = "nat_te
 
     # Require at least one response choice
     if not response_choices:
-        logger.warning("No valid response choices found in span %s", trace_source.span.name)
+        logger.warning("No valid response choices found in span: '%s'", trace_source.span.name)
         return None
 
     # Get timestamp with better error handling
@@ -315,8 +323,8 @@ def convert_langchain_openai(trace_source: TraceSource, client_id: str = "nat_te
                                   workload_id=str(workload_id),
                                   client_id=client_id,
                                   error_details=None)
-        logger.debug("Successfully converted span %s to DFW record", trace_source.span.name)
+        logger.debug("Successfully converted span to DFWESRecord: '%s'", trace_source.span.name)
         return dfw_payload
     except Exception as e:
-        logger.error("Failed to create DFW record for span %s: %s", trace_source.span.name, str(e))
+        logger.error("Failed to create DFWESRecord for span: '%s'", trace_source.span.name, exc_info=e)
         return None

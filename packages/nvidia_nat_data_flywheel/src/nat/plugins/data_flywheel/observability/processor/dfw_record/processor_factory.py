@@ -19,6 +19,16 @@ from nat.observability.processor.processor import Processor
 
 
 def processor_factory(processor_class: type, from_type: type[Any], to_type: type[Any]) -> type[Processor]:
+    """Create a concrete processor class from a processor class and types.
+
+    Args:
+        processor_class (type): The processor class to create a concrete instance of
+        from_type (type[Any]): The type of the input data
+        to_type (type[Any]): The type of the output data
+
+    Returns:
+        type[Processor]: The concrete processor class
+    """
 
     class ConcreteProcessor(processor_class[from_type, to_type]):  # type: ignore
         pass
@@ -27,6 +37,15 @@ def processor_factory(processor_class: type, from_type: type[Any], to_type: type
 
 
 def processor_factory_from_type(processor_class: type, from_type: type[Any]) -> type[Processor]:
+    """Create a concrete processor class from a processor class and input type.
+
+    Args:
+        processor_class (type): The processor class to create a concrete instance of
+        from_type (type[Any]): The type of the input data
+
+    Returns:
+        type[Processor]: The concrete processor class
+    """
 
     class ConcreteProcessor(processor_class[from_type]):  # type: ignore
         pass
@@ -35,8 +54,17 @@ def processor_factory_from_type(processor_class: type, from_type: type[Any]) -> 
 
 
 def processor_factory_to_type(processor_class: type, to_type: type[Any]) -> type[Processor]:
+    """Create a concrete processor class from a processor class and output type.
 
-    class ConcreteProcessor(processor_class[to_type | None]):  # type: ignore
+    Args:
+        processor_class (type): The processor class to create a concrete instance of
+        to_type (type[Any]): The type of the output data
+
+    Returns:
+        type[Processor]: The concrete processor class
+    """
+
+    class ConcreteProcessor(processor_class[to_type]):  # type: ignore
         pass
 
     return ConcreteProcessor

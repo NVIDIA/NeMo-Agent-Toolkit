@@ -32,18 +32,39 @@ class TraceSourceAdapter(ABC, Generic[OutputT]):
 
     @abstractmethod
     def can_handle(self, trace_source: TraceSource) -> bool:
-        """Check if this adapter can handle the given trace source."""
+        """Check if this adapter can handle the given trace source.
+
+        Args:
+            trace_source (TraceSource): The trace source to check
+
+        Returns:
+            bool: True if the adapter can handle the trace source, False otherwise
+        """
         pass
 
     @abstractmethod
     def convert(self, trace_source: TraceSource, client_id: str) -> OutputT | None:
-        """Convert trace source to DFW record."""
+        """Convert trace source to DFW record.
+
+        Args:
+            trace_source (TraceSource): The trace source to convert
+            client_id (str): The client ID to use for the DFW record
+
+        Returns:
+            OutputT | None: The converted DFW record
+        """
         pass
 
     @property
     @abstractmethod
     def framework_identifier(self) -> str:
         """Return the framework identifier this adapter handles."""
+        pass
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Return the name of the adapter."""
         pass
 
     @property

@@ -18,12 +18,13 @@ import logging
 from nat.builder.context import AIQContextState
 from nat.plugins.data_flywheel.observability.exporter.dfw_exporter import DFWExporter
 from nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin import ElasticsearchMixin
+from nat.plugins.data_flywheel.observability.schema.dfw_es_record import DFWESRecord
 
 logger = logging.getLogger(__name__)
 
 
 class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
-    """Abstract base class for Data Flywheel exporters."""
+    """Elasticsearch-specific Data Flywheel exporter."""
 
     def __init__(self,
                  context_state: AIQContextState | None = None,
@@ -34,7 +35,7 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
                  drop_on_overflow: bool = False,
                  shutdown_timeout: float = 10.0,
                  **elasticsearch_kwargs):
-        """Initialize the Data Flywheel exporter.
+        """Initialize the Elasticsearch Data Flywheel exporter.
 
         Args:
             context_state: The context state to use for the exporter.
@@ -44,12 +45,14 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
             max_queue_size: The maximum queue size for exporting spans.
             drop_on_overflow: Whether to drop spans on overflow.
             shutdown_timeout: The shutdown timeout in seconds.
-            endpoint: The elasticsearch endpoint.
-            index: The elasticsearch index name.
-            elasticsearch_auth: The elasticsearch authentication credentials.
-            headers: The elasticsearch headers.
+            **elasticsearch_kwargs: Additional arguments for ElasticsearchMixin:
+                - endpoint: The elasticsearch endpoint.
+                - index: The elasticsearch index name.
+                - elasticsearch_auth: The elasticsearch authentication credentials.
+                - headers: The elasticsearch headers.
         """
-        # Initialize DFWExporter with only the parameters it accepts
+        # Initialize both mixins - ElasticsearchMixin expects elasticsearch_kwargs,
+        # DFWExporter expects the standard exporter parameters
         super().__init__(context_state=context_state,
                          batch_size=batch_size,
                          flush_interval=flush_interval,
@@ -58,6 +61,12 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
                          shutdown_timeout=shutdown_timeout,
                          client_id=client_id,
                          **elasticsearch_kwargs)
+
+    @property
+    def export_contract(self) -> type[DFWESRecord]:
+        """The export contract for Elasticsearch.
+        """
+        return DFWESRecord
 
     async def export_processed(self, item: dict | list[dict]) -> None:
         """Export processed DFW records to Elasticsearch."""

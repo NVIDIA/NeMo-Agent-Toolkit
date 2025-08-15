@@ -15,8 +15,8 @@
 
 import logging
 from abc import abstractmethod
-from typing import Any
-from typing import TypeVar
+
+from pydantic import BaseModel
 
 from nat.builder.context import AIQContextState
 from nat.data_models.span import Span
@@ -29,8 +29,6 @@ from nat.plugins.data_flywheel.observability.processor import processor_factory_
 from nat.plugins.data_flywheel.observability.processor import processor_factory_to_type
 
 logger = logging.getLogger(__name__)
-
-DFWOutputT = TypeVar("DFWOutputT")
 
 
 class DictBatchingProcessor(BatchingProcessor[dict]):
@@ -46,7 +44,6 @@ class DFWExporter(SpanExporter[Span, dict]):
     """Abstract base class for Data Flywheel exporters."""
 
     def __init__(self,
-                 to_type: type[Any],
                  context_state: AIQContextState | None = None,
                  batch_size: int = 100,
                  flush_interval: float = 5.0,
@@ -63,11 +60,12 @@ class DFWExporter(SpanExporter[Span, dict]):
             max_queue_size: The maximum queue size for exporting spans.
             drop_on_overflow: Whether to drop spans on overflow.
             shutdown_timeout: The shutdown timeout in seconds.
+            client_id: The client ID for the exporter.
         """
         super().__init__(context_state)
 
-        SpanToDFWESRecordProcessor = processor_factory_to_type(SpanToDFWRecordProcessor, to_type=to_type)
-        DFWToDictESProcessor = processor_factory_from_type(DFWToDictProcessor, from_type=to_type)
+        SpanToDFWESRecordProcessor = processor_factory_to_type(SpanToDFWRecordProcessor, to_type=self.export_contract)
+        DFWToDictESProcessor = processor_factory_from_type(DFWToDictProcessor, from_type=self.export_contract)
 
         self.add_processor(SpanToDFWESRecordProcessor(client_id=client_id))  # type: ignore
         self.add_processor(DFWToDictESProcessor())
@@ -80,6 +78,19 @@ class DFWExporter(SpanExporter[Span, dict]):
                                   shutdown_timeout=shutdown_timeout))
 
         self.add_processor(DictBatchFilterProcessor())
+
+    @property
+    @abstractmethod
+    def export_contract(self) -> type[BaseModel]:
+        """The export contract used for processing spans before converting to dict.
+
+        This type defines the structure of records that spans are converted to
+        before being serialized to dictionaries for export.
+
+        Returns:
+            type[Any]: The Pydantic model type for the export contract.
+        """
+        pass
 
     @abstractmethod
     async def export_processed(self, item: dict | list[dict]) -> None:

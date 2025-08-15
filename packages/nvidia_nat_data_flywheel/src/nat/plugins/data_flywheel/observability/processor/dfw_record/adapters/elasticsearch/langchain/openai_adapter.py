@@ -18,13 +18,15 @@ import logging
 from nat.plugins.data_flywheel.observability.processor.dfw_record.adapters import TraceSourceAdapter
 from nat.plugins.data_flywheel.observability.processor.dfw_record.adapters.elasticsearch.langchain import \
     convert_langchain_openai
+from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import register_adapter
 from nat.plugins.data_flywheel.observability.schema.dfw_es_record import DFWESRecord
 from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
 
 logger = logging.getLogger(__name__)
 
 
-class ESLangChainOpenAIAdapter(TraceSourceAdapter[DFWESRecord | None]):
+@register_adapter
+class ESLangChainOpenAIAdapter(TraceSourceAdapter[DFWESRecord]):
     """Adapter for LangChain OpenAI trace sources."""
 
     def can_handle(self, trace_source: TraceSource) -> bool:
@@ -37,3 +39,7 @@ class ESLangChainOpenAIAdapter(TraceSourceAdapter[DFWESRecord | None]):
     @property
     def framework_identifier(self) -> str:
         return "langchain_openai"
+
+    @property
+    def name(self) -> str:
+        return f"elasticsearch_{self.framework_identifier}_adapter"

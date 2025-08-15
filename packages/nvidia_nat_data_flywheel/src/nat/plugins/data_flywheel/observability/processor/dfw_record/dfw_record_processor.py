@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 DFWRecordT = TypeVar("DFWRecordT", bound=BaseModel)
 
 
-class DFWToDictProcessor(Processor[DFWRecordT | None, dict]):
+class DFWToDictProcessor(Processor[DFWRecordT, dict]):
     """Processor that converts a Span to an OtelSpan."""
 
     @override
@@ -45,13 +45,13 @@ class DFWToDictProcessor(Processor[DFWRecordT | None, dict]):
             dict: The converted dictionary.
         """
         if item is None:
-            logger.warning("Cannot process `None` item, returning empty dict")
+            logger.debug("Cannot process 'None' item, returning empty dict")
             return {}
 
         return item.model_dump(by_alias=True)
 
 
-class SpanToDFWRecordProcessor(Processor[Span, DFWRecordT | None], TypeIntrospectionMixin):
+class SpanToDFWRecordProcessor(Processor[Span, DFWRecordT], TypeIntrospectionMixin):
     """Processor that converts a Span to an OtelSpan."""
 
     def __init__(self, client_id: str):
@@ -65,7 +65,7 @@ class SpanToDFWRecordProcessor(Processor[Span, DFWRecordT | None], TypeIntrospec
             item (Span): The Span to convert.
 
         Returns:
-            DFWRecordT: The converted DFW record.
+            DFWRecordT | None: The converted DFW record.
         """
 
         match item.attributes.get("nat.event_type"):
@@ -73,5 +73,5 @@ class SpanToDFWRecordProcessor(Processor[Span, DFWRecordT | None], TypeIntrospec
                 dfw_record = span_to_dfw_record(span=item, to_type=self.output_type, client_id=self._client_id)
                 return cast(DFWRecordT | None, dfw_record)
             case _:
-                logger.warning("Unsupported event type: %s", item.attributes.get("nat.event_type"))
+                logger.debug("Unsupported event type: '%s'", item.attributes.get("nat.event_type"))
                 return None
