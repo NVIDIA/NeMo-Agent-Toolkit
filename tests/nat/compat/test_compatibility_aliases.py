@@ -18,15 +18,19 @@ import subprocess
 
 import pytest
 
+# Prevent isort from removing the pylint disable comments
+# isort:skip_file
 
-def test_namespace_compat():
-    import nat
 
+def test_aiq_subclass_is_nat_subclass():
     with pytest.deprecated_call():
-        import aiq
+        from aiq.data_models import function as aiq_function  # pylint: disable=no-name-in-module
 
-        # Check that the aiq namespace is an alias for nat
-        assert aiq.__path__ == nat.__path__
+        class MyAIQFunctionConfig(aiq_function.FunctionBaseConfig):
+            pass
+
+        from nat.data_models import function as nat_function
+        assert issubclass(MyAIQFunctionConfig, nat_function.FunctionBaseConfig)
 
 
 def test_cli_compat():
