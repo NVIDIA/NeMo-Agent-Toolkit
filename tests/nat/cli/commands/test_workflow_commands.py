@@ -14,9 +14,24 @@
 # limitations under the License.
 
 from pathlib import Path
+from unittest.mock import patch
 
+import pytest
+
+from nat.cli.commands.workflow.workflow_commands import _get_nat_dependency
 from nat.cli.commands.workflow.workflow_commands import get_repo_root
 
 
 def test_get_repo_root(project_dir: str):
     assert get_repo_root() == Path(project_dir)
+
+
+@patch('nat.cli.entrypoint.get_version')
+@pytest.mark.parametrize(
+    "versioned, expected_dep",
+    [(True, "nvidia-nat[langchain]~=1.2"), (False, "nvidia-nat[langchain]")],
+)
+def test_get_nat_dependency(mock_get_version, versioned, expected_dep):
+    mock_get_version.return_value = "1.2.3"
+    result = _get_nat_dependency(versioned=versioned)
+    assert result == expected_dep

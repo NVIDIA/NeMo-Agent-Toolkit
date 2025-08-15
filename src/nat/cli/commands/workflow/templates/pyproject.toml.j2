@@ -9,7 +9,7 @@ root = "{{ rel_path_to_repo_root}}"{% else %}requires = ["setuptools >= 64"]{% e
 name = "{{ package_name }}"
 {% if editable %}dynamic = ["version"]{% else %}version = "0.1.0"{% endif %}
 dependencies = [
-  "nvidia-nat[langchain]",
+  "{{ nat_dependency }}",
 ]
 requires-python = ">=3.11,<3.13"
 description = "Custom NeMo Agent Toolkit Workflow"
