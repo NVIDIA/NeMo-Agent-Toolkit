@@ -172,8 +172,8 @@ exclude = ["packages/compat"]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
   "asgi-lifespan~=2.1",
-  "flake8-pyproject~=1.2",
   "flake8~=7.1",
+  "flake8-pyproject~=1.2",
   "httpx-sse~=0.4",
   "ipython~=8.31",
   "isort==5.12.0",
@@ -193,8 +193,8 @@ dev = [
   "setuptools >= 64",
   "setuptools_scm>=8",
   "sphinx~=8.2",
-  "sphinx-copybutton>=0.5",
   "sphinx-autoapi>=3.6",
+  "sphinx-copybutton>=0.5",
   "sphinx-mermaid",
   "tomlkit~=0.13.2",
   "twine~=6.0",
