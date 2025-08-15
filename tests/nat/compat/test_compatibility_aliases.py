@@ -19,14 +19,15 @@ import subprocess
 import pytest
 
 
-def test_namespace_compat():
-    import nat
-
+def test_aiq_sublass_is_nat_subclass():
     with pytest.deprecated_call():
-        import aiq
+        from aiq.data_models import function as aiq_function
 
-        # Check that the aiq namespace is an alias for nat
-        assert aiq.__path__ == nat.__path__
+        class MyAIQFunctionConfig(aiq_function.FunctionBaseConfig):
+            pass
+
+        from nat.data_models import function as nat_function
+        assert issubclass(MyAIQFunctionConfig, nat_function.FunctionBaseConfig)
 
 
 def test_cli_compat():
