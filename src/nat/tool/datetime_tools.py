@@ -38,6 +38,8 @@ async def current_datetime(_config: CurrentTimeToolConfig, _builder: Builder):
 
     async def _get_current_time(unused: str) -> str:
 
+        del unused  # Unused parameter to avoid type checking error
+
         from nat.builder.context import Context
         nat_context = Context.get()
 
