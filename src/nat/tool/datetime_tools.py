@@ -29,14 +29,14 @@ class CurrentTimeToolConfig(FunctionBaseConfig, name="current_datetime"):
 
 
 @register_function(config_type=CurrentTimeToolConfig)
-async def current_datetime(config: CurrentTimeToolConfig, builder: Builder):
+async def current_datetime(_config: CurrentTimeToolConfig, _builder: Builder):
 
     import datetime
     import zoneinfo
 
     from starlette.datastructures import Headers
 
-    async def _get_current_time(unused: str) -> str:
+    async def _get_current_time(_unused: str) -> str:
 
         from nat.builder.context import Context
         nat_context = Context.get()
