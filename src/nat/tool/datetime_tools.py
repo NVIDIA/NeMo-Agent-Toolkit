@@ -37,7 +37,7 @@ async def current_datetime(config: CurrentTimeToolConfig, builder: Builder):
         now = datetime.datetime.now(zoneinfo.ZoneInfo("UTC"))  # Get current time in UTC
         now_human_readable = now.strftime(("%Y-%m-%d %H:%M:%S"))
 
-        return f"The current time of day is {now_human_readable}"  # Format time in H:MM AM/PM format
+        return f"The current time of day is {now_human_readable} UTC"  # Format time in H:MM AM/PM format
 
     yield FunctionInfo.from_fn(
         _get_current_time, description="Returns the current date and time in human readable format in UTC timezone.")
