@@ -21,7 +21,9 @@ from nat.data_models.function import FunctionBaseConfig
 
 class CurrentTimeToolConfig(FunctionBaseConfig, name="current_datetime"):
     """
-    Simple tool which returns the current date and time in human readable format in UTC timezone.
+    Simple tool which returns the current date and time in human readable format with timezone information. By default,
+    the timezone is in Etc/UTC. If the user provides a timezone in the header, we will use it. Timezone will be
+    provided in IANA zone name format. For example, "America/New_York" or "Etc/UTC".
     """
     pass
 
@@ -32,12 +34,33 @@ async def current_datetime(config: CurrentTimeToolConfig, builder: Builder):
     import datetime
     import zoneinfo
 
+    from starlette.datastructures import Headers
+
     async def _get_current_time(unused: str) -> str:
 
-        now = datetime.datetime.now(zoneinfo.ZoneInfo("UTC"))  # Get current time in UTC
+        from nat.builder.context import Context
+        nat_context = Context.get()
+
+        headers: Headers | None = nat_context.metadata.headers
+
+        # Default timezone is UTC
+        timezone_obj = zoneinfo.ZoneInfo("Etc/UTC")
+
+        if headers:
+            # If user has provided a timezone in the header, we will try to use it
+            timezone_header = headers.get("x-timezone")
+            if timezone_header:
+                try:
+                    timezone_obj = zoneinfo.ZoneInfo(timezone_header)
+                except Exception:
+                    pass
+
+        now = datetime.datetime.now(timezone_obj)
         now_human_readable = now.strftime(("%Y-%m-%d %H:%M:%S"))
 
-        return f"The current time of day is {now_human_readable} UTC"  # Format time in H:MM AM/PM format
+        # Returns the current time in human readable format with timezone information.
+        return f"The current time of day is {now_human_readable} {timezone_obj.key}"
 
     yield FunctionInfo.from_fn(
-        _get_current_time, description="Returns the current date and time in human readable format in UTC timezone.")
+        _get_current_time,
+        description="Returns the current date and time in human readable format with timezone information.")
