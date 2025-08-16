@@ -29,7 +29,8 @@ class CurrentTimeToolConfig(FunctionBaseConfig, name="current_datetime"):
 
 
 @register_function(config_type=CurrentTimeToolConfig)
-async def current_datetime(_config: CurrentTimeToolConfig, _builder: Builder):
+async def current_datetime(config: CurrentTimeToolConfig, builder: Builder):
+    del config, builder  # Unused parameters to avoid linting error
 
     import datetime
     import zoneinfo
@@ -38,7 +39,7 @@ async def current_datetime(_config: CurrentTimeToolConfig, _builder: Builder):
 
     async def _get_current_time(unused: str) -> str:
 
-        del unused  # Unused parameter to avoid type checking error
+        del unused  # Unused parameter to avoid linting error
 
         from nat.builder.context import Context
         nat_context = Context.get()
