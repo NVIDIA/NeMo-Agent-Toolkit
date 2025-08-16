@@ -71,7 +71,6 @@
         "rewrap.wrappingColumn": 120,
         "yapf.args": [
             "--style=${workspaceFolder}/pyproject.toml"
-        ],
-        "editor.formatOnSave": true
+        ]
     }
 }
