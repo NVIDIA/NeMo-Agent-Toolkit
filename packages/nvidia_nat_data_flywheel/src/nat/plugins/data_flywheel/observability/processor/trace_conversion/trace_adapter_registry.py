@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from collections.abc import Callable
 from functools import reduce
 from typing import Any
 
@@ -34,18 +35,18 @@ class TraceAdapterRegistry:
     _union_cache: Any = None
 
     @classmethod
-    def register_adapter(cls, trace_source_model: type):
+    def register_adapter(cls, trace_source_model: type) -> Callable[[Callable], Callable]:
         """Register adapter with a trace source Pydantic model.
 
         The model defines the schema for union-based detection and provides
         framework/provider information.
 
         Args:
-            trace_source_model: Pydantic model class that defines the trace source schema
+            trace_source_model (type): Pydantic model class that defines the trace source schema
                                (e.g., OpenAITraceContainer, NIMTraceContainer, CustomTraceContainer)
 
         Returns:
-            Decorator function that registers the converter
+            Callable: Decorator function that registers the converter
         """
 
         def decorator(func):
@@ -101,10 +102,10 @@ class TraceAdapterRegistry:
         """Extract framework and provider from a trace source model.
 
         Args:
-            model: Pydantic model class
+            model (type): Pydantic model class
 
         Returns:
-            Tuple of (framework, provider)
+            tuple[str, str]: Tuple of (framework, provider)
         """
         # Try to get default values from the model fields
         extracted_framework = "unknown"
@@ -115,7 +116,7 @@ class TraceAdapterRegistry:
             if 'framework' in model.model_fields:  # type: ignore
                 fw_field = model.model_fields['framework']  # type: ignore
                 if hasattr(fw_field, 'default') and fw_field.default is not None:
-                    extracted_framework = str(fw_field.default).lower().replace('llmframeworkenum.', '')
+                    extracted_framework = getattr(fw_field.default, 'value', str(fw_field.default))
 
             if 'provider' in model.model_fields:  # type: ignore
                 prov_field = model.model_fields['provider']  # type: ignore
@@ -129,11 +130,11 @@ class TraceAdapterRegistry:
         return extracted_framework, extracted_provider
 
     @classmethod
-    def get_current_union(cls):
+    def get_current_union(cls) -> type:
         """Get the current source union with all registered types.
 
         Returns:
-            Union type containing all registered concrete types plus original types
+            type: Union type containing all registered concrete types plus original types
         """
         if cls._union_cache is None:
             cls._rebuild_union()
@@ -156,6 +157,7 @@ class TraceAdapterRegistry:
         elif len(all_schema_types) == 1:
             cls._union_cache = next(iter(all_schema_types))
         else:
+            # Sort types by name to ensure consistent order
             sorted_types = sorted(all_schema_types, key=lambda t: t.__name__)
             # Create Union from multiple types using reduce
             cls._union_cache = reduce(lambda a, b: a | b, sorted_types)
@@ -182,15 +184,19 @@ class TraceAdapterRegistry:
 
     @classmethod
     def create_dynamic_instance(cls, trace_source: TraceContainer, framework: str, provider: str) -> TraceContainer:
-        """Convert a TraceContainer to the appropriate dynamic type if registered.
+        """Convert a TraceContainer to the appropriate dynamic type.
 
         Args:
-            trace_source: The base TraceContainer instance
-            framework: Framework name
-            provider: Provider name
+            trace_source (TraceContainer): The base TraceContainer instance
+            framework (str): Framework name
+            provider (str): Provider name
 
         Returns:
-            TraceContainer: Either the dynamic type instance or the original trace_source
+            TraceContainer: The dynamic type instance
+
+        Raises:
+            ValueError: If no adapter is registered for the framework+provider combination
+            RuntimeError: If dynamic type creation fails
         """
         # Check if we have a registered dynamic type for this framework+provider
         if (framework, provider) in cls._registered_types:
@@ -201,21 +207,22 @@ class TraceAdapterRegistry:
             try:
                 return dynamic_type(source=trace_source.source, span=trace_source.span)
             except Exception as e:
-                logger.warning("Failed to create dynamic type %s: %s", dynamic_type.__name__, e)
-                return trace_source
+                logger.error("Failed to create dynamic type %s: %s", dynamic_type.__name__, e)
+                raise RuntimeError(
+                    f"Dynamic type creation failed for {framework}+{provider}: {dynamic_type.__name__}") from e
         else:
-            logger.debug("No dynamic type registered for %s+%s", framework, provider)
-            return trace_source
+            logger.error("No dynamic type registered for %s+%s", framework, provider)
+            raise ValueError(f"No adapter registered for framework='{framework}' provider='{provider}'")
 
     @classmethod
     def list_registered_types(cls) -> dict[tuple[str, str], str]:
         """List all registered framework+provider combinations.
 
         Returns:
-            Dict mapping (framework, provider) tuples to type names
+            dict[tuple[str, str], str]: Dict mapping (framework, provider) tuples to type names
         """
         return {key: type_obj.__name__ for key, type_obj in cls._registered_types.items()}
 
 
-# Convenience function for the new approach
+# Convenience function for adapter registration
 register_adapter = TraceAdapterRegistry.register_adapter

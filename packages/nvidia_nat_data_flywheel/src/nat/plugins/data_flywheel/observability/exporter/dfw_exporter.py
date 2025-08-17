@@ -22,11 +22,11 @@ from nat.builder.context import ContextState
 from nat.data_models.span import Span
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.observability.processor.batching_processor import BatchingProcessor
+from nat.observability.processor.falsy_batch_filter_processor import DictBatchFilterProcessor
+from nat.observability.processor.processor_factory import processor_factory_from_type
+from nat.observability.processor.processor_factory import processor_factory_to_type
 from nat.plugins.data_flywheel.observability.processor import DFWToDictProcessor
-from nat.plugins.data_flywheel.observability.processor import DictBatchFilterProcessor
 from nat.plugins.data_flywheel.observability.processor import SpanToDFWRecordProcessor
-from nat.plugins.data_flywheel.observability.processor import processor_factory_from_type
-from nat.plugins.data_flywheel.observability.processor import processor_factory_to_type
 
 logger = logging.getLogger(__name__)
 

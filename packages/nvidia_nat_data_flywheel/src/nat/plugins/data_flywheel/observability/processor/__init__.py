@@ -14,26 +14,14 @@
 # limitations under the License.
 
 # DFW Record Processors
-from .dfw_record.dfw_record_processor import SpanToDFWRecordProcessor
-from .dfw_record.dfw_record_processor import DFWToDictProcessor
-from .dfw_record.processor_factory import processor_factory
-from .dfw_record.processor_factory import processor_factory_from_type
-from .dfw_record.processor_factory import processor_factory_to_type
-
-# General Batch Filtering Processors
-from .falsy_batch_filter_processor import DictBatchFilterProcessor
-from .falsy_batch_filter_processor import FalsyBatchFilterProcessor
+from .dfw_record_processor import SpanToDFWRecordProcessor
+from .dfw_record_processor import DFWToDictProcessor
 
 # Trace Source Registry
-from .dfw_record.trace_adapter_registry import TraceAdapterRegistry
+from .trace_conversion.trace_adapter_registry import TraceAdapterRegistry
 
 __all__ = [
     "SpanToDFWRecordProcessor",  # DFW Record Processors
     "DFWToDictProcessor",
-    "FalsyBatchFilterProcessor",  # General Processors
-    "DictBatchFilterProcessor",
-    "processor_factory",  # Core Functions
-    "processor_factory_from_type",
-    "processor_factory_to_type",
     "TraceAdapterRegistry",  # Trace Source Registry
 ]

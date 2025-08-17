@@ -40,7 +40,7 @@ class TraceContainer(BaseModel):
             try:
                 from pydantic import TypeAdapter
 
-                from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import \
+                from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import \
                     TraceAdapterRegistry
 
                 current_union = TraceAdapterRegistry.get_current_union()
@@ -60,7 +60,7 @@ class TraceContainer(BaseModel):
         """Initialize TraceSource and ensure union is built."""
         # Trigger union building on first instantiation if needed
         try:
-            from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import \
+            from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import \
                 TraceAdapterRegistry
             TraceAdapterRegistry.get_current_union()  # This ensures union is built and model updated
         except ImportError:

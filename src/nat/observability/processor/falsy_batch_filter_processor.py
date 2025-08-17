@@ -43,3 +43,13 @@ class FalsyBatchFilterProcessor(Processor[list[FalsyT], list[FalsyT]]):
 class DictBatchFilterProcessor(FalsyBatchFilterProcessor[dict]):
     """Processor that filters out empty dict items from a batch."""
     pass
+
+
+class ListBatchFilterProcessor(FalsyBatchFilterProcessor[list]):
+    """Processor that filters out empty list items from a batch."""
+    pass
+
+
+class SetBatchFilterProcessor(FalsyBatchFilterProcessor[set]):
+    """Processor that filters out empty set items from a batch."""
+    pass

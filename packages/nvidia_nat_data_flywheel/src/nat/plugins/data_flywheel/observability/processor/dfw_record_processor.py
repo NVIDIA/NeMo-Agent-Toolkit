@@ -23,7 +23,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.span import Span
 from nat.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
 from nat.observability.processor.processor import Processor
-from nat.plugins.data_flywheel.observability.processor.dfw_record import span_to_dfw_record
+from nat.plugins.data_flywheel.observability.processor.trace_conversion import span_to_dfw_record
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)

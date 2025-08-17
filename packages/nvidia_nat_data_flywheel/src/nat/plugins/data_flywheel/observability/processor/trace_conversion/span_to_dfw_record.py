@@ -20,6 +20,8 @@ from typing import Any
 from pydantic import BaseModel
 
 from nat.data_models.span import Span
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import \
+    TraceAdapterRegistry
 from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
 from nat.utils.type_converter import GlobalTypeConverter
 
@@ -30,7 +32,7 @@ def _get_string_value(value: Any) -> str:
     """Extract string value from enum or literal type safely.
 
     Args:
-        value: Could be an Enum, string, or other type
+        value (Any): Could be an Enum, string, or other type
 
     Returns:
         str: String representation of the value
@@ -75,23 +77,13 @@ def get_trace_source(span: Span, client_id: str) -> TraceContainer:
         detected_provider = getattr(trace_container.source, 'provider', 'unknown')
 
         # Convert enum to string if needed
-        if hasattr(detected_provider, 'value'):
-            detected_provider = detected_provider.value
+        detected_provider = _get_string_value(detected_provider)
 
-        # Now convert to dynamic type if available
-        try:
-            from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import \
-                TraceAdapterRegistry
-            return TraceAdapterRegistry.create_dynamic_instance(trace_container, framework, detected_provider)
-        except ImportError:
-            logger.debug("TraceAdapterRegistry not available, using base TraceContainer")
-            return trace_container
+        # Now convert to dynamic type - must have registered adapter
+        return TraceAdapterRegistry.create_dynamic_instance(trace_container, framework, detected_provider)
 
     except Exception as e:
         # Schema detection failed - this indicates missing schema registration or malformed data
-        from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import \
-            TraceAdapterRegistry
-
         available_schemas = list(TraceAdapterRegistry._registered_models.keys())
         schema_names = [schema.__name__ for schema in available_schemas]
 
@@ -102,7 +94,7 @@ def get_trace_source(span: Span, client_id: str) -> TraceContainer:
                          f"Original error: {e}") from e
 
 
-def span_to_dfw_record(span: Span, to_type: type[BaseModel], client_id: str = "nat_client") -> BaseModel | None:
+def span_to_dfw_record(span: Span, to_type: type[BaseModel], client_id: str) -> BaseModel | None:
     """Convert a span to DFW record using registered adapters.
 
     Args:
