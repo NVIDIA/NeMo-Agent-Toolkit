@@ -64,8 +64,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
-        self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration()
         self.eval_trace_context = get_eval_trace_context()  # Get the global trace context
+        self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration(self.eval_trace_context)
         # Metadata
         self.eval_input: EvalInput | None = None
         self.workflow_interrupted: bool = False

@@ -132,7 +132,7 @@ class WeaveExporter(SpanExporter[Span, Span], EvalExporterBase):
         Returns:
             Call: The Weave call created from the span and step data.
         """
-        # Use the generic method to get the best parent call
+        # Get the best parent call for the current evaluation context
         parent_call = self.get_evaluation_parent_call()
 
         # If no parent from evaluation context, check our internal stack for parent relationships

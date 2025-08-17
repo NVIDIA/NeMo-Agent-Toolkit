@@ -22,7 +22,6 @@ from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.usage_stats import UsageStats
 from nat.eval.usage_stats import UsageStatsItem
-from nat.eval.utils.eval_trace_ctx import get_eval_trace_context
 from nat.profiler.data_models import ProfilerResults
 
 logger = logging.getLogger(__name__)
@@ -33,12 +32,12 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
     Class to handle all Weave integration functionality.
     """
 
-    def __init__(self):
+    def __init__(self, eval_trace_context):
         self.available = False
         self.client = None
         self.eval_logger = None
         self.pred_loggers = {}
-        self.eval_trace_context = get_eval_trace_context()
+        self.eval_trace_context = eval_trace_context
 
         try:
             from weave.flow.eval_imperative import EvaluationLogger
