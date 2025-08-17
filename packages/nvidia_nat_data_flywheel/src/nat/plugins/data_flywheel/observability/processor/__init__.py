@@ -24,6 +24,9 @@ from .dfw_record.processor_factory import processor_factory_to_type
 from .falsy_batch_filter_processor import DictBatchFilterProcessor
 from .falsy_batch_filter_processor import FalsyBatchFilterProcessor
 
+# Trace Source Registry
+from .dfw_record.trace_adapter_registry import TraceAdapterRegistry
+
 __all__ = [
     "SpanToDFWRecordProcessor",  # DFW Record Processors
     "DFWToDictProcessor",
@@ -32,4 +35,5 @@ __all__ = [
     "processor_factory",  # Core Functions
     "processor_factory_from_type",
     "processor_factory_to_type",
+    "TraceAdapterRegistry",  # Trace Source Registry
 ]

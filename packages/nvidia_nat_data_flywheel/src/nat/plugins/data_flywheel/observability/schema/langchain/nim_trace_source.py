@@ -17,9 +17,10 @@ import logging
 from typing import Literal
 
 from nat.plugins.data_flywheel.observability.schema.langchain.openai_trace_source import OpenAITraceSourceBase
+from nat.plugins.data_flywheel.observability.schema.provider import Provider
 
 logger = logging.getLogger(__name__)
 
 
-class NIMTraceSource(OpenAITraceSourceBase[Literal["nim"]]):
-    provider: Literal["nim"] = "nim"
+class NIMTraceSource(OpenAITraceSourceBase[Literal[Provider.NIM]]):
+    provider: Literal[Provider.NIM] = Provider.NIM

@@ -20,8 +20,8 @@ from typing import Any
 from pydantic import BaseModel
 
 from nat.data_models.span import Span
-from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import TraceAdapterRegistry
-from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
+from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
+from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
@@ -40,24 +40,66 @@ def _get_string_value(value: Any) -> str:
     return str(value)
 
 
-def get_trace_source(span: Span) -> TraceSource:
+def get_trace_source(span: Span, client_id: str) -> TraceContainer:
     """Get the source of a span.
 
     Args:
         span (Span): The span to get the source of
+        client_id (str): The client ID to use for the DFW record
 
     Returns:
-        TraceSource: The source of the span
+        TraceContainer: The source of the span
     """
+    # Extract framework (provider will be detected by union schema matching)
+    framework = _get_string_value(span.attributes.get("nat.framework", "langchain"))
+
+    # Create source dictionary WITHOUT provider - let union detect it via schema matching
     source_dict = {
         "source": {
-            "framework": span.attributes.get("nat.framework", "unknown"),
+            "framework": framework,  # Don't include provider - let union schemas set their default values
             "input_value": span.attributes.get("input.value", None),
             "metadata": span.attributes.get("nat.metadata", None),
+            "client_id": client_id,
         },
         "span": span
     }
-    return TraceSource(**source_dict)
+
+    try:
+        # Create the TraceContainer - union will pick the right type based on schema
+        trace_container = TraceContainer(**source_dict)
+        logger.debug("Union selected schema: %s with provider: %s",
+                     type(trace_container.source),
+                     getattr(trace_container.source, 'provider', 'unknown'))
+
+        # Extract the provider that was detected by the union
+        detected_provider = getattr(trace_container.source, 'provider', 'unknown')
+
+        # Convert enum to string if needed
+        if hasattr(detected_provider, 'value'):
+            detected_provider = detected_provider.value
+
+        # Now convert to dynamic type if available
+        try:
+            from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import \
+                TraceAdapterRegistry
+            return TraceAdapterRegistry.create_dynamic_instance(trace_container, framework, detected_provider)
+        except ImportError:
+            logger.debug("TraceAdapterRegistry not available, using base TraceContainer")
+            return trace_container
+
+    except Exception as e:
+        # Schema detection failed - this indicates missing schema registration or malformed data
+        from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import \
+            TraceAdapterRegistry
+
+        available_schemas = list(TraceAdapterRegistry._registered_models.keys())
+        schema_names = [schema.__name__ for schema in available_schemas]
+
+        raise ValueError(f"Schema-based detection failed for framework '{framework}'. "
+                         f"Data structure doesn't match any registered trace source schemas. "
+                         f"Available schemas: {schema_names}. "
+                         f"Ensure proper schema is registered with @register_adapter() for this data format. "
+                         f"Original error: {e}") from e
 
 
 def span_to_dfw_record(span: Span, to_type: type[BaseModel], client_id: str = "nat_client") -> BaseModel | None:
@@ -71,22 +113,5 @@ def span_to_dfw_record(span: Span, to_type: type[BaseModel], client_id: str = "n
     Returns:
         BaseModel | None: The converted DFW record
     """
-    trace_source = get_trace_source(span)
-    adapter = TraceAdapterRegistry.get_adapter(trace_source, to_type)
-    if adapter is None:
-        framework_str = _get_string_value(trace_source.source.framework)  # pylint: disable=no-member
-        provider_str = _get_string_value(trace_source.source.provider)  # pylint: disable=no-member
-        framework_provider = f"{framework_str}_{provider_str}"
-        logger.warning("No adapter found for framework: '%s'. Supported frameworks: '%s'",
-                       framework_provider,
-                       TraceAdapterRegistry.list_supported_frameworks())
-        return None
-
-    try:
-        return adapter.convert(trace_source, client_id)
-    except (ValueError, TypeError) as e:
-        logger.error("Invalid input for adapter '%s': '%s'", adapter.framework_identifier, str(e))
-        return None
-    except Exception as e:
-        logger.error("Unexpected error in adapter '%s': '%s'", adapter.framework_identifier, str(e))
-        return None
+    trace_source = get_trace_source(span, client_id)
+    return GlobalTypeConverter.convert(trace_source, to_type=to_type)

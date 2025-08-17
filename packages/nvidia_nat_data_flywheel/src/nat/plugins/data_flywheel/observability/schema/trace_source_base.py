@@ -27,3 +27,4 @@ class TraceSourceBase(BaseModel, Generic[FrameworkT, ProviderT]):
     """Base class for trace sources with generic framework and provider types."""
     framework: FrameworkT = Field(..., description="The framework of the trace source")
     provider: ProviderT = Field(..., description="The provider of the trace source")
+    client_id: str = Field(..., description="The client ID of the trace source")

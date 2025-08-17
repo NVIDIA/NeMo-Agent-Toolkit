@@ -15,12 +15,8 @@
 
 from .nim_converter import convert_langchain_nim
 from .openai_converter import convert_langchain_openai
-from .nim_adapter import ESLangChainNimAdapter
-from .openai_adapter import ESLangChainOpenAIAdapter
 
 __all__ = [
     "convert_langchain_nim",
     "convert_langchain_openai",
-    "ESLangChainNimAdapter",
-    "ESLangChainOpenAIAdapter",
 ]

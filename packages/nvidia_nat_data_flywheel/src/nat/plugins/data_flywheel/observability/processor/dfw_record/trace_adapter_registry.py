@@ -14,235 +14,208 @@
 # limitations under the License.
 
 import logging
-from enum import Enum
-from functools import lru_cache
+from functools import reduce
 from typing import Any
-from typing import TypeVar
 
-from nat.plugins.data_flywheel.observability.processor.dfw_record.adapters import TraceSourceAdapter
-from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
-from nat.utils.type_utils import DecomposedType
-
-OutputT = TypeVar("OutputT")
+from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
+from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
 
-def _get_string_value(value: Any) -> str:
-    """Extract string value from enum or literal type safely.
-
-    Args:
-        value (Any): Could be an Enum, string, or other type
-
-    Returns:
-        str: String representation of the value
-    """
-    if isinstance(value, Enum):
-        return value.value
-    return str(value)
-
-
-@lru_cache(maxsize=128)
-def _get_output_type_name(output_type: type[Any]) -> str:
-    """Extract a registry-friendly name from an output type, handling unions and optionals.
-
-    Recursively handles nested optionals and unions to extract meaningful type names.
-
-    Args:
-        output_type (type[Any]): The type to extract a name from
-
-    Returns:
-        str: Registry-friendly type name (e.g., "DFWESRecord", "TypeA_or_TypeB")
-    """
-    decomposed = DecomposedType(output_type)
-
-    if decomposed.is_optional:
-        # Handle Optional[T] -> recursively process T
-        inner_type = decomposed.get_optional_type()
-        return _get_output_type_name(inner_type.type)
-    if decomposed.is_union:
-        # Handle Union[A, B, C] -> "A_or_B_or_C"
-        non_none_types = [arg for arg in decomposed.args if arg is not type(None)]
-        if non_none_types:
-            # Recursively process each union member
-            type_names = [_get_output_type_name(arg) for arg in non_none_types]
-            return "_or_".join(sorted(type_names))
-        return 'Unknown'
-    if hasattr(output_type, '__name__'):
-        return output_type.__name__
-
-    return str(output_type)
-
-
 class TraceAdapterRegistry:
-    """Registry for managing trace source adapters.
+    """Registry for dynamically creating concrete TraceContainer types and updating unions.
 
-    Supports multiple output types while maintaining backward compatibility.
-    Stores adapters in format: {framework_identifier: {output_type_name: adapter}}
+    Maintains schema detection through Pydantic unions while enabling dynamic registration.
     """
 
-    _adapters: dict[str, dict[str, TraceSourceAdapter[Any]]] = {}
+    _registered_types: dict[tuple[str, str], type] = {}  # (framework, provider) -> concrete_type
+    _registered_models: dict[type, tuple[str, str]] = {}  # model_class -> (framework, provider)
+    _union_cache: Any = None
 
     @classmethod
-    def register_adapter(cls, adapter: TraceSourceAdapter[Any]):
-        """Register a new adapter.
+    def register_adapter(cls, trace_source_model: type):
+        """Register adapter with a trace source Pydantic model.
 
-        The output type is automatically determined from the adapter's output_type property.
+        The model defines the schema for union-based detection and provides
+        framework/provider information.
 
         Args:
-            adapter (TraceSourceAdapter[Any]): The adapter to register
-        """
-        framework_id = adapter.framework_identifier
-        output_type_name = _get_output_type_name(adapter.output_type)
-
-        if framework_id not in cls._adapters:
-            cls._adapters[framework_id] = {}
-
-        cls._adapters[framework_id][output_type_name] = adapter
-        logger.debug("Registered adapter for framework: '%s', output type: '%s'", framework_id, output_type_name)
-
-    @classmethod
-    def unregister_adapter(cls, framework_identifier: str, output_type: type[Any] | None = None) -> bool:
-        """Unregister an adapter by framework identifier and output type.
-
-        Args:
-            framework_identifier (str): The framework identifier to unregister
-            output_type (type[Any] | None): The output type to unregister (if None, removes all adapters
-                        for this framework)
+            trace_source_model: Pydantic model class that defines the trace source schema
+                               (e.g., OpenAITraceContainer, NIMTraceContainer, CustomTraceContainer)
 
         Returns:
-            True if adapter was found and removed, False otherwise
+            Decorator function that registers the converter
         """
-        if framework_identifier not in cls._adapters:
-            logger.warning("Attempted to unregister non-existent framework: '%s'", framework_identifier)
-            return False
 
-        if output_type is None:
-            # Remove all adapters for this framework
-            cls._adapters.pop(framework_identifier)
-            logger.debug("Unregistered all adapters for framework: %s", framework_identifier)
-            return True
+        def decorator(func):
+            # Extract framework and provider from the model
+            framework, provider = cls._extract_framework_provider(trace_source_model)
 
-        # Remove specific output type adapter
-        output_type_name = _get_output_type_name(output_type)
-        if output_type_name in cls._adapters[framework_identifier]:
-            cls._adapters[framework_identifier].pop(output_type_name)
+            # Create unique concrete type for GlobalTypeConverter distinction
+            type_name = f"{framework.title()}{provider.title()}TraceContainer"
+            concrete_type = type(
+                type_name, (TraceContainer, ),
+                {
+                    '_framework': framework,
+                    '_provider': provider,
+                    '_source_model': trace_source_model,
+                    '__module__': func.__module__,
+                    '__qualname__': type_name,
+                })
 
-            # Clean up empty framework entry
-            if not cls._adapters[framework_identifier]:
-                cls._adapters.pop(framework_identifier)
+            # Store the mapping
+            cls._registered_types[(framework, provider)] = concrete_type
+            cls._registered_models[trace_source_model] = (framework, provider)
 
-            logger.debug("Unregistered adapter for framework: %s, output type: %s",
-                         framework_identifier,
-                         output_type_name)
-            return True
+            # Immediately rebuild union and update TraceContainer model
+            cls._rebuild_union()
 
-        logger.warning("Attempted to unregister non-existent adapter for framework: '%s', output type: '%s'",
-                       framework_identifier,
-                       output_type_name)
-        return False
+            # Create converter function with concrete type signature
+            def typed_converter(trace_source: concrete_type):
+                """Schema-specific converter with unique input type."""
+                return func(trace_source)
 
-    @classmethod
-    def get_adapter(cls, trace_source: TraceSource, output_type: type[OutputT]) -> TraceSourceAdapter[OutputT] | None:
-        """Get the appropriate adapter for a trace source and output type.
-
-        Args:
-            trace_source (TraceSource): The trace source to find an adapter for
-            output_type (type[OutputT]): The desired output type
-
-        Returns:
-            TraceSourceAdapter[OutputT] | None: The appropriate adapter for the trace source and output type
-        """
-        # Input validation: Ensure required fields are present and valid
-        source_obj = trace_source.source
-        if not source_obj.framework or not source_obj.provider:
-            logger.warning("Invalid trace source: missing framework '%s' or provider '%s'",
-                           source_obj.framework,
-                           source_obj.provider)
-            return None
-
-        framework_str = _get_string_value(source_obj.framework)
-        provider_str = _get_string_value(source_obj.provider)
-        framework_provider = f"{framework_str}_{provider_str}"
-        output_type_name = _get_output_type_name(output_type)
-
-        framework_adapters = cls._adapters.get(framework_provider)
-        if framework_adapters:
-            return framework_adapters.get(output_type_name)  # type: ignore
-
-        return None
-
-    @classmethod
-    def list_supported_frameworks(cls) -> list[str]:
-        """List all supported framework identifiers.
-
-        Returns:
-            list[str]: List of supported framework identifiers
-        """
-        return list(cls._adapters.keys())
-
-    @classmethod
-    def list_supported_output_types(cls, framework_identifier: str | None = None) -> list[str]:
-        """List all supported output types.
-
-        Args:
-            framework_identifier (str | None): If provided, list output types for this framework only
-        """
-        # Return output types for a specific framework
-        if framework_identifier:
-            framework_adapters = cls._adapters.get(framework_identifier, {})
-            return list(framework_adapters.keys())
-
-        # Return all unique output types across all frameworks
-        output_types = set()
-        for framework_adapters in cls._adapters.values():
-            output_types.update(framework_adapters.keys())
-        return list(output_types)
-
-    @classmethod
-    def list_adapters(cls) -> dict[str, dict[str, str]]:
-        """List all registered adapters in a structured format.
-
-        Returns:
-            Dict in format: {framework_id: {output_type: adapter_class_name}}
-        """
-        result = {}
-        for framework_id, framework_adapters in cls._adapters.items():
-            result[framework_id] = {
-                output_type: adapter.__class__.__name__
-                for output_type, adapter in framework_adapters.items()
+            # Set proper function metadata
+            typed_converter.__name__ = f"convert_{framework}_{provider}"
+            typed_converter.__qualname__ = typed_converter.__name__
+            typed_converter.__annotations__ = {
+                'trace_source': concrete_type, 'return': func.__annotations__.get('return', type(None))
             }
-        return result
+
+            # Register with GlobalTypeConverter
+            GlobalTypeConverter.register_converter(typed_converter)
+            logger.debug("Registered converter: %s for model %s (%s+%s) with type %s",
+                         typed_converter.__name__,
+                         trace_source_model.__name__,
+                         framework,
+                         provider,
+                         type_name)
+
+            return func
+
+        return decorator
+
+    @classmethod
+    def _extract_framework_provider(cls, model: type) -> tuple[str, str]:
+        """Extract framework and provider from a trace source model.
+
+        Args:
+            model: Pydantic model class
+
+        Returns:
+            Tuple of (framework, provider)
+        """
+        # Try to get default values from the model fields
+        extracted_framework = "unknown"
+        extracted_provider = "unknown"
+
+        if hasattr(model, 'model_fields'):
+            # Pydantic v2 approach
+            if 'framework' in model.model_fields:  # type: ignore
+                fw_field = model.model_fields['framework']  # type: ignore
+                if hasattr(fw_field, 'default') and fw_field.default is not None:
+                    extracted_framework = str(fw_field.default).lower().replace('llmframeworkenum.', '')
+
+            if 'provider' in model.model_fields:  # type: ignore
+                prov_field = model.model_fields['provider']  # type: ignore
+                if hasattr(prov_field, 'default') and prov_field.default is not None:
+                    extracted_provider = getattr(prov_field.default, 'value', str(prov_field.default))
+
+        logger.debug("Extracted framework='%s', provider='%s' from %s",
+                     extracted_framework,
+                     extracted_provider,
+                     model.__name__)
+        return extracted_framework, extracted_provider
+
+    @classmethod
+    def get_current_union(cls):
+        """Get the current source union with all registered types.
+
+        Returns:
+            Union type containing all registered concrete types plus original types
+        """
+        if cls._union_cache is None:
+            cls._rebuild_union()
+        return cls._union_cache
+
+    @classmethod
+    def _rebuild_union(cls):
+        """Rebuild the union with all registered schema models."""
+
+        # Start empty - all types added through registration
+        all_schema_types = set()
+
+        # Add all registered schema models for union detection
+        all_schema_types.update(cls._registered_models.keys())
+
+        # Create union from schema types (these are used for schema detection)
+        if len(all_schema_types) == 0:
+            # No types registered yet - use Any as permissive fallback
+            cls._union_cache = Any
+        elif len(all_schema_types) == 1:
+            cls._union_cache = next(iter(all_schema_types))
+        else:
+            sorted_types = sorted(all_schema_types, key=lambda t: t.__name__)
+            # Create Union from multiple types using reduce
+            cls._union_cache = reduce(lambda a, b: a | b, sorted_types)
+
+        logger.debug("Rebuilt source union with %d registered schema types: %s",
+                     len(all_schema_types), [t.__name__ for t in all_schema_types])
+
+        # Update TraceContainer model with new union
+        cls._update_trace_source_model()
+
+    @classmethod
+    def _update_trace_source_model(cls):
+        """Update the TraceContainer model to use the current dynamic union."""
+        try:
+            # Update the source field annotation to use current union
+            if hasattr(TraceContainer, '__annotations__'):
+                TraceContainer.__annotations__['source'] = cls._union_cache
+
+                # Force Pydantic to rebuild the model with new annotations
+                TraceContainer.model_rebuild()
+                logger.debug("Updated TraceContainer model with new union type")
+        except Exception as e:
+            logger.warning("Failed to update TraceContainer model: %s", e)
+
+    @classmethod
+    def create_dynamic_instance(cls, trace_source: TraceContainer, framework: str, provider: str) -> TraceContainer:
+        """Convert a TraceContainer to the appropriate dynamic type if registered.
+
+        Args:
+            trace_source: The base TraceContainer instance
+            framework: Framework name
+            provider: Provider name
+
+        Returns:
+            TraceContainer: Either the dynamic type instance or the original trace_source
+        """
+        # Check if we have a registered dynamic type for this framework+provider
+        if (framework, provider) in cls._registered_types:
+            dynamic_type = cls._registered_types[(framework, provider)]
+            logger.debug("Converting to dynamic type %s for %s+%s", dynamic_type.__name__, framework, provider)
+
+            # Create instance of the dynamic type with the same data
+            try:
+                return dynamic_type(source=trace_source.source, span=trace_source.span)
+            except Exception as e:
+                logger.warning("Failed to create dynamic type %s: %s", dynamic_type.__name__, e)
+                return trace_source
+        else:
+            logger.debug("No dynamic type registered for %s+%s", framework, provider)
+            return trace_source
+
+    @classmethod
+    def list_registered_types(cls) -> dict[tuple[str, str], str]:
+        """List all registered framework+provider combinations.
+
+        Returns:
+            Dict mapping (framework, provider) tuples to type names
+        """
+        return {key: type_obj.__name__ for key, type_obj in cls._registered_types.items()}
 
 
-def register_adapter(cls: type[TraceSourceAdapter[Any]]):
-    """Decorator to automatically register an adapter class.
-
-    Args:
-        cls (type[TraceSourceAdapter[Any]]): The adapter class to register
-
-    Returns:
-        The original class
-    """
-    try:
-        adapter_instance = cls()
-        TraceAdapterRegistry.register_adapter(adapter_instance)
-        logger.debug("Registered adapter: '%s'", cls.__name__)
-    except Exception as e:
-        logger.error("Failed to register adapter: '%s'", cls.__name__, exc_info=e)
-
-    return cls
-
-
-def unregister_adapter(framework_identifier: str, output_type: type[Any] | None = None) -> bool:
-    """Unregister an adapter by framework identifier and output type.
-
-    Args:
-        framework_identifier (str): The framework identifier to unregister
-        output_type (type[Any] | None): The output type to unregister (if None, removes all adapters
-                    for this framework)
-
-    Returns:
-        True if adapter was found and removed, False otherwise
-    """
-    return TraceAdapterRegistry.unregister_adapter(framework_identifier, output_type)
+# Convenience function for the new approach
+register_adapter = TraceAdapterRegistry.register_adapter

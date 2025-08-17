@@ -24,10 +24,11 @@ from pydantic import field_validator
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import ToolSchema
 from nat.plugins.data_flywheel.observability.schema.langchain.langchain_message import LangChainMessage
+from nat.plugins.data_flywheel.observability.schema.provider import Provider
 from nat.plugins.data_flywheel.observability.schema.trace_source_base import TraceSourceBase
 from nat.plugins.data_flywheel.observability.utils.deserialize import deserialize_input_value
 
-ProviderT = TypeVar("ProviderT", bound=str)
+ProviderT = TypeVar("ProviderT")
 
 logger = logging.getLogger(__name__)
 
@@ -85,5 +86,5 @@ class OpenAITraceSourceBase(TraceSourceBase[Literal[LLMFrameworkEnum.LANGCHAIN],
         raise ValueError(f"Invalid metadata format: {v}")
 
 
-class OpenAITraceSource(OpenAITraceSourceBase[Literal["openai"]]):
-    provider: Literal["openai"] = "openai"
+class OpenAITraceSource(OpenAITraceSourceBase[Literal[Provider.OPENAI]]):
+    provider: Literal[Provider.OPENAI] = Provider.OPENAI

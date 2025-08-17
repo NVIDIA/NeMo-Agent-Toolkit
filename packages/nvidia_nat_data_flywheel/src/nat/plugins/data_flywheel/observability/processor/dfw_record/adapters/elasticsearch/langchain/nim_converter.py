@@ -19,20 +19,22 @@ import logging
 # flake8: noqa
 from nat.plugins.data_flywheel.observability.processor.dfw_record.adapters.elasticsearch.langchain.openai_converter import \
     convert_langchain_openai
+from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import register_adapter
 from nat.plugins.data_flywheel.observability.schema.dfw_es_record import DFWESRecord
-from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
+from nat.plugins.data_flywheel.observability.schema.langchain.nim_trace_source import NIMTraceSource
+from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
 
 logger = logging.getLogger(__name__)
 
 
-def convert_langchain_nim(trace_source: TraceSource, client_id: str) -> DFWESRecord | None:
+@register_adapter(trace_source_model=NIMTraceSource)
+def convert_langchain_nim(trace_source: TraceContainer) -> DFWESRecord:
     """Convert a LangChain Nim trace source to a DFWESRecord.
 
     Args:
-        trace_source (TraceSource): The trace source to convert
-        client_id (str): The client ID to use for the DFW record
+        trace_source (TraceContainer): The trace source to convert
 
     Returns:
-        DFWESRecord | None: The converted DFW record
+        DFWESRecord: The converted DFW record
     """
-    return convert_langchain_openai(trace_source, client_id)
+    return convert_langchain_openai(trace_source)

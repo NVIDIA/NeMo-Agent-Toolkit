@@ -13,12 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .trace_source_adapter import TraceSourceAdapter
-from .elasticsearch.langchain import ESLangChainNimAdapter
-from .elasticsearch.langchain import ESLangChainOpenAIAdapter
-
-__all__ = [
-    "TraceSourceAdapter",
-    "ESLangChainNimAdapter",
-    "ESLangChainOpenAIAdapter",
-]
+# Import all adapter modules to trigger registration
+from . import elasticsearch  # noqa: F401

@@ -19,6 +19,7 @@ import logging
 from nat.data_models.intermediate_step import ToolSchema
 from nat.plugins.data_flywheel.observability.processor.dfw_record.common import extract_timestamp
 from nat.plugins.data_flywheel.observability.processor.dfw_record.common import extract_usage_info
+from nat.plugins.data_flywheel.observability.processor.dfw_record.trace_adapter_registry import register_adapter
 from nat.plugins.data_flywheel.observability.schema.dfw_es_record import AssistantMessage
 from nat.plugins.data_flywheel.observability.schema.dfw_es_record import DFWESRecord
 from nat.plugins.data_flywheel.observability.schema.dfw_es_record import FinishReason
@@ -36,7 +37,8 @@ from nat.plugins.data_flywheel.observability.schema.dfw_es_record import ToolCal
 from nat.plugins.data_flywheel.observability.schema.dfw_es_record import ToolMessage
 from nat.plugins.data_flywheel.observability.schema.dfw_es_record import UserMessage
 from nat.plugins.data_flywheel.observability.schema.langchain.langchain_message import LangChainMessage
-from nat.plugins.data_flywheel.observability.schema.trace_source import TraceSource
+from nat.plugins.data_flywheel.observability.schema.langchain.openai_trace_source import OpenAITraceSource
+from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +64,7 @@ def _convert_role(role: str) -> str:
     return ROLE_MAP.get(role, DEFAULT_ROLE)
 
 
-def _create_message_by_role(role: str, content: str, **kwargs) -> Message | None:
+def _create_message_by_role(role: str, content: str, **kwargs) -> Message:
     """Factory function for creating messages by role.
 
     Args:
@@ -71,7 +73,10 @@ def _create_message_by_role(role: str, content: str, **kwargs) -> Message | None
         **kwargs: Additional role-specific parameters
 
     Returns:
-        Message | None: The appropriate message type for the role
+        Message: The appropriate message type for the role
+
+    Raises:
+        ValueError: If the role is unsupported
     """
     role = _convert_role(role)
 
@@ -89,7 +94,7 @@ def _create_message_by_role(role: str, content: str, **kwargs) -> Message | None
         case "function":
             return FunctionMessage(content=content, role="function")
         case _:
-            logger.warning("Unsupported message role: %s", role)
+            raise ValueError(f"Unsupported message role: {role}. Supported roles: {list(ROLE_MAP.keys())}")
 
 
 def _create_tool_calls(tool_calls_data: list) -> list[ToolCall]:
@@ -130,14 +135,17 @@ def _create_tool_calls(tool_calls_data: list) -> list[ToolCall]:
     return validated_tool_calls
 
 
-def _convert_message_to_dfw(message: LangChainMessage) -> Message | None:
+def _convert_message_to_dfw(message: LangChainMessage) -> Message:
     """Convert a message to appropriate DFW message type with improved structure.
 
     Args:
         message (LangChainMessage): The message to convert
 
     Returns:
-        Message | None: The converted message
+        Message: The converted message
+
+    Raises:
+        ValueError: If the message cannot be converted
     """
 
     # Get content
@@ -155,7 +163,7 @@ def _convert_message_to_dfw(message: LangChainMessage) -> Message | None:
     if raw_tool_calls:
         tool_calls = _create_tool_calls(raw_tool_calls)
 
-    # Get tool_call_id for tool messages
+    # # Get tool_call_id for tool messages
     tool_call_id = message.additional_kwargs.get("tool_call_id", "")
 
     return _create_message_by_role(role=role, content=str(content), tool_calls=tool_calls, tool_call_id=tool_call_id)
@@ -206,20 +214,23 @@ def _validate_and_convert_tools(tools_schema: list) -> list[RequestTool]:
     return request_tools
 
 
-def _convert_chat_response(chat_response: dict, span_name: str = "", index: int = 0) -> ResponseChoice | None:
+def _convert_chat_response(chat_response: dict, span_name: str = "", index: int = 0) -> ResponseChoice:
     """Convert a chat response to a DFW payload with better error context.
 
     Args:
         chat_response (dict): The chat response to convert
         span_name (str): Span name for error context
+        index (int): The index of this choice
 
     Returns:
-        ResponseChoice | None: The converted chat response
+        ResponseChoice: The converted chat response
+
+    Raises:
+        ValueError: If the chat response is invalid
     """
     message = chat_response.get("message", {})
     if message is None:
-        logger.warning("Chat response missing message for span: '%s'", span_name)
-        return None
+        raise ValueError(f"Chat response missing message for span: '{span_name}'")
 
     # Get content
     content = message.get("content", "")
@@ -247,22 +258,27 @@ def _convert_chat_response(chat_response: dict, span_name: str = "", index: int 
     return response_choice
 
 
-def convert_langchain_openai(trace_source: TraceSource, client_id: str) -> DFWESRecord | None:
+@register_adapter(trace_source_model=OpenAITraceSource)
+def convert_langchain_openai(trace_source: TraceContainer) -> DFWESRecord:
     """Convert a LangChain OpenAI trace source to a DFWESRecord.
 
     Args:
-        trace_source (TraceSource): The trace source to convert
-        client_id (str): The client ID to use for the DFW record
+        trace_source (TraceContainer): The trace source to convert
 
     Returns:
-        DFWESRecord | None: The converted DFW record
+        DFWESRecord: The converted DFW record
+
+    Raises:
+        ValueError: If the trace source cannot be converted to DFWESRecord
     """
     # Convert messages
     messages = []
     for message in trace_source.source.input_value:
-        msg_result = _convert_message_to_dfw(message)
-        if msg_result is not None:
+        try:
+            msg_result = _convert_message_to_dfw(message)
             messages.append(msg_result)
+        except ValueError as e:
+            raise ValueError(f"Failed to convert message in trace source: {e}") from e
 
     # Get tools schema
     tools_schema = trace_source.source.metadata.tools_schema
@@ -286,14 +302,16 @@ def convert_langchain_openai(trace_source: TraceSource, client_id: str) -> DFWES
     response_choices = []
     chat_responses = trace_source.source.metadata.chat_responses or []
     for idx, chat_response in enumerate(chat_responses):
-        response_choice = _convert_chat_response(chat_response, trace_source.span.name, index=idx)
-        if response_choice is not None:
+        try:
+            response_choice = _convert_chat_response(chat_response, trace_source.span.name, index=idx)
             response_choices.append(response_choice)
+        except ValueError as e:
+            raise ValueError(f"Failed to convert chat response {idx}: {e}") from e
 
     # Require at least one response choice
     if not response_choices:
-        logger.warning("No valid response choices found in span: '%s'", trace_source.span.name)
-        return None
+        raise ValueError(f"No valid response choices found in span: '{trace_source.span.name}'. "
+                         f"Expected at least one chat response in metadata.")
 
     # Get timestamp with better error handling
     timestamp_int = extract_timestamp(trace_source.span)
@@ -321,10 +339,9 @@ def convert_langchain_openai(trace_source: TraceSource, client_id: str) -> DFWES
                                   response=responses,
                                   timestamp=timestamp_int,
                                   workload_id=str(workload_id),
-                                  client_id=client_id,
+                                  client_id=trace_source.source.client_id,
                                   error_details=None)
         logger.debug("Successfully converted span to DFWESRecord: '%s'", trace_source.span.name)
         return dfw_payload
     except Exception as e:
-        logger.error("Failed to create DFWESRecord for span: '%s'", trace_source.span.name, exc_info=e)
-        return None
+        raise ValueError(f"Failed to create DFWESRecord for span '{trace_source.span.name}': {e}") from e
