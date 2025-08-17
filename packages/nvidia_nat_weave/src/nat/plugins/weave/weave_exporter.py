@@ -24,7 +24,7 @@ from weave.trace.weave_client import Call
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.span import Span
-from nat.eval.utils.eval_trace_ctx import EvalExporterBase
+from nat.eval.utils.eval_trace_ctx import EvalExporterMixin
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.utils.log_utils import LogFilter
@@ -42,7 +42,7 @@ presidio_filter = LogFilter([
 ])
 
 
-class WeaveExporter(SpanExporter[Span, Span], EvalExporterBase):
+class WeaveExporter(SpanExporter[Span, Span], EvalExporterMixin):
     """A Weave exporter that exports telemetry traces to Weights & Biases Weave using OpenTelemetry."""
 
     _weave_calls: IsolatedAttribute[dict[str, Call]] = IsolatedAttribute(dict)
@@ -53,7 +53,7 @@ class WeaveExporter(SpanExporter[Span, Span], EvalExporterBase):
                  project: str | None = None,
                  verbose: bool = False):
         SpanExporter.__init__(self, context_state=context_state)
-        EvalExporterBase.__init__(self)  # Initialize the evaluation context integration
+        EvalExporterMixin.__init__(self)  # Initialize the evaluation context integration
         self._entity = entity
         self._project = project
         self._gc = weave_client_context.require_weave_client()
@@ -89,7 +89,8 @@ class WeaveExporter(SpanExporter[Span, Span], EvalExporterBase):
             return
 
         # Track export operation start for evaluation coordination
-        self.eval_context.track_export_start()
+        if self.eval_context:
+            self.eval_context.track_export_start()
 
         self._create_weave_call(event, span)
 
@@ -103,7 +104,8 @@ class WeaveExporter(SpanExporter[Span, Span], EvalExporterBase):
         self._finish_weave_call(event)
 
         # Track export operation completion for evaluation coordination
-        self.eval_context.track_export_complete()
+        if self.eval_context:
+            self.eval_context.track_export_complete()
 
     @contextmanager
     def parent_call(self, trace_id: str, parent_call_id: str) -> Generator[None]:
@@ -132,7 +134,7 @@ class WeaveExporter(SpanExporter[Span, Span], EvalExporterBase):
         Returns:
             Call: The Weave call created from the span and step data.
         """
-        # Use the generic method to get the best parent call
+        # Get the best parent call for the current evaluation context
         parent_call = self.get_evaluation_parent_call()
 
         # If no parent from evaluation context, check our internal stack for parent relationships

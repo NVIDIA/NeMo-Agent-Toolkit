@@ -34,7 +34,6 @@ from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.usage_stats import UsageStats
 from nat.eval.usage_stats import UsageStatsItem
 from nat.eval.usage_stats import UsageStatsLLM
-from nat.eval.utils.eval_trace_ctx import get_eval_trace_context
 from nat.eval.utils.output_uploader import OutputUploader
 from nat.eval.utils.weave_eval import WeaveEvaluationIntegration
 from nat.profiler.data_models import ProfilerResults
@@ -64,8 +63,16 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
-        self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration()
-        self.eval_trace_context = get_eval_trace_context()  # Get the global trace context
+
+        # Create evaluation trace context
+        try:
+            from nat.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
+            self.eval_trace_context = WeaveEvalTraceContext()
+        except Exception:
+            from nat.eval.utils.eval_trace_ctx import EvalTraceContext
+            self.eval_trace_context = EvalTraceContext()
+
+        self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration(self.eval_trace_context)
         # Metadata
         self.eval_input: EvalInput | None = None
         self.workflow_interrupted: bool = False
@@ -472,6 +479,20 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
             # Initialize Weave integration
             self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config)
+
+            # Update any WeaveExporter instances with the populated eval context
+            try:
+                from nat.eval.utils.eval_trace_ctx import EvalExporterMixin
+
+                # Access exporter manager through the workflow (if available)
+                if hasattr(eval_workflow, '_exporter_manager'):
+                    all_exporters = await eval_workflow._exporter_manager.get_all_exporters()
+                    for name, exporter in all_exporters.items():
+                        if isinstance(exporter, EvalExporterMixin):
+                            exporter.set_eval_context(self.eval_trace_context)
+                            logger.debug(f"Set eval context on exporter: {name}")
+            except Exception as e:
+                logger.debug(f"Failed to set eval context on exporters: {e}")
 
             # Run workflow
             with self.eval_trace_context.evaluation_context():
