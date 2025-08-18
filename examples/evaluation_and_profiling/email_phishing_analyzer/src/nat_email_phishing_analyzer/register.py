@@ -43,7 +43,6 @@ class EmailPhishingAnalyzerConfig(FunctionBaseConfig, OptimizableMixin, name="em
         default=phishing_prompt,
         space=SearchSpace(
             is_prompt=True,
-            prompt=phishing_prompt,
             prompt_purpose="Allow an LLM to look at an email body and determine if it is a phishing attempt."))
 
 

@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 from typing import Generic
-from typing import Sequence
 from typing import TypeVar
 
 from pydantic import BaseModel
@@ -88,14 +88,23 @@ def OptimizableField(
     if not isinstance(user_extra, dict):
         raise TypeError("`json_schema_extra` must be a mapping.")
 
-    # 2. Prepare our own metadata
+    # 2. If the space is a prompt, ensure a concrete base prompt exists
+    if getattr(space, "is_prompt", False):
+        if getattr(space, "prompt", None) is None:
+            if default is None:
+                raise ValueError("Prompt-optimized fields require a base prompt: provide a non-None field default "
+                                 "or set space.prompt.")
+            # Default prompt not provided in space; fall back to the field's default
+            space.prompt = default
+
+    # 3. Prepare our own metadata
     ours = {"optimizable": True, "search_space": space}
 
-    # 3. Merge with user extras according to merge_conflict policy
+    # 4. Merge with user extras according to merge_conflict policy
     intersect = ours.keys() & user_extra.keys()
     if intersect:
         if merge_conflict == "error":
-            raise ValueError(f"`json_schema_extra` already contains reserved key(s): "
+            raise ValueError("`json_schema_extra` already contains reserved key(s): "
                              f"{', '.join(intersect)}")
         if merge_conflict == "keep":
             # remove the ones the user already set so we don't overwrite them
@@ -103,7 +112,7 @@ def OptimizableField(
 
     merged_extra = {**user_extra, **ours}  # ours wins if 'overwrite'
 
-    # 4. Return a normal Pydantic Field with merged extras
+    # 5. Return a normal Pydantic Field with merged extras
     return Field(default, json_schema_extra=merged_extra, **fld_kw)
 
 

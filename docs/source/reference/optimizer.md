@@ -216,11 +216,23 @@ class SomeImageAgentConfig(FunctionBaseConfig, OptimizableMixin, name="some_imag
         space=SearchSpace(low=["gpt-3.5-turbo", "gpt-4", "claude-2"]),
         description="The name of the model to use."
     )
-    system_prompt: str = OptimizableField(
+    # Option A: Start from a prompt different from the default (set prompt in space)
+    system_prompt_a: str = OptimizableField(
         default="You are a helpful assistant.",
         space=SearchSpace(
             is_prompt=True,
-            prompt="You are a helpful assistant.",
+            prompt="You are a concise and safety-aware assistant.",
+            prompt_purpose="To guide the behavior of the chatbot."
+        ),
+        description="The system prompt for the LLM."
+    )
+
+    # Option B: Start from the field's default prompt (omit prompt in space)
+    system_prompt_b: str = OptimizableField(
+        default="You are a helpful assistant.",
+        space=SearchSpace(
+            is_prompt=True,
+            # prompt is intentionally omitted; defaults to the field's default
             prompt_purpose="To guide the behavior of the chatbot."
         ),
         description="The system prompt for the LLM."
@@ -228,9 +240,14 @@ class SomeImageAgentConfig(FunctionBaseConfig, OptimizableMixin, name="some_imag
 ```
 
 In this example:
-- `quality and sharpening` is a continuous float  and integer parameters.
+- `quality` (int) and `sharpening` (float) are continuous parameters.
 - `model_name` is a categorical parameter, and the optimizer will choose from the provided list of models.
-- `system_prompt` is a prompt parameter that can be optimized using an LLM if `do_prompt_optimization` is enabled.
+- `system_prompt_a` demonstrates setting a different starting prompt in the `SearchSpace`.
+- `system_prompt_b` demonstrates omitting `SearchSpace.prompt`, which uses the field's default as the base prompt.
+
+Behavior for prompt-optimized fields:
+- If `space.is_prompt` is `true` and `space.prompt` is `None`, the optimizer will use the `OptimizableField`'s `default` as the base prompt.
+- If both `space.prompt` and the field `default` are `None`, an error is raised. Provide at least one.
 
 ## Enabling Optimization of Fields in the Config File
 Once `OptimizableField`s have been created in your workflow's data models, you need to enable optimization for these fields in your workflow configuration file.
