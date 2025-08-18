@@ -43,7 +43,8 @@ class SearchSpace(Generic[T]):
     # Helper for Optuna Trials
     def suggest(self, trial: Trial, name: str):
         if self.is_prompt:
-            raise ValueError("Prompt optimization not currently supported.")
+            raise ValueError("Prompt optimization not currently supported using Optuna."
+                             " Use the genetic algorithm implementation instead.")
         if self.high is None:
             return trial.suggest_categorical(name, self.low)
         if isinstance(self.low, int):

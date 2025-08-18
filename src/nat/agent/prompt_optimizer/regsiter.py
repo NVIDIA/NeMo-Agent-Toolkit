@@ -32,6 +32,8 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
 
     try:
         from langchain_core.prompts import PromptTemplate
+
+        from .prompt import mutator_prompt
     except ImportError as exc:
         raise ImportError("langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
                           "This error can be resolve by installing nat-langchain.") from exc
@@ -43,6 +45,9 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
                               validate_template=True)
 
     base_prompt: str = (await template.ainvoke(input={"system_objective": config.system_objective})).to_string()
+    prompt_extension_template = PromptTemplate(template=mutator_prompt,
+                                               input_variables=["original_prompt", "objective"],
+                                               validate_template=True)
 
     async def _inner(input_message: PromptOptimizerInputSchema) -> str:
         """
@@ -51,21 +56,13 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
 
         original_prompt = input_message.original_prompt
         prompt_objective = input_message.objective
-        feedback = input_message.oracle_feedback
 
-        prompt = f"{base_prompt}\n\nOriginal Prompt: {original_prompt}\n\n with objective {prompt_objective}\n\n"
+        prompt_extension = (await prompt_extension_template.ainvoke(input={
+            "original_prompt": original_prompt,
+            "objective": prompt_objective,
+        })).to_string()
 
-        if feedback:
-            prompt += (f"The prompt evaluation mechanism also generated feedback on a few inputs "
-                       f"which are provided below. Please use them to guide your edits to instructions."
-                       f"\nFeedback: {feedback}\n\n")
-
-        prompt += (
-            "Please suggest an optimized version of the prompt that produces high accuracy at the correct times. "
-            "Be creative in your modifications to suggest considerations for edge cases, or other helpful information. "
-            "Only respond with the optimized prompt and no other text. Do not introduce new variables or change "
-            "the existing variables in the prompt. Only modify the instructions in the prompt that are "
-            "not variables. ")
+        prompt = f"{base_prompt}\n\n{prompt_extension}"
 
         optimized_prompt = await llm.ainvoke(prompt)
         return optimized_prompt.content

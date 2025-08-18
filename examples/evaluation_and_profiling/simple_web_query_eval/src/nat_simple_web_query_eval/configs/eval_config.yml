@@ -25,33 +25,20 @@ functions:
     embedder_name: nv-embedqa-e5-v5
   current_datetime:
     _type: current_datetime
-  prompt_init:
-    _type: prompt_init
-    optimizer_llm: nim_rag_eval_llm
-    system_objective: Retrieve information about langsmith.
-  prompt_recombination:
-    _type: prompt_recombiner
-    optimizer_llm: nim_rag_eval_llm
-    system_objective: Retrieve information about langsmith.
 
 llms:
   nim_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
-    optimizable_params:
-      - temperature
-      - top_p
-      - max_tokens
-
   nim_rag_eval_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     max_tokens: 8
   nim_trajectory_eval_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
-    temperature: 0.1
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
     max_tokens: 1024
 
 embedders:
@@ -65,8 +52,6 @@ workflow:
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3
-  optimizable_params:
-    - additional_instructions
 
 eval:
   general:
@@ -76,6 +61,25 @@ eval:
     dataset:
       _type: json
       file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
+    profiler:
+      # Compute inter query token uniqueness
+      token_uniqueness_forecast: true
+      # Compute expected workflow runtime
+      workflow_runtime_forecast: true
+      # Compute inference optimization metrics
+      compute_llm_metrics: true
+      # Avoid dumping large text into the output CSV (helpful to not break structure)
+      csv_exclude_io_text: true
+      # Idenitfy common prompt prefixes
+      prompt_caching_prefixes:
+        enable: true
+        min_frequency: 0.1
+      bottleneck_analysis:
+        # Can also be simple_stack
+        enable_nested_stack: true
+      concurrency_spike_analysis:
+        enable: true
+        spike_threshold: 7
 
   evaluators:
     rag_accuracy:
@@ -90,33 +94,6 @@ eval:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm
-
-optimizer:
-  output_path: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/optimizer/
-  reps_per_param_set: 2
-  eval_metrics:
-    rag_accuracy:
-      evaluator_name: rag_accuracy
-      direction: maximize
-    rag_groundedness:
-        evaluator_name: rag_groundedness
-        direction: maximize
-    rag_relevance:
-        evaluator_name: rag_relevance
-        direction: maximize
-
-  numeric:
-    enabled: true
-    n_trials: 3
-
-  prompt:
-    enabled: true
-    prompt_population_init_function: prompt_init
-    prompt_recombination_function: prompt_recombination
-    ga_generations: 3
-    ga_population_size: 5
-    ga_diversity_lambda: 0.3
-    ga_parallel_evaluations: 1
-
-
-
+    trajectory_accuracy:
+      _type: trajectory
+      llm_name: nim_trajectory_eval_llm

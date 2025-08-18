@@ -120,10 +120,13 @@ def optimize_parameters(
     with (out_dir / "optimized_config.yml").open("w") as fh:
         yaml.dump(tuned_cfg.model_dump(), fh)
     with (out_dir / "trials_dataframe_params.csv").open("w") as fh:
-        # Include user attributes so the `rep_scores` metadata is exported.
-        df = study.trials_dataframe(attrs=("user_attrs", ))
-        # Flatten user_attrs -> rep_scores into its own column for convenience.
-        if "rep_scores" not in df.columns and "user_attrs" in df.columns:
+        # Export full trials DataFrame (values, params, timings, etc.).
+        df = study.trials_dataframe()
+        # Normalise rep_scores column naming for convenience.
+        if "user_attrs_rep_scores" in df.columns and "rep_scores" not in df.columns:
+            df = df.rename(columns={"user_attrs_rep_scores": "rep_scores"})
+        elif "user_attrs" in df.columns and "rep_scores" not in df.columns:
+            # Some Optuna versions return a dict in a single user_attrs column.
             df["rep_scores"] = df["user_attrs"].apply(lambda d: d.get("rep_scores") if isinstance(d, dict) else None)
             df = df.drop(columns=["user_attrs"])
         df.to_csv(fh, index=False)
