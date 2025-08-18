@@ -23,6 +23,7 @@ limitations under the License.
 
 - **Requested {category} type is ambiguous**: This error might arise when the `_type` in your configuration file is not unique. Please ensure that the `_type` is unique for each workflow. It can also occur after upgrading the toolkit from a previous version in-place when developing. To fix this issue, run the following commands:
 
+    <!-- path-check-skip-begin -->
     ```bash
     # Remove all __pycache__ directories -- the existing __pycache__ directories contain the old aiqtoolkit packages
     find . -name __pycache__ -type d -exec rm -rf {} +
@@ -35,6 +36,7 @@ limitations under the License.
     # Reinstall the environment
     uv sync --all-groups --all-extras
     ```
+    <!-- path-check-skip-end -->
 
 ## Runtime Issues
 
