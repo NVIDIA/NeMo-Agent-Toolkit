@@ -57,7 +57,7 @@ docker info
 
 ### Running Services
 
-To start Redis (required for memory/redis examples):
+To start Redis (required for redis-based examples):
 ```bash
 docker compose -f examples/deploy/docker-compose.redis.yml up -d
 ```
