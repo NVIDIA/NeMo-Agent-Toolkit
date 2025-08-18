@@ -40,7 +40,7 @@ class OpenAIModelConfig(LLMBaseConfig, OptimizableMixin, RetryMixin, name="opena
 
     temperature: float = OptimizableField(default=0.0,
                                           description="Sampling temperature in [0, 1].",
-                                          space=SearchSpace(high=0.8, low=0.1, step=0.2))
+                                          space=SearchSpace(high=0.9, low=0.1, step=0.2))
     top_p: float = OptimizableField(default=1.0,
                                     description="Top-p for distribution sampling.",
                                     space=SearchSpace(high=1.0, low=0.5, step=0.1))

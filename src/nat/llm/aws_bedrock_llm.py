@@ -39,10 +39,10 @@ class AWSBedrockModelConfig(LLMBaseConfig, OptimizableMixin, RetryMixin, name="a
 
     temperature: float = OptimizableField(default=0.0,
                                           description="Sampling temperature in [0, 1].",
-                                          space=SearchSpace(high=0.8, low=0.1, step=0.2))
+                                          space=SearchSpace(high=0.9, low=0.1, step=0.2))
     max_tokens: int = OptimizableField(default=300,
                                        description="Maximum number of tokens to generate.",
-                                       space=SearchSpace(high=2048, low=128, step=512))
+                                       space=SearchSpace(high=2176, low=128, step=512))
 
     context_size: int | None = Field(default=1024,
                                      gt=0,
