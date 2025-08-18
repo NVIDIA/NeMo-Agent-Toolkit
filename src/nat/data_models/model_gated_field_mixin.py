@@ -15,7 +15,6 @@
 
 from collections.abc import Sequence
 from re import Pattern
-from typing import ClassVar
 from typing import Generic
 from typing import TypeVar
 
@@ -25,9 +24,9 @@ from pydantic import model_validator
 T = TypeVar("T")
 
 
-class SupportedField(Generic[T]):
+class ModelGatedFieldMixin(Generic[T]):
     """
-    A supported field is a field that is supported (or not supported) for a given model.
+    A mixin that gates a field based on model support.
 
     This should be used to simplify the validation of a field for a given model.
 
@@ -40,30 +39,21 @@ class SupportedField(Generic[T]):
                     Defaults to ("model_name", "model", "azure_deployment",)
     """
 
-    # The keys that are used to validate the field. This should be extended to support additional keys
-    # when needed, but should not be modified by subclasses. If subclasses need to add additional keys,
-    # they should override the model_keys class variable.
-    model_keys: ClassVar[Sequence[str]] = (
-        "model_name",
-        "model",
-        "azure_deployment",
-    )
-
     def __init_subclass__(
-        cls,
-        field_name: str | None = None,
-        default_if_supported: T | None = None,
-        unsupported_models: Sequence[Pattern[str]] | None = None,
-        supported_models: Sequence[Pattern[str]] | None = None,
-        model_keys: Sequence[str] | None = None,
+            cls,
+            field_name: str | None = None,
+            default_if_supported: T | None = None,
+            unsupported_models: Sequence[Pattern[str]] | None = None,
+            supported_models: Sequence[Pattern[str]] | None = None,
+            model_keys: Sequence[str] = ("model_name", "model", "azure_deployment"),
     ) -> None:
         """
         Store the class variables for the field and define the model validator.
         """
         super().__init_subclass__()
-        if SupportedField in cls.__bases__:
+        if ModelGatedFieldMixin in cls.__bases__:
             if field_name is None:
-                raise ValueError("field_name must be provided when subclassing SupportedField")
+                raise ValueError("field_name must be provided when subclassing ModelGatedFieldMixin")
             cls.field_name = field_name
             cls.default_if_supported = default_if_supported
             cls.unsupported_models = unsupported_models
@@ -85,7 +75,7 @@ class SupportedField(Generic[T]):
                     return any(p.search(model_name) for p in getattr(cls, "supported_models"))
                 return False
 
-            cls._supported_field_check_model = check_model
+            cls._model_gated_field_check_model = check_model
 
             @classmethod
             def configuration_valid(cls) -> None:
@@ -95,42 +85,34 @@ class SupportedField(Generic[T]):
                                                                                     None) is not None:
                     raise ValueError("Only one of unsupported_models or supported_models must be provided")
 
-            cls._supported_field_ensure_selector_configuration_valid = configuration_valid
+            cls._model_gated_field_ensure_selector_configuration_valid = configuration_valid
 
             @classmethod
-            def resolve_support(cls, instance: BaseModel) -> tuple[str, bool] | None:
+            def resolve_support(cls, instance: BaseModel) -> str | None:
                 for key in getattr(cls, "model_keys"):
                     if hasattr(instance, key):
                         model_name_value = getattr(instance, key)
-                        is_supported = getattr(cls, "_supported_field_check_model")(str(model_name_value))
-                        return key, is_supported
+                        is_supported = getattr(cls, "_model_gated_field_check_model")(str(model_name_value))
+                        return key if not is_supported else None
                 return None
 
-            cls._supported_field_resolve_support = resolve_support
+            cls._model_gated_field_resolve_support = resolve_support
 
             @model_validator(mode="after")
             def model_validate(self):
-                clss = self.__class__
-                clss._supported_field_ensure_selector_configuration_valid()
+                klass = self.__class__
+                klass._model_gated_field_ensure_selector_configuration_valid()
 
-                field_name_local = getattr(clss, "field_name")
+                field_name_local = getattr(klass, "field_name")
                 current_value = getattr(self, field_name_local, None)
 
-                match clss._supported_field_resolve_support(self):
-                    case (found_key, is_supported):
-                        if not is_supported:
-                            if current_value is not None:
-                                raise ValueError(
-                                    f"{field_name_local} is not supported for {found_key}: {getattr(self, found_key)}")
-                            return self
-                    case None:
-                        # No model key present → apply default
-                        if current_value is None:
-                            setattr(self, field_name_local, getattr(clss, "default_if_supported", None))
-                        return self
-
-                if current_value is None:
-                    setattr(self, field_name_local, getattr(clss, "default_if_supported", None))
+                found_key = klass._model_gated_field_resolve_support(self)
+                if found_key is not None:
+                    if current_value is not None:
+                        raise ValueError(
+                            f"{field_name_local} is not supported for {found_key}: {getattr(self, found_key)}")
+                elif current_value is None:
+                    setattr(self, field_name_local, getattr(klass, "default_if_supported", None))
                 return self
 
-            cls._supported_field_model_validator = model_validate
+            cls._model_gated_field_model_validator = model_validate

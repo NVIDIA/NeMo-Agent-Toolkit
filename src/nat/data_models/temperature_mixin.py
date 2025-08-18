@@ -18,17 +18,17 @@ import re
 from pydantic import BaseModel
 from pydantic import Field
 
-from nat.data_models.supported_field import SupportedField
+from nat.data_models.model_gated_field_mixin import ModelGatedFieldMixin
 
-_UNSUPPORTED_TEMPERATURE = (re.compile(r"gpt5", re.IGNORECASE), )
+_UNSUPPORTED_TEMPERATURE_MODELS = (re.compile(r"gpt5", re.IGNORECASE), )
 
 
 class TemperatureMixin(
         BaseModel,
-        SupportedField[float],
+        ModelGatedFieldMixin[float],
         field_name="temperature",
         default_if_supported=0.0,
-        unsupported_models=_UNSUPPORTED_TEMPERATURE,
+        unsupported_models=_UNSUPPORTED_TEMPERATURE_MODELS,
 ):
     """
     Mixin class for temperature configuration.

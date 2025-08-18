@@ -20,14 +20,14 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import ValidationError
 
-from nat.data_models.supported_field import SupportedField
+from nat.data_models.model_gated_field_mixin import ModelGatedFieldMixin
 
 
-def test_supported_field_requires_one_selector():
+def test_model_gated_field_requires_one_selector():
 
     class BadBoth(
             BaseModel,
-            SupportedField[int],
+            ModelGatedFieldMixin[int],
             field_name="dummy",
             default_if_supported=1,
             unsupported_models=(re.compile(r"alpha"), ),
@@ -40,11 +40,11 @@ def test_supported_field_requires_one_selector():
         _ = BadBoth()
 
 
-def test_supported_field_requires_selector_present():
+def test_model_gated_field_requires_selector_present():
 
     class BadNone(
             BaseModel,
-            SupportedField[int],
+            ModelGatedFieldMixin[int],
             field_name="dummy",
             default_if_supported=1,
     ):
@@ -55,11 +55,11 @@ def test_supported_field_requires_selector_present():
         _ = BadNone()
 
 
-def test_supported_field_default_applied_when_supported_and_value_none():
+def test_model_gated_field_default_applied_when_supported_and_value_none():
 
     class GoodSupported(
             BaseModel,
-            SupportedField[int],
+            ModelGatedFieldMixin[int],
             field_name="dummy",
             default_if_supported=5,
             supported_models=(re.compile(r"^alpha$"), ),
@@ -71,11 +71,11 @@ def test_supported_field_default_applied_when_supported_and_value_none():
     assert m.dummy == 5
 
 
-def test_supported_field_raises_when_not_supported_and_value_set():
+def test_model_gated_field_raises_when_not_supported_and_value_set():
 
     class GoodUnsupported(
             BaseModel,
-            SupportedField[int],
+            ModelGatedFieldMixin[int],
             field_name="dummy",
             default_if_supported=5,
             unsupported_models=(re.compile(r"alpha"), ),
@@ -87,11 +87,11 @@ def test_supported_field_raises_when_not_supported_and_value_set():
         _ = GoodUnsupported(model_name="alpha", dummy=3)
 
 
-def test_supported_field_none_returned_when_not_supported_and_value_none():
+def test_model_gated_field_none_returned_when_not_supported_and_value_none():
 
     class GoodUnsupported(
             BaseModel,
-            SupportedField[int],
+            ModelGatedFieldMixin[int],
             field_name="dummy",
             default_if_supported=5,
             unsupported_models=(re.compile(r"alpha"), ),
@@ -103,11 +103,11 @@ def test_supported_field_none_returned_when_not_supported_and_value_none():
     assert m.dummy is None
 
 
-def test_supported_field_default_applied_when_no_model_key_present():
+def test_model_gated_field_default_applied_when_no_model_key_present():
 
     class NoModelKey(
             BaseModel,
-            SupportedField[int],
+            ModelGatedFieldMixin[int],
             field_name="dummy",
             default_if_supported=7,
             supported_models=(re.compile(r"anything"), ),
@@ -119,11 +119,11 @@ def test_supported_field_default_applied_when_no_model_key_present():
     assert m.dummy == 7
 
 
-def test_supported_field_with_custom_model_keys():
+def test_model_gated_field_with_custom_model_keys():
 
     class CustomKeys(
             BaseModel,
-            SupportedField[int],
+            ModelGatedFieldMixin[int],
             field_name="dummy",
             default_if_supported=9,
             unsupported_models=(re.compile(r"ban"), ),
@@ -135,3 +135,21 @@ def test_supported_field_with_custom_model_keys():
     # Unsupported because custom_key matches the banned pattern
     m = CustomKeys(custom_key="banned")
     assert m.dummy is None
+
+
+def test_model_gated_field_with_custom_model_keys_and_default_if_supported():
+
+    class CustomKeys(
+            BaseModel,
+            ModelGatedFieldMixin[int],
+            field_name="dummy",
+            default_if_supported=9,
+            unsupported_models=(re.compile(r"ban"), ),
+            model_keys=("custom_key", ),
+    ):
+        dummy: int | None = Field(default=None)
+        custom_key: str
+
+    # Supported because custom_key does not match the banned pattern
+    m = CustomKeys(custom_key="valid")
+    assert m.dummy == 9
