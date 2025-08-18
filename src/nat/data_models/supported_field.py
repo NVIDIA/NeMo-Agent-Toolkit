@@ -78,12 +78,11 @@ class SupportedField(Generic[T]):
 
                 Args:
                     model_name: The name of the model to check.
-                    unsupported: A sequence of regex patterns that match the model names NOT supported for the field.
                 """
-                if cls.unsupported_models is not None:
-                    return not any(p.search(model_name) for p in cls.unsupported_models)
-                if cls.supported_models is not None:
-                    return any(p.search(model_name) for p in cls.supported_models)
+                if getattr(cls, "unsupported_models", None) is not None:
+                    return not any(p.search(model_name) for p in getattr(cls, "unsupported_models"))
+                if getattr(cls, "supported_models", None) is not None:
+                    return any(p.search(model_name) for p in getattr(cls, "supported_models"))
                 return False
 
             cls._supported_field_check_model = check_model
@@ -100,10 +99,10 @@ class SupportedField(Generic[T]):
 
             @classmethod
             def resolve_support(cls, instance: BaseModel) -> tuple[str, bool] | None:
-                for key in cls.model_keys:
+                for key in getattr(cls, "model_keys"):
                     if hasattr(instance, key):
                         model_name_value = getattr(instance, key)
-                        is_supported = cls._supported_field_check_model(str(model_name_value))
+                        is_supported = getattr(cls, "_supported_field_check_model")(str(model_name_value))
                         return key, is_supported
                 return None
 
