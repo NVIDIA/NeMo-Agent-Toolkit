@@ -18,7 +18,7 @@ limitations under the License.
 ## 📦 Overview
 The NeMo Agent toolkit, formerly known as Agent Intelligence (AIQ) toolkit, has been renamed to align with the NVIDIA NeMo family of products. This release brings significant new capabilities and improvements across authentication, resource management, observability, and developer experience. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
 
-While NeMo Agent Toolkit is designed to be backwards compatible with the previous version, users are encouraged to update their code to follow the latest conventions and best practices. Migration instructions are provided in the official [migration guide](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/resources/migration-guide.md).
+While NeMo Agent Toolkit is designed to be compatible with the previous version, users are encouraged to update their code to follow the latest conventions and best practices. Migration instructions are provided in the [migration guide](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/resources/migration-guide.md).
 
 ## 🚨 Breaking Changes
 * Remove outdated/unsupported devcontainer by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/626
@@ -29,12 +29,12 @@ While NeMo Agent Toolkit is designed to be backwards compatible with the previou
 * Observability redesign to reduce dependencies and improve flexibility by @mpenn in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/379
 
 ## 🚀 Notable Features and Improvements
-* [Authentication for Tool Calling](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/reference/api-authentication.md):  Implement robust authentication mechanisms that enable secure and configurable access management for tool invocation within agent workflows.
+* [Authentication for Tool Calling](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/reference/api-authentication.md): Implement robust authentication mechanisms that enable secure and configurable access management for tool invocation within agent workflows.
 * [Test Time Compute](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/reference/test-time-compute.md): Dynamically reallocate compute resources after model training, allowing agents to optimize reasoning, factual accuracy, and system robustness without retraining the base model.
-* [Sizing Calculator](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/workflows/sizing-calc.md):  Estimate GPU cluster requirements to support your target number of users and desired response times, simplifying deployment planning and scaling.
+* [Sizing Calculator](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/workflows/sizing-calc.md): Estimate GPU cluster requirements to support your target number of users and desired response times, simplifying deployment planning and scaling.
 * [Object Store Integration](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/extend/object-store.md): Connect and manage data through supported object stores, improving agent extensibility and enabling advanced data workflows.
 * [Enhanced Cursor Rules](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md): Build new workflows or extend existing ones by leveraging cursor rules, making agent development faster and more flexible.
-* [Interactive Notebooks](https://github.com/NVIDIA/NeMo-Agent-Toolkit/tree/release/1.2/examples/notebooks):  Access a suite of onboarding and example notebooks to accelerate agentic workflow development, testing, and experimentation.
+* [Interactive Notebooks](https://github.com/NVIDIA/NeMo-Agent-Toolkit/tree/release/1.2/examples/notebooks): Access a suite of onboarding and example notebooks to accelerate agent workflow development, testing, and experimentation.
 * [Observability Refactor](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/workflows/observe/index.md): Onboard new observability and monitoring platforms more easily, and take advantage of improved plug-in architecture for workflow inspection and analysis.
 
 ## 📜 Full Change Log
