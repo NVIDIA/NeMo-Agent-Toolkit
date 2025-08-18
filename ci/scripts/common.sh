@@ -114,8 +114,6 @@ function build_package_wheel()
     local pkg=$1
     pkg_dir_name="${pkg#packages/}"
     pkg_dir_name="${pkg#./packages/}"
-    # Replace "nat_" with "nvidia_nat_"
-    pkg_dir_name="${pkg_dir_name//nat_/nvidia_nat_}"
 
     # Remove compat/
     pkg_dir_name="${pkg_dir_name/compat\/}"
