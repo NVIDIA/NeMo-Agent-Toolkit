@@ -12,13 +12,16 @@ resolution-markers = [
 members = [
     "nvidia-nat",
     "nvidia-nat-agno",
+    "nvidia-nat-all",
     "nvidia-nat-crewai",
+    "nvidia-nat-ingestion",
     "nvidia-nat-langchain",
     "nvidia-nat-llama-index",
     "nvidia-nat-mem0ai",
     "nvidia-nat-mysql",
     "nvidia-nat-opentelemetry",
     "nvidia-nat-phoenix",
+    "nvidia-nat-profiling",
     "nvidia-nat-ragaai",
     "nvidia-nat-redis",
     "nvidia-nat-s3",
@@ -4652,6 +4655,9 @@ dependencies = [
 agno = [
     { name = "nvidia-nat-agno" },
 ]
+all = [
+    { name = "nvidia-nat-all" },
+]
 crewai = [
     { name = "nvidia-nat-crewai" },
 ]
@@ -4685,7 +4691,7 @@ gunicorn = [
     { name = "gunicorn" },
 ]
 ingestion = [
-    { name = "lxml" },
+    { name = "nvidia-nat-ingestion" },
 ]
 langchain = [
     { name = "nvidia-nat-langchain" },
@@ -4706,9 +4712,7 @@ phoenix = [
     { name = "nvidia-nat-phoenix" },
 ]
 profiling = [
-    { name = "matplotlib" },
-    { name = "prefixspan" },
-    { name = "scikit-learn" },
+    { name = "nvidia-nat-profiling" },
 ]
 ragaai = [
     { name = "nvidia-nat-ragaai" },
@@ -4783,8 +4787,6 @@ requires-dist = [
     { name = "httpx", specifier = "~=0.27" },
     { name = "jinja2", specifier = "~=3.1" },
     { name = "jsonpath-ng", specifier = "~=1.7" },
-    { name = "lxml", marker = "extra == 'ingestion'", specifier = "~=5.4" },
-    { name = "matplotlib", marker = "extra == 'profiling'", specifier = "~=3.9" },
     { name = "mcp", specifier = "~=1.10" },
     { name = "nat-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/frameworks/agno_personal_finance" },
     { name = "nat-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
@@ -4813,7 +4815,9 @@ requires-dist = [
     { name = "networkx", specifier = "~=3.4" },
     { name = "numpy", specifier = "~=1.26" },
     { name = "nvidia-nat-agno", marker = "extra == 'agno'", editable = "packages/nvidia_nat_agno" },
+    { name = "nvidia-nat-all", marker = "extra == 'all'", editable = "packages/nvidia_nat_all" },
     { name = "nvidia-nat-crewai", marker = "extra == 'crewai'", editable = "packages/nvidia_nat_crewai" },
+    { name = "nvidia-nat-ingestion", marker = "extra == 'ingestion'", editable = "packages/nvidia_nat_ingestion" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-llama-index", marker = "extra == 'llama-index'", editable = "packages/nvidia_nat_llama_index" },
     { name = "nvidia-nat-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/nvidia_nat_mem0ai" },
@@ -4822,6 +4826,7 @@ requires-dist = [
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-phoenix", marker = "extra == 'phoenix'", editable = "packages/nvidia_nat_phoenix" },
     { name = "nvidia-nat-phoenix", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_phoenix" },
+    { name = "nvidia-nat-profiling", marker = "extra == 'profiling'", editable = "packages/nvidia_nat_profiling" },
     { name = "nvidia-nat-ragaai", marker = "extra == 'ragaai'", editable = "packages/nvidia_nat_ragaai" },
     { name = "nvidia-nat-ragaai", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_ragaai" },
     { name = "nvidia-nat-redis", marker = "extra == 'redis'", editable = "packages/nvidia_nat_redis" },
@@ -4835,18 +4840,16 @@ requires-dist = [
     { name = "pkce", specifier = "==1.0.3" },
     { name = "pkginfo", specifier = "~=1.12" },
     { name = "platformdirs", specifier = "~=4.3" },
-    { name = "prefixspan", marker = "extra == 'profiling'", specifier = "~=0.5.2" },
     { name = "pydantic", specifier = "==2.10.*" },
     { name = "pymilvus", specifier = "~=2.4" },
     { name = "pyyaml", specifier = "~=6.0" },
     { name = "ragas", specifier = "~=0.2.14" },
     { name = "rich", specifier = "~=13.9" },
-    { name = "scikit-learn", marker = "extra == 'profiling'", specifier = "~=1.6" },
     { name = "tabulate", specifier = "~=0.9" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "opentelemetry", "phoenix", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "profiling", "gunicorn"]
+provides-extras = ["all", "agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "gunicorn"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -4902,6 +4905,52 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nvidia-nat-all"
+source = { editable = "packages/nvidia_nat_all" }
+dependencies = [
+    { name = "gunicorn" },
+    { name = "nvidia-nat" },
+    { name = "nvidia-nat-agno" },
+    { name = "nvidia-nat-crewai" },
+    { name = "nvidia-nat-ingestion" },
+    { name = "nvidia-nat-langchain" },
+    { name = "nvidia-nat-llama-index" },
+    { name = "nvidia-nat-mem0ai" },
+    { name = "nvidia-nat-mysql" },
+    { name = "nvidia-nat-opentelemetry" },
+    { name = "nvidia-nat-phoenix" },
+    { name = "nvidia-nat-profiling" },
+    { name = "nvidia-nat-ragaai" },
+    { name = "nvidia-nat-redis" },
+    { name = "nvidia-nat-s3" },
+    { name = "nvidia-nat-semantic-kernel" },
+    { name = "nvidia-nat-weave" },
+    { name = "nvidia-nat-zep-cloud" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "gunicorn", specifier = "~=23.0" },
+    { name = "nvidia-nat", editable = "." },
+    { name = "nvidia-nat-agno", editable = "packages/nvidia_nat_agno" },
+    { name = "nvidia-nat-crewai", editable = "packages/nvidia_nat_crewai" },
+    { name = "nvidia-nat-ingestion", editable = "packages/nvidia_nat_ingestion" },
+    { name = "nvidia-nat-langchain", editable = "packages/nvidia_nat_langchain" },
+    { name = "nvidia-nat-llama-index", editable = "packages/nvidia_nat_llama_index" },
+    { name = "nvidia-nat-mem0ai", editable = "packages/nvidia_nat_mem0ai" },
+    { name = "nvidia-nat-mysql", editable = "packages/nvidia_nat_mysql" },
+    { name = "nvidia-nat-opentelemetry", editable = "packages/nvidia_nat_opentelemetry" },
+    { name = "nvidia-nat-phoenix", editable = "packages/nvidia_nat_phoenix" },
+    { name = "nvidia-nat-profiling", editable = "packages/nvidia_nat_profiling" },
+    { name = "nvidia-nat-ragaai", editable = "packages/nvidia_nat_ragaai" },
+    { name = "nvidia-nat-redis", editable = "packages/nvidia_nat_redis" },
+    { name = "nvidia-nat-s3", editable = "packages/nvidia_nat_s3" },
+    { name = "nvidia-nat-semantic-kernel", editable = "packages/nvidia_nat_semantic_kernel" },
+    { name = "nvidia-nat-weave", editable = "packages/nvidia_nat_weave" },
+    { name = "nvidia-nat-zep-cloud", editable = "packages/nvidia_nat_zep_cloud" },
+]
+
+[[package]]
 name = "nvidia-nat-crewai"
 source = { editable = "packages/nvidia_nat_crewai" }
 dependencies = [
@@ -4912,6 +4961,20 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "crewai", specifier = "~=0.95.0" },
+    { name = "nvidia-nat", editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-ingestion"
+source = { editable = "packages/nvidia_nat_ingestion" }
+dependencies = [
+    { name = "lxml" },
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "lxml", specifier = "~=5.4" },
     { name = "nvidia-nat", editable = "." },
 ]
 
@@ -5022,6 +5085,24 @@ dependencies = [
 requires-dist = [
     { name = "arize-phoenix", specifier = "~=6.1" },
     { name = "nvidia-nat", extras = ["opentelemetry"], editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-profiling"
+source = { editable = "packages/nvidia_nat_profiling" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "nvidia-nat" },
+    { name = "prefixspan" },
+    { name = "scikit-learn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "matplotlib", specifier = "~=3.9" },
+    { name = "nvidia-nat", editable = "." },
+    { name = "prefixspan", specifier = "~=0.5.2" },
+    { name = "scikit-learn", specifier = "~=1.6" },
 ]
 
 [[package]]
