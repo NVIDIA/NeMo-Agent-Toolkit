@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 from typing import TypeVar
 from typing import cast
@@ -48,7 +49,9 @@ class DFWToDictProcessor(Processor[DFWRecordT, dict]):
             logger.debug("Cannot process 'None' item, returning empty dict")
             return {}
 
-        return item.model_dump(by_alias=True)
+        return json.loads(item.model_dump_json(by_alias=True))
+
+        # return item.model_dump(by_alias=True)
 
 
 class SpanToDFWRecordProcessor(Processor[Span, DFWRecordT], TypeIntrospectionMixin):

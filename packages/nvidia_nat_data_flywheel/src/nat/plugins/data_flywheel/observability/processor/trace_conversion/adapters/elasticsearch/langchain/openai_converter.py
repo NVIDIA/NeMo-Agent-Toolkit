@@ -36,7 +36,7 @@ from nat.plugins.data_flywheel.observability.schema.dfw_es_record import SystemM
 from nat.plugins.data_flywheel.observability.schema.dfw_es_record import ToolCall
 from nat.plugins.data_flywheel.observability.schema.dfw_es_record import ToolMessage
 from nat.plugins.data_flywheel.observability.schema.dfw_es_record import UserMessage
-from nat.plugins.data_flywheel.observability.schema.langchain.langchain_message import LangChainMessage
+from nat.plugins.data_flywheel.observability.schema.langchain.openai_message import OpenAIMessage
 from nat.plugins.data_flywheel.observability.schema.langchain.openai_trace_source import OpenAITraceSource
 from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
 
@@ -135,11 +135,11 @@ def _create_tool_calls(tool_calls_data: list) -> list[ToolCall]:
     return validated_tool_calls
 
 
-def _convert_message_to_dfw(message: LangChainMessage) -> Message:
+def _convert_message_to_dfw(message: OpenAIMessage) -> Message:
     """Convert a message to appropriate DFW message type with improved structure.
 
     Args:
-        message (LangChainMessage): The message to convert
+        message (OpenAIMessage): The message to convert
 
     Returns:
         Message: The converted message

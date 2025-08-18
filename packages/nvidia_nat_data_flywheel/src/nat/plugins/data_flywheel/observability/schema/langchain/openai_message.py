@@ -19,7 +19,7 @@ from pydantic import BaseModel
 
 
 # LangChain message models for validation
-class LangChainMessage(BaseModel):
+class OpenAIMessage(BaseModel):
     content: str
     additional_kwargs: dict[str, Any] = {}
     response_metadata: dict[str, Any] = {}

@@ -56,17 +56,23 @@ class ElasticsearchMixin:
             item: Dictionary or list of dictionaries to export to Elasticsearch.
         """
         logger.info("Exporting item: %s", item)
-        return
+        # return
 
-        # if isinstance(item, list):
-        #     if not item:  # Empty list
-        #         return
-        #     if not all(isinstance(doc, dict) for doc in item):
-        #         raise ValueError("All items in list must be dictionaries")
-        #     # Bulk export for list of dicts
-        #     await self._elastic_client.bulk(index=self._index, operations=item)
-        # elif isinstance(item, dict):
-        #     # Single document export
-        #     await self._elastic_client.index(index=self._index, document=item)
-        # else:
-        #     raise ValueError(f"Invalid item type: {type(item)}. Expected dict or list[dict]")
+        if isinstance(item, list):
+            if not item:  # Empty list
+                return
+            if not all(isinstance(doc, dict) for doc in item):
+                raise ValueError("All items in list must be dictionaries")
+
+            # Format for bulk operations: each document needs an action/metadata line
+            bulk_operations = []
+            for doc in item:
+                bulk_operations.append({"index": {"_index": self._index}})  # action/metadata with index
+                bulk_operations.append(doc)  # document
+
+            await self._elastic_client.bulk(operations=bulk_operations)
+        elif isinstance(item, dict):
+            # Single document export
+            await self._elastic_client.index(index=self._index, document=item)
+        else:
+            raise ValueError(f"Invalid item type: {type(item)}. Expected dict or list[dict]")

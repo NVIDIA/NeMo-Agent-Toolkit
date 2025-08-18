@@ -88,7 +88,7 @@ class DFWExporter(SpanExporter[Span, dict]):
         before being serialized to dictionaries for export.
 
         Returns:
-            type[Any]: The Pydantic model type for the export contract.
+            type[BaseModel]: The Pydantic model type for the export contract.
         """
         pass
 

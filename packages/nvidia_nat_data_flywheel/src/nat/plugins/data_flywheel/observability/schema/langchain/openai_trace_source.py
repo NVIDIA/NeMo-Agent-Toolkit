@@ -23,7 +23,7 @@ from pydantic import field_validator
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import ToolSchema
-from nat.plugins.data_flywheel.observability.schema.langchain.langchain_message import LangChainMessage
+from nat.plugins.data_flywheel.observability.schema.langchain.openai_message import OpenAIMessage
 from nat.plugins.data_flywheel.observability.schema.provider import Provider
 from nat.plugins.data_flywheel.observability.schema.trace_source_base import TraceSourceBase
 from nat.plugins.data_flywheel.observability.utils.deserialize import deserialize_input_value
@@ -40,12 +40,12 @@ class OpenAIMetadata(BaseModel):
 
 class OpenAITraceSourceBase(TraceSourceBase[Literal[LLMFrameworkEnum.LANGCHAIN], ProviderT]):
     framework: Literal[LLMFrameworkEnum.LANGCHAIN] = LLMFrameworkEnum.LANGCHAIN
-    input_value: list[LangChainMessage]
+    input_value: list[OpenAIMessage]
     metadata: OpenAIMetadata
 
     @field_validator("input_value", mode="before")
     @classmethod
-    def validate_input_value(cls, v: Any) -> list[LangChainMessage]:
+    def validate_input_value(cls, v: Any) -> list[OpenAIMessage]:
         if v is None:
             raise ValueError("Input value is required")
 
@@ -62,8 +62,8 @@ class OpenAITraceSourceBase(TraceSourceBase[Literal[LLMFrameworkEnum.LANGCHAIN],
             validated_messages = []
             for msg in v:
                 if isinstance(msg, dict):
-                    validated_messages.append(LangChainMessage(**msg))
-                elif isinstance(msg, LangChainMessage):
+                    validated_messages.append(OpenAIMessage(**msg))
+                elif isinstance(msg, OpenAIMessage):
                     validated_messages.append(msg)
                 else:
                     raise ValueError(f"Invalid message format: {msg}")
