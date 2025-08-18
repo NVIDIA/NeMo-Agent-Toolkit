@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = "==3.12.*"
 resolution-markers = [
     "sys_platform == 'linux'",
@@ -3990,8 +3990,12 @@ dev = [
     { name = "flake8" },
     { name = "flake8-pyproject" },
     { name = "httpx-sse" },
+    { name = "ipython" },
     { name = "isort" },
+    { name = "myst-parser" },
+    { name = "nbsphinx" },
     { name = "nvidia-nat-test" },
+    { name = "nvidia-sphinx-theme" },
     { name = "pip" },
     { name = "pre-commit" },
     { name = "pylint" },
@@ -4003,20 +4007,14 @@ dev = [
     { name = "python-docx" },
     { name = "setuptools" },
     { name = "setuptools-scm" },
-    { name = "tomlkit" },
-    { name = "twine" },
-    { name = "yapf" },
-]
-docs = [
-    { name = "ipython" },
-    { name = "myst-parser" },
-    { name = "nbsphinx" },
-    { name = "nvidia-sphinx-theme" },
     { name = "sphinx" },
     { name = "sphinx-autoapi" },
     { name = "sphinx-copybutton" },
     { name = "sphinx-mermaid" },
+    { name = "tomlkit" },
+    { name = "twine" },
     { name = "vale" },
+    { name = "yapf" },
 ]
 
 [package.metadata]
@@ -4101,8 +4099,12 @@ dev = [
     { name = "flake8", specifier = "~=7.1" },
     { name = "flake8-pyproject", specifier = "~=1.2" },
     { name = "httpx-sse", specifier = "~=0.4" },
+    { name = "ipython", specifier = "~=8.31" },
     { name = "isort", specifier = "==5.12.0" },
+    { name = "myst-parser", specifier = "~=4.0" },
+    { name = "nbsphinx", specifier = "~=0.9" },
     { name = "nvidia-nat-test", editable = "packages/nvidia_nat_test" },
+    { name = "nvidia-sphinx-theme", specifier = ">=0.0.7" },
     { name = "pip", specifier = ">=24.3.1" },
     { name = "pre-commit", specifier = ">=4.0,<5.0" },
     { name = "pylint", specifier = "==3.3.*" },
@@ -4114,20 +4116,14 @@ dev = [
     { name = "python-docx", specifier = "~=1.1.0" },
     { name = "setuptools", specifier = ">=64" },
     { name = "setuptools-scm", specifier = ">=8" },
-    { name = "tomlkit", specifier = "~=0.13.2" },
-    { name = "twine", specifier = "~=6.0" },
-    { name = "yapf", specifier = "==0.43.*" },
-]
-docs = [
-    { name = "ipython", specifier = "~=8.31" },
-    { name = "myst-parser", specifier = "~=4.0" },
-    { name = "nbsphinx", specifier = "~=0.9" },
-    { name = "nvidia-sphinx-theme", specifier = ">=0.0.7" },
     { name = "sphinx", specifier = "~=8.2" },
     { name = "sphinx-autoapi", specifier = ">=3.6" },
     { name = "sphinx-copybutton", specifier = ">=0.5" },
     { name = "sphinx-mermaid" },
+    { name = "tomlkit", specifier = "~=0.13.2" },
+    { name = "twine", specifier = "~=6.0" },
     { name = "vale", specifier = "~=3.12" },
+    { name = "yapf", specifier = "==0.43.*" },
 ]
 
 [[package]]
