@@ -57,6 +57,10 @@ The NIM LLM provider is defined by the {py:class}`~nat.llm.nim_llm.NIMModelConfi
 * `base_url` - The base URL to use for the model
 * `max_retries` - The maximum number of retries for the request
 
+:::{note}
+`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Model-Gated Fields](../../extend/model-gated-fields.md) for details.
+:::
+
 ### OpenAI
 
 The OpenAI LLM provider is defined by the {py:class}`~nat.llm.openai_llm.OpenAIModelConfig` class.
@@ -70,6 +74,10 @@ The OpenAI LLM provider is defined by the {py:class}`~nat.llm.openai_llm.OpenAIM
 * `base_url` - The base URL to use for the model
 * `max_retries` - The maximum number of retries for the request
 
+:::{note}
+`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Model-Gated Fields](../../extend/model-gated-fields.md) for details.
+:::
+
 ### AWS Bedrock
 
 The AWS Bedrock LLM provider is defined by the {py:class}`~nat.llm.aws_bedrock_llm.AWSBedrockModelConfig` class.
@@ -81,6 +89,10 @@ The AWS Bedrock LLM provider is defined by the {py:class}`~nat.llm.aws_bedrock_l
 * `region_name` - The region to use for the model
 * `base_url` - The base URL to use for the model
 * `credentials_profile_name` - The credentials profile name to use for the model
+
+:::{note}
+`temperature` is model-gated and may not be supported by all models. See [Model-Gated Fields](../../extend/model-gated-fields.md) for details.
+:::
 
 
 ```{toctree}

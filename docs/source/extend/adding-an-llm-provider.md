@@ -56,6 +56,81 @@ class OpenAIModelConfig(LLMBaseConfig, name="openai"):
     max_retries: int = Field(default=10, description="The max number of retries for the request.")
 ```
 
+## Mixins
+
+Mixins are used to add additional fields to the provider configuration without needing to subclass or add additional fields to the provider configuration explicitly. Additionally, the toolkit can use the mixins for validation and opt-in functionality.
+
+### RetryMixin
+
+The {class}`nat.data_models.retry_mixin.RetryMixin` is a mixin that adds a `max_retries` field to the provider config. The `max_retries` field is an integer that specifies the maximum number of retries for the request.
+
+```python
+from nat.data_models.retry_mixin import RetryMixin
+
+class OpenAIModelConfig(LLMBaseConfig, RetryMixin, name="openai"):
+    """An OpenAI LLM provider to be used with an LLM client."""
+
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
+
+    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
+    base_url: str | None = Field(default=None, description="Base url to the hosted model.")
+    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
+                            serialization_alias="model",
+                            description="The OpenAI hosted model name.")
+    seed: int | None = Field(default=None, description="Random seed to set for generation.")
+```
+
+### Model-Gated Fields
+
+Some configuration parameters are only valid for certain models. The toolkit provides built-in mixins that automatically validate and default these parameters based on the selected model. For details on the mechanism, see [Model-Gated Configuration Fields](./model-gated-fields.md).
+
+- `TemperatureMixin`: adds a `temperature` field in [0, 1], with a default of `0.0` when supported
+- `TopPMixin`: adds a `top_p` field in [0, 1], with a default of `1.0` when supported
+
+:::{note}
+The built-in mixins may reject certain fields for models that do not support them (for example, GPT-5 models currently reject `temperature` and `top_p`). If a gated field is explicitly set on an unsupported model, validation will fail.
+:::
+
+#### TemperatureMixin
+
+The {class}`nat.data_models.temperature_mixin.TemperatureMixin` is a mixin that adds a `temperature` field to the provider config. The `temperature` field is a float in [0, 1] that specifies the sampling temperature for the model.
+
+```python
+from nat.data_models.temperature_mixin import TemperatureMixin
+
+
+class OpenAIModelConfig(LLMBaseConfig, TemperatureMixin, name="openai"):
+    """An OpenAI LLM provider to be used with an LLM client."""
+
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
+
+
+    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
+    base_url: str | None = Field(default=None, description="Base url to the hosted model.")
+    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
+                            serialization_alias="model",
+                            description="The OpenAI hosted model name.")
+    seed: int | None = Field(default=None, description="Random seed to set for generation.")
+```
+
+#### TopPMixin
+
+The {class}`nat.data_models.top_p_mixin.TopPMixin` is a mixin that adds a `top_p` field to the provider config. The `top_p` field is a float in [0, 1] that specifies the top-p for distribution sampling.
+
+```python
+from nat.data_models.top_p_mixin import TopPMixin
+
+class OpenAIModelConfig(LLMBaseConfig, TopPMixin, name="openai"):
+    """An OpenAI LLM provider to be used with an LLM client."""
+
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
+
+    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
+    base_url: str | None = Field(default=None, description="Base url to the hosted model.")
+    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
+                            serialization_alias="model",
+                            description="The OpenAI hosted model name.")
+```
 
 ### Registering the Provider
 An asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_provider` is used to register the provider with NeMo Agent toolkit by yielding an instance of {class}`nat.builder.llm.LLMProviderInfo`.
