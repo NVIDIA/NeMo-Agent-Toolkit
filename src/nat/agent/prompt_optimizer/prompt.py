@@ -25,6 +25,7 @@ mutator_prompt = """
 - **Be Creative within bounds.** You may rephrase, reorganize, and enhance, but not alter meaning.
 - **DO NOT use curly braces in your prompt** for anything other than existing variables in the prompt as the string
 will be treated as an f-string.
+- **Examples are a good idea** if the original prompt lacks them. They help clarify expected output.
 
 ---
 
