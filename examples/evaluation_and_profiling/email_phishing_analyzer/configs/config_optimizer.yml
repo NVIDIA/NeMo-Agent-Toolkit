@@ -119,14 +119,14 @@ optimizer:
 
   numeric:
     enabled: true
-    n_trials: 1
+    n_trials: 3
 
   prompt:
-    enabled: false
+    enabled: true
     prompt_population_init_function: prompt_init
     prompt_recombination_function: prompt_recombination
     ga_generations: 3
-    ga_population_size: 5
+    ga_population_size: 3
     ga_diversity_lambda: 0.3
     ga_parallel_evaluations: 1
 
