@@ -27,7 +27,7 @@ Use {py:class}`~nat.data_models.model_gated_field_mixin.ModelGatedFieldMixin` to
   - `supported_models`: A sequence of compiled regex patterns that mark models where the field is supported.
 - **Behavior**:
   - Supported and value not provided → sets `default_if_supported`.
-  - Supported and value provided → keeps the provided value (and validates its range/type if defined).
+  - Supported and value provided → keeps the provided value (and performs all other validations if defined).
   - Unsupported and value provided → raises a validation error.
   - Unsupported and value not provided → leaves the field as `None`.
   - No detection keys present → applies `default_if_supported`.
@@ -78,7 +78,7 @@ class AzureOnlyMixin(
   - Default when supported: `1.0`
   - Not supported on GPT-5 models
 
-### Example: Integrating into a Provider Config
+### Example: Integrating into a Provider Configuration
 
 ```python
 from pydantic import BaseModel, Field
@@ -92,7 +92,7 @@ class MyProviderConfig(BaseModel, TemperatureMixin, TopPMixin):
 
 ## Best Practices
 
-- Use `supported_models` for allowlists and `unsupported_models` for denylists; do not set both.
+- Use `supported_models` for allowlist and `unsupported_models` for denylist; do not set both.
 - Keep regex patterns specific (anchor with `^` and `$` when appropriate).
 - If your config uses a non-standard model identifier field, set `model_keys` accordingly.
 
