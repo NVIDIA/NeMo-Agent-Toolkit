@@ -21,12 +21,12 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.llm.nim_llm import NIMModelConfig
-from aiq.llm.openai_llm import OpenAIModelConfig
-from aiq.plugins.agno.llm import nim_agno
-from aiq.plugins.agno.llm import openai_agno
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.agno.llm import nim_agno
+from nat.plugins.agno.llm import openai_agno
 
 
 class TestNimAgno:
@@ -166,7 +166,7 @@ class TestOpenAIAgno:
             # Verify that the returned object is the mock OpenAIChat instance
             assert openai_instance == mock_openai_chat.return_value
 
-    @patch("aiq.cli.type_registry.GlobalTypeRegistry")
+    @patch("nat.cli.type_registry.GlobalTypeRegistry")
     def test_registration_decorators(self, mock_global_registry):
         """Test that the register_llm_client decorators correctly register the llm functions."""
         # Mock the GlobalTypeRegistry

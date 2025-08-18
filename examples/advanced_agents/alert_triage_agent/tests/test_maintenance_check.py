@@ -27,16 +27,16 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 import yaml
-from aiq_alert_triage_agent.maintenance_check import NO_ONGOING_MAINTENANCE_STR
-from aiq_alert_triage_agent.maintenance_check import MaintenanceCheckToolConfig
-from aiq_alert_triage_agent.maintenance_check import _get_active_maintenance
-from aiq_alert_triage_agent.maintenance_check import _load_maintenance_data
-from aiq_alert_triage_agent.maintenance_check import _parse_alert_data
-from aiq_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
+from nat_alert_triage_agent.maintenance_check import NO_ONGOING_MAINTENANCE_STR
+from nat_alert_triage_agent.maintenance_check import MaintenanceCheckToolConfig
+from nat_alert_triage_agent.maintenance_check import _get_active_maintenance
+from nat_alert_triage_agent.maintenance_check import _load_maintenance_data
+from nat_alert_triage_agent.maintenance_check import _parse_alert_data
+from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.component_ref import LLMRef
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.component_ref import LLMRef
 
 
 def test_load_maintenance_data():
@@ -246,7 +246,7 @@ async def test_maintenance_check_tool():
                 # Run test cases
                 for case in test_cases:
                     # Mock the alert summarization function
-                    with patch('aiq_alert_triage_agent.maintenance_check._summarize_alert') as mock_summarize:
+                    with patch('nat_alert_triage_agent.maintenance_check._summarize_alert') as mock_summarize:
                         if case['expected_maintenance']:
                             mock_summarize.return_value = case['mock_summary']
 

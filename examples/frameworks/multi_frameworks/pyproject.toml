@@ -6,7 +6,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_multi_frameworks"
+name = "nat_multi_frameworks"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain,llama-index]~=1.2",
@@ -14,7 +14,7 @@ dependencies = [
   "bs4==0.0.2",
   "markdown-it-py~=3.0",
   "nvidia-haystack==0.1.2",
-  "openai~=1.78.0",                         # Pin to compatible range with llama-index
+  "openai~=1.78.0", # Pin to compatible range with llama-index
 ]
 requires-python = ">=3.11,<3.13"
 description = "Custom NeMo Agent toolkit Workflow"
@@ -23,5 +23,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_multi_frameworks = "aiq_multi_frameworks.register"
+[project.entry-points.'nat.components']
+nat_multi_frameworks = "nat_multi_frameworks.register"

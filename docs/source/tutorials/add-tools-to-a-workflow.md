@@ -21,7 +21,7 @@ The [Customizing a Workflow](./customize-a-workflow.md) tutorial demonstrates ho
 
 NeMo Agent toolkit includes several built-in tools (functions) that can be used in any workflow. To query for a list of installed tools, run the following command:
 ```bash
-aiq info components -t function
+nat info components -t function
 ```
 
 The `examples/getting_started/simple_web_query/configs/config.yml` workflow defines a tool to query the [LangSmith User Guide](https://docs.smith.langchain.com). This is defined in the `functions` section of the configuration file:
@@ -37,7 +37,7 @@ functions:
 
 However, the workflow is unaware of some related technologies, such as LangChain, if you run:
 ```bash
-aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "How do I trace only specific parts of my LangChain application?"
+nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "How do I trace only specific parts of my LangChain application?"
 ```
 
 The output may be similar to the following:
@@ -98,7 +98,7 @@ The resulting YAML is located at `examples/documentation_guides/workflows/custom
 
 When you rerun the workflow with the updated configuration file:
 ```bash
-aiq run --config_file examples/documentation_guides/workflows/custom_workflow/custom_config.yml \
+nat run --config_file examples/documentation_guides/workflows/custom_workflow/custom_config.yml \
   --input "How do I trace only specific parts of my LangChain application?"
 ```
 
@@ -111,7 +111,7 @@ Workflow Result:
 ## Alternate Method Using a Web Search Tool
 Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. One of the tools available in NeMo Agent toolkit is the `tavily_internet_search` tool, which utilizes the [Tavily Search API](https://tavily.com/).
 
-The `tavily_internet_search` tool is part of the `aiqtoolkit[langchain]` package, to install the package run:
+The `tavily_internet_search` tool is part of the `nvidia-nat[langchain]` package, to install the package run:
 ```bash
 # local package install from source
 uv pip install -e '.[langchain]'
@@ -142,7 +142,7 @@ The resulting configuration file is located at `examples/documentation_guides/wo
 
 When you re-run the workflow with the updated configuration file:
 ```bash
-aiq run --config_file examples/documentation_guides/workflows/custom_workflow/search_config.yml \
+nat run --config_file examples/documentation_guides/workflows/custom_workflow/search_config.yml \
   --input "How do I trace only specific parts of my LangChain application?"
 ```
 

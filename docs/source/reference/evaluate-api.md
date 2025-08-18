@@ -35,7 +35,7 @@ graph TD
 See NeMo Agent toolkit [UI and Server](./../quick-start/launching-ui.md) guide for instructions on starting the NeMo Agent toolkit server.
 Sample Usage:
 ```bash
-aiq serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
+nat serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
 ```
 
 ## Evaluate Request and Response
@@ -60,7 +60,7 @@ curl --request POST \
 You can optionally pipe the output to `jq` for response formatting.
 
 ### Evaluate Request Format
-`AIQEvaluateRequest`:
+`EvaluateRequest`:
 - `config_file`: Path to the evaluation configuration file on the remote server.
 - `job_id`: Unique identifier for the evaluation job. If not provided, a new job ID is generated.
 - `reps`: Number of repetitions for the evaluation. Defaults to 1.
@@ -76,7 +76,7 @@ The evaluation request is stored as a background job in the server and the endpo
 ```
 
 ### Evaluate Response Format
-`AIQEvaluateResponse`:
+`EvaluateResponse`:
 - `job_id`: Unique identifier for the evaluation job.
 - `status`: Status of the evaluation job. Possible values are:
 **Possible `status` values**:
@@ -108,7 +108,7 @@ The response contains the status of the job, including the job ID, status, and a
   "status": "success",
   "config_file": "examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml",
   "error": null,
-  "output_path": ".tmp/aiq/examples/getting_started/simple_web_query/jobs/882317f0-6149-4b29-872b-9c8018d64784",
+  "output_path": ".tmp/nat/examples/getting_started/simple_web_query/jobs/882317f0-6149-4b29-872b-9c8018d64784",
   "created_at": "2025-04-11T17:33:38.018904Z",
   "updated_at": "2025-04-11T17:34:40.359080Z",
   "expires_at": "2025-04-11T17:44:40.359080Z"
@@ -145,7 +145,7 @@ curl --request GET \
     "status": "success",
     "config_file": "examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml",
     "error": null,
-    "output_path": ".tmp/aiq/examples/getting_started/simple_web_query/jobs/df6fddd7-2adf-45dd-a105-8559a7569ec9",
+    "output_path": ".tmp/nat/examples/getting_started/simple_web_query/jobs/df6fddd7-2adf-45dd-a105-8559a7569ec9",
     "created_at": "2025-04-11T17:33:16.711636Z",
     "updated_at": "2025-04-11T17:34:24.753742Z",
     "expires_at": "2025-04-11T17:44:24.753742Z"
@@ -161,6 +161,6 @@ A separate output directory is created for each job. The output directory contai
 As the results are maintained per-job, output directory cleanup is recommended. This can be done by enabling `eval.general.output.cleanup` in the evaluation configuration file. If this configuration is enabled, the server removes the entire contents of the output directory at the start of each job. This way only the last job's results are kept in the output directory.
 
 ### Job Expiry
-You can also configure the expiry timer per-job using the `expiry_seconds` parameter in the `AIQEvaluateRequest`. The server will automatically clean up expired jobs based on this timer. The default expiry value is 3600 seconds (1 hour). The expiration time is clamped between 600 (10 min) and 86400 (24h).
+You can also configure the expiry timer per-job using the `expiry_seconds` parameter in the `EvaluateRequest`. The server will automatically clean up expired jobs based on this timer. The default expiry value is 3600 seconds (1 hour). The expiration time is clamped between 600 (10 min) and 86400 (24h).
 
 This cleanup includes both the job metadata and the contents of the output directory. The most recently finished job is always preserved, even if expired. Similarly, active jobs, `["submitted", "running"]`, are exempt from cleanup.

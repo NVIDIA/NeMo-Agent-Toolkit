@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA NeMo Agent Toolkit](./docs/source/_static/aiqtoolkit_banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](./docs/source/_static/banner.png "NeMo Agent toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit
 
@@ -50,11 +50,11 @@ With NeMo Agent toolkit, you can move quickly, experiment freely, and ensure rel
 
 The following diagram illustrates the key components of NeMo Agent toolkit and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend NeMo Agent toolkit in your projects.
 
-![NeMo Agent toolkit Components Diagram](docs/source/_static/aiqtoolkit_gitdiagram.png)
+![NeMo Agent toolkit Components Diagram](docs/source/_static/gitdiagram.png)
 
 ## Links
 
- * [Documentation](https://docs.nvidia.com/aiqtoolkit): Explore the full documentation for NeMo Agent toolkit.
+ * [Documentation](https://docs.nvidia.com/nemo/agent-toolkit): Explore the full documentation for NeMo Agent toolkit.
  * [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with NeMo Agent toolkit.
  * [Examples](./examples/README.md): Explore examples of NeMo Agent toolkit workflows located in the [`examples`](./examples) directory of the source repository.
  * [Create and Customize NeMo Agent toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent toolkit workflows.
@@ -77,8 +77,8 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 
 1. Clone the NeMo Agent toolkit repository to your local machine.
    ```bash
-   git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git aiqtoolkit
-   cd aiqtoolkit
+   git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit
+   cd nemo-agent-toolkit
    ```
 
 2. Initialize, fetch, and update submodules in the Git repository.
@@ -123,7 +123,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
    ```
 
    > [!NOTE]
-   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
+   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
 
 
 
@@ -135,7 +135,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 6. Verify the installation using the NeMo Agent toolkit CLI
 
    ```bash
-   aiq --version
+   nat --version
    ```
 
    This should output the NeMo Agent toolkit version which is currently installed.
@@ -177,10 +177,10 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
       parse_agent_response_max_retries: 3
    ```
 
-3. Run the Hello World example using the `aiq` CLI and the `workflow.yaml` file.
+3. Run the Hello World example using the `nat` CLI and the `workflow.yaml` file.
 
    ```bash
-   aiq run --config_file workflow.yaml --input "List five subspecies of Aardvarks"
+   nat run --config_file workflow.yaml --input "List five subspecies of Aardvarks"
    ```
 
    This will run the workflow and output the results to the console.

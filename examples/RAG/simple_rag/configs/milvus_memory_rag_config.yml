@@ -36,11 +36,11 @@ retrievers:
 
 functions:
   cuda_retriever_tool:
-    _type: aiq_retriever
+    _type: nat_retriever
     retriever: cuda_retriever
     topic: Retrieve documentation for NVIDIA's CUDA library
   mcp_retriever_tool:
-    _type: aiq_retriever
+    _type: nat_retriever
     retriever: mcp_retriever
     topic: Retrieve information about Model Context Protocol (MCP)
   add_memory:

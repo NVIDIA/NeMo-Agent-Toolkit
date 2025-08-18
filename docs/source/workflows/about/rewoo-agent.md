@@ -61,7 +61,7 @@ functions:
   calculator_inequality:
     _type: calculator_inequality
   calculator_divide:
-    _type: aiq_simple_calculator/calculator_divide
+    _type: nat_simple_calculator/calculator_divide
   math_agent:
     _type: rewoo_agent
     tool_names:
@@ -91,7 +91,9 @@ functions:
 
 * `use_openai_api`**[Deprecated]** : This option is deprecated and will be removed in a future release. This option will NOT take any effect.
 
-* `additional_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base prompt.
+* `additional_planner_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base planner prompt.
+
+* `additional_solver_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base solver prompt.
 
 
 ## **Step-by-Step Breakdown of a ReWOO Agent**
