@@ -51,9 +51,6 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
         default=None,
         description="Provides the SOLVER_PROMPT to use with the agent")  # defaults to SOLVER_PROMPT in prompt.py
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
-    use_openai_api: bool = Field(default=True,
-                                 description=("This option is deprecated and will be removed in a future release. "
-                                              "This option will NOT take any effect."))
     additional_instructions: str | None = Field(
         default=None, description="Additional instructions to provide to the agent in addition to the base prompt.")
     additional_planner_instructions: str | None = Field(
@@ -125,8 +122,9 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
                                                         token_counter=len,
                                                         start_on="human",
                                                         include_system=True)
-            task = HumanMessage(content=messages[0].content)
-            state = ReWOOGraphState(task=task)
+
+            task = HumanMessage(content=messages[-1].content)
+            state = ReWOOGraphState(messages=messages, task=task)
 
             # run the ReWOO Agent Graph
             state = await graph.ainvoke(state)
