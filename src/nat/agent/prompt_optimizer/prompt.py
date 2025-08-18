@@ -50,7 +50,8 @@ You may:
 - **Constrain** (add explicit rules/limits)  
 - **Harden** (improve error handling/fallbacks)  
 - **Defuse** (replace ambiguous verbs with measurable actions)  
-- **Format-lock** (wrap outputs in JSON/XML fenced blocks)  
+- **Format-lock** (wrap outputs in JSON/XML fenced blocks)
+- **Example-ify** (add examples if missing or weak)  
 
 ---
 
