@@ -20,7 +20,7 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
-create_env group:dev group:docs extra:examples
+create_env group:dev extra:examples
 
 # Before running the checks, make sure we have no changes in the repo
 git reset --hard
