@@ -28,15 +28,23 @@ class ModelGatedFieldMixin(Generic[T]):
     """
     A mixin that gates a field based on model support.
 
-    This should be used to simplify the validation of a field for a given model.
+    This should be used to automatically validate a field based on a given model.
 
-    Args:
-        field_name: The name of the field.
-        default_if_supported: The default value of the field if it is supported for the model.
-        unsupported_models: A sequence of regex patterns that match the model names NOT supported for the field.
-        supported_models: A sequence of regex patterns that match the model names supported for the field.
-        model_keys: A sequence of keys that are used to validate the field.
-                    Defaults to ("model_name", "model", "azure_deployment",)
+    Parameters
+    ----------
+    field_name: `str`
+                The name of the field.
+    default_if_supported: `T`
+                          The default value of the field if it is supported for the model.
+    unsupported_models: `Sequence[Pattern[str]] | None`
+                        A sequence of regex patterns that match the model names NOT supported for the field.
+                        Defaults to None.
+    supported_models: `Sequence[Pattern[str]] | None`
+                      A sequence of regex patterns that match the model names supported for the field.
+                      Defaults to None.
+    model_keys: `Sequence[str]`
+                A sequence of keys that are used to validate the field.
+                Defaults to ("model_name", "model", "azure_deployment",)
     """
 
     def __init_subclass__(
@@ -54,6 +62,14 @@ class ModelGatedFieldMixin(Generic[T]):
         if ModelGatedFieldMixin in cls.__bases__:
             if field_name is None:
                 raise ValueError("field_name must be provided when subclassing ModelGatedFieldMixin")
+            if default_if_supported is None:
+                raise ValueError("default_if_supported must be provided when subclassing ModelGatedFieldMixin")
+            if unsupported_models is None and supported_models is None:
+                raise ValueError("Either unsupported_models or supported_models must be provided")
+            if unsupported_models is not None and supported_models is not None:
+                raise ValueError("Only one of unsupported_models or supported_models must be provided")
+            if model_keys is not None and len(model_keys) == 0:
+                raise ValueError("model_keys must be provided and non-empty when subclassing ModelGatedFieldMixin")
             cls.field_name = field_name
             cls.default_if_supported = default_if_supported
             cls.unsupported_models = unsupported_models
@@ -69,26 +85,18 @@ class ModelGatedFieldMixin(Generic[T]):
                 Args:
                     model_name: The name of the model to check.
                 """
-                if getattr(cls, "unsupported_models", None) is not None:
-                    return not any(p.search(model_name) for p in getattr(cls, "unsupported_models"))
-                if getattr(cls, "supported_models", None) is not None:
-                    return any(p.search(model_name) for p in getattr(cls, "supported_models"))
+                unsupported = getattr(cls, "unsupported_models", None)
+                supported = getattr(cls, "supported_models", None)
+                if unsupported is not None:
+                    return not any(p.search(model_name) for p in unsupported)
+                if supported is not None:
+                    return any(p.search(model_name) for p in supported)
                 return False
 
             cls._model_gated_field_check_model = check_model
 
             @classmethod
-            def configuration_valid(cls) -> None:
-                if getattr(cls, "unsupported_models", None) is None and getattr(cls, "supported_models", None) is None:
-                    raise ValueError("Either unsupported_models or supported_models must be provided")
-                if getattr(cls, "unsupported_models", None) is not None and getattr(cls, "supported_models",
-                                                                                    None) is not None:
-                    raise ValueError("Only one of unsupported_models or supported_models must be provided")
-
-            cls._model_gated_field_ensure_selector_configuration_valid = configuration_valid
-
-            @classmethod
-            def resolve_support(cls, instance: BaseModel) -> str | None:
+            def detect_support(cls, instance: BaseModel) -> str | None:
                 for key in getattr(cls, "model_keys"):
                     if hasattr(instance, key):
                         model_name_value = getattr(instance, key)
@@ -96,17 +104,16 @@ class ModelGatedFieldMixin(Generic[T]):
                         return key if not is_supported else None
                 return None
 
-            cls._model_gated_field_resolve_support = resolve_support
+            cls._model_gated_field_detect_support = detect_support
 
             @model_validator(mode="after")
             def model_validate(self):
                 klass = self.__class__
-                klass._model_gated_field_ensure_selector_configuration_valid()
 
                 field_name_local = getattr(klass, "field_name")
                 current_value = getattr(self, field_name_local, None)
 
-                found_key = klass._model_gated_field_resolve_support(self)
+                found_key = klass._model_gated_field_detect_support(self)
                 if found_key is not None:
                     if current_value is not None:
                         raise ValueError(

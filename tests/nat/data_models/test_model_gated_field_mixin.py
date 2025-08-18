@@ -25,33 +25,35 @@ from nat.data_models.model_gated_field_mixin import ModelGatedFieldMixin
 
 def test_model_gated_field_requires_one_selector():
 
-    class BadBoth(
-            BaseModel,
-            ModelGatedFieldMixin[int],
-            field_name="dummy",
-            default_if_supported=1,
-            unsupported_models=(re.compile(r"alpha"), ),
-            supported_models=(re.compile(r"beta"), ),
-    ):
-        dummy: int | None = Field(default=None)
-        model_name: str = "alpha"
+    with pytest.raises(ValueError, match=r"Only one of unsupported_models or supported_models must be provided"):
 
-    with pytest.raises(ValidationError, match=r"Only one of unsupported_models or supported_models must be provided"):
+        class BadBoth(
+                BaseModel,
+                ModelGatedFieldMixin[int],
+                field_name="dummy",
+                default_if_supported=1,
+                unsupported_models=(re.compile(r"alpha"), ),
+                supported_models=(re.compile(r"beta"), ),
+        ):
+            dummy: int | None = Field(default=None)
+            model_name: str = "alpha"
+
         _ = BadBoth()
 
 
 def test_model_gated_field_requires_selector_present():
 
-    class BadNone(
-            BaseModel,
-            ModelGatedFieldMixin[int],
-            field_name="dummy",
-            default_if_supported=1,
-    ):
-        dummy: int | None = Field(default=None)
-        model_name: str = "alpha"
+    with pytest.raises(ValueError, match=r"Either unsupported_models or supported_models must be provided"):
 
-    with pytest.raises(ValidationError, match=r"Either unsupported_models or supported_models must be provided"):
+        class BadNone(
+                BaseModel,
+                ModelGatedFieldMixin[int],
+                field_name="dummy",
+                default_if_supported=1,
+        ):
+            dummy: int | None = Field(default=None)
+            model_name: str = "alpha"
+
         _ = BadNone()
 
 
