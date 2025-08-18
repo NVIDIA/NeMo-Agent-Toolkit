@@ -1,0 +1,71 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nat.*"]
+
+
+[tool.setuptools_scm]
+root = "../.."
+
+
+[project]
+name = "nvidia-nat-all"
+dynamic = ["version"]
+dependencies = [
+  # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
+  # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
+  # Keep sorted!!!
+  "nvidia-nat~=1.2",
+  "nvidia-nat-agno",
+  "nvidia-nat-crewai",
+  "nvidia-nat-langchain",
+  "nvidia-nat-llama-index",
+  "nvidia-nat-mem0ai",
+  "nvidia-nat-mysql",
+  "nvidia-nat-opentelemetry",
+  "nvidia-nat-phoenix",
+  "nvidia-nat-profiling",
+  "nvidia-nat-ragaai",
+  "nvidia-nat-redis",
+  "nvidia-nat-s3",
+  "nvidia-nat-semantic-kernel",
+  "nvidia-nat-weave",
+  "nvidia-nat-zep-cloud",
+  "nvidia-nat-ingestion",
+  "gunicorn~=23.0",
+]
+requires-python = ">=3.11,<3.13"
+description = "Meta-package that installs the full NVIDIA NeMo Agent Toolkit plugin and optional dependency set"
+readme = "src/nat/meta/pypi.md"
+keywords = ["ai", "rag", "agents"]
+classifiers = ["Programming Language :: Python"]
+
+
+[tool.uv]
+config-settings = { editable_mode = "compat" }
+
+
+[tool.uv.sources]
+nvidia-nat = { workspace = true }
+nvidia-nat-agno = { workspace = true }
+nvidia-nat-crewai = { workspace = true }
+nvidia-nat-langchain = { workspace = true }
+nvidia-nat-llama-index = { workspace = true }
+nvidia-nat-mem0ai = { workspace = true }
+nvidia-nat-mysql = { workspace = true }
+nvidia-nat-opentelemetry = { workspace = true }
+nvidia-nat-phoenix = { workspace = true }
+nvidia-nat-profiling = { workspace = true }
+nvidia-nat-ragaai = { workspace = true }
+nvidia-nat-redis = { workspace = true }
+nvidia-nat-s3 = { workspace = true }
+nvidia-nat-semantic-kernel = { workspace = true }
+nvidia-nat-weave = { workspace = true }
+nvidia-nat-zep-cloud = { workspace = true }
+nvidia-nat-ingestion = { workspace = true }
+
+
