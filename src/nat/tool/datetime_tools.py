@@ -36,6 +36,8 @@ async def current_datetime(_config: CurrentTimeToolConfig, _builder: Builder):
 
     from starlette.datastructures import Headers
 
+    from nat.settings.global_settings import GlobalSettings
+
     async def _get_current_time(unused: str) -> str:
 
         del unused  # Unused parameter to avoid linting error
@@ -43,25 +45,32 @@ async def current_datetime(_config: CurrentTimeToolConfig, _builder: Builder):
         from nat.builder.context import Context
         nat_context = Context.get()
 
-        headers: Headers | None = nat_context.metadata.headers
-
-        # Default timezone is UTC
+        # Default to UTC
         timezone_obj = zoneinfo.ZoneInfo("Etc/UTC")
 
+        headers: Headers | None = nat_context.metadata.headers
+
         if headers:
-            # If user has provided a timezone in the header, we will try to use it
+            # If user has provided a timezone in the header, we will prioritize on using it
             timezone_header = headers.get("x-timezone")
             if timezone_header:
                 try:
                     timezone_obj = zoneinfo.ZoneInfo(timezone_header)
                 except Exception:
                     pass
+        else:
+            # Only if a timezone is not in the header, we will determine default timezone based on global settings
+            fallback_tz = GlobalSettings.get().fallback_timezone
+
+            if fallback_tz == "system":
+                # Use the system's local timezone. Avoid requiring external deps.
+                timezone_obj = datetime.datetime.now().astimezone().tzinfo or zoneinfo.ZoneInfo("Etc/UTC")
 
         now = datetime.datetime.now(timezone_obj)
-        now_human_readable = now.strftime(("%Y-%m-%d %H:%M:%S"))
+        now_machine_readable = now.strftime(("%Y-%m-%d %H:%M:%S %z"))
 
-        # Returns the current time in human readable format with timezone information.
-        return f"The current time of day is {now_human_readable} {timezone_obj.key}"
+        # Returns the current time in machine readable format with timezone offset.
+        return f"The current time of day is {now_machine_readable}"
 
     yield FunctionInfo.from_fn(
         _get_current_time,
