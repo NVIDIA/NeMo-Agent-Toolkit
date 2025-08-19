@@ -166,13 +166,7 @@ class BearerTokenCred(_CredBase):
 
 
 Credential = typing.Annotated[
-    typing.Union[
-        HeaderCred,
-        QueryCred,
-        CookieCred,
-        BasicAuthCred,
-        BearerTokenCred,
-    ],
+    HeaderCred | QueryCred | CookieCred | BasicAuthCred | BearerTokenCred,
     Field(discriminator="kind"),
 ]
 
@@ -242,7 +236,7 @@ class HTTPResponse(BaseModel):
 
     status_code: int = Field(description="HTTP status code returned by the server")
     headers: dict[str, str] = Field(default_factory=dict, description="HTTP response headers")
-    body: typing.Union[dict[str, typing.Any], list[typing.Any], str, bytes] | None = Field(
+    body: dict[str, typing.Any] | list[typing.Any] | str | bytes | None = Field(
         default=None, description="Response body content (JSON dict/array, plain text, or raw bytes)")
     cookies: dict[str, str] | None = Field(default=None, description="Cookies returned by the server")
     content_type: str | None = Field(default=None, description="Content-Type header value")

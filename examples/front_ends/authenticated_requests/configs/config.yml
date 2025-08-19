@@ -43,14 +43,15 @@ authentication:
     _type: oauth2_auth_code_flow
     authorization_url: https://auth.atlassian.com/authorize
     token_url: https://auth.atlassian.com/oauth/token
-    client_id: ${AIQ_OAUTH_CLIENT_ID}
-    client_secret: ${AIQ_OAUTH_CLIENT_SECRET}
+    client_id: ${JIRA_OAUTH_CLIENT_ID}
+    client_secret: ${JIRA_OAUTH_CLIENT_SECRET}
+    redirect_uri: http://localhost:8000/auth/redirect
     token_endpoint_auth_method: client_secret_post
-    response_type: code
     authorization_kwargs:
       prompt: consent
       audience: api.atlassian.com
       client_url: "http://localhost:8000"
+      response_type: code
     scopes:
       - report:personal-data
       - read:jira-work

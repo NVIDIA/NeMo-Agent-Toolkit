@@ -6,19 +6,19 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_authenticated_requests"
+name = "nat_authenticated_requests"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit",
-  "aiqtoolkit[langchain]",
+  "nvidia-nat",
+  "nvidia-nat[langchain]",
   "httpx",
 ]
 requires-python = ">=3.11,<3.13"
-description = "AIQ Toolkit Authenticated Requests Example"
+description = "Custom NeMo Agent toolkit workflow demonstrating making authenticated requests"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
+[project.entry-points.'nat.components']
 authenticated_requests = "authenticated_requests.register"

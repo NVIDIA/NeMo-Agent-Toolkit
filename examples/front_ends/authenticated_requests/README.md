@@ -17,178 +17,31 @@ limitations under the License.
 
 # Authenticated Requests Example
 
-This example demonstrates the AuthProviders extensibility in the NeMo Agent Toolkit, showing how to make authenticated HTTP
-requests.
+This example demonstrates the AuthProviders extensibility in the NeMo Agent Toolkit, showing how to make authenticated HTTP requests to external APIs. The example includes a custom `authenticated_request` function that can make both authenticated and public HTTP requests using various authentication providers.
 
-## Available AuthProviders Request Methods
+For more information about authentication providers and creating custom authentication integrations, see the [Authentication Provider Documentation](../../../docs/source/extend/adding-an-authentication-provider.md).
 
-The AuthProviderMixin provides the following HTTP methods that can be called:
-
-### **Unified Request Method**
-```python
-# The main unified method that supports all HTTP methods
-response = await auth_provider.request(
-    method="GET",
-    url="https://api.atlassian.com/oauth/token/accessible-resources",
-    user_id="Test",
-    apply_auth=True,  # Default
-    headers={"Custom-Header": "value"},
-    timeout=30
-)
-```
-
-### **GET Requests**
-```python
-# Authenticated GET request (default behavior)
-response = await auth_provider.get(
-    url="https://api.atlassian.com/oauth/token/accessible-resources",
-    user_id="Test"
-)
-
-# Public GET request (unauthenticated)
-response = await auth_provider.get(
-    url="https://api.github.com/repos/nvidia/agent-iq-toolkit",
-    apply_auth=False
-)
-```
-
-### **POST Requests**
-```python
-# POST with JSON data (authenticated)
-response = await auth_provider.post(
-    url="https://api.atlassian.com/rest/api/2/project",
-    user_id="admin",
-    json={"name": "New Project", "key": "NP", "projectTypeKey": "software"}
-)
-
-# POST with form data (authenticated)
-response = await auth_provider.post(
-    url="https://api.example.com/form",
-    user_id="user123",
-    data={"field1": "value1", "field2": "value2"}
-)
-
-# Public POST request (unauthenticated)
-response = await auth_provider.post(
-    url="https://httpbin.org/post",
-    apply_auth=False,
-    json={"test": "data"}
-)
-```
-
-### **PUT Requests**
-```python
-# PUT with JSON data to update a resource (authenticated)
-response = await auth_provider.put(
-    url="https://api.atlassian.com/rest/api/2/issue/ABC-123",
-    user_id="editor",
-    json={"fields": {"summary": "Updated Issue Title"}}
-)
-
-# PUT with string data (authenticated)
-response = await auth_provider.put(
-    url="https://api.example.com/documents/doc123",
-    user_id="writer",
-    data="Updated document content"
-)
-```
-
-### **DELETE Requests**
-```python
-# Delete a resource (authenticated)
-response = await auth_provider.delete(
-    url="https://api.atlassian.com/rest/api/2/project/PROJECT-123",
-    user_id="admin"
-)
-
-# Delete with query parameters (authenticated)
-response = await auth_provider.delete(
-    url="https://api.example.com/items/item456",
-    user_id="moderator",
-    params={"force": "true", "reason": "cleanup"}
-)
-```
-
-### **PATCH Requests**
-```python
-# PATCH to partially update a resource (authenticated)
-response = await auth_provider.patch(
-    url="https://api.atlassian.com/rest/api/2/issue/ABC-123",
-    user_id="editor",
-    json={"fields": {"priority": {"name": "High"}}}
-)
-
-# PATCH with form data (authenticated)
-response = await auth_provider.patch(
-    url="https://api.example.com/profile/user123",
-    user_id="user123",
-    data={"email": "newemail@example.com"}
-)
-```
-
-### **HEAD Requests**
-```python
-# HEAD request to check resource existence (authenticated)
-response = await auth_provider.head(
-    url="https://api.atlassian.com/rest/api/2/issue/ABC-123",
-    user_id="viewer"
-)
-
-# Public HEAD request to check headers
-response = await auth_provider.head(
-    url="https://httpbin.org/status/200",
-    apply_auth=False
-)
-```
-
-### **OPTIONS Requests**
-```python
-# OPTIONS request to check allowed methods (authenticated)
-response = await auth_provider.options(
-    url="https://api.atlassian.com/rest/api/2/project",
-    user_id="developer"
-)
-
-# Public OPTIONS request
-response = await auth_provider.options(
-    url="https://httpbin.org/",
-    apply_auth=False
-)
-```
-
-## HTTPResponse Object
-
-All request methods return an `HTTPResponse` object that contains the response data and metadata:
-
-### **HTTPResponse Properties**
-
-- **`status_code`** (int): HTTP status code returned by the server (200, 404, 500, etc.)
-- **`headers`** (dict[str, str]): HTTP response headers as key-value pairs
-- **`body`** (dict | list | str | bytes | None): Response body content - automatically parsed JSON (dict/list), plain text (str), or raw bytes
-- **`cookies`** (dict[str, str] | None): Cookies returned by the server, if any
-- **`content_type`** (str | None): Content-Type header value (e.g., "application/json", "text/html")
-- **`url`** (str | None): Final URL after any redirects
-- **`elapsed`** (float | None): Request duration in seconds
-- **`auth_result`** (AuthResult | None): Authentication result used for this request, contains credentials and token info
+The example implements a custom `authenticated_request` function that can be used by agents to make HTTP requests to external APIs. See the function implementation in [`authenticated_request_function`](src/authenticated_requests/api_requests.py).
 
 ## OAuth 2.0 Setup for Jira
 
 This example uses **OAuth 2.0 Authorization Code Flow** to authenticate with Atlassian's Jira API.
 
-### Environment Variables Required
+### Creating a Jira OAuth App
 
-```bash
-export AIQ_OAUTH_CLIENT_ID=your_jira_client_id
-export AIQ_OAUTH_CLIENT_SECRET=your_jira_client_secret
-```
+Before using this example, you need to create an OAuth app in your Atlassian Developer account to obtain the required client ID and secret:
 
-### Jira OAuth App Setup
+1. **Create an OAuth App**: Follow the detailed instructions at [Atlassian's OAuth 2.0 3LO documentation](https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/#faq1) to create your OAuth app
+2. **Configure Redirect URI**:
+   - **Local Development**: Set the redirect URI to `http://localhost:8000/auth/redirect` in your OAuth app settings
+   - **Production**: Update the redirect URI to match your production domain (e.g., `https://<yourdomain>.com/auth/redirect`)
+3. **Required Scopes**: Ensure your app has the necessary Jira API scopes (already configured in the example's [config.yml](configs/config.yml))
 
-To use this example, you need to configure the following parameters:
+### Configuration Details
 
 **Required Environment Variables:**
-- `AIQ_OAUTH_CLIENT_ID` - Your Jira OAuth app client ID
-- `AIQ_OAUTH_CLIENT_SECRET` - Your Jira OAuth app client secret
+- `JIRA_OAUTH_CLIENT_ID` - Your Jira OAuth app client ID (from Atlassian Developer Console)
+- `JIRA_OAUTH_CLIENT_SECRET` - Your Jira OAuth app client secret (from Atlassian Developer Console)
 
 **Pre-configured Settings in config.yml:**
 - `redirect_uri`: `http://localhost:8000/auth/redirect`
@@ -198,26 +51,41 @@ To use this example, you need to configure the following parameters:
 
 ## Running the Example
 
-### 1. Install Dependencies
+### Install Dependencies
 ```bash
-cd examples/front_ends/authenticated_requests
-pip install -e .
+uv pip install -e examples/front_ends/authenticated_requests
 ```
 
-### 2. Set Environment Variables
+### Set Environment Variables
 ```bash
-export AIQ_OAUTH_CLIENT_ID=your_client_id_here
-export AIQ_OAUTH_CLIENT_SECRET=your_client_secret_here
+export JIRA_OAUTH_CLIENT_ID=your_client_id_here
+export JIRA_OAUTH_CLIENT_SECRET=your_client_secret_here
 ```
 
-### 3. Start the Agent
+### Start the Agent
 ```bash
-aiq serve --config_file=examples/front_ends/authenticated_requests/src/authenticated_requests/configs/config.yml
+nat serve --config_file=examples/front_ends/authenticated_requests/configs/config.yml
 ```
 
-### 4. Deploy the UI
-Follow the instructions at [NeMo Agent Toolkit UI](../../../external/aiqtoolkit-opensource-ui/) to deploy the web interface.
+### Deploy the UI
+Follow the instructions in the [NeMo Agent Toolkit UI](../../../external/nat-ui/README.md) to deploy the web interface.
 
-### 5. Test the Functions
+### Query the Agent
 
-Once connected to the UI, you can test the authenticated requests:
+Open the NeMo Agent Toolkit UI in your browser at `http://localhost:3000`. Ensure settings are configured correctly to point to your agent's API endpoint at `http://localhost:8000` and
+the WebSocket URL at `ws://localhost:8000/websocket`.
+
+Close the settings window. In your chat window, ensure that `Websocket` mode is enabled by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out.
+
+Once you've successfully connected to the websocket, you can start querying the agent. Asking the agent the following query should initiate the demonstrative authentication flow and then return
+information about the authenticated user:
+
+**Test prompt (authentication required):**
+```
+Send an authenticated GET request to https://api.atlassian.com/oauth/token/accessible-resources and return the cloud ID for my Jira authentication provider.
+```
+
+**Test prompt (no authentication required):**
+```
+Send a GET request to https://catfact.ninja/fact and show me the random cat fact from the response.
+```

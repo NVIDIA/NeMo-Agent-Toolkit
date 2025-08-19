@@ -19,22 +19,19 @@ from typing import Literal
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.authentication import HTTPResponse
-from aiq.data_models.component_ref import AuthenticationRef
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.authentication import HTTPResponse
+from nat.data_models.component_ref import AuthenticationRef
+from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
 
 class AuthenticatedRequestConfig(FunctionBaseConfig, name="authenticated_request"):
     """
-    Simple configuration for making authenticated HTTP requests.
-
-    Takes direct parameters for user_id, HTTP method, and URL to make authenticated requests or unauthenticated
-    requests.
+    Configuration for making authenticated or unauthenticated HTTP requests.
     """
     auth_provider: AuthenticationRef = Field(
         description="Reference to the authentication provider to use for API authentication.")
@@ -51,17 +48,22 @@ async def authenticated_request_function(config: AuthenticatedRequestConfig, bui
                      authenticated: bool = True,
                      json_data: dict | None = None) -> str:
         """
-        Make HTTP requests using the AuthProviderMixin unified request method.
+        Make authenticated or public HTTP requests to external APIs.
+
+        This function provides a unified interface for making HTTP requests with automatic
+        authentication handling. It supports all standard HTTP methods and can switch
+        between authenticated and public requests as needed.
 
         Args:
-            url (str): The full URL to request
-            method (str): HTTP method to use (GET, POST, PUT, DELETE, PATCH)
-            user_id (str | None): User identifier for authentication.
-            authenticated (bool): Whether to use authentication (defaults to True - first citizen)
-            json_data (dict, optional): JSON data to send with POST/PUT/PATCH requests
+            url: The complete URL to send the request to (including protocol, domain, and path)
+            method: HTTP method to use. Supported methods: GET, POST, PUT, DELETE, PATCH
+            user_id: User identifier for authentication context.
+            authenticated: Whether to apply authentication to this request. Defaults to True
+            json_data: JSON payload to send with the request body. Typically used with
+                      POST, PUT, or PATCH requests
 
         Returns:
-            str: The actual API response content as text, or error message as text
+            Response content as a formatted string.
         """
         try:
             response: HTTPResponse = await auth_provider.request(  # type: ignore[attr-defined]
@@ -71,39 +73,43 @@ async def authenticated_request_function(config: AuthenticatedRequestConfig, bui
                 apply_auth=authenticated,
                 body_data=json_data if json_data else None)
 
-            auth_status = "authenticated" if authenticated else "public"
-            logger.info("Successfully made %s %s request to %s (status: %s)",
-                        auth_status,
-                        method.upper(),
-                        url,
-                        response.status_code)
-
             if response.body is not None:
                 if isinstance(response.body, str):
-                    return response.body
-                try:
-                    return json.dumps(response.body, indent=2)
-                except (TypeError, ValueError):
-                    return str(response.body)
+                    formatted_response = response.body
+                else:
+                    try:
+                        formatted_response = json.dumps(response.body, indent=2)
+                    except (TypeError, ValueError):
+                        formatted_response = str(response.body)
+
+                if 200 <= response.status_code < 300:
+                    return f"SUCCESS (HTTP {response.status_code}): {formatted_response}"
+                elif 400 <= response.status_code < 500:
+                    return f"CLIENT ERROR (HTTP {response.status_code}): {formatted_response}"
+                elif 500 <= response.status_code < 600:
+                    return f"SERVER ERROR (HTTP {response.status_code}): {formatted_response}"
+                else:
+                    return f"HTTP {response.status_code}: {formatted_response}"
             else:
-                return f"No response content received (HTTP {response.status_code})"
+                if response.status_code == 204:
+                    return "SUCCESS (HTTP 204): No content - operation completed successfully"
+                elif response.status_code == 202:
+                    return "SUCCESS (HTTP 202): Request accepted for processing"
+                else:
+                    return f"No response content received (HTTP {response.status_code})"
 
         except ValueError as e:
-            error_msg = f"Validation error: {str(e)}"
-            logger.error(error_msg)
+            error_msg = f"VALIDATION ERROR: {str(e)}"
+            logger.error("Validation error for %s %s: %s", method.upper(), url, str(e))
             return error_msg
 
         except Exception as e:
-            error_msg = f"Request failed: {str(e)}"
-            logger.error(error_msg)
+            error_msg = f"ERROR: {str(e)}"
+            logger.error("Error for %s %s: %s", method.upper(), url, str(e))
             return error_msg
 
-    try:
-        yield FunctionInfo.create(
-            single_fn=_inner,
-            description="Makes authenticated or unathenticated HTTP requests and returns the response content as text."
-            "Authenticated requests are first citizen (default), with optional unauthenticated mode.")
-    except GeneratorExit:
-        logger.info("Authenticated request function exited early!")
-    finally:
-        logger.info("Cleaning up authenticated request function.")
+    yield FunctionInfo.create(
+        single_fn=_inner,
+        description=("Makes authenticated or unauthenticated HTTP requests and returns a formatted response string."
+                     "Authenticated requests are the default behavior, with optional public/unauthenticated mode "
+                     "for accessing public APIs."))

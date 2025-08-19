@@ -147,5 +147,3 @@ information about the authenticated user:
 ```text
 Who am I logged in as?
 ```
-
-**Tip**: Remember to enable pop-ups in your browser to allow the OAuth 2.0 provider to open a new window for authentication.

@@ -15,11 +15,12 @@
 
 import json
 import logging
+from typing import Any
 
 import httpx
 
-from aiq.data_models.authentication import AuthResult
-from aiq.data_models.authentication import HTTPResponse
+from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import HTTPResponse
 
 logger = logging.getLogger(__name__)
 
@@ -32,31 +33,26 @@ class AuthProviderMixin(httpx.AsyncClient):
     while keeping HTTP configuration flexible at the request level.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         """
         Initialize HTTP client with default settings.
 
         Creates a default httpx.AsyncClient for connection pooling and reuse.
-        All HTTP infrastructure configuration (timeouts, SSL, proxies, etc.)
-        is handled at the request level for maximum flexibility.
-
-        This maintains clean separation: mixin provides HTTP client capability,
-        auth provider handles authentication logic, requests handle HTTP config.
+        All HTTP configuration (timeouts, SSL, proxies, etc.) is handled
+        at the request level
         """
-        # Initialize httpx.AsyncClient with sensible defaults only
         super().__init__()
 
-    async def request(
-            self,
-            method: str,
-            url: str,
-            user_id: str | None = None,
-            apply_auth: bool = True,  # Default to authenticated - most auth provider requests need auth
-            headers: dict | None = None,
-            params: dict | None = None,
-            body_data: str | dict | None = None,
-            timeout: int | None = None,
-            **kwargs) -> HTTPResponse:
+    async def request(self,
+                      method: str,
+                      url: str,
+                      user_id: str | None = None,
+                      apply_auth: bool = True,
+                      headers: dict | None = None,
+                      params: dict | None = None,
+                      body_data: str | dict | None = None,
+                      timeout: int | None = None,
+                      **kwargs) -> HTTPResponse:
         """Make an HTTP request with optional authentication.
 
         This method provides a unified interface for both authenticated and public requests.
@@ -66,27 +62,18 @@ class AuthProviderMixin(httpx.AsyncClient):
         Args:
             method: HTTP method as string (GET, POST, PUT, DELETE, etc.)
             url: Target URL for the request
-            user_id: User ID for authentication (uses current context if None)
+            user_id: User ID for authentication
             apply_auth: If True, includes authentication; if False, makes unauthenticated request
                        Default is True since most requests through auth providers need authentication.
                        Explicitly set to False for public endpoints (health checks, documentation, etc.)
             headers: Additional headers to include
             params: Query parameters
-            body_data: Request body (string or dict for JSON)
+            body_data: Request body
             timeout: Request timeout in seconds
             **kwargs: Additional httpx request parameters
 
         Returns:
             HTTPResponse: Structured response with status, headers, body, and auth context
-
-        Examples:
-            # Authenticated requests (default behavior)
-            user_data = await provider.request("GET", "/user/profile")
-            response = await provider.request("POST", "/orders", json={"item": "widget"})
-
-            # Public/unauthenticated requests (explicit)
-            health = await provider.request("GET", "/health", apply_auth=False)
-            docs = await provider.request("GET", "/api/docs", apply_auth=False)
         """
 
         # Validate user_id string format when provided (allow None for session fallback)
@@ -97,7 +84,7 @@ class AuthProviderMixin(httpx.AsyncClient):
                     "Use None to trigger fallback behavior (session cookies) or provide a valid user identifier.")
 
         # Initialize request kwargs
-        request_kwargs = {"headers": headers or {}, "params": params or {}, "timeout": timeout or 30, **kwargs}
+        request_kwargs: dict = {"headers": headers or {}, "params": params or {}, "timeout": timeout or 30, **kwargs}
 
         # Handle body data based on type
         if body_data is not None:
@@ -108,62 +95,49 @@ class AuthProviderMixin(httpx.AsyncClient):
 
         auth_result: AuthResult | None = None
 
-        # Perform authentication if requested
-        if apply_auth:
+        if apply_auth:  # Perform authentication if requested
             try:
-                # Call the authenticate method from AuthProviderBase
-                # This will be available through multiple inheritance
                 auth_result = await self.authenticate(user_id=user_id)  # type: ignore
 
                 if not auth_result or not auth_result.credentials:
-                    logger.warning(f"No authentication credentials received for user '{user_id}'")
+                    logger.warning("No authentication credentials received for user '%s'", user_id)
                 else:
-                    # Automatically inject credentials into request
+                    # Inject additional request parameters.
                     auth_result.attach(request_kwargs)
 
             except Exception as e:
-                logger.error(f"Authentication failed for {method} {url}: {str(e)}")
-                # Continue without authentication - let the API decide if auth is required
+                logger.error("Authentication failed for %s %s: %s", method, url, str(e))
+                raise
 
         try:
-            # Make the request using inherited httpx.AsyncClient
-            response = await super().request(method, url, **request_kwargs)
-
-            # Convert httpx.Response to our structured HTTPResponse
-            return self._convert_response(response, auth_result)
+            response: httpx.Response = await super().request(method, url, **request_kwargs)
+            return self._convert_response(response, auth_result)  # Convert httpx.Response to HTTPResponse
 
         except httpx.HTTPStatusError as e:
-            # Handle authentication errors with automatic retry
+            # Handle 401 Unauthorized with automatic token refresh (OAuth2 standard pattern)
+            # RFC 6750 Section 3.1: APIs return 401 when access tokens are expired/invalid
             if e.response.status_code == 401 and apply_auth and auth_result:
-                logger.info(f"Received 401 for {method} {url}, attempting token refresh")
+                logger.info("Received 401 for %s %s, attempting token refresh", method, url)
 
                 # Try to refresh token if the auth provider supports it
                 if hasattr(self, '_attempt_token_refresh'):
                     try:
-                        refreshed_auth = await self._attempt_token_refresh(user_id, auth_result)  # type: ignore
+                        refreshed_auth: AuthResult | None = await self._attempt_token_refresh(  # type: ignore
+                            user_id, auth_result)
                         if refreshed_auth:
-                            # Clear old auth and apply new
-                            request_kwargs = {
-                                k: v
-                                for k, v in request_kwargs.items() if k not in ['headers', 'params', 'cookies', 'auth']
-                            }
-                            request_kwargs.setdefault('headers', {})
-                            request_kwargs.setdefault('params', {})
-
+                            # Attach additional request parameters to new auth credentials.
                             refreshed_auth.attach(request_kwargs)
 
-                            # Retry the request with refreshed token
+                            # Retry the request after obtaining new auth credentials.
                             response = await super().request(method, url, **request_kwargs)
                             return self._convert_response(response, refreshed_auth)
                     except Exception as refresh_error:
-                        logger.warning(f"Token refresh failed: {refresh_error}")
+                        logger.warning("Token refresh failed: %s", refresh_error)
 
-            # If we can't refresh or refresh failed, convert the error response
             return self._convert_response(e.response, auth_result)
 
         except Exception as e:
-            logger.error(f"Request failed for {method} {url}: {str(e)}")
-            # Return error response in our standard format
+            logger.error("Request failed for %s %s: %s", method, url, str(e))
             return HTTPResponse(status_code=500,
                                 headers={},
                                 body={
@@ -184,16 +158,12 @@ class AuthProviderMixin(httpx.AsyncClient):
         This preserves all response data while adding authentication context
         and providing consistent response handling across the system.
         """
-        # Parse response body intelligently
         try:
-            # Try JSON first (most common for APIs)
             if response.headers.get('content-type', '').startswith('application/json'):
-                body = response.json()
+                body: Any = response.json()
             else:
-                # Fall back to text
                 body = response.text
         except (json.JSONDecodeError, ValueError):
-            # If all else fails, use raw text
             body = response.text
 
         return HTTPResponse(status_code=response.status_code,
@@ -213,23 +183,22 @@ class AuthProviderMixin(httpx.AsyncClient):
                    url: str,
                    user_id: str | None = None,
                    apply_auth: bool = True,
-                   json: dict | None = None,
+                   json_data: dict | None = None,
                    data: str | dict | None = None,
                    **kwargs) -> HTTPResponse:
         """Make a POST request."""
-        # Handle json vs data parameters (following httpx conventions)
-        body_data = json if json is not None else data
+        body_data: Any = json_data if json_data is not None else data
         return await self.request("POST", url, user_id, apply_auth, body_data=body_data, **kwargs)
 
     async def put(self,
                   url: str,
                   user_id: str | None = None,
                   apply_auth: bool = True,
-                  json: dict | None = None,
+                  json_data: dict | None = None,
                   data: str | dict | None = None,
                   **kwargs) -> HTTPResponse:
         """Make a PUT request."""
-        body_data = json if json is not None else data
+        body_data: Any = json_data if json_data is not None else data
         return await self.request("PUT", url, user_id, apply_auth, body_data=body_data, **kwargs)
 
     async def delete(self, url: str, user_id: str | None = None, apply_auth: bool = True, **kwargs) -> HTTPResponse:
@@ -240,11 +209,11 @@ class AuthProviderMixin(httpx.AsyncClient):
                     url: str,
                     user_id: str | None = None,
                     apply_auth: bool = True,
-                    json: dict | None = None,
+                    json_data: dict | None = None,
                     data: str | dict | None = None,
                     **kwargs) -> HTTPResponse:
         """Make a PATCH request."""
-        body_data = json if json is not None else data
+        body_data: Any = json_data if json_data is not None else data
         return await self.request("PATCH", url, user_id, apply_auth, body_data=body_data, **kwargs)
 
     async def head(self, url: str, user_id: str | None = None, apply_auth: bool = True, **kwargs) -> HTTPResponse:

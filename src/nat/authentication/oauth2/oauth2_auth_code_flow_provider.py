@@ -19,13 +19,13 @@ from datetime import timezone
 from authlib.integrations.httpx_client import OAuth2Client as AuthlibOAuth2Client
 from pydantic import SecretStr
 
-from aiq.authentication.interfaces import AuthProviderBase
-from aiq.authentication.mixins import AuthProviderMixin
-from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.authentication import AuthResult
-from aiq.data_models.authentication import BearerTokenCred
+from nat.authentication.interfaces import AuthProviderBase
+from nat.authentication.mixins import AuthProviderMixin
+from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from nat.builder.context import Context
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import BearerTokenCred
 
 
 class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConfig], AuthProviderMixin):

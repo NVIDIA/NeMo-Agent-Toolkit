@@ -17,12 +17,12 @@ import logging
 
 from pydantic import SecretStr
 
-from aiq.authentication.api_key.api_key_auth_provider_config import APIKeyAuthProviderConfig
-from aiq.authentication.interfaces import AuthProviderBase
-from aiq.authentication.mixins import AuthProviderMixin
-from aiq.data_models.authentication import AuthResult
-from aiq.data_models.authentication import BearerTokenCred
-from aiq.data_models.authentication import HeaderAuthScheme
+from nat.authentication.api_key.api_key_auth_provider_config import APIKeyAuthProviderConfig
+from nat.authentication.interfaces import AuthProviderBase
+from nat.authentication.mixins import AuthProviderMixin
+from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import BearerTokenCred
+from nat.data_models.authentication import HeaderAuthScheme
 
 logger = logging.getLogger(__name__)
 

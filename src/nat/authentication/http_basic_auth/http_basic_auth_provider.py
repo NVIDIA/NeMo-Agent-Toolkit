@@ -15,15 +15,15 @@
 
 from pydantic import SecretStr
 
-from aiq.authentication.interfaces import AuthProviderBase
-from aiq.authentication.mixins import AuthProviderMixin
-from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.authentication import AuthProviderBaseConfig
-from aiq.data_models.authentication import AuthResult
-from aiq.data_models.authentication import BasicAuthCred
-from aiq.data_models.authentication import BearerTokenCred
+from nat.authentication.interfaces import AuthProviderBase
+from nat.authentication.mixins import AuthProviderMixin
 from nat.builder.context import Context
+from nat.data_models.authentication import AuthenticatedContext
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import BasicAuthCred
+from nat.data_models.authentication import BearerTokenCred
 
 
 class HTTPBasicAuthProvider(AuthProviderBase, AuthProviderMixin):
