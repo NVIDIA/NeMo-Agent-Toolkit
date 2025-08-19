@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import base64
+import json
 import logging
-import pickle
 
 import aiomysql
 from aiomysql.pool import Pool
@@ -124,7 +125,13 @@ class MySQLObjectStore(ObjectStore):
                     await cur.execute("SELECT id FROM object_meta WHERE path=%s FOR UPDATE;", (key, ))
                     (obj_id, ) = await cur.fetchone()
 
-                    blob = pickle.dumps(item)
+                    # Serialize ObjectStoreItem to JSON with base64-encoded bytes
+                    payload = {
+                        "data": base64.b64encode(item.data).decode("ascii"),
+                        "content_type": item.content_type,
+                        "metadata": item.metadata,
+                    }
+                    blob = json.dumps(payload, ensure_ascii=False).encode("utf-8")
                     await cur.execute("INSERT INTO object_data (id, data) VALUES (%s, %s)", (obj_id, blob))
                     await conn.commit()
                 except Exception:
@@ -151,7 +158,13 @@ class MySQLObjectStore(ObjectStore):
                     await cur.execute("SELECT id FROM object_meta WHERE path=%s FOR UPDATE;", (key, ))
                     (obj_id, ) = await cur.fetchone()
 
-                    blob = pickle.dumps(item)
+                    # Serialize ObjectStoreItem to JSON with base64-encoded bytes
+                    payload = {
+                        "data": base64.b64encode(item.data).decode("ascii"),
+                        "content_type": item.content_type,
+                        "metadata": item.metadata,
+                    }
+                    blob = json.dumps(payload, ensure_ascii=False).encode("utf-8")
                     await cur.execute("REPLACE INTO object_data (id, data) VALUES (%s, %s)", (obj_id, blob))
                     await conn.commit()
                 except Exception:
@@ -178,7 +191,14 @@ class MySQLObjectStore(ObjectStore):
                 if not row:
                     raise NoSuchKeyError(
                         key=key, additional_message=f"MySQL table {self._config.bucket_name} does not have key {key}")
-                return pickle.loads(row[0])
+                payload = json.loads(row[0].decode("utf-8"))
+                data_field = payload.get("data")
+                data_bytes = base64.b64decode(data_field) if data_field is not None else b""
+                return ObjectStoreItem(
+                    data=data_bytes,
+                    content_type=payload.get("content_type"),
+                    metadata=payload.get("metadata"),
+                )
 
     @override
     async def delete_object(self, key: str):
