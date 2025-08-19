@@ -158,8 +158,7 @@ class ReActAgentGraph(DualNodeAgent):
                         tool_response = HumanMessage(content=tool_response_content)
                         agent_scratchpad.append(tool_response)
                     agent_scratchpad += working_state
-                    # exclude the last message from the chat history
-                    chat_history = "\n".join([f"{message.type}: {message.content}" for message in state.messages[:-1]])
+                    chat_history = self._get_chat_history(state.messages)
                     question = str(state.messages[-1].content)
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
 
