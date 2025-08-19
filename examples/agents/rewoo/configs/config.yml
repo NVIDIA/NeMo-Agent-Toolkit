@@ -45,7 +45,6 @@ workflow:
   llm_name: nim_llm
   verbose: true
   max_retries: 2
-  use_openai_api: true
 
 eval:
   general:
