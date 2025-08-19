@@ -17,6 +17,7 @@ import json
 # pylint: disable=R0917
 import logging
 from json import JSONDecodeError
+from typing import TYPE_CHECKING
 
 from langchain_core.agents import AgentAction
 from langchain_core.agents import AgentFinish
@@ -44,7 +45,10 @@ from nat.agent.react_agent.output_parser import ReActOutputParser
 from nat.agent.react_agent.output_parser import ReActOutputParserException
 from nat.agent.react_agent.prompt import SYSTEM_PROMPT
 from nat.agent.react_agent.prompt import USER_PROMPT
-from nat.agent.react_agent.register import ReActAgentWorkflowConfig
+
+# To avoid circular imports
+if TYPE_CHECKING:
+    from nat.agent.react_agent.register import ReActAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
 
@@ -332,7 +336,7 @@ class ReActAgentGraph(DualNodeAgent):
         return True
 
 
-def create_react_agent_prompt(config: ReActAgentWorkflowConfig) -> ChatPromptTemplate:
+def create_react_agent_prompt(config: "ReActAgentWorkflowConfig") -> ChatPromptTemplate:
     """
     Create a ReAct Agent prompt from the config.
 
