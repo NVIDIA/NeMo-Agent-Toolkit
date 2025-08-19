@@ -24,7 +24,7 @@ from weave.trace.weave_client import Call
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.span import Span
-from nat.eval.utils.eval_trace_ctx import EvalExporterMixin
+# EvalExporterMixin removed - replaced by direct task waiting in evaluate.py
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.utils.log_utils import LogFilter
@@ -42,7 +42,7 @@ presidio_filter = LogFilter([
 ])
 
 
-class WeaveExporter(SpanExporter[Span, Span], EvalExporterMixin):
+class WeaveExporter(SpanExporter[Span, Span]):
     """A Weave exporter that exports telemetry traces to Weights & Biases Weave using OpenTelemetry."""
 
     _weave_calls: IsolatedAttribute[dict[str, Call]] = IsolatedAttribute(dict)
@@ -53,7 +53,6 @@ class WeaveExporter(SpanExporter[Span, Span], EvalExporterMixin):
                  project: str | None = None,
                  verbose: bool = False):
         SpanExporter.__init__(self, context_state=context_state)
-        EvalExporterMixin.__init__(self)
         self._entity = entity
         self._project = project
         self._gc = weave_client_context.require_weave_client()
@@ -84,8 +83,7 @@ class WeaveExporter(SpanExporter[Span, Span], EvalExporterMixin):
             logger.warning("No span found for event %s", event.UUID)
             return
 
-        # Track export operation start for evaluation coordination
-        self.on_export_start()
+        # Export coordination now handled by direct task waiting in evaluate.py
 
         self._create_weave_call(event, span)
 
@@ -98,8 +96,7 @@ class WeaveExporter(SpanExporter[Span, Span], EvalExporterMixin):
         super()._process_end_event(event)
         self._finish_weave_call(event)
 
-        # Track export operation completion for evaluation coordination
-        self.on_export_complete()
+        # Export coordination now handled by direct task waiting in evaluate.py
 
     @contextmanager
     def parent_call(self, trace_id: str, parent_call_id: str) -> Generator[None]:

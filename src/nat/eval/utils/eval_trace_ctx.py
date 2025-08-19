@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -29,14 +28,10 @@ class EvalTraceContext:
     This class provides a framework-agnostic way to:
     1. Track evaluation calls/contexts
     2. Ensure proper parent-child relationships in traces
-    3. Synchronize evaluation completion with trace exports
     """
 
     def __init__(self):
         self.eval_call = None  # Store the evaluation call/context for propagation
-        self.pending_exports = 0  # Track pending trace exports across all exporters
-        self.export_complete_event = asyncio.Event()
-        self.export_complete_event.set()  # Initially set since no operations pending
 
     def set_eval_call(self, eval_call: Any) -> None:
         """Set the evaluation call/context for propagation to traces."""
@@ -47,27 +42,6 @@ class EvalTraceContext:
     def get_eval_call(self) -> Any:
         """Get the current evaluation call/context."""
         return self.eval_call
-
-    def track_export_start(self) -> None:
-        """Called when any trace export operation begins."""
-        self.pending_exports += 1
-        if self.export_complete_event.is_set():
-            self.export_complete_event.clear()
-        logger.debug("Export operation started. Pending exports: %d", self.pending_exports)
-
-    def track_export_complete(self) -> None:
-        """Called when any trace export operation completes."""
-        self.pending_exports = max(0, self.pending_exports - 1)
-        if self.pending_exports == 0:
-            self.export_complete_event.set()
-        logger.debug("Export operation completed. Pending exports: %d", self.pending_exports)
-
-    async def wait_for_exports(self) -> None:
-        """Wait for all trace exports to complete."""
-        if self.pending_exports > 0:
-            logger.debug("Waiting for %d pending exports to complete", self.pending_exports)
-            await self.export_complete_event.wait()
-            logger.debug("All exports completed")
 
     @contextmanager
     def evaluation_context(self):
@@ -110,30 +84,3 @@ class WeaveEvalTraceContext(EvalTraceContext):
                 yield
         else:
             yield
-
-
-class EvalExporterMixin:
-    """
-    Mixin to add evaluation context integration to any exporter.
-
-    This mixin provides functionality to coordinate with evaluation runs,
-    enabling proper trace hierarchy and export coordination.
-    """
-
-    def __init__(self, *args, eval_context: 'EvalTraceContext | None' = None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.eval_context = eval_context
-
-    def set_eval_context(self, eval_context: 'EvalTraceContext') -> None:
-        """Set the evaluation trace context."""
-        self.eval_context = eval_context
-
-    def on_export_start(self) -> None:
-        """Called when export operation begins. Handles eval context coordination."""
-        if self.eval_context:
-            self.eval_context.track_export_start()
-
-    def on_export_complete(self) -> None:
-        """Called when export operation completes. Handles eval context coordination."""
-        if self.eval_context:
-            self.eval_context.track_export_complete()

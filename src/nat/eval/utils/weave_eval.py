@@ -94,8 +94,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             self.pred_loggers = {}
 
             # Capture the current evaluation call for context propagation
-            if self.available:
-                self.eval_trace_context.set_eval_call(self.eval_logger._evaluate_call)
+            self.eval_trace_context.set_eval_call(self.eval_logger._evaluate_call)
 
             return True
         except Exception as e:
@@ -153,9 +152,6 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             await asyncio.to_thread(pred_logger.finish)
 
         await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
-
-        # Wait for any pending exports to complete using the generic context
-        await self.eval_trace_context.wait_for_exports()
 
     def _log_profiler_metrics(self, profiler_results: ProfilerResults, usage_stats: UsageStats) -> dict[str, Any]:
         """Log profiler metrics to Weave."""

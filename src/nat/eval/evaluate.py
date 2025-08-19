@@ -410,6 +410,33 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         return workflow_type
 
+    async def wait_for_all_export_tasks_local(self, session_manager: SessionManager, timeout: float = 60.0) -> None:
+        """Wait for all trace export tasks to complete for local workflows.
+
+        This only works for local workflows where we have direct access to the
+        SessionManager and its underlying workflow with exporter manager.
+        """
+        try:
+            workflow = session_manager.workflow
+            all_exporters = await workflow.get_all_exporters()
+            if not all_exporters:
+                logger.debug("No exporters to wait for")
+                return
+
+            logger.info(f"Waiting for export tasks from {len(all_exporters)} local exporters (timeout: {timeout}s)")
+
+            for name, exporter in all_exporters.items():
+                try:
+                    await exporter.wait_for_tasks(timeout=timeout)
+                    logger.info(f"Export tasks completed for exporter: {name}")
+                except Exception as e:
+                    logger.warning(f"Error waiting for export tasks from {name}: {e}")
+
+            logger.info("All local export task waiting completed")
+
+        except Exception as e:
+            logger.warning(f"Failed to wait for local export tasks: {e}")
+
     async def run_and_evaluate(self,
                                session_manager: SessionManager | None = None,
                                job_id: str | None = None) -> EvaluationRunOutput:
@@ -480,22 +507,6 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             # Initialize Weave integration
             self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config)
 
-            # Update any WeaveExporter instances with the populated eval context
-            # TODO: This is a hack to get the eval context on the exporters.
-            # We should find a better way to do this.
-            try:
-                from nat.eval.utils.eval_trace_ctx import EvalExporterMixin
-
-                # Access exporter manager through the workflow (if available)
-                if hasattr(eval_workflow, '_exporter_manager'):
-                    all_exporters = await eval_workflow._exporter_manager.get_all_exporters()
-                    for name, exporter in all_exporters.items():
-                        if isinstance(exporter, EvalExporterMixin):
-                            exporter.set_eval_context(self.eval_trace_context)
-                            logger.debug(f"Set eval context on exporter: {name}")
-            except Exception as e:
-                logger.debug(f"Failed to set eval context on exporters: {e}")
-
             # Run workflow
             with self.eval_trace_context.evaluation_context():
                 if self.config.endpoint:
@@ -506,9 +517,14 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                             session_manager = SessionManager(eval_workflow.build(),
                                                              max_concurrency=self.eval_config.general.max_concurrency)
                         await self.run_workflow_local(session_manager)
-            # Evaluate
-            evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
-            await self.run_evaluators(evaluators)
+
+                # Evaluate
+                evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
+                await self.run_evaluators(evaluators)
+
+                # Wait for all trace export tasks to complete (local workflows only)
+                if session_manager and not self.config.endpoint:
+                    await self.wait_for_all_export_tasks_local(session_manager, timeout=15.0)
 
         # Profile the workflow
         profiler_results = await self.profile_workflow()
