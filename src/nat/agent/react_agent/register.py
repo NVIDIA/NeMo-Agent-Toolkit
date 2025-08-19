@@ -93,6 +93,11 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         raise ValueError(f"No tools specified for ReAct Agent '{config.llm_name}'")
     # configure callbacks, for sending intermediate steps
     # construct the ReAct Agent Graph from the configured llm, prompt, and tools
+
+    if config.use_openai_api is False:
+        logger.warning("The use_openai_api option is deprecated and will be removed in a future release. "
+                       "This option will NOT take any effect.")
+
     graph: CompiledGraph = await ReActAgentGraph(
         llm=llm,
         prompt=prompt,

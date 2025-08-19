@@ -185,8 +185,7 @@ class ReWOOAgentGraph(BaseAgent):
             if not task:
                 logger.error("%s No task provided to the ReWOO Agent. Please provide a valid task.", AGENT_LOG_PREFIX)
                 return {"result": NO_INPUT_ERROR_MESSAGE}
-            # exclude the last message from the chat history
-            chat_history = "\n".join([f"{message.type}: {message.content}" for message in state.messages[:-1]])
+            chat_history = self._get_chat_history(state.messages)
             plan = await self._stream_llm(
                 planner,
                 {

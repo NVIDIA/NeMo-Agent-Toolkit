@@ -135,8 +135,7 @@ class ReActAgentGraph(DualNodeAgent):
                         return state
                     question = content
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
-                    # exclude the last message from the chat history
-                    chat_history = "\n".join([f"{message.type}: {message.content}" for message in state.messages[:-1]])
+                    chat_history = self._get_chat_history(state.messages)
                     output_message = await self._stream_llm(
                         self.agent,
                         {

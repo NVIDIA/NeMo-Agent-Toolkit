@@ -89,6 +89,8 @@ functions:
 
 * `max_history`:  Defaults to 15. Maximum number of messages to keep in the conversation history.
 
+* `use_openai_api`**[Deprecated]** : This option is deprecated and will be removed in a future release. It is always set to `True` for backwards compatibility, but this option will NOT take any effect.
+
 * `additional_planner_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base planner prompt.
 
 * `additional_solver_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base solver prompt.

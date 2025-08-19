@@ -234,6 +234,22 @@ class BaseAgent(ABC):
             logger.warning("%s Unexpected error during JSON parsing: %s", AGENT_LOG_PREFIX, str(e))
             return {"error": f"Unexpected parsing error: {str(e)}", "original_string": json_string}
 
+    def _get_chat_history(self, messages: list[BaseMessage]) -> str:
+        """
+        Get the chat history excluding the last message.
+
+        Parameters
+        ----------
+        messages : list[BaseMessage]
+            The messages to get the chat history from
+
+        Returns
+        -------
+        str
+            The chat history excluding the last message
+        """
+        return "\n".join([f"{message.type}: {message.content}" for message in messages[:-1]])
+
     @abstractmethod
     async def _build_graph(self, state_schema: type) -> CompiledGraph:
         pass
