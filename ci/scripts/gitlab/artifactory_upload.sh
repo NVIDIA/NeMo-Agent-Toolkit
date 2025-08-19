@@ -37,7 +37,9 @@ fi
 NAT_ARCH="any"
 NAT_OS="any"
 
-NAT_COMPONENTS=("nvidia-nat" "aiqtoolkit")
+# nvidia-nat itself and all of the plugins are under "nvidia-nat", while the compatibility packages are under "nat"
+NAT_COMPONENTS=("nvidia-nat" "nat")
+
 # We need to fix the name of the component in artifactory to aiqtoolkit
 ARTIFACTORY_COMPONENT_FIXED_NAME="aiqtoolkit"
 
