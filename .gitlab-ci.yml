@@ -35,6 +35,7 @@ stages:
 
 variables:
   UV_CACHE_DIR: .uv-cache
+  BUILD_NAT_COMPAT: "true"
   GIT_SUBMODULE_STRATEGY: recursive
   GIT_SUBMODULE_FORCE_HTTPS: "true"
   BUILD_AIQ_COMPAT: "true"
