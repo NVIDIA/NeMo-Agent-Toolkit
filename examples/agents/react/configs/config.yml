@@ -20,7 +20,7 @@ general:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: meta/llama-3.3-70b-instruct
     temperature: 0.0
     max_tokens: 250
 
@@ -43,6 +43,7 @@ workflow:
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 2
+  use_openai_api: true
 
 eval:
   general:
