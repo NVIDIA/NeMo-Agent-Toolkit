@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+
 import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -99,11 +101,14 @@ async def test_aws_bedrock_langchain_agent():
 @pytest.mark.integration
 async def test_azure_openai_langchain_agent():
     """
-    Test Azure OpenAI LLM with LangChain agent. Requires AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT to be set.
+    Test Azure OpenAI LLM with LangChain agent.
+    Requires AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT to be set.
+    The model can be changed by setting AZURE_OPENAI_DEPLOYMENT.
+    See https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart for more information.
     """
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
 
-    llm_config = AzureOpenAIModelConfig(azure_deployment="gpt-4.1-20250414")
+    llm_config = AzureOpenAIModelConfig(azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1"))
 
     async with WorkflowBuilder() as builder:
         await builder.add_llm("azure_openai_llm", llm_config)

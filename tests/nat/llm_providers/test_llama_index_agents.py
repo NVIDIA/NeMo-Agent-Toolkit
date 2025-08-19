@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 from typing import Any
 
 import pytest
@@ -109,9 +110,10 @@ async def test_azure_openai_minimal_agent():
     """
     Test Azure OpenAI LLM with minimal LlamaIndex agent.
     Requires AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT to be set.
+    The model can be changed by setting AZURE_OPENAI_DEPLOYMENT.
     See https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart for more information.
     """
-    llm_config = AzureOpenAIModelConfig(azure_deployment="gpt-4.1-20250414")
+    llm_config = AzureOpenAIModelConfig(azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1"))
     agent = await create_minimal_agent("azure_openai_llm", llm_config)
 
     response = await agent.achat("What is 1+2?")
