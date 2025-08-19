@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import base64
-import json
 import mimetypes
 import sys
+
+from nat.object_store.models import ObjectStoreItem
 
 # Usage: python serialize_file.py <file_path>
 
@@ -29,11 +29,7 @@ file_path = sys.argv[1]
 with open(file_path, "rb") as f:
     data = f.read()
 
-payload = {
-    "data": base64.b64encode(data).decode("ascii"),
-    "content_type": mimetypes.guess_type(file_path)[0],
-    "metadata": {},
-}
+item = ObjectStoreItem(data=data, content_type=mimetypes.guess_type(file_path)[0], metadata={})
 
 with open(file_path + ".json", "w", encoding="utf-8") as f:
-    json.dump(payload, f, ensure_ascii=False)
+    f.write(item.model_dump_json())
