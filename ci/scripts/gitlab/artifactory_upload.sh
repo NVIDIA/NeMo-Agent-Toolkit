@@ -112,7 +112,7 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
                 # Extract relative path to preserve directory structure, but replacing the first dir with aiqtoolkit
                 # as this is an already established path in artifactory
                 RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
-                RELATIVE_PATH=$(echo "${RELATIVE_PATH}" | sed -e 's|^nvidia-nat/|aiqtoolkit/|')
+                RELATIVE_PATH=$(echo "${RELATIVE_PATH}" | sed -e 's|^nvidia-nat/|aiqtoolkit/|' | sed -e 's|^nat/|aiqtoolkit/|')
                 ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
 
                 echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
