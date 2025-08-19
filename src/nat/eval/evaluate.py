@@ -410,7 +410,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         return workflow_type
 
-    async def wait_for_all_export_tasks_local(self, session_manager: SessionManager, timeout: float = 60.0) -> None:
+    async def wait_for_all_export_tasks_local(self, session_manager: SessionManager, timeout: float) -> None:
         """Wait for all trace export tasks to complete for local workflows.
 
         This only works for local workflows where we have direct access to the
@@ -524,7 +524,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
                 # Wait for all trace export tasks to complete (local workflows only)
                 if session_manager and not self.config.endpoint:
-                    await self.wait_for_all_export_tasks_local(session_manager, timeout=15.0)
+                    await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
 
         # Profile the workflow
         profiler_results = await self.profile_workflow()
