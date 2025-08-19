@@ -24,7 +24,7 @@ rapids-logger "Installing non-pip deps"
 apt update
 apt install --no-install-recommends -y make
 
-create_env group:dev group:docs
+create_env group:dev
 
 rapids-logger "Building documentation"
 pushd ${CI_PROJECT_DIR}/docs
