@@ -331,6 +331,9 @@ async def mock_llm():
             generation = ChatGeneration(message=message)
             return ChatResult(generations=[generation], llm_output={'mock_llm_response': True})
 
+        def bind_tools(self, tools: list[BaseTool], **kwargs: typing.Any) -> BaseChatModel:
+            return self
+
         @property
         def _llm_type(self) -> str:
             return 'mock-llm'
