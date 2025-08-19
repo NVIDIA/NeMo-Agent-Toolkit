@@ -26,7 +26,7 @@ from nat.data_models.intermediate_step import ToolSchema
 from nat.plugins.data_flywheel.observability.schema.langchain.openai_message import OpenAIMessage
 from nat.plugins.data_flywheel.observability.schema.provider import Provider
 from nat.plugins.data_flywheel.observability.schema.trace_source_base import TraceSourceBase
-from nat.plugins.data_flywheel.observability.utils.deserialize import deserialize_input_value
+from nat.plugins.data_flywheel.observability.utils.deserialize import deserialize_span_attribute
 
 ProviderT = TypeVar("ProviderT")
 
@@ -51,7 +51,7 @@ class OpenAITraceSourceBase(TraceSourceBase[Literal[LLMFrameworkEnum.LANGCHAIN],
 
         # Handle string input (JSON string)
         if isinstance(v, str):
-            v = deserialize_input_value(v)
+            v = deserialize_span_attribute(v)
 
         # Handle dict input (single message)
         if isinstance(v, dict):
@@ -78,7 +78,7 @@ class OpenAITraceSourceBase(TraceSourceBase[Literal[LLMFrameworkEnum.LANGCHAIN],
             return {}
 
         if isinstance(v, str):
-            metadata = deserialize_input_value(v)
+            metadata = deserialize_span_attribute(v)
             if not isinstance(metadata, dict):
                 raise ValueError(f"Invalid metadata format: {metadata}")
             return metadata

@@ -17,11 +17,11 @@ import json
 from typing import Any
 
 
-def deserialize_input_value(input_value: dict[str, Any] | list[Any] | str) -> dict[str, Any] | list[Any]:
+def deserialize_span_attribute(value: dict[str, Any] | list[Any] | str) -> dict[str, Any] | list[Any]:
     """Deserialize a string input value to a dictionary, list, or None.
 
     Args:
-        input_value (str): The input value to deserialize
+        value (str): The input value to deserialize
 
     Returns:
         dict | list: The deserialized input value
@@ -30,9 +30,9 @@ def deserialize_input_value(input_value: dict[str, Any] | list[Any] | str) -> di
         ValueError: If parsing fails
     """
     try:
-        if isinstance(input_value, (dict, list)):
-            return input_value
-        deserialized_attribute = json.loads(input_value)
+        if isinstance(value, (dict, list)):
+            return value
+        deserialized_attribute = json.loads(value)
         return deserialized_attribute
     except (json.JSONDecodeError, TypeError) as e:
-        raise ValueError(f"Failed to parse input_value: {input_value}, error: {e}") from e
+        raise ValueError(f"Failed to parse input_value: {value}, error: {e}") from e

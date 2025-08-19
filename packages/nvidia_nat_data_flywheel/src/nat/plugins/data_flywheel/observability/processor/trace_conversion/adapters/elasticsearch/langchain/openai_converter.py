@@ -331,7 +331,6 @@ def convert_langchain_openai(trace_source: TraceContainer) -> DFWESRecord:
                          model=model_name,
                          usage=usage_info.model_dump() if usage_info else None)
 
-    # Get workload_id
     workload_id = trace_source.span.attributes.get("nat.function.name", "unknown")
 
     try:
