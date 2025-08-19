@@ -27,7 +27,6 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 

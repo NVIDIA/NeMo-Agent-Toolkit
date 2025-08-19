@@ -27,7 +27,6 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +63,6 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
 
 
 @register_function(config_type=ReWOOAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builder):
 async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builder):
     from langchain.schema import BaseMessage
     from langchain_core.messages import trim_messages
