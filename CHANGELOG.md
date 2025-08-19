@@ -257,6 +257,8 @@ While NeMo Agent Toolkit is designed to be compatible with the previous version,
 * Fix: Remove `pickle` from MySQL-based Object Store by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/669
 * Enable `BUILD_NAT_COMPAT` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/670
 * Fix paths for compatibility packages by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/672
+* Add missing compatibility package for `aiqtoolkit-weave` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/674
+* Add chat_history to the context of ReAct and ReWOO agent by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/673
 
 ### 🙌 New Contributors
 * @titericz made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/312
