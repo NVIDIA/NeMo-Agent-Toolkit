@@ -17,6 +17,7 @@ import json
 # pylint: disable=R0917
 import logging
 from json import JSONDecodeError
+from typing import TYPE_CHECKING
 
 from langchain_core.agents import AgentAction
 from langchain_core.agents import AgentFinish
@@ -44,7 +45,10 @@ from nat.agent.react_agent.output_parser import ReActOutputParser
 from nat.agent.react_agent.output_parser import ReActOutputParserException
 from nat.agent.react_agent.prompt import SYSTEM_PROMPT
 from nat.agent.react_agent.prompt import USER_PROMPT
-from nat.agent.react_agent.register import ReActAgentWorkflowConfig
+
+# To avoid circular imports
+if TYPE_CHECKING:
+    from nat.agent.react_agent.register import ReActAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
 
@@ -124,17 +128,19 @@ class ReActAgentGraph(DualNodeAgent):
                     if len(state.messages) == 0:
                         raise RuntimeError('No input received in state: "messages"')
                     # to check is any human input passed or not, if no input passed Agent will return the state
-                    content = str(state.messages[0].content)
+                    content = str(state.messages[-1].content)
                     if content.strip() == "":
                         logger.error("%s No human input passed to the agent.", AGENT_LOG_PREFIX)
                         state.messages += [AIMessage(content=NO_INPUT_ERROR_MESSAGE)]
                         return state
                     question = content
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
-
+                    chat_history = self._get_chat_history(state.messages)
                     output_message = await self._stream_llm(
                         self.agent,
-                        {"question": question},
+                        {
+                            "question": question, "chat_history": chat_history
+                        },
                         RunnableConfig(callbacks=self.callbacks)  # type: ignore
                     )
 
@@ -152,13 +158,15 @@ class ReActAgentGraph(DualNodeAgent):
                         tool_response = HumanMessage(content=tool_response_content)
                         agent_scratchpad.append(tool_response)
                     agent_scratchpad += working_state
-                    question = str(state.messages[0].content)
+                    chat_history = self._get_chat_history(state.messages)
+                    question = str(state.messages[-1].content)
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
 
-                    output_message = await self._stream_llm(self.agent, {
-                        "question": question, "agent_scratchpad": agent_scratchpad
-                    },
-                                                            RunnableConfig(callbacks=self.callbacks))
+                    output_message = await self._stream_llm(
+                        self.agent, {
+                            "question": question, "agent_scratchpad": agent_scratchpad, "chat_history": chat_history
+                        },
+                        RunnableConfig(callbacks=self.callbacks))
 
                     if self.detailed_logs:
                         logger.info(AGENT_CALL_LOG_MESSAGE, question, output_message.content)
@@ -326,7 +334,7 @@ class ReActAgentGraph(DualNodeAgent):
         return True
 
 
-def create_react_agent_prompt(config: ReActAgentWorkflowConfig) -> ChatPromptTemplate:
+def create_react_agent_prompt(config: "ReActAgentWorkflowConfig") -> ChatPromptTemplate:
     """
     Create a ReAct Agent prompt from the config.
 
