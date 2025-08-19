@@ -19,7 +19,7 @@ limitations under the License.
 
 ## Release 1.2.0
 ### Summary
-The NeMo Agent toolkit, formerly known as Agent Intelligence (AIQ) toolkit, has been renamed to align with the NVIDIA NeMo family of products. This release brings significant new capabilities and improvements across authentication, resource management, observability, and developer experience. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
+The NeMo Agent toolkit, formerly known as Agent Intelligence (AIQ) toolkit, has been renamed in this release to align with the NVIDIA NeMo family of products. This release also brings significant new capabilities and improvements across authentication, resource management, observability, and developer experience. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
 
 Following are the key features and improvements in this release:
 * [Authentication for Tool Calling](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/reference/api-authentication.md): Implement robust authentication mechanisms that enable secure and configurable access management for tool invocation within agent workflows.
