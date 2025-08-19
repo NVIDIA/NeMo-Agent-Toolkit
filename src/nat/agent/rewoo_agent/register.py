@@ -27,6 +27,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
+from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +52,9 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
         default=None,
         description="Provides the SOLVER_PROMPT to use with the agent")  # defaults to SOLVER_PROMPT in prompt.py
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
-    use_openai_api: bool = Field(default=True,
-                                 description=("This option is deprecated and will be removed in a future release. "
-                                              "This option will NOT take any effect."))
-    additional_instructions: str | None = Field(
-        default=None, description="Additional instructions to provide to the agent in addition to the base prompt.")
+    use_openai_api: bool = Field(default=False,
+                                 description=("Use OpenAI API for the input/output types to the function. "
+                                              "If False, strings will be used."))
     additional_planner_instructions: str | None = Field(
         default=None,
         validation_alias=AliasChoices("additional_planner_instructions", "additional_instructions"),
@@ -99,10 +98,6 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
         raise ValueError("Invalid solver prompt")
     solver_prompt = ChatPromptTemplate([("system", solver_system_prompt), ("user", SOLVER_USER_PROMPT)])
 
-    if config.use_openai_api is False:
-        logger.warning("The use_openai_api option is deprecated and will be removed in a future release. "
-                       "This option will NOT take any effect.")
-
     # we can choose an LLM for the ReWOO agent in the config file
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
@@ -129,9 +124,8 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
                                                         token_counter=len,
                                                         start_on="human",
                                                         include_system=True)
-
-            task = HumanMessage(content=messages[-1].content)
-            state = ReWOOGraphState(messages=messages, task=task)
+            task = HumanMessage(content=messages[0].content)
+            state = ReWOOGraphState(task=task)
 
             # run the ReWOO Agent Graph
             state = await graph.ainvoke(state)
@@ -148,4 +142,15 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
                 return ChatResponse.from_string(str(ex))
             return ChatResponse.from_string("I seem to be having a problem.")
 
-    yield FunctionInfo.from_fn(_response_fn, description=config.description)
+    if (config.use_openai_api):
+        yield FunctionInfo.from_fn(_response_fn, description=config.description)
+
+    else:
+
+        async def _str_api_fn(input_message: str) -> str:
+            oai_input = GlobalTypeConverter.get().try_convert(input_message, to_type=ChatRequest)
+            oai_output = await _response_fn(oai_input)
+
+            return GlobalTypeConverter.get().try_convert(oai_output, to_type=str)
+
+        yield FunctionInfo.from_fn(_str_api_fn, description=config.description)
