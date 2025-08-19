@@ -1,0 +1,22 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools]
+packages = []
+
+[tool.setuptools_scm]
+root = "../../.."
+
+[project]
+name = "nat_simple_calculator_mcp"
+dynamic = ["version"]
+dependencies = ["nvidia-nat[langchain]~=1.2", "nat_simple_calculator"]
+requires-python = ">=3.11,<3.13"
+description = "Simple Calculator MCP - demonstrates NeMo Agent toolkit Model Context Protocol integration"
+keywords = ["ai", "mcp", "protocol", "agents"]
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+nat_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }

@@ -1,0 +1,23 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "../../.."
+
+[project]
+name = "nat_simple_auth"
+dynamic = ["version"]
+dependencies = [
+    "nvidia-nat[langchain]~=1.2",
+    "httpx",
+]
+requires-python = ">=3.11,<3.13"
+description = "Custom NeMo Agent toolkit workflow demonstrating auth"
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+
+[project.entry-points.'nat.components']
+simple_auth = "nat_simple_auth.register"

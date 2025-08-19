@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence Toolkit Tutorials
+# NVIDIA NeMo Agent Toolkit Tutorials
 
 ```{toctree}
 :caption: Tutorials
@@ -23,4 +23,5 @@ limitations under the License.
 ./customize-a-workflow.md
 ./add-tools-to-a-workflow.md
 ./create-a-new-workflow.md
+./build-a-demo-agent-workflow-using-cursor-rules.md
 ```

@@ -46,8 +46,7 @@ functions:
     tool_names: [ wikipedia_search, current_datetime, code_generation ]
     llm_name: nim_llm
     verbose: true
-    handle_parsing_errors: true
-    max_retries: 2
+    parse_agent_response_max_retries: 2
 
 workflow:
   _type: reasoning_agent

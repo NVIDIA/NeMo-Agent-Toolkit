@@ -27,7 +27,7 @@ rapids-logger "Running tests"
 set +e
 
 pytest --junit-xml=${CI_PROJECT_DIR}/report_pytest.xml \
-       --cov=aiq --cov-report term-missing \
+       --cov=nat --cov-report term-missing \
        --cov-report=xml:${CI_PROJECT_DIR}/report_pytest_coverage.xml
 PYTEST_RESULTS=$?
 

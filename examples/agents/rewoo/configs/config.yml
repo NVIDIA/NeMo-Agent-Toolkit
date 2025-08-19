@@ -44,12 +44,11 @@ workflow:
   tool_names: [calculator_multiply, calculator_inequality, calculator_divide, calculator_subtract, internet_search, haystack_chitchat_agent]
   llm_name: nim_llm
   verbose: true
-  handle_parsing_errors: true
   max_retries: 2
 
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/rewoo_agent/
+    output_dir: .tmp/nat/examples/rewoo_agent/
     dataset:
       _type: json
       file_path: examples/agents/data/rewoo.json

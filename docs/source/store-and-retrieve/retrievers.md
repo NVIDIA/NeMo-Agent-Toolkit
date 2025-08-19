@@ -17,13 +17,13 @@ limitations under the License.
 
 # Retrievers
 
-Retrievers are an important component of Retrieval Augmented Generation (RAG) workflows which allow LLMs to search a data store for content which is semantically similar to a query, which can be used as context by the LLM when providing a response to the query. Within AIQ toolkit, retrievers are a configurable component that can be used within functions, similar to LLMs and Embedders, to provide a consistent read-only interface for connecting to different data store providers.
+Retrievers are an important component of Retrieval Augmented Generation (RAG) workflows which allow LLMs to search a data store for content which is semantically similar to a query, which can be used as context by the LLM when providing a response to the query. Within NeMo Agent toolkit, retrievers are a configurable component that can be used within functions, similar to LLMs and Embedders, to provide a consistent read-only interface for connecting to different data store providers.
 
 ## Features
  - **Standard Interface**: Retrievers implement a standard search interface, allowing for compatibility across different retriever implementations.
  - **Standard Output Format**: Retrievers also implement a standard output format along with conversion functions to provide retriever output as a dictionary or string.
  - **Extensible Via Plugins**: Additional retrievers can be added as plugins by developers to support more data stores.
- - **Additional Framework Implementations**: Retrievers can be loaded using a framework implementation rather than the default AIQ toolkit retriever implementation.
+ - **Additional Framework Implementations**: Retrievers can be loaded using a framework implementation rather than the default NeMo Agent toolkit retriever implementation.
 
 ## Included Retrievers
  - [Milvus](https://milvus.io/docs)
@@ -31,7 +31,7 @@ Retrievers are an important component of Retrieval Augmented Generation (RAG) wo
 
 ## Usage
 ### Configuration
-Retrievers are configured similarly to other AIQ toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type. These parameters can then be configured in the config file under the `retrievers` section.
+Retrievers are configured similarly to other NeMo Agent toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type. These parameters can then be configured in the config file under the `retrievers` section.
 
 Below is an example config object for the NeMo Retriever:
 ```python
@@ -62,12 +62,12 @@ retrievers:
 ```
 In this example the `uri`, `collection_name`, and `top_k` are specified, while the default values for `output_fields` and `timeout` are used, and the `nvidia_api_key` will be pulled from the `NVIDIA_API_KEY` environment variable.
 
-This configured retriever can then be used as an argument for a function which uses a retriever (such as the `aiq_retriever` function). The `aiq_retriever` function is a simple function to provide the configured retriever as an LLM tool. Its config is shown below
+This configured retriever can then be used as an argument for a function which uses a retriever (such as the `retriever_tool` function). The `retriever_tool` function is a simple function to provide the configured retriever as an LLM tool. Its config is shown below
 
 ```python
-class AIQRetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
+class RetrieverConfig(FunctionBaseConfig, name="nat_retriever"):
     """
-    AIQRetriever tool which provides a common interface for different vectorstores. Its
+    Retriever tool which provides a common interface for different vectorstores. Its
     configuration uses clients, which are the vectorstore-specific implementaiton of the retriever interface.
     """
     retriever: RetrieverRef = Field(description="The retriever instance name from the workflow configuration object.")
@@ -79,7 +79,7 @@ class AIQRetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
     description: str = Field(default=None, description="If present it will be used as the tool description")
 ```
 
-Here is an example configuration of an `aiq_retriever` function that uses a `nemo_retriever`:
+Here is an example configuration of an `retriever_tool` function that uses a `nemo_retriever`:
 ```yaml
 retrievers:
     my_retriever:
@@ -89,24 +89,24 @@ retrievers:
         top_k: 10
 
 functions:
-    aiq_retriever_tool:
-        _type: aiq_retriever
+    retriever_tool:
+        _type: retriever_tool
         retriever: my_retriever
-        topic: "AIQ documentation"
+        topic: "NeMo Agent toolkit documentation"
 ```
 
 ### Developing with Retrievers
-Alternatively, you can use a retriever as a component in your own function, such as a custom built RAG workflow. When building a function that uses a retriever you can instantiate the retriever using the builder. Like other components, you can reference the retriever by name and specify the framework you want to use. Unlike other components, you can also omit the framework to get an instance of an `AIQRetriever`.
+Alternatively, you can use a retriever as a component in your own function, such as a custom built RAG workflow. When building a function that uses a retriever you can instantiate the retriever using the builder. Like other components, you can reference the retriever by name and specify the framework you want to use. Unlike other components, you can also omit the framework to get an instance of a `Retriever`.
 
 ```python
 @register_function(config_type=MyFunctionConfig)
 async def my_function(config: MyFunctionConfig, builder: Builder):
 
-    # Build an AIQRetriever
-    aiq_retriever = await builder.get_retriever(config.retriever)
+    # Build a Retriever
+    retriever_tool = await builder.get_retriever(config.retriever)
 
     # Build a langchain Retriever
     langchain_retriever = await builder.get_retriever(config.retriever, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 ```
 
-Retrievers expose a `search` method for retrieving data that takes a single required argument, "query", and any number of optional keyword arguments. AIQ toolkit Retrievers support a `bind` method which can be used to set or override defaults for these optional keyword arguments. Any additional required, unbound, parameters can be inspected using the `get_unbound_params` method. This provides flexibility in how retrievers are used in functions, allowing for all search parameters to be specified in the config, or allowing some to be specified by the agent when the function is called.
+Retrievers expose a `search` method for retrieving data that takes a single required argument, "query", and any number of optional keyword arguments. NeMo Agent toolkit Retrievers support a `bind` method which can be used to set or override defaults for these optional keyword arguments. Any additional required, unbound, parameters can be inspected using the `get_unbound_params` method. This provides flexibility in how retrievers are used in functions, allowing for all search parameters to be specified in the config, or allowing some to be specified by the agent when the function is called.

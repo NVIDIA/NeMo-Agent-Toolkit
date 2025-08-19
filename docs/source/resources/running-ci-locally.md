@@ -26,7 +26,7 @@ By default the script will perform a `git clone` and checkout the latest commit.
 
 ## Prerequisites
 - [Docker](https://docs.docker.com/get-docker/)
-- AIQ toolkit source repository cloned locally with both the `origin` and `upstream` remotes set up. Refer to [Creating the Environment](./contributing.md#creating-the-environment) for more details.
+- NeMo Agent toolkit source repository cloned locally with both the `origin` and `upstream` remotes set up. Refer to [Creating the Environment](./contributing.md#creating-the-environment) for more details.
 
 ## Usage
 Typical usage is as follows:
@@ -51,7 +51,7 @@ To debug a CI issue, you can use the `bash` pseudo-stage. This will perform a gi
 ./ci/scripts/run_ci_local.sh bash
 ```
 
-From this point you can manually copy/paste the commands which would normally be run by the CI scripts one command at a time. The GitHub Actions CI scripts for AIQ toolkit are located in the `ci/scripts/github` directory, these scripts are GitHub Actions specific wrappers for scripts located in the `ci/scripts` directory.
+From this point you can manually copy/paste the commands which would normally be run by the CI scripts one command at a time. The GitHub Actions CI scripts for NeMo Agent toolkit are located in the `ci/scripts/github` directory, these scripts are GitHub Actions specific wrappers for scripts located in the `ci/scripts` directory.
 
 ## CI Artifacts and Cache
 
@@ -72,6 +72,7 @@ To run the CI pipeline on a different architecture other than your own, QEMU can
 > Note: This assumes you have an amd64 system and want to run the CI pipeline on arm64. If you are using an arm64 and want to emulate amd64, you will need to adjust the commands accordingly.
 
 On an apt based system, this can be done with the following commands:
+<!-- path-check-skip-begin -->
 ```bash
 sudo apt install qemu-utils qemu-system-arm qemu-user-static
 ```
@@ -85,6 +86,7 @@ Verify that the registration was successful:
 ```bash
 docker run --platform=linux/arm64 --rm -t ubuntu:noble uname -m
 ```
+<!-- path-check-skip-end -->
 
 ### Run CI on arm64
 The `CI_ARCH` environment variable can be set to the desired architecture to run CI, for example to run the CI pipeline on arm64, you can use the following command:

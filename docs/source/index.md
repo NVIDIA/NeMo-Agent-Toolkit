@@ -23,20 +23,20 @@ limitations under the License.
    :class: highlight
 ```
 
-![NVIDIA Agent Intelligence Toolkit](./_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](./_static/banner.png "NeMo Agent toolkit banner image")
 
-# NVIDIA Agent Intelligence Toolkit Overview
+# NVIDIA NeMo Agent Toolkit Overview
 
-NVIDIA Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
+NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
 
 
 :::{note}
-Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. The transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
+NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `nvidia-nat` instead of `aiqtoolkit` or `agentiq`. The transitional packages named `aiqtoolkit` and `agentiq` are available for backwards compatibility, but will be removed in the future.
 :::
 
 ## Key Features
 
-- [**Framework Agnostic:**](./quick-start/installing.md#framework-integrations) AIQ toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), and [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. AIQ toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
+- [**Framework Agnostic:**](./quick-start/installing.md#framework-integrations) NeMo Agent toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), and [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
 
 - [**Reusability:**](./extend/sharing-components.md) Every agent, tool, and agentic workflow in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
 
@@ -44,24 +44,24 @@ Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 
 - [**Profiling:**](./workflows/profiler.md) Use the profiler to profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 
-- [**Observability:**](./workflows/observe/index.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool, with examples using [Phoenix](./workflows/observe/observe-workflow-with-phoenix.md) and [W&B Weave](./workflows/observe/observe-workflow-with-weave.md).
+- [**Observability:**](./workflows/observe/index.md) Monitor and debug your workflows with dedicated integrations for popular observability platforms such as Phoenix, Weave, and Langfuse, plus compatibility with OpenTelemetry-based systems. Track performance, trace execution flows, and gain insights into your agent behaviors.
 
 - [**Evaluation System:**](./workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
-- [**User Interface:**](./quick-start/launching-ui.md) Use the AIQ toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**User Interface:**](./quick-start/launching-ui.md) Use the NeMo Agent toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 
-- [**Full MCP Support:**](./workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use AIQ toolkit as an [MCP client](./workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use AIQ toolkit as an [MCP server](./workflows/mcp/mcp-server.md) to publish tools via MCP.
+- [**Full MCP Support:**](./workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent toolkit as an [MCP client](./workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent toolkit as an [MCP server](./workflows/mcp/mcp-server.md) to publish tools via MCP.
 
 ## FAQ
 For frequently asked questions, refer to [FAQ](./resources/faq.md).
 
 ## Feedback
 
-We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.
+We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) if you have any feedback or feature requests.
 
 ```{toctree}
 :hidden:
-:caption: About NVIDIA Agent Intelligence Toolkit
+:caption: About NVIDIA NeMo Agent Toolkit
 Overview <self>
 Release Notes <./release-notes.md>
 ```
@@ -81,11 +81,15 @@ Tutorials <./tutorials/index.md>
 About Workflows <./workflows/about/index.md>
 ./workflows/run-workflows.md
 Workflow Configuration <./workflows/workflow-configuration.md>
+./workflows/llms/index.md
+./workflows/embedders.md
+./workflows/retrievers.md
 Functions <./workflows/functions/index.md>
 ./workflows/mcp/index.md
 Evaluate Workflows <./workflows/evaluate.md>
+Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 Profiling Workflows <./workflows/profiler.md>
-./workflows/using-local-llms.md
+Sizing Calculator <./workflows/sizing-calc.md>
 ./workflows/observe/index.md
 ```
 
@@ -95,6 +99,7 @@ Profiling Workflows <./workflows/profiler.md>
 
 Memory Module <./store-and-retrieve/memory.md>
 ./store-and-retrieve/retrievers.md
+Object Store <./store-and-retrieve/object-store.md>
 ```
 
 ```{toctree}
@@ -102,12 +107,17 @@ Memory Module <./store-and-retrieve/memory.md>
 :caption: Extend
 
 Writing Custom Functions <./extend/functions.md>
-Extending the AIQ Toolkit Using Plugins <./extend/plugins.md>
+Extending the NeMo Agent Toolkit Using Plugins <./extend/plugins.md>
 Sharing Components <./extend/sharing-components.md>
 Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/adding-a-retriever.md
 ./extend/memory.md
 Adding an LLM Provider <./extend/adding-an-llm-provider.md>
+Adding an Object Store Provider <./extend/object-store.md>
+Adding an Authentication Provider <./extend/adding-an-authentication-provider.md>
+Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
+Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
+Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
 ```
 
 ```{toctree}
@@ -115,12 +125,15 @@ Adding an LLM Provider <./extend/adding-an-llm-provider.md>
 :caption: Reference
 
 ./api/index.rst
-./reference/interactive-models.md
+API Authentication <./reference/api-authentication.md>
+Interactive Models <./reference/interactive-models.md>
 API Server Endpoints <./reference/api-server-endpoints.md>
-./reference/websockets.md
+Websockets <./reference/websockets.md>
 Command Line Interface (CLI) <./reference/cli.md>
+Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
+Test Time Compute <./reference/test-time-compute.md>
 Troubleshooting <./troubleshooting.md>
 ```
 
@@ -130,8 +143,9 @@ Troubleshooting <./troubleshooting.md>
 
 FAQ <./resources/faq.md>
 Code of Conduct <./resources/code-of-conduct.md>
+Migration Guide <./resources/migration-guide.md>
 Contributing <./resources/contributing.md>
 ./resources/running-ci-locally.md
 ./support.md
-./resources/licensing
+./resources/licensing.md
 ```

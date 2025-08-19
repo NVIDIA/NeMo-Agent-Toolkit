@@ -1,0 +1,15 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "../../.."
+
+
+[project]
+name = "aiqtoolkit-agno"
+dynamic = ["version"]
+dependencies = ["nvidia-nat[agno]~=1.2"]
+readme = "pypi.md"
+description = "Transitional package for nvidia-nat-agno, this package is deprecated and will be removed in the future."
+classifiers = ["Programming Language :: Python"]
