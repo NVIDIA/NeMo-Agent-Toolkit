@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 
 
@@ -30,6 +31,7 @@ class ObjectStoreItem(BaseModel):
     metadata : dict[str, str] | None
         Metadata providing context and utility for management operations.
     """
+    model_config = ConfigDict(ser_json_bytes="base64", val_json_bytes="base64")
 
     data: bytes = Field(description="The data to store in the object store.")
     content_type: str | None = Field(description="The content type of the data.", default=None)

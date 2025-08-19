@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-import pickle
 
 import aiomysql
 from aiomysql.pool import Pool
@@ -57,8 +56,10 @@ class MySQLObjectStore(ObjectStore):
         )
         assert self._conn_pool is not None
 
-        logger.info(
-            f"Created connection pool for {self._config.bucket_name} at {self._config.host}:{self._config.port}")
+        logger.info("Created connection pool for %s at %s:%s",
+                    self._config.bucket_name,
+                    self._config.host,
+                    self._config.port)
 
         async with self._conn_pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -88,8 +89,10 @@ class MySQLObjectStore(ObjectStore):
 
             await conn.commit()
 
-        logger.info(
-            f"Created schema and tables for {self._config.bucket_name} at {self._config.host}:{self._config.port}")
+        logger.info("Created schema and tables for %s at %s:%s",
+                    self._config.bucket_name,
+                    self._config.host,
+                    self._config.port)
 
         return self
 
@@ -123,8 +126,7 @@ class MySQLObjectStore(ObjectStore):
                             key=key, additional_message=f"MySQL table {self._config.bucket_name} already has key {key}")
                     await cur.execute("SELECT id FROM object_meta WHERE path=%s FOR UPDATE;", (key, ))
                     (obj_id, ) = await cur.fetchone()
-
-                    blob = pickle.dumps(item)
+                    blob = item.model_dump_json()
                     await cur.execute("INSERT INTO object_data (id, data) VALUES (%s, %s)", (obj_id, blob))
                     await conn.commit()
                 except Exception:
@@ -151,7 +153,7 @@ class MySQLObjectStore(ObjectStore):
                     await cur.execute("SELECT id FROM object_meta WHERE path=%s FOR UPDATE;", (key, ))
                     (obj_id, ) = await cur.fetchone()
 
-                    blob = pickle.dumps(item)
+                    blob = item.model_dump_json()
                     await cur.execute("REPLACE INTO object_data (id, data) VALUES (%s, %s)", (obj_id, blob))
                     await conn.commit()
                 except Exception:
@@ -178,7 +180,7 @@ class MySQLObjectStore(ObjectStore):
                 if not row:
                     raise NoSuchKeyError(
                         key=key, additional_message=f"MySQL table {self._config.bucket_name} does not have key {key}")
-                return pickle.loads(row[0])
+                return ObjectStoreItem.model_validate_json(row[0].decode("utf-8"))
 
     @override
     async def delete_object(self, key: str):
