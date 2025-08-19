@@ -17,20 +17,38 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
 from nat.data_models.retry_mixin import RetryMixin
+from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
+@register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
+async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _builder: Builder):
+
+    from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
+
+    llm = AzureChatCompletion(
+        api_key=llm_config.api_key,
+        api_version=llm_config.api_version,
+        endpoint=llm_config.azure_endpoint,
+        deployment_name=llm_config.azure_deployment,
+    )
+
+    if isinstance(llm_config, RetryMixin):
+        llm = patch_with_retry(llm,
+                               retries=llm_config.num_retries,
+                               retry_codes=llm_config.retry_on_status_codes,
+                               retry_on_messages=llm_config.retry_on_errors)
+
+    yield llm
+
+
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
-async def openai_semantic_kernel(llm_config: OpenAIModelConfig, builder: Builder):
+async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-    config_obj = {
-        **llm_config.model_dump(exclude={"type"}, by_alias=True),
-    }
-
-    llm = OpenAIChatCompletion(ai_model_id=config_obj.get("model"))
+    llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,
