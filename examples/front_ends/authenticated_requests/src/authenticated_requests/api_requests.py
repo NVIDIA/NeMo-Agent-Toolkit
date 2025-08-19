@@ -74,6 +74,7 @@ async def authenticated_request_function(config: AuthenticatedRequestConfig, bui
                 body_data=json_data if json_data else None)
 
             if response.body is not None:
+
                 if isinstance(response.body, str):
                     formatted_response = response.body
                 else:
@@ -90,13 +91,6 @@ async def authenticated_request_function(config: AuthenticatedRequestConfig, bui
                     return f"SERVER ERROR (HTTP {response.status_code}): {formatted_response}"
                 else:
                     return f"HTTP {response.status_code}: {formatted_response}"
-            else:
-                if response.status_code == 204:
-                    return "SUCCESS (HTTP 204): No content - operation completed successfully"
-                elif response.status_code == 202:
-                    return "SUCCESS (HTTP 202): Request accepted for processing"
-                else:
-                    return f"No response content received (HTTP {response.status_code})"
 
         except ValueError as e:
             error_msg = f"VALIDATION ERROR: {str(e)}"
