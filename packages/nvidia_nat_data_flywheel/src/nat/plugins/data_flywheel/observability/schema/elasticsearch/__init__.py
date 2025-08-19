@@ -13,13 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from .contract_version import ElasticsearchContractVersion
 
-from nat.plugins.data_flywheel.observability.schema.dfw_es_record import DFWESRecord
-
-
-class ElasticsearchContractVersion(Enum):
-    """The type of trace source."""
-
-    VERSION_1_0 = DFWESRecord
-    VERSION_1_1 = DFWESRecord
+__all__ = ["ElasticsearchContractVersion"]

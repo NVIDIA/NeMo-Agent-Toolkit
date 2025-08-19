@@ -25,6 +25,8 @@ from pydantic import Field
 from pydantic import field_validator
 from pydantic import model_validator
 
+from nat.plugins.data_flywheel.observability.schema.registry import register_schema
+
 logger = logging.getLogger(__name__)
 
 
@@ -165,6 +167,8 @@ class Response(BaseModel):
     usage: dict[str, Any] | None = Field(None, description="Token usage information")
 
 
+@register_schema(name="elasticsearch", version="1.0")
+@register_schema(name="elasticsearch", version="1.1")
 class DFWESRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
 

@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from nat.builder.context import AIQContextState
 from nat.plugins.data_flywheel.observability.exporter.dfw_exporter import DFWExporter
 from nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin import ElasticsearchMixin
-from nat.plugins.data_flywheel.observability.schema.contract_version import ElasticsearchContractVersion
+from nat.plugins.data_flywheel.observability.schema.elasticsearch.contract_version import ElasticsearchContractVersion
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
     def export_contract(self) -> type[BaseModel]:
         """The export contract for Elasticsearch.
         """
-        return self.contract_version.value
+        return self.contract_version.get_contract_class()
 
     async def export_processed(self, item: dict | list[dict]) -> None:
         """Export processed DFW records to Elasticsearch."""

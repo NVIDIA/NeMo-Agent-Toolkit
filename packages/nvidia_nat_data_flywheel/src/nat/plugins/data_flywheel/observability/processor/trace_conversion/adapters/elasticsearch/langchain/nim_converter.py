@@ -20,7 +20,7 @@ import logging
 from nat.plugins.data_flywheel.observability.processor.trace_conversion.adapters.elasticsearch.langchain.openai_converter import \
     convert_langchain_openai
 from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import register_adapter
-from nat.plugins.data_flywheel.observability.schema.dfw_es_record import DFWESRecord
+from nat.plugins.data_flywheel.observability.schema.elasticsearch.v1_1.dfw_es_record import DFWESRecord
 from nat.plugins.data_flywheel.observability.schema.langchain.nim_trace_source import NIMTraceSource
 from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
 
