@@ -31,6 +31,7 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
         api_key=llm_config.api_key,
         api_version=llm_config.api_version,
         endpoint=llm_config.azure_endpoint,
+        deployment_name=llm_config.azure_deployment,
     )
 
     if isinstance(llm_config, RetryMixin):

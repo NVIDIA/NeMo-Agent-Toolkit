@@ -111,7 +111,7 @@ async def test_azure_openai_minimal_agent():
     Requires AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT to be set.
     See https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart for more information.
     """
-    llm_config = AzureOpenAIModelConfig(azure_deployment="meta/llama-3.1-70b-instruct")
+    llm_config = AzureOpenAIModelConfig(azure_deployment="gpt-4.1-20250414")
     agent = await create_minimal_agent("azure_openai_llm", llm_config)
 
     response = await agent.achat("What is 1+2?")
