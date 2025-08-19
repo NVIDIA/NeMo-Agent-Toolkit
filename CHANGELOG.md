@@ -40,6 +40,7 @@ While NeMo Agent Toolkit is designed to be compatible with the previous version,
 * [Enhanced Cursor Rules](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md): Build new workflows or extend existing ones by leveraging cursor rules, making agent development faster and more flexible.
 * [Interactive Notebooks](https://github.com/NVIDIA/NeMo-Agent-Toolkit/tree/release/1.2/examples/notebooks): Access a suite of onboarding and example notebooks to accelerate agent workflow development, testing, and experimentation.
 * [Observability Refactor](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/workflows/observe/index.md): Onboard new observability and monitoring platforms more easily, and take advantage of improved plug-in architecture for workflow inspection and analysis.
+* [Examples Reorganization](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/examples/README.md): Organize examples by functionality, making it easier to find and use the examples.
 
 ### 📜 Full Change Log
 * Use consistent casing for ReAct agent by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/293
@@ -245,6 +246,17 @@ While NeMo Agent Toolkit is designed to be compatible with the previous version,
 * Consolidate CI pipelines by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/632
 * Install git-lfs in docs CI stage by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/648
 * Fix `aiq` compatibility by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/651
+* Bugfix: Align Python Version Ranges by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/655
+* Docs: Add Migration Guide by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/653
+* Update third-party-license files for v1.2 by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/657
+* Add notebooks to show users how to get started with the toolkit and build agents by @cdgamarose-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/656
+* Remove redundant prefix from directory names by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/665
+* Docs: Add Upgrade Fix to Troubleshooting by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/659
+* Enhance README with badges, installation, instructions, and a roadmap by @mdemoret-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/654
+* Adding `.nspect-allowlist.toml` to remediate false positives found by scanner by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/668
+* Fix: Remove `pickle` from MySQL-based Object Store by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/669
+* Enable `BUILD_NAT_COMPAT` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/670
+* Fix paths for compatibility packages by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/672
 
 ### 🙌 New Contributors
 * @titericz made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/312
@@ -266,7 +278,6 @@ While NeMo Agent Toolkit is designed to be compatible with the previous version,
 * @dfagnou made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/421
 * @vikalluru made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/409
 * @ashsong-nv made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/530
-
 
 ## [1.1.0] - 2025-05-16
 ### Key Features
