@@ -55,6 +55,7 @@ DB(s?)
 [Ee]xplainability
 Faiss
 [Gg]eneratable
+GitHub
 glog
 GPU(s?)
 Grafana
@@ -115,6 +116,7 @@ pytest
 [Rr]eusability
 [Rr]untime(s?)
 [Ss]erializable
+[Ss]treamable
 [Ss]ubclassing
 [Ss]ubcard(s?)
 [Ss]ubgraph(s?)

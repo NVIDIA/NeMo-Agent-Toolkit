@@ -94,17 +94,20 @@ ALLOWLISTED_WORDS: set[str] = {
     "copy/paste",
     "edit/score",
     "file/console",
+    "files/functions",
     "I/O",
     "Input/Observation",
     "input/output",
     "inputs/outputs",
     "JavaScript/TypeScript",
     "JSON/YAML",
+    "LTE/5G",
     "output/jobs/job_",
     "predictions/forecasts",
     "provider/method.",
     "RagaAI/Catalyst",
     "read/write",
+    "run/host",
     "run/serve",
     "search/edit/score/select",
     "size/time",
@@ -140,6 +143,11 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     (
         r"^examples/evaluation_and_profiling/simple_web_query_eval/.*configs/eval_upload.yml",
         r"^input/langsmith.json",
+    ),
+    # ignore notebook-relative paths
+    (
+        r"^examples/notebooks/retail_sales_agent/.*configs/",
+        r"^\./retail_sales_agent/data/",
     ),
     # ignore generated files
     (
@@ -209,7 +217,7 @@ REFERENTIAL_PATHS: set[str] = {
 }
 
 # File extensions to check paths
-EXTENSIONS: tuple[str, ...] = ('.md', '.rst', '.yml', '.yaml', '.json', '.toml', '.ini', '.conf', '.cfg')
+EXTENSIONS: tuple[str, ...] = ('.ipynb', '.md', '.rst', '.yml', '.yaml', '.json', '.toml', '.ini', '.conf', '.cfg')
 
 URI_OR_PATH_REGEX = re.compile(r'((([^:/?# ]+):)?(//([^/?# ]*))([^?# ]*)(\?([^# ]*))?(#([^ ]*))?'
                                r'|(\.?\.?/?)(([^ \t`=\'"]+/)+[^ \t`=\'"]+))')

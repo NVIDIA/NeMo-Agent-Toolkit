@@ -4,7 +4,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["aiq.*", "nat.*"]
+include = ["aiq", "nat.*"]
 
 [tool.setuptools_scm]
 # intentionally empty, the section is required for setuptools_scm to work but we don't need to set anything
@@ -58,14 +58,16 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 [project.optional-dependencies]
 # Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install nvidia-nat[langchain]`
 # Keep sorted!!!
+all = ["nvidia-nat-all"]  # meta-package
 agno = ["nvidia-nat-agno"]
 crewai = ["nvidia-nat-crewai"]
-ingestion = ["lxml~=5.4"]
+ingestion = ["nvidia-nat-ingestion"]  # meta-package
 langchain = ["nvidia-nat-langchain"]
 llama-index = ["nvidia-nat-llama-index"]
 mem0ai = ["nvidia-nat-mem0ai"]
 opentelemetry = ["nvidia-nat-opentelemetry"]
 phoenix = ["nvidia-nat-phoenix"]
+profiling = ["nvidia-nat-profiling"]  # meta-package
 ragaai = ["nvidia-nat-ragaai"]
 mysql = ["nvidia-nat-mysql"]
 redis = ["nvidia-nat-redis"]
@@ -86,10 +88,12 @@ examples = [
   "nat_automated_description_generation",
   "nat_email_phishing_analyzer",
   "nat_multi_frameworks",
+  "nat_first_search_agent",
   "nat_plot_charts",
   "nat_por_to_jiratickets",
   "nat_profiler_agent",
   "nat_redact_pii",
+  "nat_retail_sales_agent",
   "nat_semantic_kernel_demo",
   "nat_simple_auth",
   "nat_simple_web_query",
@@ -105,11 +109,6 @@ examples = [
   "nat_user_report",
 ]
 
-profiling = [
-  "matplotlib~=3.9",
-  "prefixspan~=0.5.2",
-  "scikit-learn~=1.6",
-]
 
 # Optional dependency needed when use_gunicorn is set to true
 gunicorn = [
@@ -123,21 +122,24 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 # Workspace members
+nvidia-nat-all = { workspace = true }
+nvidia-nat-agno = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
+nvidia-nat-ingestion = { workspace = true }
 nvidia-nat-langchain = { workspace = true }
 nvidia-nat-llama-index = { workspace = true }
 nvidia-nat-mem0ai = { workspace = true }
 nvidia-nat-mysql = { workspace = true }
+nvidia-nat-opentelemetry = { workspace = true }
+nvidia-nat-phoenix = { workspace = true }
+nvidia-nat-profiling = { workspace = true }
+nvidia-nat-ragaai = { workspace = true }
 nvidia-nat-redis = { workspace = true }
 nvidia-nat-s3 = { workspace = true }
 nvidia-nat-semantic-kernel = { workspace = true }
 nvidia-nat-test = { workspace = true }
-nvidia-nat-zep-cloud = { workspace = true }
-nvidia-nat-agno = { workspace = true }
 nvidia-nat-weave = { workspace = true }
-nvidia-nat-opentelemetry = { workspace = true }
-nvidia-nat-phoenix = { workspace = true }
-nvidia-nat-ragaai = { workspace = true }
+nvidia-nat-zep-cloud = { workspace = true }
 
 # All examples here
 nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
@@ -145,10 +147,12 @@ nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent",
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
 nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }
+nat_first_search_agent = { path = "examples/notebooks/first_search_agent", editable = true }
 nat_plot_charts = { path = "examples/custom_functions/plot_charts", editable = true }
 nat_por_to_jiratickets = { path = "examples/HITL/por_to_jiratickets", editable = true }
 nat_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editable = true }
 nat_redact_pii = { path = "examples/observability/redact_pii", editable = true }
+nat_retail_sales_agent = { path = "examples/notebooks/retail_sales_agent", editable = true }
 nat_semantic_kernel_demo = { path = "examples/frameworks/semantic_kernel_demo", editable = true }
 nat_simple_auth = { path = "examples/front_ends/simple_auth", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }

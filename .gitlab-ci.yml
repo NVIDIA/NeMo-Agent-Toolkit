@@ -1,3 +1,4 @@
+
 # SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -34,27 +35,21 @@ stages:
 
 variables:
   UV_CACHE_DIR: .uv-cache
+  BUILD_NAT_COMPAT: "true"
   GIT_SUBMODULE_STRATEGY: recursive
   GIT_SUBMODULE_FORCE_HTTPS: "true"
   BUILD_AIQ_COMPAT: "true"
+  WORKSPACE_TMP: "${CI_PROJECT_DIR}/.tmp"
 
 default:
-  image: rapidsai/ci-conda:cuda12.5.1-ubuntu22.04-py3.12
+  image: ghcr.io/astral-sh/uv:python3.12-bookworm
   cache:
     - key: $CI_COMMIT_REF_SLUG
       paths:
         - $UV_CACHE_DIR
   before_script:
-    # Ensure UV is installed
-    - pip install uv
-    - uv venv --seed .venv
-    - source .venv/bin/activate
+    - mkdir -p ${WORKSPACE_TMP}
 
-    # Ensure Git LFS is installed
-    - conda install git-lfs -y
-    - git lfs install
-    - git lfs fetch
-    - git lfs pull
   after_script:
     # Your `uv` commands
     - uv cache prune --ci
@@ -110,12 +105,12 @@ package:wheel:
     - ./ci/scripts/gitlab/build_wheel.sh
   artifacts:
     paths:
-      # match - .tmp/wheels/aiqtoolkit/nvidia-nat/<version>/*.whl, .tmp/wheels/nvidia-nat/nvidia-nat-crewai/<version>/*.whl etc.
+      # match - .tmp/wheels/nvidia-nat/<version>/*.whl, .tmp/wheels/nvidia-nat/nvidia-nat-crewai/<version>/*.whl etc.
       - .tmp/wheels/nvidia-nat/*/*/*.whl
       # Match the example wheels
       - .tmp/wheels/nvidia-nat/examples/*.whl
       # Match  the transitional wheels
-      - .tmp/wheels/aiqtoolkit/*/*/*.whl
+      - .tmp/wheels/nat/*/*/*.whl
     expire_in: 1 week
 
 
