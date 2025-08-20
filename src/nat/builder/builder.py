@@ -24,9 +24,11 @@ from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.component_ref import EmbedderRef
+from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import MemoryRef
@@ -36,6 +38,7 @@ from nat.data_models.component_ref import TTCStrategyRef
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
@@ -65,15 +68,30 @@ class Builder(ABC):
         pass
 
     @abstractmethod
+    async def add_function_group(self, name: str | FunctionGroupRef, config: FunctionGroupBaseConfig) -> FunctionGroup:
+        pass
+
+    @abstractmethod
     def get_function(self, name: str | FunctionRef) -> Function:
+        pass
+
+    @abstractmethod
+    def get_function_group(self, name: str | FunctionGroupRef) -> FunctionGroup:
         pass
 
     def get_functions(self, function_names: Sequence[str | FunctionRef]) -> list[Function]:
 
         return [self.get_function(name) for name in function_names]
 
+    def get_function_groups(self, function_group_names: Sequence[str | FunctionGroupRef]) -> list[FunctionGroup]:
+        return [self.get_function_group(name) for name in function_group_names]
+
     @abstractmethod
     def get_function_config(self, name: str | FunctionRef) -> FunctionBaseConfig:
+        pass
+
+    @abstractmethod
+    def get_function_group_config(self, name: str | FunctionGroupRef) -> FunctionGroupBaseConfig:
         pass
 
     @abstractmethod
@@ -88,10 +106,11 @@ class Builder(ABC):
     def get_workflow_config(self) -> FunctionBaseConfig:
         pass
 
-    def get_tools(self, tool_names: Sequence[str | FunctionRef],
+    @abstractmethod
+    def get_tools(self,
+                  tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
                   wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
-
-        return [self.get_tool(fn_name=n, wrapper_type=wrapper_type) for n in tool_names]
+        pass
 
     @abstractmethod
     def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
@@ -257,8 +276,12 @@ class Builder(ABC):
     def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
         pass
 
+    @abstractmethod
+    def get_function_group_dependencies(self, fn_name: str) -> FunctionDependencies:
+        pass
 
-class EvalBuilder(Builder):
+
+class EvalBuilder(ABC):
 
     @abstractmethod
     async def add_evaluator(self, name: str, config: EvaluatorBaseConfig):

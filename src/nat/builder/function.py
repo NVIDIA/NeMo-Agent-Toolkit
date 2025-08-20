@@ -29,7 +29,9 @@ from nat.builder.function_base import InputT
 from nat.builder.function_base import SingleOutputT
 from nat.builder.function_base import StreamingOutputT
 from nat.builder.function_info import FunctionInfo
+from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 
 _InvokeFnT = Callable[[InputT], Awaitable[SingleOutputT]]
 _StreamFnT = Callable[[InputT], AsyncGenerator[StreamingOutputT]]
@@ -342,3 +344,52 @@ class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
             pass
 
         return FunctionImpl(config=config, info=info, instance_name=instance_name)
+
+
+class FunctionGroup:
+
+    def __init__(self,
+                 *,
+                 config: FunctionGroupBaseConfig,
+                 functions: dict[str, tuple[Callable, str]] | None = None,
+                 instance_name: str | None = None):
+
+        self._config = config
+        self._instance_name = instance_name or config.type
+        self._context = Context.get()
+        self._functions: dict[str, Function] = {}
+
+        if functions is not None:
+            for name, (fn, description) in functions.items():
+                self.add_function(name, fn, description)
+
+    def add_function(self, name: str, fn: Callable, description: str):
+        if name is None:
+            raise ValueError("Function name cannot be None")
+        if fn is None:
+            raise ValueError("Function cannot be None")
+        if description is None:
+            raise ValueError("Function description cannot be None")
+        if not name:
+            raise ValueError("Function name cannot be empty")
+        if any(c.isspace() for c in name):
+            raise ValueError(f"Function name cannot contain whitespace: {name}")
+        if name in self._functions:
+            raise ValueError(f"Function {name} already exists in function group {self._instance_name}")
+
+        info = FunctionInfo.from_fn(fn, description=description)
+        full_name = f"{self._instance_name}.{name}"
+        lambda_fn = LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name=full_name)
+        self._functions[name] = lambda_fn
+
+    def get_functions(self) -> dict[str, Function]:
+        return {f"{self._instance_name}.{name}": func for name, func in self._functions.items()}
+
+    def get_exposed_functions(self) -> dict[str, Function]:
+        if set(self._config.expose) - set(self._functions.keys()):
+            raise ValueError(f"Function group {self._instance_name} exposes functions that are not found in the group. "
+                             f"Available functions: {list(self._functions.keys())}")
+        return {
+            f"{self._instance_name}.{name}": func
+            for name, func in self._functions.items() if name in self._config.expose
+        }

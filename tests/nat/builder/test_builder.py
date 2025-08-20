@@ -23,6 +23,7 @@ from pydantic import ConfigDict
 from nat.builder.builder import Builder
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
 from nat.builder.retriever import RetrieverProviderInfo
@@ -31,6 +32,7 @@ from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_embedder_client
 from nat.cli.register_workflow import register_embedder_provider
 from nat.cli.register_workflow import register_function
+from nat.cli.register_workflow import register_function_group
 from nat.cli.register_workflow import register_llm_client
 from nat.cli.register_workflow import register_llm_provider
 from nat.cli.register_workflow import register_memory
@@ -44,6 +46,7 @@ from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
@@ -105,6 +108,31 @@ class TTTCStrategyConfig(TTCStrategyBaseConfig, name="test_ttc_strategy"):
 
 class FailingFunctionConfig(FunctionBaseConfig, name="failing_function"):
     pass
+
+
+# Function Group Test Configurations
+class FunctionGroupConfig(FunctionGroupBaseConfig, name="test_function_group"):
+    """Test configuration for function groups."""
+    expose: list[str] = ["add", "multiply"]
+    raise_error: bool = False
+
+
+class EmptyExposesFunctionGroupConfig(FunctionGroupBaseConfig, name="empty_exposes_function_group"):
+    """Test configuration with no exposed functions."""
+    expose: list[str] = []
+    raise_error: bool = False
+
+
+class AllExposesFunctionGroupConfig(FunctionGroupBaseConfig, name="all_exposes_function_group"):
+    """Test configuration that exposes all functions."""
+    expose: list[str] = ["add", "multiply", "subtract"]
+    raise_error: bool = False
+
+
+class FailingFunctionGroupConfig(FunctionGroupBaseConfig, name="failing_function_group"):
+    """Test configuration for function group that fails during initialization."""
+    expose: list[str] = ["add"]
+    raise_error: bool = True
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -235,13 +263,87 @@ async def _register():
             async def build_components(self, builder: Builder) -> None:
                 pass
 
-            def supported_pipeline_types(self) -> [PipelineTypeEnum]:
+            def supported_pipeline_types(self) -> list[PipelineTypeEnum]:
                 return [PipelineTypeEnum.AGENT_EXECUTION]
 
             def stage_type(self) -> StageTypeEnum:
                 return StageTypeEnum.SCORING
 
         yield DummyTTCStrategy(config)
+
+    # Function Group registrations
+    @register_function_group(config_type=FunctionGroupConfig)
+    async def register_test_function_group(config: FunctionGroupConfig, builder: Builder):
+        """Register a test function group with basic arithmetic operations."""
+
+        if config.raise_error:
+            raise ValueError("Function group initialization failed")
+
+        async def add(a: int, b: int) -> int:
+            """Add two numbers."""
+            return a + b
+
+        async def multiply(a: int, b: int) -> int:
+            """Multiply two numbers."""
+            return a * b
+
+        async def subtract(a: int, b: int) -> int:
+            """Subtract two numbers."""
+            return a - b
+
+        yield FunctionGroup(config=config,
+                            functions={
+                                "add": (add, "Add two numbers"),
+                                "multiply": (multiply, "Multiply two numbers"),
+                                "subtract": (subtract, "Subtract two numbers")
+                            })
+
+    @register_function_group(config_type=EmptyExposesFunctionGroupConfig)
+    async def register_empty_exposes_group(config: EmptyExposesFunctionGroupConfig, builder: Builder):
+        """Register a function group with no exposed functions."""
+
+        if config.raise_error:
+            raise ValueError("Function group initialization failed")
+
+        async def internal_function(x: int) -> int:
+            """Internal function that is not exposed."""
+            return x * 2
+
+        yield FunctionGroup(config=config, functions={"internal_function": (internal_function, "Internal function")})
+
+    @register_function_group(config_type=AllExposesFunctionGroupConfig)
+    async def register_all_exposes_group(config: AllExposesFunctionGroupConfig, builder: Builder):
+        """Register a function group that exposes all functions."""
+
+        if config.raise_error:
+            raise ValueError("Function group initialization failed")
+
+        async def add(a: int, b: int) -> int:
+            """Add two numbers."""
+            return a + b
+
+        async def multiply(a: int, b: int) -> int:
+            """Multiply two numbers."""
+            return a * b
+
+        async def subtract(a: int, b: int) -> int:
+            """Subtract two numbers."""
+            return a - b
+
+        yield FunctionGroup(config=config,
+                            functions={
+                                "add": (add, "Add two numbers"),
+                                "multiply": (multiply, "Multiply two numbers"),
+                                "subtract": (subtract, "Subtract two numbers")
+                            })
+
+    @register_function_group(config_type=FailingFunctionGroupConfig)
+    async def register_failing_function_group(config: FailingFunctionGroupConfig, builder: Builder):
+        """Register a function group that always fails during initialization."""
+
+        # This function group always raises an exception during initialization
+        raise ValueError("Function group initialization failed")
+        yield  # This line will never be reached, but needed for the AsyncGenerator type
 
 
 async def test_build():
@@ -266,7 +368,7 @@ async def test_add_function():
     class FunctionReturningBadConfig(FunctionBaseConfig, name="fn_return_bad"):
         pass
 
-    @register_function(config_type=FunctionReturningBadConfig)
+    @register_function(config_type=FunctionReturningBadConfig)  # type: ignore
     async def register2(config: FunctionReturningBadConfig, b: Builder):
 
         yield {}
@@ -320,7 +422,7 @@ async def test_set_workflow():
     class FunctionReturningBadConfig(FunctionBaseConfig, name="fn_return_bad"):
         pass
 
-    @register_function(config_type=FunctionReturningBadConfig)
+    @register_function(config_type=FunctionReturningBadConfig)  # type: ignore
     async def register2(config: FunctionReturningBadConfig, b: Builder):
 
         yield {}
@@ -763,6 +865,196 @@ async def test_built_config():
         assert workflow_config.retrievers == {"retriever1": retriever_config}
         assert workflow_config.object_stores == {"object_store1": object_store_config}
         assert workflow_config.ttc_strategies == {"ttc_strategy": ttc_config}
+
+
+# Function Group Tests
+
+
+async def test_add_function_group():
+    """Test adding function groups to a workflow builder."""
+
+    async with WorkflowBuilder() as builder:
+        # Test adding a normal function group
+        group = await builder.add_function_group("math_group", FunctionGroupConfig())
+        assert isinstance(group, FunctionGroup)
+
+        # Test adding a function group with no exposed functions
+        empty_group = await builder.add_function_group("empty_group", EmptyExposesFunctionGroupConfig())
+        assert isinstance(empty_group, FunctionGroup)
+
+        # Test adding a function group that exposes all functions
+        all_group = await builder.add_function_group("all_group", AllExposesFunctionGroupConfig())
+        assert isinstance(all_group, FunctionGroup)
+
+        # Test error when adding function group with existing name
+        with pytest.raises(ValueError):
+            await builder.add_function_group("math_group", FunctionGroupConfig())
+
+        # Test error when adding function group that fails during initialization
+        with pytest.raises(ValueError):
+            await builder.add_function_group("failing_group", FailingFunctionGroupConfig())
+
+
+async def test_get_function_group():
+    """Test getting function groups from a workflow builder."""
+
+    async with WorkflowBuilder() as builder:
+        # Add a function group
+        added_group = await builder.add_function_group("math_group", FunctionGroupConfig())
+
+        # Test getting existing function group
+        retrieved_group = builder.get_function_group("math_group")
+        assert retrieved_group == added_group
+
+        # Test error when getting non-existent function group
+        with pytest.raises(ValueError):
+            builder.get_function_group("non_existent_group")
+
+
+async def test_get_function_group_config():
+    """Test getting function group configurations."""
+
+    async with WorkflowBuilder() as builder:
+        # Add a function group
+        config = FunctionGroupConfig()
+        await builder.add_function_group("math_group", config)
+
+        # Test getting existing function group config
+        retrieved_config = builder.get_function_group_config("math_group")
+        assert retrieved_config == config
+        assert retrieved_config is config
+
+        # Test error when getting non-existent function group config
+        with pytest.raises(ValueError):
+            builder.get_function_group_config("non_existent_group")
+
+
+async def test_function_group_exposed_functions():
+    """Test that exposed functions from function groups are accessible."""
+
+    async with WorkflowBuilder() as builder:
+        # Add function group with some exposed functions
+        await builder.add_function_group("math_group", FunctionGroupConfig())
+
+        # Test that exposed functions are accessible as regular functions
+        add_fn = builder.get_function("test_function_group.add")
+        multiply_fn = builder.get_function("test_function_group.multiply")
+
+        assert add_fn is not None
+        assert multiply_fn is not None
+
+        # Test that non-exposed functions are not accessible
+        with pytest.raises(ValueError):
+            builder.get_function("test_function_group.subtract")
+
+
+async def test_function_group_empty_exposes():
+    """Test function group with no exposed functions."""
+
+    async with WorkflowBuilder() as builder:
+        # Add function group with no exposed functions
+        await builder.add_function_group("empty_group", EmptyExposesFunctionGroupConfig())
+
+        # Verify no functions were added to global registry
+        exposed_functions = [k for k in builder._functions.keys() if k.startswith("empty_exposes_function_group.")]
+        assert len(exposed_functions) == 0
+
+        # But the group itself should exist
+        group = builder.get_function_group("empty_group")
+        assert isinstance(group, FunctionGroup)
+
+
+async def test_function_group_all_exposes():
+    """Test function group that exposes all functions."""
+
+    async with WorkflowBuilder() as builder:
+        # Add function group that exposes all functions
+        await builder.add_function_group("all_group", AllExposesFunctionGroupConfig())
+
+        # All functions should be accessible
+        add_fn = builder.get_function("all_exposes_function_group.add")
+        multiply_fn = builder.get_function("all_exposes_function_group.multiply")
+        subtract_fn = builder.get_function("all_exposes_function_group.subtract")
+
+        assert add_fn is not None
+        assert multiply_fn is not None
+        assert subtract_fn is not None
+
+
+async def test_function_group_name_conflicts():
+    """Test function group name conflict handling."""
+
+    async with WorkflowBuilder() as builder:
+        # Add a function first
+        await builder.add_function("math_group", FunctionReturningFunctionConfig())
+
+        # Try to add function group with same name - should fail
+        with pytest.raises(ValueError):
+            await builder.add_function_group("math_group", FunctionGroupConfig())
+
+
+async def test_function_group_dependencies_tracking():
+    """Test that function group dependencies are properly tracked."""
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_function_group("math_group", FunctionGroupConfig())
+
+        # Check that dependencies are tracked
+        assert "math_group" in builder.function_group_dependencies
+        from nat.data_models.function_dependencies import FunctionDependencies
+        dependencies = builder.function_group_dependencies["math_group"]
+        assert isinstance(dependencies, FunctionDependencies)
+
+
+async def test_function_group_integration_with_workflow():
+    """Test building a workflow that includes function groups."""
+
+    async with WorkflowBuilder() as builder:
+        # Add function groups
+        await builder.add_function_group("math_group", FunctionGroupConfig())
+        await builder.add_function_group("empty_group", EmptyExposesFunctionGroupConfig())
+
+        # Add regular functions
+        await builder.add_function("regular_fn", FunctionReturningFunctionConfig())
+
+        # Set workflow
+        await builder.set_workflow(FunctionReturningFunctionConfig())
+
+        # Test that function groups were added correctly
+        assert "math_group" in builder._function_groups
+        assert "empty_group" in builder._function_groups
+
+        # Test that exposed functions are accessible
+        assert "test_function_group.add" in builder._functions
+        assert "test_function_group.multiply" in builder._functions
+
+        # Test that non-exposed functions are not accessible
+        assert "test_function_group.subtract" not in builder._functions
+
+        # Test that no functions were exposed from empty group
+        empty_group_functions = [k for k in builder._functions.keys() if k.startswith("empty_exposes_function_group.")]
+        assert len(empty_group_functions) == 0
+
+        # Test that regular functions still work
+        assert "regular_fn" in builder._functions
+
+
+async def test_function_group_config_validation():
+    """Test function group configuration validation."""
+
+    # Test that function group configs are stored correctly in the builder
+    async with WorkflowBuilder() as builder:
+        config = FunctionGroupConfig()
+        await builder.add_function_group("math_group", config)
+
+        # Test getting function group config
+        retrieved_config = builder.get_function_group_config("math_group")
+        assert retrieved_config == config
+        assert retrieved_config is config
+
+        # Test that function group is stored correctly
+        function_group = builder.get_function_group("math_group")
+        assert isinstance(function_group, FunctionGroup)
 
 
 async def test_add_telemetry_exporter():

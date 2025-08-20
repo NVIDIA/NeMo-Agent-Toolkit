@@ -27,6 +27,8 @@ from nat.cli.type_registry import EvaluatorRegisteredCallableT
 from nat.cli.type_registry import FrontEndBuildCallableT
 from nat.cli.type_registry import FrontEndRegisteredCallableT
 from nat.cli.type_registry import FunctionBuildCallableT
+from nat.cli.type_registry import FunctionGroupBuildCallableT
+from nat.cli.type_registry import FunctionGroupRegisteredCallableT
 from nat.cli.type_registry import FunctionRegisteredCallableT
 from nat.cli.type_registry import LLMClientBuildCallableT
 from nat.cli.type_registry import LLMClientRegisteredCallableT
@@ -60,6 +62,7 @@ from nat.data_models.embedder import EmbedderBaseConfigT
 from nat.data_models.evaluator import EvaluatorBaseConfigT
 from nat.data_models.front_end import FrontEndConfigT
 from nat.data_models.function import FunctionConfigT
+from nat.data_models.function import FunctionGroupConfigT
 from nat.data_models.llm import LLMBaseConfigT
 from nat.data_models.memory import MemoryBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfigT
@@ -155,10 +158,7 @@ def register_function(config_type: type[FunctionConfigT],
 
         context_manager_fn = asynccontextmanager(fn)
 
-        if framework_wrappers is None:
-            framework_wrappers_list: list[str] = []
-        else:
-            framework_wrappers_list = list(framework_wrappers)
+        framework_wrappers_list = list(framework_wrappers or [])
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
                                                                 component_type=ComponentEnum.FUNCTION)
@@ -175,6 +175,41 @@ def register_function(config_type: type[FunctionConfigT],
         return context_manager_fn
 
     return register_function_inner
+
+
+def register_function_group(config_type: type[FunctionGroupConfigT],
+                            framework_wrappers: list[LLMFrameworkEnum | str] | None = None):
+    """
+    Register a function group with the NeMo Agent Toolkit.
+
+    Function groups enable sharing of configurations and resources across multiple functions.
+    """
+
+    def register_function_group_inner(
+        fn: FunctionGroupBuildCallableT[FunctionGroupConfigT]
+    ) -> FunctionGroupRegisteredCallableT[FunctionGroupConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredFunctionGroupInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        framework_wrappers_list = list(framework_wrappers or [])
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.FUNCTION_GROUP)
+
+        GlobalTypeRegistry.get().register_function_group(
+            RegisteredFunctionGroupInfo(
+                full_type=config_type.full_type,
+                config_type=config_type,
+                build_fn=context_manager_fn,
+                framework_wrappers=framework_wrappers_list,
+                discovery_metadata=discovery_metadata,
+            ))
+
+        return context_manager_fn
+
+    return register_function_group_inner
 
 
 def register_llm_provider(config_type: type[LLMBaseConfigT]):

@@ -25,6 +25,7 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
+from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
@@ -39,8 +40,8 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
     tool names and descriptions to select the optimal tool.
     """
 
-    tool_names: list[FunctionRef] = Field(default_factory=list,
-                                          description="The list of tools to provide to the rewoo agent.")
+    tool_names: list[FunctionRef | FunctionGroupRef] = Field(
+        default_factory=list, description="The list of tools to provide to the rewoo agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the rewoo agent.")
     verbose: bool = Field(default=False, description="Set the verbosity of the rewoo agent's logging.")
     include_tool_input_schema_in_tool_description: bool = Field(

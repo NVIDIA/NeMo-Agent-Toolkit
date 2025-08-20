@@ -69,6 +69,9 @@ async def test_custom_mcp_worker(mcp_nat_config: Config):
     # Create a minimal mock workflow with functions
     mock_workflow = Mock()
     mock_workflow.functions = {"test_function": Mock()}  # Simple dict with one mock function
+    function_group_mock = Mock()
+    function_group_mock.get_functions.return_value = {"inner_function": Mock()}
+    mock_workflow.function_groups = {"group1": function_group_mock}
     mock_workflow.config.workflow.type = "test_workflow"
     mock_builder.build.return_value = mock_workflow
 
