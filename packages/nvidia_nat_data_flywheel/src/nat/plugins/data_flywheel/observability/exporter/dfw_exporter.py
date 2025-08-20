@@ -64,11 +64,12 @@ class DFWExporter(SpanExporter[Span, dict]):
         """
         super().__init__(context_state)
 
-        SpanToDFWESRecordProcessor = processor_factory_to_type(SpanToDFWRecordProcessor, to_type=self.export_contract)
-        DFWToDictESProcessor = processor_factory_from_type(DFWToDictProcessor, from_type=self.export_contract)
+        ConcreteSpanToDFWRecordProcessor = processor_factory_to_type(SpanToDFWRecordProcessor,
+                                                                     to_type=self.export_contract)
+        ConcreteDFWToDictProcessor = processor_factory_from_type(DFWToDictProcessor, from_type=self.export_contract)
 
-        self.add_processor(SpanToDFWESRecordProcessor(client_id=client_id))  # type: ignore
-        self.add_processor(DFWToDictESProcessor())
+        self.add_processor(ConcreteSpanToDFWRecordProcessor(client_id=client_id))  # type: ignore
+        self.add_processor(ConcreteDFWToDictProcessor())
 
         self.add_processor(
             DictBatchingProcessor(batch_size=batch_size,
