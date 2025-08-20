@@ -184,8 +184,10 @@ html_title = f'{project} ({version})'
 # Setting check_switcher to False, since we are building the version switcher for the first time, the json_url will
 # return 404s, which will then cause the build to fail.
 html_theme_options = {
-    'collapse_navigation': False,
-    'navigation_depth': 6,
+    'collapse_navigation':
+        False,
+    'navigation_depth':
+        6,
     'extra_head': [  # Adding Adobe Analytics
         '''
     <script src="https://assets.adobedtm.com/5d4962a43b79/c1061d2c5e7b/launch-191c2462b890.min.js" ></script>
@@ -196,11 +198,18 @@ html_theme_options = {
     <script type="text/javascript">if (typeof _satellite !== "undefined") {_satellite.pageBottom();}</script>
     '''
     ],
-    "show_nav_level": 2,
+    "show_nav_level":
+        2,
     "switcher": {
         "json_url": "../versions1.json", "version_match": version
     },
-    "check_switcher": False
+    "check_switcher":
+        False,
+    "icon_links": [{
+        "name": "GitHub",
+        "url": "https://github.com/NVIDIA/NeMo-Agent-Toolkit",
+        "icon": "fa-brands fa-github",
+    }],
 }
 
 html_extra_path = ["versions1.json"]
