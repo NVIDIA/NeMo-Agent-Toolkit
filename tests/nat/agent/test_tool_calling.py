@@ -23,6 +23,7 @@ from langgraph.prebuilt import ToolNode
 from nat.agent.base import AgentDecision
 from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph
 from nat.agent.tool_calling_agent.agent import ToolCallAgentGraphState
+from nat.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
 from nat.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
 
 
@@ -44,6 +45,32 @@ def mock_config():
     return ToolCallAgentWorkflowConfig(tool_names=['test'], llm_name='test', verbose=True)
 
 
+def test_tool_calling_config_prompt(mock_config_tool_calling_agent):
+    config = mock_config_tool_calling_agent
+    prompt = create_tool_calling_agent_prompt(config)
+    assert prompt is None
+
+
+def test_tool_calling_config_prompt_w_system_prompt():
+    system_prompt = "test prompt"
+    config = ToolCallAgentWorkflowConfig(tool_names=['test'],
+                                         llm_name='test',
+                                         verbose=True,
+                                         system_prompt=system_prompt)
+    prompt = create_tool_calling_agent_prompt(config)
+    assert prompt is system_prompt
+
+
+def test_tool_calling_config_prompt_w_additional_instructions():
+    additional_instructions = "test additional instructions"
+    config = ToolCallAgentWorkflowConfig(tool_names=['test'],
+                                         llm_name='test',
+                                         verbose=True,
+                                         additional_instructions=additional_instructions)
+    prompt = create_tool_calling_agent_prompt(config)
+    assert prompt.strip() == additional_instructions.strip()
+
+
 def test_tool_calling_agent_init(mock_config_tool_calling_agent, mock_llm, mock_tool):
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
     agent = ToolCallAgentGraph(llm=mock_llm, tools=tools, detailed_logs=mock_config_tool_calling_agent.verbose)
@@ -53,6 +80,23 @@ def test_tool_calling_agent_init(mock_config_tool_calling_agent, mock_llm, mock_
     assert agent.detailed_logs == mock_config_tool_calling_agent.verbose
     assert isinstance(agent.tool_caller, ToolNode)
     assert list(agent.tool_caller.tools_by_name.keys()) == ['Tool A', 'Tool B']
+
+
+def test_tool_calling_agent_init_w_prompt(mock_config_tool_calling_agent, mock_llm, mock_tool):
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = "If a tool is available to help answer the question, use it to answer the question."
+    agent = ToolCallAgentGraph(llm=mock_llm,
+                               tools=tools,
+                               detailed_logs=mock_config_tool_calling_agent.verbose,
+                               prompt=prompt)
+    assert isinstance(agent, ToolCallAgentGraph)
+    assert agent.llm == mock_llm
+    assert agent.tools == tools
+    assert agent.detailed_logs == mock_config_tool_calling_agent.verbose
+    assert isinstance(agent.tool_caller, ToolNode)
+    assert list(agent.tool_caller.tools_by_name.keys()) == ['Tool A', 'Tool B']
+    output_messages = agent.agent.steps[0].invoke({"messages": []})
+    assert output_messages[0].content == prompt
 
 
 @pytest.fixture(name='mock_tool_agent', scope="module")
