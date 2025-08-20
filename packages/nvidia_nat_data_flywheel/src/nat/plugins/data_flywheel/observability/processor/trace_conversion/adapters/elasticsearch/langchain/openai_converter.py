@@ -64,7 +64,7 @@ def _convert_role(role: str) -> str:
     return ROLE_MAP.get(role, DEFAULT_ROLE)
 
 
-def _create_message_by_role(role: str, content: str, **kwargs) -> Message:
+def _create_message_by_role(role: str, content: str | None, **kwargs) -> Message:
     """Factory function for creating messages by role.
 
     Args:
@@ -82,14 +82,19 @@ def _create_message_by_role(role: str, content: str, **kwargs) -> Message:
 
     match role:
         case "user":
+            assert content is not None, "User message content cannot be None"
             return UserMessage(content=content, role="user")
         case "system":
+            assert content is not None, "System message content cannot be None"
             return SystemMessage(content=content, role="system")
         case "assistant":
             tool_calls = kwargs.get("tool_calls", [])
+            if len(tool_calls) > 0:
+                content = None
             return AssistantMessage(content=content, role="assistant", tool_calls=tool_calls if tool_calls else None)
         case "tool":
             tool_call_id = kwargs.get("tool_call_id", "")
+            assert content is not None, "Tool message content cannot be None"
             return ToolMessage(content=content, role="tool", tool_call_id=tool_call_id)
         case "function":
             return FunctionMessage(content=content, role="function")
@@ -164,9 +169,9 @@ def _convert_message_to_dfw(message: OpenAIMessage) -> Message:
         tool_calls = _create_tool_calls(raw_tool_calls)
 
     # # Get tool_call_id for tool messages
-    tool_call_id = message.additional_kwargs.get("tool_call_id", "")
+    tool_call_id = message.tool_call_id or None
 
-    return _create_message_by_role(role=role, content=str(content), tool_calls=tool_calls, tool_call_id=tool_call_id)
+    return _create_message_by_role(role=role, content=content, tool_calls=tool_calls, tool_call_id=tool_call_id)
 
 
 def _validate_and_convert_tools(tools_schema: list) -> list[RequestTool]:
@@ -233,7 +238,7 @@ def _convert_chat_response(chat_response: dict, span_name: str = "", index: int 
         raise ValueError(f"Chat response missing message for span: '{span_name}'")
 
     # Get content
-    content = message.get("content", "")
+    content = message.get("content", None)
 
     # Get role and finish reason
     response_message = message.get("response_metadata", {})
@@ -246,6 +251,10 @@ def _convert_chat_response(chat_response: dict, span_name: str = "", index: int 
         tool_calls = additional_kwargs.get("tool_calls", [])
         if tool_calls is not None:
             validated_tool_calls = _create_tool_calls(tool_calls)
+
+    # If there are no tool calls, set the content to None
+    if len(validated_tool_calls) > 0:
+        content = None
 
     # Map finish reason to enum
     mapped_finish_reason = FINISH_REASON_MAP.get(finish_reason)

@@ -20,10 +20,11 @@ from pydantic import BaseModel
 
 # LangChain message models for validation
 class OpenAIMessage(BaseModel):
-    content: str
+    content: str | None = None
     additional_kwargs: dict[str, Any] = {}
     response_metadata: dict[str, Any] = {}
     type: str
     name: str | None = None
     id: str | None = None
     example: bool = False
+    tool_call_id: str | None = None
