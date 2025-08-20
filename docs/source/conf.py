@@ -63,7 +63,7 @@ author = 'NVIDIA Corporation'
 # Retrieve the version number from git via setuptools_scm
 called_proc = subprocess.run('python -m setuptools_scm', shell=True, capture_output=True, check=True)
 release = called_proc.stdout.strip().decode('utf-8')
-version = '.'.join(release.split('.')[:3])
+version = '.'.join(release.split('.')[:2])
 
 # -- General configuration ---------------------------------------------------
 
@@ -195,6 +195,8 @@ html_theme_options = {
     },
     "check_switcher": False
 }
+
+html_extra_path = ["versions.json"]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
