@@ -174,7 +174,7 @@ html_theme = "nvidia_sphinx_theme"
 html_logo = '_static/main_nv_logo_square.png'
 html_title = f'{project} ({version})'
 
-# Setting check_switcher to Felse, since we are building the version switcher for the firsdt time, the json_url will
+# Setting check_switcher to False, since we are building the version switcher for the first time, the json_url will
 # return 404s, which will then cause the build to fail.
 html_theme_options = {
     'collapse_navigation': False,
