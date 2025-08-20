@@ -200,7 +200,14 @@ html_theme_options = {
     "switcher": {
         "json_url": "../versions1.json", "version_match": version
     },
-    "check_switcher": False
+    "check_switcher": False,
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/NVIDIA/NeMo-Agent-Toolkit",
+            "icon": "fa-brands fa-github",
+        }
+    ],
 }
 
 html_extra_path = ["versions1.json"]
