@@ -174,6 +174,8 @@ html_theme = "nvidia_sphinx_theme"
 html_logo = '_static/main_nv_logo_square.png'
 html_title = f'{project} ({version})'
 
+# Setting check_switcher to Felse, since we are building the version switcher for the firsdt time, the json_url will
+# return 404s, which will then cause the build to fail.
 html_theme_options = {
     'collapse_navigation': False,
     'navigation_depth': 6,
@@ -187,7 +189,11 @@ html_theme_options = {
     <script type="text/javascript">if (typeof _satellite !== "undefined") {_satellite.pageBottom();}</script>
     '''
     ],
-    "show_nav_level": 2
+    "show_nav_level": 2,
+    "switcher": {
+        "json_url": "https://docs.nvidia.com/nemo/agent-toolkit/latest/versions.json", "version_match": version
+    },
+    "check_switcher": False
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
