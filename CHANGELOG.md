@@ -18,6 +18,13 @@ limitations under the License.
 ## Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2025-08-20
+### 📦 Overview
+This is a documentation only release, there are no code changes in this release.
+
+### 📜 Full Change Log
+* Add a version switcher to the documentation builds https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/681
+
 ## [1.2.0] - 2025-08-20
 ### 📦 Overview
 The NeMo Agent toolkit, formerly known as Agent Intelligence (AIQ) toolkit, has been renamed to align with the NVIDIA NeMo family of products. This release brings significant new capabilities and improvements across authentication, resource management, observability, and developer experience. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
