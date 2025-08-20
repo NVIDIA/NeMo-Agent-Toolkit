@@ -34,7 +34,7 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
     kwargs = llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True)
 
     if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
-        raise ValueError("NVIDIA AI Endpoints only supports chat completion API type. "
+        raise ValueError("AWS Bedrock LLM only supports chat completion API type. "
                          f"Received: {llm_config.api_type}")
 
     llm = Bedrock(**kwargs)
@@ -56,7 +56,7 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
     kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
 
     if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
-        raise ValueError("NVIDIA AI Endpoints only supports chat completion API type. "
+        raise ValueError("Azure OpenAI only supports chat completion API type. "
                          f"Received: {llm_config.api_type}")
 
     llm = AzureOpenAI(**kwargs)
