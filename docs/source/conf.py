@@ -198,12 +198,12 @@ html_theme_options = {
     ],
     "show_nav_level": 2,
     "switcher": {
-        "json_url": "https://docs.nvidia.com/nemo/agent-toolkit/latest/versions.json", "version_match": version
+        "json_url": "../versions1.json", "version_match": version
     },
     "check_switcher": False
 }
 
-html_extra_path = ["versions.json"]
+html_extra_path = ["versions1.json"]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
