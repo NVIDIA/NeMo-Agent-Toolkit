@@ -98,6 +98,7 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
 
     # Get the function dependencies of the augmented function
     function_used_tools = builder.get_function_dependencies(config.augmented_fn).functions
+    function_used_tools.update(builder.get_function_group_dependencies(config.augmented_fn).functions)
     tool_list = "Tool: Description\n"
 
     for tool in function_used_tools:

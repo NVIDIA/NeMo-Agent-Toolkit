@@ -24,6 +24,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.api_server import ChatRequest
+from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
@@ -40,7 +41,7 @@ class ReasoningFunctionConfig(FunctionBaseConfig, name="reasoning_agent"):
     """
 
     llm_name: LLMRef = Field(description="The name of the LLM to use for reasoning.")
-    augmented_fn: FunctionRef = Field(description="The name of the function to reason on.")
+    augmented_fn: FunctionRef | FunctionGroupRef = Field(description="The name of the function to reason on.")
     verbose: bool = Field(default=False, description="Whether to log detailed information.")
     reasoning_prompt_template: str = Field(
         default=("You are an expert reasoning model task with creating a detailed execution plan"
@@ -114,6 +115,7 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
 
     # Get the function dependencies of the augmented function
     function_used_tools = builder.get_function_dependencies(config.augmented_fn).functions
+    function_used_tools.update(builder.get_function_group_dependencies(config.augmented_fn).functions)
     tool_names_with_desc: list[tuple[str, str]] = []
 
     for tool in function_used_tools:

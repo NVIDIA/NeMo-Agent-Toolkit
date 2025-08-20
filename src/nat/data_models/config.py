@@ -29,6 +29,7 @@ from nat.data_models.evaluate import EvalConfig
 from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.logging import LoggingBaseConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
@@ -242,6 +243,9 @@ class Config(HashableBaseModel):
     # Functions Configuration
     functions: dict[str, FunctionBaseConfig] = {}
 
+    # Function Groups Configuration
+    function_groups: dict[str, FunctionGroupBaseConfig] = {}
+
     # LLMs Configuration
     llms: dict[str, LLMBaseConfig] = {}
 
@@ -278,6 +282,7 @@ class Config(HashableBaseModel):
             stream.write(f"Workflow Type: {self.workflow.type}\n")
 
         stream.write(f"Number of Functions: {len(self.functions)}\n")
+        stream.write(f"Number of Function Groups: {len(self.function_groups)}\n")
         stream.write(f"Number of LLMs: {len(self.llms)}\n")
         stream.write(f"Number of Embedders: {len(self.embedders)}\n")
         stream.write(f"Number of Memory: {len(self.memory)}\n")
@@ -287,6 +292,7 @@ class Config(HashableBaseModel):
         stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n")
 
     @field_validator("functions",
+                     "function_groups",
                      "llms",
                      "embedders",
                      "memory",
@@ -328,6 +334,10 @@ class Config(HashableBaseModel):
                                    typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
 
+        FunctionGroupsAnnotation = dict[str,
+                                        typing.Annotated[type_registry.compute_annotation(FunctionGroupBaseConfig),
+                                                         Discriminator(TypedBaseModel.discriminator)]]
+
         MemoryAnnotation = dict[str,
                                 typing.Annotated[type_registry.compute_annotation(MemoryBaseConfig),
                                                  Discriminator(TypedBaseModel.discriminator)]]
@@ -344,7 +354,8 @@ class Config(HashableBaseModel):
                                      typing.Annotated[type_registry.compute_annotation(TTCStrategyBaseConfig),
                                                       Discriminator(TypedBaseModel.discriminator)]]
 
-        WorkflowAnnotation = typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
+        WorkflowAnnotation = typing.Annotated[(type_registry.compute_annotation(FunctionBaseConfig)
+                                               | type_registry.compute_annotation(FunctionGroupBaseConfig)),
                                               Discriminator(TypedBaseModel.discriminator)]
 
         should_rebuild = False
@@ -367,6 +378,11 @@ class Config(HashableBaseModel):
         functions_field = cls.model_fields.get("functions")
         if functions_field is not None and functions_field.annotation != FunctionsAnnotation:
             functions_field.annotation = FunctionsAnnotation
+            should_rebuild = True
+
+        function_groups_field = cls.model_fields.get("function_groups")
+        if function_groups_field is not None and function_groups_field.annotation != FunctionGroupsAnnotation:
+            function_groups_field.annotation = FunctionGroupsAnnotation
             should_rebuild = True
 
         memory_field = cls.model_fields.get("memory")

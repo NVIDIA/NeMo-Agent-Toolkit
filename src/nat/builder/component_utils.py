@@ -30,6 +30,7 @@ from nat.data_models.component_ref import generate_instance_id
 from nat.data_models.config import Config
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
@@ -48,6 +49,7 @@ _component_group_order = [
     ComponentGroup.OBJECT_STORES,
     ComponentGroup.RETRIEVERS,
     ComponentGroup.TTC_STRATEGIES,
+    ComponentGroup.FUNCTION_GROUPS,
     ComponentGroup.FUNCTIONS,
 ]
 
@@ -107,6 +109,8 @@ def group_from_component(component: TypedBaseModel) -> ComponentGroup | None:
         return ComponentGroup.EMBEDDERS
     if (isinstance(component, FunctionBaseConfig)):
         return ComponentGroup.FUNCTIONS
+    if (isinstance(component, FunctionGroupBaseConfig)):
+        return ComponentGroup.FUNCTION_GROUPS
     if (isinstance(component, LLMBaseConfig)):
         return ComponentGroup.LLMS
     if (isinstance(component, MemoryBaseConfig)):
@@ -254,9 +258,9 @@ def build_dependency_sequence(config: "Config") -> list[ComponentInstanceData]:
             runtime instance references.
     """
 
-    total_node_count = len(config.embedders) + len(config.functions) + len(config.llms) + len(config.memory) + len(
-        config.object_stores) + len(config.retrievers) + len(config.ttc_strategies) + len(
-            config.authentication) + 1  # +1 for the workflow
+    total_node_count = (len(config.embedders) + len(config.functions) + len(config.function_groups) + len(config.llms) +
+                        len(config.memory) + len(config.object_stores) + len(config.retrievers) +
+                        len(config.ttc_strategies) + len(config.authentication) + 1)  # +1 for the workflow
 
     dependency_map: dict
     dependency_graph: nx.DiGraph
