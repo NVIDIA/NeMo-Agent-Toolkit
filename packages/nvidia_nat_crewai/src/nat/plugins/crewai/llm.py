@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=unused-argument
 
 import os
 
@@ -23,6 +24,7 @@ from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.responses_api import validate_no_responses_api
 
 
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
@@ -75,6 +77,8 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
 
     from crewai import LLM
 
+    validate_no_responses_api(llm_config)
+
     config_obj = {
         **llm_config.model_dump(exclude={"type"}, by_alias=True),
         "model": f"nvidia_nim/{llm_config.model_name}",
@@ -109,6 +113,8 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
 async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from crewai import LLM
+
+    validate_no_responses_api(llm_config)
 
     config_obj = {
         **llm_config.model_dump(exclude={"type"}, by_alias=True),

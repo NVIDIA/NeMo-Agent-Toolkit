@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=invalid-name
 
 import asyncio
 import logging
@@ -118,6 +119,22 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         # log the total tokens for this item, per-llm tokens can be exported later if needed
         await self.pred_loggers[item.id].alog_score(scorer="wf_tokens", score=usage_stats_item.total_tokens)
 
+        # Compute total cached tokens and log it
+        total_cached_tokens = 0
+        for k in usage_stats_item.usage_stats_per_llm:
+            llm_stats = usage_stats_item.usage_stats_per_llm[k]
+            total_cached_tokens += llm_stats.cached_tokens
+
+        await self.pred_loggers[item.id].alog_score(scorer="total_cached_tokens", score=total_cached_tokens)
+
+        # Compute total reasoning tokens and log it
+        total_reasoning_tokens = 0
+        for k in usage_stats_item.usage_stats_per_llm:
+            llm_stats = usage_stats_item.usage_stats_per_llm[k]
+            total_reasoning_tokens += llm_stats.reasoning_tokens
+
+        await self.pred_loggers[item.id].alog_score(scorer="total_reasoning_tokens", score=total_reasoning_tokens)
+
     async def alog_score(self, eval_output: EvalOutput, evaluator_name: str):
         """Log scores for evaluation outputs."""
         if not self.eval_logger:
@@ -157,7 +174,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         if profiler_results.workflow_runtime_metrics:
             profile_metrics["wf_runtime_p95"] = profiler_results.workflow_runtime_metrics.p95
 
-        # TODO:get the LLM tokens from the usage stats and log them
+        # Eventually get the LLM tokens from the usage stats and log them
         profile_metrics["total_runtime"] = usage_stats.total_runtime
 
         return profile_metrics

@@ -24,4 +24,6 @@ class TokenUsageBaseModel(BaseModel):
 
     prompt_tokens: int = Field(default=0, description="Number of tokens in the prompt.")
     completion_tokens: int = Field(default=0, description="Number of tokens in the completion.")
+    cached_tokens: int = Field(default=0, description="Number of tokens read from cache.")
+    reasoning_tokens: int = Field(default=0, description="Number of tokens used for reasoning.")
     total_tokens: int = Field(default=0, description="Number of tokens total.")

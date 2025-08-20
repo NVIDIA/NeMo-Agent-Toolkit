@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=unused-argument
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -20,12 +21,15 @@ from nat.data_models.retry_mixin import RetryMixin
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.responses_api import validate_no_responses_api
 
 
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
 async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _builder: Builder):
 
     from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
+
+    validate_no_responses_api(llm_config)
 
     llm = AzureChatCompletion(
         api_key=llm_config.api_key,
@@ -48,7 +52,13 @@ async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builde
 
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-    llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name)
+    validate_no_responses_api(llm_config)
+
+    config_obj = {
+        **llm_config.model_dump(exclude={"type"}, by_alias=True),
+    }
+
+    llm = OpenAIChatCompletion(ai_model_id=config_obj.get("model"))
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,

@@ -12,10 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=unused-argument
+
+import logging
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.llm import APITypeEnum
 from nat.data_models.retry_mixin import RetryMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
@@ -23,11 +27,17 @@ from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
+logger = logging.getLogger(__name__)
+
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, _builder: Builder):
 
     from langchain_aws import ChatBedrockConverse
+
+    if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
+        raise ValueError("AWS Bedrock only supports chat completion API type. "
+                         f"Received: {llm_config.api_type}")
 
     client = ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))
 
@@ -45,6 +55,10 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     from langchain_openai import AzureChatOpenAI
 
+    if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
+        raise ValueError("Azure OpenAI only supports chat completion API type. "
+                         f"Received: {llm_config.api_type}")
+
     client = AzureChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
 
     if isinstance(llm_config, RetryMixin):
@@ -60,6 +74,10 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
 
     from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
+    if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
+        raise ValueError("NVIDIA AI Endpoints only supports chat completion API type. "
+                         f"Received: {llm_config.api_type}")
 
     client = ChatNVIDIA(**llm_config.model_dump(exclude={"type"}, by_alias=True))
 
@@ -80,8 +98,19 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
     # Default kwargs for OpenAI to include usage metadata in the response. If the user has set stream_usage to False, we
     # will not include this.
     default_kwargs = {"stream_usage": True}
+    exclude = {"type"}
+    if llm_config.model_name.startswith('o') or llm_config.model_name.startswith('gpt-5'):
+        exclude.add("temperature")
 
-    kwargs = {**default_kwargs, **llm_config.model_dump(exclude={"type"}, by_alias=True)}
+    kwargs = {**default_kwargs, **llm_config.model_dump(exclude=exclude, by_alias=True)}
+
+    if llm_config.api_type == APITypeEnum.RESPONSES:
+        kwargs["use_responses_api"] = True
+        kwargs["use_previous_response_id"] = True
+        if "stream" in kwargs and kwargs["stream"]:
+            kwargs["stream"] = False
+            logger.warning("Streaming is not supported with the OpenAI Responses API. "
+                           "Setting stream to False.")
 
     client = ChatOpenAI(**kwargs)
 

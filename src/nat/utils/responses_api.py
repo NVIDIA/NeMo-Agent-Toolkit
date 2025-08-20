@@ -12,13 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=raising-format-tuple
 
-# pylint: disable=unused-import
-# flake8: noqa
+from nat.data_models.llm import APITypeEnum
 
-# Import any workflows which need to be automatically registered here
-from .react_agent import register as react_agent
-from .reasoning_agent import reasoning_agent
-from .responses_api_agent import register as responses_api_agent
-from .rewoo_agent import register as rewoo_agent
-from .tool_calling_agent import register as tool_calling_agent
+
+def validate_no_responses_api(llm_config):
+    """Validate that the LLM config does not use the Responses API."""
+
+    if llm_config.api_type == APITypeEnum.RESPONSES:
+        raise ValueError("Responses API is not supported for config %s. Please use a different API type.",
+                         str(llm_config))

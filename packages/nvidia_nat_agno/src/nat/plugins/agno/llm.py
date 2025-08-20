@@ -12,22 +12,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=unused-argument
 
 import os
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.llm import APITypeEnum
 from nat.data_models.retry_mixin import RetryMixin
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.responses_api import validate_no_responses_api
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
 async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
 
     from agno.models.nvidia import Nvidia
+
+    validate_no_responses_api(llm_config)
 
     config_obj = {
         **llm_config.model_dump(exclude={"type", "model_name"}, by_alias=True),
@@ -68,15 +73,25 @@ async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
 async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
 
     from agno.models.openai import OpenAIChat
+    from agno.models.openai import OpenAIResponses
 
-    # Use model_dump to get the proper field values with correct types
-    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
+    if llm_config.api_type == APITypeEnum.RESPONSES:
+        # Use model_dump to get the proper field values with correct types
+        kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
 
-    # AGNO uses 'id' instead of 'model' for the model name
-    if "model" in kwargs:
-        kwargs["id"] = kwargs.pop("model")
+        # AGNO uses 'id' instead of 'model' for the model name
+        if "model" in kwargs:
+            kwargs["id"] = kwargs.pop("model")
 
-    client = OpenAIChat(**kwargs)
+        client = OpenAIResponses(**kwargs)
+    else:
+        config_obj = {
+            **llm_config.model_dump(exclude={"type", "model_name", "api_type", "stream"}, by_alias=True),
+            "id":
+                f"{llm_config.model_name}",
+        }
+
+        client = OpenAIChat(**config_obj)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,
