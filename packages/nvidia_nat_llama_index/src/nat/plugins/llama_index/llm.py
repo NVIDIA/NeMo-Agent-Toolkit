@@ -18,13 +18,50 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
 from nat.data_models.retry_mixin import RetryMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
+@register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: Builder):
+
+    from llama_index.llms.bedrock import Bedrock
+
+    kwargs = llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True)
+
+    llm = Bedrock(**kwargs)
+
+    if isinstance(llm_config, RetryMixin):
+        llm = patch_with_retry(llm,
+                               retries=llm_config.num_retries,
+                               retry_codes=llm_config.retry_on_status_codes,
+                               retry_on_messages=llm_config.retry_on_errors)
+
+    yield llm
+
+
+@register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder: Builder):
+
+    from llama_index.llms.azure_openai import AzureOpenAI
+
+    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
+
+    llm = AzureOpenAI(**kwargs)
+
+    if isinstance(llm_config, RetryMixin):
+        llm = patch_with_retry(llm,
+                               retries=llm_config.num_retries,
+                               retry_codes=llm_config.retry_on_status_codes,
+                               retry_on_messages=llm_config.retry_on_errors)
+
+    yield llm
+
+
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
-async def nim_llama_index(llm_config: NIMModelConfig, builder: Builder):
+async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
 
     from llama_index.llms.nvidia import NVIDIA
 
@@ -45,7 +82,7 @@ async def nim_llama_index(llm_config: NIMModelConfig, builder: Builder):
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
-async def openai_llama_index(llm_config: OpenAIModelConfig, builder: Builder):
+async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from llama_index.llms.openai import OpenAI
 
@@ -55,24 +92,6 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, builder: Builder):
         del kwargs["base_url"]
 
     llm = OpenAI(**kwargs)
-
-    if isinstance(llm_config, RetryMixin):
-        llm = patch_with_retry(llm,
-                               retries=llm_config.num_retries,
-                               retry_codes=llm_config.retry_on_status_codes,
-                               retry_on_messages=llm_config.retry_on_errors)
-
-    yield llm
-
-
-@register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
-async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, builder: Builder):
-
-    from llama_index.llms.bedrock import Bedrock
-
-    kwargs = llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True)
-
-    llm = Bedrock(**kwargs)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,
