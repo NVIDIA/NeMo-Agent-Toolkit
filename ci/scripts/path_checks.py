@@ -172,6 +172,8 @@ IGNORED_FILES: set[str] = {
     r"^manifest.yaml$",  #
     # files located within data directories
     r"data/.*$",  #
+    # Versions json file for the documentation version switcher button
+    r"^docs/source/versions1.json$",
 }
 
 # Paths to ignore -- regex pattern

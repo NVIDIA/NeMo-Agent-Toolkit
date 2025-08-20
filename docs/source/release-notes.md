@@ -17,6 +17,10 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Release Notes
 
+## Release 1.2.1
+### Summary
+This is a documentation only release, there are no code changes in this release.
+
 ## Release 1.2.0
 ### Summary
 The NeMo Agent toolkit, formerly known as Agent Intelligence (AIQ) toolkit, has been renamed in this release to align with the NVIDIA NeMo family of products. This release also brings significant new capabilities and improvements across authentication, resource management, observability, and developer experience. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.

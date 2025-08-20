@@ -63,7 +63,7 @@ author = 'NVIDIA Corporation'
 # Retrieve the version number from git via setuptools_scm
 called_proc = subprocess.run('python -m setuptools_scm', shell=True, capture_output=True, check=True)
 release = called_proc.stdout.strip().decode('utf-8')
-version = '.'.join(release.split('.')[:3])
+version = '.'.join(release.split('.')[:2])
 
 # -- General configuration ---------------------------------------------------
 
@@ -181,6 +181,8 @@ html_theme = "nvidia_sphinx_theme"
 html_logo = '_static/main_nv_logo_square.png'
 html_title = f'{project} ({version})'
 
+# Setting check_switcher to False, since we are building the version switcher for the first time, the json_url will
+# return 404s, which will then cause the build to fail.
 html_theme_options = {
     'collapse_navigation': False,
     'navigation_depth': 6,
@@ -194,8 +196,14 @@ html_theme_options = {
     <script type="text/javascript">if (typeof _satellite !== "undefined") {_satellite.pageBottom();}</script>
     '''
     ],
-    "show_nav_level": 2
+    "show_nav_level": 2,
+    "switcher": {
+        "json_url": "../versions1.json", "version_match": version
+    },
+    "check_switcher": False
 }
+
+html_extra_path = ["versions1.json"]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
