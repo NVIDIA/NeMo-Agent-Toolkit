@@ -9,7 +9,7 @@ root = "../../.."
 [project]
 name = "aiqtoolkit-weave"
 dynamic = ["version"]
-dependencies = ["nvidia-nat[weave]~=1.2"]
+dependencies = ["nvidia-nat[weave]~=1.3"]
 readme = "pypi.md"
 description = "Transitional package for nvidia-nat-weave, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]
