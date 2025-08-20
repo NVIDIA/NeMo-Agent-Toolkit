@@ -81,7 +81,6 @@ class WeaveExporter(SpanExporter[Span, Span]):
         if span is None:
             logger.warning("No span found for event %s", event.UUID)
             return
-
         self._create_weave_call(event, span)
 
     def _process_end_event(self, event: IntermediateStep):
