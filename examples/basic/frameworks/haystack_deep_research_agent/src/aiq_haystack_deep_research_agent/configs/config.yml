@@ -16,25 +16,12 @@
 general:
   use_uvloop: true
 
-llms:
-  openai_llm:
-    _type: openai
-    model_name: gpt-4o-mini
-    temperature: 0.0
-    max_tokens: 4000
-
 workflow:
   _type: haystack_deep_research_agent
-  llm: openai_llm
-  system_prompt: |
-    You are a deep research assistant.
-    You create comprehensive research reports to answer the user's questions.
-    You use the 'search' tool to answer any questions by using web search.
-    You use the 'rag' tool to answer any questions by using retrieval augmented generation on your internal document database.
-    You perform multiple searches until you have the information you need to answer the question.
-    Make sure you research different aspects of the question.
-    Use markdown to format your response.
-    When you use information from the websearch results, cite your sources using markdown links.
-    When you use information from the document database, cite the text used from the source document.
-    It is important that you cite accurately.
+  agent_model: meta/llama-3.1-8b-instruct
+  rag_model: meta/llama-3.1-8b-instruct
+  nvidia_api_url: https://integrate.api.nvidia.com/v1
   max_agent_steps: 20
+  opensearch_url: http://localhost:9200
+  index_on_startup: true
+  data_dir: /data

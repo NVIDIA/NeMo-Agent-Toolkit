@@ -17,14 +17,14 @@ import logging
 
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
 
-class HaystackDeepResearchWorkflowConfig(FunctionBaseConfig, name="haystack_deep_research_agent"):
-    llm: LLMRef
+class HaystackDeepResearchWorkflowConfig(
+    FunctionBaseConfig, name="haystack_deep_research_agent"
+):  # type: ignore
     system_prompt: str = """
     You are a deep research assistant.
     You create comprehensive research reports to answer the user's questions.
@@ -37,137 +37,79 @@ class HaystackDeepResearchWorkflowConfig(FunctionBaseConfig, name="haystack_deep
     When you use information from the document database, cite the text used from the source document.
     It is important that you cite accurately.
     """
+    agent_model: str = "nvidia/llama-3.3-nemotron-super-49b-v1"
+    rag_model: str = "nvidia/llama-3.2-nv-embedqa-1b-v2"
     max_agent_steps: int = 20
+    opensearch_url: str = "http://localhost:9200"
+    nvidia_api_url: str = "https://integrate.api.nvidia.com/v1"
+    # Indexing configuration
+    index_on_startup: bool = True
+    # Default to "/data" so users can mount a volume or place files at repo_root/data.
+    # If it doesn't exist, we fall back to this example's bundled data folder.
+    data_dir: str = "/data"
 
 
 @register_function(config_type=HaystackDeepResearchWorkflowConfig)
-async def haystack_deep_research_agent_workflow(config: HaystackDeepResearchWorkflowConfig, builder: Builder):
+async def haystack_deep_research_agent_workflow(
+    config: HaystackDeepResearchWorkflowConfig, builder: Builder
+):
     """
     Main workflow that creates and returns the deep research agent
-    Implements the exact structure from the Blueprint_Deep_Research_Agent.ipynb notebook
     """
     from haystack.components.agents import Agent
-    from haystack.components.builders import ChatPromptBuilder
-    from haystack.components.converters.html import HTMLToDocument
-    from haystack.components.converters.output_adapter import OutputAdapter
-    from haystack.components.fetchers.link_content import LinkContentFetcher
-    from haystack.components.generators.chat import OpenAIChatGenerator
-    from haystack.components.websearch.serper_dev import SerperDevWebSearch
-    from haystack.core.pipeline import Pipeline
-    from haystack.core.super_component import SuperComponent
+    from haystack.utils import Secret
     from haystack.dataclasses import ChatMessage
-    from haystack.tools import ComponentTool
-    from haystack_integrations.components.retrievers.opensearch import OpenSearchBM25Retriever
+    from haystack.tools import Toolset
+    from haystack_integrations.components.generators.nvidia import NvidiaChatGenerator
     from haystack_integrations.document_stores.opensearch import OpenSearchDocumentStore
+    from aiq_haystack_deep_research_agent.pipelines import (
+        create_search_tool,
+        create_rag_tool,
+        run_startup_indexing,
+    )
 
     logger.info(f"Starting Haystack Deep Research Agent workflow with config: {config}")
 
-    # Create search pipeline exactly as in the notebook
-    search_pipeline = Pipeline()
-    search_pipeline.add_component("search", SerperDevWebSearch(top_k=10))
-    search_pipeline.add_component("fetcher", LinkContentFetcher(timeout=3, raise_on_failure=False, retry_attempts=2))
-    search_pipeline.add_component("converter", HTMLToDocument())
-    search_pipeline.add_component(
-        "output_adapter",
-        OutputAdapter(
-            template="""
-{%- for doc in docs -%}
-  {%- if doc.content -%}
-  <search-result url="{{ doc.meta.url }}">
-  {{ doc.content|truncate(25000) }}
-  </search-result>
-  {%- endif -%}
-{%- endfor -%}
-""",
-            output_type=str,
-        ),
+    # Create search tool
+    search_tool = create_search_tool()
+
+    # Create document store
+    document_store = OpenSearchDocumentStore(
+        hosts=[config.opensearch_url], index="deep_research_docs"
     )
-    search_pipeline.connect("search.links", "fetcher.urls")
-    search_pipeline.connect("fetcher.streams", "converter.sources")
-    search_pipeline.connect("converter.documents", "output_adapter.docs")
+    logger.info("Connected to OpenSearch successfully")
 
-    # Create SuperComponent for search exactly as in the notebook
-    search_component = SuperComponent(
-        pipeline=search_pipeline,
-        input_mapping={"query": ["search.query"]},
-        output_mapping={"output_adapter.output": "search_result"},
-    )
-
-    # Create search tool exactly as in the notebook
-    search_tool = ComponentTool(
-        name="search",
-        description="Use this tool to search for information on the internet.",
-        component=search_component,
-        outputs_to_string={"source": "search_result"},
-    )
-
-    # Create RAG pipeline exactly as in the notebook
-    try:
-        document_store = OpenSearchDocumentStore(
-            hosts=["http://localhost:9200"],
-            index="deep_research_docs"
-        )
-        logger.info("Connected to OpenSearch successfully")
-
-        retriever = OpenSearchBM25Retriever(document_store=document_store, top_k=15)
-        generator = OpenAIChatGenerator(model="gpt-4o-mini")
-
-        # Use ChatPromptBuilder exactly as in the notebook
-        template = """
-{% for document in documents %}
-    {{ document.content }}
-{% endfor %}
-
-Please answer the question based on the given information.
-
-{{query}}
-"""
-        prompt_builder = ChatPromptBuilder(template=[ChatMessage.from_user(template)], required_variables="*")
-
-        rag_pipeline = Pipeline()
-        rag_pipeline.add_component("retriever", retriever)
-        rag_pipeline.add_component("prompt_builder", prompt_builder)
-        rag_pipeline.add_component("llm", generator)
-
-        rag_pipeline.connect("retriever", "prompt_builder.documents")
-        rag_pipeline.connect("prompt_builder", "llm")
-
-        # Create SuperComponent for RAG exactly as in the notebook
-        rag_component = SuperComponent(
-            pipeline=rag_pipeline,
-            input_mapping={"query": ["retriever.query", "prompt_builder.query"]},
-            output_mapping={"llm.replies": "rag_result"},
+    # Optionally index local data at startup
+    if config.index_on_startup:
+        run_startup_indexing(
+            document_store=document_store, data_dir=config.data_dir, logger=logger
         )
 
-        # Create RAG tool exactly as in the notebook
-        rag_tool = ComponentTool(
-            name="rag",
-            description="Use this tool to search in your internal database of documents with Retrieval Augmented Generation (RAG).",
-            component=rag_component,
-            outputs_to_string={"source": "rag_result"},
-        )
+    # Create RAG tool
+    rag_tool, _ = create_rag_tool(
+        document_store=document_store,
+        rag_model=config.rag_model,
+        nvidia_api_url=config.nvidia_api_url,
+        secret_provider=Secret.from_env_var("NVIDIA_API_KEY"),
+        top_k=15,
+    )
 
-        tools = [search_tool, rag_tool]
-
-    except Exception as e:
-        logger.warning(f"Failed to connect to OpenSearch: {e}. Using search tool only.")
-        tools = [search_tool]
-
-    # Create the agent exactly as in the notebook
+    # Create the agent
     agent = Agent(
-        chat_generator=OpenAIChatGenerator(model="gpt-4o-mini"),
-        tools=tools,
+        chat_generator=NvidiaChatGenerator(
+            model=config.agent_model,
+            api_base_url=config.nvidia_api_url,
+            api_key=Secret.from_env_var("NVIDIA_API_KEY"),
+        ),
+        tools=Toolset(tools=[search_tool, rag_tool]),
         system_prompt=config.system_prompt,
         exit_conditions=["text"],
         max_agent_steps=config.max_agent_steps,
     )
 
     # Warm up the agent
-    try:
-        agent.warm_up()
-        logger.info("Agent warmed up successfully")
-    except Exception as e:
-        logger.warning(f"Agent warm up failed: {e}")
+    agent.warm_up()
+    logger.info("Agent warmed up successfully")
 
     async def _response_fn(input_message: str) -> str:
         """
@@ -183,11 +125,11 @@ Please answer the question based on the given information.
         try:
             logger.info(f"Processing research query: {input_message}")
 
-            # Create messages exactly as in the notebook
+            # Create messages
             messages = [ChatMessage.from_user(input_message)]
             agent_output = agent.run(messages=messages)
 
-            # Extract response exactly as in the notebook
+            # Extract response
             if "messages" in agent_output and agent_output["messages"]:
                 response = agent_output["messages"][-1].text
                 logger.info("Research query completed successfully")
