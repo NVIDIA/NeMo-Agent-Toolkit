@@ -24,7 +24,6 @@ from weave.trace.weave_client import Call
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.span import Span
-# EvalExporterMixin removed - replaced by direct task waiting in evaluate.py
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.utils.log_utils import LogFilter
@@ -52,7 +51,7 @@ class WeaveExporter(SpanExporter[Span, Span]):
                  entity: str | None = None,
                  project: str | None = None,
                  verbose: bool = False):
-        SpanExporter.__init__(self, context_state=context_state)
+        super().__init__(context_state=context_state)
         self._entity = entity
         self._project = project
         self._gc = weave_client_context.require_weave_client()
@@ -83,8 +82,6 @@ class WeaveExporter(SpanExporter[Span, Span]):
             logger.warning("No span found for event %s", event.UUID)
             return
 
-        # Export coordination now handled by direct task waiting in evaluate.py
-
         self._create_weave_call(event, span)
 
     def _process_end_event(self, event: IntermediateStep):
@@ -95,8 +92,6 @@ class WeaveExporter(SpanExporter[Span, Span]):
         """
         super()._process_end_event(event)
         self._finish_weave_call(event)
-
-        # Export coordination now handled by direct task waiting in evaluate.py
 
     @contextmanager
     def parent_call(self, trace_id: str, parent_call_id: str) -> Generator[None]:
