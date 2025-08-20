@@ -1,0 +1,39 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nat.*"]
+
+
+[tool.setuptools_scm]
+root = "../.."
+
+
+[project]
+name = "nvidia-nat-ingestion"
+dynamic = ["version"]
+dependencies = [
+  # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
+  # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
+  # Keep sorted!!!
+  "lxml~=5.4",
+  "nvidia-nat~=1.2",
+]
+requires-python = ">=3.11,<3.13"
+description = "Meta-package providing ingestion dependencies for NVIDIA NeMo Agent Toolkit"
+readme = "src/nat/meta/pypi.md"
+keywords = ["ai", "rag", "agents"]
+classifiers = ["Programming Language :: Python"]
+
+
+[tool.uv]
+config-settings = { editable_mode = "compat" }
+
+
+[tool.uv.sources]
+nvidia-nat = { workspace = true }
+
+
