@@ -588,8 +588,8 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         except KeyError as err:
             raise KeyError(
                 f"An invalid Embedder config and wrapper combination was supplied. Config: `{config_type}`, "
-                "Wrapper: `{wrapper_type}`. The workflow is requesting a {wrapper_type} Embedder client but "
-                "there is no registered conversion from that Embedder provider to LLM framework: {wrapper_type}. "
+                f"Wrapper: `{wrapper_type}`. The workflow is requesting a {wrapper_type} Embedder client but "
+                f"there is no registered conversion from that Embedder provider to LLM framework: {wrapper_type}. "
                 "Please provide an Embedder configuration from one of the following providers: "
                 f"{set(self._embedder_client_provider_to_framework.keys())}") from err
 
@@ -703,8 +703,8 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         except KeyError as err:
             raise KeyError(
                 f"An invalid Retriever config and wrapper combination was supplied. Config: `{config_type}`, "
-                "Wrapper: `{wrapper_type}`. The workflow is requesting a {wrapper_type} Retriever client but "
-                "there is no registered conversion from that Retriever provider to LLM framework: {wrapper_type}. "
+                f"Wrapper: `{wrapper_type}`. The workflow is requesting a {wrapper_type} Retriever client but "
+                f"there is no registered conversion from that Retriever provider to LLM framework: {wrapper_type}. "
                 "Please provide a Retriever configuration from one of the following providers: "
                 f"{set(self._retriever_client_provider_to_framework.keys())}") from err
 
