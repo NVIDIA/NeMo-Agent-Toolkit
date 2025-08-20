@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Import adapters first to trigger auto-registration
-from . import adapters  # noqa: F401
+from . import adapters  # noqa: F401  # pylint: disable=import-self,no-name-in-module
 
 from .common import extract_timestamp
 from .common import extract_usage_info

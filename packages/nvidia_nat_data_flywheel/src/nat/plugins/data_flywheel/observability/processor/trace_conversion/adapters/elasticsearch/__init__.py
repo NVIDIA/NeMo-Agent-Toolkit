@@ -14,4 +14,4 @@
 # limitations under the License.
 
 # Import all framework-specific adapters to trigger registration
-from . import langchain  # noqa: F401
+from . import langchain  # noqa: F401  # pylint: disable=import-self,no-name-in-module

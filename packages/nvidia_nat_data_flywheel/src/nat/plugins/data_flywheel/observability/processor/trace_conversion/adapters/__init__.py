@@ -14,4 +14,4 @@
 # limitations under the License.
 
 # Import all adapter modules to trigger registration
-from . import elasticsearch  # noqa: F401
+from . import elasticsearch  # noqa: F401  # pylint: disable=import-self,no-name-in-module
