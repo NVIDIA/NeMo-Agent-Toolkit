@@ -254,21 +254,26 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
     return sync_wrapper
 
 
-def track_unregistered_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
+def track_unregistered_function(func: Any = None, *, name: str | None = None, metadata: dict[str, Any] | None = None):
     """
     Decorator that wraps any function with scope management and automatic tracking.
 
     - Sets active function context using the function name
     - Leverages Context.push_active_function for built-in tracking
     - Avoids duplicate tracking entries by relying on NAT's built-in systems
+
+    Args:
+        func: The function to wrap
+        name: Custom name to use for tracking instead of func.__name__
+        metadata: Additional metadata to include in tracking
     """
-    function_name: str = func.__name__ if func else "<unknown_function>"
+    function_name: str = name if name else (func.__name__ if func else "<unknown_function>")
 
     # If called as @track_unregistered_function(...) but not immediately passed a function
     if func is None:
 
         def decorator_wrapper(actual_func):
-            return track_unregistered_function(actual_func, metadata=metadata)
+            return track_unregistered_function(actual_func, name=name, metadata=metadata)
 
         return decorator_wrapper
 
