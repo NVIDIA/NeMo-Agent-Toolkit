@@ -17,6 +17,22 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Release Notes
 
+## Release 1.2.0
+### Summary
+The NeMo Agent toolkit, formerly known as Agent Intelligence (AIQ) toolkit, has been renamed in this release to align with the NVIDIA NeMo family of products. This release also brings significant new capabilities and improvements across authentication, resource management, observability, and developer experience. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
+
+The following are the key features and improvements in this release:
+* [Authentication for Tool Calling](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/reference/api-authentication.md): Implement robust authentication mechanisms that enable secure and configurable access management for tool invocation within agent workflows.
+* [Test Time Compute](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/reference/test-time-compute.md): Dynamically reallocate compute resources after model training, allowing agents to optimize reasoning, factual accuracy, and system robustness without retraining the base model.
+* [Sizing Calculator](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/workflows/sizing-calc.md): Estimate GPU cluster requirements to support your target number of users and desired response times, simplifying deployment planning and scaling.
+* [Object Store Integration](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/extend/object-store.md): Connect and manage data through supported object stores, improving agent extensibility and enabling advanced data workflows.
+* [Enhanced Cursor Rules](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md): Build new workflows or extend existing ones by leveraging cursor rules, making agent development faster and more flexible.
+* [Interactive Notebooks](https://github.com/NVIDIA/NeMo-Agent-Toolkit/tree/release/1.2/examples/notebooks): Access a suite of onboarding and example notebooks to accelerate agent workflow development, testing, and experimentation.
+* [Observability Refactor](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/workflows/observe/index.md): Onboard new observability and monitoring platforms more easily, and take advantage of improved plug-in architecture for workflow inspection and analysis.
+* [Examples Reorganization](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/examples/README.md): Organize examples by functionality, making it easier to find and use the examples.
+
+Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/CHANGELOG.md) for a complete list of changes.
+
 ## Release 1.1.0
 ### Summary
 * [Full Model Context Protocol (MCP) support](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/v1.1.0/docs/source/workflows/mcp/index.md). Workflows/tools can now be exposed as MCP servers.
