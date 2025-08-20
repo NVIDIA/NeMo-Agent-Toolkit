@@ -242,7 +242,14 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
             except AttributeError:
                 usage_metadata = {}
 
-        llm_text_output = generation.message.content if generation else ""
+        if generation:
+            llm_text_output = generation.message.content
+            if "tool_calls" in generation.message.additional_kwargs:
+                # add tool calls if included in the output
+                tool_calls = generation.message.additional_kwargs['tool_calls']
+                llm_text_output = f"{llm_text_output}\n\nTool calls: {tool_calls}"
+        else:
+            llm_text_output = ""
 
         tool_outputs_list = []
         # Check if message.additional_kwargs as tool_outputs indicative of server side tool calling

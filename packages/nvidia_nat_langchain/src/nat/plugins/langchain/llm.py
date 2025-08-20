@@ -22,6 +22,7 @@ from nat.cli.register_workflow import register_llm_client
 from nat.data_models.llm import APITypeEnum
 from nat.data_models.retry_mixin import RetryMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
@@ -29,8 +30,48 @@ from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 logger = logging.getLogger(__name__)
 
 
+@register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, _builder: Builder):
+
+    from langchain_aws import ChatBedrockConverse
+
+    if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
+        raise ValueError("AWS Bedrock only supports chat completion API type. "
+                         f"Received: {llm_config.api_type}")
+
+    client = ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))
+
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    yield client
+
+
+@register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: Builder):
+
+    from langchain_openai import AzureChatOpenAI
+
+    if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
+        raise ValueError("Azure OpenAI only supports chat completion API type. "
+                         f"Received: {llm_config.api_type}")
+
+    client = AzureChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    yield client
+
+
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def nim_langchain(llm_config: NIMModelConfig, builder: Builder):
+async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
 
     from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
@@ -50,7 +91,7 @@ async def nim_langchain(llm_config: NIMModelConfig, builder: Builder):
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
+async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
@@ -72,26 +113,6 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
                            "Setting stream to False.")
 
     client = ChatOpenAI(**kwargs)
-
-    if isinstance(llm_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
-    yield client
-
-
-@register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, builder: Builder):
-
-    from langchain_aws import ChatBedrockConverse
-
-    if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
-        raise ValueError("AWS Bedrock only supports chat completion API type. "
-                         f"Received: {llm_config.api_type}")
-
-    client = ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,

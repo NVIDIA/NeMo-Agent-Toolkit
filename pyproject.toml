@@ -171,12 +171,16 @@ exclude = ["packages/compat"]
 [dependency-groups]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
-  "nvidia-nat_test",
   "asgi-lifespan~=2.1",
-  "flake8-pyproject~=1.2",
   "flake8~=7.1",
+  "flake8-pyproject~=1.2",
   "httpx-sse~=0.4",
+  "ipython~=8.31",
   "isort==5.12.0",
+  "myst-parser~=4.0",
+  "nbsphinx~=0.9",
+  "nvidia-nat_test",
+  "nvidia-sphinx-theme>=0.0.7",
   "pip>=24.3.1",
   "pre-commit>=4.0,<5.0",
   "pylint==3.3.*",
@@ -188,23 +192,15 @@ dev = [
   "python-docx~=1.1.0",
   "setuptools >= 64",
   "setuptools_scm>=8",
+  "sphinx~=8.2",
+  "sphinx-autoapi>=3.6",
+  "sphinx-copybutton>=0.5",
+  "sphinx-mermaid",
   "tomlkit~=0.13.2",
   "twine~=6.0",
+  "vale~=3.12",
   "yapf==0.43.*",
 ]
-
-docs = [
-  "ipython~=8.31",
-  "myst-parser~=4.0",
-  "nbsphinx~=0.9",
-  "nvidia-sphinx-theme>=0.0.7",
-  "sphinx~=8.2",
-  "sphinx-copybutton>=0.5",
-  "sphinx-autoapi>=3.6",
-  "sphinx-mermaid",
-  "vale~=3.12",
-]
-
 
 [project.entry-points.'nat.components']
 nat_agents = "nat.agent.register"

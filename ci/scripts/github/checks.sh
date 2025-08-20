@@ -20,7 +20,7 @@ GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITHUB_SCRIPT_DIR}/common.sh
 
-create_env group:dev group:docs extra:examples
+create_env group:dev extra:examples
 
 rapids-logger "Running checks"
 ${SCRIPT_DIR}/checks.sh
