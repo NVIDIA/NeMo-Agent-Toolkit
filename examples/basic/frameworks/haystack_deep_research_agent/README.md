@@ -32,17 +32,20 @@ The Haystack Deep Research Agent is an intelligent research assistant that can:
 
 The workflow consists of three main components:
 
-1. **Web Search Tool** (`web_search_tool.py`): Uses Haystack's SerperDevWebSearch and LinkContentFetcher to search the web and extract content from web pages
-2. **RAG Tool** (`rag_tool.py`): Uses OpenSearchDocumentStore to index and query internal documents with semantic retrieval
-3. **Deep Research Agent** (`deep_research_agent.py`): Combines both tools using Haystack's Agent framework with OpenAI for intelligent orchestration
+1. **Web Search Tool**: Uses Haystack's SerperDevWebSearch and LinkContentFetcher to search the web and extract content from web pages
+2. **RAG Tool**: Uses OpenSearchDocumentStore to index and query internal documents with semantic retrieval
+3. **Deep Research Agent** (`register.py`): Orchestrates the agent and imports modular pipelines from `src/aiq_haystack_deep_research_agent/pipelines/`:
+   - `search.py`: builds the web search tool
+   - `rag.py`: builds the RAG pipeline and tool
+   - `indexing.py`: startup indexing (PDF/TXT/MD) into OpenSearch
 
 ## Prerequisites
 
 Before using this workflow, ensure you have:
 
-1. **OpenAI API Key**: Required for the chat generator and RAG functionality
-   - Get your key from [OpenAI Platform](https://platform.openai.com/api-keys)
-   - Set as environment variable: `export OPENAI_API_KEY=your_key_here`
+1. **NVIDIA API Key**: Required for the chat generator and RAG functionality
+   - Get your key from [NVIDIA API Catalog](https://build.nvidia.com/)
+   - Set as environment variable: `export NVIDIA_API_KEY=your_key_here`
 
 2. **SerperDev API Key**: Required for web search functionality
    - Get your key from [SerperDev](https://serper.dev/api-key)
@@ -50,6 +53,7 @@ Before using this workflow, ensure you have:
 
 3. **OpenSearch Instance**: Required for RAG functionality
    - You can run OpenSearch locally using Docker:
+
      ```bash
      docker run -d --name opensearch -p 9200:9200 -p 9600:9600 \
        -e "discovery.type=single-node" \
@@ -64,7 +68,7 @@ Follow the instructions in the [Install Guide](../../../../docs/source/quick-sta
 ### Step 1: Set Your API Keys
 
 ```bash
-export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
+export NVIDIA_API_KEY=<YOUR_NVIDIA_API_KEY>
 export SERPERDEV_API_KEY=<YOUR_SERPERDEV_API_KEY>
 ```
 
@@ -85,7 +89,10 @@ uv pip install -e examples/basic/frameworks/haystack_deep_research_agent
 
 ### Step 4: Add Sample Documents (Optional)
 
-Place PDF documents in the `data/` directory to enable RAG functionality:
+Place documents in the example `data/` directory to enable RAG (PDF, TXT, or MD). On startup, the workflow indexes files from:
+
+- `workflow.data_dir` (default: `/data`)
+- If empty/missing, it falls back to this example's bundled `data/` directory
 
 ```bash
 # Example: Download a sample PDF
@@ -104,6 +111,7 @@ aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src
 Here are some example queries you can try:
 
 **Web Search Examples:**
+
 ```bash
 # Current events
 aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src/aiq_haystack_deep_research_agent/configs/config.yml --input "What are the latest developments in AI research for 2024?"
@@ -113,12 +121,52 @@ aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src
 ```
 
 **RAG Examples (if you have documents indexed):**
+
 ```bash
 # Document-specific queries
 aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src/aiq_haystack_deep_research_agent/configs/config.yml --input "What are the key features of AWS Bedrock?"
 
 # Mixed queries (will use both web search and RAG)
 aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src/aiq_haystack_deep_research_agent/configs/config.yml --input "How does AWS Bedrock compare to other AI platforms in 2024?"
+```
+
+**Web Search + RAG Examples:**
+
+```bash
+aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src/aiq_haystack_deep_research_agent/configs/config.yml --input "Is panna (heavy cream) needed on carbonara? Check online the recipe and compare it with the one from our internal dataset."
+```
+
+## Testing
+
+### Quick smoke test (no external services)
+
+- Validates the workflow config without hitting LLMs or OpenSearch.
+
+```bash
+# In your virtual environment
+pytest -q examples/basic/frameworks/haystack_deep_research_agent/tests -k config_yaml_loads_and_has_keys
+```
+
+### End-to-end test (requires keys + OpenSearch)
+
+- Prerequisites:
+  - Set keys: `NVIDIA_API_KEY` and `SERPERDEV_API_KEY`
+  - OpenSearch running on `http://localhost:9200` (start with Docker):
+
+```bash
+docker run -d --name opensearch -p 9200:9200 -p 9600:9600 \
+  -e "discovery.type=single-node" \
+  -e "plugins.security.disabled=true" \
+  opensearchproject/opensearch:2.11.1
+```
+
+- Run the e2e test (ensure `pytest-asyncio` is installed in your venv):
+
+```bash
+pip install pytest-asyncio  # if not already installed
+export NVIDIA_API_KEY=<YOUR_KEY>
+export SERPERDEV_API_KEY=<YOUR_KEY>
+pytest -q examples/basic/frameworks/haystack_deep_research_agent/tests -k full_workflow_e2e
 ```
 
 ## Configuration
@@ -131,10 +179,11 @@ The workflow is configured via `config.yml`. Key configuration options include:
   - `retry_attempts`: Number of retry attempts for failed requests (default: 2)
 
 - **RAG Tool**:
-  - `document_store_host`: OpenSearch host URL (default: "http://localhost:9200")
-  - `index_name`: OpenSearch index name (default: "deep_research_docs")
+  - `opensearch_url`: OpenSearch host URL (default: `http://localhost:9200`)
+  - `index_name`: OpenSearch index name (fixed: `deep_research_docs`)
   - `top_k`: Number of documents to retrieve (default: 15)
-  - `data_directory`: Directory containing PDF documents to index
+  - `index_on_startup`: If true, run indexing pipeline on start
+  - `data_dir`: Directory to scan for documents; if empty/missing, falls back to example `data/`
 
 - **Agent**:
   - `max_agent_steps`: Maximum number of agent steps (default: 20)
@@ -146,7 +195,7 @@ You can customize the workflow by:
 
 1. **Modifying the system prompt** in `config.yml` to change the agent's behavior
 2. **Adding more document types** by extending the RAG tool to support other file formats
-3. **Changing the LLM model** by updating the OpenAI model in the configuration
+3. **Changing the LLM model** by updating the NVIDIA model names in the configuration (`agent_model` and `rag_model` in `config.yml`). See Haystack's NvidiaChatGenerator docs: [NvidiaChatGenerator](https://docs.haystack.deepset.ai/docs/nvidiachatgenerator)
 4. **Adjusting search parameters** to optimize for your use case
 
 ## Troubleshooting
@@ -154,7 +203,7 @@ You can customize the workflow by:
 **Common Issues:**
 
 1. **OpenSearch Connection Error**: Ensure OpenSearch is running and accessible at the configured host
-2. **Missing API Keys**: Verify that both OPENAI_API_KEY and SERPERDEV_API_KEY are set
+2. **Missing API Keys**: Verify that both NVIDIA_API_KEY and SERPERDEV_API_KEY are set
 3. **No Documents Found**: Check that PDF files are placed in the data directory and the path is correct
 4. **Web Search Fails**: Verify your SerperDev API key is valid and has remaining quota
 

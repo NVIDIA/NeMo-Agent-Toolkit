@@ -13,47 +13,81 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyright: reportMissingTypeStubs=false, reportMissingImports=false
+
+import importlib
+import os
+import urllib.error
+import urllib.request
+from pathlib import Path
 import pytest
 
 
-class TestHaystackDeepResearchAgent:
-    """Test suite for the Haystack Deep Research Agent workflow"""
+def _opensearch_reachable(url: str) -> bool:
+    try:
+        with urllib.request.urlopen(
+            f"{url.rstrip('/')}/_cluster/health", timeout=1
+        ) as resp:
+            return 200 <= getattr(resp, "status", 0) < 300
+    except Exception:
+        return False
 
-    def test_import_modules(self):
-        """Test that all modules can be imported without errors"""
-        try:
-            from aiq_haystack_deep_research_agent import register
-            # Note: Individual tool modules are no longer used since everything is in register.py
-        except ImportError as e:
-            pytest.fail(f"Failed to import modules: {e}")
 
-    def test_config_classes_exist(self):
-        """Test that configuration classes are properly defined"""
-        from aiq_haystack_deep_research_agent.register import HaystackDeepResearchWorkflowConfig
+@pytest.mark.e2e
+@pytest.mark.skipif(
+    not os.environ.get("NVIDIA_API_KEY"),
+    reason="NVIDIA_API_KEY not set; skipping live e2e test for haystack_deep_research_agent.",
+)
+@pytest.mark.skipif(
+    not os.environ.get("SERPERDEV_API_KEY"),
+    reason="SERPERDEV_API_KEY not set; skipping live e2e test for haystack_deep_research_agent.",
+)
+@pytest.mark.skipif(
+    not _opensearch_reachable("http://localhost:9200"),
+    reason="OpenSearch not reachable on http://localhost:9200; skipping e2e test.",
+)
+async def test_full_workflow_e2e() -> None:
+    config_file = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "aiq_haystack_deep_research_agent"
+        / "configs"
+        / "config.yml"
+    )
 
-        # Verify that the configuration class can be instantiated
-        workflow_config = HaystackDeepResearchWorkflowConfig(llm="test_llm")
-        assert workflow_config.max_agent_steps == 20
-        assert "deep research assistant" in workflow_config.system_prompt
+    loader_mod = importlib.import_module("aiq.runtime.loader")
+    load_workflow = getattr(loader_mod, "load_workflow")
 
-    @pytest.mark.e2e
-    async def test_workflow_integration(self):
-        """End-to-end test of the workflow (requires API keys and OpenSearch)"""
-        # This test requires:
-        # - OPENAI_API_KEY environment variable
-        # - SERPERDEV_API_KEY environment variable
-        # - OpenSearch running on localhost:9200 (optional for search-only mode)
-        # Run with: pytest -m e2e
+    async with load_workflow(config_file) as workflow:
+        async with workflow.run("Give a short overview of this workflow.") as runner:
+            result = await runner.result(to_type=str)
 
-        import os
-        if not os.getenv("OPENAI_API_KEY") or not os.getenv("SERPERDEV_API_KEY"):
-            pytest.skip("API keys not available for end-to-end testing")
+    assert isinstance(result, str)
+    assert len(result) > 0
 
-        # This is a placeholder for a full end-to-end test
-        # In a real implementation, you would:
-        # 1. Start OpenSearch (or mock it) - workflow now gracefully degrades without it
-        # 2. Create the workflow with proper configuration
-        # 3. Test with a simple query like "What is artificial intelligence?"
-        # 4. Verify the response format and that it includes web search results
 
-        assert True  # Placeholder assertion
+def test_config_yaml_loads_and_has_keys() -> None:
+    config_file = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "aiq_haystack_deep_research_agent"
+        / "configs"
+        / "config.yml"
+    )
+
+    with open(config_file, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    assert "workflow:" in text
+    assert "_type: haystack_deep_research_agent" in text
+    # key fields expected
+    for key in [
+        "agent_model:",
+        "rag_model:",
+        "nvidia_api_url:",
+        "max_agent_steps:",
+        "opensearch_url:",
+        "index_on_startup:",
+        "data_dir:",
+    ]:
+        assert key in text, f"Missing key: {key}"
