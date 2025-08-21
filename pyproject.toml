@@ -273,6 +273,7 @@ select = [
 ]
 
 extend-ignore = [
+  "PLC0415", # Allow lazy imports inside functions
   # Disable all the "too-*" checks, as they are too strict for our codebase
   "PLR0904", # too-many-public-methods
   "PLR0911", # too-many-return-statements
