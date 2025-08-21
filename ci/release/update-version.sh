@@ -54,7 +54,7 @@ function sed_runner() {
 # Currently only the pypi.md file for the nvidia-nat package contains links to documentation
 # Replace this with a `find ./ -name "pypi.md"` if this is needed for the other pypi.md files
 if [[ -z "${SKIP_MD_UPDATE}" ]]; then
-   sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_VERSION}|g" src/nat/meta/pypi.md
+   sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_SHORT_TAG}|g" src/nat/meta/pypi.md
 fi
 
 
