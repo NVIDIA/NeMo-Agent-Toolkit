@@ -178,7 +178,6 @@ dev = [
   "asgi-lifespan~=2.1",
   "httpx-sse~=0.4",
   "ipython~=8.31",
-  "isort==5.12.0",
   "myst-parser~=4.0",
   "nbsphinx~=0.9",
   "nvidia-nat_test",
@@ -946,46 +945,6 @@ redefining-builtins-modules = [
   "io",
 ]
 
-
-# ===== isort Config =====
-[tool.isort]
-line_length = 120
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-combine_as_imports = true
-order_by_type = true
-force_single_line = true
-default_section = "THIRDPARTY"
-src_paths = ["examples", "packages/**/src", "src", "tests"]
-skip = [
-  "__init__.py",
-  ".eggs",
-  ".git",
-  ".hg",
-  ".mypy_cache",
-  ".tmp",
-  ".tox",
-  ".venv",
-  "buck-out",
-  "build",
-  "dist",
-  "models",
-  "thirdparty",
-]
-known_first_party = ["aiq", "nat"]
-# Need to declare known third party for namespace packages which have the same name
-known_third_party = [
-  "agno",
-  "crewai",
-  "langchain",
-  "llama_index",
-  "mem0ai",
-  "redis",
-  "semantic_kernel",
-  "zep_cloud",
-]
-namespace_packages = ["aiq", "aiq.plugins", "nat", "nat.plugins"]
 
 # ===== yapf Config =====
 [tool.yapf]
