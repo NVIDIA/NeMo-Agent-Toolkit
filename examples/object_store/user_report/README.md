@@ -117,13 +117,19 @@ This example uses mock data to demonstrate the functionality of the object store
 
 ```bash
 # Load mock data to MinIO
-nat object-store upload --store-type s3 --bucket-name my-bucket --endpoint-url http://localhost:9000 --access-key minioadmin --secret-key minioadmin examples/object_store/user_report/data/object_store 
+nat object-store \
+  s3 --endpoint-url http://127.0.0.1:9000 --access-key minioadmin --secret-key minioadmin my-bucket \
+  upload ./examples/object_store/user_report/data/object_store/
 
 # Load mock data to MySQL
-nat object-store upload --store-type mysql --bucket-name my-bucket --username root --password ${MYSQL_ROOT_PASSWORD} examples/object_store/user_report/data/object_store
+nat object-store \
+  mysql --host 127.0.0.1 --username root --password ${MYSQL_ROOT_PASSWORD} --port 3306 my-bucket \
+  upload ./examples/object_store/user_report/data/object_store/
 
 # Load mock data to Redis
-nat object-store upload --store-type redis --bucket-name my-bucket examples/object_store/user_report/data/object_store
+nat object-store \
+  redis --host 127.0.0.1 --port 6379 --db 0 my-bucket \
+  upload ./examples/object_store/user_report/data/object_store/
 ```
 
 There are additional command-line arguments that can be used to specify authentication credentials for some object stores.
