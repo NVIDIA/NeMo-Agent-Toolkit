@@ -259,7 +259,7 @@ asyncio_default_fixture_loop_scope = "session"
 [tool.ruff]
 # Set the maximum line length to 120.
 line-length = 120
-target-version = "py311" # Set to minimum supported Python version
+target-version = "py311"
 
 [tool.ruff.lint]
 # Add the `line-too-long` rule to the enforced rule set.
@@ -285,12 +285,6 @@ ignore = [
 [tool.ruff.lint.isort]
 case-sensitive = true
 
-[tool.ruff.format]
-indent-style = "space"
-# Use `\n` line endings for all files
-line-ending = "lf"
-# Prevents ruff from changing quote styles
-quote-style = "preserve"
 
 ## Pylint configuration begins here
 

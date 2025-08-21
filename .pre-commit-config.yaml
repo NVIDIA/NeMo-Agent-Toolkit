@@ -32,7 +32,7 @@ repos:
       # Run the linter.
       - id: ruff-check
       # Run the formatter.
-      - id: ruff-format
+      # - id: ruff-format
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.6.2
