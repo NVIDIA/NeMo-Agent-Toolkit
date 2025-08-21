@@ -44,6 +44,8 @@ class EvaluationRunConfig(BaseModel):
     # number of passes at each concurrency, if 0 the dataset is adjusted to a multiple of the
     # concurrency. The is only used if adjust_dataset_size is true
     num_passes: int = 0
+    # timeout for waiting for trace export tasks to complete
+    export_timeout: float = 60.0
 
 
 class EvaluationRunOutput(BaseModel):
