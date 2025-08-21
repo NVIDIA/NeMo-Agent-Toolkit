@@ -8,7 +8,7 @@ root = "../../.."
 [project]
 name = "nat_por_to_jiratickets"
 dynamic = ["version"]
-dependencies = ["nvidia-nat[langchain]~=1.2"]
+dependencies = ["nvidia-nat[langchain]~=1.3"]
 requires-python = ">=3.11,<3.13"
 description = "Custom NeMo Agent toolkit Workflow"
 classifiers = ["Programming Language :: Python"]

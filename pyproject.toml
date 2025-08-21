@@ -39,7 +39,7 @@ dependencies = [
   "pydantic==2.10.*", # work-around for arize-phoenix==6.1.0 incompatibility with pydantic==2.11.*, remove once we update arize-phoenix
   "pymilvus~=2.4",
   "PyYAML~=6.0",
-  "ragas~=0.2.14",
+  "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
   "rich~=13.9",
   "tabulate~=0.9",
   "uvicorn[standard]~=0.32.0",
@@ -58,16 +58,16 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 [project.optional-dependencies]
 # Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install nvidia-nat[langchain]`
 # Keep sorted!!!
-all = ["nvidia-nat-all"]  # meta-package
+all = ["nvidia-nat-all"] # meta-package
 agno = ["nvidia-nat-agno"]
 crewai = ["nvidia-nat-crewai"]
-ingestion = ["nvidia-nat-ingestion"]  # meta-package
+ingestion = ["nvidia-nat-ingestion"] # meta-package
 langchain = ["nvidia-nat-langchain"]
 llama-index = ["nvidia-nat-llama-index"]
 mem0ai = ["nvidia-nat-mem0ai"]
 opentelemetry = ["nvidia-nat-opentelemetry"]
 phoenix = ["nvidia-nat-phoenix"]
-profiling = ["nvidia-nat-profiling"]  # meta-package
+profiling = ["nvidia-nat-profiling"] # meta-package
 ragaai = ["nvidia-nat-ragaai"]
 mysql = ["nvidia-nat-mysql"]
 redis = ["nvidia-nat-redis"]
