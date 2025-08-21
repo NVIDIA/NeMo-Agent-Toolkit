@@ -122,7 +122,6 @@ class WebSocketMessageHandler:
                 # TODO: Handle the disconnect  # pylint: disable=fixme
                 break
 
-
     async def process_user_message_content(
             self, user_content: WebSocketUserMessage | WebSocketUserInteractionResponseMessage) -> BaseModel | None:
         """
@@ -309,7 +308,7 @@ class WebSocketMessageHandler:
                                                                output_type=output_type):
 
                     if not isinstance(value, ResponseSerializable):
-                        value = ResponsePayloadOutput(payload=value)
+                        value = ResponsePayloadOutput(payload=value)  # noqa: PLW2901 allow re-assigning a loop var
 
                     await self.create_websocket_message(data_model=value, status=WebSocketMessageStatus.IN_PROGRESS)
 
