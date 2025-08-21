@@ -269,8 +269,7 @@ select = [
   "F",
   "W",
   # Enable isort support
-  "I001",
-  "I002",
+  "I",
 ]
 
 [tool.ruff.lint.isort]
