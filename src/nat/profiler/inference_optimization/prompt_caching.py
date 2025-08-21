@@ -121,7 +121,7 @@ def get_common_prefixes(all_steps: list[list[IntermediateStep]],
     grouped = df.groupby(['llm_name'])
     for llm_name, group_df in grouped:
         # Unpack llm_name Tuple
-        llm_name = llm_name[0]  # noqa: PLW2901 allow re-assigning the llm_name loop variable
+        llm_name = llm_name[0]
 
         text_inputs = group_df['llm_text_input'].astype(str).tolist()
         total_calls = len(text_inputs)

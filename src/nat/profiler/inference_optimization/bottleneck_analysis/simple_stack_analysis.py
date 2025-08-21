@@ -99,7 +99,7 @@ def profile_workflow_bottlenecks(all_steps: list[list[IntermediateStep]]) -> Sim
         # We might have multiple events with the same UUID, but typically we expect:
         #   LLM_START, LLM_END (or TOOL_START, TOOL_END).
         # Sort by timestamp
-        group_df = group_df.sort_values("event_timestamp")  # noqa: PLW2901 allow overwriting the loop variable
+        group_df = group_df.sort_values("event_timestamp")
 
         # Identify operation_type from the first row's event_type
         first_event_type = group_df["event_type"].iloc[0]

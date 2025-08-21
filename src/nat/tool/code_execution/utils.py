@@ -92,10 +92,10 @@ def python_doc_to_cmd_help(doc_class, docs_prefix="", arg_prefix=""):
         if "        " in line and " - " in line:
             # add colors
             # PLW2901 - Allow re-assignment of the line variable
-            line = line.replace("        ", "        \033[92m").replace(" - ", "\033[0m - ")  # noqa: PLW2901
+            line = line.replace("        ", "        \033[92m").replace(" - ", "\033[0m - ")
             # fixing arg format
-            line = line.replace('        \033[92m', f'        \033[92m{arg_prefix}')  # noqa: PLW2901
+            line = line.replace('        \033[92m', f'        \033[92m{arg_prefix}')
         # fixing indent
-        line = line.replace("        ", "    ").replace("    ", "  ")  # noqa: PLW2901
+        line = line.replace("        ", "    ").replace("    ", "  ")
         colored_args += line + '\n'
     return colored_args[:-1]

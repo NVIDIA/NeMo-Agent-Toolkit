@@ -283,8 +283,9 @@ extend-ignore = [
   "PLR0915", # too-many-statements
   "PLR0917", # too-many-positional-arguments
   "PLR1702", # too-many-nested-blocks
-  "PLW0108", # unnecessary-lambda
   "PLR2004", # Magic value used in comparison this happens a lot within unittests
+  "PLW0108", # unnecessary-lambda
+  "PLW2901", # allow re-assigning a loop variable
 ]
 
 [tool.ruff.lint.isort]

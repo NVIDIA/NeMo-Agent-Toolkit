@@ -308,7 +308,7 @@ class WebSocketMessageHandler:
                                                                output_type=output_type):
 
                     if not isinstance(value, ResponseSerializable):
-                        value = ResponsePayloadOutput(payload=value)  # noqa: PLW2901 allow re-assigning a loop var
+                        value = ResponsePayloadOutput(payload=value)
 
                     await self.create_websocket_message(data_model=value, status=WebSocketMessageStatus.IN_PROGRESS)
 

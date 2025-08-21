@@ -42,7 +42,7 @@ def generate_config_type_docs(config_type: TypedBaseModelT) -> str:
     for field_name, field_info in config_type.model_fields.items():
 
         if (field_name == "type"):
-            field_name = "_type"  # noqa: PLW2901 allow re-assigning this loop variable
+            field_name = "_type"
 
         decomponsed_type = DecomposedType(field_info.annotation)
 
