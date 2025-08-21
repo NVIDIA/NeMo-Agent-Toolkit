@@ -262,11 +262,34 @@ line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
-# The E, F, W categories are flake8 rules.
-select = ["E", "F", "W"]
+
+select = [
+  # The E, F, W categories are flake8 rules.
+  "E",
+  "F",
+  "W",
+  # Enable isort support
+  "I001",
+  "I002",
+]
 
 [tool.ruff.lint.isort]
 case-sensitive = true
+combine-as-imports = true
+default-section = "third-party"
+force-single-line = true
+known-first-party = ["aiq", "nat"]
+known-third-party = [
+  "agno",
+  "crewai",
+  "langchain",
+  "llama_index",
+  "mem0ai",
+  "redis",
+  "semantic_kernel",
+  "zep_cloud",
+]
+order-by-type = true
 
 ## Pylint configuration begins here
 
