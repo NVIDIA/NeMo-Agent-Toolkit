@@ -19,6 +19,8 @@ from unittest.mock import patch
 
 import pytest
 import requests
+
+# Yapf and ruff disagree on how to format long imports, disable yapf go with ruff
 from nat_alert_triage_agent.telemetry_metrics_host_heartbeat_check_tool import (
     TelemetryMetricsHostHeartbeatCheckToolConfig,
 )  # yapf: disable

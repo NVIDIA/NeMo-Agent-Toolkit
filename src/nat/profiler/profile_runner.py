@@ -88,6 +88,7 @@ class ProfilerRunner:
         writes out combined requests JSON, then computes and saves additional metrics,
         and optionally fits a forecasting model.
         """
+        # Yapf and ruff disagree on how to format long imports, disable yapf go with ruff
         from nat.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
             multi_example_call_profiling,
         )  # yapf: disable
