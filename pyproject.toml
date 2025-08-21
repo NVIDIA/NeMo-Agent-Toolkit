@@ -175,8 +175,6 @@ exclude = ["packages/compat"]
 [dependency-groups]
 dev = [
   "asgi-lifespan~=2.1",
-  "flake8~=7.1",
-  "flake8-pyproject~=1.2",
   "httpx-sse~=0.4",
   "ipython~=8.31",
   "isort==5.12.0",
