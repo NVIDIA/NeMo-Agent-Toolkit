@@ -23,7 +23,7 @@ import pytest
 import requests
 from nat_alert_triage_agent.telemetry_metrics_host_performance_check_tool import (
     TelemetryMetricsHostPerformanceCheckToolConfig,
-)
+)  # yapf: disable
 from nat_alert_triage_agent.telemetry_metrics_host_performance_check_tool import _get_llm_analysis_input
 from nat_alert_triage_agent.telemetry_metrics_host_performance_check_tool import _timeseries_stats
 
