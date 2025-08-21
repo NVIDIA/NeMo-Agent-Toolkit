@@ -274,7 +274,6 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-case-sensitive = true
 combine-as-imports = true
 default-section = "third-party"
 force-single-line = true
