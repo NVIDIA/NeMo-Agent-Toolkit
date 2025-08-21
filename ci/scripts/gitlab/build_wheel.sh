@@ -21,7 +21,7 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
 GIT_TAG=$(get_git_tag)
-IS_TAGGED=$(is_current_commit_tagged)
+IS_TAGGED=$(is_current_commit_release_tagged)
 rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
 if [[ "${CI_CRON_NIGHTLY}" == "1" || ( ${IS_TAGGED} == "1" && "${CI_COMMIT_BRANCH}" != "main" ) ]]; then

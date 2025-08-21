@@ -8,7 +8,7 @@ root = "../../.."
 [project]
 name = "nat_agno_personal_finance"
 dynamic = ["version"]
-dependencies = ["nvidia-nat[agno]~=1.2", "openai~=1.66", "litellm~=1.63.14"]
+dependencies = ["nvidia-nat[agno]~=1.3", "openai~=1.66", "litellm~=1.63.14"]
 requires-python = ">=3.11,<3.13"
 description = "Custom NeMo Agent toolkit Workflow using Agno for personal finance"
 classifiers = ["Programming Language :: Python"]
