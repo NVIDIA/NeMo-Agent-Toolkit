@@ -277,7 +277,7 @@ select = [
 combine-as-imports = true
 default-section = "third-party"
 force-single-line = true
-known-first-party = ["aiq", "nat"]
+known-first-party = ["aiq", "nat", "_utils"]
 known-third-party = [
   "agno",
   "crewai",
