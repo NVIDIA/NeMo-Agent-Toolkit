@@ -19,8 +19,9 @@ from unittest.mock import patch
 
 import pytest
 import requests
-from nat_alert_triage_agent.telemetry_metrics_host_heartbeat_check_tool import \
-    TelemetryMetricsHostHeartbeatCheckToolConfig
+from nat_alert_triage_agent.telemetry_metrics_host_heartbeat_check_tool import (
+    TelemetryMetricsHostHeartbeatCheckToolConfig,
+)
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder

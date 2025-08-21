@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import importlib
 import importlib.abc
 import importlib.util
+import sys
 import warnings
 
 

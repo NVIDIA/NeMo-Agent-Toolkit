@@ -15,10 +15,9 @@
 
 import logging
 
+from nat.plugins.opentelemetry.otel_span import OtelSpan
 from phoenix.otel import HTTPSpanExporter
 from phoenix.trace.projects import using_project
-
-from nat.plugins.opentelemetry.otel_span import OtelSpan
 
 logger = logging.getLogger(__name__)
 
