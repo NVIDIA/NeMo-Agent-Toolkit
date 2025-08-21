@@ -984,30 +984,6 @@ known_third_party = [
 ]
 namespace_packages = ["aiq", "aiq.plugins", "nat", "nat.plugins"]
 
-[tool.flake8]
-filename = ["*.py"]
-
-max-line-length = 120
-max-doc-length = 120
-
-extend-ignore = [
-  # Ignore missing docstrings __init__ methods as we document those on the class
-  "D107",
-  # Don't require quotes to be placed on the same line as a one-line docstring, useful when the docstring is close
-  # to the line limit
-  "D200",
-  # Allow a blank line between a docstring and the code
-  "D202",
-  # D204: 1 blank line required after class docstring
-  "D204",
-  # D205: 1 blank line required between summary line and description (allow for a paragraph)
-  "D205",
-  # D400: First line should end with a period (only works if we're adhering to D205)
-  "D400",
-  # D401: First line should be in imperative mood
-  "D401",
-]
-
 # ===== yapf Config =====
 [tool.yapf]
 based_on_style = "pep8"
