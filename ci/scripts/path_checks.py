@@ -123,17 +123,17 @@ ALLOWLISTED_WORDS: set[str] = {
     "user/assistant",
     "validate/sanitize",
     "Workflows/tools",
-    "Yes/No",  #
+    "Yes/No",
     # numbers
-    r"\d+/\d+(/\d+)*",  #
+    r"\d+/\d+(/\d+)*",
     # LLM model names
     "meta/[Ll]lama.*",
     "nvidia/([Ll]lama|[Nn][Vv]-).*",
     "mistralai/[Mm]ixtral.*",
     "microsoft/[Pp]hi.*",
-    "ssmits/[Qq]wen.*",  #
+    "ssmits/[Qq]wen.*",
     # MIME types
-    "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
+    "(application|text|image|video|audio|model|dataset|token|other)/.*",
     # Time zones
     "[A-Z][a-z]+(_[A-Z][a-z]+)*/[A-Z][a-z]+(_[A-Z][a-z]+)*",
 }
@@ -159,19 +159,19 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
 # Files to ignore -- regex pattern
 IGNORED_FILES: set[str] = {
     # hidden files
-    r"^\.",  #
+    r"^\.",
     # CI files
-    r"^ci/",  #
+    r"^ci/",
     # project files
-    r"pyproject\.toml$",  #
+    r"pyproject\.toml$",
     # docker files
-    r"Dockerfile",  #
-    r"docker-compose([A-Za-z0-9_\-\.]+)?\.ya?ml$",  #
+    r"Dockerfile",
+    r"docker-compose([A-Za-z0-9_\-\.]+)?\.ya?ml$",
     # top-level markdown files with no related content
     r"(CHANGELOG|CONTRIBUTING|LICENSE|SECURITY)\.md",
-    r"^manifest.yaml$",  #
+    r"^manifest.yaml$",
     # files located within data directories
-    r"data/.*$",  #
+    r"data/.*$",
     # Versions json file for the documentation version switcher button
     r"^docs/source/versions1.json$",
 }
@@ -179,17 +179,17 @@ IGNORED_FILES: set[str] = {
 # Paths to ignore -- regex pattern
 IGNORED_PATHS: set[str] = {
     # temporary files
-    r"\.tmp/",  #
+    r"\.tmp/",
     # files that are located in the directory of the file being checked
     r"^\./upload_to_minio\.sh$",
     r"^\./upload_to_mysql\.sh$",
-    r"^\./start_local_sandbox\.sh$",  #
+    r"^\./start_local_sandbox\.sh$",
     # script files that exist in the root of the repo
     r"^scripts/langchain_web_ingest\.py$",
-    r"^scripts/bootstrap_milvus\.sh$",  #
+    r"^scripts/bootstrap_milvus\.sh$",
     # generated files
     r"^\./run_service\.sh$",
-    r"^outputs/line_chart_\d+\.png$",  #
+    r"^outputs/line_chart_\d+\.png$",
     # virtual environment directories
     r"(\.[a-z_]*env$|^\.[a-z_]*env)",
 }
@@ -288,10 +288,9 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                     # ensure that we don't push a single-line block
                     if "```" not in block_type:
                         section.append(block_type)
-                else:
-                    # if it's empty, then we're done with the section
-                    if section:
-                        section.pop()
+                # if it's empty, then we're done with the section
+                elif section:
+                    section.pop()
 
             if filename.endswith("yml") or filename.endswith("yaml") or (section and section[-1] in ["yml", "yaml"]):
                 if any((key in line) for key in YAML_WHITELISTED_KEYS):

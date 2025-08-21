@@ -326,11 +326,10 @@ class ToolTestRunner:
                     result = await tool_function(input_data)
                 else:
                     result = tool_function(input_data)
+            elif asyncio.iscoroutinefunction(tool_function):
+                result = await tool_function()
             else:
-                if asyncio.iscoroutinefunction(tool_function):
-                    result = await tool_function()
-                else:
-                    result = tool_function()
+                result = tool_function()
 
             # Assert expected output if provided
             if expected_output is not None:
@@ -417,11 +416,10 @@ class ToolTestRunner:
                     result = await tool_function(input_data)
                 else:
                     result = tool_function(input_data)
+            elif asyncio.iscoroutinefunction(tool_function):
+                result = await tool_function()
             else:
-                if asyncio.iscoroutinefunction(tool_function):
-                    result = await tool_function()
-                else:
-                    result = tool_function()
+                result = tool_function()
 
             # Assert expected output if provided
             if expected_output is not None:

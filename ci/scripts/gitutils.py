@@ -390,7 +390,6 @@ def get_merge_target():
     str
         Ref name of the target branch
     """
-    #
 
     remote_branch = GithubWrapper.get_pr_target_remote_branch()
 

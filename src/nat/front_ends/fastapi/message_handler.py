@@ -122,7 +122,6 @@ class WebSocketMessageHandler:
                 # TODO: Handle the disconnect  # pylint: disable=fixme
                 break
 
-        return None
 
     async def process_user_message_content(
             self, user_content: WebSocketUserMessage | WebSocketUserInteractionResponseMessage) -> BaseModel | None:

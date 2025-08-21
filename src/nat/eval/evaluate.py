@@ -511,12 +511,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             with self.eval_trace_context.evaluation_context():
                 if self.config.endpoint:
                     await self.run_workflow_remote()
-                else:
-                    if not self.config.skip_workflow:
-                        if session_manager is None:
-                            session_manager = SessionManager(eval_workflow.build(),
-                                                             max_concurrency=self.eval_config.general.max_concurrency)
-                        await self.run_workflow_local(session_manager)
+                elif not self.config.skip_workflow:
+                    if session_manager is None:
+                        session_manager = SessionManager(eval_workflow.build(),
+                                                         max_concurrency=self.eval_config.general.max_concurrency)
+                    await self.run_workflow_local(session_manager)
 
                 # Evaluate
                 evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
