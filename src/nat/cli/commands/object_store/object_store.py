@@ -77,7 +77,7 @@ async def upload_file(object_store: ObjectStore, file_path: Path, key: str):
         click.echo(f"✅ Uploaded: {file_path.name} -> {key}")
 
     except Exception as e:
-        raise Exception(f"Failed to upload {file_path.name}:\n{e}") from e
+        raise RuntimeError(f"Failed to upload {file_path.name}:\n{e}") from e
 
 
 def object_store_command_decorator(async_func):
