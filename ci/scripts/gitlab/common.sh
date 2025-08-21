@@ -36,7 +36,7 @@ function get_git_tag() {
 
         # If the branch is a nightly build create a version which will be accepted by pypi
         # Note: We are intentionally creating an actual tag, just setting the variable
-        GIT_TAG=$(echo $GIT_TAG | sed -e "s|-.*|a$(date +"%Y%m%d")|")
+        GIT_TAG=$(echo $GIT_TAG | sed -E -e "s/(-|a).*/a$(date +"%Y%m%d")/")
     fi
 
     echo ${GIT_TAG}
