@@ -38,6 +38,7 @@ def main(versions_file: str, new_version: str):
 
     with open(versions_file, "w", encoding="utf-8") as fh:
         json.dump(version_list, fh, indent=4)
+        fh.write("\n")  # Add a trailing newline
 
 
 if __name__ == "__main__":
