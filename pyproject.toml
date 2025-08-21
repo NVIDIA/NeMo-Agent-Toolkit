@@ -269,6 +269,22 @@ select = [
   "W",
   # Enable isort support
   "I",
+  # Enable partial pylint support
+  "PL",
+]
+
+extend-ignore = [
+  # Disable all the "too-*" checks, as they are too strict for our codebase
+  "PLR0904", # too-many-public-methods
+  "PLR0911", # too-many-return-statements
+  "PLR0912", # too-many-branches
+  "PLR0913", # too-many-arguments
+  "PLR0914", # too-many-locals
+  "PLR0915", # too-many-statements
+  "PLR0917", # too-many-positional-arguments
+  "PLR1702", # too-many-nested-blocks
+  "PLW0108", # unnecessary-lambda
+  "PLR2004", # Magic value used in comparison this happens a lot within unittests
 ]
 
 [tool.ruff.lint.isort]
