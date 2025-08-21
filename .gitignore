@@ -214,6 +214,7 @@ tags
 deploy/compose/volumes
 examples/RAG/simple_rag/deploy/volumes
 examples/RAG/compose/volumes
+examples/notebooks/examples/retail_sales_agent/deploy/volumes/
 
 # Mac Metadata
 **/*.DS_Store

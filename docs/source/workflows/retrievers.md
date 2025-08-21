@@ -14,6 +14,8 @@ limitations under the License.
 
 # Retrievers
 
+Retrievers are used to retrieve relevant documents from a vector database. See the [Store and Retrieve: Retrievers](../store-and-retrieve/retrievers.md) page for more details on retrievers.
+
 ## Supported Retriever Providers
 
 NeMo Agent toolkit supports the following retriever providers:

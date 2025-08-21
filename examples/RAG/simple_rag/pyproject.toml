@@ -12,7 +12,7 @@ root = "../../.."
 name = "nat_simple_rag"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[ingestion, langchain, mem0ai]~=1.2"
+  "nvidia-nat[ingestion,langchain,mem0ai]~=1.3"
 ]
 requires-python = ">=3.11,<3.13"
 description = "Simple NeMo Agent toolkit Rag example"

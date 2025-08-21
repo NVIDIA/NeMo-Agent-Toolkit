@@ -241,7 +241,7 @@ class TestOTLPSpanAdapterExporter:
                 exporter.export(sample_end_event)
 
                 # Wait for async processing
-                await exporter._wait_for_tasks()
+                await exporter.wait_for_tasks()
 
             # Verify that export was called (span was processed and exported)
             mock_otlp_exporter.export.assert_called()
@@ -295,7 +295,7 @@ class TestOTLPSpanAdapterExporter:
                 exporter.export(end_event)
 
             # Wait for batch processing
-            await exporter._wait_for_tasks()
+            await exporter.wait_for_tasks()
 
         # Verify that export was called (batching should trigger export)
         mock_otlp_exporter.export.assert_called()

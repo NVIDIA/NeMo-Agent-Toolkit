@@ -1,0 +1,139 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+general:
+  use_uvloop: true
+  logging:
+    console:
+      _type: console
+      level: INFO
+
+llms:
+  supervisor_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 2048
+    api_key: $NVIDIA_API_KEY
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 2048
+    context_window: 32768
+    api_key: $NVIDIA_API_KEY
+
+embedders:
+  nim_embedder:
+    _type: nim
+    model_name: nvidia/nv-embedqa-e5-v5
+    truncate: END
+    api_key: $NVIDIA_API_KEY
+
+
+functions:
+  get_total_product_sales_data:
+    _type: get_total_product_sales_data
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+  get_sales_per_day:
+    _type: get_sales_per_day
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+  detect_outliers_iqr:
+    _type: detect_outliers_iqr
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+
+  data_analysis_agent:
+    _type: tool_calling_agent
+    tool_names:
+      - get_total_product_sales_data
+      - get_sales_per_day
+      - detect_outliers_iqr
+    llm_name: nim_llm
+    max_history: 10
+    max_iterations: 15
+    description: "A helpful assistant that can answer questions about the retail sales CSV data. Use the tools to answer the questions."
+    verbose: true
+
+  plot_sales_trend_for_stores:
+    _type: plot_sales_trend_for_stores
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+  plot_and_compare_revenue_across_stores:
+    _type: plot_and_compare_revenue_across_stores
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+  plot_average_daily_revenue:
+    _type: plot_average_daily_revenue
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+
+  data_visualization_agent:
+    _type: react_agent
+    llm_name: nim_llm
+    tool_names:
+      - plot_sales_trend_for_stores
+      - plot_and_compare_revenue_across_stores
+      - plot_average_daily_revenue
+    max_history: 10
+    max_iterations: 15
+    description: "You are a data visualization expert. Your task is to create plots and visualizations based on user requests. Use available tools to analyze data and generate plots."
+    verbose: true
+    handle_parsing_errors: true
+    max_retries: 2
+    retry_parsing_errors: true
+
+  product_catalog_rag:
+    _type: local_llama_index_rag
+    llm_name: nim_llm
+    embedder_name: nim_embedder
+    collection_name: product_catalog_rag
+    data_dir: ./retail_sales_agent/data/rag/product_catalog.md
+    description: "Search product catalog for TabZen tablet, AeroBook laptop, NovaPhone specifications"
+
+  rag_agent:
+    _type: react_agent
+    llm_name: nim_llm
+    tool_names:
+      - product_catalog_rag
+    max_history: 3
+    max_iterations: 5
+    max_retries: 2
+    retry_parsing_errors: true
+    description: "An assistant that can answer questions about products. Use product_catalog_rag to answer questions about products. Do not make up information."
+    verbose: true
+
+
+workflow:
+  _type: react_agent
+  tool_names: [data_analysis_agent, data_visualization_agent, rag_agent]
+  llm_name: supervisor_llm
+  verbose: true
+  handle_parsing_errors: true
+  max_retries: 2
+  system_prompt: |
+    Answer the following questions as best you can. You may communicate and collaborate with various experts to answer the questions:
+
+    {tools}
+
+    You may respond in one of two formats.
+    Use the following format exactly to communicate with an expert:
+
+    Question: the input question you must answer
+    Thought: you should always think about what to do
+    Action: the action to take, should be one of [{tool_names}]
+    Action Input: the input to the action (if there is no required input, include "Action Input: None")
+    Observation: wait for the expert to respond, do not assume the expert's response
+
+    ... (this Thought/Action/Action Input/Observation can repeat N times.)
+    Use the following format once you have the final answer:
+
+    Thought: I now know the final answer
+    Final Answer: the final answer to the original input question

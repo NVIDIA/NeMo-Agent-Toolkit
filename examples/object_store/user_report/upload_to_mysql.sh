@@ -72,19 +72,18 @@ find "$DIR" -type f | while IFS= read -r filepath; do
 
   echo "Processing file: ${relpath}"
   fsize=$(stat -c%s "$filepath")
-  # Serialize the file
   python serialize_file.py "$filepath"
-  serialized_file="${filepath}.pkl"
+  serialized_file="${filepath}.json"
 
   ${MYSQL[@]} <<EOF
 USE \`$DB\`;
 START TRANSACTION;
 
 INSERT INTO object_meta (path, size)
-VALUES ('/${relpath}', ${fsize})
+VALUES ('${relpath}', ${fsize})
 ON DUPLICATE KEY UPDATE size=VALUES(size), created_at=CURRENT_TIMESTAMP;
 
-SET @obj_id := (SELECT id FROM object_meta WHERE path='/${relpath}' FOR UPDATE);
+SET @obj_id := (SELECT id FROM object_meta WHERE path='${relpath}' FOR UPDATE);
 
 REPLACE INTO object_data (id, data)
 VALUES (

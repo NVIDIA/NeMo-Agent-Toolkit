@@ -179,6 +179,7 @@ class BaseAgent(ABC):
                 logger.debug("%s Retrying tool call for %s in %d seconds...", AGENT_LOG_PREFIX, tool.name, sleep_time)
                 await asyncio.sleep(sleep_time)
 
+        # pylint: disable=C0209
         # All retries exhausted, return error message
         error_content = "Tool call failed after all retry attempts. Last error: %s" % str(last_exception)
         logger.error("%s %s", AGENT_LOG_PREFIX, error_content)
@@ -233,6 +234,22 @@ class BaseAgent(ABC):
         except Exception as e:
             logger.warning("%s Unexpected error during JSON parsing: %s", AGENT_LOG_PREFIX, str(e))
             return {"error": f"Unexpected parsing error: {str(e)}", "original_string": json_string}
+
+    def _get_chat_history(self, messages: list[BaseMessage]) -> str:
+        """
+        Get the chat history excluding the last message.
+
+        Parameters
+        ----------
+        messages : list[BaseMessage]
+            The messages to get the chat history from
+
+        Returns
+        -------
+        str
+            The chat history excluding the last message
+        """
+        return "\n".join([f"{message.type}: {message.content}" for message in messages[:-1]])
 
     @abstractmethod
     async def _build_graph(self, state_schema: type) -> CompiledGraph:

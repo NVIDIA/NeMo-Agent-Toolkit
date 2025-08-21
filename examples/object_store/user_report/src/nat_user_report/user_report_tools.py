@@ -37,7 +37,7 @@ async def get_user_report(config: GetUserReportConfig, builder: Builder):
 
     async def _inner(user_id: str, date: str | None = None) -> str:
         date = date or "latest"
-        key = f"/reports/{user_id}/{date}.json"
+        key = f"reports/{user_id}/{date}.json"
         logger.info("Fetching report from %s", key)
         item = await object_store.get_object(key=key)
         return item.data.decode("utf-8")
@@ -56,7 +56,7 @@ async def put_user_report(config: PutUserReportConfig, builder: Builder):
 
     async def _inner(report: str, user_id: str, date: str | None = None) -> str:
         date = date or "latest"
-        key = f"/reports/{user_id}/{date}.json"
+        key = f"reports/{user_id}/{date}.json"
         logger.info("Putting new report into %s for user %s with date %s", key, user_id, date)
         try:
             await object_store.put_object(key=key,
@@ -80,7 +80,7 @@ async def update_user_report(config: UpdateUserReportConfig, builder: Builder):
 
     async def _inner(report: str, user_id: str, date: str | None = None) -> str:
         date = date or "latest"
-        key = f"/reports/{user_id}/{date}.json"
+        key = f"reports/{user_id}/{date}.json"
         logger.info("Update or insert report into %s for user %s with date %s", key, user_id, date)
         await object_store.upsert_object(key=key,
                                          item=ObjectStoreItem(data=report.encode("utf-8"),
@@ -101,7 +101,7 @@ async def delete_user_report(config: DeleteUserReportConfig, builder: Builder):
 
     async def _inner(user_id: str, date: str | None = None) -> str:
         date = date or "latest"
-        key = f"/reports/{user_id}/{date}.json"
+        key = f"reports/{user_id}/{date}.json"
         logger.info("Delete report from %s for user %s with date %s", key, user_id, date)
         await object_store.delete_object(key=key)
         return f"User report for {user_id} with date {date} deleted"

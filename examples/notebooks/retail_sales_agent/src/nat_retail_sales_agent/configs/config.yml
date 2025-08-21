@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+general:
+  use_uvloop: true
+  logging:
+    console:
+      _type: console
+      level: WARN
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    api_key: $NVIDIA_API_KEY
+
+functions:
+  get_total_product_sales_data:
+    _type: get_total_product_sales_data
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+  get_sales_per_day:
+    _type: get_sales_per_day
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+  detect_outliers_iqr:
+    _type: detect_outliers_iqr
+    data_path: ./retail_sales_agent/data/retail_sales_data.csv
+
+workflow:
+  _type: react_agent
+  tool_names:
+    - get_total_product_sales_data
+    - get_sales_per_day
+    - detect_outliers_iqr
+  llm_name: nim_llm
+  verbose: true
+  handle_parsing_errors: true
+  max_retries: 2
+  description: "A helpful assistant that can answer questions about the retail sales CSV data"

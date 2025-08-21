@@ -87,6 +87,9 @@ Begin!
 """
 
 PLANNER_USER_PROMPT = """
+Previous conversation history:
+{chat_history}
+
 task: {task}
 """
 

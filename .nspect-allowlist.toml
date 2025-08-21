@@ -1,0 +1,26 @@
+version = "1.2.0"
+
+[oss]
+[[pulse-trufflehog.files]]
+file = "packages/nvidia_nat_mysql/tests/test_mysql_object_store.py"
+
+[[pulse-trufflehog.files.secrets]]
+# Fake password string used for unittests
+type = "Password"
+values = ["pas****************-pw\""]
+
+[[pulse-trufflehog.files]]
+file = "tests/nat/authentication/test_http_basic_auth_exchanger.py"
+
+[[pulse-trufflehog.files.secrets]]
+# Fake password string used for unittests
+type = "Password"
+values = ["\"pa***********ass\"", "\"pa******** \"b\""]
+
+[[pulse-trufflehog.files]]
+file = "tests/nat/authentication/test_data_models.py"
+
+[[pulse-trufflehog.files.secrets]]
+# Fake passwords and credentials used for unittests
+type = "Password"
+values = ["pas**************and\"", "\"pa******** \"p\""]

@@ -33,6 +33,7 @@ Each NVIDIA NeMo Agent toolkit example demonstrates a particular feature or use 
   - [Human In The Loop (HITL)](#human-in-the-loop-hitl)
   - [Memory](#memory)
   - [Model Context Protocol (MCP)](#model-context-protocol-mcp)
+  - [Notebooks](#notebooks)
   - [Object Store](#object-store)
   - [Observability](#observability)
   - [Retrieval Augmented Generation (RAG)](#retrieval-augmented-generation-rag)
@@ -91,6 +92,10 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 
 ### Model Context Protocol (MCP)
 - **[`simple_calculator_mcp`](MCP/simple_calculator_mcp/README.md)**: Demonstrates Model Context Protocol support using the basic simple calculator example
+
+### Notebooks
+- **[`first_search_agent`](notebooks/first_search_agent/)**: Demonstrates how to bring an existing agent from a framework like LangChain into this toolkit
+- **[`retail_sales_agent`](notebooks/retail_sales_agent/)**: A simple retail agent that showcases how to incrementally add tools and agents to build a multi-agent system
 
 ### Object Store
 - **[`user_report`](object_store/user_report/README.md)**: User report generation and storage system using object store (S3, MySQL, and/or memory)

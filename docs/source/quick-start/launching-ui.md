@@ -76,6 +76,10 @@ Running this command will produce the following expected output:
 ### Launch the NeMo Agent Toolkit User Interface
 After the NeMo Agent toolkit server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official [Node.js documentation](https://nodejs.org/en/download).
 
+For comprehensive information about the NeMo Agent Toolkit UI, including setup instructions, configuration options, and UI components documentation, see:
+- [NeMo Agent Toolkit UI README](https://github.com/NVIDIA/NeMo-Agent-Toolkit-UI/blob/main/README.md) - Complete UI documentation and setup guide
+- [UI Components Documentation](https://github.com/NVIDIA/NeMo-Agent-Toolkit-UI/tree/main/docs/ui) - Detailed information about components, features, and interface elements
+
 ```bash
 cd external/nat-ui
 npm install

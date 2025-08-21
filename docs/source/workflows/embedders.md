@@ -21,6 +21,7 @@ NeMo Agent toolkit supports the following embedder providers:
 |----------|------|-------------|
 | [NVIDIA NIM](https://build.nvidia.com) | `nim` | NVIDIA Inference Microservice (NIM) |
 | [OpenAI](https://openai.com) | `openai` | OpenAI API |
+| [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
 
 ## Embedder Configuration
 
@@ -34,9 +35,18 @@ embedders:
   openai_embedder:
     _type: openai
     model_name: text-embedding-3-small
+  azure_openai_embedder:
+    _type: azure_openai
+    azure_deployment: text-embedding-3-small
 ```
 
 ### NVIDIA NIM
+
+You can use the following environment variables to configure the NVIDIA NIM embedder provider:
+
+* `NVIDIA_API_KEY` - The API key to access NVIDIA NIM resources
+
+
 The NIM embedder provider is defined by the {py:class}`~nat.embedder.nim_embedder.NIMEmbedderModelConfig` class.
 
 * `model_name` - The name of the model to use
@@ -47,6 +57,10 @@ The NIM embedder provider is defined by the {py:class}`~nat.embedder.nim_embedde
 
 ### OpenAI
 
+You can use the following environment variables to configure the OpenAI embedder provider:
+
+* `OPENAI_API_KEY` - The API key to access OpenAI resources
+
 The OpenAI embedder provider is defined by the {py:class}`~nat.embedder.openai_embedder.OpenAIEmbedderModelConfig` class.
 
 * `model_name` - The name of the model to use
@@ -54,3 +68,16 @@ The OpenAI embedder provider is defined by the {py:class}`~nat.embedder.openai_e
 * `base_url` - The base URL to use for the model
 * `max_retries` - The maximum number of retries for the request
 
+### Azure OpenAI
+
+You can use the following environment variables to configure the Azure OpenAI embedder provider:
+
+* `AZURE_OPENAI_API_KEY` - The API key to access Azure OpenAI resources
+* `AZURE_OPENAI_ENDPOINT` - The Azure OpenAI endpoint to access Azure OpenAI resources
+
+The Azure OpenAI embedder provider is defined by the {py:class}`~nat.embedder.azure_openai_embedder.AzureOpenAIEmbedderModelConfig` class.
+
+* `api_key` - The API key to use for the model
+* `api_version` - The API version to use for the model
+* `azure_endpoint` - The Azure OpenAI endpoint to use for the model
+* `azure_deployment` - The name of the Azure OpenAI deployment to use
