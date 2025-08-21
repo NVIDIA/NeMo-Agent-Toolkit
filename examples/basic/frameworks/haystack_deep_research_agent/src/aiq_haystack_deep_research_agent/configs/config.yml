@@ -18,8 +18,8 @@ general:
 
 workflow:
   _type: haystack_deep_research_agent
-  agent_model: meta/llama-3.1-8b-instruct
-  rag_model: meta/llama-3.1-8b-instruct
+  agent_model: nvidia/llama-3.3-nemotron-super-49b-v1
+  rag_model: nvidia/llama-3.3-nemotron-super-49b-v1
   nvidia_api_url: https://integrate.api.nvidia.com/v1
   max_agent_steps: 20
   opensearch_url: http://localhost:9200

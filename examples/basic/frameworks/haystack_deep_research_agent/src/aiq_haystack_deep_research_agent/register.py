@@ -37,8 +37,8 @@ class HaystackDeepResearchWorkflowConfig(
     When you use information from the document database, cite the text used from the source document.
     It is important that you cite accurately.
     """
-    agent_model: str = "nvidia/llama-3.3-nemotron-super-49b-v1"
-    rag_model: str = "nvidia/llama-3.2-nv-embedqa-1b-v2"
+    agent_model: str = "meta/llama-3.1-8b-instruct"
+    rag_model: str = "meta/llama-3.1-8b-instruct"
     max_agent_steps: int = 20
     opensearch_url: str = "http://localhost:9200"
     nvidia_api_url: str = "https://integrate.api.nvidia.com/v1"
