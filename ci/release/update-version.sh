@@ -54,7 +54,7 @@ function sed_runner() {
 # Currently only the pypi.md file for the nvidia-nat package contains links to documentation
 # Replace this with a `find ./ -name "pypi.md"` if this is needed for the other pypi.md files
 if [[ -z "${SKIP_MD_UPDATE}" ]]; then
-   sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_VERSION}|g" src/nat/meta/pypi.md
+   sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_SHORT_TAG}|g" src/nat/meta/pypi.md
 fi
 
 
@@ -90,3 +90,8 @@ for TOML_FILE in "${NAT_PACKAGE_TOMLS[@]}"; do
       --new-version="${NAT_VERSION}" \
       --version-match="${VERSION_MATCH}"
 done
+
+# Update the documentation versions1.json file
+${CUR_DIR}/update_doc_versions1.py \
+  --versions-file=${PROJECT_ROOT}/docs/source/versions1.json \
+  --new-version="${NEXT_SHORT_TAG}"

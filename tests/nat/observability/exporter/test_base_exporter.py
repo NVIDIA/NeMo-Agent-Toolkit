@@ -332,12 +332,12 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         await exporter._cleanup()
 
     async def test_wait_for_tasks_no_tasks(self, exporter):
-        """Test _wait_for_tasks with no tasks."""
+        """Test wait_for_tasks with no tasks."""
         # Should complete immediately
-        await exporter._wait_for_tasks()
+        await exporter.wait_for_tasks()
 
     async def test_wait_for_tasks_with_completing_tasks(self, exporter):
-        """Test _wait_for_tasks with tasks that complete quickly."""
+        """Test wait_for_tasks with tasks that complete quickly."""
 
         async def quick_task():
             await asyncio.sleep(0.01)
@@ -348,13 +348,13 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         exporter._tasks.add(task1)
         exporter._tasks.add(task2)
 
-        await exporter._wait_for_tasks(timeout=1.0)
+        await exporter.wait_for_tasks(timeout=1.0)
 
         assert task1.done()
         assert task2.done()
 
     async def test_wait_for_tasks_timeout(self, exporter, caplog):
-        """Test _wait_for_tasks with timeout."""
+        """Test wait_for_tasks with timeout."""
 
         async def slow_task():
             await asyncio.sleep(10)  # Much longer than timeout
@@ -364,13 +364,13 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
 
         # Capture logs from the specific logger
         with caplog.at_level(logging.WARNING, logger="nat.observability.exporter.base_exporter"):
-            await exporter._wait_for_tasks(timeout=0.01)
+            await exporter.wait_for_tasks(timeout=0.01)
 
         assert "did not complete within" in caplog.text
         task.cancel()  # Clean up
 
     async def test_wait_for_tasks_exception(self, exporter, caplog):
-        """Test _wait_for_tasks with task that raises exception."""
+        """Test wait_for_tasks with task that raises exception."""
 
         async def failing_task():
             raise ValueError("task error")
@@ -379,7 +379,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         exporter._tasks.add(task)
 
         with caplog.at_level(logging.ERROR):
-            await exporter._wait_for_tasks()
+            await exporter.wait_for_tasks()
 
         # Should log error but not re-raise
         assert task.done()
