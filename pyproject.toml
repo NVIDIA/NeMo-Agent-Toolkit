@@ -173,6 +173,7 @@ members = ["packages/*"]
 exclude = ["packages/compat"]
 
 [dependency-groups]
+# Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
   "asgi-lifespan~=2.1",
   "httpx-sse~=0.4",
@@ -202,7 +203,7 @@ dev = [
   "twine~=6.0",
   "vale~=3.12",
   "yapf==0.43.*",
-] # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
+]
 
 [project.entry-points.'nat.components']
 nat_agents = "nat.agent.register"
@@ -254,31 +255,15 @@ testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 
+
 [tool.ruff]
 # Set the maximum line length to 120.
 line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
-# The D, E, F, W categories are flake8 rules.
-select = ["D", "E", "F", "W"]
-ignore = [
-  # Ignore missing docstrings __init__ methods as we document those on the class
-  "D107",
-  # Don't require quotes to be placed on the same line as a one-line docstring, useful when the docstring is close
-  # to the line limit
-  "D200",
-  # Allow a blank line between a docstring and the code
-  "D202",
-  # D204: 1 blank line required after class docstring
-  "D204",
-  # D205: 1 blank line required between summary line and description (allow for a paragraph)
-  "D205",
-  # D400: First line should end with a period (only works if we're adhering to D205)
-  "D400",
-  # D401: First line should be in imperative mood
-  "D401",
-]
+# The E, F, W categories are flake8 rules.
+select = ["E", "F", "W"]
 
 [tool.ruff.lint.isort]
 case-sensitive = true
