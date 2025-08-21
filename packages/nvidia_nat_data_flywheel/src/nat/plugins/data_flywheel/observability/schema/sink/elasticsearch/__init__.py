@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-from typing import Literal
+#  schemas are auto-discovered by the discovery system - no manual imports needed
+from .contract_version import ElasticsearchContractVersion
 
-from nat.plugins.data_flywheel.observability.schema.langchain.openai_trace_source import OpenAITraceSourceBase
-from nat.plugins.data_flywheel.observability.schema.provider import Provider
-
-logger = logging.getLogger(__name__)
-
-
-class NIMTraceSource(OpenAITraceSourceBase[Literal[Provider.NIM]]):
-    provider: Literal[Provider.NIM] = Provider.NIM
+__all__ = ["ElasticsearchContractVersion"]

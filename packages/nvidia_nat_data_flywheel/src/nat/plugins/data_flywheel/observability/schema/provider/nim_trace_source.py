@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .nim_converter import convert_langchain_nim
-from .openai_converter import convert_langchain_openai
+import logging
 
-__all__ = [
-    "convert_langchain_nim",
-    "convert_langchain_openai",
-]
+from nat.plugins.data_flywheel.observability.schema.provider.openai_trace_source import OpenAITraceSourceBase
+
+logger = logging.getLogger(__name__)
+
+
+class NIMTraceSource(OpenAITraceSourceBase):
+    pass

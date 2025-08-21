@@ -56,6 +56,7 @@ class ElasticsearchMixin:
             item: Dictionary or list of dictionaries to export to Elasticsearch.
         """
         logger.info("Exporting item: %s", item)
+        return
 
         if isinstance(item, list):
             if not item:  # Empty list

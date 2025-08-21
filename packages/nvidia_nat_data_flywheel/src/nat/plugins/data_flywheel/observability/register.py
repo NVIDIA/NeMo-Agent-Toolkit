@@ -21,7 +21,7 @@ from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
-from nat.plugins.data_flywheel.observability.schema.elasticsearch import ElasticsearchContractVersion
+from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ElasticsearchContractVersion
 
 logger = logging.getLogger(__name__)
 

@@ -80,11 +80,11 @@ def get_trace_source(span: Span, client_id: str) -> TraceContainer:
         detected_provider = _get_string_value(detected_provider)
 
         # Now convert to dynamic type - must have registered adapter
-        return TraceAdapterRegistry.create_dynamic_instance(trace_container, framework, detected_provider)
+        return TraceAdapterRegistry.create_dynamic_instance(trace_container)
 
     except Exception as e:
         # Schema detection failed - this indicates missing schema registration or malformed data
-        available_schemas = list(TraceAdapterRegistry._registered_models.keys())
+        available_schemas = list(TraceAdapterRegistry._registered_types.keys())
         schema_names = [schema.__name__ for schema in available_schemas]
 
         raise ValueError(f"Schema-based detection failed for framework '{framework}'. "

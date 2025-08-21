@@ -39,3 +39,5 @@ nvidia-nat = { workspace = true }
 
 [project.entry-points.'nat.components']
 nat_data_flywheel_observability = "nat.plugins.data_flywheel.observability.register"
+nat_data_flywheel_adapter = "nat.plugins.data_flywheel.observability.processor.trace_conversion.adapters.register"
+nat_data_flywheel_schema = "nat.plugins.data_flywheel.observability.schema.register"

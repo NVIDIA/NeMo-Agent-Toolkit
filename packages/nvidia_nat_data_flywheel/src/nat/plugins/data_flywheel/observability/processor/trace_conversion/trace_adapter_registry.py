@@ -30,44 +30,37 @@ class TraceAdapterRegistry:
     Maintains schema detection through Pydantic unions while enabling dynamic registration.
     """
 
-    _registered_types: dict[tuple[str, str], type] = {}  # (framework, provider) -> concrete_type
-    _registered_models: dict[type, tuple[str, str]] = {}  # model_class -> (framework, provider)
+    _registered_types: dict[type, type] = {}  # model_class -> concrete_type
     _union_cache: Any = None
 
     @classmethod
     def register_adapter(cls, trace_source_model: type) -> Callable[[Callable], Callable]:
         """Register adapter with a trace source Pydantic model.
 
-        The model defines the schema for union-based detection and provides
-        framework/provider information.
+        The model defines the schema for union-based detection, allowing automatic
+        schema matching without explicit framework/provider specification.
 
         Args:
             trace_source_model (type): Pydantic model class that defines the trace source schema
-                               (e.g., OpenAITraceContainer, NIMTraceContainer, CustomTraceContainer)
+                               (e.g., OpenAITraceSource, NIMTraceSource, CustomTraceSource)
 
         Returns:
             Callable: Decorator function that registers the converter
         """
 
         def decorator(func):
-            # Extract framework and provider from the model
-            framework, provider = cls._extract_framework_provider(trace_source_model)
 
             # Create unique concrete type for GlobalTypeConverter distinction
-            type_name = f"{framework.title()}{provider.title()}TraceContainer"
-            concrete_type = type(
-                type_name, (TraceContainer, ),
-                {
-                    '_framework': framework,
-                    '_provider': provider,
-                    '_source_model': trace_source_model,
-                    '__module__': func.__module__,
-                    '__qualname__': type_name,
-                })
+            type_name = f"{trace_source_model.__name__}TraceContainer"
+            concrete_type = type(type_name, (TraceContainer, ),
+                                 {
+                                     '_source_model': trace_source_model,
+                                     '__module__': func.__module__,
+                                     '__qualname__': type_name,
+                                 })
 
             # Store the mapping
-            cls._registered_types[(framework, provider)] = concrete_type
-            cls._registered_models[trace_source_model] = (framework, provider)
+            cls._registered_types[trace_source_model] = concrete_type
 
             # Immediately rebuild union and update TraceContainer model
             cls._rebuild_union()
@@ -78,7 +71,7 @@ class TraceAdapterRegistry:
                 return func(trace_source)
 
             # Set proper function metadata
-            typed_converter.__name__ = f"convert_{framework}_{provider}"
+            typed_converter.__name__ = f"convert_{trace_source_model.__name__}"
             typed_converter.__qualname__ = typed_converter.__name__
             typed_converter.__annotations__ = {
                 'trace_source': concrete_type, 'return': func.__annotations__.get('return', type(None))
@@ -86,48 +79,14 @@ class TraceAdapterRegistry:
 
             # Register with GlobalTypeConverter
             GlobalTypeConverter.register_converter(typed_converter)
-            logger.debug("Registered converter: %s for model %s (%s+%s) with type %s",
+            logger.debug("Registered converter: %s for model %s with type %s",
                          typed_converter.__name__,
                          trace_source_model.__name__,
-                         framework,
-                         provider,
-                         type_name)
+                         concrete_type.__name__)
 
             return func
 
         return decorator
-
-    @classmethod
-    def _extract_framework_provider(cls, model: type) -> tuple[str, str]:
-        """Extract framework and provider from a trace source model.
-
-        Args:
-            model (type): Pydantic model class
-
-        Returns:
-            tuple[str, str]: Tuple of (framework, provider)
-        """
-        # Try to get default values from the model fields
-        extracted_framework = "unknown"
-        extracted_provider = "unknown"
-
-        if hasattr(model, 'model_fields'):
-            # Pydantic v2 approach
-            if 'framework' in model.model_fields:  # type: ignore
-                fw_field = model.model_fields['framework']  # type: ignore
-                if hasattr(fw_field, 'default') and fw_field.default is not None:
-                    extracted_framework = getattr(fw_field.default, 'value', str(fw_field.default))
-
-            if 'provider' in model.model_fields:  # type: ignore
-                prov_field = model.model_fields['provider']  # type: ignore
-                if hasattr(prov_field, 'default') and prov_field.default is not None:
-                    extracted_provider = getattr(prov_field.default, 'value', str(prov_field.default))
-
-        logger.debug("Extracted framework='%s', provider='%s' from %s",
-                     extracted_framework,
-                     extracted_provider,
-                     model.__name__)
-        return extracted_framework, extracted_provider
 
     @classmethod
     def get_current_union(cls) -> type:
@@ -148,7 +107,7 @@ class TraceAdapterRegistry:
         all_schema_types = set()
 
         # Add all registered schema models for union detection
-        all_schema_types.update(cls._registered_models.keys())
+        all_schema_types.update(cls._registered_types.keys())
 
         # Create union from schema types (these are used for schema detection)
         if len(all_schema_types) == 0:
@@ -183,45 +142,46 @@ class TraceAdapterRegistry:
             logger.warning("Failed to update TraceContainer model: %s", e)
 
     @classmethod
-    def create_dynamic_instance(cls, trace_source: TraceContainer, framework: str, provider: str) -> TraceContainer:
+    def create_dynamic_instance(cls, trace_container: TraceContainer) -> TraceContainer:
         """Convert a TraceContainer to the appropriate dynamic type.
 
         Args:
-            trace_source (TraceContainer): The base TraceContainer instance
-            framework (str): Framework name
-            provider (str): Provider name
+            trace_container (TraceContainer): The base TraceContainer instance
 
         Returns:
             TraceContainer: The dynamic type instance
 
         Raises:
-            ValueError: If no adapter is registered for the framework+provider combination
+            ValueError: If no adapter is registered for the trace source schema type
             RuntimeError: If dynamic type creation fails
         """
-        # Check if we have a registered dynamic type for this framework+provider
-        if (framework, provider) in cls._registered_types:
-            dynamic_type = cls._registered_types[(framework, provider)]
-            logger.debug("Converting to dynamic type %s for %s+%s", dynamic_type.__name__, framework, provider)
+        # Check if we have a registered dynamic type for this trace source schema
+        if trace_container.source.__class__ in cls._registered_types:
+            dynamic_type = cls._registered_types[trace_container.source.__class__]
+            logger.debug("Converting to dynamic type %s for %s",
+                         dynamic_type.__name__,
+                         trace_container.__class__.__name__)
 
             # Create instance of the dynamic type with the same data
             try:
-                return dynamic_type(source=trace_source.source, span=trace_source.span)
+                return dynamic_type(source=trace_container.source, span=trace_container.span)
             except Exception as e:
                 logger.error("Failed to create dynamic type %s: %s", dynamic_type.__name__, e)
                 raise RuntimeError(
-                    f"Dynamic type creation failed for {framework}+{provider}: {dynamic_type.__name__}") from e
+                    f"Dynamic type creation failed for {trace_container.__class__.__name__}: {dynamic_type.__name__}"
+                ) from e
         else:
-            logger.error("No dynamic type registered for %s+%s", framework, provider)
-            raise ValueError(f"No adapter registered for framework='{framework}' provider='{provider}'")
+            logger.error("No dynamic type registered for schema %s", trace_container.source.__class__.__name__)
+            raise ValueError(f"No adapter registered for schema {trace_container.source.__class__.__name__}")
 
     @classmethod
-    def list_registered_types(cls) -> dict[tuple[str, str], str]:
-        """List all registered framework+provider combinations.
+    def list_registered_types(cls) -> dict[type, type]:
+        """List all registered trace source schema types and their concrete container types.
 
         Returns:
-            dict[tuple[str, str], str]: Dict mapping (framework, provider) tuples to type names
+            dict[type, type]: Dict mapping trace source model types to concrete container types
         """
-        return {key: type_obj.__name__ for key, type_obj in cls._registered_types.items()}
+        return cls._registered_types
 
 
 # Convenience function for adapter registration

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .contract_version import ElasticsearchContractVersion
+# pylint: disable=unused-import
+# flake8: noqa
+# isort:skip_file
 
-__all__ = ["ElasticsearchContractVersion"]
+# Import any adapters which need to be automatically registered here
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.adapters.elasticsearch import \
+    nim_converter
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.adapters.elasticsearch import \
+    openai_converter

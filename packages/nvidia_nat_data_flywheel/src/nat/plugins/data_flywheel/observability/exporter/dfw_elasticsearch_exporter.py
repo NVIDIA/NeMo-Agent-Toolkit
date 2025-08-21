@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from nat.builder.context import AIQContextState
 from nat.plugins.data_flywheel.observability.exporter.dfw_exporter import DFWExporter
 from nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin import ElasticsearchMixin
-from nat.plugins.data_flywheel.observability.schema.elasticsearch.contract_version import ElasticsearchContractVersion
+from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ElasticsearchContractVersion
 
 logger = logging.getLogger(__name__)
 
