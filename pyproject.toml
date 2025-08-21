@@ -260,8 +260,8 @@ line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
-# Add the `line-too-long` rule to the enforced rule set.
-select = ["E", "F", "W"]
+# The D, E, F, W categories are flake8 rules.
+select = ["D", "E", "F", "W"]
 ignore = [
   # Ignore missing docstrings __init__ methods as we document those on the class
   "D107",
@@ -282,7 +282,6 @@ ignore = [
 
 [tool.ruff.lint.isort]
 case-sensitive = true
-
 
 ## Pylint configuration begins here
 
