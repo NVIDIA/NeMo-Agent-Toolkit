@@ -20,6 +20,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+# Type alias for evaluation call objects that have an optional 'id' attribute
+EvalCallType = Any  # Could be Weave Call object or other tracing framework objects
+
 
 class EvalTraceContext:
     """
@@ -31,15 +34,15 @@ class EvalTraceContext:
     """
 
     def __init__(self):
-        self.eval_call = None  # Store the evaluation call/context for propagation
+        self.eval_call: EvalCallType | None = None  # Store the evaluation call/context for propagation
 
-    def set_eval_call(self, eval_call: Any) -> None:
+    def set_eval_call(self, eval_call: EvalCallType | None) -> None:
         """Set the evaluation call/context for propagation to traces."""
         self.eval_call = eval_call
         if eval_call:
             logger.debug("Set evaluation call context: %s", getattr(eval_call, 'id', str(eval_call)))
 
-    def get_eval_call(self) -> Any:
+    def get_eval_call(self) -> EvalCallType | None:
         """Get the current evaluation call/context."""
         return self.eval_call
 
@@ -60,7 +63,7 @@ class WeaveEvalTraceContext(EvalTraceContext):
     def __init__(self):
         super().__init__()
         self.available = False
-        self.set_call_stack: Callable[[Any], Any] | None = None
+        self.set_call_stack: Callable[[list[EvalCallType]], Any] | None = None
 
         try:
             from weave.trace.context.call_context import set_call_stack

@@ -15,7 +15,11 @@
 
 import asyncio
 import logging
+from typing import TYPE_CHECKING
 from typing import Any
+
+if TYPE_CHECKING:
+    from nat.eval.utils.eval_trace_ctx import EvalTraceContext
 
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
@@ -32,7 +36,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
     Class to handle all Weave integration functionality.
     """
 
-    def __init__(self, eval_trace_context):
+    def __init__(self, eval_trace_context: "EvalTraceContext"):
         self.available = False
         self.client = None
         self.eval_logger = None
