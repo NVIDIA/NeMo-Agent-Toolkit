@@ -34,8 +34,11 @@ function get_git_tag() {
             exit 1;
         fi
 
-        # If the branch is a nightly build create a version which will be accepted by pypi
-        # Note: We are intentionally creating an actual tag, just setting the variable
+        # If the branch is a nightly build create a version which will be accepted by pypi,
+        # The sed script here is splitting on either the first dash or 'a',
+        # transforming a tag like `v1.3.0-dev-17-g7681cf9f` into `v1.3.0a20250821`
+        # and a tag like `v1.3.0a5` into `v1.3.0a20250821`
+        # Note: We are intentionally not ceating an actual tag, just setting the variable
         GIT_TAG=$(echo $GIT_TAG | sed -E -e "s/(-|a).*/a$(date +"%Y%m%d")/")
     fi
 
