@@ -124,7 +124,7 @@ class TestOTLPSpanAdapterExporterIntegration:
             exporter.export(end_event)
 
             # Wait for async export to complete
-            await exporter._wait_for_tasks()
+            await exporter.wait_for_tasks()
 
             # Give a small buffer for HTTP request to complete
             await asyncio.sleep(0.1)
@@ -158,7 +158,7 @@ class TestOTLPSpanAdapterExporterIntegration:
             exporter.export(end_event)
 
             # Wait for export attempt (should fail but not crash)
-            await exporter._wait_for_tasks()
+            await exporter.wait_for_tasks()
             await asyncio.sleep(0.1)
 
         # Test passes if no exception was raised - error should be logged internally
@@ -202,7 +202,7 @@ class TestOTLPSpanAdapterExporterIntegration:
                 exporter.export(end_event)
 
             # Wait for batch processing
-            await exporter._wait_for_tasks()
+            await exporter.wait_for_tasks()
             await asyncio.sleep(0.1)
 
         # Validate that batch export occurred
@@ -219,7 +219,7 @@ class TestOTLPSpanAdapterExporterIntegration:
         async with exporter.start():
             exporter.export(start_event)
             exporter.export(end_event)
-            await exporter._wait_for_tasks()
+            await exporter.wait_for_tasks()
             await asyncio.sleep(0.1)
 
         # Validate that spans were exported
