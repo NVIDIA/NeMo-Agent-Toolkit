@@ -42,17 +42,22 @@ function get_git_tag() {
     echo ${GIT_TAG}
 }
 
-function is_current_commit_tagged() {
-    # Check if the current commit is tagged
+function is_current_commit_release_tagged() {
+    # Check if the current commit is tagged for release, either an RC tag or the release tag
     set +e
-    git describe --tags --exact-match HEAD >/dev/null 2>&1
+    GIT_TAG=$(git describe --tags --exact-match HEAD 2>/dev/null)
     local status_code=$?
     set -e
 
     # Convert the unix status code to a boolean value
     local is_tagged=0
     if [[ ${status_code} -eq 0 ]]; then
-        is_tagged=1
+        local is_pre_release=0
+
+        # Ensure we don't have a dev or alpha tag
+        if [[ ! (${GIT_TAG} =~ "-dev" || ${GIT_TAG} =~ "a") ]]; then
+            is_tagged=1
+        fi
     fi
     echo ${is_tagged}
 }
