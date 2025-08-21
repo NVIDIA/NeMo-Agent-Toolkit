@@ -11,17 +11,17 @@ from haystack.tools import ComponentTool
 
 
 def create_search_tool() -> ComponentTool:
-	search_pipeline = Pipeline()
-	search_pipeline.add_component("search", SerperDevWebSearch(top_k=10))
-	search_pipeline.add_component(
-		"fetcher",
-		LinkContentFetcher(timeout=3, raise_on_failure=False, retry_attempts=2),
-	)
-	search_pipeline.add_component("converter", HTMLToDocument())
-	search_pipeline.add_component(
-		"output_adapter",
-		OutputAdapter(
-			template="""
+    search_pipeline = Pipeline()
+    search_pipeline.add_component("search", SerperDevWebSearch(top_k=10))
+    search_pipeline.add_component(
+        "fetcher",
+        LinkContentFetcher(timeout=3, raise_on_failure=False, retry_attempts=2),
+    )
+    search_pipeline.add_component("converter", HTMLToDocument())
+    search_pipeline.add_component(
+        "output_adapter",
+        OutputAdapter(
+            template="""
 			{%- for doc in docs -%}
 				{%- if doc.content -%}
 					<search-result url="{{ doc.meta.url }}">
@@ -30,22 +30,22 @@ def create_search_tool() -> ComponentTool:
 				{%- endif -%}
 			{%- endfor -%}
 			""",
-			output_type=str,
-		),
-	)
-	search_pipeline.connect("search.links", "fetcher.urls")
-	search_pipeline.connect("fetcher.streams", "converter.sources")
-	search_pipeline.connect("converter.documents", "output_adapter.docs")
+            output_type=str,
+        ),
+    )
+    search_pipeline.connect("search.links", "fetcher.urls")
+    search_pipeline.connect("fetcher.streams", "converter.sources")
+    search_pipeline.connect("converter.documents", "output_adapter.docs")
 
-	search_component = SuperComponent(
-		pipeline=search_pipeline,
-		input_mapping={"query": ["search.query"]},
-		output_mapping={"output_adapter.output": "search_result"},
-	)
+    search_component = SuperComponent(
+        pipeline=search_pipeline,
+        input_mapping={"query": ["search.query"]},
+        output_mapping={"output_adapter.output": "search_result"},
+    )
 
-	return ComponentTool(
-		name="search",
-		description="Use this tool to search for information on the internet.",
-		component=search_component,
-		outputs_to_string={"source": "search_result"},
-	)
+    return ComponentTool(
+        name="search",
+        description="Use this tool to search for information on the Internet.",
+        component=search_component,
+        outputs_to_string={"source": "search_result"},
+    )
