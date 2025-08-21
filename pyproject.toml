@@ -7,7 +7,7 @@ where = ["src"]
 include = ["aiq", "nat.*"]
 
 [tool.setuptools_scm]
-# intentionally empty, the section is required for setuptools_scm to work but we don't need to set anything
+git_describe_command = "git describe --long --first-parent"
 
 [project]
 name = "nvidia-nat"

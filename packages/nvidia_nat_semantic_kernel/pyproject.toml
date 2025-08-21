@@ -9,6 +9,7 @@ include = ["nat.*"]
 
 
 [tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
 root = "../.."
 
 

@@ -3,6 +3,9 @@ build-backend = "setuptools.build_meta"
 {% if editable %}requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
+# NAT uses the --first-parent flag to avoid tags from previous releases which have been merged into the develop branch
+# from causing an unexpected version change. This can be safely removed if developing outside of the NAT repository.
+git_describe_command = "git describe --long --first-parent"
 root = "{{ rel_path_to_repo_root}}"{% else %}requires = ["setuptools >= 64"]{% endif %}
 
 [project]

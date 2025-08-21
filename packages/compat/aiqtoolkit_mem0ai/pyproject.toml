@@ -4,6 +4,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 
 [tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
