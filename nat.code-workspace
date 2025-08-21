@@ -4,9 +4,8 @@
         // Extension identifier format: ${publisher}.${name}. Example: vscode.csharp
         // List of extensions which should be recommended for users of this workspace.
         "recommendations": [
+            "charliermarsh.ruff",
             "eeyore.yapf",
-            "ms-python.flake8",
-            "ms-python.isort",
             "ms-python.pylint",
             "ms-python.vscode-pylance",
             "stkb.rewrap"
