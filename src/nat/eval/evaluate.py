@@ -423,19 +423,19 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 logger.debug("No exporters to wait for")
                 return
 
-            logger.info(f"Waiting for export tasks from {len(all_exporters)} local exporters (timeout: {timeout}s)")
+            logger.info("Waiting for export tasks from %d local exporters (timeout: %ds)", len(all_exporters), timeout)
 
             for name, exporter in all_exporters.items():
                 try:
                     await exporter.wait_for_tasks(timeout=timeout)
-                    logger.info(f"Export tasks completed for exporter: {name}")
+                    logger.info("Export tasks completed for exporter: %s", name)
                 except Exception as e:
-                    logger.warning(f"Error waiting for export tasks from {name}: {e}")
+                    logger.warning("Error waiting for export tasks from %s: %s", name, e)
 
             logger.info("All local export task waiting completed")
 
         except Exception as e:
-            logger.warning(f"Failed to wait for local export tasks: {e}")
+            logger.warning("Failed to wait for local export tasks: %s", e)
 
     async def run_and_evaluate(self,
                                session_manager: SessionManager | None = None,

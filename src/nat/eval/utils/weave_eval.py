@@ -18,15 +18,15 @@ import logging
 from typing import TYPE_CHECKING
 from typing import Any
 
-if TYPE_CHECKING:
-    from nat.eval.utils.eval_trace_ctx import EvalTraceContext
-
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.usage_stats import UsageStats
 from nat.eval.usage_stats import UsageStatsItem
 from nat.profiler.data_models import ProfilerResults
+
+if TYPE_CHECKING:
+    from nat.eval.utils.eval_trace_ctx import EvalTraceContext
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +47,8 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             from weave.flow.eval_imperative import EvaluationLogger
             from weave.flow.eval_imperative import ScoreLogger
             from weave.trace.context import weave_client_context
-            self.EvaluationLogger = EvaluationLogger
-            self.ScoreLogger = ScoreLogger
+            self.evaluation_logger_cls = EvaluationLogger  # pylint: disable=invalid-name
+            self.score_logger_cls = ScoreLogger  # pylint: disable=invalid-name
             self.weave_client_context = weave_client_context
             self.available = True
         except ImportError:
@@ -94,7 +94,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             weave_dataset = self._get_weave_dataset(eval_input)
             config_dict = config.model_dump(mode="json")
             config_dict["name"] = workflow_alias
-            self.eval_logger = self.EvaluationLogger(model=config_dict, dataset=weave_dataset)
+            self.eval_logger = self.evaluation_logger_cls(model=config_dict, dataset=weave_dataset)
             self.pred_loggers = {}
 
             # Capture the current evaluation call for context propagation
@@ -165,7 +165,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         if profiler_results.workflow_runtime_metrics:
             profile_metrics["wf_runtime_p95"] = profiler_results.workflow_runtime_metrics.p95
 
-        # TODO:get the LLM tokens from the usage stats and log them
+        # TODO: get the LLM tokens from the usage stats and log them
         profile_metrics["total_runtime"] = usage_stats.total_runtime
 
         return profile_metrics

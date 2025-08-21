@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from contextlib import contextmanager
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -99,15 +98,8 @@ def test_weave_evaluation_context_without_weave(mock_eval_call):
 
 def test_weave_evaluation_context_exception_handling(mock_eval_call):
     """Test WeaveEvalTraceContext evaluation_context handles exceptions gracefully."""
-    mock_set_call_stack = MagicMock()
-
-    # Create a context manager that raises an exception
-    @contextmanager
-    def failing_context():
-        raise RuntimeError("Weave context failed")
-        yield  # This won't be reached
-
-    mock_set_call_stack.return_value = failing_context()
+    # Create a mock set_call_stack that raises an exception when called
+    mock_set_call_stack = MagicMock(side_effect=RuntimeError("Weave context failed"))
 
     ctx = WeaveEvalTraceContext()
     ctx.available = True
