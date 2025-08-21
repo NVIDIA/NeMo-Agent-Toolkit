@@ -3,6 +3,7 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
@@ -16,7 +17,7 @@ dependencies = [
   "jupyterlab~=4.3",
   "notebook~=7.3",
   "ipykernel~=6.29",
-  "ipywidgets~=8.1"
+  "ipywidgets~=8.1",
 ]
 requires-python = ">=3.11,<3.13"
 description = "Custom AIQ Toolkit Workflow"
