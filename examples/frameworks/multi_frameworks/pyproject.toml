@@ -9,7 +9,7 @@ root = "../../.."
 name = "nat_multi_frameworks"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[langchain,llama-index]~=1.2",
+  "nvidia-nat[langchain,llama-index]~=1.3",
   "arxiv~=2.1.3",
   "bs4==0.0.2",
   "markdown-it-py~=3.0",

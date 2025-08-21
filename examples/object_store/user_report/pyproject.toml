@@ -9,9 +9,9 @@ root = "../../.."
 name = "nat_user_report"
 dynamic = ["version"]
 dependencies = [
-    "nvidia-nat[mysql]",
-    "nvidia-nat[redis]",
-    "nvidia-nat[s3]",
+    "nvidia-nat[mysql]~=1.3",
+    "nvidia-nat[redis]~=1.3",
+    "nvidia-nat[s3]~=1.3",
 ]
 requires-python = ">=3.11,<3.13"
 description = "NeMo Agent toolkit example that uses an Object Store"
