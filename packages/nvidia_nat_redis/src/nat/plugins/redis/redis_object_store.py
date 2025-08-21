@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-import pickle
 
 import redis.asyncio as redis
 
@@ -32,8 +31,6 @@ class RedisObjectStore(ObjectStore):
     Implementation of ObjectStore that stores objects in Redis.
 
     Each object is stored as a single binary value at key "nat:object_store:bucket:{bucket_name}:{object_key}".
-
-    The full ObjectStoreItem is pickled to preserve content_type and metadata transparently.
     """
 
     def __init__(self, *, bucket_name: str, host: str, port: int, db: int):
@@ -88,8 +85,9 @@ class RedisObjectStore(ObjectStore):
 
         full_key = self._make_key(key)
 
+        item_json = item.model_dump_json()
         # Redis SET with NX ensures we do not overwrite existing keys
-        if not await self._client.set(full_key, pickle.dumps(item), nx=True):
+        if not await self._client.set(full_key, item_json, nx=True):
             raise KeyAlreadyExistsError(key=key,
                                         additional_message=f"Redis bucket {self._bucket_name} already has key {key}")
 
@@ -100,7 +98,8 @@ class RedisObjectStore(ObjectStore):
             raise RuntimeError("Connection not established")
 
         full_key = self._make_key(key)
-        await self._client.set(full_key, pickle.dumps(item))
+        item_json = item.model_dump_json()
+        await self._client.set(full_key, item_json)
 
     @override
     async def get_object(self, key: str) -> ObjectStoreItem:
@@ -113,7 +112,7 @@ class RedisObjectStore(ObjectStore):
         if data is None:
             raise NoSuchKeyError(key=key,
                                  additional_message=f"Redis bucket {self._bucket_name} does not have key {key}")
-        return pickle.loads(data)
+        return ObjectStoreItem.model_validate_json(data)
 
     @override
     async def delete_object(self, key: str):
