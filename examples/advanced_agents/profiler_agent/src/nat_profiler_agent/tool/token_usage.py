@@ -202,7 +202,7 @@ def create_token_usage_chart(df: pd.DataFrame, temp_dir: str) -> TokenUsageInfo:
 
     # Scale tokens per second to be visible alongside token counts
     # Find an appropriate scaling factor
-    max_token_count = max(max(prompt_tokens or [0]), max(completion_tokens or [0]), max(total_tokens or [0]))
+    max_token_count = max(*(prompt_tokens or [0]), *(completion_tokens or [0]), *(total_tokens or [0]))
     max_tps = max(tokens_per_second or [0])
     scaling_factor = max_token_count / max(max_tps, 1) * 0.8  # Scale tokens/sec to be visible but not dominate
 
