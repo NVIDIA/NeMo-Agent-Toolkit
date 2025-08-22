@@ -25,7 +25,6 @@ from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.trajectory_evaluator.evaluate import TrajectoryEvaluator
 
 
-
 @pytest.fixture
 def mock_llm():
     """Fixture to provide a mocked LLM."""

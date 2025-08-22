@@ -74,8 +74,7 @@ def set_framework_profiler_handler(
                 logger.debug("LlamaIndex callback handler registered")
 
             if LLMFrameworkEnum.CREWAI in frameworks and not _library_instrumented["crewai"]:
-                from nat.plugins.crewai.crewai_callback_handler import \
-                    CrewAIProfilerHandler
+                from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
 
                 handler = CrewAIProfilerHandler()
                 handler.instrument()

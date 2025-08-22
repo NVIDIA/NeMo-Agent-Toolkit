@@ -33,7 +33,6 @@ from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 
-
 @pytest.fixture
 def dataset_structure():
     """Fixture for dataset structure configuration"""

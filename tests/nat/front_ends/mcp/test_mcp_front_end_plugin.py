@@ -25,7 +25,6 @@ from nat.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
 from nat.test.functions import EchoFunctionConfig
 
 
-
 @pytest.fixture
 def echo_function_config():
     return EchoFunctionConfig()

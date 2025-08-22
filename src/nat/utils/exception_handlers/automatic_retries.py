@@ -26,7 +26,6 @@ from collections.abc import Sequence
 from typing import Any
 from typing import TypeVar
 
-
 T = TypeVar("T")
 Exc = tuple[type[BaseException], ...]  # exception classes
 CodePattern = int | str | range  # for retry_codes argument

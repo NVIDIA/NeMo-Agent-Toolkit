@@ -19,7 +19,6 @@ from pydantic import ValidationError
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 
 
-
 def test_mcp_front_end_config_default_values():
     """Test that the default values are set correctly."""
     config = MCPFrontEndConfig()

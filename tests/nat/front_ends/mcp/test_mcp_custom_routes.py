@@ -28,7 +28,6 @@ from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWork
 from nat.utils.type_utils import override
 
 
-
 class CustomMCPWorker(MCPFrontEndPluginWorker):
     """Custom MCP worker that adds additional routes."""
 

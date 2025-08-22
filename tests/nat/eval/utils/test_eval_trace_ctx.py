@@ -22,7 +22,6 @@ from nat.eval.utils.eval_trace_ctx import EvalTraceContext
 from nat.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
 
 
-
 @pytest.fixture
 def mock_eval_call():
     """Fixture to provide a mock evaluation call object."""

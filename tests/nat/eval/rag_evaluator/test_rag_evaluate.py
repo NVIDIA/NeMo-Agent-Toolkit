@@ -31,7 +31,6 @@ from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.rag_evaluator.evaluate import RAGEvaluator
 
 
-
 class ExampleModel(BaseModel):
     content: str
     other: str

@@ -49,7 +49,6 @@ from nat.profiler.data_models import ProfilerResults
 from nat.runtime.session import SessionManager
 
 
-
 @pytest.fixture
 def default_eval_run_config():
     """Fixture for default evaluation run configuration."""

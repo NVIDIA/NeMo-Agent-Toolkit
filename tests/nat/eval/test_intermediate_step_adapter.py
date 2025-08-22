@@ -24,7 +24,6 @@ from nat.data_models.invocation_node import InvocationNode
 from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
 
 
-
 @pytest.fixture
 def llm_name():
     return "mock_llm"

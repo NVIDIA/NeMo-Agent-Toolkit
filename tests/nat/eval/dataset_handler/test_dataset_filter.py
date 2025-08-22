@@ -21,7 +21,6 @@ from nat.data_models.dataset_handler import EvalFilterEntryConfig
 from nat.eval.dataset_handler.dataset_filter import DatasetFilter
 
 
-
 @pytest.fixture
 def sample_df():
     """
