@@ -688,7 +688,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                      step_adaptor=self.get_step_adaptor(),
                                                      result_type=ChatResponseChunk,
                                                      output_type=ChatResponseChunk))
-                    else:  # pylint: disable=no-else-return
+                    # pylint: disable-next=no-else-return
+                    else:
                         # Return single response - check if workflow supports non-streaming
                         try:
                             response.headers["Content-Type"] = "application/json"
@@ -722,7 +723,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                 single_response = ChatResponse.from_string(content)
                                 response.headers["Content-Type"] = "application/json"
                                 return single_response
-                            else:  # pylint: disable=no-else-return
+                            # pylint: disable-next=no-else-return
+                            else:
                                 raise
 
             return post_openai_api_compatible
