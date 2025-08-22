@@ -99,7 +99,7 @@ reviews:
             def fixture_my_fixture():
                 pass
 
-  auto_apply_labels: true`
+  auto_apply_labels: true
   suggested_labels: true
   labeling_instructions:
     - label: "! - Release"
