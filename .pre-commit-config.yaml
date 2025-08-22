@@ -32,12 +32,12 @@ repos:
     hooks:
       - id: uv-lock
 
-  # - repo: https://github.com/tcort/markdown-link-check
-  #   rev: v3.12.2
-  #   hooks:
-  #     - id: markdown-link-check
-  #       args: ["-q", "--config", "ci/markdown-link-check-config.json"]
-  #       exclude: "^src/nat/meta/pypi\\.md$"
+  - repo: https://github.com/tcort/markdown-link-check
+    rev: v3.12.2
+    hooks:
+      - id: markdown-link-check
+        args: ["-q", "--config", "ci/markdown-link-check-config.json"]
+        exclude: "^src/nat/meta/pypi\\.md$"
 
 default_language_version:
   python: python3
