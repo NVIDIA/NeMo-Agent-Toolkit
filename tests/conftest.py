@@ -107,7 +107,7 @@ def restore_environ_fixture():
 
 
 @pytest.fixture(name="set_test_api_keys")
-def set_test_api_keys_fixture(restore_environ):  # pylint: disable=unused-argument
+def set_test_api_keys_fixture(restore_environ):
     for key in ("NGC_API_KEY", "NVD_API_KEY", "NVIDIA_API_KEY", "OPENAI_API_KEY", "SERPAPI_API_KEY"):
         os.environ[key] = "test_key"
 
