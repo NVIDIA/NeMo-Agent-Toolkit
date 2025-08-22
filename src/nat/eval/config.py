@@ -27,7 +27,7 @@ class EvaluationRunConfig(BaseModel):
     """
     Parameters used for a single evaluation run.
     """
-    config_file: Path
+    config_file: Path | BaseModel
     dataset: str | None = None  # dataset file path can be specified in the config file
     result_json_path: str = "$"
     skip_workflow: bool = False
