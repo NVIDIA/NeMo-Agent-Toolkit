@@ -64,7 +64,7 @@ eval:
 
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_calculator/src/nat_simple_calculator/data/simple_calculator.json
+      file_path: examples/getting_started/simple_calculator/data/simple_calculator.json
 
   evaluators:
     tuneable_eval:
