@@ -44,6 +44,7 @@ Dask
 Databricks
 Datadog
 DB(s?)
+[Dd]enylist
 [Dd]eserialize
 [Dd]ev
 [Dd]evcontainer(s?)
@@ -77,7 +78,7 @@ LLM(s?)
 Loghub
 Mem0
 Milvus
-[Mm]ixin
+[Mm]ixin(s?)
 MLflow
 MLOps
 Morpheus
