@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
+class WeaveEvaluationIntegration:
     """
     Class to handle all Weave integration functionality.
     """
@@ -47,8 +47,8 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             from weave.flow.eval_imperative import EvaluationLogger
             from weave.flow.eval_imperative import ScoreLogger
             from weave.trace.context import weave_client_context
-            self.evaluation_logger_cls = EvaluationLogger  # pylint: disable=invalid-name
-            self.score_logger_cls = ScoreLogger  # pylint: disable=invalid-name
+            self.evaluation_logger_cls = EvaluationLogger
+            self.score_logger_cls = ScoreLogger
             self.weave_client_context = weave_client_context
             self.available = True
         except ImportError:

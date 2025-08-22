@@ -58,7 +58,7 @@ class UserManagerHolder():
         return self._context.user_manager.get_id()
 
 
-class Builder(ABC):  # pylint: disable=too-many-public-methods
+class Builder(ABC):
 
     @abstractmethod
     async def add_function(self, name: str | FunctionRef, config: FunctionBaseConfig) -> Function:

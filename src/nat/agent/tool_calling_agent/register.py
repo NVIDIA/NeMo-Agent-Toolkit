@@ -86,7 +86,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
 
             # get and return the output from the state
             state = ToolCallAgentGraphState(**state)
-            output_message = state.messages[-1]  # pylint: disable=E1136
+            output_message = state.messages[-1]
             return output_message.content
         except Exception as ex:
             logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)

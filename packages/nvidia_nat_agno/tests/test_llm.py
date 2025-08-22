@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=not-async-context-manager
-
 import os
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -181,12 +179,10 @@ class TestOpenAIAgno:
 
         # Check that nim_agno is registered for NIMModelConfig and LLMFrameworkEnum.AGNO
         assert (NIMModelConfig, LLMFrameworkEnum.AGNO) in mock_registry._llm_client_map
-        # pylint: disable-next=comparison-with-callable
         assert mock_registry._llm_client_map[(NIMModelConfig, LLMFrameworkEnum.AGNO)] == nim_agno
 
         # Check that openai_agno is registered for OpenAIModelConfig and LLMFrameworkEnum.AGNO
         assert (OpenAIModelConfig, LLMFrameworkEnum.AGNO) in mock_registry._llm_client_map
-        # pylint: disable-next=comparison-with-callable
         assert mock_registry._llm_client_map[(OpenAIModelConfig, LLMFrameworkEnum.AGNO)] == openai_agno
 
     @patch("agno.models.openai.OpenAIChat")

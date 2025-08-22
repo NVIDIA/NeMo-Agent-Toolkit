@@ -289,7 +289,7 @@ class StepAdaptor:
 
         return event
 
-    def process(self, step: IntermediateStep) -> ResponseSerializable | None:  # pylint: disable=R1710
+    def process(self, step: IntermediateStep) -> ResponseSerializable | None:
 
         # Track the chunk
         self._history.append(step)

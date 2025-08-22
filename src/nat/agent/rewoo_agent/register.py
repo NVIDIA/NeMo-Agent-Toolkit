@@ -133,7 +133,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
 
             # get and return the output from the state
             state = ReWOOGraphState(**state)
-            output_message = state.result.content  # pylint: disable=E1101
+            output_message = state.result.content
             return ChatResponse.from_string(output_message)
 
         except Exception as ex:

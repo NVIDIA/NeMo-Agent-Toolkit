@@ -66,7 +66,7 @@ def compute_inter_query_token_uniqueness_by_llm(all_steps: list[list[Intermediat
     # 2) Group by (llm_name, example_number), then sort each group
     grouped = cdf.groupby(['llm_name', 'example_number'], as_index=False, group_keys=True)
 
-    for (llm, ex_num), group_df in grouped:  # pylint: disable=unused-variable
+    for (llm, ex_num), group_df in grouped:
         # Sort by event_timestamp
         group_df = group_df.sort_values('event_timestamp', ascending=True)
 

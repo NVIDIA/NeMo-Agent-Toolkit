@@ -42,7 +42,7 @@ async def azure_openai_llama_index(embedder_config: AzureOpenAIEmbedderModelConf
 @register_embedder_client(config_type=NIMEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
 async def nim_llamaindex(embedder_config: NIMEmbedderModelConfig, _builder: Builder):
 
-    from llama_index.embeddings.nvidia import NVIDIAEmbedding  # pylint: disable=no-name-in-module
+    from llama_index.embeddings.nvidia import NVIDIAEmbedding
 
     config_obj = {
         **embedder_config.model_dump(exclude={"type", "model_name"}, by_alias=True),

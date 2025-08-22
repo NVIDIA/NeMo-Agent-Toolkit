@@ -29,7 +29,6 @@ from nat.registry_handlers.schemas.publish import Artifact
 from nat.runtime.loader import PluginTypes
 from nat.runtime.loader import discover_entrypoints
 
-# pylint: disable=redefined-outer-name
 logger = logging.getLogger(__name__)
 
 

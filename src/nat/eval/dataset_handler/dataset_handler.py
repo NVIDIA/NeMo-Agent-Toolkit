@@ -146,13 +146,12 @@ class DatasetHandler:
             # When num_passes is specified, always use concurrency * num_passes
             # This respects the user's intent for exact number of passes
             target_size = self.concurrency * self.num_passes
+        # When num_passes = 0, use the largest multiple of concurrency <= original_size
+        # If original_size < concurrency, we need at least concurrency rows
+        elif original_size >= self.concurrency:
+            target_size = (original_size // self.concurrency) * self.concurrency
         else:
-            # When num_passes = 0, use the largest multiple of concurrency <= original_size
-            # If original_size < concurrency, we need at least concurrency rows
-            if original_size >= self.concurrency:
-                target_size = (original_size // self.concurrency) * self.concurrency
-            else:
-                target_size = self.concurrency
+            target_size = self.concurrency
 
         if target_size == 0:
             raise ValueError("Input dataset too small for even one batch at given concurrency.")

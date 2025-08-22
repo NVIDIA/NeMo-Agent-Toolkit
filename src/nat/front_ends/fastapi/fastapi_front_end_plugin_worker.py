@@ -522,9 +522,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         workflow = session_manager.workflow
 
-        GenerateBodyType = workflow.input_schema  # pylint: disable=invalid-name
-        GenerateStreamResponseType = workflow.streaming_output_schema  # pylint: disable=invalid-name
-        GenerateSingleResponseType = workflow.single_output_schema  # pylint: disable=invalid-name
+        GenerateBodyType = workflow.input_schema
+        GenerateStreamResponseType = workflow.streaming_output_schema
+        GenerateSingleResponseType = workflow.single_output_schema
 
         # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
         # Consider prefixing these with "nat_" to avoid conflicts

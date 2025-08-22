@@ -39,7 +39,6 @@ async def test_state_schema():
     state = ReActGraphState(messages=[input_message])
     sample_thought = AgentAction(tool='test', tool_input='test', log='test_action')
 
-    # pylint: disable=no-member, unsubscriptable-object
     state.agent_scratchpad.append(sample_thought)
     state.tool_responses.append(input_message)
     assert isinstance(state.messages, list)
@@ -276,7 +275,7 @@ async def test_graph_parsing_error(mock_react_graph):
     response = await mock_react_graph.ainvoke(ReActGraphState(messages=[HumanMessage('fix the input on retry')]))
     response = ReActGraphState(**response)
 
-    response = response.messages[-1]  # pylint: disable=unsubscriptable-object
+    response = response.messages[-1]
     assert isinstance(response, AIMessage)
     # When parsing fails, it should return an error message with the original input
     assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in response.content
@@ -286,7 +285,7 @@ async def test_graph_parsing_error(mock_react_graph):
 async def test_graph(mock_react_graph):
     response = await mock_react_graph.ainvoke(ReActGraphState(messages=[HumanMessage('Final Answer: lorem ipsum')]))
     response = ReActGraphState(**response)
-    response = response.messages[-1]  # pylint: disable=unsubscriptable-object
+    response = response.messages[-1]
     assert isinstance(response, AIMessage)
     assert response.content == 'lorem ipsum'
 
@@ -294,7 +293,7 @@ async def test_graph(mock_react_graph):
 async def test_no_input(mock_react_graph):
     response = await mock_react_graph.ainvoke(ReActGraphState(messages=[HumanMessage('')]))
     response = ReActGraphState(**response)
-    response = response.messages[-1]  # pylint: disable=unsubscriptable-object
+    response = response.messages[-1]
     assert isinstance(response, AIMessage)
     assert response.content == NO_INPUT_ERROR_MESSAGE
 

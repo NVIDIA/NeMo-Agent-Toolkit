@@ -186,7 +186,7 @@ def test_group_from_component():
 
     for TestBaseConfig, test_component_group in test_component_config_group_map.items():
 
-        class ComponentConfig(TestBaseConfig, name="test"):  # type: ignore # pylint: disable=too-many-ancestors
+        class ComponentConfig(TestBaseConfig, name="test"):  # type: ignore
             pass
 
         component_instance = ComponentConfig()
@@ -235,7 +235,7 @@ def test_recursive_componentref_discovery():
             memory: MemoryRef
 
         # Not testing tuple or set based types due to limited Pydantic support
-        class TestConfig(base_config_type):  # type: ignore # pylint: disable=too-many-ancestors
+        class TestConfig(base_config_type):  # type: ignore
             llm: LLMRef
             function_from_model: NestedFns
             embedders_dict: dict[str, EmbedderRef]

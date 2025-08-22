@@ -26,7 +26,6 @@ from nat.data_models.function import FunctionBaseConfig
 from nat.profiler.decorators.function_tracking import track_function
 
 # flake8: noqa
-# pylint: disable=unused-import
 # Import any tools which need to be automatically registered here
 from . import categorizer
 from . import hardware_check_tool
@@ -41,8 +40,6 @@ from . import utils
 # Import custom evaluator
 from .classification_evaluator import register_classification_evaluator
 from .prompts import ALERT_TRIAGE_AGENT_PROMPT
-
-# pylint: enable=unused-import
 
 
 class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agent"):

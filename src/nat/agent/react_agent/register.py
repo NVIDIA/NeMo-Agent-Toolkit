@@ -125,7 +125,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
 
             # get and return the output from the state
             state = ReActGraphState(**state)
-            output_message = state.messages[-1]  # pylint: disable=E1136
+            output_message = state.messages[-1]
             return ChatResponse.from_string(str(output_message.content))
 
         except Exception as ex:

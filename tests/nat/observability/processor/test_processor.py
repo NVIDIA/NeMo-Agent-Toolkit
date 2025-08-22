@@ -26,7 +26,7 @@ class TestProcessorAbstractBehavior:
     def test_processor_cannot_be_instantiated_directly(self):
         """Test that Processor cannot be instantiated directly due to abstract method."""
         with pytest.raises(TypeError, match="Can't instantiate abstract class Processor"):
-            Processor()  # pylint: disable=abstract-class-instantiated
+            Processor()
 
     def test_processor_with_unimplemented_process_method_fails(self):
         """Test that a class inheriting from Processor without implementing process() fails."""
@@ -35,7 +35,7 @@ class TestProcessorAbstractBehavior:
             class IncompleteProcessor(Processor[str, int]):
                 pass
 
-            IncompleteProcessor()  # pylint: disable=abstract-class-instantiated
+            IncompleteProcessor()
 
 
 class TestProcessorTypeIntrospection:
@@ -50,10 +50,10 @@ class TestProcessorTypeIntrospection:
                 return len(item)
 
         processor = StringToIntProcessor()
-        assert processor.input_type == str
-        assert processor.output_type == int
-        assert processor.input_class == str
-        assert processor.output_class == int
+        assert processor.input_type is str
+        assert processor.output_type is int
+        assert processor.input_class is str
+        assert processor.output_class is int
 
     def test_generic_type_introspection(self):
         """Test type introspection with generic types."""
@@ -65,9 +65,9 @@ class TestProcessorTypeIntrospection:
 
         processor = ListToStringProcessor()
         assert processor.input_type == list[int]
-        assert processor.output_type == str
-        assert processor.input_class == list  # Generic origin is list
-        assert processor.output_class == str
+        assert processor.output_type is str
+        assert processor.input_class is list  # Generic origin is list
+        assert processor.output_class is str
 
     def test_complex_generic_type_introspection(self):
         """Test type introspection with complex generic types."""
@@ -80,8 +80,8 @@ class TestProcessorTypeIntrospection:
         processor = DictToListProcessor()
         assert processor.input_type == dict[str, Any]
         assert processor.output_type == list[str]
-        assert processor.input_class == dict
-        assert processor.output_class == list
+        assert processor.input_class is dict
+        assert processor.output_class is list
 
     def test_type_introspection_error_handling(self):
         """Test error handling when type introspection fails."""
@@ -276,8 +276,8 @@ class TestProcessorInheritance:
 
         processor = ExtendedStringProcessor()
         # Type introspection should still work
-        assert processor.input_type == str
-        assert processor.output_type == str
+        assert processor.input_type is str
+        assert processor.output_type is str
 
     async def test_inherited_processor_functionality(self):
         """Test that inherited processors work correctly."""
@@ -318,8 +318,8 @@ class TestProcessorInheritance:
                 return f"{processed} - {timestamp}"
 
         processor = TimestampProcessor()
-        assert processor.input_type == str
-        assert processor.output_type == str
+        assert processor.input_type is str
+        assert processor.output_type is str
 
 
 class TestProcessorEdgeCases:
@@ -335,7 +335,7 @@ class TestProcessorEdgeCases:
 
         processor = OptionalProcessor()
         assert processor.input_type == str | None
-        assert processor.output_type == str
+        assert processor.output_type is str
 
     async def test_processor_with_same_input_output_type(self):
         """Test processor where input and output types are the same."""
@@ -346,8 +346,8 @@ class TestProcessorEdgeCases:
                 return item
 
         processor = IdentityProcessor()
-        assert processor.input_type == str
-        assert processor.output_type == str
+        assert processor.input_type is str
+        assert processor.output_type is str
 
         result = await processor.process("test")
         assert result == "test"
@@ -373,7 +373,7 @@ class TestProcessorEdgeCases:
         processor = CustomProcessor()
         assert processor.input_type == CustomInput
         assert processor.output_type == CustomOutput
-        assert processor.input_class == CustomInput
+        assert processor.input_class is CustomInput
         assert processor.output_class == CustomOutput
 
     def test_processor_with_union_types(self):
@@ -387,10 +387,10 @@ class TestProcessorEdgeCases:
 
         processor = UnionProcessor()
         assert processor.input_type == str | int
-        assert processor.output_type == str
+        assert processor.output_type is str
         # Union types have Union as their origin, not the full str | int
-        assert processor.input_class == get_origin(str | int)  # This is just Union
-        assert processor.output_class == str
+        assert processor.input_class is get_origin(str | int)  # This is just Union
+        assert processor.output_class is str
 
     async def test_processor_with_empty_string(self):
         """Test processor edge case with empty input."""

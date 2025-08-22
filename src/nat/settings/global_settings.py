@@ -124,7 +124,6 @@ class Settings(HashableBaseModel):
                 if (short_names[key.local_name] == 1):
                     type_list.append((key.local_name, key.config_type))
 
-            # pylint: disable=consider-alternative-union-syntax
             return typing.Union[tuple(typing.Annotated[x_type, Tag(x_id)] for x_id, x_type in type_list)]
 
         RegistryHandlerAnnotation = dict[

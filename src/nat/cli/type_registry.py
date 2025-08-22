@@ -298,7 +298,7 @@ class RegisteredPackage(BaseModel):
     discovery_metadata: DiscoveryMetadata
 
 
-class TypeRegistry:  # pylint: disable=too-many-public-methods
+class TypeRegistry:
 
     def __init__(self) -> None:
         # Telemetry Exporters
@@ -779,7 +779,7 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         self._registration_changed()
 
-    def get_infos_by_type(self, component_type: ComponentEnum) -> dict:  # pylint: disable=R0911
+    def get_infos_by_type(self, component_type: ComponentEnum) -> dict:
 
         if component_type == ComponentEnum.FRONT_END:
             return self._registered_front_end_infos
@@ -849,8 +849,7 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
-    def get_registered_types_by_component_type(  # pylint: disable=R0911
-            self, component_type: ComponentEnum) -> list[str]:
+    def get_registered_types_by_component_type(self, component_type: ComponentEnum) -> list[str]:
 
         if component_type == ComponentEnum.FUNCTION:
             return [i.static_type() for i in self._registered_functions]
@@ -925,7 +924,6 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
             if (short_names[key.local_name] == 1):
                 type_list.append((key.local_name, key.config_type))
 
-        # pylint: disable=consider-alternative-union-syntax
         return typing.Union[tuple(typing.Annotated[x_type, Tag(x_id)] for x_id, x_type in type_list)]
 
     def compute_annotation(self, cls: type[TypedBaseModelT]):

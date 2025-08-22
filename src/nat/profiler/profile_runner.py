@@ -88,14 +88,19 @@ class ProfilerRunner:
         writes out combined requests JSON, then computes and saves additional metrics,
         and optionally fits a forecasting model.
         """
-        from nat.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import \
-            multi_example_call_profiling
-        from nat.profiler.inference_optimization.bottleneck_analysis.simple_stack_analysis import \
-            profile_workflow_bottlenecks
-        from nat.profiler.inference_optimization.experimental.concurrency_spike_analysis import \
-            concurrency_spike_analysis
-        from nat.profiler.inference_optimization.experimental.prefix_span_analysis import \
-            prefixspan_subworkflow_with_text
+        # Yapf and ruff disagree on how to format long imports, disable yapf go with ruff
+        from nat.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
+            multi_example_call_profiling,
+        )  # yapf: disable
+        from nat.profiler.inference_optimization.bottleneck_analysis.simple_stack_analysis import (
+            profile_workflow_bottlenecks,
+        )  # yapf: disable
+        from nat.profiler.inference_optimization.experimental.concurrency_spike_analysis import (
+            concurrency_spike_analysis,
+        )  # yapf: disable
+        from nat.profiler.inference_optimization.experimental.prefix_span_analysis import (
+            prefixspan_subworkflow_with_text,
+        )  # yapf: disable
         from nat.profiler.inference_optimization.llm_metrics import LLMMetrics
         from nat.profiler.inference_optimization.prompt_caching import get_common_prefixes
         from nat.profiler.inference_optimization.token_uniqueness import compute_inter_query_token_uniqueness_by_llm

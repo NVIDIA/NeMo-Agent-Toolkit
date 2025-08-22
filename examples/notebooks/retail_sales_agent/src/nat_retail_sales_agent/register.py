@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-import
 # flake8: noqa
 
 from nat_retail_sales_agent.data_insight_tools import detect_outliers_iqr_function

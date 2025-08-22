@@ -79,7 +79,7 @@ async def test_sync_generator(reactive_stream: Subject):
 
     @track_function
     def number_generator(n):
-        for i in range(n):  # pylint: disable=use-yield-from
+        for i in range(n):
             yield i
 
     nums = list(number_generator(3))

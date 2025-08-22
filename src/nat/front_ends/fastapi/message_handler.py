@@ -86,7 +86,7 @@ class WebSocketMessageHandler:
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
 
-        # TODO: Handle the exit  # pylint: disable=fixme
+        # TODO: Handle the exit
         pass
 
     async def run(self) -> None:
@@ -105,12 +105,10 @@ class WebSocketMessageHandler:
                 if (isinstance(validated_message, WebSocketUserMessage)):
                     await self.process_workflow_request(validated_message)
 
-                elif isinstance(
-                        validated_message,
-                    (  # noqa: E131
-                        WebSocketSystemResponseTokenMessage,
-                        WebSocketSystemIntermediateStepMessage,
-                        WebSocketSystemInteractionMessage)):
+                elif isinstance(validated_message,
+                                (WebSocketSystemResponseTokenMessage,
+                                 WebSocketSystemIntermediateStepMessage,
+                                 WebSocketSystemInteractionMessage)):
                     # These messages are already handled by self.create_websocket_message(data_model=value, …)
                     # No further processing is needed here.
                     pass
@@ -119,10 +117,8 @@ class WebSocketMessageHandler:
                     user_content = await self.process_user_message_content(validated_message)
                     self._user_interaction_response.set_result(user_content)
             except (asyncio.CancelledError, WebSocketDisconnect):
-                # TODO: Handle the disconnect  # pylint: disable=fixme
+                # TODO: Handle the disconnect
                 break
-
-        return None
 
     async def process_user_message_content(
             self, user_content: WebSocketUserMessage | WebSocketUserInteractionResponseMessage) -> BaseModel | None:
@@ -162,7 +158,7 @@ class WebSocketMessageHandler:
 
             if isinstance(content, TextContent) and (self._running_workflow_task is None):
 
-                def _done_callback(task: asyncio.Task):  # pylint: disable=unused-argument
+                def _done_callback(task: asyncio.Task):
                     self._running_workflow_task = None
 
                 self._running_workflow_task = asyncio.create_task(

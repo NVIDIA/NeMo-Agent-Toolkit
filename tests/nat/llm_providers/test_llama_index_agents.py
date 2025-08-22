@@ -39,7 +39,7 @@ def calculator(expression: str) -> str:
     """
     try:
         # Safely evaluate the expression
-        result = eval(expression)  # pylint: disable=eval-used
+        result = eval(expression)
         return str(result)
     except Exception as e:
         return f"Error calculating expression: {str(e)}"

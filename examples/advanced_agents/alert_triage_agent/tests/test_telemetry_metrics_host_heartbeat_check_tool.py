@@ -19,12 +19,15 @@ from unittest.mock import patch
 
 import pytest
 import requests
-from nat_alert_triage_agent.telemetry_metrics_host_heartbeat_check_tool import \
-    TelemetryMetricsHostHeartbeatCheckToolConfig
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.component_ref import LLMRef
+
+# Yapf and ruff disagree on how to format long imports, disable yapf go with ruff
+from nat_alert_triage_agent.telemetry_metrics_host_heartbeat_check_tool import (
+    TelemetryMetricsHostHeartbeatCheckToolConfig,
+)  # yapf: disable
 
 
 async def test_telemetry_metrics_host_heartbeat_check_tool():

@@ -297,8 +297,7 @@ def ping(url: str, timeout: int, json_output: bool) -> None:
 
     if json_output:
         click.echo(result.model_dump_json(indent=2))
+    elif result.status == "healthy":
+        click.echo(f"Server at {result.url} is healthy (response time: {result.response_time_ms}ms)")
     else:
-        if result.status == "healthy":
-            click.echo(f"Server at {result.url} is healthy (response time: {result.response_time_ms}ms)")
-        else:
-            click.echo(f"Server at {result.url} {result.status}: {result.error}")
+        click.echo(f"Server at {result.url} {result.status}: {result.error}")

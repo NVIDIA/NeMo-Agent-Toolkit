@@ -85,7 +85,7 @@ class TestTypeIntrospectionMixin:
     def test_direct_generic_output_type(self):
         """Test output_type property with direct generic parameters"""
         instance = ConcreteDirectClass()
-        assert instance.output_type == str
+        assert instance.output_type is str
 
     def test_direct_generic_complex_input_type(self):
         """Test input_type with complex generic types"""
@@ -100,7 +100,7 @@ class TestTypeIntrospectionMixin:
     def test_indirect_generic_input_type(self):
         """Test input_type property with indirect generic resolution"""
         instance = IndirectGenericChild()
-        assert instance.input_type == int
+        assert instance.input_type is int
 
     def test_indirect_generic_output_type(self):
         """Test output_type property with indirect generic resolution"""
@@ -110,7 +110,7 @@ class TestTypeIntrospectionMixin:
     def test_input_class_simple_type(self):
         """Test input_class property with simple type"""
         instance = ConcreteDirectClass()
-        assert instance.input_class == list
+        assert instance.input_class is list
 
     def test_input_class_non_generic_type(self):
         """Test input_class property with non-generic type"""
@@ -120,17 +120,17 @@ class TestTypeIntrospectionMixin:
             # Clear the cache by accessing the property function
             instance.__class__.input_type.fget.cache_clear()
             instance.__class__.input_class.fget.cache_clear()
-            assert instance.input_class == str
+            assert instance.input_class is str
 
     def test_output_class_simple_type(self):
         """Test output_class property with simple type"""
         instance = ConcreteDirectClass()
-        assert instance.output_class == str
+        assert instance.output_class is str
 
     def test_output_class_generic_type(self):
         """Test output_class property with generic type"""
         instance = ConcreteDirectComplexClass()
-        assert instance.output_class == list
+        assert instance.output_class is list
 
     def test_output_class_non_generic_type(self):
         """Test output_class property with non-generic type"""
@@ -140,7 +140,7 @@ class TestTypeIntrospectionMixin:
             # Clear the cache by accessing the property function
             instance.__class__.output_type.fget.cache_clear()
             instance.__class__.output_class.fget.cache_clear()
-            assert instance.output_class == int
+            assert instance.output_class is int
 
     def test_non_generic_class_input_type_error(self):
         """Test that non-generic class raises error for input_type"""
@@ -182,7 +182,7 @@ class TestTypeIntrospectionMixin:
         """Test _substitute_type_var method with TypeVar"""
         instance = IndirectGenericChild()
         result = instance._substitute_type_var(T, int)
-        assert result == int
+        assert result is int
 
     def test_substitute_type_var_with_generic_type(self):
         """Test _substitute_type_var method with generic type containing TypeVar"""
@@ -201,7 +201,7 @@ class TestTypeIntrospectionMixin:
         """Test _substitute_type_var method with non-TypeVar type"""
         instance = IndirectGenericChild()
         result = instance._substitute_type_var(str, int)
-        assert result == str
+        assert result is str
 
     def test_substitute_type_var_with_complex_nested_type(self):
         """Test _substitute_type_var method with complex nested type"""

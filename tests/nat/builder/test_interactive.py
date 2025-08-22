@@ -52,7 +52,6 @@ def test_human_prompt_binary_valid():
     assert prompt.input_type == HumanPromptModelType.BINARY_CHOICE
     assert len(prompt.options) == 2
     # Also check that each option’s label and value are as expected
-    # pylint: disable=unsubscriptable-object
     assert prompt.options[0].label == "Yes"
     assert prompt.options[1].value is False
 

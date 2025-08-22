@@ -53,7 +53,7 @@ def _extract_tools_schema(invocation_params: dict) -> list:
     return tools_schema
 
 
-class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # pylint: disable=R0901
+class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
     """Callback Handler that tracks NIM info."""
 
     total_tokens: int = 0

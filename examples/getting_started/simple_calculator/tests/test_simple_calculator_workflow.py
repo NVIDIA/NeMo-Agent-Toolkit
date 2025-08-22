@@ -20,11 +20,11 @@ import logging
 from pathlib import Path
 
 import pytest
+
+from nat.runtime.loader import load_workflow
 from nat_simple_calculator.register import DivisionToolConfig
 from nat_simple_calculator.register import InequalityToolConfig
 from nat_simple_calculator.register import MultiplyToolConfig
-
-from nat.runtime.loader import load_workflow
 
 logger = logging.getLogger(__name__)
 

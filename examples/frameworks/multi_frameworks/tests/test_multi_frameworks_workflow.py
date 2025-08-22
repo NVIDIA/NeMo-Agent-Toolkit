@@ -20,9 +20,9 @@ import logging
 from pathlib import Path
 
 import pytest
-from nat_multi_frameworks.register import MultiFrameworksWorkflowConfig
 
 from nat.runtime.loader import load_workflow
+from nat_multi_frameworks.register import MultiFrameworksWorkflowConfig
 
 logger = logging.getLogger(__name__)
 

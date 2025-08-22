@@ -179,7 +179,6 @@ class BaseAgent(ABC):
                 logger.debug("%s Retrying tool call for %s in %d seconds...", AGENT_LOG_PREFIX, tool.name, sleep_time)
                 await asyncio.sleep(sleep_time)
 
-        # pylint: disable=C0209
         # All retries exhausted, return error message
         error_content = "Tool call failed after all retry attempts. Last error: %s" % str(last_exception)
         logger.error("%s %s", AGENT_LOG_PREFIX, error_content)

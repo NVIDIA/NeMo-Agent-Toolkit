@@ -53,7 +53,7 @@ async def document_search(config: MilvusDocumentSearchToolConfig, builder: Build
     from langchain_core.messages import HumanMessage
     from langchain_core.messages import SystemMessage
     from langchain_core.pydantic_v1 import BaseModel
-    from langchain_core.pydantic_v1 import Field  # pylint: disable=redefined-outer-name, reimported
+    from langchain_core.pydantic_v1 import Field
 
     # define collection store
     # create a list of tuples using enumerate()

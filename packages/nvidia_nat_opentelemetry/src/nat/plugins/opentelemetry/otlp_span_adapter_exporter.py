@@ -22,7 +22,7 @@ from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 logger = logging.getLogger(__name__)
 
 
-class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):  # pylint: disable=R0901
+class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
     """An OpenTelemetry OTLP span exporter for sending traces to OTLP-compatible services.
 
     This class combines the OtelSpanExporter base functionality with OTLP-specific

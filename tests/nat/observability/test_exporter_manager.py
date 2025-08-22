@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=redefined-outer-name  # pytest fixtures
-
 import asyncio
 import gc
 import logging
@@ -482,7 +480,7 @@ class TestExporterManagerLifecycle:
             async def start(self):
                 self._ready_event.set()
                 raise RuntimeError("Test exception")
-                yield  # Needed for proper async context manager  # pylint: disable=unreachable
+                yield  # Needed for proper async context manager
 
         failing_exporter = FailingExporter("failing")
         exporter_manager.add_exporter("failing", failing_exporter)

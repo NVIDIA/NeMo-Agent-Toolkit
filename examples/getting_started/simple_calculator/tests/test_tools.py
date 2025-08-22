@@ -13,12 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nat.test.tool_test_runner import ToolTestRunner
 from nat_simple_calculator.register import DivisionToolConfig
 from nat_simple_calculator.register import InequalityToolConfig
 from nat_simple_calculator.register import MultiplyToolConfig
 from nat_simple_calculator.register import SubtractToolConfig
-
-from nat.test.tool_test_runner import ToolTestRunner
 
 
 async def test_inequality_tool():

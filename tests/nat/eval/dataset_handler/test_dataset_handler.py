@@ -32,8 +32,6 @@ from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
-# pylint: disable=redefined-outer-name
-
 
 @pytest.fixture
 def dataset_structure():

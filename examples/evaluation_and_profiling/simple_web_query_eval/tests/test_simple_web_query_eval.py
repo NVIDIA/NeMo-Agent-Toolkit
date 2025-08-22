@@ -19,9 +19,9 @@ import json
 import logging
 from pathlib import Path
 
-import nat_simple_web_query_eval
 import pytest
 
+import nat_simple_web_query_eval
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
 

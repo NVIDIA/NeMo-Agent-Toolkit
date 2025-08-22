@@ -157,7 +157,6 @@ def execute_agno_tool(name: str,
     -------
     The result of the function execution as a string
     """
-    global _tool_call_counters, _tool_initialization_done
 
     try:
         logger.debug(f"Running {name} with kwargs: {kwargs}")

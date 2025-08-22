@@ -108,5 +108,3 @@ class Mem0Editor(MemoryEditor):
 
             user_id = kwargs.pop("user_id")
             await self._client.delete_all(user_id=user_id)
-
-        return

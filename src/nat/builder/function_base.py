@@ -111,7 +111,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
         ValueError
             If the input type cannot be determined from the class definition
         """
-        for base_cls in self.__class__.__orig_bases__:  # pylint: disable=no-member # type: ignore
+        for base_cls in self.__class__.__orig_bases__:
 
             base_cls_args = typing.get_args(base_cls)
 
@@ -196,7 +196,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
         ValueError
             If the streaming output type cannot be determined from the class definition
         """
-        for base_cls in self.__class__.__orig_bases__:  # pylint: disable=no-member # type: ignore
+        for base_cls in self.__class__.__orig_bases__:
 
             base_cls_args = typing.get_args(base_cls)
 
@@ -269,7 +269,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
         ValueError
             If the single output type cannot be determined from the class definition
         """
-        for base_cls in self.__class__.__orig_bases__:  # pylint: disable=no-member # type: ignore
+        for base_cls in self.__class__.__orig_bases__:
 
             base_cls_args = typing.get_args(base_cls)
 
