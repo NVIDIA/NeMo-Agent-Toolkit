@@ -41,7 +41,8 @@ reviews:
     - label: DO NOT MERGE
       instructions: >-
         Apply this label to PRs that should not be merged due to critical issues, incomplete work, or other blocking
-        concerns. Check the PR description for specific details about why it should not be merged.
+        concerns. Check the PR description for specific details about why it should not be merged. There is no need to
+        apply this label to draft PRs.
     - label: doc
       instructions: >-
         Apply this label when the PR primarily adds, updates, or improves documentation including README files. If you
