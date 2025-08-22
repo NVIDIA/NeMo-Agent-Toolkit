@@ -351,9 +351,17 @@ class DatasetHandler:
         if self.custom_post_process_function:
             try:
                 custom_function = self._load_custom_post_process_function()
-                return custom_function(eval_input)
+                processed = custom_function(eval_input)
+                if not isinstance(processed, EvalInput):
+                    raise TypeError(
+                        f"Custom post-process function '{self.custom_post_process_function}' must return "
+                        f"EvalInput, got {type(processed)}"
+                    )
+                return processed
             except Exception as e:
-                raise RuntimeError(f"Error calling custom post-process function: {e}") from e
+                raise RuntimeError(
+                    f"Error calling custom post-process function '{self.custom_post_process_function}': {e}"
+                ) from e
 
         return eval_input
 
