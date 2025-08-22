@@ -231,7 +231,7 @@ class FunctionDescriptor:
         else:
             annotations = [param.annotation for param in sig.parameters.values()]
 
-            is_input_typed = all([a != sig.empty for a in annotations])  # pylint: disable=use-a-generator
+            is_input_typed = all([a != sig.empty for a in annotations])
 
             input_type = tuple[*annotations] if is_input_typed else None  # noqa: syntax-error
 

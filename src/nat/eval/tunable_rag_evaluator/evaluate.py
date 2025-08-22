@@ -29,7 +29,6 @@ from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 
-# pylint: disable=line-too-long
 # flake8: noqa: E501
 
 

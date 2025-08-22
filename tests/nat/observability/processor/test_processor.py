@@ -26,7 +26,7 @@ class TestProcessorAbstractBehavior:
     def test_processor_cannot_be_instantiated_directly(self):
         """Test that Processor cannot be instantiated directly due to abstract method."""
         with pytest.raises(TypeError, match="Can't instantiate abstract class Processor"):
-            Processor()  # pylint: disable=abstract-class-instantiated
+            Processor()
 
     def test_processor_with_unimplemented_process_method_fails(self):
         """Test that a class inheriting from Processor without implementing process() fails."""
@@ -35,7 +35,7 @@ class TestProcessorAbstractBehavior:
             class IncompleteProcessor(Processor[str, int]):
                 pass
 
-            IncompleteProcessor()  # pylint: disable=abstract-class-instantiated
+            IncompleteProcessor()
 
 
 class TestProcessorTypeIntrospection:

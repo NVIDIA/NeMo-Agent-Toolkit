@@ -24,7 +24,7 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from nat_profiler_agent import tool  # noqa: F401 # pylint: disable=unused-import
+from nat_profiler_agent import tool  # noqa: F401
 from nat_profiler_agent.prompts import RETRY_PROMPT
 from nat_profiler_agent.prompts import SYSTEM_PROMPT
 
@@ -72,7 +72,7 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     from nat_profiler_agent.agent import ProfilerAgent
     from nat_profiler_agent.agent import ProfilerAgentState
     from nat_profiler_agent.data_models import ExecPlan
-    from nat_profiler_agent.tool import flow_chart  # noqa: F401 # pylint: disable=unused-import
+    from nat_profiler_agent.tool import flow_chart  # noqa: F401
 
     # Create the agent executor
     tools = builder.get_tools(tool_names=config.tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

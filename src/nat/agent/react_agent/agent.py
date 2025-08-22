@@ -15,7 +15,6 @@
 
 import json
 
-# pylint: disable=R0917
 import logging
 import typing
 from json import JSONDecodeError

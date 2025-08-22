@@ -26,7 +26,7 @@ from nat.registry_handlers.schemas.search import SearchFields
 logger = logging.getLogger(__name__)
 
 
-async def search_artifacts(  # pylint: disable=R0917
+async def search_artifacts(
         registry_handler_config: RegistryHandlerBaseConfig,
         component_types: list[ComponentEnum],
         visualize: bool,

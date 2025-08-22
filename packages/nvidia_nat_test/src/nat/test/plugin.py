@@ -68,7 +68,7 @@ def register_components_fixture():
     discover_and_register_plugins(PluginTypes.ALL)
 
     # Also import the nat.test.register module to register test-only components
-    import nat.test.register  # pylint: disable=unused-import # noqa: F401
+    import nat.test.register
 
 
 @pytest.fixture(name="module_registry", scope="module", autouse=True)

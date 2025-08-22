@@ -86,7 +86,7 @@ class WebSocketMessageHandler:
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
 
-        # TODO: Handle the exit  # pylint: disable=fixme
+        # TODO: Handle the exit
         pass
 
     async def run(self) -> None:
@@ -119,7 +119,7 @@ class WebSocketMessageHandler:
                     user_content = await self.process_user_message_content(validated_message)
                     self._user_interaction_response.set_result(user_content)
             except (asyncio.CancelledError, WebSocketDisconnect):
-                # TODO: Handle the disconnect  # pylint: disable=fixme
+                # TODO: Handle the disconnect
                 break
 
     async def process_user_message_content(
@@ -160,7 +160,7 @@ class WebSocketMessageHandler:
 
             if isinstance(content, TextContent) and (self._running_workflow_task is None):
 
-                def _done_callback(task: asyncio.Task):  # pylint: disable=unused-argument
+                def _done_callback(task: asyncio.Task):
                     self._running_workflow_task = None
 
                 self._running_workflow_task = asyncio.create_task(

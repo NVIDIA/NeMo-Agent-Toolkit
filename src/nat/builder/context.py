@@ -38,7 +38,7 @@ from nat.utils.reactive.subject import Subject
 
 class Singleton(type):
 
-    def __init__(cls, name, bases, dict):  # pylint: disable=W0622
+    def __init__(cls, name, bases, dict):
         super(Singleton, cls).__init__(name, bases, dict)
         cls.instance = None
 

@@ -89,7 +89,7 @@ def test_component_ref_pydantic_validation():
     # Validate configuration object instantiation with ComponentRef types
     for test_base_config, test_ref_type in test_config_map.items():
 
-        class TestConfig(test_base_config, name="test"):  # type: ignore # pylint: disable=too-many-ancestors
+        class TestConfig(test_base_config, name="test"):  # type: ignore
             ref_field: test_ref_type  # type: ignore
 
         config_dict = {"ref_field": "ref_value"}
@@ -119,4 +119,4 @@ def test_component_ref_interface():
 
     # Should fail
     with pytest.raises(TypeError):
-        _ = BadRefType("")  # type: ignore # pylint: disable=abstract-class-instantiated
+        _ = BadRefType("")  # type: ignore

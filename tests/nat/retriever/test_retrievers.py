@@ -89,7 +89,7 @@ class CustomMilvusClient:
         data: list,
         limit: int,
         search_params: dict,
-        filter: str | None,  # pylint: disable=W0622
+        filter: str | None,
         output_fields: list[str] | None,
         timeout: float | None,
         anns_field: str,
@@ -131,7 +131,7 @@ class CustomMilvusClient:
         data: list,
         limit: int,
         batch_size: int,
-        filter: str | None,  # pylint: disable=W0622
+        filter: str | None,
         output_fields: list[str] | None,
         search_params: dict,
         timeout: float | None,

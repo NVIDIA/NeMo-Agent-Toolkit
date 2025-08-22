@@ -29,7 +29,7 @@ from nat.utils.data_models.schema_validator import validate_yaml
 logger = logging.getLogger(__name__)
 
 
-async def search_artifacts(  # pylint: disable=R0917
+async def search_artifacts(
         registry_handler_config: RegistryHandlerBaseConfig,
         query: str,
         search_fields: list[SearchFields],
@@ -116,7 +116,7 @@ async def search_artifacts(  # pylint: disable=R0917
     required=False,
     help=("The component types to include in search."),
 )
-def search(  # pylint: disable=R0917
+def search(
         config_file: str,
         channel: str,
         fields: list[str],

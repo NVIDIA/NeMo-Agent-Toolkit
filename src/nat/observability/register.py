@@ -45,7 +45,7 @@ class FileTelemetryExporterConfig(TelemetryExporterBaseConfig, name="file"):
 
 
 @register_telemetry_exporter(config_type=FileTelemetryExporterConfig)
-async def file_telemetry_exporter(config: FileTelemetryExporterConfig, builder: Builder):  # pylint: disable=W0613
+async def file_telemetry_exporter(config: FileTelemetryExporterConfig, builder: Builder):
     """
     Build and return a FileExporter for file-based telemetry export with optional rolling.
     """
@@ -68,7 +68,7 @@ class ConsoleLoggingMethodConfig(LoggingBaseConfig, name="console"):
 
 
 @register_logging_method(config_type=ConsoleLoggingMethodConfig)
-async def console_logging_method(config: ConsoleLoggingMethodConfig, builder: Builder):  # pylint: disable=W0613
+async def console_logging_method(config: ConsoleLoggingMethodConfig, builder: Builder):
     """
     Build and return a StreamHandler for console-based logging.
     """
@@ -86,7 +86,7 @@ class FileLoggingMethod(LoggingBaseConfig, name="file"):
 
 
 @register_logging_method(config_type=FileLoggingMethod)
-async def file_logging_method(config: FileLoggingMethod, builder: Builder):  # pylint: disable=W0613
+async def file_logging_method(config: FileLoggingMethod, builder: Builder):
     """
     Build and return a FileHandler for file-based logging.
     """

@@ -40,7 +40,7 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
-async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):  # pylint: disable=unused-argument
+async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):
     import weave
     from nat.plugins.weave.weave_exporter import WeaveExporter
 

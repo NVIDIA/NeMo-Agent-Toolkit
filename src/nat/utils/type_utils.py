@@ -50,7 +50,7 @@ def is_valid_json(string):
 # In Python >= 3.12, it uses the built-in typing.override decorator
 # In Python < 3.12, it acts as a no-op decorator
 if sys.version_info >= (3, 12):
-    from typing import override  # pylint: disable=unused-import
+    from typing import override
 else:
 
     def override(func):
@@ -181,7 +181,7 @@ class DecomposedType:
             True if the current type is a union type, False otherwise.
         """
 
-        return self.origin in (typing.Union, types.UnionType)  # pylint: disable=consider-alternative-union-syntax
+        return self.origin in (typing.Union, types.UnionType)
 
     @property
     @lru_cache
@@ -197,7 +197,7 @@ class DecomposedType:
         """
 
         return self.origin in (
-            typing.AsyncGenerator,  # pylint: disable=consider-alternative-union-syntax,deprecated-typing-alias
+            typing.AsyncGenerator,
             collections.abc.AsyncGenerator,
             types.AsyncGeneratorType,
         )
@@ -250,7 +250,7 @@ class DecomposedType:
         remaining_args = tuple(arg for arg in self.args if arg is not types.NoneType)
 
         if (len(remaining_args) > 1):
-            return DecomposedType(typing.Union[remaining_args])  # pylint: disable=consider-alternative-union-syntax
+            return DecomposedType(typing.Union[remaining_args])
         if (len(remaining_args) == 1):
             return DecomposedType(remaining_args[0])
 

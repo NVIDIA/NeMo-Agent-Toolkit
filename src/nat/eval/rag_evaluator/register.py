@@ -73,7 +73,7 @@ class RagasEvaluatorConfig(EvaluatorBaseConfig, name="ragas"):
         if isinstance(self.metric, str):
             return self.metric
         if isinstance(self.metric, dict) and self.metric:
-            return next(iter(self.metric.keys()))  # pylint: disable=no-member
+            return next(iter(self.metric.keys()))
         return ""
 
     @property
@@ -82,7 +82,7 @@ class RagasEvaluatorConfig(EvaluatorBaseConfig, name="ragas"):
         if isinstance(self.metric, str):
             return RagasMetricConfig()  # Default config when only a metric name is given
         if isinstance(self.metric, dict) and self.metric:
-            return next(iter(self.metric.values()))  # pylint: disable=no-member
+            return next(iter(self.metric.values()))
         return RagasMetricConfig()  # Default config when an invalid type is provided
 
 

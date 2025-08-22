@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=redefined-outer-name  # pytest fixtures
 
 import asyncio
 import logging
@@ -795,7 +794,7 @@ class TestAbstractMethod:
                 pass  # Missing export_processed implementation
 
             # This should raise TypeError due to missing abstract method implementation
-            IncompleteExporter()  # pylint: disable=abstract-class-instantiated
+            IncompleteExporter()
 
 
 class TestCallbackProcessorIntegration:

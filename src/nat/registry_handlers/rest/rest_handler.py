@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 class RestRegistryHandler(AbstractRegistryHandler):
     """A registry handler for interactions with a remote REST registry."""
 
-    def __init__(  # pylint: disable=R0917
+    def __init__(
             self,
             endpoint: str,
             token: str,

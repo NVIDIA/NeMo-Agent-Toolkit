@@ -44,7 +44,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
     https://github.com/pypiserver/pypiserver
     """
 
-    def __init__(  # pylint: disable=R0917
+    def __init__(
             self,
             endpoint: str,
             token: str | None = None,
@@ -135,7 +135,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
                     "--index-url",
                     f"{self._endpoint}/{self._pull_route}/",
                     versioned_packages_str
-                ],  # pylint: disable=W0631
+                ],
                 check=True)
 
             result.check_returncode()
@@ -172,7 +172,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
 
         try:
             completed_process = subprocess.run(
-                ["pip", "search", "--index", f"{self._endpoint}", query.query],  # pylint: disable=W0631
+                ["pip", "search", "--index", f"{self._endpoint}", query.query],
                 text=True,
                 capture_output=True,
                 check=True)

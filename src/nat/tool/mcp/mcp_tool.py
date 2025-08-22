@@ -48,7 +48,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
 
 
 @register_function(config_type=MCPToolConfig)
-async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=unused-argument
+async def mcp_tool(config: MCPToolConfig, builder: Builder):
     """
     Generate a NAT Function that wraps a tool provided by the MCP server.
     """

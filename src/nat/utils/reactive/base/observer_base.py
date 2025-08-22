@@ -20,7 +20,7 @@ from typing import TypeVar
 
 # Contravariant type param: An Observer that can accept type X can also
 # accept any supertype of X.
-_T_in_contra = TypeVar("_T_in_contra", contravariant=True)  # pylint: disable=invalid-name
+_T_in_contra = TypeVar("_T_in_contra", contravariant=True)
 
 
 class ObserverBase(Generic[_T_in_contra], ABC):

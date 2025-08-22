@@ -90,7 +90,6 @@ def replace_current_year(line, start, end):
     # first turn a simple regex into double (if applicable). then update years
     res = CheckSimple.sub(r"Copyright (c) \1-\1, NVIDIA CORPORATION", line)
 
-    # pylint: disable=consider-using-f-string
     res = CheckDouble.sub(r"Copyright (c) {:04d}-{:04d}, NVIDIA CORPORATION".format(start, end), res)
     return res
 
@@ -123,7 +122,7 @@ def insert_license(f, this_year, first_line):
     return [f, 1, "License inserted", replace_line]
 
 
-def check_copyright(  # pylint: disable=too-many-positional-arguments
+def check_copyright(
         f,
         update_current_year,
         verify_apache_v2=False,

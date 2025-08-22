@@ -31,7 +31,6 @@ from nat.cli.register_workflow import register_tool_wrapper
 
 logger = logging.getLogger(__name__)
 
-# pylint: disable=consider-alternative-union-syntax)
 
 
 def get_type_info(field_type):

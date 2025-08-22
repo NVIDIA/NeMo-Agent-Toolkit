@@ -24,7 +24,7 @@ from nat.observability.processor.intermediate_step_serializer import Intermediat
 logger = logging.getLogger(__name__)
 
 
-class FileExporter(FileExportMixin, RawExporter[IntermediateStep, str]):  # pylint: disable=R0901
+class FileExporter(FileExportMixin, RawExporter[IntermediateStep, str]):
     """A File exporter that exports telemetry traces to a local file."""
 
     def __init__(self, context_state: ContextState | None = None, **file_kwargs):

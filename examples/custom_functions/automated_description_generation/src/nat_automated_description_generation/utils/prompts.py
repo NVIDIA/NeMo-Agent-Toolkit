@@ -15,7 +15,6 @@
 
 from langchain_core.prompts import ChatPromptTemplate
 
-# pylint: disable=invalid-name
 map_prompt_system = """Analyze these snippets from a data collection:
                             --------------
                             {documents}
