@@ -59,10 +59,6 @@ reviews:
       instructions: >-
         Apply this label when the PR implements new functionality, adds new features, or introduces new capabilities
         to the toolkit. If you apply this label do not apply the "bug", "doc", or "improvement" labels.
-    - label: good first issue
-      instructions: Do not apply this label, it is only used for issues.
-    - label: help wanted
-      instructions: Do not apply this label, it is only used for issues.
     - label: improvement
       instructions: >-
         Apply this label when the PR enhances existing functionality without adding completely new features, such as
@@ -72,20 +68,11 @@ reviews:
       instructions: >-
         Apply this label when the PR contains invalid changes, doesn't follow project guidelines, or has fundamental
         issues that make it unsuitable for the project.
-    - label: Needs Triage
-      instructions: Do not apply this label, it is only used for issues.
     - label: non-breaking
       instructions: >-
         Apply this label when the PR introduces changes that maintain backward compatibility, does not create a
         behavioral change, and does not require users to modify their existing code. If you apply this label, do not
         apply the "breaking" label.
-    - label: question
-      instructions: Do not apply this label, it is only used for issues.
-    - label: skip-ci
-      instructions: Do not apply this label, PR authors will apply this label if they need to skip CI checks.
-    - label: wontfix
-      instructions: Do not apply this label, it is only used for issues.
-
 
   suggested_reviewers: false
   tools:
