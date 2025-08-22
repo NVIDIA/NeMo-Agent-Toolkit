@@ -114,7 +114,9 @@ jobs:
 
             env:
               CI_PYTHON_VERSION: ${{ matrix.python-version }}
-              CI_ARCH: ${{ matrix.arch }}
+    env:
+      CI_PYTHON_VERSION: ${{ matrix.python-version }}
+      CI_ARCH: ${{ matrix.arch }}
 
     steps:
       - name: Checkout
