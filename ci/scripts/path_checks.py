@@ -22,6 +22,9 @@ from dataclasses import dataclass
 
 from gitutils import all_files
 
+# Allow empty comments in this file, this allows for in-line comments to apply to a section.
+# ruff: noqa: PLR2044
+
 # File path pairs to allowlist -- first is the file path, second is the path in the file
 ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     # allow references to data from configs
@@ -123,14 +126,18 @@ ALLOWLISTED_WORDS: set[str] = {
     "user/assistant",
     "validate/sanitize",
     "Workflows/tools",
-    "Yes/No",  # numbers
-    r"\d+/\d+(/\d+)*",  # LLM model names
+    "Yes/No",  #
+    # numbers
+    r"\d+/\d+(/\d+)*",  #
+    # LLM model names
     "meta/[Ll]lama.*",
     "nvidia/([Ll]lama|[Nn][Vv]-).*",
     "mistralai/[Mm]ixtral.*",
     "microsoft/[Pp]hi.*",
-    "ssmits/[Qq]wen.*",  # MIME types
-    "(application|text|image|video|audio|model|dataset|token|other)/.*",  # Time zones
+    "ssmits/[Qq]wen.*",  #
+    # MIME types
+    "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
+    # Time zones
     "[A-Z][a-z]+(_[A-Z][a-z]+)*/[A-Z][a-z]+(_[A-Z][a-z]+)*",
 }
 
@@ -155,28 +162,38 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
 # Files to ignore -- regex pattern
 IGNORED_FILES: set[str] = {
     # hidden files
-    r"^\.",  # CI files
-    r"^ci/",  # project files
-    r"pyproject\.toml$",  # docker files
-    r"Dockerfile",
-    r"docker-compose([A-Za-z0-9_\-\.]+)?\.ya?ml$",  # top-level markdown files with no related content
+    r"^\.",  #
+    # CI files
+    r"^ci/",  #
+    # project files
+    r"pyproject\.toml$",  #
+    # docker files
+    r"Dockerfile",  #
+    r"docker-compose([A-Za-z0-9_\-\.]+)?\.ya?ml$",  #
+    # top-level markdown files with no related content
     r"(CHANGELOG|CONTRIBUTING|LICENSE|SECURITY)\.md",
-    r"^manifest.yaml$",  # files located within data directories
-    r"data/.*$",  # Versions json file for the documentation version switcher button
+    r"^manifest.yaml$",  #
+    # files located within data directories
+    r"data/.*$",  #
+    # Versions json file for the documentation version switcher button
     r"^docs/source/versions1.json$",
 }
 
 # Paths to ignore -- regex pattern
 IGNORED_PATHS: set[str] = {
     # temporary files
-    r"\.tmp/",  # files that are located in the directory of the file being checked
+    r"\.tmp/",  #
+    # files that are located in the directory of the file being checked
     r"^\./upload_to_minio\.sh$",
     r"^\./upload_to_mysql\.sh$",
-    r"^\./start_local_sandbox\.sh$",  # script files that exist in the root of the repo
+    r"^\./start_local_sandbox\.sh$",  #
+    # script files that exist in the root of the repo
     r"^scripts/langchain_web_ingest\.py$",
-    r"^scripts/bootstrap_milvus\.sh$",  # generated files
+    r"^scripts/bootstrap_milvus\.sh$",  #
+    # generated files
     r"^\./run_service\.sh$",
-    r"^outputs/line_chart_\d+\.png$",  # virtual environment directories
+    r"^outputs/line_chart_\d+\.png$",  #
+    # virtual environment directories
     r"(\.[a-z_]*env$|^\.[a-z_]*env)",
 }
 
