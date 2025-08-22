@@ -23,5 +23,70 @@ reviews:
     enabled: true
     drafts: false
     auto_incremental_review: false
-  suggested_labels: false
+  suggested_labels: true
+  labeling_instructions:
+    - label: ! - Release
+      instructions: >-
+        You should only apply this label when the source branch has a name matching the regex pattern `release/\d+\.\d+`
+        and the target branch is `main`.
+    - label: breaking
+      instructions: >-
+        Apply this label when the PR introduces changes that break backward compatibility, modify existing APIs in
+        incompatible ways, creates a behavioral change, or require users to update their code when upgrading. If you
+        apply this label, do not apply the "non-breaking" label.
+    - label: bug
+      instructions: >-
+        Apply this label when the PR fixes a defect, error, or unexpected behavior in the existing codebase. If you
+        apply this label do not apply the "doc", "feature request", or "improvement" labels.
+    - label: DO NOT MERGE
+      instructions: >-
+        Apply this label to PRs that should not be merged due to critical issues, incomplete work, or other blocking
+        concerns. Check the PR description for specific details about why it should not be merged.
+    - label: doc
+      instructions: >-
+        Apply this label when the PR primarily adds, updates, or improves documentation including README files. If you
+        apply this label do not apply the "bug", "feature request", or "improvement" labels.
+    - label: duplicate
+      instructions: >-
+        Apply this label when the PR addresses the same issue or implements the same feature as another existing
+        PR or issue.
+    - label: external
+      instructions: >-
+        Apply this label when the PR was submitted by someone who is not a member of the @NVIDIA/agentiq-developers
+        GitHub team.
+    - label: feature request
+      instructions: >-
+        Apply this label when the PR implements new functionality, adds new features, or introduces new capabilities
+        to the toolkit. If you apply this label do not apply the "bug", "doc", or "improvement" labels.
+    - label: good first issue
+      instructions: Do not apply this label, it is only used for issues.
+    - label: help wanted
+      instructions: Do not apply this label, it is only used for issues.
+    - label: improvement
+      instructions: >-
+        Apply this label when the PR enhances existing functionality without adding completely new features, such as
+        performance optimizations, code refactoring, or usability enhancements. If you apply this label do not apply
+        the "bug", "doc", or "feature request" labels.
+    - label: invalid
+      instructions: >-
+        Apply this label when the PR contains invalid changes, doesn't follow project guidelines, or has fundamental
+        issues that make it unsuitable for the project.
+    - label: Needs Triage
+      instructions: Do not apply this label, it is only used for issues.
+    - label: non-breaking
+      instructions: >-
+        Apply this label when the PR introduces changes that maintain backward compatibility, does not create a
+        behavioral change, and does not require users to modify their existing code. If you apply this label, do not
+        apply the "breaking" label.
+    - label: question
+      instructions: Do not apply this label, it is only used for issues.
+    - label: skip-ci
+      instructions: Do not apply this label, PR authors will apply this label if they need to skip CI checks.
+    - label: wontfix
+      instructions: Do not apply this label, it is only used for issues.
+
+
   suggested_reviewers: false
+  tools:
+    ruff:
+      enabled: true
