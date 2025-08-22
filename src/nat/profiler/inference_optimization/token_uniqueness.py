@@ -68,7 +68,6 @@ def compute_inter_query_token_uniqueness_by_llm(all_steps: list[list[Intermediat
 
     for (llm, ex_num), group_df in grouped:
         # Sort by event_timestamp
-        # PLW2901: Allow reassignment of a loop variable
         group_df = group_df.sort_values('event_timestamp', ascending=True)
 
         # Shift the llm_text_input to compare consecutive calls
