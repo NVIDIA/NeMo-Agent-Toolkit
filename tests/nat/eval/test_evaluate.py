@@ -48,6 +48,7 @@ from nat.eval.evaluator.evaluator_model import EvalOutputItem
 from nat.profiler.data_models import ProfilerResults
 from nat.runtime.session import SessionManager
 
+# pylint: disable=unused-argument # arguments are passed to setup the fixtures
 
 @pytest.fixture
 def default_eval_run_config():
@@ -298,8 +299,8 @@ async def test_run_workflow_remote_success(evaluation_run, generated_answer):
     Mock RemoteWorkflowHandler and test evaluation with a remote workflow.
     """
     # Patch the remote handler
-    with patch("nat.eval.remote_workflow.EvaluationRemoteWorkflowHandler") as MockHandler:
-        mock_handler = MockHandler.return_value
+    with patch("nat.eval.remote_workflow.EvaluationRemoteWorkflowHandler") as mock_handler:
+        mock_handler.return_value = MagicMock()
 
         async def fake_run_workflow_remote(eval_input):
             """
