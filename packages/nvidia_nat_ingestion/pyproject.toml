@@ -9,6 +9,7 @@ include = ["nat.*"]
 
 
 [tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
 root = "../.."
 
 
@@ -35,5 +36,3 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 nvidia-nat = { workspace = true }
-
-

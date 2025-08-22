@@ -16,6 +16,7 @@
 import json
 # pylint: disable=R0917
 import logging
+import re
 import typing
 from json import JSONDecodeError
 
@@ -23,12 +24,14 @@ from langchain_core.agents import AgentAction
 from langchain_core.agents import AgentFinish
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
+from langchain_core.language_models import LanguageModelInput
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import MessagesPlaceholder
+from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
@@ -97,10 +100,26 @@ class ReActAgentGraph(DualNodeAgent):
                          f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
         prompt = prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         # construct the ReAct Agent
-        bound_llm = llm.bind(stop=["Observation:"])  # type: ignore
-        self.agent = prompt | bound_llm
+        self.agent = prompt | self._maybe_bind_llm_and_yield()
         self.tools_dict = {tool.name: tool for tool in tools}
         logger.debug("%s Initialized ReAct Agent Graph", AGENT_LOG_PREFIX)
+
+    def _maybe_bind_llm_and_yield(self) -> Runnable[LanguageModelInput, BaseMessage]:
+        """
+        Bind additional parameters to the LLM if needed
+        - if the LLM is a smart model, no need to bind any additional parameters
+        - if the LLM is a non-smart model, bind a stop sequence to the LLM
+
+        Returns:
+            Runnable[LanguageModelInput, BaseMessage]: The LLM with any additional parameters bound.
+        """
+        # models that don't need (or don't support)a stop sequence
+        smart_models = re.compile(r"gpt-?5", re.IGNORECASE)
+        if any(smart_models.search(getattr(self.llm, model, "")) for model in ["model", "model_name"]):
+            # no need to bind any additional parameters to the LLM
+            return self.llm
+        # add a stop sequence to the LLM
+        return self.llm.bind(stop=["Observation:"])
 
     def _get_tool(self, tool_name: str):
         try:
