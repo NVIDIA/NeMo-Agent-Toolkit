@@ -112,8 +112,6 @@ jobs:
           - python-version: "3.12"
             container: ${{ inputs.py_12_container }}
 
-            env:
-              CI_PYTHON_VERSION: ${{ matrix.python-version }}
     env:
       CI_PYTHON_VERSION: ${{ matrix.python-version }}
       CI_ARCH: ${{ matrix.arch }}
