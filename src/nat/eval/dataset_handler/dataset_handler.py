@@ -362,6 +362,11 @@ class DatasetHandler:
         Import and return the custom post-process function using standard Python import path.
         """
         # Split the function path to get module and function name
+        if "." not in self.custom_post_process_function:
+            raise ValueError(
+                f"Invalid custom_post_process_function '{self.custom_post_process_function}'. "
+                "Expected format: '<module_path>.<function_name>'"
+            )
         module_path, function_name = self.custom_post_process_function.rsplit(".", 1)
 
         # Import the module
