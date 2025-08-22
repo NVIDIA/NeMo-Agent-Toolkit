@@ -82,10 +82,13 @@ def test_config_yaml_loads_and_has_keys() -> None:
     assert "_type: haystack_deep_research_agent" in text
     # key fields expected
     for key in [
-        "agent_model:",
-        "rag_model:",
-        "nvidia_api_url:",
+        "llms:",
+        "rag_llm:",
+        "agent_llm:",
+        "workflow:",
         "max_agent_steps:",
+        "search_top_k:",
+        "rag_top_k:",
         "opensearch_url:",
         "index_on_startup:",
         "data_dir:",

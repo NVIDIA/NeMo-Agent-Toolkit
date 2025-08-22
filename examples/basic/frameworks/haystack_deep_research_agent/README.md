@@ -195,7 +195,7 @@ You can customize the workflow by:
 
 1. **Modifying the system prompt** in `config.yml` to change the agent's behavior
 2. **Adding more document types** by extending the RAG tool to support other file formats
-3. **Changing the LLM model** by updating the NVIDIA model names in the configuration (`agent_model` and `rag_model` in `config.yml`). See Haystack's NvidiaChatGenerator docs: [NvidiaChatGenerator](https://docs.haystack.deepset.ai/docs/nvidiachatgenerator)
+3. **Changing the LLM model** by updating the top-level `llms` section in `config.yml`. This example defines `agent_llm` and `rag_llm` using the `nim` provider so they can leverage common parameters like `temperature`, `top_p`, and `max_tokens`. The workflow references them via the builder. See Haystack's NvidiaChatGenerator docs: [NvidiaChatGenerator](https://docs.haystack.deepset.ai/docs/nvidiachatgenerator)
 4. **Adjusting search parameters** to optimize for your use case
 
 ## Troubleshooting
@@ -213,9 +213,9 @@ You can customize the workflow by:
 
 The workflow demonstrates several key NeMo-Agent-Toolkit patterns:
 
-- **Function Registration**: Each tool is registered as a function with its own configuration
-- **Builder Pattern**: The NeMo-Agent-Toolkit Builder is used to create and manage tools and LLMs
-- **Component Integration**: Haystack components are wrapped as NeMo-Agent-Toolkit functions
+- **Workflow Registration**: The agent is exposed as a workflow function with a pydantic config
+- **Builder LLM Integration**: LLMs are defined under top-level `llms:` and accessed via `builder.get_llm_config(...)`
+- **Component Integration**: Haystack components are composed into tools within the workflow
 - **Error Handling**: Robust error handling with fallback behaviors
 - **Async Operations**: All operations are asynchronous for better performance
 

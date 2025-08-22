@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
-from typing import Tuple
 
 from haystack.core.pipeline import Pipeline
 from haystack.components.converters.pypdf import PyPDFToDocument
@@ -12,7 +11,7 @@ from haystack.components.writers import DocumentWriter
 from haystack.document_stores.types import DuplicatePolicy
 
 
-def _gather_sources(base_dir: Path) -> Tuple[list[Path], list[Path]]:
+def _gather_sources(base_dir: Path) -> tuple[list[Path], list[Path]]:
     pdfs = list(base_dir.glob("**/*.pdf"))
     texts = list(base_dir.glob("**/*.txt")) + list(base_dir.glob("**/*.md"))
     return pdfs, texts

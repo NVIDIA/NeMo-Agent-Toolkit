@@ -10,9 +10,18 @@ from haystack.core.super_component import SuperComponent
 from haystack.tools import ComponentTool
 
 
-def create_search_tool() -> ComponentTool:
+def create_search_tool(top_k: int = 10) -> ComponentTool:
+    """
+    Build a Haystack web search tool pipeline.
+
+    Args:
+        top_k: Number of search results to retrieve from Serper.
+
+    Returns:
+        ComponentTool: A Haystack tool that executes web search and returns formatted text.
+    """
     search_pipeline = Pipeline()
-    search_pipeline.add_component("search", SerperDevWebSearch(top_k=10))
+    search_pipeline.add_component("search", SerperDevWebSearch(top_k=top_k))
     search_pipeline.add_component(
         "fetcher",
         LinkContentFetcher(timeout=3, raise_on_failure=False, retry_attempts=2),
