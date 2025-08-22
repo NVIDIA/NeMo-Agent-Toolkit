@@ -353,15 +353,12 @@ class DatasetHandler:
                 custom_function = self._load_custom_post_process_function()
                 processed = custom_function(eval_input)
                 if not isinstance(processed, EvalInput):
-                    raise TypeError(
-                        f"Custom post-process function '{self.custom_post_process_function}' must return "
-                        f"EvalInput, got {type(processed)}"
-                    )
+                    raise TypeError(f"Custom post-process function '{self.custom_post_process_function}' must return "
+                                    f"EvalInput, got {type(processed)}")
                 return processed
             except Exception as e:
                 raise RuntimeError(
-                    f"Error calling custom post-process function '{self.custom_post_process_function}': {e}"
-                ) from e
+                    f"Error calling custom post-process function '{self.custom_post_process_function}': {e}") from e
 
         return eval_input
 
@@ -371,10 +368,8 @@ class DatasetHandler:
         """
         # Split the function path to get module and function name
         if "." not in self.custom_post_process_function:
-            raise ValueError(
-                f"Invalid custom_post_process_function '{self.custom_post_process_function}'. "
-                "Expected format: '<module_path>.<function_name>'"
-            )
+            raise ValueError(f"Invalid custom_post_process_function '{self.custom_post_process_function}'. "
+                             "Expected format: '<module_path>.<function_name>'")
         module_path, function_name = self.custom_post_process_function.rsplit(".", 1)
 
         # Import the module
