@@ -41,10 +41,6 @@
         "files.insertFinalNewline": true,
         "files.trimFinalNewlines": true,
         "files.trimTrailingWhitespace": true,
-        "flake8.args": [
-            "--max-line-length=120",
-            "--max-doc-length=120"
-        ],
         "isort.importStrategy": "fromEnvironment",
         "pylint.args": [
             "--rcfile=${workspaceFolder}/pyproject.toml"
