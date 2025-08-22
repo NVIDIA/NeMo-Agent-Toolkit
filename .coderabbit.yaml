@@ -86,3 +86,11 @@ reviews:
   tools:
     ruff:
       enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    osvScanner:
+      enabled: true
