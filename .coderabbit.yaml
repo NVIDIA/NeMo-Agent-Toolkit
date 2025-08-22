@@ -21,7 +21,7 @@ reviews:
   collapse_walkthrough: false
   auto_review:
     enabled: true
-    drafts: false
+    drafts: true # WIP: set false later
     auto_incremental_review: false
   suggested_labels: true
   labeling_instructions:
