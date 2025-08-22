@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 import json
 import math
 from pathlib import Path
@@ -41,7 +42,8 @@ class DatasetHandler:
                  reps: int,
                  concurrency: int,
                  num_passes: int = 1,
-                 adjust_dataset_size: bool = False):
+                 adjust_dataset_size: bool = False,
+                 custom_post_process_function: str | None = None):
         from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         self.dataset_config = dataset_config
@@ -52,6 +54,9 @@ class DatasetHandler:
         self.concurrency = concurrency
         self.num_passes = num_passes
         self.adjust_dataset_size = adjust_dataset_size
+
+        # Custom post-process function
+        self.custom_post_process_function = custom_post_process_function
 
         # Helpers
         self.intermediate_step_adapter = IntermediateStepAdapter()
@@ -329,6 +334,49 @@ class DatasetHandler:
             event_filter = self.intermediate_step_adapter.DEFAULT_EVENT_FILTER
         filtered_steps = self.intermediate_step_adapter.filter_intermediate_steps(intermediate_steps, event_filter)
         return self.intermediate_step_adapter.serialize_intermediate_steps(filtered_steps)
+
+    def post_process_eval_input(self, eval_input: EvalInput) -> EvalInput:
+        """
+        Post-process the eval input using custom function if provided.
+
+        The custom post-process function should have the signature:
+        def custom_post_process(eval_input: EvalInput) -> EvalInput
+
+        Args:
+            eval_input: The EvalInput object to post-process
+
+        Returns:
+            The post-processed EvalInput object
+        """
+        if self.custom_post_process_function:
+            try:
+                custom_function = self._load_custom_post_process_function()
+                return custom_function(eval_input)
+            except Exception as e:
+                raise RuntimeError(f"Error calling custom post-process function: {e}") from e
+
+        return eval_input
+
+    def _load_custom_post_process_function(self):
+        """
+        Import and return the custom post-process function using standard Python import path.
+        """
+        # Split the function path to get module and function name
+        module_path, function_name = self.custom_post_process_function.rsplit(".", 1)
+
+        # Import the module
+        module = importlib.import_module(module_path)
+
+        # Get the function from the module
+        if not hasattr(module, function_name):
+            raise AttributeError(f"Function '{function_name}' not found in module '{module_path}'")
+
+        custom_function = getattr(module, function_name)
+
+        if not callable(custom_function):
+            raise ValueError(f"'{self.custom_post_process_function}' is not callable")
+
+        return custom_function
 
     def publish_eval_input(self,
                            eval_input,
