@@ -16,6 +16,7 @@
 import json
 # pylint: disable=R0917
 import logging
+import re
 import typing
 from json import JSONDecodeError
 
@@ -97,10 +98,21 @@ class ReActAgentGraph(DualNodeAgent):
                          f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
         prompt = prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         # construct the ReAct Agent
-        bound_llm = llm.bind(stop=["Observation:"])  # type: ignore
-        self.agent = prompt | bound_llm
+        if ReActAgentGraph._llm_needs_stop_sequence(llm):
+            bound_llm = llm.bind(stop=["Observation:"])
+            self.agent = prompt | bound_llm
+        else:
+            self.agent = prompt | llm
         self.tools_dict = {tool.name: tool for tool in tools}
         logger.debug("%s Initialized ReAct Agent Graph", AGENT_LOG_PREFIX)
+
+    @staticmethod
+    def _llm_needs_stop_sequence(llm: BaseChatModel) -> bool:
+        """
+        Check if the LLM needs a stop sequence.
+        """
+        smart_models = re.compile(r"gpt-?5", re.IGNORECASE)
+        return not any(smart_models.match(getattr(llm, model, "")) for model in ["model", "model_name"])
 
     def _get_tool(self, tool_name: str):
         try:
