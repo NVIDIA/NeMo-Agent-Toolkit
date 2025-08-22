@@ -511,6 +511,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
          patch("nat.builder.eval_builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
          patch("nat.eval.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
          patch("nat.eval.evaluate.OutputUploader", return_value=mock_uploader), \
+         patch("nat.eval.evaluate.EvaluationRunOutput", return_value=MagicMock()) as mock_eval_run_output, \
          patch.object(evaluation_run, "run_workflow_local",
                       wraps=evaluation_run.run_workflow_local) as mock_run_workflow, \
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \
@@ -546,6 +547,9 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
         # Ensure custom scripts are run and directory is uploaded
         mock_uploader.run_custom_scripts.assert_called_once()
         mock_uploader.upload_directory.assert_awaited_once()
+
+        # Ensure EvaluationRunOutput was created (this prevents the Pydantic validation error)
+        mock_eval_run_output.assert_called()
 
 
 def test_append_job_id_to_output_dir(default_eval_config):
