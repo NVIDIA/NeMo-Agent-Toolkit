@@ -19,18 +19,18 @@ from functools import reduce
 from typing import Any
 
 from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
-from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
 
 class TraceAdapterRegistry:
-    """Registry for dynamically creating concrete TraceContainer types and updating unions.
+    """Registry for trace source to target type conversions.
 
-    Maintains schema detection through Pydantic unions while enabling dynamic registration.
+    Maintains schema detection through Pydantic unions while enabling dynamic registration
+    of converter functions for different trace source types.
     """
 
-    _registered_types: dict[type, type] = {}  # model_class -> concrete_type
+    _registered_types: dict[type, dict[type, Callable]] = {}  # source_type -> {target_type -> converter}
     _union_cache: Any = None
 
     @classmethod
@@ -49,51 +49,79 @@ class TraceAdapterRegistry:
         """
 
         def decorator(func):
+            return_type = func.__annotations__.get('return')
 
-            # Create unique concrete type for GlobalTypeConverter distinction
-            type_name = f"{trace_source_model.__name__}TraceContainer"
-            concrete_type = type(type_name, (TraceContainer, ),
-                                 {
-                                     '_source_model': trace_source_model,
-                                     '__module__': func.__module__,
-                                     '__qualname__': type_name,
-                                 })
+            # Validate return type annotation exists and is meaningful
+            if return_type is None:
+                raise ValueError(f"Converter function '{func.__name__}' must have a return type annotation.\n"
+                                 f"Example: def {func.__name__}(trace: TraceContainer) -> DFWESRecord:")
 
-            # Store the mapping
-            cls._registered_types[trace_source_model] = concrete_type
+            # Initialize nested dict if needed
+            if trace_source_model not in cls._registered_types:
+                cls._registered_types[trace_source_model] = {}
+
+            # Store converter: source_type -> target_type -> converter_func
+            cls._registered_types[trace_source_model][return_type] = func
 
             # Immediately rebuild union and update TraceContainer model
             cls._rebuild_union()
 
-            # Create converter function with concrete type signature
-            def typed_converter(trace_source: concrete_type):
-                """Schema-specific converter with unique input type."""
-                return func(trace_source)
-
-            # Set proper function metadata
-            typed_converter.__name__ = f"convert_{trace_source_model.__name__}"
-            typed_converter.__qualname__ = typed_converter.__name__
-            typed_converter.__annotations__ = {
-                'trace_source': concrete_type, 'return': func.__annotations__.get('return', type(None))
-            }
-
-            # Register with GlobalTypeConverter
-            GlobalTypeConverter.register_converter(typed_converter)
-            logger.debug("Registered converter: %s for model %s with type %s",
-                         typed_converter.__name__,
+            logger.debug("Registered %s -> %s converter",
                          trace_source_model.__name__,
-                         concrete_type.__name__)
-
+                         getattr(return_type, '__name__', str(return_type)))
             return func
 
         return decorator
 
     @classmethod
-    def get_current_union(cls) -> type:
-        """Get the current source union with all registered types.
+    def convert(cls, trace_container: TraceContainer, to_type: type) -> Any:
+        """Convert trace to target type using registered converter function.
+
+        Args:
+            trace_container (TraceContainer): TraceContainer with source data to convert
+            to_type (type): Target type to convert to
 
         Returns:
-            type: Union type containing all registered concrete types plus original types
+            Converted object of to_type
+
+        Raises:
+            ValueError: If no converter is registered for source->target combination
+        """
+        source_type = type(trace_container.source)
+
+        # Look up converter: source_type -> target_type -> converter_func
+        source_converters = cls._registered_types.get(source_type, {})
+        converter = source_converters.get(to_type)
+
+        if not converter:
+            available_targets = list(source_converters.keys()) if source_converters else []
+            available_target_names = [getattr(t, '__name__', str(t)) for t in available_targets]
+            raise ValueError(
+                f"No converter from {source_type.__name__} to {getattr(to_type, '__name__', str(to_type))}. "
+                f"Available targets: {available_target_names}")
+
+        return converter(trace_container)
+
+    @classmethod
+    def get_adapter(cls, trace_container: TraceContainer, to_type: type) -> Callable | None:
+        """Get the converter function for a given trace source and target type.
+
+        Args:
+            trace_container (TraceContainer): TraceContainer with source data
+            to_type (type): Target type to convert to
+
+        Returns:
+            Converter function if registered, None if not found
+        """
+        source_type = type(trace_container.source)
+        return cls._registered_types.get(source_type, {}).get(to_type)
+
+    @classmethod
+    def get_current_union(cls) -> type:
+        """Get the current source union with all registered source types.
+
+        Returns:
+            type: Union type containing all registered trace source types
         """
         if cls._union_cache is None:
             cls._rebuild_union()
@@ -101,15 +129,12 @@ class TraceAdapterRegistry:
 
     @classmethod
     def _rebuild_union(cls):
-        """Rebuild the union with all registered schema models."""
+        """Rebuild the union with all registered trace source types."""
 
-        # Start empty - all types added through registration
-        all_schema_types = set()
+        # Get all registered source types (dictionary keys)
+        all_schema_types = set(cls._registered_types.keys())
 
-        # Add all registered schema models for union detection
-        all_schema_types.update(cls._registered_types.keys())
-
-        # Create union from schema types (these are used for schema detection)
+        # Create union from source types (used for Pydantic schema detection)
         if len(all_schema_types) == 0:
             # No types registered yet - use Any as permissive fallback
             cls._union_cache = Any
@@ -121,7 +146,7 @@ class TraceAdapterRegistry:
             # Create Union from multiple types using reduce
             cls._union_cache = reduce(lambda a, b: a | b, sorted_types)
 
-        logger.debug("Rebuilt source union with %d registered schema types: %s",
+        logger.debug("Rebuilt source union with %d registered source types: %s",
                      len(all_schema_types), [t.__name__ for t in all_schema_types])
 
         # Update TraceContainer model with new union
@@ -142,47 +167,89 @@ class TraceAdapterRegistry:
             logger.warning("Failed to update TraceContainer model: %s", e)
 
     @classmethod
-    def create_dynamic_instance(cls, trace_container: TraceContainer) -> TraceContainer:
-        """Convert a TraceContainer to the appropriate dynamic type.
+    def unregister_adapter(cls, source_type: type, target_type: type) -> bool:
+        """Unregister a specific adapter.
 
         Args:
-            trace_container (TraceContainer): The base TraceContainer instance
+            source_type (type): The trace source type
+            target_type (type): The target conversion type
 
         Returns:
-            TraceContainer: The dynamic type instance
-
-        Raises:
-            ValueError: If no adapter is registered for the trace source schema type
-            RuntimeError: If dynamic type creation fails
+            bool: True if adapter was found and removed, False if not found
         """
-        # Check if we have a registered dynamic type for this trace source schema
-        if trace_container.source.__class__ in cls._registered_types:
-            dynamic_type = cls._registered_types[trace_container.source.__class__]
-            logger.debug("Converting to dynamic type %s for %s",
-                         dynamic_type.__name__,
-                         trace_container.__class__.__name__)
+        if source_type not in cls._registered_types:
+            return False
 
-            # Create instance of the dynamic type with the same data
-            try:
-                return dynamic_type(source=trace_container.source, span=trace_container.span)
-            except Exception as e:
-                logger.error("Failed to create dynamic type %s: %s", dynamic_type.__name__, e)
-                raise RuntimeError(
-                    f"Dynamic type creation failed for {trace_container.__class__.__name__}: {dynamic_type.__name__}"
-                ) from e
-        else:
-            logger.error("No dynamic type registered for schema %s", trace_container.source.__class__.__name__)
-            raise ValueError(f"No adapter registered for schema {trace_container.source.__class__.__name__}")
+        target_converters = cls._registered_types[source_type]
+        if target_type not in target_converters:
+            return False
+
+        # Remove the specific converter
+        del target_converters[target_type]
+
+        # Clean up empty source entry
+        if not target_converters:
+            del cls._registered_types[source_type]
+
+        # Rebuild union since registered types changed
+        cls._rebuild_union()
+
+        logger.debug("Unregistered %s -> %s converter",
+                     source_type.__name__,
+                     getattr(target_type, '__name__', str(target_type)))
+        return True
 
     @classmethod
-    def list_registered_types(cls) -> dict[type, type]:
-        """List all registered trace source schema types and their concrete container types.
+    def unregister_all_adapters(cls, source_type: type) -> int:
+        """Unregister all adapters for a given source type.
+
+        Args:
+            source_type (type): The trace source type to remove all converters for
 
         Returns:
-            dict[type, type]: Dict mapping trace source model types to concrete container types
+            int: Number of converters removed
+        """
+        if source_type not in cls._registered_types:
+            return 0
+
+        removed_count = len(cls._registered_types[source_type])
+        del cls._registered_types[source_type]
+
+        # Rebuild union since registered types changed
+        cls._rebuild_union()
+
+        logger.debug("Unregistered all %d converters for %s", removed_count, source_type.__name__)
+        return removed_count
+
+    @classmethod
+    def clear_registry(cls) -> int:
+        """Clear all registered adapters. Useful for testing cleanup.
+
+        Returns:
+            int: Total number of converters removed
+        """
+        total_removed = sum(len(converters) for converters in cls._registered_types.values())
+        cls._registered_types.clear()
+        cls._union_cache = None
+
+        # Rebuild union (will be empty now)
+        cls._rebuild_union()
+
+        logger.debug("Cleared registry - removed %d total converters", total_removed)
+        return total_removed
+
+    @classmethod
+    def list_registered_types(cls) -> dict[type, dict[type, Callable]]:
+        """List all registered conversions: source_type -> {target_type -> converter}.
+
+        Returns:
+            dict[type, dict[type, Callable]]: Nested dict mapping source types to their available target conversions
         """
         return cls._registered_types
 
 
-# Convenience function for adapter registration
+# Convenience functions for adapter management
 register_adapter = TraceAdapterRegistry.register_adapter
+unregister_adapter = TraceAdapterRegistry.unregister_adapter
+unregister_all_adapters = TraceAdapterRegistry.unregister_all_adapters
+clear_registry = TraceAdapterRegistry.clear_registry

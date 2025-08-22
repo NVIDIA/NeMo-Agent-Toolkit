@@ -69,10 +69,20 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
 
     @property
     def export_contract(self) -> type[BaseModel]:
-        """The export contract for Elasticsearch.
+        """Get the Pydantic model class for the configured Elasticsearch contract version.
+
+        Returns:
+            type[BaseModel]: The contract schema class for this version
         """
         return self.contract_version.get_contract_class()
 
     async def export_processed(self, item: dict | list[dict]) -> None:
-        """Export processed DFW records to Elasticsearch."""
+        """Export processed DFW records to Elasticsearch.
+
+        Delegates to ElasticsearchMixin.export_processed() which handles
+        bulk operations for lists and single document indexing for individual records.
+
+        Args:
+            item (dict | list[dict]): Single dictionary or batch of dictionaries to export
+        """
         await super().export_processed(item)

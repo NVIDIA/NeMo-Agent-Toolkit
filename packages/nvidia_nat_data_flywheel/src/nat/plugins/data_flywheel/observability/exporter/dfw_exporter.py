@@ -32,10 +32,10 @@ logger = logging.getLogger(__name__)
 
 
 class DictBatchingProcessor(BatchingProcessor[dict]):
-    """Processor that batches dict objects with explicit type information.
+    """Processor that batches dictionary objects for bulk operations.
 
-    This class provides explicit type information for the TypeIntrospectionMixin
-    by overriding the type properties directly.
+    Specializes BatchingProcessor with explicit dict typing to support
+    bulk export operations to sinks.
     """
     pass
 

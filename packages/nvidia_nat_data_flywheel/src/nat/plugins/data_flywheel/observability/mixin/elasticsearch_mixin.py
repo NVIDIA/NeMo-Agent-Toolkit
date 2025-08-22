@@ -53,7 +53,7 @@ class ElasticsearchMixin:
         """Export a batch of spans.
 
         Args:
-            item: Dictionary or list of dictionaries to export to Elasticsearch.
+            item (dict | list[dict]): Dictionary or list of dictionaries to export to Elasticsearch.
         """
         if isinstance(item, list):
             if not item:  # Empty list

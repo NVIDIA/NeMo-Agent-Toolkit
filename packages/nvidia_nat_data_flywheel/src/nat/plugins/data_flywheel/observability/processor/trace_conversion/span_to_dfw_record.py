@@ -23,7 +23,6 @@ from nat.data_models.span import Span
 from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import \
     TraceAdapterRegistry
 from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
-from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
@@ -42,23 +41,29 @@ def _get_string_value(value: Any) -> str:
     return str(value)
 
 
-def get_trace_source(span: Span, client_id: str) -> TraceContainer:
-    """Get the source of a span.
+def get_trace_container(span: Span, client_id: str) -> TraceContainer:
+    """Create a TraceContainer from a span for schema detection and conversion.
+
+    Extracts trace data from span attributes and creates a TraceContainer where Pydantic's
+    discriminated union will automatically detect the correct trace source schema type.
 
     Args:
-        span (Span): The span to get the source of
-        client_id (str): The client ID to use for the DFW record
+        span (Span): The span containing trace attributes to extract
+        client_id (str): The client ID to include in the trace source data
 
     Returns:
-        TraceContainer: The source of the span
+        TraceContainer: Container with automatically detected source type and original span
+
+    Raises:
+        ValueError: If span data doesn't match any registered trace source schemas
     """
-    # Extract framework (provider will be detected by union schema matching)
+    # Extract framework name from span attributes
     framework = _get_string_value(span.attributes.get("nat.framework", "langchain"))
 
-    # Create source dictionary WITHOUT provider - let union detect it via schema matching
+    # Create trace source data - Pydantic union will detect correct schema type automatically
     source_dict = {
         "source": {
-            "framework": framework,  # Don't include provider - let union schemas set their default values
+            "framework": framework,
             "input_value": span.attributes.get("input.value", None),
             "metadata": span.attributes.get("nat.metadata", None),
             "client_id": client_id,
@@ -67,43 +72,46 @@ def get_trace_source(span: Span, client_id: str) -> TraceContainer:
     }
 
     try:
-        # Create the TraceContainer - union will pick the right type based on schema
+        # Create TraceContainer - Pydantic discriminated union automatically detects source type
         trace_container = TraceContainer(**source_dict)
-        logger.debug("Union selected schema: %s with provider: %s",
-                     type(trace_container.source),
-                     getattr(trace_container.source, 'provider', 'unknown'))
-
-        # Extract the provider that was detected by the union
-        detected_provider = getattr(trace_container.source, 'provider', 'unknown')
-
-        # Convert enum to string if needed
-        detected_provider = _get_string_value(detected_provider)
-
-        # Now convert to dynamic type - must have registered adapter
-        return TraceAdapterRegistry.create_dynamic_instance(trace_container)
+        logger.debug("Pydantic union detected source type: %s for framework: %s",
+                     type(trace_container.source).__name__,
+                     framework)
+        return trace_container
 
     except Exception as e:
-        # Schema detection failed - this indicates missing schema registration or malformed data
-        available_schemas = list(TraceAdapterRegistry._registered_types.keys())
-        schema_names = [schema.__name__ for schema in available_schemas]
+        # Schema detection failed - indicates missing adapter registration or malformed span data
+        registry_data = TraceAdapterRegistry.list_registered_types()
+        adapter_metadata = []
+        for source_type, target_converters in registry_data.items():
+            for target_type in target_converters.keys():
+                target_name = getattr(target_type, '__name__', str(target_type))
+                adapter_metadata.append(f"{source_type.__name__} -> {target_name}")
 
-        raise ValueError(f"Schema-based detection failed for framework '{framework}'. "
-                         f"Data structure doesn't match any registered trace source schemas. "
-                         f"Available schemas: {schema_names}. "
-                         f"Ensure proper schema is registered with @register_adapter() for this data format. "
+        raise ValueError(f"Trace source schema detection failed for framework '{framework}'. "
+                         f"Span data structure doesn't match any registered trace source schemas. "
+                         f"Available registered adapters: {adapter_metadata}. "
+                         f"Ensure a schema is registered with @register_adapter() for this trace format. "
                          f"Original error: {e}") from e
 
 
 def span_to_dfw_record(span: Span, to_type: type[BaseModel], client_id: str) -> BaseModel | None:
-    """Convert a span to DFW record using registered adapters.
+    """Convert a span to Data Flywheel record using registered trace adapters.
+
+    Creates a TraceContainer from the span, automatically detects the trace source type
+    via Pydantic schema matching, then uses the registered converter to transform it
+    to the specified target type.
 
     Args:
-        span (Span): The span to convert
-        to_type (type[BaseModel]): The type of the DFW record to convert to
-        client_id (str): The client ID to use for the DFW record
+        span (Span): The span containing trace data to convert
+        to_type (type[BaseModel]): Target Pydantic model type for the conversion
+        client_id (str): Client identifier to include in the trace data
 
     Returns:
-        BaseModel | None: The converted DFW record
+        BaseModel | None: Converted record of the specified type, or None if conversion fails
+
+    Raises:
+        ValueError: If no converter is registered for the detected source type -> target type
     """
-    trace_source = get_trace_source(span, client_id)
-    return GlobalTypeConverter.convert(trace_source, to_type=to_type)
+    trace_container = get_trace_container(span, client_id)
+    return TraceAdapterRegistry.convert(trace_container, to_type=to_type)

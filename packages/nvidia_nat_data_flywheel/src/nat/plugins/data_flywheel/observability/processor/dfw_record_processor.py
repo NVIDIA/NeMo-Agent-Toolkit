@@ -33,7 +33,11 @@ DFWRecordT = TypeVar("DFWRecordT", bound=BaseModel)
 
 
 class DFWToDictProcessor(Processor[DFWRecordT, dict]):
-    """Processor that converts a Span to an OtelSpan."""
+    """Processor that converts a Data Flywheel record to a dictionary.
+
+    Serializes Pydantic DFW record models to dictionaries using model_dump_json()
+    for consistent field aliasing and proper JSON serialization.
+    """
 
     @override
     async def process(self, item: DFWRecordT | None) -> dict:
@@ -51,11 +55,13 @@ class DFWToDictProcessor(Processor[DFWRecordT, dict]):
 
         return json.loads(item.model_dump_json(by_alias=True))
 
-        # return item.model_dump(by_alias=True)
-
 
 class SpanToDFWRecordProcessor(Processor[Span, DFWRecordT], TypeIntrospectionMixin):
-    """Processor that converts a Span to an OtelSpan."""
+    """Processor that converts a Span to a Data Flywheel record.
+
+    Extracts trace data from spans and uses the trace adapter registry to convert
+    it to the target DFW record format.
+    """
 
     def __init__(self, client_id: str):
         self._client_id = client_id
