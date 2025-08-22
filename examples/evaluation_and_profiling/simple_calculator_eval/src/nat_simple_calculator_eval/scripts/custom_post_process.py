@@ -48,7 +48,7 @@ def add_metadata_and_filter(eval_input: EvalInput) -> EvalInput:
 
         # Add metadata to the full_dataset_entry
         enhanced_entry = item.full_dataset_entry.copy() if item.full_dataset_entry else {}
-        enhanced_entry['post_process_timestamp'] = "2025-01-27T12:00:00Z"
+        enhanced_entry['post_process_timestamp'] = datetime.now(timezone.utc).isoformat()
         enhanced_entry['post_process_version'] = "1.0"
         enhanced_entry['has_output'] = bool(item.output_obj)
 
