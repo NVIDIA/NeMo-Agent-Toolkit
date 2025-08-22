@@ -307,7 +307,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         async def start_evaluation(request: EvaluateRequest, background_tasks: BackgroundTasks, http_request: Request):
             """Handle evaluation requests."""
 
-            async with session_manager.session(request=http_request):
+            async with session_manager.session(http_connection=http_request):
 
                 # if job_id is present and already exists return the job info
                 if request.job_id:
@@ -336,7 +336,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             """Get the status of an evaluation job."""
             logger.info("Getting status for job %s", job_id)
 
-            async with session_manager.session(request=http_request):
+            async with session_manager.session(http_connection=http_request):
 
                 job = job_store.get_job(job_id)
                 if not job:
@@ -349,7 +349,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             """Get the status of the last created evaluation job."""
             logger.info("Getting last job status")
 
-            async with session_manager.session(request=http_request):
+            async with session_manager.session(http_connection=http_request):
 
                 job = job_store.get_last_job()
                 if not job:
@@ -361,7 +361,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         async def get_jobs(http_request: Request, status: str | None = None) -> list[EvaluateStatusResponse]:
             """Get all jobs, optionally filtered by status."""
 
-            async with session_manager.session(request=http_request):
+            async with session_manager.session(http_connection=http_request):
 
                 if status is None:
                     logger.info("Getting all jobs")
@@ -572,7 +572,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(request=request,
+                async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return await generate_single_response(None, session_manager, result_type=result_type)
@@ -583,7 +583,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def get_stream(request: Request):
 
-                async with session_manager.session(request=request,
+                async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
@@ -618,7 +618,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(request=request,
+                async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return await generate_single_response(payload, session_manager, result_type=result_type)
@@ -632,7 +632,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(request: Request, payload: request_type):
 
-                async with session_manager.session(request=request,
+                async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
@@ -677,7 +677,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 # Check if streaming is requested
                 stream_requested = getattr(payload, 'stream', False)
 
-                async with session_manager.session(request=request):
+                async with session_manager.session(http_connection=request):
                     if stream_requested:
                         # Return streaming response
                         return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
@@ -688,42 +688,41 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                      step_adaptor=self.get_step_adaptor(),
                                                      result_type=ChatResponseChunk,
                                                      output_type=ChatResponseChunk))
-                    else:
-                        # Return single response - check if workflow supports non-streaming
-                        try:
-                            response.headers["Content-Type"] = "application/json"
-                            return await generate_single_response(payload, session_manager, result_type=ChatResponse)
-                        except ValueError as e:
-                            if "Cannot get a single output value for streaming workflows" in str(e):
-                                # Workflow only supports streaming, but client requested non-streaming
-                                # Fall back to streaming and collect the result
-                                chunks = []
-                                async for chunk_str in generate_streaming_response_as_str(
-                                        payload,
-                                        session_manager=session_manager,
-                                        streaming=True,
-                                        step_adaptor=self.get_step_adaptor(),
-                                        result_type=ChatResponseChunk,
-                                        output_type=ChatResponseChunk):
-                                    if chunk_str.startswith("data: ") and not chunk_str.startswith("data: [DONE]"):
-                                        chunk_data = chunk_str[6:].strip()  # Remove "data: " prefix
-                                        if chunk_data:
-                                            try:
-                                                chunk_json = ChatResponseChunk.model_validate_json(chunk_data)
-                                                if (chunk_json.choices and len(chunk_json.choices) > 0
-                                                        and chunk_json.choices[0].delta
-                                                        and chunk_json.choices[0].delta.content is not None):
-                                                    chunks.append(chunk_json.choices[0].delta.content)
-                                            except Exception:
-                                                continue
 
-                                # Create a single response from collected chunks
-                                content = "".join(chunks)
-                                single_response = ChatResponse.from_string(content)
-                                response.headers["Content-Type"] = "application/json"
-                                return single_response
-                            else:
-                                raise
+                    # Return single response - check if workflow supports non-streaming
+                    try:
+                        response.headers["Content-Type"] = "application/json"
+                        return await generate_single_response(payload, session_manager, result_type=ChatResponse)
+                    except ValueError as e:
+                        if "Cannot get a single output value for streaming workflows" in str(e):
+                            # Workflow only supports streaming, but client requested non-streaming
+                            # Fall back to streaming and collect the result
+                            chunks = []
+                            async for chunk_str in generate_streaming_response_as_str(
+                                    payload,
+                                    session_manager=session_manager,
+                                    streaming=True,
+                                    step_adaptor=self.get_step_adaptor(),
+                                    result_type=ChatResponseChunk,
+                                    output_type=ChatResponseChunk):
+                                if chunk_str.startswith("data: ") and not chunk_str.startswith("data: [DONE]"):
+                                    chunk_data = chunk_str[6:].strip()  # Remove "data: " prefix
+                                    if chunk_data:
+                                        try:
+                                            chunk_json = ChatResponseChunk.model_validate_json(chunk_data)
+                                            if (chunk_json.choices and len(chunk_json.choices) > 0
+                                                    and chunk_json.choices[0].delta
+                                                    and chunk_json.choices[0].delta.content is not None):
+                                                chunks.append(chunk_json.choices[0].delta.content)
+                                        except Exception:
+                                            continue
+
+                            # Create a single response from collected chunks
+                            content = "".join(chunks)
+                            single_response = ChatResponse.from_string(content)
+                            response.headers["Content-Type"] = "application/json"
+                            return single_response
+                        raise
 
             return post_openai_api_compatible
 
@@ -758,7 +757,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     http_request: Request) -> AsyncGenerateResponse | AsyncGenerationStatusResponse:
                 """Handle async generation requests."""
 
-                async with session_manager.session(request=http_request):
+                async with session_manager.session(http_connection=http_request):
 
                     # if job_id is present and already exists return the job info
                     if request.job_id:
@@ -804,7 +803,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             """Get the status of an async job."""
             logger.info("Getting status for job %s", job_id)
 
-            async with session_manager.session(request=http_request):
+            async with session_manager.session(http_connection=http_request):
 
                 job = job_store.get_job(job_id)
                 if not job:

@@ -166,8 +166,9 @@ class WebSocketMessageHandler:
                     self._running_workflow_task = None
 
                 self._running_workflow_task = asyncio.create_task(
-                    self._run_workflow(content.text,
-                                       self._conversation_id,
+                    self._run_workflow(payload=content.text,
+                                       user_message_id=self._message_parent_id,
+                                       conversation_id=self._conversation_id,
                                        result_type=self._schema_output_mapping[self._workflow_schema_type],
                                        output_type=self._schema_output_mapping[
                                            self._workflow_schema_type])).add_done_callback(_done_callback)
@@ -290,14 +291,16 @@ class WebSocketMessageHandler:
 
     async def _run_workflow(self,
                             payload: typing.Any,
+                            user_message_id: str | None = None,
                             conversation_id: str | None = None,
                             result_type: type | None = None,
                             output_type: type | None = None) -> None:
 
         try:
             async with self._session_manager.session(
+                    user_message_id=user_message_id,
                     conversation_id=conversation_id,
-                    request=self._socket,
+                    http_connection=self._socket,
                     user_input_callback=self.human_interaction_callback,
                     user_authentication_callback=(self._flow_handler.authenticate
                                                   if self._flow_handler else None)) as session:
