@@ -22,6 +22,8 @@ from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
+# pylint: disable=unused-argument
+
 
 def extract_numbers(text: str) -> list[str]:
     """
