@@ -495,3 +495,107 @@ def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
     # check that there are two medium entries in the eval_input
     assert len(eval_input.eval_input_items) == 2
     assert all(item.full_dataset_entry['difficulty'] == 'medium' for item in eval_input.eval_input_items)
+
+
+def test_custom_post_process_function():
+    """Test that custom post-process function is correctly applied to EvalInput."""
+    from nat.data_models.dataset_handler import EvalDatasetJsonConfig
+    from nat.eval.dataset_handler.dataset_handler import DatasetHandler
+
+    # Create a simple dataset config
+    dataset_config = EvalDatasetJsonConfig()
+
+    # Create dataset handler with custom post-process function
+    custom_function = f"{__name__}.sample_post_process_function"
+    dataset_handler = DatasetHandler(dataset_config=dataset_config,
+                                     reps=1,
+                                     concurrency=1,
+                                     custom_post_process_function=custom_function)
+
+    # Create a simple EvalInput for testing
+    test_items = [
+        EvalInputItem(id="1",
+                      input_obj="What is 2 + 3?",
+                      expected_output_obj="5",
+                      output_obj="The answer is 5.00",
+                      trajectory=[],
+                      expected_trajectory=[],
+                      full_dataset_entry={}),
+        EvalInputItem(id="2",
+                      input_obj="What is 10 / 3?",
+                      expected_output_obj="3.33",
+                      output_obj="The result is 3.333333333",
+                      trajectory=[],
+                      expected_trajectory=[],
+                      full_dataset_entry={})
+    ]
+
+    test_eval_input = EvalInput(eval_input_items=test_items)
+
+    # Apply the custom post-process function
+    processed_eval_input = dataset_handler.post_process_eval_input(test_eval_input)
+
+    # Verify the function was applied
+    assert len(processed_eval_input.eval_input_items) == 2
+
+    # Check that the first item was normalized (5.00 -> 5)
+    first_item = processed_eval_input.eval_input_items[0]
+    assert first_item.output_obj == "The answer is 5"
+    assert first_item.full_dataset_entry.get('output_normalized') is True
+
+    # Check that the second item was normalized (3.333333333 -> 3.33)
+    second_item = processed_eval_input.eval_input_items[1]
+    assert second_item.output_obj == "The result is 3.33"
+    assert second_item.full_dataset_entry.get('output_normalized') is True
+
+
+def sample_post_process_function(eval_input: EvalInput) -> EvalInput:
+    """
+    Simple test post-process function that normalizes numerical outputs.
+    This mimics the behavior of the normalize_calculator_outputs function.
+    """
+    import re
+
+    def normalize_number(text: str) -> str:
+        """Helper function to normalize numerical representations"""
+        number_pattern = r'-?\d+\.?\d*'
+        numbers = re.findall(number_pattern, text)
+
+        normalized_text = text
+        for num_str in numbers:
+            try:
+                num = float(num_str)
+                if num.is_integer():
+                    normalized_num = str(int(num))
+                else:
+                    normalized_num = f"{num:.2f}".rstrip('0').rstrip('.')
+                normalized_text = normalized_text.replace(num_str, normalized_num, 1)
+            except ValueError:
+                continue
+
+        return normalized_text
+
+    processed_items = []
+
+    for item in eval_input.eval_input_items:
+        # Normalize the output if it exists
+        normalized_output = item.output_obj
+        if isinstance(item.output_obj, str):
+            normalized_output = normalize_number(item.output_obj)
+
+        # Create enhanced dataset entry with normalization info
+        enhanced_entry = item.full_dataset_entry.copy() if item.full_dataset_entry else {}
+        enhanced_entry['output_normalized'] = normalized_output != item.output_obj
+
+        # Create new item with normalized values
+        normalized_item = EvalInputItem(id=item.id,
+                                        input_obj=item.input_obj,
+                                        expected_output_obj=item.expected_output_obj,
+                                        output_obj=normalized_output,
+                                        trajectory=item.trajectory,
+                                        expected_trajectory=item.expected_trajectory,
+                                        full_dataset_entry=enhanced_entry)
+
+        processed_items.append(normalized_item)
+
+    return EvalInput(eval_input_items=processed_items)
