@@ -24,12 +24,14 @@ from langchain_core.agents import AgentAction
 from langchain_core.agents import AgentFinish
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
+from langchain_core.language_models import LanguageModelInput
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import MessagesPlaceholder
+from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
@@ -98,21 +100,15 @@ class ReActAgentGraph(DualNodeAgent):
                          f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
         prompt = prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         # construct the ReAct Agent
-        if ReActAgentGraph._llm_needs_stop_sequence(llm):
-            bound_llm = llm.bind(stop=["Observation:"])
-            self.agent = prompt | bound_llm
-        else:
-            self.agent = prompt | llm
+        self.agent = prompt | self._prepare_llm()
         self.tools_dict = {tool.name: tool for tool in tools}
         logger.debug("%s Initialized ReAct Agent Graph", AGENT_LOG_PREFIX)
 
-    @staticmethod
-    def _llm_needs_stop_sequence(llm: BaseChatModel) -> bool:
-        """
-        Check if the LLM needs a stop sequence.
-        """
+    def _prepare_llm(self) -> Runnable[LanguageModelInput, BaseMessage]:
         smart_models = re.compile(r"gpt-?5", re.IGNORECASE)
-        return not any(smart_models.match(getattr(llm, model, "")) for model in ["model", "model_name"])
+        if any(smart_models.match(getattr(self.llm, model, "")) for model in ["model", "model_name"]):
+            return self.llm
+        return self.llm.bind(stop=["Observation:"])
 
     def _get_tool(self, tool_name: str):
         try:
