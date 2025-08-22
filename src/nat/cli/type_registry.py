@@ -849,8 +849,7 @@ class TypeRegistry:
 
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
-    def get_registered_types_by_component_type(
-            self, component_type: ComponentEnum) -> list[str]:
+    def get_registered_types_by_component_type(self, component_type: ComponentEnum) -> list[str]:
 
         if component_type == ComponentEnum.FUNCTION:
             return [i.static_type() for i in self._registered_functions]

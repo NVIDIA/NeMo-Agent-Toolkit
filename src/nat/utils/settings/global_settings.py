@@ -76,8 +76,7 @@ def add_channel_interative(channel_type: str) -> None:
     registry = GlobalTypeRegistry.get()
 
     try:
-        ChannelConfigType = registry.get_registered_channel_info_by_channel_type(
-            channel_type=channel_type).config_type
+        ChannelConfigType = registry.get_registered_channel_info_by_channel_type(channel_type=channel_type).config_type
     except Exception as e:
         logger.exception("Invalid channel type: %s", e, exc_info=True)
         return
@@ -92,8 +91,7 @@ def add_channel_interative(channel_type: str) -> None:
             settings.channels[channel_name] = {}
             break
 
-    ChannelConfigType = registry.get_registered_channel_info_by_channel_type(
-        channel_type=channel_type).config_type
+    ChannelConfigType = registry.get_registered_channel_info_by_channel_type(channel_type=channel_type).config_type
 
     configure_registry_channel(config_type=ChannelConfigType, channel_name=channel_name)
 

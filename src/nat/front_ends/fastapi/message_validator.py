@@ -322,7 +322,8 @@ class MessageValidator:
         conversation_id: str | None = None,
         content: HumanPrompt,
         status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
-        timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))) -> WebSocketSystemInteractionMessage | None:
+        timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
+    ) -> WebSocketSystemInteractionMessage | None:
         """
         Creates a system interaction message with default values.
 

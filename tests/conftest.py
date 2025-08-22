@@ -350,18 +350,16 @@ def mock_tool():
             name: str = tool_name
             description: str = 'test tool:' + tool_name
 
-            async def _arun(
-                    self,
-                    query: str | dict = 'test',
-                    run_manager: AsyncCallbackManagerForToolRun | None = None,
-                    **kwargs):  # noqa: E501
+            async def _arun(self,
+                            query: str | dict = 'test',
+                            run_manager: AsyncCallbackManagerForToolRun | None = None,
+                            **kwargs):  # noqa: E501
                 return query
 
-            def _run(
-                    self,
-                    query: str | dict = 'test',
-                    run_manager: CallbackManagerForToolRun | None = None,
-                    **kwargs):  # noqa: E501
+            def _run(self,
+                     query: str | dict = 'test',
+                     run_manager: CallbackManagerForToolRun | None = None,
+                     **kwargs):  # noqa: E501
                 return query
 
         return MockTool()

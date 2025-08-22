@@ -122,13 +122,12 @@ def insert_license(f, this_year, first_line):
     return [f, 1, "License inserted", replace_line]
 
 
-def check_copyright(
-        f,
-        update_current_year,
-        verify_apache_v2=False,
-        update_start_year=False,
-        do_insert_license=False,
-        git_add=False):
+def check_copyright(f,
+                    update_current_year,
+                    verify_apache_v2=False,
+                    update_start_year=False,
+                    do_insert_license=False,
+                    git_add=False):
     """
     Checks for copyright headers and their years
     """

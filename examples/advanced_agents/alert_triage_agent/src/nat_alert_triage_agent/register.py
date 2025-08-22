@@ -42,7 +42,6 @@ from .classification_evaluator import register_classification_evaluator
 from .prompts import ALERT_TRIAGE_AGENT_PROMPT
 
 
-
 class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agent"):
     """
     Configuration for the Alert Triage Agent workflow. This agent orchestrates multiple diagnostic tools

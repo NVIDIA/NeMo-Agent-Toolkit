@@ -32,7 +32,6 @@ from nat.cli.register_workflow import register_tool_wrapper
 logger = logging.getLogger(__name__)
 
 
-
 def get_type_info(field_type):
     origin = get_origin(field_type)
     if origin is None:
