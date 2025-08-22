@@ -25,7 +25,7 @@ reviews:
     auto_incremental_review: false
   suggested_labels: true
   labeling_instructions:
-    - label: ! - Release
+    - label: "! - Release"
       instructions: >-
         You should only apply this label when the source branch has a name matching the regex pattern `release/\d+\.\d+`
         and the target branch is `main`.
