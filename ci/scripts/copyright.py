@@ -23,11 +23,7 @@ import os
 import re
 import sys
 
-# Now import gitutils. Ignore flake8 error here since there is no other way to
-# set up imports
-import gitutils  # noqa: E402
-
-# pylint: disable=global-statement
+import gitutils
 
 logger = logging.getLogger(__name__)
 
@@ -241,7 +237,6 @@ def _main():
     logging.basicConfig(format="%(levelname)s:%(message)s", level=log_level)
 
     ret_val = 0
-    global ExemptFiles
 
     argparser = argparse.ArgumentParser("Checks for a consistent copyright header in git's modified files")
     argparser.add_argument("--update-start-year",
@@ -326,7 +321,7 @@ def _main():
 
     (args, dirs) = argparser.parse_known_args()
     try:
-        ExemptFiles = ExemptFiles + [re.compile(pathName) for pathName in args.exclude]
+        ExemptFiles.extend([re.compile(pathName) for pathName in args.exclude])
     except re.error as re_exception:
         logger.exception("Regular expression error: %s", re_exception, exc_info=True)
         return 1
