@@ -45,6 +45,15 @@ def test_top_p_rejected_when_unsupported_and_set():
     with pytest.raises(ValidationError, match=r"top_p is not supported for model_name: gpt5"):
         _ = TestConfig(model_name="gpt5", top_p=0.2)
 
+    with pytest.raises(ValidationError, match=r"top_p is not supported for model_name: gpt5o"):
+        _ = TestConfig(model_name="gpt5o", top_p=0.2)
+
+    with pytest.raises(ValidationError, match=r"top_p is not supported for model_name: gpt-5"):
+        _ = TestConfig(model_name="gpt-5", top_p=0.2)
+
+    with pytest.raises(ValidationError, match=r"top_p is not supported for model_name: gpt-5o"):
+        _ = TestConfig(model_name="gpt-5o", top_p=0.2)
+
 
 def test_top_p_none_when_unsupported_and_value_none():
 

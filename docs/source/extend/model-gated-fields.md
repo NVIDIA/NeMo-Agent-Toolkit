@@ -59,7 +59,7 @@ class AzureOnlyMixin(
     ModelGatedFieldMixin[int],
     field_name="some_param",
     default_if_supported=1,
-    unsupported_models=(re.compile(r"^gpt5$", re.IGNORECASE),),
+    unsupported_models=(re.compile(r"gpt-?5", re.IGNORECASE),),
     model_keys=("azure_deployment",),
 ):
     some_param: int | None = Field(default=None)

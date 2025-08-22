@@ -20,7 +20,7 @@ from pydantic import Field
 
 from nat.data_models.model_gated_field_mixin import ModelGatedFieldMixin
 
-_UNSUPPORTED_TEMPERATURE_MODELS = (re.compile(r"gpt5", re.IGNORECASE), )
+_UNSUPPORTED_TEMPERATURE_MODELS = (re.compile(r"gpt-?5", re.IGNORECASE), )
 
 
 class TemperatureMixin(

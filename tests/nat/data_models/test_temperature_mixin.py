@@ -45,6 +45,15 @@ def test_temperature_rejected_when_unsupported_and_set():
     with pytest.raises(ValidationError, match=r"temperature is not supported for model_name: gpt5"):
         _ = TestConfig(model_name="gpt5", temperature=0.2)
 
+    with pytest.raises(ValidationError, match=r"temperature is not supported for model_name: gpt5o"):
+        _ = TestConfig(model_name="gpt5o", temperature=0.2)
+
+    with pytest.raises(ValidationError, match=r"temperature is not supported for model_name: gpt-5"):
+        _ = TestConfig(model_name="gpt-5", temperature=0.2)
+
+    with pytest.raises(ValidationError, match=r"temperature is not supported for model_name: gpt-5o"):
+        _ = TestConfig(model_name="gpt-5o", temperature=0.2)
+
 
 def test_temperature_none_when_unsupported_and_value_none():
 
