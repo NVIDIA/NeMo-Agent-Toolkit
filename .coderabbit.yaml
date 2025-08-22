@@ -55,6 +55,8 @@ reviews:
       spelling mistakes but are listed in the `ci/vale/styles/config/vocabularies/nat/accept.txt` file are OK.
 
     # Misc.
+    - All code should be licensed under the Apache License 2.0, and should contain an Apache License 2.0 header
+      comment at the top of each file.
     - Confirm that copyright years are up-to date whenever a file is changed.
 
   path_instructions:
