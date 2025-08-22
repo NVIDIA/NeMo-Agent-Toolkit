@@ -17,8 +17,16 @@
 # Docs: https://docs.coderabbit.ai/getting-started/configure-coderabbit/
 language: "en-US"
 reviews:
-  review_status: false
+  review_status: true
   collapse_walkthrough: false
+  pre_merge_checks:
+    title:
+      mode: warning
+      requirements: "Title should be concise, and descriptive, and use imperative mood (max ~72 chars)."
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
   auto_review:
     enabled: true
     drafts: true # WIP: set false later
