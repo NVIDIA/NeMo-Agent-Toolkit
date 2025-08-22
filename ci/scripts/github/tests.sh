@@ -20,6 +20,7 @@ GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITHUB_SCRIPT_DIR}/common.sh
 export REPORTS_DIR=${WORKSPACE_TMP}/reports
+mkdir -p ${REPORTS_DIR}
 get_lfs_files
 
 create_env group:dev extra:all
