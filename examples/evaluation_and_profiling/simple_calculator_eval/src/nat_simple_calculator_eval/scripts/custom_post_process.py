@@ -92,7 +92,7 @@ def normalize_calculator_outputs(eval_input: EvalInput) -> EvalInput:
         import re
 
         # Extract numbers from text and normalize them
-        number_pattern = r'-?\d+\.?\d*'
+        number_pattern = r'-?\d+(?:\.\d+)?'
         numbers = re.findall(number_pattern, text)
 
         normalized_text = text
