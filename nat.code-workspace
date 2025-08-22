@@ -41,10 +41,6 @@
         "files.insertFinalNewline": true,
         "files.trimFinalNewlines": true,
         "files.trimTrailingWhitespace": true,
-        "isort.importStrategy": "fromEnvironment",
-        "pylint.args": [
-            "--rcfile=${workspaceFolder}/pyproject.toml"
-        ],
         "python.analysis.exclude": [
             // Repeat default options
             "**/node_modules",
