@@ -65,6 +65,7 @@ class ContextState(metaclass=Singleton):
 
     def __init__(self):
         self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
+        self.user_message_id: ContextVar[str | None] = ContextVar("user_message_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
         self.metadata: ContextVar[RequestAttributes] = ContextVar("request_attributes", default=RequestAttributes())
@@ -164,6 +165,13 @@ class Context:
             str | None
         """
         return self._context_state.conversation_id.get()
+
+    @property
+    def user_message_id(self) -> str | None:
+        """
+        This property retrieves the user message ID which is the unique identifier for the current user message.
+        """
+        return self._context_state.user_message_id.get()
 
     @contextmanager
     def push_active_function(self, function_name: str, input_data: typing.Any | None):
