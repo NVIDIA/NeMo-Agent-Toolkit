@@ -34,7 +34,7 @@ def extract_numbers(text: str) -> list[str]:
         List of number strings found in the text
     """
     import re
-    return re.findall(r"\d+\.?\d*", text)
+    return re.findall(r"\d+(?:\.\d+)?", text)
 
 
 def validate_number_count(numbers: list[str], expected_count: int, action: str) -> str | None:
