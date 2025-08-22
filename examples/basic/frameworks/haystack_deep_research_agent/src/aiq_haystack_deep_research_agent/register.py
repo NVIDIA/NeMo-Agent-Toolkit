@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+# pyright: reportMissingTypeStubs=false, reportMissingImports=false
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +19,7 @@ import logging
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.llm.nim_llm import NIMModelConfig
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +39,10 @@ class HaystackDeepResearchWorkflowConfig(
     When you use information from the document database, cite the text used from the source document.
     It is important that you cite accurately.
     """
-    agent_model: str = "meta/llama-3.1-8b-instruct"
-    rag_model: str = "meta/llama-3.1-8b-instruct"
     max_agent_steps: int = 20
+    search_top_k: int = 10
+    rag_top_k: int = 15
     opensearch_url: str = "http://localhost:9200"
-    nvidia_api_url: str = "https://integrate.api.nvidia.com/v1"
     # Indexing configuration
     index_on_startup: bool = True
     # Default to "/data" so users can mount a volume or place files at repo_root/data.
@@ -54,7 +55,10 @@ async def haystack_deep_research_agent_workflow(
     config: HaystackDeepResearchWorkflowConfig, builder: Builder
 ):
     """
-    Main workflow that creates and returns the deep research agent
+    Main workflow that creates and returns the deep research agent.
+
+    Uses top-level `llms` configuration via builder to instantiate Haystack NvidiaChatGenerator
+    for both the agent and RAG tool, per review suggestions.
     """
     from haystack.components.agents import Agent
     from haystack.utils import Secret
@@ -71,7 +75,7 @@ async def haystack_deep_research_agent_workflow(
     logger.info(f"Starting Haystack Deep Research Agent workflow with config: {config}")
 
     # Create search tool
-    search_tool = create_search_tool()
+    search_tool = create_search_tool(top_k=config.search_top_k)
 
     # Create document store
     document_store = OpenSearchDocumentStore(
@@ -85,22 +89,34 @@ async def haystack_deep_research_agent_workflow(
             document_store=document_store, data_dir=config.data_dir, logger=logger
         )
 
-    # Create RAG tool
+    def _nim_to_haystack_generator(cfg: NIMModelConfig) -> NvidiaChatGenerator:
+        return NvidiaChatGenerator(
+            model=cfg.model_name,
+            api_base_url=cfg.base_url,
+            api_key=Secret.from_env_var("NVIDIA_API_KEY"),
+        )
+
+    # Instantiate LLMs via builder configs (expecting NIM)
+    rag_llm_cfg = builder.get_llm_config("rag_llm")
+    agent_llm_cfg = builder.get_llm_config("agent_llm")
+
+    if not isinstance(rag_llm_cfg, NIMModelConfig):
+        raise TypeError("llms.rag_llm must be of type 'nim'.")
+    if not isinstance(agent_llm_cfg, NIMModelConfig):
+        raise TypeError("llms.agent_llm must be of type 'nim'.")
+
+    rag_generator = _nim_to_haystack_generator(rag_llm_cfg)
     rag_tool, _ = create_rag_tool(
         document_store=document_store,
-        rag_model=config.rag_model,
-        nvidia_api_url=config.nvidia_api_url,
-        secret_provider=Secret.from_env_var("NVIDIA_API_KEY"),
-        top_k=15,
+        top_k=config.rag_top_k,
+        generator=rag_generator,
     )
 
     # Create the agent
+    agent_generator = _nim_to_haystack_generator(agent_llm_cfg)
+
     agent = Agent(
-        chat_generator=NvidiaChatGenerator(
-            model=config.agent_model,
-            api_base_url=config.nvidia_api_url,
-            api_key=Secret.from_env_var("NVIDIA_API_KEY"),
-        ),
+        chat_generator=agent_generator,
         tools=Toolset(tools=[search_tool, rag_tool]),
         system_prompt=config.system_prompt,
         exit_conditions=["text"],
@@ -113,14 +129,13 @@ async def haystack_deep_research_agent_workflow(
 
     async def _response_fn(input_message: str) -> str:
         """
-        Process the input message and generate a research response
-        Implements the exact logic from the notebook
+        Process the input message and generate a research response.
 
         Args:
             input_message: The user's research question
 
         Returns:
-            Comprehensive research report
+            Comprehensive research report.
         """
         try:
             logger.info(f"Processing research query: {input_message}")

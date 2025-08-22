@@ -1,8 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Tuple
-
 from haystack.components.builders import ChatPromptBuilder
 from haystack.core.pipeline import Pipeline
 from haystack.core.super_component import SuperComponent
@@ -16,18 +14,29 @@ from haystack_integrations.components.retrievers.opensearch import (
 
 def create_rag_tool(
     document_store,
-    rag_model: str,
-    nvidia_api_url: str,
-    secret_provider,
     *,
     top_k: int = 15,
-) -> Tuple[ComponentTool, Pipeline]:
+    generator: NvidiaChatGenerator | None = None,
+) -> tuple[ComponentTool, Pipeline]:
+    """
+    Build a RAG tool composed of OpenSearch retriever and NvidiaChatGenerator.
+
+    Args:
+        document_store: OpenSearch document store instance.
+        top_k: Number of documents to retrieve for RAG.
+        generator: Pre-configured NvidiaChatGenerator created from builder LLM config.
+
+    Returns:
+        (ComponentTool, Pipeline): The tool and underlying pipeline.
+
+    Raises:
+        ValueError: If a generator is not provided.
+    """
     retriever = OpenSearchBM25Retriever(document_store=document_store, top_k=top_k)
-    generator = NvidiaChatGenerator(
-        model=rag_model,
-        api_base_url=nvidia_api_url,
-        api_key=secret_provider,
-    )
+    if generator is None:
+        raise ValueError(
+            "NvidiaChatGenerator instance must be provided via builder-configured LLM."
+        )
 
     template = """
 	{% for document in documents %}
