@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import logging
+from datetime import datetime
+from datetime import timezone
 
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem

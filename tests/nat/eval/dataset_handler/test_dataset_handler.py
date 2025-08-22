@@ -499,8 +499,6 @@ def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
 
 def test_custom_post_process_function():
     """Test that custom post-process function is correctly applied to EvalInput."""
-    from nat.data_models.dataset_handler import EvalDatasetJsonConfig
-    from nat.eval.dataset_handler.dataset_handler import DatasetHandler
 
     # Create a simple dataset config
     dataset_config = EvalDatasetJsonConfig()
