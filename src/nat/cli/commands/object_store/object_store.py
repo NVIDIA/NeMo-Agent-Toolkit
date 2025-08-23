@@ -131,7 +131,7 @@ async def upload_command(store: ObjectStore, local_dir: Path, **_kwargs):
         # Process each file recursively
         for file_path in local_dir.rglob("*"):
             if file_path.is_file():
-                key = str(file_path.relative_to(local_dir))
+                key = file_path.relative_to(local_dir).as_posix()
                 await upload_file(store, file_path, key)
                 file_count += 1
 
