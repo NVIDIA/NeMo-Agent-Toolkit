@@ -15,6 +15,8 @@
 
 import typing
 
+from pydantic import Field
+
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
 
@@ -23,8 +25,21 @@ class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     pass
 
 
+class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+    """Base configuration for function groups.
+
+    Function groups enable sharing of configurations and resources across multiple functions.
+    """
+    exposes: list[str] = Field(
+        default=[],
+        description="The list of exposed function names which should be added to the global Function registry",
+    )
+
+
 class EmptyFunctionConfig(FunctionBaseConfig, name="EmptyFunctionConfig"):
     pass
 
 
 FunctionConfigT = typing.TypeVar("FunctionConfigT", bound=FunctionBaseConfig)
+
+FunctionGroupConfigT = typing.TypeVar("FunctionGroupConfigT", bound=FunctionGroupBaseConfig)

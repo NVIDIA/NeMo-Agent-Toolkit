@@ -22,6 +22,7 @@ from typing import Any
 import pandas as pd
 
 from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.cli.type_registry import RegisteredFunctionGroupInfo
 from nat.cli.type_registry import RegisteredFunctionInfo
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.profiler.data_frame_row import DataFrameRow
@@ -32,7 +33,8 @@ _FRAMEWORK_REGEX_MAP = {t: fr'\b{t._name_}\b' for t in LLMFrameworkEnum}
 logger = logging.getLogger(__name__)
 
 
-def detect_llm_frameworks_in_build_fn(registration: RegisteredFunctionInfo) -> list[LLMFrameworkEnum]:
+def detect_llm_frameworks_in_build_fn(
+        registration: RegisteredFunctionInfo | RegisteredFunctionGroupInfo) -> list[LLMFrameworkEnum]:
     """
     Analyze a function's source (the build_fn) to see which LLM frameworks it uses. Also recurses
     into any additional Python functions that the build_fn calls while passing `builder`, so that

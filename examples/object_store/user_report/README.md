@@ -22,6 +22,7 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 ## Table of Contents
 
 - [Key Features](#key-features)
+- [Function Groups Overview](#function-groups-overview)
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
@@ -37,11 +38,59 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 
 ## Key Features
 
-- **Object Store Integration:** Demonstrates comprehensive integration with object storage systems including AWS S3 and MinIO for storing and retrieving user report data.
-- **Multi-Database Support:** Shows support for both object stores (S3-compatible) and relational databases (MySQL) for flexible data storage architectures.
-- **File Server Backend:** Provides a complete file server implementation with object store backing, supporting REST API operations for upload, download, update, and delete.
-- **Real-Time Report Management:** Enables dynamic creation, retrieval, and management of user reports through natural language interfaces with automatic timestamp handling.
-- **Mock Data Pipeline:** Includes complete setup scripts and mock data for testing object store workflows without requiring production data sources.
+- **Function Group Implementation**: Demonstrates the new function groups feature in NeMo Agent toolkit for sharing configurations and resources across multiple functions.
+- **Shared Configuration**: All user report functions share the same object store reference and configuration settings.
+- **Resource Sharing**: Functions within the group share the same object store client connection, reducing resource overhead.
+- **Object Store Integration**: Comprehensive integration with object storage systems including AWS S3 and MinIO for storing and retrieving user report data.
+- **Multi-Database Support**: Shows support for both object stores (S3-compatible) and relational databases (MySQL) for flexible data storage architectures.
+- **File Server Backend**: Provides a complete file server implementation with object store backing, supporting REST API operations for upload, download, update, and delete.
+- **Real-Time Report Management**: Enables dynamic creation, retrieval, and management of user reports through natural language interfaces with automatic timestamp handling.
+- **Mock Data Pipeline**: Includes complete setup scripts and mock data for testing object store workflows without requiring production data sources.
+
+## Function Groups Overview
+
+This example demonstrates the new function groups feature in NeMo Agent toolkit. Function groups allow you to:
+
+- **Share configurations** across multiple related functions
+- **Share resources** such as database connections or API clients
+- **Reduce duplication** in both Python code and YAML configurations
+- **Maintain compatibility** with existing function interfaces
+
+### How Function Groups Work
+
+The user report function group (`user_report`) contains four functions that all share the same configuration:
+
+- **Shared Configuration**: All functions use the same `object_store` reference and function descriptions
+- **Shared Resources**: All functions share the same object store client connection
+- **Individual Functions**: Each function (`get`, `put`, `update`, `delete`) has its own logic and description
+- **Naming Convention**: Functions are referenced as `user_report.get`, `user_report.put`, etc.
+
+### Configuration Structure
+
+```yaml
+function_groups:
+  user_report:
+    _type: user_report
+    exposes: [get, put, update, delete]
+    object_store: report_object_store
+    get_description: "Description for get function..."
+    put_description: "Description for put function..."
+    update_description: "Description for update function..."
+    delete_description: "Description for delete function..."
+```
+
+### Function References
+
+In the workflow configuration, you can reference individual functions or the entire group:
+
+```yaml
+workflow:
+  _type: react_agent
+  # Reference individual functions
+  tool_names: [user_report.get, user_report.put, user_report.update, user_report.delete]
+  
+  # tool_names: [user_report]
+```
 
 ## Installation and Setup
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
