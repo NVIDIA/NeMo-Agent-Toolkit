@@ -145,7 +145,7 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
     await object_store.upsert_object("greeting.txt", ObjectStoreItem(
         data=b"Goodbye, World!",
         content_type="text/plain",
-        metadata={"author", "user123"}
+        metadata={"author": "user123"}
     ))
 
     # Retrieve an object
@@ -177,9 +177,9 @@ object_stores:
 ```
 
 This enables HTTP endpoints for object store operations:
-- **PUT** `/static/{file_path}` - Update an existing object
+- **PUT** `/static/{file_path}` - Create or replace an object at the given path (upsert)
   ```console
-  $ curl -X PUT -d @data.txt http://localhost:9000/static/folder/data.txt
+  $ curl -X PUT --data-binary @data.txt http://localhost:9000/static/folder/data.txt
   ```
 - **GET** `/static/{file_path}` - Download an object
   ```console
@@ -187,7 +187,7 @@ This enables HTTP endpoints for object store operations:
   ```
 - **POST** `/static/{file_path}` - Upload a new object
   ```console
-  $ curl -X POST -d @data_new.txt http://localhost:9000/static/folder/data.txt
+  $ curl -X POST --data-binary @data_new.txt http://localhost:9000/static/folder/data.txt
   ```
 - **DELETE** `/static/{file_path}` - Delete an object
   ```console

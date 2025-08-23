@@ -42,9 +42,8 @@ class RedisObjectStore(ObjectStore):
         self._port = port
         self._db = db
         self._client: redis.Redis | None = None
-        self._key_prefix = f"nat:object_store:bucket:{self._bucket_name}"
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "RedisObjectStore":
 
         if self._client is not None:
             raise RuntimeError("Connection already established")
@@ -66,7 +65,7 @@ class RedisObjectStore(ObjectStore):
 
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
 
         if not self._client:
             raise RuntimeError("Connection not established")
@@ -75,7 +74,7 @@ class RedisObjectStore(ObjectStore):
         self._client = None
 
     def _make_key(self, key: str) -> str:
-        return f"{self._key_prefix}:{key}"
+        return f"nat/object_store/{self._bucket_name}/{key}"
 
     @override
     async def put_object(self, key: str, item: ObjectStoreItem):

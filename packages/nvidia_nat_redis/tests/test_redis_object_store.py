@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import socket
 from contextlib import asynccontextmanager
 
 import pytest
@@ -26,7 +27,18 @@ from nat.test.object_store_tests import ObjectStoreTests
 # docker run --rm -ti --name test-redis -p 6379:6379 redis:7-alpine
 
 
+def _redis_available(host: str = "localhost", port: int = 6379) -> bool:
+    with socket.socket() as s:
+        s.settimeout(0.25)
+        try:
+            s.connect((host, port))
+            return True
+        except OSError:
+            return False
+
+
 @pytest.mark.integration
+@pytest.mark.skipif(not _redis_available(), reason="Redis server not available")
 class TestRedisObjectStore(ObjectStoreTests):
 
     @asynccontextmanager

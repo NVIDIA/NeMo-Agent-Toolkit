@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import re
 
 import aiomysql
 from aiomysql.pool import Pool
@@ -33,19 +34,24 @@ class MySQLObjectStore(ObjectStore):
     """
 
     def __init__(self, *, bucket_name: str, host: str, port: int, username: str | None, password: str | None):
+        super().__init__()
+
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", bucket_name):
+            raise ValueError("bucket_name must match [A-Za-z0-9_-]+")
+
         self._bucket_name = bucket_name
         self._host = host
         self._port = port
         self._username = username
         self._password = password
 
-        super().__init__()
-
         self._conn_pool: Pool | None = None
 
-        self._schema = f"`bucket_{self._bucket_name}`"
+    @property
+    def _schema(self) -> str:
+        return f"`bucket_{self._bucket_name}`"
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "MySQLObjectStore":
 
         if self._conn_pool is not None:
             raise RuntimeError("Connection already established")
@@ -98,7 +104,7 @@ class MySQLObjectStore(ObjectStore):
 
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
 
         if not self._conn_pool:
             raise RuntimeError("Connection not established")

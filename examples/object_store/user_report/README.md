@@ -79,7 +79,7 @@ docker compose -f examples/deploy/docker-compose.minio.yml up -d
 ```
 
 > [!NOTE]
-> This is not a secure configuration and should not to be used in production systems.
+> This is not a secure configuration and should not be used in production systems.
 
 #### Setting up MySQL
 
@@ -98,7 +98,7 @@ docker compose -f examples/deploy/docker-compose.mysql.yml up -d
 ```
 
 > [!NOTE]
-> This is not a secure configuration and should not to be used in production systems.
+> This is not a secure configuration and should not be used in production systems.
 
 #### Setting up Redis
 
@@ -109,7 +109,7 @@ docker compose -f examples/deploy/docker-compose.redis.yml up -d
 ```
 
 > [!NOTE]
-> This is not a secure configuration and should not to be used in production systems.
+> This is not a secure configuration and should not be used in production systems.
 
 ### Loading Mock Data
 
@@ -163,8 +163,8 @@ The above command will use the S3-compatible object store. Other configuration f
 ### Using the Object Store Backed File Server (Optional)
 
 - Download an object: `curl -X GET http://<hostname>:<port>/static/{file_path} -o {filename}`
-- Upload an object: `curl -X POST http://<hostname>:<port>/static/{file_path} -d @{filename}`
-- Upsert an object: `curl -X PUT http://<hostname>:<port>/static/{file_path} -d @{filename}`
+- Upload an object: `curl -X POST http://<hostname>:<port>/static/{file_path} --data-binary @{filename}`
+- Upsert an object: `curl -X PUT http://<hostname>:<port>/static/{file_path} --data-binary @{filename}`
 - Delete an object: `curl -X DELETE http://<hostname>:<port>/static/{file_path}`
 
 If any of the loading scripts were run and the files are in the object store, example commands are:

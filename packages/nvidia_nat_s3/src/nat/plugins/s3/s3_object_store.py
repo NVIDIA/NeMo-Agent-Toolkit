@@ -47,20 +47,16 @@ class S3ObjectStore(ObjectStore):
         self._client: BaseClient | None = None
         self._client_context = None
 
-        if not access_key:
-            raise ValueError("Access key is not set")
+        self._client_args: dict = {}
+        if access_key and secret_key:
+            self._client_args["aws_access_key_id"] = access_key
+            self._client_args["aws_secret_access_key"] = secret_key
+        if region:
+            self._client_args["region_name"] = region
+        if endpoint_url:
+            self._client_args["endpoint_url"] = endpoint_url
 
-        if not secret_key:
-            raise ValueError("Secret key is not set")
-
-        self._client_args = {
-            "aws_access_key_id": access_key,
-            "aws_secret_access_key": secret_key,
-            "region_name": region,
-            "endpoint_url": endpoint_url,
-        }
-
-    async def __aenter__(self):
+    async def __aenter__(self) -> "S3ObjectStore":
 
         if self._client_context is not None:
             raise RuntimeError("Connection already established")
@@ -82,7 +78,7 @@ class S3ObjectStore(ObjectStore):
 
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
 
         if self._client_context is None:
             raise RuntimeError("Connection not established")

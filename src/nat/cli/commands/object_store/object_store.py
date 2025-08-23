@@ -17,6 +17,7 @@ import asyncio
 import importlib
 import logging
 import mimetypes
+import time
 from pathlib import Path
 
 import click
@@ -60,8 +61,7 @@ async def upload_file(object_store: ObjectStore, file_path: Path, key: str):
         key: The key to upload the file to.
     """
     try:
-        with open(file_path, "rb") as f:
-            data = f.read()
+        data = await asyncio.to_thread(file_path.read_bytes)
 
         item = ObjectStoreItem(data=data,
                                content_type=mimetypes.guess_type(str(file_path))[0],
@@ -69,7 +69,7 @@ async def upload_file(object_store: ObjectStore, file_path: Path, key: str):
                                    "original_filename": file_path.name,
                                    "file_size": str(len(data)),
                                    "file_extension": file_path.suffix,
-                                   "upload_timestamp": str(int(asyncio.get_event_loop().time()))
+                                   "upload_timestamp": str(int(time.time()))
                                })
 
         # Upload using upsert to allow overwriting
@@ -186,17 +186,19 @@ def register_object_store_commands():
     @click.option("--region", type=str, help="S3 region")
     @click.pass_context
     def s3(ctx: click.Context, **kwargs):
+        ctx.ensure_object(dict)
         ctx.obj["store_config"] = get_object_store_config(store_type="s3", **kwargs)
 
     @click.group(name="mysql", invoke_without_command=False, help="MySQL object store operations.")
     @click.argument("bucket_name", type=str, required=True)
     @click.option("--host", type=str, help="MySQL host")
     @click.option("--port", type=int, help="MySQL port")
-    @click.option("--db", type=int, help="MySQL db")
+    @click.option("--db", type=str, help="MySQL database name")
     @click.option("--username", type=str, help="MySQL username")
     @click.option("--password", type=str, help="MySQL password")
     @click.pass_context
     def mysql(ctx: click.Context, **kwargs):
+        ctx.ensure_object(dict)
         ctx.obj["store_config"] = get_object_store_config(store_type="mysql", **kwargs)
 
     @click.group(name="redis", invoke_without_command=False, help="Redis object store operations.")
@@ -206,6 +208,7 @@ def register_object_store_commands():
     @click.option("--db", type=int, help="Redis db")
     @click.pass_context
     def redis(ctx: click.Context, **kwargs):
+        ctx.ensure_object(dict)
         ctx.obj["store_config"] = get_object_store_config(store_type="redis", **kwargs)
 
     commands = {"s3": s3, "mysql": mysql, "redis": redis}
