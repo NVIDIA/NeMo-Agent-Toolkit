@@ -21,7 +21,6 @@ import uuid
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from nat_profiler_agent.data_models import TokenUsageInfo
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -29,6 +28,7 @@ from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
+from nat_profiler_agent.data_models import TokenUsageInfo
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +202,7 @@ def create_token_usage_chart(df: pd.DataFrame, temp_dir: str) -> TokenUsageInfo:
 
     # Scale tokens per second to be visible alongside token counts
     # Find an appropriate scaling factor
-    max_token_count = max(max(prompt_tokens or [0]), max(completion_tokens or [0]), max(total_tokens or [0]))
+    max_token_count = max(*(prompt_tokens or [0]), *(completion_tokens or [0]), *(total_tokens or [0]))
     max_tps = max(tokens_per_second or [0])
     scaling_factor = max_token_count / max(max_tps, 1) * 0.8  # Scale tokens/sec to be visible but not dominate
 

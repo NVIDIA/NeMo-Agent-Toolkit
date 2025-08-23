@@ -64,7 +64,7 @@ class GetSalesPerDayConfig(FunctionBaseConfig, name="get_sales_per_day"):
 
 
 @register_function(config_type=GetSalesPerDayConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def get_sales_per_day_function(config: GetSalesPerDayConfig, builder: Builder):  # pylint: disable=unused-argument
+async def get_sales_per_day_function(config: GetSalesPerDayConfig, builder: Builder):
     """Get total sales across all products per day."""
     import pandas as pd
 

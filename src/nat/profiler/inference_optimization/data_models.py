@@ -172,7 +172,7 @@ class CallNode(BaseModel):
         if not self.children:
             return self.duration
 
-        intervals = [(c.start_time, c.end_time) for c in self.children]  # pylint: disable=not-an-iterable
+        intervals = [(c.start_time, c.end_time) for c in self.children]
         # Sort by start time
         intervals.sort(key=lambda x: x[0])
 
@@ -204,7 +204,7 @@ class CallNode(BaseModel):
         This ensures no overlap double-counting among children.
         """
         total = self.compute_self_time()
-        for c in self.children:  # pylint: disable=not-an-iterable
+        for c in self.children:
             total += c.compute_subtree_time()
         return total
 
@@ -216,7 +216,7 @@ class CallNode(BaseModel):
         info = (f"{indent}- {self.operation_type} '{self.operation_name}' "
                 f"(uuid={self.uuid}, start={self.start_time:.2f}, "
                 f"end={self.end_time:.2f}, dur={self.duration:.2f})")
-        child_strs = [child._repr(level + 1) for child in self.children]  # pylint: disable=not-an-iterable
+        child_strs = [child._repr(level + 1) for child in self.children]
         return "\n".join([info] + child_strs)
 
 

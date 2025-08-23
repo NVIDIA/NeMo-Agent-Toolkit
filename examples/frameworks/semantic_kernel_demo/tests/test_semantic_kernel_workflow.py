@@ -20,9 +20,9 @@ import logging
 from pathlib import Path
 
 import pytest
-from nat_semantic_kernel_demo.register import SKTravelPlanningWorkflowConfig
 
 from nat.runtime.loader import load_workflow
+from nat_semantic_kernel_demo.register import SKTravelPlanningWorkflowConfig
 
 logger = logging.getLogger(__name__)
 

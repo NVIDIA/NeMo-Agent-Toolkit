@@ -15,7 +15,6 @@
 
 from langchain_core.prompts import ChatPromptTemplate
 
-# pylint: disable=invalid-name
 map_prompt_system = """Analyze these snippets from a data collection:
                             --------------
                             {documents}
@@ -23,7 +22,7 @@ map_prompt_system = """Analyze these snippets from a data collection:
                             Extract and summarize:
                             1. The main subject matter or topic.
                             2. Key technical terms or concepts.
-                            3. The type of information being stored.      # noqa             
+                            3. The type of information being stored.
                             Provide a brief, factual summary focusing on these elements."""
 
 direct_summary_template = """Below are retrieved content samples from a data collection:

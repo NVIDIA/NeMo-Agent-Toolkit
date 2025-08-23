@@ -228,7 +228,7 @@ def run_prefixspan(sequences_map: dict[int, list[PrefixCallNode]],
     else:
         abs_min_support = min_support
 
-    freq_patterns = ps.frequent(abs_min_support)  # pylint: disable=not-callable
+    freq_patterns = ps.frequent(abs_min_support)
     # freq_patterns => [(count, [item1, item2, ...])]
 
     results = []
@@ -321,13 +321,12 @@ def compute_coverage_and_duration(sequences_map: dict[int, list[PrefixCallNode]]
 # --------------------------------------------------------------------------------
 
 
-def prefixspan_subworkflow_with_text(  # pylint: disable=too-many-positional-arguments
-        all_steps: list[list[IntermediateStep]],
-        min_support: int | float = 2,
-        top_k: int = 10,
-        min_coverage: float = 0.0,
-        max_text_len: int = 700,
-        prefix_list: list[str] = None) -> PrefixSpanSubworkflowResult:
+def prefixspan_subworkflow_with_text(all_steps: list[list[IntermediateStep]],
+                                     min_support: int | float = 2,
+                                     top_k: int = 10,
+                                     min_coverage: float = 0.0,
+                                     max_text_len: int = 700,
+                                     prefix_list: list[str] = None) -> PrefixSpanSubworkflowResult:
     """
     1) Build sequences of calls for each example (with llm_text_input).
     2) Convert to token lists, run PrefixSpan with min_support.

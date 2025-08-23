@@ -127,7 +127,6 @@ class ConfiguredTTCStrategy:
     instance: StrategyBase
 
 
-# pylint: disable=too-many-public-methods
 class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     def __init__(self, *, general_config: GeneralConfig | None = None, registry: TypeRegistry | None = None):

@@ -145,7 +145,7 @@ def load_column_or_static(df, host_id, column):
         # Column missing from DataFrame, try loading from static JSON file
         static_data = _get_static_data()
         try:
-            return static_data[column]  # pylint: disable=unsubscriptable-object
+            return static_data[column]
         except KeyError as exc:
             raise KeyError(f"Column '{column}' not found in test and benign fallback data") from exc
     # Column exists in DataFrame, get value for this host
@@ -162,7 +162,7 @@ def load_column_or_static(df, host_id, column):
         # If data is None, empty, or NaN, try loading from static JSON file
         static_data = _get_static_data()
         try:
-            return static_data[column]  # pylint: disable=unsubscriptable-object
+            return static_data[column]
         except KeyError as exc:
             raise KeyError(f"Column '{column}' not found in static data") from exc
 

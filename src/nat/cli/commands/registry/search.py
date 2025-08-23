@@ -29,14 +29,13 @@ from nat.utils.data_models.schema_validator import validate_yaml
 logger = logging.getLogger(__name__)
 
 
-async def search_artifacts(  # pylint: disable=R0917
-        registry_handler_config: RegistryHandlerBaseConfig,
-        query: str,
-        search_fields: list[SearchFields],
-        visualize: bool,
-        component_types: list[ComponentEnum],
-        save_path: str | None = None,
-        n_results: int = 10) -> None:
+async def search_artifacts(registry_handler_config: RegistryHandlerBaseConfig,
+                           query: str,
+                           search_fields: list[SearchFields],
+                           visualize: bool,
+                           component_types: list[ComponentEnum],
+                           save_path: str | None = None,
+                           n_results: int = 10) -> None:
 
     from nat.cli.type_registry import GlobalTypeRegistry
     from nat.registry_handlers.schemas.search import SearchQuery
@@ -116,14 +115,13 @@ async def search_artifacts(  # pylint: disable=R0917
     required=False,
     help=("The component types to include in search."),
 )
-def search(  # pylint: disable=R0917
-        config_file: str,
-        channel: str,
-        fields: list[str],
-        query: str,
-        component_types: list[ComponentEnum],
-        n_results: int,
-        output_path: str) -> None:
+def search(config_file: str,
+           channel: str,
+           fields: list[str],
+           query: str,
+           component_types: list[ComponentEnum],
+           n_results: int,
+           output_path: str) -> None:
     """
     Search for NAT artifacts with the specified configuration.
     """

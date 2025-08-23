@@ -48,8 +48,6 @@ from nat.eval.evaluator.evaluator_model import EvalOutputItem
 from nat.profiler.data_models import ProfilerResults
 from nat.runtime.session import SessionManager
 
-# pylint: disable=redefined-outer-name
-
 
 @pytest.fixture
 def default_eval_run_config():

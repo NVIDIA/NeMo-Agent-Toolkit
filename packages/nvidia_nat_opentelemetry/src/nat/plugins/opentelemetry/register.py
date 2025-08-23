@@ -38,7 +38,7 @@ class LangfuseTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, n
 
 
 @register_telemetry_exporter(config_type=LangfuseTelemetryExporter)
-async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder: Builder):
 
     import base64
 
@@ -75,7 +75,7 @@ class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemet
 
 
 @register_telemetry_exporter(config_type=LangsmithTelemetryExporter)
-async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, builder: Builder):
     """Create a Langsmith telemetry exporter."""
 
     from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
@@ -105,7 +105,7 @@ class OtelCollectorTelemetryExporter(BatchConfigMixin,
 
 
 @register_telemetry_exporter(config_type=OtelCollectorTelemetryExporter)
-async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):
     """Create an OpenTelemetry telemetry exporter."""
 
     from nat.plugins.opentelemetry.otel_span_exporter import get_opentelemetry_sdk_version
@@ -140,7 +140,7 @@ class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetr
 
 
 @register_telemetry_exporter(config_type=PatronusTelemetryExporter)
-async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder: Builder):
     """Create a Patronus telemetry exporter."""
 
     from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
@@ -162,7 +162,6 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-# pylint: disable=W0613
 class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="galileo"):
     """A telemetry exporter to transmit traces to externally hosted galileo service."""
 
@@ -173,7 +172,7 @@ class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetry
 
 
 @register_telemetry_exporter(config_type=GalileoTelemetryExporter)
-async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: Builder):
     """Create a Galileo telemetry exporter."""
 
     from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter

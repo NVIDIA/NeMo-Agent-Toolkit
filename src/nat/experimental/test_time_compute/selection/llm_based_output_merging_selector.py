@@ -135,8 +135,6 @@ class LLMBasedOutputMergingSelector(StrategyBase):
             except Exception as e:
                 logger.error(f"Error parsing merged output: {e}")
                 raise ValueError("Failed to parse merged output.")
-        else:
-            merged_output = merged_output
 
         logger.info("Merged output: %s", str(merged_output))
 

@@ -27,8 +27,6 @@ from nat.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
 from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
 from nat.utils.type_utils import override
 
-# pylint: disable=redefined-outer-name
-
 
 class CustomMCPWorker(MCPFrontEndPluginWorker):
     """Custom MCP worker that adds additional routes."""

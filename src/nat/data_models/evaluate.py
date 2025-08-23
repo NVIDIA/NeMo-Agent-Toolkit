@@ -108,7 +108,7 @@ class EvalConfig(BaseModel):
     @classmethod
     def rebuild_annotations(cls):
 
-        from nat.cli.type_registry import GlobalTypeRegistry  # pylint: disable=cyclic-import
+        from nat.cli.type_registry import GlobalTypeRegistry
 
         type_registry = GlobalTypeRegistry.get()
 

@@ -23,7 +23,7 @@ import pytest
 from nat.data_models import common
 
 
-class ԊashableTĕstModel(common.HashableBaseModel):  # pylint: disable=non-ascii-name
+class ԊashableTĕstModel(common.HashableBaseModel):  # noqa: PLC2401 allow non-ascii class name
     """
     Intentionally using non-ascci characters to test the encoding for the hash
     """

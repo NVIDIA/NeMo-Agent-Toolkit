@@ -336,7 +336,7 @@ class TestOTLPSpanAdapterExporter:
     def test_missing_endpoint_parameter(self):
         """Test that missing endpoint parameter raises appropriate error."""
         with pytest.raises(TypeError, match="missing 1 required keyword-only argument: 'endpoint'"):
-            OTLPSpanAdapterExporter()  # pylint: disable=missing-kwoa # type: ignore[call-arg]
+            OTLPSpanAdapterExporter()
 
     @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
     async def test_resource_attributes_applied_to_spans(self,

@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=redefined-outer-name  # pytest fixtures
-
 import asyncio
 import logging
 from unittest.mock import Mock
@@ -776,10 +774,10 @@ class TestTypeIntrospection:
 
     def test_input_output_types(self, processing_exporter):
         """Test that type introspection works correctly."""
-        assert processing_exporter.input_type == str
-        assert processing_exporter.output_type == int
-        assert processing_exporter.input_class == str
-        assert processing_exporter.output_class == int
+        assert processing_exporter.input_type is str
+        assert processing_exporter.output_type is int
+        assert processing_exporter.input_class is str
+        assert processing_exporter.output_class is int
 
 
 class TestAbstractMethod:
@@ -795,7 +793,7 @@ class TestAbstractMethod:
                 pass  # Missing export_processed implementation
 
             # This should raise TypeError due to missing abstract method implementation
-            IncompleteExporter()  # pylint: disable=abstract-class-instantiated
+            IncompleteExporter()
 
 
 class TestCallbackProcessorIntegration:

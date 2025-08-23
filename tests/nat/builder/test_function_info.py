@@ -484,8 +484,8 @@ def test_constructor():
     assert info.input_schema == schema_in
     assert info.single_output_schema == schema_out
     assert info.stream_output_schema is NoneType
-    assert info.input_type == int
-    assert info.single_output_type == str
+    assert info.input_type is int
+    assert info.single_output_type is str
     assert info.stream_output_type is NoneType
 
     # Positive stream only test
@@ -499,9 +499,9 @@ def test_constructor():
     assert info.input_schema == schema_in
     assert info.single_output_schema is NoneType
     assert info.stream_output_schema == schema_out
-    assert info.input_type == int
+    assert info.input_type is int
     assert info.single_output_type is NoneType
-    assert info.stream_output_type == str
+    assert info.stream_output_type is str
 
     # Positive single and stream test
     info = FunctionInfo(single_fn=fn_int_to_str,
@@ -515,9 +515,9 @@ def test_constructor():
     assert info.input_schema == schema_in
     assert info.single_output_schema == schema_out
     assert info.stream_output_schema == schema_out
-    assert info.input_type == int
-    assert info.single_output_type == str
-    assert info.stream_output_type == str
+    assert info.input_type is int
+    assert info.single_output_type is str
+    assert info.stream_output_type is str
 
 
 @pytest.mark.parametrize("function, input_type, output_type",
@@ -884,7 +884,7 @@ async def test_create_single_to_stream_conversion():
     info = FunctionInfo.create(single_fn=fn_int_to_str, single_to_stream_fn=convert_to_stream)
 
     assert info.stream_fn is not None
-    assert info.stream_output_type == int
+    assert info.stream_output_type is int
     assert info.stream_output_schema is not None
 
     async for value in info.stream_fn(10):
@@ -931,7 +931,7 @@ async def test_create_stream_to_single_conversion():
     info = FunctionInfo.create(stream_fn=fn_int_to_str_stream, stream_to_single_fn=convert_to_single)
 
     assert info.single_fn is not None
-    assert info.single_output_type == int
+    assert info.single_output_type is int
     assert info.single_output_schema is not None
 
     assert await info.single_fn(10) == 10

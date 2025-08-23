@@ -23,9 +23,6 @@ set +e
 pre-commit run --all-files --show-diff-on-failure
 PRE_COMMIT_RETVAL=$?
 
-${SCRIPT_DIR}/python_checks.sh
-PY_CHECKS_RETVAL=$?
-
 echo "Checking copyright headers"
 python ${SCRIPT_DIR}/copyright.py --verify-apache-v2
 COPYRIGHT_RETVAL=$?
@@ -47,7 +44,7 @@ fi
 ${SCRIPT_DIR}/path_checks.sh
 PATH_CHECKS_RETVAL=$?
 
-if [[ ${PRE_COMMIT_RETVAL} -ne 0 || ${PY_CHECKS_RETVAL} -ne 0 || ${COPYRIGHT_RETVAL} -ne 0 || ${DOCUMENTATION_RETVAL} -ne 0 || ${PATH_CHECKS_RETVAL} -ne 0 ]]; then
+if [[ ${PRE_COMMIT_RETVAL} -ne 0 || ${COPYRIGHT_RETVAL} -ne 0 || ${DOCUMENTATION_RETVAL} -ne 0 || ${PATH_CHECKS_RETVAL} -ne 0 ]]; then
    echo ">>>> FAILED: checks"
    exit 1
 fi

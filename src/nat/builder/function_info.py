@@ -231,7 +231,7 @@ class FunctionDescriptor:
         else:
             annotations = [param.annotation for param in sig.parameters.values()]
 
-            is_input_typed = all([a != sig.empty for a in annotations])  # pylint: disable=use-a-generator
+            is_input_typed = all([a != sig.empty for a in annotations])
 
             input_type = tuple[*annotations] if is_input_typed else None  # noqa: syntax-error
 
@@ -372,18 +372,16 @@ class FunctionInfo:
 
             if (stream_to_single_fn is not None):
                 raise ValueError("Cannot provide both single_fn and stream_to_single_fn")
-        else:
-            if (stream_to_single_fn is not None and stream_fn is None):
-                raise ValueError("stream_fn must be provided if stream_to_single_fn is provided")
+        elif (stream_to_single_fn is not None and stream_fn is None):
+            raise ValueError("stream_fn must be provided if stream_to_single_fn is provided")
 
         if (stream_fn is not None):
             final_stream_fn = stream_fn
 
             if (single_to_stream_fn is not None):
                 raise ValueError("Cannot provide both stream_fn and single_to_stream_fn")
-        else:
-            if (single_to_stream_fn is not None and single_fn is None):
-                raise ValueError("single_fn must be provided if single_to_stream_fn is provided")
+        elif (single_to_stream_fn is not None and single_fn is None):
+            raise ValueError("single_fn must be provided if single_to_stream_fn is provided")
 
         if (single_fn is None and stream_fn is None):
             raise ValueError("At least one of single_fn or stream_fn must be provided")

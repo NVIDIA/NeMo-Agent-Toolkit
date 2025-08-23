@@ -107,7 +107,7 @@ def restore_environ_fixture():
 
 
 @pytest.fixture(name="set_test_api_keys")
-def set_test_api_keys_fixture(restore_environ):  # pylint: disable=unused-argument
+def set_test_api_keys_fixture(restore_environ):
     for key in ("NGC_API_KEY", "NVD_API_KEY", "NVIDIA_API_KEY", "OPENAI_API_KEY", "SERPAPI_API_KEY"):
         os.environ[key] = "test_key"
 
@@ -349,18 +349,16 @@ def mock_tool():
             name: str = tool_name
             description: str = 'test tool:' + tool_name
 
-            async def _arun(
-                    self,
-                    query: str | dict = 'test',
-                    run_manager: AsyncCallbackManagerForToolRun | None = None,  # pylint: disable=unused-argument
-                    **kwargs):  # noqa: E501  # pylint: disable=arguments-differ
+            async def _arun(self,
+                            query: str | dict = 'test',
+                            run_manager: AsyncCallbackManagerForToolRun | None = None,
+                            **kwargs):  # noqa: E501
                 return query
 
-            def _run(
-                    self,
-                    query: str | dict = 'test',
-                    run_manager: CallbackManagerForToolRun | None = None,  # pylint: disable=unused-argument
-                    **kwargs):  # noqa: E501  # pylint: disable=arguments-differ
+            def _run(self,
+                     query: str | dict = 'test',
+                     run_manager: CallbackManagerForToolRun | None = None,
+                     **kwargs):  # noqa: E501
                 return query
 
         return MockTool()

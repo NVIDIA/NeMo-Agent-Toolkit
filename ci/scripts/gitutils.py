@@ -116,7 +116,6 @@ class GitWrapper:
     @staticmethod
     def get_repo_owner_name():
 
-        # pylint: disable=anomalous-backslash-in-string
         return "NVIDIA/" + _run_cmd("git remote -v | grep -oP '/\\K\\w*(?=\\.git \\(fetch\\))' | head -1")
 
     @functools.lru_cache
@@ -390,7 +389,6 @@ def get_merge_target():
     str
         Ref name of the target branch
     """
-    #
 
     remote_branch = GithubWrapper.get_pr_target_remote_branch()
 

@@ -86,7 +86,7 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
 
         # Gather the appropriate modules/functions based on your builder config
         for llm in self._builder_llms:
-            if self._builder_llms[llm].provider_type == 'openai':  # pylint: disable=consider-using-in
+            if self._builder_llms[llm].provider_type == 'openai':
                 functions_to_patch.extend(["openai_non_streaming", "openai_streaming"])
 
         # Grab original reference for the tool call

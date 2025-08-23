@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-import
 # flake8: noqa
 
-from .local import register_local  # pylint: disable=E0611
-from .pypi import register_pypi  # pylint: disable=E0611
-from .rest import register_rest  # pylint: disable=E0611
+from .local import register_local
+from .pypi import register_pypi
+from .rest import register_rest

@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import json
-# pylint: disable=R0917
 import logging
 import re
 import typing

@@ -39,7 +39,7 @@ class SWEBenchInput(BaseModel):
 
     # Handle improperly formatted JSON strings for list fields
     @field_validator("FAIL_TO_PASS", "PASS_TO_PASS", mode="before")
-    def parse_list_fields(cls, value):  # pylint: disable=no-self-argument
+    def parse_list_fields(cls, value):
         if isinstance(value, str):
             # Attempt to parse the string as a list
             return json.loads(value)

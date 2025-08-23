@@ -50,7 +50,7 @@ class TestIntermediateStepSerializerBasicFunctionality:
         assert hasattr(serializer, 'input_type')
         assert hasattr(serializer, 'output_type')
         assert serializer.input_type == IntermediateStep
-        assert serializer.output_type == str
+        assert serializer.output_type is str
 
     def test_serializer_has_serialize_mixin(self):
         """Test that IntermediateStepSerializer has SerializeMixin functionality."""
@@ -389,9 +389,9 @@ class TestIntermediateStepSerializerTypeIntrospection:
         serializer = IntermediateStepSerializer()
 
         assert serializer.input_type == IntermediateStep
-        assert serializer.output_type == str
-        assert serializer.input_class == IntermediateStep
-        assert serializer.output_class == str
+        assert serializer.output_type is str
+        assert serializer.input_class is IntermediateStep
+        assert serializer.output_class is str
 
     def test_processor_inheritance_properties(self):
         """Test that all processor properties are available."""

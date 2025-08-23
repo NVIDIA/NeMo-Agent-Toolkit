@@ -47,7 +47,7 @@ def configure_registry_channel(config_type: RegistryHandlerBaseConfig, channel_n
             user_input = input(f"{human_prompt}: ")
             model_fields = {}
             model_fields[field] = (info.annotation, ...)
-            DynamicFieldModel = create_model("DynamicFieldModel", **model_fields)  # pylint: disable=C0103
+            DynamicFieldModel = create_model("DynamicFieldModel", **model_fields)
             dynamic_inputs = {field: user_input}
 
             try:
@@ -76,8 +76,7 @@ def add_channel_interative(channel_type: str) -> None:
     registry = GlobalTypeRegistry.get()
 
     try:
-        ChannelConfigType = registry.get_registered_channel_info_by_channel_type(  # pylint: disable=C0103
-            channel_type=channel_type).config_type
+        ChannelConfigType = registry.get_registered_channel_info_by_channel_type(channel_type=channel_type).config_type
     except Exception as e:
         logger.exception("Invalid channel type: %s", e, exc_info=True)
         return
@@ -92,8 +91,7 @@ def add_channel_interative(channel_type: str) -> None:
             settings.channels[channel_name] = {}
             break
 
-    ChannelConfigType = registry.get_registered_channel_info_by_channel_type(  # pylint: disable=C0103
-        channel_type=channel_type).config_type
+    ChannelConfigType = registry.get_registered_channel_info_by_channel_type(channel_type=channel_type).config_type
 
     configure_registry_channel(config_type=ChannelConfigType, channel_name=channel_name)
 
@@ -181,7 +179,7 @@ def match_valid_channel(channel_name: str) -> None:
 
     channals_settings = settings.channels
     channel_settings = channals_settings.get(channel_name)
-    ChannelConfigType = registry.get_registered_channel_info_by_channel_type(  # pylint: disable=C0103
+    ChannelConfigType = registry.get_registered_channel_info_by_channel_type(
         channel_type=channel_settings.static_type()).config_type
 
     configure_registry_channel(config_type=ChannelConfigType, channel_name=channel_name)

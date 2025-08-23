@@ -25,8 +25,8 @@ from nat.utils.reactive.subscription import Subscription
 
 # Covariant type param: An Observable producing type X can also produce
 # a subtype of X.
-_T_out_co = TypeVar("_T_out_co", covariant=True)  # pylint: disable=invalid-name
-_T = TypeVar("_T")  # pylint: disable=invalid-name
+_T_out_co = TypeVar("_T_out_co", covariant=True)
+_T = TypeVar("_T")
 
 OnNext = Callable[[_T], None]
 OnError = Callable[[Exception], None]

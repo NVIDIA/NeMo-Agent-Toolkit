@@ -42,15 +42,14 @@ logger = logging.getLogger(__name__)
 class RestRegistryHandler(AbstractRegistryHandler):
     """A registry handler for interactions with a remote REST registry."""
 
-    def __init__(  # pylint: disable=R0917
-            self,
-            endpoint: str,
-            token: str,
-            timeout: int = 30,
-            publish_route: str = "",
-            pull_route: str = "",
-            search_route: str = "",
-            remove_route: str = ""):
+    def __init__(self,
+                 endpoint: str,
+                 token: str,
+                 timeout: int = 30,
+                 publish_route: str = "",
+                 pull_route: str = "",
+                 search_route: str = "",
+                 remove_route: str = ""):
         super().__init__()
         self._endpoint = endpoint.rstrip("/")
         self._timeout = timeout

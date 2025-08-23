@@ -21,7 +21,7 @@ from typing import TypeVar
 if typing.TYPE_CHECKING:
     from nat.utils.reactive.base.subject_base import SubjectBase
 
-_T = TypeVar("_T")  # pylint: disable=invalid-name
+_T = TypeVar("_T")
 
 OnNext = Callable[[_T], None]
 OnError = Callable[[Exception], None]

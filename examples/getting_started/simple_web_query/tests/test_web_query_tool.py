@@ -16,10 +16,10 @@
 import platform
 
 import pytest
-from nat_simple_web_query.register import WebQueryToolConfig
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.test.embedder import EmbedderTestConfig
+from nat_simple_web_query.register import WebQueryToolConfig
 
 
 @pytest.mark.skipif(platform.machine() == "aarch64",

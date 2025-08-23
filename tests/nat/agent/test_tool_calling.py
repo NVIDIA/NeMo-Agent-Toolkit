@@ -32,7 +32,6 @@ async def test_state_schema():
     state = ToolCallAgentGraphState(messages=[input_message])
     assert isinstance(state.messages, list)
 
-    # pylint: disable=unsubscriptable-object
     assert isinstance(state.messages[0], HumanMessage)
     assert state.messages[0].content == input_message.content
     with pytest.raises(AttributeError) as ex:
@@ -165,7 +164,7 @@ async def test_tool_node_final_answer(mock_tool_agent):
                             "type": "tool_call",
                         }])
     mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='hello, world!')])
-    mock_state.messages.append(message)  # pylint: disable=no-member
+    mock_state.messages.append(message)
     response = await mock_tool_agent.tool_node(mock_state)
     response = response.messages[-1]
     assert isinstance(response, ToolMessage)
@@ -182,6 +181,6 @@ async def test_graph(mock_tool_graph):
     mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='please, mock tool call!')])
     response = await mock_tool_graph.ainvoke(mock_state)
     response = ToolCallAgentGraphState(**response)
-    response = response.messages[-1]  # pylint: disable=unsubscriptable-object
+    response = response.messages[-1]
     assert isinstance(response, AIMessage)
     assert response.content == 'mock query'

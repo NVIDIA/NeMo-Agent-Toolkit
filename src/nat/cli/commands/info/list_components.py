@@ -26,14 +26,13 @@ from nat.registry_handlers.schemas.search import SearchFields
 logger = logging.getLogger(__name__)
 
 
-async def search_artifacts(  # pylint: disable=R0917
-        registry_handler_config: RegistryHandlerBaseConfig,
-        component_types: list[ComponentEnum],
-        visualize: bool,
-        query: str,
-        num_results: int,
-        query_fields: list[SearchFields],
-        save_path: str | None) -> None:
+async def search_artifacts(registry_handler_config: RegistryHandlerBaseConfig,
+                           component_types: list[ComponentEnum],
+                           visualize: bool,
+                           query: str,
+                           num_results: int,
+                           query_fields: list[SearchFields],
+                           save_path: str | None) -> None:
 
     from nat.cli.type_registry import GlobalTypeRegistry
     from nat.registry_handlers.schemas.search import SearchQuery

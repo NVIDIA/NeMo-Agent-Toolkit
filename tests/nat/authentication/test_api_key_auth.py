@@ -99,7 +99,7 @@ def test_config_invalid_header_prefix_nonascii():
 # --------------------------------------------------------------------------- #
 # APIKeyAuthProvider – _construct_authentication_header
 # --------------------------------------------------------------------------- #
-async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):  # pylint:disable=unused-argument
+async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):
     cfg = make_config()
 
     async with WorkflowBuilder() as builder:

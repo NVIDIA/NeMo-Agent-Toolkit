@@ -27,16 +27,16 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 import yaml
+
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.component_ref import LLMRef
 from nat_alert_triage_agent.maintenance_check import NO_ONGOING_MAINTENANCE_STR
 from nat_alert_triage_agent.maintenance_check import MaintenanceCheckToolConfig
 from nat_alert_triage_agent.maintenance_check import _get_active_maintenance
 from nat_alert_triage_agent.maintenance_check import _load_maintenance_data
 from nat_alert_triage_agent.maintenance_check import _parse_alert_data
 from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
-
-from nat.builder.framework_enum import LLMFrameworkEnum
-from nat.builder.workflow_builder import WorkflowBuilder
-from nat.data_models.component_ref import LLMRef
 
 
 def test_load_maintenance_data():
