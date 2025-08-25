@@ -486,11 +486,14 @@ class EvaluationRun:
                                        usage_stats=UsageStats(),
                                        profiler_results=ProfilerResults())
 
+        custom_pre_eval_process_function = self.eval_config.general.output.custom_pre_eval_process_function \
+            if self.eval_config.general.output else None
         dataset_handler = DatasetHandler(dataset_config=dataset_config,
                                          reps=self.config.reps,
                                          concurrency=self.eval_config.general.max_concurrency,
                                          num_passes=self.config.num_passes,
-                                         adjust_dataset_size=self.config.adjust_dataset_size)
+                                         adjust_dataset_size=self.config.adjust_dataset_size,
+                                         custom_pre_eval_process_function=custom_pre_eval_process_function)
         self.eval_input = dataset_handler.get_eval_input_from_dataset(self.config.dataset)
         if not self.eval_input.eval_input_items:
             logger.info("Dataset is empty. Nothing to evaluate.")
@@ -507,8 +510,8 @@ class EvaluationRun:
             # Initialize Weave integration
             self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config)
 
-            # Run workflow
             with self.eval_trace_context.evaluation_context():
+                # Run workflow
                 if self.config.endpoint:
                     await self.run_workflow_remote()
                 elif not self.config.skip_workflow:
@@ -516,6 +519,9 @@ class EvaluationRun:
                         session_manager = SessionManager(eval_workflow.build(),
                                                          max_concurrency=self.eval_config.general.max_concurrency)
                     await self.run_workflow_local(session_manager)
+
+                # Pre-evaluation process the workflow output
+                self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
 
                 # Evaluate
                 evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}

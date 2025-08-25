@@ -495,3 +495,115 @@ def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
     # check that there are two medium entries in the eval_input
     assert len(eval_input.eval_input_items) == 2
     assert all(item.full_dataset_entry['difficulty'] == 'medium' for item in eval_input.eval_input_items)
+
+
+def test_custom_pre_eval_process_function():
+    """Test that custom pre-evaluation process function is correctly applied to EvalInput."""
+
+    # Create a simple dataset config
+    dataset_config = EvalDatasetJsonConfig()
+
+    # Create dataset handler with custom pre-evaluation process function
+    custom_function = f"{__name__}.sample_pre_eval_process_function"
+    dataset_handler = DatasetHandler(dataset_config=dataset_config,
+                                     reps=1,
+                                     concurrency=1,
+                                     custom_pre_eval_process_function=custom_function)
+
+    # Create a simple EvalInput for testing
+    test_items = [
+        EvalInputItem(id="1",
+                      input_obj="What is 2 + 3?",
+                      expected_output_obj="5",
+                      output_obj="The answer is 5.00",
+                      trajectory=[],
+                      expected_trajectory=[],
+                      full_dataset_entry={}),
+        EvalInputItem(id="2",
+                      input_obj="What is 10 / 3?",
+                      expected_output_obj="3.33",
+                      output_obj="The result is 3.333333333",
+                      trajectory=[],
+                      expected_trajectory=[],
+                      full_dataset_entry={})
+    ]
+
+    test_eval_input = EvalInput(eval_input_items=test_items)
+
+    # Apply the custom pre-evaluation process function
+    processed_eval_input = dataset_handler.pre_eval_process_eval_input(test_eval_input)
+
+    # Verify the function was applied
+    assert len(processed_eval_input.eval_input_items) == 2
+
+    # Check that the first item was normalized (5.00 -> 5)
+    first_item = processed_eval_input.eval_input_items[0]
+    assert first_item.output_obj == "The answer is 5"
+
+    # Check that the second item was normalized (3.333333333 -> 3.33)
+    second_item = processed_eval_input.eval_input_items[1]
+    assert second_item.output_obj == "The result is 3.33"
+
+
+def sample_pre_eval_process_function(item: EvalInputItem) -> EvalInputItem:
+    """
+    Simple test pre-evaluation process function that normalizes numerical outputs.
+    This mimics the behavior of the normalize_calculator_outputs function.
+    """
+    import re
+
+    def normalize_number(text: str) -> str:
+        """Helper function to normalize numerical representations"""
+        number_pattern = r'-?\d+\.?\d*'
+        numbers = re.findall(number_pattern, text)
+
+        normalized_text = text
+        if isinstance(text, str):
+            for num_str in numbers:
+                try:
+                    num = float(num_str)
+                    if num.is_integer():
+                        normalized_num = str(int(num))
+                    else:
+                        normalized_num = f"{num:.2f}".rstrip('0').rstrip('.')
+                    normalized_text = normalized_text.replace(num_str, normalized_num, 1)
+                except ValueError:
+                    continue
+
+        return normalized_text
+
+    # Normalize the output if it exists
+    normalized_output = item.output_obj
+    if isinstance(item.output_obj, str):
+        normalized_output = normalize_number(item.output_obj)
+
+    # Return item with normalized output
+    return item.copy_with_updates(output_obj=normalized_output)
+
+
+def test_eval_input_item_copy_with_updates():
+    """Test that EvalInputItem.copy_with_updates correctly copies and updates fields."""
+    # Create a test EvalInputItem
+    test_item = EvalInputItem(id="1",
+                              input_obj="What is 10 / 3?",
+                              expected_output_obj="3.33",
+                              output_obj="The result is 3.333333333",
+                              trajectory=[],
+                              expected_trajectory=[],
+                              full_dataset_entry={"test": "data"})
+
+    # Test updating multiple fields
+    updated_item = test_item.copy_with_updates(output_obj="The result is 3.33", expected_output_obj="3.33")
+
+    # Verify the updated fields
+    assert updated_item.output_obj == "The result is 3.33"
+    assert updated_item.expected_output_obj == "3.33"
+
+    # Verify other fields are preserved
+    assert updated_item.id == "1"
+    assert updated_item.input_obj == "What is 10 / 3?"
+    assert updated_item.full_dataset_entry == {"test": "data"}
+
+    # Verify the original item is unchanged
+    assert test_item.output_obj == "The result is 3.333333333"
+    assert test_item.expected_output_obj == "3.33"
