@@ -164,7 +164,7 @@ class JobStore:
                             output: BaseModel | None = None):
 
         try:
-            job: JobInfo = 
+            job: JobInfo = await client.get_metadata(["jobs", job_id])
 
             job.status = status
             job.error = error
