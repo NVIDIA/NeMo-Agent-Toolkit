@@ -30,7 +30,11 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
-    auto_incremental_review: false
+    auto_incremental_review: true
+
+  poem: false
+  sequence_diagrams: true
+  suggested_reviewers: false
 
   path_instructions:
     - path: "**/*"
@@ -158,8 +162,6 @@ reviews:
         behavioral change, and does not require users to modify their existing code. If you apply this label, do not
         apply the "breaking" label.
 
-  sequence_diagrams: false
-  suggested_reviewers: false
   tools:
     ruff:
       enabled: true
