@@ -300,7 +300,7 @@ async def test_run_workflow_remote_success(evaluation_run, generated_answer):
     """
     # Patch the remote handler
     with patch("nat.eval.remote_workflow.EvaluationRemoteWorkflowHandler") as mock_handler:
-        mock_handler.return_value = MagicMock()
+        handler_instance = mock_handler.return_value
 
         async def fake_run_workflow_remote(eval_input):
             """
@@ -310,7 +310,7 @@ async def test_run_workflow_remote_success(evaluation_run, generated_answer):
                 item.output_obj = generated_answer
             return eval_input
 
-        mock_handler.run_workflow_remote = AsyncMock(side_effect=fake_run_workflow_remote)
+        handler_instance.run_workflow_remote = AsyncMock(side_effect=fake_run_workflow_remote)
 
         # Run the remote evaluation (this calls the mocked handler)
         await evaluation_run.run_workflow_remote()
