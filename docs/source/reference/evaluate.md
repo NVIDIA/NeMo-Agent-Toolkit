@@ -177,7 +177,7 @@ To run the evaluation using the custom dataset parser, run the following command
 nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-custom-dataset-format.yml
 ```
 ### Custom Pre-evaluation Process Function
-You can provide a custom function to pre-evaluation process the eval input after the workflow runs but before evaluation begins. This allows you to modify, filter, or enrich the evaluation data.
+You can provide a custom function to process the eval input after the workflow runs but before evaluation begins. This allows you to modify, filter, or enrich the evaluation data.
 
 **Example:**
 `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-with-custom-post-process.yml`:
@@ -191,13 +191,10 @@ eval:
       _type: json
       file_path: examples/getting_started/simple_calculator/src/nat_simple_calculator/data/simple_calculator.json
 ```
-This example configuration uses a custom pre-evaluation process function to:
-- normalize numerical outputs for consistent evaluation
-- standardize number formats (such as "5.00" → "5")
-- ensure accurate comparison during evaluation
+This example configuration uses a custom pre-evaluation process function to normalize numerical outputs for consistent evaluation.
 
 The custom pre-evaluation process function is a Python function that takes an `EvalInputItem` object and returns a modified `EvalInputItem` object.
-**Helper Function**: Use the `copy_with_updates()` method to easily update only specific fields while preserving all others:
+**Helper Function**: You can use the `copy_with_updates()` method in the `EvalInputItem` object to easily update only specific fields while preserving all others:
 ```python
 # Update only the output_obj field
 return item.copy_with_updates(output_obj="new output")
