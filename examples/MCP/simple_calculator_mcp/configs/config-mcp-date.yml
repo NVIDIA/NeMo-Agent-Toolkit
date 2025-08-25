@@ -15,7 +15,8 @@
 
 # This config file shows how to use the MCP server to get the current date and time.
 # Here the workflow acts as a MCP client and connects to the MCP server running
-# on the specified URL (defaults to `http://localhost:8080/sse`).
+# on the specified URL. streamable-http is the recommended transport for HTTP-based
+# connections, but sse is also supported for backwards compatibility.
 
 general:
   use_uvloop: true

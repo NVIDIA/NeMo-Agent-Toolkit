@@ -266,15 +266,16 @@ async def ping_mcp_server(url: str, timeout: int) -> MCPPingResult:
 
 @click.group(invoke_without_command=True, help="List tool names (default), or show details with --detail or --tool.")
 @click.option('--direct', is_flag=True, help='Bypass MCPBuilder and use direct MCP protocol')
-@click.option('--url',
-              default='http://localhost:9901/sse',
-              show_default=True,
-              help='For SSE/StreamableHTTP: MCP server URL (e.g. http://localhost:8080/sse)')
+@click.option(
+    '--url',
+    default='http://localhost:9901/mcp/',
+    show_default=True,
+    help='MCP server URL (e.g. http://localhost:8080/mcp/ for streamable-http, http://localhost:8080/sse for sse)')
 @click.option('--transport',
               type=click.Choice(['sse', 'stdio', 'streamable-http']),
-              default='sse',
+              default='streamable-http',
               show_default=True,
-              help='Type of client to use')
+              help='Type of client to use (default: streamable-http, backwards compatible with sse)')
 @click.option('--command', help='For stdio: The command to run (e.g. mcp-server)')
 @click.option('--args', help='For stdio: Additional arguments for the command (space-separated)')
 @click.option('--env', help='For stdio: Environment variables in KEY=VALUE format (space-separated)')
@@ -293,7 +294,7 @@ def list_mcp(ctx, direct, url, transport, command, args, env, tool, detail, json
     Args:
         ctx (click.Context): Click context object for command invocation
         direct (bool): Whether to bypass MCPBuilder and use direct MCP protocol
-        url (str): MCP server URL to connect to (default: http://localhost:9901/sse)
+        url (str): MCP server URL to connect to (default: http://localhost:9901/mcp/)
         tool (str | None): Optional specific tool name to retrieve detailed info for
         detail (bool): Whether to show full details (description + schema) for all tools
         json_output (bool): Whether to output tool metadata in JSON format instead of text
@@ -343,7 +344,7 @@ def list_mcp(ctx, direct, url, transport, command, args, env, tool, detail, json
 
 
 @list_mcp.command()
-@click.option('--url', default='http://localhost:9901/sse', show_default=True, help='MCP server URL')
+@click.option('--url', default='http://localhost:9901/mcp/', show_default=True, help='MCP server URL')
 @click.option('--timeout', default=60, show_default=True, help='Timeout in seconds for ping request')
 @click.option('--json-output', is_flag=True, help='Output ping result in JSON format')
 def ping(url: str, timeout: int, json_output: bool) -> None:
@@ -353,13 +354,13 @@ def ping(url: str, timeout: int, json_output: bool) -> None:
     It's useful for health checks and monitoring server availability.
 
     Args:
-        url (str): MCP server URL to ping (default: http://localhost:9901/sse)
+        url (str): MCP server URL to ping (default: http://localhost:9901/mcp/)
         timeout (int): Timeout in seconds for the ping request (default: 60)
         json_output (bool): Whether to output the result in JSON format
 
     Examples:
         nat info mcp ping                                    # Ping default server
-        nat info mcp ping --url http://custom-server:9901/sse # Ping custom server
+        nat info mcp ping --url http://custom-server:9901/mcp/ # Ping custom server
         nat info mcp ping --timeout 10                      # Use 10 second timeout
         nat info mcp ping --json-output                     # Get JSON format output
     """

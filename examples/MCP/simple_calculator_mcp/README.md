@@ -82,15 +82,14 @@ You can run the simple calculator workflow using Remote MCP tools. In this case,
 You can publish the simple calculator tools via MCP using the `nat mcp` command. Details are provided in the [MCP Server Guide](../../../docs/source/workflows/mcp/mcp-server.md).
 
 ## Configuration Examples
-
-| Configuration File | MCP Server Type | Available Tools |
-|-------------------|-----------------|-----------------|
-| `config-mcp-date.yml` | Date Server | Current time, date formatting |
-| `config-mcp-math.yml` | Math Server | Advanced mathematical operations |
-| `config-combined.yml` | Multiple Servers | Combined demonstration |
+| Configuration File | MCP Server Type | Transport | Available Tools |
+|--------------------|-----------------|-----------------|-----------------|
+| `config-mcp-date.yml` | Date Server | streamable-http | Current time, date formatting |
+| `config-mcp-math.yml` | Math Server | streamable-http | Advanced mathematical operations |
+| `config-combined.yml` | Multiple Servers | streamable-http | Combined demonstration |
+| `config-mcp-date-stdio.yml` | Multiple Servers | stdio and streamable-http | Current time, date formatting |
 
 ### Running the Workflows
-
 **Date Server Example:**
 1. **Start the MCP server**: Follow the setup instructions in [README](./deploy_external_mcp/README.md) to start the containerized time server on port 8080
 2. **Run the workflow**:

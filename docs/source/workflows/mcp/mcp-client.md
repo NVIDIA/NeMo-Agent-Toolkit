@@ -23,6 +23,16 @@ You can use NeMo Agent toolkit as an MCP Client to connect to and use tools serv
 
 This guide will cover how to use NeMo Agent toolkit as an MCP Client. For more information on how to use NeMo Agent toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
 
+## MCP Client Configuration
+
+The MCP client can connect to MCP servers using different transport types. The choice of transport should match the server's configuration.
+
+### Transport Types
+
+- **`streamable-http`** (default): Modern HTTP-based transport, recommended for new deployments
+- **`sse`**: Server-Sent Events transport, maintained for backwards compatibility
+- **`stdio`**: Standard input/output transport for local process communication
+
 ## Usage
 Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions through configuration of an `mcp_tool_wrapper`.
 
@@ -33,9 +43,9 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     function.
     """
     # Add your custom configuration parameters here
-    url: HttpUrl | None = Field(default=None, description="The URL of the MCP server (for SSE mode)")
+    url: HttpUrl | None = Field(default=None, description="The URL of the MCP server (for streamable-http or sse modes)")
     mcp_tool_name: str = Field(description="The name of the tool served by the MCP Server that you want to use")
-    client_type: str = Field(default="sse", description="The type of client to use ('sse' or 'stdio')")
+    transport: Literal["sse", "stdio", "streamable-http"] = Field(default="streamable-http", description="The type of transport to use (default: streamable-http, backwards compatible with sse)")
     command: str | None = Field(default=None, description="The command to run for stdio mode (e.g. 'mcp-server')")
     args: list[str] | None = Field(default=None, description="Additional arguments for the stdio command")
     env: dict[str, str] | None = Field(default=None, description="Environment variables to set for the stdio process")
@@ -54,6 +64,21 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
 ```
 In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as a NeMo Agent toolkit function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between NeMo Agent toolkit functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
 
+### Streamable-HTTP Mode Configuration
+For streamable-http mode, you only need to specify the server URL and the tool name:
+
+```yaml
+functions:
+  mcp_tool_a:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:8080/mcp/"
+    mcp_tool_name: tool_a
+  mcp_tool_b:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:8080/mcp/"
+    mcp_tool_name: tool_b
+```
+
 ### SSE Mode Configuration
 For SSE mode, you only need to specify the server URL and the tool name:
 
@@ -68,6 +93,7 @@ functions:
     url: "http://localhost:8080/sse"
     mcp_tool_name: tool_b
 ```
+SSE mode is supported for backwards compatibility with existing systems.
 
 ### STDIO Mode Configuration
 For STDIO mode, you need to specify the command to run and any additional arguments or environment variables:

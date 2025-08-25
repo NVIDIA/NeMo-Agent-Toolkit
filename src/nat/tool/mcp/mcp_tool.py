@@ -33,10 +33,12 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     function.
     """
     # Add your custom configuration parameters here
-    url: HttpUrl | None = Field(default=None, description="The URL of the MCP server (for SSE mode)")
+    url: HttpUrl | None = Field(default=None,
+                                description="The URL of the MCP server (for streamable-http or sse modes)")
     mcp_tool_name: str = Field(description="The name of the tool served by the MCP Server that you want to use")
-    transport: Literal["sse", "stdio", "streamable-http"] = Field(default="sse",
-                                                                  description="The type of transport to use")
+    transport: Literal["sse", "stdio", "streamable-http"] = Field(
+        default="streamable-http",
+        description="The type of transport to use (default: streamable-http, backwards compatible with sse)")
     command: str | None = Field(default=None,
                                 description="The command to run for stdio mode (e.g. 'docker' or 'python')")
     args: list[str] | None = Field(default=None, description="Additional arguments for the stdio command")
@@ -61,11 +63,12 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
                 raise ValueError("url should not be set when using stdio client type")
             if not self.command:
                 raise ValueError("command is required when using stdio client type")
-        elif self.transport == 'streamable-http' or self.transport == 'sse':
+        elif self.transport in ['streamable-http', 'sse']:
             if self.command is not None or self.args is not None or self.env is not None:
-                raise ValueError("command, args, and env should not be set when using sse client type")
+                raise ValueError(
+                    "command, args, and env should not be set when using streamable-http or sse client type")
             if not self.url:
-                raise ValueError("url is required when using sse client type")
+                raise ValueError("url is required when using streamable-http or sse client type")
 
 
 @register_function(config_type=MCPToolConfig)
@@ -78,7 +81,6 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):
     from nat.tool.mcp.mcp_client_base import MCPStdioClient
     from nat.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
     from nat.tool.mcp.mcp_client_base import MCPToolClient
-
 
     # Initialize the client
     if config.transport == 'stdio':
