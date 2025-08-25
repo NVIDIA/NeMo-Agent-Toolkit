@@ -18,6 +18,7 @@ from langchain_core.agents import AgentAction
 from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.tool import ToolMessage
+from langchain_core.prompts import SystemMessagePromptTemplate
 from langgraph.graph.graph import CompiledGraph
 
 from nat.agent.base import AgentDecision
@@ -60,6 +61,39 @@ def mock_config():
 @pytest.fixture(name='mock_llm_config', scope="module")
 def mock_llm_config():
     return LLMBaseConfig()
+
+
+@pytest.fixture(name="mock_thinking_llm_config", scope="module")
+def fixture_mock_thinking_llm_config():
+    """Fixture for a mock LLM config with thinking support."""
+    from nat.data_models.thinking_mixin import ThinkingMixin
+
+    class _ThinkingCfg(LLMBaseConfig, ThinkingMixin):
+        model_name: str = "nvidia/nvidia-nemotron"
+
+    return _ThinkingCfg(thinking=True)
+
+
+@pytest.fixture(name="mock_no_thinking_llm_config", scope="module")
+def fixture_mock_no_thinking_llm_config():
+    """Fixture for a mock LLM config with thinking support."""
+    from nat.data_models.thinking_mixin import ThinkingMixin
+
+    class _ThinkingCfg(LLMBaseConfig, ThinkingMixin):
+        model_name: str = "nvidia/nvidia-nemotron"
+
+    return _ThinkingCfg(thinking=False)
+
+
+@pytest.fixture(name="mock_default_thinking_llm_config", scope="module")
+def fixture_mock_default_thinking_llm_config():
+    """Fixture for a mock LLM config with thinking support."""
+    from nat.data_models.thinking_mixin import ThinkingMixin
+
+    class _ThinkingCfg(LLMBaseConfig, ThinkingMixin):
+        model_name: str = "nvidia/nvidia-nemotron"
+
+    return _ThinkingCfg()
 
 
 def test_react_init(mock_config_react_agent, mock_llm_config, mock_llm, mock_tool):
@@ -596,3 +630,34 @@ def test_config_mixed_alias_usage():
     assert config.parse_agent_response_max_retries == 12
     assert config.max_tool_calls == 28
     assert config.tool_call_max_retries == 1  # default value
+
+
+def test_react_thinking_system_message_insertion(mock_thinking_llm_config):
+    cfg = ReActAgentWorkflowConfig(tool_names=["test"], llm_name="test", verbose=True)
+    prompt = create_react_agent_prompt(cfg, mock_thinking_llm_config)
+    # The thinking system prompt should be the very first system message
+    assert len(prompt.messages) == 4
+    system_prompt = prompt.messages[0]
+    assert isinstance(system_prompt, SystemMessagePromptTemplate)
+    assert system_prompt.prompt.template == "/think"
+
+
+def test_react_no_thinking_system_message_insertion(mock_no_thinking_llm_config):
+    cfg = ReActAgentWorkflowConfig(tool_names=["test"], llm_name="test", verbose=True)
+    prompt = create_react_agent_prompt(cfg, mock_no_thinking_llm_config)
+    # The thinking system prompt should be the very first system message
+    assert len(prompt.messages) == 4
+    system_prompt = prompt.messages[0]
+    assert isinstance(system_prompt, SystemMessagePromptTemplate)
+    assert system_prompt.prompt.template == "/no_think"
+
+
+def test_react_default_thinking_system_message_insertion(mock_default_thinking_llm_config):
+    cfg = ReActAgentWorkflowConfig(tool_names=["test"], llm_name="test", verbose=True)
+    prompt = create_react_agent_prompt(cfg, mock_default_thinking_llm_config)
+    assert len(prompt.messages) == 3
+    # The thinking system prompt should not be inserted
+    system_prompt = prompt.messages[0]
+    assert isinstance(system_prompt, SystemMessagePromptTemplate)
+    assert "/no_think" not in system_prompt.prompt.template
+    assert "/think" not in system_prompt.prompt.template

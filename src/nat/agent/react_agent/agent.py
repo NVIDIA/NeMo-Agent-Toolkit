@@ -359,6 +359,8 @@ def create_react_agent_prompt(config: "ReActAgentWorkflowConfig", llm_config: LL
 
     Args:
         config (ReActAgentWorkflowConfig): The config to use for the prompt.
+        llm_config (LLMBaseConfig): The LLM config to use for the prompt.
+                                    Used to determine if the LLM supports thinking.
 
     Returns:
         ChatPromptTemplate: The ReAct Agent prompt.
@@ -377,9 +379,13 @@ def create_react_agent_prompt(config: "ReActAgentWorkflowConfig", llm_config: LL
     if not valid_prompt:
         logger.exception("%s Invalid system_prompt", AGENT_LOG_PREFIX)
         raise ValueError("Invalid system_prompt")
-    messages = [("system", prompt_str), ("user", USER_PROMPT),
-                MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)]
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt:
-        messages.insert(0, ("system", llm_config.thinking_system_prompt))
+    messages = [
+        ("system", prompt_str),
+        ("user", USER_PROMPT),
+        MessagesPlaceholder(variable_name='agent_scratchpad', optional=True),
+    ]
+    if isinstance(llm_config, ThinkingMixin):
+        if llm_config.thinking_system_prompt:
+            messages.insert(0, ("system", llm_config.thinking_system_prompt))
     prompt = ChatPromptTemplate.from_messages(messages)
     return prompt
