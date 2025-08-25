@@ -20,11 +20,11 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
 
-from aiq.builder.builder import Builder
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.tool.mcp.mcp_client_base import MCPBaseClient
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
+from nat.tool.mcp.mcp_client_base import MCPBaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -132,9 +132,9 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
     - Uses builder's exit stack to manage client lifecycle
     - Applies tool filters if provided
     """
-    from aiq.tool.mcp.mcp_client_base import MCPSSEClient
-    from aiq.tool.mcp.mcp_client_base import MCPStdioClient
-    from aiq.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
+    from nat.tool.mcp.mcp_client_base import MCPSSEClient
+    from nat.tool.mcp.mcp_client_base import MCPStdioClient
+    from nat.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
 
     # Build the appropriate client
     client_cls = {

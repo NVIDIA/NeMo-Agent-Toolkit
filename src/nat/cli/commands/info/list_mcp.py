@@ -23,7 +23,6 @@ import click
 from pydantic import BaseModel
 
 from nat.tool.mcp.exceptions import MCPError
-from nat.tool.mcp.mcp_client import MCPBuilder
 from nat.utils.exception_handlers.mcp import format_mcp_error
 
 # Suppress verbose logs from mcp.client.sse and httpx
@@ -117,9 +116,9 @@ async def list_tools_and_schemas(command, url, tool_name=None, transport='sse', 
     Raises:
         MCPError: Caught internally and logged, returns empty list instead
     """
-    from aiq.tool.mcp.mcp_client_base import MCPSSEClient
-    from aiq.tool.mcp.mcp_client_base import MCPStdioClient
-    from aiq.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
+    from nat.tool.mcp.mcp_client_base import MCPSSEClient
+    from nat.tool.mcp.mcp_client_base import MCPStdioClient
+    from nat.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
 
     if args is None:
         args = []

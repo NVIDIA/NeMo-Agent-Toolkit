@@ -146,7 +146,7 @@ functions:
 
 This configuration launches the MCP server directly as a `subprocess` instead of connecting to a running server. Run it with:
 ```bash
-aiq run --config_file examples/simple_calculator/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/simple_calculator/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 Ensure that MCP server time package is installed in your environment before running the workflow.
 ```bash
