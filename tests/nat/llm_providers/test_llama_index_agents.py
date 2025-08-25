@@ -62,6 +62,7 @@ async def create_minimal_agent(llm_name: str, llm_config: Any) -> ReActAgent:
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_nim_minimal_agent():
     """Test NIM LLM with minimal LlamaIndex agent. Requires NVIDIA_API_KEY to be set."""
     llm_config = NIMModelConfig(model_name="meta/llama-3.1-70b-instruct", temperature=0.0)
@@ -74,6 +75,7 @@ async def test_nim_minimal_agent():
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("openai_api_key")
 async def test_openai_minimal_agent():
     """Test OpenAI LLM with minimal LlamaIndex agent. Requires OPENAI_API_KEY to be set."""
     llm_config = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.0)
@@ -86,6 +88,7 @@ async def test_openai_minimal_agent():
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("aws_keys")
 async def test_aws_bedrock_minimal_agent():
     """
     Test AWS Bedrock LLM with LangChain agent.
@@ -106,6 +109,7 @@ async def test_aws_bedrock_minimal_agent():
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("azure_openai_keys")
 async def test_azure_openai_minimal_agent():
     """
     Test Azure OpenAI LLM with minimal LlamaIndex agent.
