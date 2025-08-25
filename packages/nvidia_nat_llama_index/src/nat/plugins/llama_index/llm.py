@@ -13,15 +13,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Sequence
+from typing import TypeVar
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+
+ModelType = TypeVar("ModelType")
+
+
+def llama_index_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+    from llama_index.core.base.llms.types import ChatMessage
+
+    def injector(messages: Sequence[ChatMessage]) -> Sequence[ChatMessage]:
+        msgs = list(messages)
+        msgs.insert(0, ChatMessage(role="system", content=system_prompt))
+        return msgs
+
+    return patch_with_thinking(
+        client,
+        function_names=["chat", "stream_chat", "achat", "astream_chat"],
+        system_prompt_injector=injector,
+    )
 
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -32,6 +54,9 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
     kwargs = llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True)
 
     llm = Bedrock(**kwargs)
+
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        llm = llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,
@@ -50,6 +75,9 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
     kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
 
     llm = AzureOpenAI(**kwargs)
+
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        llm = llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,
@@ -92,6 +120,9 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
         del kwargs["base_url"]
 
     llm = OpenAI(**kwargs)
+
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        llm = llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,

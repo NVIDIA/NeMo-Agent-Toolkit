@@ -77,6 +77,11 @@ class AzureOnlyMixin(
   - Default when supported: `1.0`
   - Not supported on GPT-5 models
 
+- {py:class}`~nat.data_models.thinking_mixin.ThinkingMixin`
+  - Field: `thinking: bool | None`
+  - Default when supported: `None` (use model default)
+  - Only currently supported on Nemotron models
+
 ### Example: Integrating into a Provider Configuration
 
 ```python

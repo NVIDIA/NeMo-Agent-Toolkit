@@ -14,18 +14,36 @@
 # limitations under the License.
 
 import os
+from typing import TypeVar
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+
+ModelType = TypeVar("ModelType")
+
+
+def agno_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+    from agno.models.message import Message
+
+    def injector(messages: list[Message]) -> list[Message]:
+        return [Message(role="system", content=system_prompt)] + messages
+
+    return patch_with_thinking(
+        client,
+        function_names=["invoke_stream", "invoke", "ainvoke", "ainvoke_stream"],
+        system_prompt_injector=injector,
+    )
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
-async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
+async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
 
     from agno.models.nvidia import Nvidia
 
@@ -54,7 +72,10 @@ async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
 
     client = Nvidia(**kwargs)  # type: ignore[arg-type]
 
-    if isinstance(client, RetryMixin):
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = agno_thinking_injector(client, llm_config.thinking_system_prompt)
+
+    if isinstance(llm_config, RetryMixin):
 
         client = patch_with_retry(client,
                                   retries=llm_config.num_retries,
@@ -65,7 +86,7 @@ async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
-async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
+async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from agno.models.openai import OpenAIChat
 
@@ -77,6 +98,9 @@ async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
         kwargs["id"] = kwargs.pop("model")
 
     client = OpenAIChat(**kwargs)
+
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = agno_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,
