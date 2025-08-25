@@ -1,0 +1,175 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+# Docs: https://docs.coderabbit.ai/getting-started/configure-coderabbit/
+language: "en-US"
+reviews:
+  review_status: true
+  collapse_walkthrough: false
+  pre_merge_checks:
+    title:
+      mode: warning
+      requirements: "Title should be concise, and descriptive, and use imperative mood (max ~72 chars)."
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+
+  poem: false
+  sequence_diagrams: true
+  suggested_reviewers: false
+
+  path_instructions:
+    - path: "**/*"
+      instructions: >-
+        # Code Review Instructions
+
+        - Ensure the code follows best practices and coding standards.
+        - For **Python** code, follow
+          [PEP 20](https://peps.python.org/pep-0020/) and
+          [PEP 8](https://peps.python.org/pep-0008/) for style guidelines.
+        - Check for security vulnerabilities and potential issues.
+        - Python methods should use type hints for all parameters and return values.
+          Example:
+            ```python
+            def my_function(param1: int, param2: str) -> bool:
+                pass
+            ```
+
+        # Documentation Review Instructions
+        - Verify that documentation and comments are clear and comprehensive.
+        - Verify that the documentation doesn't contain any TODOs, FIXMEs or placeholder text like "lorem ipsum".
+        - Verify that the documentation doesn't contain any offensive or outdated terms.
+        - Verify that documentation and comments are free of spelling mistakes, ensure the documentation doesn't contain any
+          words listed in the `ci/vale/styles/config/vocabularies/nat/reject.txt` file, words that might appear to be
+          spelling mistakes but are listed in the `ci/vale/styles/config/vocabularies/nat/accept.txt` file are OK.
+
+        # Misc.
+        - All code should be licensed under the Apache License 2.0, and should contain an Apache License 2.0 header
+          comment at the top of each file.
+        - Confirm that copyright years are up-to date whenever a file is changed.
+
+    - path: "docs/source/**/*"
+      instructions: >-
+        This directory contains the source code for the documentation. All documentation should be written in Markdown
+        format. Any image files should be placed in the `docs/source/_static` directory.
+
+    - path: "examples/**/*"
+      instructions: >-
+        - This directory contains example code and usage scenarios for the toolkit, at a minimum an example should
+          contain a README.md or file README.ipynb.
+        - If an example contains Python code, it should be placed in a subdirectory named `src/` and should
+          contain a `pyproject.toml` file. Optionally, it might also contain scripts in a `scripts/` directory.
+        - If an example contains YAML files, they should be placed in a subdirectory named `configs/`.
+        - If an example contains sample data files, they should be placed in a subdirectory named `data/`, and should
+          be checked into git-lfs.
+
+    - path: "src/aiq/**/*"
+      instructions: >-
+        This directory maintains backward compatibility with the previous version of the toolkit. It should almost
+        never be modified.
+
+    - path: "src/nat/**/*"
+      instructions: >-
+        This directory contains the core functionality of the toolkit. Changes should prioritize backward compatibility.
+
+    - path: "packages/**/*"
+      instructions: >-
+        - This directory contains optional plugin packages for the toolkit, each should contain a `pyproject.toml` file.
+        - The `pyproject.toml` file should declare a dependency on `nvidia-nat` or another package with a name starting
+          with `nvidia-nat-`. This dependency should be declared using `~=<version>`, and the version should be a two
+          digit version (ex: `~=1.0`).
+        - Not all packages contain Python code, if they do they should also contain their own set of tests, in a
+          `tests/` directory at the same level as the `pyproject.toml` file.
+
+    - path: "tests/**/*.py"
+      instructions: >-
+        - Ensure that tests are comprehensive, cover edge cases, and validate the functionality of the code.
+        - Test functions should be named using the `test_` prefix, using snake_case.
+        - Any frequently repeated code should be extracted into pytest fixtures.
+        - Pytest fixtures should define the name argument when applying the pytest.fixture decorator. The fixture
+          function being decorated should be named using the `fixture_` prefix, using snake_case. Example:
+            @pytest.fixture(name="my_fixture")
+            def fixture_my_fixture():
+                pass
+
+  auto_apply_labels: true
+  suggested_labels: true
+  labeling_instructions:
+    - label: "! - Release"
+      instructions: >-
+        You should only apply this label when the source branch has a name matching the regex pattern `release/\d+\.\d+`
+        and the target branch is `main`.
+    - label: breaking
+      instructions: >-
+        Apply this label when the PR introduces changes that break backward compatibility, modify existing APIs in
+        incompatible ways, creates a behavioral change, or require users to update their code when upgrading. If you
+        apply this label, do not apply the "non-breaking" label.
+    - label: bug
+      instructions: >-
+        Apply this label when the PR fixes a defect, error, or unexpected behavior in the existing codebase. If you
+        apply this label do not apply the "doc", "feature request", or "improvement" labels.
+    - label: DO NOT MERGE
+      instructions: >-
+        Apply this label to PRs that should not be merged due to critical issues, incomplete work, or other blocking
+        concerns. Check the PR description for specific details about why it should not be merged. There is no need to
+        apply this label to draft PRs.
+    - label: doc
+      instructions: >-
+        Apply this label when the PR primarily adds, updates, or improves documentation including README files. If you
+        apply this label do not apply the "bug", "feature request", or "improvement" labels.
+    - label: duplicate
+      instructions: >-
+        Apply this label when the PR addresses the same issue or implements the same feature as another existing
+        PR or issue.
+    - label: external
+      instructions: >-
+        Apply this label when the PR author is not an organization OWNER or MEMBER (i.e., author_association is
+        COLLABORATOR, CONTRIBUTOR, FIRST_TIMER, FIRST_TIME_CONTRIBUTOR, or NONE).
+    - label: feature request
+      instructions: >-
+        Apply this label when the PR implements new functionality, adds new features, or introduces new capabilities
+        to the toolkit. If you apply this label do not apply the "bug", "doc", or "improvement" labels.
+    - label: improvement
+      instructions: >-
+        Apply this label when the PR enhances existing functionality without adding completely new features, such as
+        performance optimizations, code refactoring, or usability enhancements. If you apply this label do not apply
+        the "bug", "doc", or "feature request" labels.
+    - label: invalid
+      instructions: >-
+        Apply this label when the PR contains invalid changes, doesn't follow project guidelines, or has fundamental
+        issues that make it unsuitable for the project.
+    - label: non-breaking
+      instructions: >-
+        Apply this label when the PR introduces changes that maintain backward compatibility, does not create a
+        behavioral change, and does not require users to modify their existing code. If you apply this label, do not
+        apply the "breaking" label.
+
+  tools:
+    ruff:
+      enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    osvScanner:
+      enabled: true
