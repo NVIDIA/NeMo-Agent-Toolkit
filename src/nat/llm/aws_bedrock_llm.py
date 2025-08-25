@@ -23,9 +23,10 @@ from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.temperature_mixin import TemperatureMixin
+from nat.data_models.thinking_mixin import ThinkingMixin
 
 
-class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, TemperatureMixin, name="aws_bedrock"):
+class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, TemperatureMixin, ThinkingMixin, name="aws_bedrock"):
     """An AWS Bedrock llm provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=())

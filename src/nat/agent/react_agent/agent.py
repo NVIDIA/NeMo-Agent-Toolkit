@@ -47,6 +47,8 @@ from nat.agent.react_agent.output_parser import ReActOutputParser
 from nat.agent.react_agent.output_parser import ReActOutputParserException
 from nat.agent.react_agent.prompt import SYSTEM_PROMPT
 from nat.agent.react_agent.prompt import USER_PROMPT
+from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.thinking_mixin import ThinkingMixin
 
 if typing.TYPE_CHECKING:
     from nat.agent.react_agent.register import ReActAgentWorkflowConfig
@@ -351,7 +353,7 @@ class ReActAgentGraph(DualNodeAgent):
         return True
 
 
-def create_react_agent_prompt(config: "ReActAgentWorkflowConfig") -> ChatPromptTemplate:
+def create_react_agent_prompt(config: "ReActAgentWorkflowConfig", llm_config: LLMBaseConfig) -> ChatPromptTemplate:
     """
     Create a ReAct Agent prompt from the config.
 
@@ -375,6 +377,10 @@ def create_react_agent_prompt(config: "ReActAgentWorkflowConfig") -> ChatPromptT
     if not valid_prompt:
         logger.exception("%s Invalid system_prompt", AGENT_LOG_PREFIX)
         raise ValueError("Invalid system_prompt")
-    prompt = ChatPromptTemplate([("system", prompt_str), ("user", USER_PROMPT),
-                                 MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])
+    messages = []
+    messages.append(("system", prompt_str))
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt:
+        messages.append(("system", llm_config.thinking_system_prompt))
+    messages.append(("user", USER_PROMPT))
+    prompt = ChatPromptTemplate(messages + [MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])
     return prompt

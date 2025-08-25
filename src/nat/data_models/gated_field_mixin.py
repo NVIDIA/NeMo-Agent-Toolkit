@@ -33,10 +33,10 @@ class GatedFieldMixinConfig:
     keys: Sequence[str]
 
 
-T = TypeVar("T")
+T_co = TypeVar("T_co", covariant=True)
 
 
-class GatedFieldMixin(Generic[T]):
+class GatedFieldMixin(Generic[T_co]):
     """
     A mixin that gates a field based on specified keys.
 
@@ -61,7 +61,7 @@ class GatedFieldMixin(Generic[T]):
     def __init_subclass__(
         cls,
         field_name: str | None = None,
-        default_if_supported: T | None = None,
+        default_if_supported: T_co | None = None,
         keys: Sequence[str] | None = None,
         unsupported: Sequence[Pattern[str]] | None = None,
         supported: Sequence[Pattern[str]] | None = None,
@@ -90,7 +90,7 @@ class GatedFieldMixin(Generic[T]):
     def _setup_direct_mixin(
         cls,
         field_name: str,
-        default_if_supported: T | None,
+        default_if_supported: T_co | None,
         unsupported: Sequence[Pattern[str]] | None,
         supported: Sequence[Pattern[str]] | None,
         keys: Sequence[str],
@@ -135,7 +135,7 @@ class GatedFieldMixin(Generic[T]):
     def _create_gated_field_validator(
         cls,
         field_name: str,
-        default_if_supported: T | None,
+        default_if_supported: T_co | None,
         unsupported: Sequence[Pattern[str]] | None,
         supported: Sequence[Pattern[str]] | None,
         keys: Sequence[str],

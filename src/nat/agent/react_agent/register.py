@@ -83,7 +83,9 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from nat.agent.react_agent.agent import ReActGraphState
     from nat.agent.react_agent.agent import create_react_agent_prompt
 
-    prompt = create_react_agent_prompt(config)
+    llm_config = builder.get_llm_config(config.llm_name)
+
+    prompt = create_react_agent_prompt(config, llm_config)
 
     # we can choose an LLM for the ReAct agent in the config file
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

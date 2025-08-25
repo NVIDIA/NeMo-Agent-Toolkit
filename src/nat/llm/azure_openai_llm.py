@@ -23,10 +23,18 @@ from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.temperature_mixin import TemperatureMixin
+from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.data_models.top_p_mixin import TopPMixin
 
 
-class AzureOpenAIModelConfig(LLMBaseConfig, RetryMixin, TemperatureMixin, TopPMixin, name="azure_openai"):
+class AzureOpenAIModelConfig(
+        LLMBaseConfig,
+        RetryMixin,
+        TemperatureMixin,
+        TopPMixin,
+        ThinkingMixin,
+        name="azure_openai",
+):
     """An Azure OpenAI LLM provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
