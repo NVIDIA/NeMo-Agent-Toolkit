@@ -33,10 +33,10 @@ class GatedFieldMixinConfig:
     keys: Sequence[str]
 
 
-T = TypeVar("T")
+T_contra = TypeVar("T_contra", contravariant=True)
 
 
-class GatedFieldMixin(Generic[T]):
+class GatedFieldMixin(Generic[T_contra]):
     """
     A mixin that gates a field based on specified keys.
 
@@ -46,7 +46,7 @@ class GatedFieldMixin(Generic[T]):
     ----------
     field_name: `str`
                 The name of the field.
-    default_if_supported: `T | None`
+    default_if_supported: `T_contra | None`
                           The default value of the field if it is supported for the key.
     keys: `Sequence[str]`
           A sequence of keys that are used to validate the field.
@@ -61,7 +61,7 @@ class GatedFieldMixin(Generic[T]):
     def __init_subclass__(
         cls,
         field_name: str | None = None,
-        default_if_supported: T | None = None,
+        default_if_supported: T_contra | None = None,
         keys: Sequence[str] | None = None,
         unsupported: Sequence[Pattern[str]] | None = None,
         supported: Sequence[Pattern[str]] | None = None,
@@ -90,7 +90,7 @@ class GatedFieldMixin(Generic[T]):
     def _setup_direct_mixin(
         cls,
         field_name: str,
-        default_if_supported: T | None,
+        default_if_supported: T_contra | None,
         unsupported: Sequence[Pattern[str]] | None,
         supported: Sequence[Pattern[str]] | None,
         keys: Sequence[str],
@@ -135,7 +135,7 @@ class GatedFieldMixin(Generic[T]):
     def _create_gated_field_validator(
         cls,
         field_name: str,
-        default_if_supported: T | None,
+        default_if_supported: T_contra | None,
         unsupported: Sequence[Pattern[str]] | None,
         supported: Sequence[Pattern[str]] | None,
         keys: Sequence[str],
@@ -167,16 +167,19 @@ class GatedFieldMixin(Generic[T]):
         keys: Sequence[str],
     ) -> bool:
         """Check if a specific field is supported based on its configuration and keys."""
+        seen = False
         for key in keys:
             if not hasattr(instance, key):
                 continue
+            seen = True
             value = str(getattr(instance, key))
             if supported is not None:
-                return any(p.search(value) for p in supported)
+                if any(p.search(value) for p in supported):
+                    return True
             elif unsupported is not None:
-                return not any(p.search(value) for p in unsupported)
-        # Default to supported if no model keys found
-        return True
+                if any(p.search(value) for p in unsupported):
+                    return False
+        return True if not seen else (unsupported is not None)
 
     @classmethod
     def _find_blocking_key(

@@ -68,7 +68,7 @@ def test_react_init(mock_config_react_agent, mock_llm, mock_tool):
 
 
 @pytest.fixture(name='mock_react_agent', scope="module")
-def mock_agent(mock_config_react_agent, mock_llm, mock_tool):
+def fixture_mock_agent(mock_config_react_agent, mock_llm, mock_tool):
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
     prompt = create_react_agent_prompt(mock_config_react_agent)
     agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=mock_config_react_agent.verbose)

@@ -375,6 +375,9 @@ def create_react_agent_prompt(config: "ReActAgentWorkflowConfig") -> ChatPromptT
     if not valid_prompt:
         logger.exception("%s Invalid system_prompt", AGENT_LOG_PREFIX)
         raise ValueError("Invalid system_prompt")
-    prompt = ChatPromptTemplate([("system", prompt_str), ("user", USER_PROMPT),
-                                 MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", prompt_str),
+        ("user", USER_PROMPT),
+        MessagesPlaceholder(variable_name='agent_scratchpad', optional=True),
+    ])
     return prompt

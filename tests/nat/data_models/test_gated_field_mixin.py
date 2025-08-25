@@ -188,7 +188,7 @@ class TestGatedFieldMixin:
             deployment: str
 
         m = MultiKeyModel(primary_model="claude", fallback_model="gpt-3.5", deployment="llama")
-        assert m.feature is None
+        assert m.feature == 42
 
     def test_numeric_model_values(self):
         """Test numeric model values."""
