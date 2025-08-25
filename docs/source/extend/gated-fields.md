@@ -15,16 +15,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Model-Gated Configuration Fields
+# Gated Fields
 
-Use {py:class}`~nat.data_models.model_gated_field_mixin.ModelGatedFieldMixin` to gate configuration fields based on whether a model supports them. This enables provider-agnostic, model-aware validation with sensible defaults and clear errors.
+Use {py:class}`~nat.data_models.gated_field_mixin.GatedFieldMixin` to gate configuration fields based on whether an analyzed field supports them. This enables provider-agnostic, model-aware validation with sensible defaults and clear errors.
 
 ## How It Works
 
-- **Detection keys**: The mixin scans these keys on the model instance to identify the model by default: `model_name`, `model`, `azure_deployment`. You can override them with `model_keys`.
+- **Detection keys**: The mixin scans `keys` specified on the instance to identify values used to determine if the field is supported.
 - **Selection modes**: Provide exactly one of the following when subclassing:
-  - `unsupported_models`: A sequence of compiled regex patterns that mark models where the field is not supported.
-  - `supported_models`: A sequence of compiled regex patterns that mark models where the field is supported.
+  - `unsupported`: A sequence of compiled regex patterns that mark the detector field where the mixin's field is not supported.
+  - `supported`: A sequence of compiled regex patterns that mark the detector field where the mixin's field is supported.
 - **Behavior**:
   - Supported and value not provided → sets `default_if_supported`.
   - Supported and value provided → keeps the provided value (and performs all other validations if defined).
@@ -37,16 +37,15 @@ Use {py:class}`~nat.data_models.model_gated_field_mixin.ModelGatedFieldMixin` to
 ```python
 import re
 from pydantic import BaseModel, Field
-from nat.data_models.model_gated_field_mixin import ModelGatedFieldMixin
-
-_SUPPORTED = (re.compile(r"^gpt-4.*$", re.IGNORECASE),)
+from nat.data_models.gated_field_mixin import GatedFieldMixin
 
 class FrequencyPenaltyMixin(
     BaseModel,
-    ModelGatedFieldMixin[float],
+    GatedFieldMixin[float],
     field_name="frequency_penalty",
     default_if_supported=0.0,
-    supported_models=_SUPPORTED,
+    keys=("model_name", "model", "azure_deployment"),
+    supported=(re.compile(r"^gpt-4.*$", re.IGNORECASE),),
 ):
     frequency_penalty: float | None = Field(default=None, ge=0.0, le=2.0)
 ```
@@ -56,11 +55,11 @@ class FrequencyPenaltyMixin(
 ```python
 class AzureOnlyMixin(
     BaseModel,
-    ModelGatedFieldMixin[int],
+    GatedFieldMixin[int],
     field_name="some_param",
     default_if_supported=1,
-    unsupported_models=(re.compile(r"gpt-?5", re.IGNORECASE),),
-    model_keys=("azure_deployment",),
+    keys=("azure_deployment",),
+    unsupported=(re.compile(r"gpt-?5", re.IGNORECASE),),
 ):
     some_param: int | None = Field(default=None)
     azure_deployment: str
@@ -92,8 +91,6 @@ class MyProviderConfig(BaseModel, TemperatureMixin, TopPMixin):
 
 ## Best Practices
 
-- Use `supported_models` for allowlist and `unsupported_models` for denylist; do not set both.
+- Use `supported` for allowlist and `unsupported` for denylist; do not set both.
 - Keep regex patterns specific (anchor with `^` and `$` when appropriate).
-- If your config uses a non-standard model identifier field, set `model_keys` accordingly.
-
-
+- If your config uses a non-standard model identifier field, set `keys` accordingly.
