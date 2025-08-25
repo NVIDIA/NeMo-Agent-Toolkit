@@ -19,6 +19,8 @@ set -e
 GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 source ${GITHUB_SCRIPT_DIR}/common.sh
+export REPORTS_DIR=${WORKSPACE_TMP}/reports
+mkdir -p ${REPORTS_DIR}
 get_lfs_files
 
 create_env group:dev extra:all
@@ -27,9 +29,10 @@ rapids-logger "Git Version: $(git describe)"
 rapids-logger "Running tests with Python version $(python --version) and pytest version $(pytest --version) on $(arch)"
 set +e
 
-pytest --junit-xml=${WORKSPACE_TMP}/report_pytest.xml \
+REPORT_IDENT_SLUG="$(arch)-py${PYTHON_VERSION}"
+pytest --junit-xml=${REPORTS_DIR}/report-${REPORT_IDENT_SLUG}_pytest.xml \
        --cov=nat --cov-report term-missing \
-       --cov-report=xml:${WORKSPACE_TMP}/report_pytest_coverage.xml
+       --cov-report=xml:${REPORTS_DIR}/report-${REPORT_IDENT_SLUG}_pytest_coverage.xml
 PYTEST_RESULTS=$?
 
 exit ${PYTEST_RESULTS}
