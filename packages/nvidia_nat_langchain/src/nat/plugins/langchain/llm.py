@@ -13,15 +13,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import TypeVar
+
+from langchain_core.language_models import BaseChatModel
+from langchain_core.language_models import LanguageModelInput
+from langchain_core.messages import HumanMessage
+from langchain_core.messages import SystemMessage
+from langchain_core.prompt_values import PromptValue
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+
+ModelType = TypeVar("ModelType", bound=BaseChatModel)
+
+
+def langchain_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+
+    def injector(messages: LanguageModelInput) -> LanguageModelInput:
+        if isinstance(messages, PromptValue):
+            lst = messages.to_messages()
+            lst.insert(0, SystemMessage(content=system_prompt))
+            return lst
+        if isinstance(messages, str):
+            return [SystemMessage(content=system_prompt), HumanMessage(content=messages)]
+        elif isinstance(messages, list):
+            return [SystemMessage(content=system_prompt)] + messages
+        else:
+            raise ValueError(f"Unsupported message type: {type(messages)}")
+
+    return patch_with_thinking(
+        client,
+        function_names=["invoke", "ainvoke", "stream", "astream"],
+        system_prompt_injector=injector,
+    )
 
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -30,6 +63,9 @@ async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, _builder: Bui
     from langchain_aws import ChatBedrockConverse
 
     client = ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))
+
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = langchain_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,
@@ -47,6 +83,9 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     client = AzureChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
 
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = langchain_thinking_injector(client, llm_config.thinking_system_prompt)
+
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,
                                   retries=llm_config.num_retries,
@@ -62,6 +101,9 @@ async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
     from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
     client = ChatNVIDIA(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = langchain_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,
@@ -84,6 +126,9 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
     kwargs = {**default_kwargs, **llm_config.model_dump(exclude={"type"}, by_alias=True)}
 
     client = ChatOpenAI(**kwargs)
+
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = langchain_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,

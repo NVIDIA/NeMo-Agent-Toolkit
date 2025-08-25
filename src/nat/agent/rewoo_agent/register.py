@@ -27,7 +27,6 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
@@ -89,13 +88,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     if not ReWOOAgentGraph.validate_planner_prompt(planner_system_prompt):
         logger.exception("Invalid planner prompt")
         raise ValueError("Invalid planner prompt")
-
-    planner_messages = [("system", planner_system_prompt), ("user", PLANNER_USER_PROMPT)]
-
-    llm_config = builder.get_llm_config(config.llm_name)
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt:
-        planner_messages.insert(0, ("system", llm_config.thinking_system_prompt))
-    planner_prompt = ChatPromptTemplate.from_messages(planner_messages)
+    planner_prompt = ChatPromptTemplate([("system", planner_system_prompt), ("user", PLANNER_USER_PROMPT)])
 
     solver_system_prompt = SOLVER_SYSTEM_PROMPT if config.solver_prompt is None else config.solver_prompt
     if config.additional_solver_instructions:
@@ -103,11 +96,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     if not ReWOOAgentGraph.validate_solver_prompt(solver_system_prompt):
         logger.exception("Invalid solver prompt")
         raise ValueError("Invalid solver prompt")
-
-    solver_messages = [("system", solver_system_prompt), ("user", SOLVER_USER_PROMPT)]
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt:
-        solver_messages.insert(0, ("system", llm_config.thinking_system_prompt))
-    solver_prompt = ChatPromptTemplate.from_messages(solver_messages)
+    solver_prompt = ChatPromptTemplate([("system", solver_system_prompt), ("user", SOLVER_USER_PROMPT)])
 
     # we can choose an LLM for the ReWOO agent in the config file
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -145,7 +134,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
             # get and return the output from the state
             state = ReWOOGraphState(**state)
             output_message = state.result.content
-            return ChatResponse.from_string(str(output_message))
+            return ChatResponse.from_string(output_message)
 
         except Exception as ex:
             logger.exception("ReWOO Agent failed with exception: %s", ex, exc_info=ex)

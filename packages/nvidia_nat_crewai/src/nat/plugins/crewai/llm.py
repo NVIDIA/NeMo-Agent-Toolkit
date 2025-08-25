@@ -14,15 +14,32 @@
 # limitations under the License.
 
 import os
+from typing import TypeVar
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+
+ModelType = TypeVar("ModelType")
+
+
+def crewai_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+
+    def injector(messages: list[dict[str, str]]) -> list[dict[str, str]]:
+        return [{"role": "system", "content": system_prompt}] + messages
+
+    return patch_with_thinking(
+        client,
+        function_names=["call"],
+        system_prompt_injector=injector,
+    )
 
 
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
@@ -60,6 +77,9 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
 
     client = LLM(**config_obj)
 
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = crewai_thinking_injector(client, llm_config.thinking_system_prompt)
+
     if isinstance(llm_config, RetryMixin):
 
         client = patch_with_retry(client,
@@ -95,6 +115,9 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
 
     client = LLM(**config_obj)
 
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = crewai_thinking_injector(client, llm_config.thinking_system_prompt)
+
     if isinstance(llm_config, RetryMixin):
 
         client = patch_with_retry(client,
@@ -115,6 +138,9 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
     }
 
     client = LLM(**config_obj)
+
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = crewai_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
 
