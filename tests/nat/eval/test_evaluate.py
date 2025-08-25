@@ -50,6 +50,7 @@ from nat.runtime.session import SessionManager
 
 # pylint: disable=unused-argument # arguments are passed to setup the fixtures
 
+
 @pytest.fixture
 def default_eval_run_config():
     """Fixture for default evaluation run configuration."""
