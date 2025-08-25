@@ -106,7 +106,7 @@ reviews:
         - Any frequently repeated code should be extracted into pytest fixtures.
         - Pytest fixtures should define the name argument when applying the pytest.fixture decorator. The fixture
           function being decorated should be named using the `fixture_` prefix, using snake_case. Example:
-            @fixture(name="my_fixture")
+            @pytest.fixture(name="my_fixture")
             def fixture_my_fixture():
                 pass
 
