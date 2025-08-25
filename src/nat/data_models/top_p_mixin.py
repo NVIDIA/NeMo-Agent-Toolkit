@@ -18,17 +18,16 @@ import re
 from pydantic import BaseModel
 from pydantic import Field
 
-from nat.data_models.model_gated_field_mixin import ModelGatedFieldMixin
-
-_UNSUPPORTED_TOP_P_MODELS = (re.compile(r"gpt-?5", re.IGNORECASE), )
+from nat.data_models.gated_field_mixin import GatedFieldMixin
 
 
 class TopPMixin(
         BaseModel,
-        ModelGatedFieldMixin[float],
+        GatedFieldMixin[float],
         field_name="top_p",
         default_if_supported=1.0,
-        unsupported_models=_UNSUPPORTED_TOP_P_MODELS,
+        keys=("model_name", "model", "azure_deployment"),
+        unsupported=(re.compile(r"gpt-?5", re.IGNORECASE), ),
 ):
     """
     Mixin class for top-p configuration.

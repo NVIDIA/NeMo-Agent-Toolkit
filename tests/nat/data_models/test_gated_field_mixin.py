@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import ValidationError
 
-from nat.data_models.model_gated_field_mixin import ModelGatedFieldMixin
+from nat.data_models.gated_field_mixin import GatedFieldMixin
 
 
 # Test data fixtures
@@ -49,36 +49,33 @@ def gpt3_pattern():
     return re.compile(r"gpt-3")
 
 
-class TestModelGatedFieldMixin:
-    """Comprehensive tests for ModelGatedFieldMixin using parameterization."""
+class TestGatedFieldMixin:
+    """Comprehensive tests for GatedFieldMixin"""
 
-    @pytest.mark.parametrize(
-        "test_case",
-        [
-            # Basic validation tests
-            {
-                "name": "both_selectors",
-                "unsupported": (re.compile(r"alpha"), ),
-                "supported": (re.compile(r"beta"), ),
-                "error_msg": r"Only one of unsupported_models or supported_models must be provided"
-            },
-            {
-                "name": "no_selectors",
-                "unsupported": None,
-                "supported": None,
-                "error_msg": r"Either unsupported_models or supported_models must be provided"
-            }
-        ])
+    @pytest.mark.parametrize("test_case",
+                             [{
+                                 "name": "both_selectors",
+                                 "unsupported": (re.compile(r"alpha"), ),
+                                 "supported": (re.compile(r"beta"), ),
+                                 "error_msg": r"Only one of unsupported or supported must be provided"
+                             },
+                              {
+                                  "name": "no_selectors",
+                                  "unsupported": None,
+                                  "supported": None,
+                                  "error_msg": r"Either unsupported or supported must be provided"
+                              }])
     def test_selector_validation(self, test_case):
         """Test selector validation scenarios."""
         with pytest.raises(ValueError, match=test_case["error_msg"]):
 
             class BadConfig(BaseModel,
-                            ModelGatedFieldMixin[int],
+                            GatedFieldMixin[int],
                             field_name="dummy",
                             default_if_supported=1,
-                            unsupported_models=test_case["unsupported"],
-                            supported_models=test_case["supported"]):
+                            keys=("model_name", ),
+                            unsupported=test_case["unsupported"],
+                            supported=test_case["supported"]):
                 dummy: int | None = Field(default=None)
                 model_name: str = "alpha"
 
@@ -86,14 +83,14 @@ class TestModelGatedFieldMixin:
 
     def test_empty_model_keys_raises_error(self):
         """Test that empty model_keys raises an error."""
-        with pytest.raises(ValueError, match=r"model_keys must be provided and non-empty"):
+        with pytest.raises(ValueError, match=r"keys must be provided and non-empty"):
 
             class EmptyKeys(BaseModel,
-                            ModelGatedFieldMixin[int],
+                            GatedFieldMixin[int],
                             field_name="test",
                             default_if_supported=1,
-                            supported_models=(re.compile(r"test"), ),
-                            model_keys=()):
+                            supported=(re.compile(r"test"), ),
+                            keys=()):
                 test: int | None = Field(default=None)
                 model_name: str = "test"
 
@@ -103,11 +100,11 @@ class TestModelGatedFieldMixin:
         """Test supported model with default value."""
 
         class SupportedModelTest(BaseModel,
-                                 ModelGatedFieldMixin[int],
+                                 GatedFieldMixin[int],
                                  field_name="dummy",
                                  default_if_supported=5,
-                                 supported_models=(re.compile(r"gpt"), ),
-                                 model_keys=("model_name", )):
+                                 supported=(re.compile(r"gpt"), ),
+                                 keys=("model_name", )):
             dummy: int | None = Field(default=None)
             model_name: str
 
@@ -118,11 +115,11 @@ class TestModelGatedFieldMixin:
         """Test fallback when no model key is present."""
 
         class NoModelKeyTest(BaseModel,
-                             ModelGatedFieldMixin[int],
+                             GatedFieldMixin[int],
                              field_name="dummy",
                              default_if_supported=7,
-                             supported_models=(re.compile(r"anything"), ),
-                             model_keys=("nonexistent_key", )):
+                             supported=(re.compile(r"anything"), ),
+                             keys=("nonexistent_key", )):
             dummy: int | None = Field(default=None)
 
         m = NoModelKeyTest()
@@ -132,11 +129,11 @@ class TestModelGatedFieldMixin:
         """Test custom model keys with supported models."""
 
         class CustomKeysTest(BaseModel,
-                             ModelGatedFieldMixin[int],
+                             GatedFieldMixin[int],
                              field_name="dummy",
                              default_if_supported=9,
-                             supported_models=(re.compile(r"valid"), ),
-                             model_keys=("custom_key", )):
+                             supported=(re.compile(r"valid"), ),
+                             keys=("custom_key", )):
             dummy: int | None = Field(default=None)
             custom_key: str
 
@@ -147,11 +144,11 @@ class TestModelGatedFieldMixin:
         """Test validation error for unsupported models."""
 
         class UnsupportedModelTest(BaseModel,
-                                   ModelGatedFieldMixin[int],
+                                   GatedFieldMixin[int],
                                    field_name="dummy",
                                    default_if_supported=5,
-                                   unsupported_models=(re.compile(r"claude"), ),
-                                   model_keys=("model_name", )):
+                                   unsupported=(re.compile(r"claude"), ),
+                                   keys=("model_name", )):
             dummy: int | None = Field(default=None)
             model_name: str
 
@@ -162,11 +159,11 @@ class TestModelGatedFieldMixin:
         """Test unsupported model with None value."""
 
         class UnsupportedModelNoneTest(BaseModel,
-                                       ModelGatedFieldMixin[int],
+                                       GatedFieldMixin[int],
                                        field_name="dummy",
                                        default_if_supported=5,
-                                       unsupported_models=(re.compile(r"claude"), ),
-                                       model_keys=("model_name", )):
+                                       unsupported=(re.compile(r"claude"), ),
+                                       keys=("model_name", )):
             dummy: int | None = Field(default=None)
             model_name: str
 
@@ -177,11 +174,11 @@ class TestModelGatedFieldMixin:
         """Test first key being supported in multiple keys scenario."""
 
         class MultiKeyModel(BaseModel,
-                            ModelGatedFieldMixin[int],
+                            GatedFieldMixin[int],
                             field_name="feature",
                             default_if_supported=42,
-                            supported_models=(re.compile(r"gpt"), ),
-                            model_keys=("primary_model", "fallback_model", "deployment")):
+                            supported=(re.compile(r"gpt"), ),
+                            keys=("primary_model", "fallback_model", "deployment")):
             feature: int | None = Field(default=None)
             primary_model: str
             fallback_model: str
@@ -194,11 +191,11 @@ class TestModelGatedFieldMixin:
         """Test first key being unsupported in multiple keys scenario."""
 
         class MultiKeyModel(BaseModel,
-                            ModelGatedFieldMixin[int],
+                            GatedFieldMixin[int],
                             field_name="feature",
                             default_if_supported=42,
-                            supported_models=(re.compile(r"gpt"), ),
-                            model_keys=("primary_model", "fallback_model", "deployment")):
+                            supported=(re.compile(r"gpt"), ),
+                            keys=("primary_model", "fallback_model", "deployment")):
             feature: int | None = Field(default=None)
             primary_model: str
             fallback_model: str
@@ -211,11 +208,11 @@ class TestModelGatedFieldMixin:
         """Test numeric model values."""
 
         class NumericModelTest(BaseModel,
-                               ModelGatedFieldMixin[int],
+                               GatedFieldMixin[int],
                                field_name="numeric_feature",
                                default_if_supported=100,
-                               supported_models=(re.compile(r"42"), re.compile(r"99")),
-                               model_keys=("model_id", "version_num")):
+                               supported=(re.compile(r"42"), re.compile(r"99")),
+                               keys=("model_id", "version_num")):
             numeric_feature: int | None = Field(default=None)
             model_id: int
             version_num: int
@@ -227,11 +224,11 @@ class TestModelGatedFieldMixin:
         """Test fallback behavior when no model keys are found."""
 
         class NoKeysModel(BaseModel,
-                          ModelGatedFieldMixin[int],
+                          GatedFieldMixin[int],
                           field_name="fallback_feature",
                           default_if_supported=42,
-                          supported_models=(re.compile(r"gpt"), ),
-                          model_keys=("nonexistent_key", )):
+                          supported=(re.compile(r"gpt"), ),
+                          keys=("nonexistent_key", )):
             fallback_feature: int | None = Field(default=None)
 
         m = NoKeysModel()
@@ -241,11 +238,11 @@ class TestModelGatedFieldMixin:
         """Test edge cases in finding blocking keys."""
 
         class BlockingKeyTest(BaseModel,
-                              ModelGatedFieldMixin[int],
+                              GatedFieldMixin[int],
                               field_name="test_feature",
                               default_if_supported=100,
-                              unsupported_models=(re.compile(r"blocked"), ),
-                              model_keys=("key1", "key2")):
+                              unsupported=(re.compile(r"blocked"), ),
+                              keys=("key1", "key2")):
             test_feature: int | None = Field(default=None)
             key1: str = "blocked"  # First key should be blocked
             key2: str = "allowed"
@@ -256,20 +253,20 @@ class TestModelGatedFieldMixin:
     def test_deep_inheritance_chain(self, gpt_pattern):
         """Test that deep inheritance chains work correctly."""
 
-        class BaseMixin(ModelGatedFieldMixin[int],
+        class BaseMixin(BaseModel,
+                        GatedFieldMixin[int],
                         field_name="deep_feature",
                         default_if_supported=100,
-                        supported_models=(gpt_pattern, ),
-                        model_keys=("model_name", )):
-            pass
+                        supported=(gpt_pattern, ),
+                        keys=("model_name", )):
+            deep_feature: int | None = Field(default=None)
 
         class MiddleMixin(BaseMixin):
-            """This class inherits from BaseMixin but not directly from ModelGatedFieldMixin."""
+            """This class inherits from BaseMixin but not directly from BaseModel, GatedFieldMixin."""
             pass
 
-        class FinalModel(BaseModel, MiddleMixin):
+        class FinalModel(MiddleMixin):
             """This class inherits from MiddleMixin, creating a deep inheritance chain."""
-            deep_feature: int | None = Field(default=None)
             model_name: str
 
         m = FinalModel(model_name="gpt-4")
@@ -285,11 +282,11 @@ class TestModelGatedFieldMixin:
         """Test edge cases in the combined validator."""
 
         class CombinedValidatorTest(BaseModel,
-                                    ModelGatedFieldMixin[int],
+                                    GatedFieldMixin[int],
                                     field_name="combined_feature",
                                     default_if_supported=200,
-                                    supported_models=(re.compile(r"gpt"), ),
-                                    model_keys=("model_name", )):
+                                    supported=(re.compile(r"gpt"), ),
+                                    keys=("model_name", )):
             combined_feature: int | None = Field(default=None)
             model_name: str
 

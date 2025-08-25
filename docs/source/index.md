@@ -113,7 +113,7 @@ Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/adding-a-retriever.md
 ./extend/memory.md
 Adding an LLM Provider <./extend/adding-an-llm-provider.md>
-Model-Gated Configuration Fields <./extend/model-gated-fields.md>
+Gated Fields <./extend/gated-fields.md>
 Adding an Object Store Provider <./extend/object-store.md>
 Adding an Authentication Provider <./extend/adding-an-authentication-provider.md>
 Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
