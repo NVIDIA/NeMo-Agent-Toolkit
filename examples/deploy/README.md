@@ -31,14 +31,19 @@ This directory contains configurations for running services used by the examples
 ## Key Features
 
 - **Docker Compose Services:** Provides pre-configured Docker Compose files for essential services used across NeMo Agent toolkit examples.
-- **Redis Service:** Includes `docker-compose.redis.yml` for running Redis memory backend with Redis Insight for memory-based examples.
-- **Phoenix Observability:** Includes `docker-compose.phoenix.yml` for running Phoenix observability server to monitor and debug workflows.
 - **Example Support Infrastructure:** Simplifies setup of supporting services required by various examples in the repository.
+- **MinIO:** Includes `docker-compose.minio.yml` for running a MinIO server for object store examples.
+- **MySQL:** Includes `docker-compose.mysql.yml` for running a MySQL server for object store examples.
+- **Phoenix Observability:** Includes `docker-compose.phoenix.yml` for running Phoenix observability server to monitor and debug workflows.
+- **Redis Service:** Includes `docker-compose.redis.yml` for running Redis memory backend with Redis Insight for memory-based examples.
+
 
 ## Available Services
 
-- **`redis`**: `docker-compose.redis.yml`
+- **`minio`**: `docker-compose.minio.yml`
+- **`mysql`**: `docker-compose.mysql.yml`
 - **`phoenix`**: `docker-compose.phoenix.yml`
+- **`redis`**: `docker-compose.redis.yml`
 
 ## Installation and Setup
 
@@ -57,9 +62,14 @@ docker info
 
 ### Running Services
 
-To start Redis (required for redis-based examples):
+To start MinIO (for object store examples):
 ```bash
-docker compose -f examples/deploy/docker-compose.redis.yml up -d
+docker compose -f examples/deploy/docker-compose.minio.yml up -d
+```
+
+To start MySQL (for object store examples):
+```bash
+docker compose -f examples/deploy/docker-compose.mysql.yml up -d
 ```
 
 To start Phoenix (for observability examples):
@@ -67,9 +77,29 @@ To start Phoenix (for observability examples):
 docker compose -f examples/deploy/docker-compose.phoenix.yml up -d
 ```
 
+To start Redis (required for memory and object store examples):
+```bash
+docker compose -f examples/deploy/docker-compose.redis.yml up -d
+```
+
 ### Stopping Services
 
+To stop the MinIO service:
+```bash
+docker compose -f examples/deploy/docker-compose.minio.yml down
+```
+
+To stop the MySQL service:
+```bash
+docker compose -f examples/deploy/docker-compose.mysql.yml down
+```
+
+To stop the Phoenix service:
+```bash
+docker compose -f examples/deploy/docker-compose.phoenix.yml down
+```
+
+To stop the Redis service:
 ```bash
 docker compose -f examples/deploy/docker-compose.redis.yml down
-docker compose -f examples/deploy/docker-compose.phoenix.yml down
 ```

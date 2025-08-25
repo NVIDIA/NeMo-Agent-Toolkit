@@ -13,21 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import redis.asyncio as redis
 from pydantic import Field
 
 from nat.builder.builder import Builder
-from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_memory
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.memory import MemoryBaseConfig
 
 
 class RedisMemoryClientConfig(MemoryBaseConfig, name="redis_memory"):
-    host: str | None = Field(default="localhost", description="Redis server host")
-    db: str | None = Field(default="0", description="Redis DB")
-    port: str | None = Field(default="6379", description="Redis server port")
-    key_prefix: str | None = Field(default="nat", description="Key prefix to use for redis keys")
+    host: str = Field(default="localhost", description="Redis server host")
+    db: int = Field(default=0, description="Redis DB")
+    port: int = Field(default=6379, description="Redis server port")
+    key_prefix: str = Field(default="nat", description="Key prefix to use for redis keys")
     embedder: EmbedderRef = Field(description=("Instance name of the memory client instance from the workflow "
                                                "configuration object."))
 
@@ -35,6 +33,9 @@ class RedisMemoryClientConfig(MemoryBaseConfig, name="redis_memory"):
 @register_memory(config_type=RedisMemoryClientConfig)
 async def redis_memory_client(config: RedisMemoryClientConfig, builder: Builder):
 
+    import redis.asyncio as redis
+
+    from nat.builder.framework_enum import LLMFrameworkEnum
     from nat.plugins.redis.redis_editor import RedisEditor
 
     from .schema import ensure_index_exists
