@@ -30,6 +30,14 @@ class TopPMixin(
         unsupported=(re.compile(r"gpt-?5", re.IGNORECASE), ),
 ):
     """
-    Mixin class for top-p configuration.
+    Mixin class for top-p configuration. Unsupported on models like gpt-5.
+
+    Attributes:
+        top_p: Top-p for distribution sampling. Defaults to 1.0 when supported on the model.
     """
-    top_p: float | None = Field(default=None, ge=0.0, le=1.0, description="Top-p for distribution sampling.")
+    top_p: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Top-p for distribution sampling. Defaults to 1.0 when supported on the model.",
+    )

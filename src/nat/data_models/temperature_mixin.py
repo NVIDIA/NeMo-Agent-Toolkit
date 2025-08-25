@@ -30,6 +30,14 @@ class TemperatureMixin(
         unsupported=(re.compile(r"gpt-?5", re.IGNORECASE), ),
 ):
     """
-    Mixin class for temperature configuration.
+    Mixin class for temperature configuration. Unsupported on models like gpt-5.
+
+    Attributes:
+        temperature: Sampling temperature in [0, 1]. Defaults to 0.0 when supported on the model.
     """
-    temperature: float | None = Field(default=None, ge=0.0, le=1.0, description="Sampling temperature in [0, 1].")
+    temperature: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Sampling temperature in [0, 1]. Defaults to 0.0 when supported on the model.",
+    )

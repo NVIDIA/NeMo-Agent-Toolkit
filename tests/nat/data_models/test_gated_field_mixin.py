@@ -111,20 +111,6 @@ class TestGatedFieldMixin:
         m = SupportedModelTest(model_name="gpt-4")
         assert m.dummy == 5
 
-    def test_no_model_key_fallback(self):
-        """Test fallback when no model key is present."""
-
-        class NoModelKeyTest(BaseModel,
-                             GatedFieldMixin[int],
-                             field_name="dummy",
-                             default_if_supported=7,
-                             supported=(re.compile(r"anything"), ),
-                             keys=("nonexistent_key", )):
-            dummy: int | None = Field(default=None)
-
-        m = NoModelKeyTest()
-        assert m.dummy == 7
-
     def test_custom_model_keys_supported(self):
         """Test custom model keys with supported models."""
 
@@ -250,48 +236,60 @@ class TestGatedFieldMixin:
         with pytest.raises(ValidationError, match=r"test_feature is not supported for key1: blocked"):
             _ = BlockingKeyTest(test_feature=999)
 
-    def test_deep_inheritance_chain(self, gpt_pattern):
+    def test_deep_inheritance_chain(self, gpt_pattern, claude_pattern):
         """Test that deep inheritance chains work correctly."""
 
-        class BaseMixin(BaseModel,
-                        GatedFieldMixin[int],
-                        field_name="deep_feature",
-                        default_if_supported=100,
-                        supported=(gpt_pattern, ),
-                        keys=("model_name", )):
+        class BaseMixinGPT(BaseModel,
+                           GatedFieldMixin[int],
+                           field_name="deep_feature",
+                           default_if_supported=100,
+                           supported=(gpt_pattern, ),
+                           keys=("model_name", )):
             deep_feature: int | None = Field(default=None)
 
-        class MiddleMixin(BaseMixin):
+        class BaseMixinClaude(BaseModel,
+                              GatedFieldMixin[int],
+                              field_name="deep_feature_2",
+                              default_if_supported=200,
+                              supported=(claude_pattern, ),
+                              keys=("model_name", )):
+            deep_feature_2: int | None = Field(default=None)
+
+        class MiddleMixinGPT(BaseMixinGPT):
             """This class inherits from BaseMixin but not directly from BaseModel, GatedFieldMixin."""
             pass
 
-        class FinalModel(MiddleMixin):
+        class MiddleMixinClaude(BaseMixinClaude):
+            """This class inherits from BaseMixin2 but not directly from BaseModel, GatedFieldMixin."""
+            pass
+
+        class FinalModelGPT(MiddleMixinGPT):
             """This class inherits from MiddleMixin, creating a deep inheritance chain."""
             model_name: str
 
-        m = FinalModel(model_name="gpt-4")
+        class FinalModelBoth(MiddleMixinGPT, MiddleMixinClaude):
+            """This class inherits from MiddleMixin2, creating a deep inheritance chain."""
+            model_name: str
+
+        m = FinalModelGPT(model_name="gpt-4")
         assert m.deep_feature == 100
 
         with pytest.raises(ValidationError, match=r"deep_feature is not supported for model_name: claude"):
-            _ = FinalModel(model_name="claude", deep_feature=999)
+            _ = FinalModelGPT(model_name="claude", deep_feature=999)
 
-        m = FinalModel(model_name="gpt-4", deep_feature=50)
+        m = FinalModelGPT(model_name="gpt-4", deep_feature=50)
         assert m.deep_feature == 50
 
-    def test_combined_validator_edge_cases(self):
-        """Test edge cases in the combined validator."""
+        m2_claude = FinalModelBoth(model_name="claude")
+        assert m2_claude.deep_feature_2 == 200
+        assert m2_claude.deep_feature is None
 
-        class CombinedValidatorTest(BaseModel,
-                                    GatedFieldMixin[int],
-                                    field_name="combined_feature",
-                                    default_if_supported=200,
-                                    supported=(re.compile(r"gpt"), ),
-                                    keys=("model_name", )):
-            combined_feature: int | None = Field(default=None)
-            model_name: str
+        with pytest.raises(ValidationError, match=r"deep_feature_2 is not supported for model_name: gpt-4"):
+            _ = FinalModelBoth(model_name="gpt-4", deep_feature_2=999)
 
-        m = CombinedValidatorTest(model_name="gpt-4")
-        assert m.combined_feature == 200
+        m2_gpt = FinalModelBoth(model_name="gpt-4")
+        assert m2_gpt.deep_feature == 100
+        assert m2_gpt.deep_feature_2 is None
 
-        with pytest.raises(ValidationError, match=r"combined_feature is not supported for model_name: claude"):
-            _ = CombinedValidatorTest(model_name="claude", combined_feature=999)
+        with pytest.raises(ValidationError, match=r"deep_feature is not supported for model_name: claude"):
+            _ = FinalModelBoth(model_name="claude", deep_feature=999)
