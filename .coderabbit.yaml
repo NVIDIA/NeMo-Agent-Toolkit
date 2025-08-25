@@ -141,8 +141,8 @@ reviews:
         PR or issue.
     - label: external
       instructions: >-
-        Apply this label when the PR was submitted by someone who is not a member of the @NVIDIA/agentiq-developers
-        GitHub team.
+        Apply this label when the PR author is not an organization OWNER or MEMBER (i.e., author_association is
+        COLLABORATOR, CONTRIBUTOR, FIRST_TIMER, FIRST_TIME_CONTRIBUTOR, or NONE).
     - label: feature request
       instructions: >-
         Apply this label when the PR implements new functionality, adds new features, or introduces new capabilities
