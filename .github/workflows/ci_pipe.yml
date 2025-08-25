@@ -39,6 +39,9 @@ on:
         description: 'The base SHA of the PR'
         required: true
         type: string
+    secrets:
+      CODECOV_TOKEN:
+        required: true
 
 # We only support ubuntu, so bash is the default
 defaults:
@@ -109,6 +112,10 @@ jobs:
           - python-version: "3.12"
             container: ${{ inputs.py_12_container }}
 
+    env:
+      CI_PYTHON_VERSION: ${{ matrix.python-version }}
+      CI_ARCH: ${{ matrix.arch }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -127,9 +134,20 @@ jobs:
         if: ${{ always() }}
         with:
           name: "test-results-${{ matrix.arch }}-py${{ matrix.python-version }}"
-          path: "${{ github.workspace }}/tmp/*.xml"
+          path: "${{ github.workspace }}/tmp/reports/*.xml"
           if-no-files-found: error
-
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        # Upload test results even if the tests fail
+        if: ${{ always() }}
+        with:
+          directory: "${{ github.workspace }}/tmp/reports"
+          env_vars: CI_ARCH,CI_PYTHON_VERSION
+          fail_ci_if_error: true
+          flags: unittests
+          name: nat-code-cov-${{ matrix.arch }}-py${{ matrix.python-version }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
 
   documentation:
     name: Documentation
