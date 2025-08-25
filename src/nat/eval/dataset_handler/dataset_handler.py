@@ -340,7 +340,9 @@ class DatasetHandler:
         Pre-evaluation process the eval input using custom function if provided.
 
         The custom pre-evaluation process function should have the signature:
-        def custom_pre_eval_process(eval_input: EvalInput) -> EvalInput
+        def custom_pre_eval_process(item: EvalInputItem) -> EvalInputItem
+
+        The framework will iterate through all items and call this function on each one.
 
         Args:
             eval_input: The EvalInput object to pre-evaluation process
@@ -351,12 +353,16 @@ class DatasetHandler:
         if self.custom_pre_eval_process_function:
             try:
                 custom_function = self._load_custom_pre_eval_process_function()
-                processed = custom_function(eval_input)
-                if not isinstance(processed, EvalInput):
-                    raise TypeError(
-                        f"Custom pre-evaluation process function '{self.custom_pre_eval_process_function}' must return "
-                        f"EvalInput, got {type(processed)}")
-                return processed
+                processed_items = []
+
+                for item in eval_input.eval_input_items:
+                    processed_item = custom_function(item)
+                    if not isinstance(processed_item, EvalInputItem):
+                        raise TypeError(f"Custom pre-evaluation '{self.custom_pre_eval_process_function}' must return "
+                                        f"EvalInputItem, got {type(processed_item)}")
+                    processed_items.append(processed_item)
+
+                return EvalInput(eval_input_items=processed_items)
             except Exception as e:
                 raise RuntimeError(f"Error calling custom pre-evaluation process function "
                                    f"'{self.custom_pre_eval_process_function}': {e}") from e
@@ -366,6 +372,8 @@ class DatasetHandler:
     def _load_custom_pre_eval_process_function(self):
         """
         Import and return the custom pre-evaluation process function using standard Python import path.
+
+        The function should process individual EvalInputItem objects.
         """
         # Split the function path to get module and function name
         if "." not in self.custom_pre_eval_process_function:

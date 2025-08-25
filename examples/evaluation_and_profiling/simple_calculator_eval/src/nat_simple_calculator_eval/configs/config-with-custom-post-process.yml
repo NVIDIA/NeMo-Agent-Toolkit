@@ -58,7 +58,7 @@ eval:
     # Example configuration demonstrating custom pre-evaluation process function
     output:
       dir: .tmp/nat/examples/simple_calculator/eval-with-post-process
-              # Custom pre-evaluation process function to normalize calculator outputs and add metadata
+              # Custom pre-evaluation process function to normalize calculator outputs (processes individual items)
       custom_pre_eval_process_function: nat_simple_calculator_eval.scripts.custom_post_process.normalize_calculator_outputs
       cleanup: true
 

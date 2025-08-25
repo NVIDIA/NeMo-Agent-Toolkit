@@ -196,9 +196,22 @@ This example configuration uses a custom pre-evaluation process function to:
 - standardize number formats (such as "5.00" → "5")
 - ensure accurate comparison during evaluation
 
-The custom pre-evaluation process function is a Python function that takes an `EvalInput` object and returns a modified `EvalInput` object. Signature of the sample custom pre-evaluation process function is as follows:
+The custom pre-evaluation process function is a Python function that takes an `EvalInputItem` object and returns a modified `EvalInputItem` object.
+**Helper Function**: Use the `copy_with_updates()` method to easily update only specific fields while preserving all others:
 ```python
-def normalize_calculator_outputs(eval_input: EvalInput) -> EvalInput:
+# Update only the output_obj field
+return item.copy_with_updates(output_obj="new output")
+
+# Update multiple fields
+return item.copy_with_updates(
+    output_obj="new output",
+    expected_output_obj="new expected"
+)
+```
+
+Signature of the sample custom pre-evaluation process function is as follows:
+```python
+def normalize_calculator_outputs(item: EvalInputItem) -> EvalInputItem:
 ```
 
 Common use cases for custom pre-evaluation process functions include:

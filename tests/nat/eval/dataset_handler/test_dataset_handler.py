@@ -539,15 +539,13 @@ def test_custom_pre_eval_process_function():
     # Check that the first item was normalized (5.00 -> 5)
     first_item = processed_eval_input.eval_input_items[0]
     assert first_item.output_obj == "The answer is 5"
-    assert first_item.full_dataset_entry.get('output_normalized') is True
 
     # Check that the second item was normalized (3.333333333 -> 3.33)
     second_item = processed_eval_input.eval_input_items[1]
     assert second_item.output_obj == "The result is 3.33"
-    assert second_item.full_dataset_entry.get('output_normalized') is True
 
 
-def sample_pre_eval_process_function(eval_input: EvalInput) -> EvalInput:
+def sample_pre_eval_process_function(item: EvalInputItem) -> EvalInputItem:
     """
     Simple test pre-evaluation process function that normalizes numerical outputs.
     This mimics the behavior of the normalize_calculator_outputs function.
@@ -560,40 +558,52 @@ def sample_pre_eval_process_function(eval_input: EvalInput) -> EvalInput:
         numbers = re.findall(number_pattern, text)
 
         normalized_text = text
-        for num_str in numbers:
-            try:
-                num = float(num_str)
-                if num.is_integer():
-                    normalized_num = str(int(num))
-                else:
-                    normalized_num = f"{num:.2f}".rstrip('0').rstrip('.')
-                normalized_text = normalized_text.replace(num_str, normalized_num, 1)
-            except ValueError:
-                continue
+        if isinstance(text, str):
+            for num_str in numbers:
+                try:
+                    num = float(num_str)
+                    if num.is_integer():
+                        normalized_num = str(int(num))
+                    else:
+                        normalized_num = f"{num:.2f}".rstrip('0').rstrip('.')
+                    normalized_text = normalized_text.replace(num_str, normalized_num, 1)
+                except ValueError:
+                    continue
 
         return normalized_text
 
-    processed_items = []
+    # Normalize the output if it exists
+    normalized_output = item.output_obj
+    if isinstance(item.output_obj, str):
+        normalized_output = normalize_number(item.output_obj)
 
-    for item in eval_input.eval_input_items:
-        # Normalize the output if it exists
-        normalized_output = item.output_obj
-        if isinstance(item.output_obj, str):
-            normalized_output = normalize_number(item.output_obj)
+    # Return item with normalized output
+    return item.copy_with_updates(output_obj=normalized_output)
 
-        # Create enhanced dataset entry with normalization info
-        enhanced_entry = item.full_dataset_entry.copy() if item.full_dataset_entry else {}
-        enhanced_entry['output_normalized'] = normalized_output != item.output_obj
 
-        # Create new item with normalized values
-        normalized_item = EvalInputItem(id=item.id,
-                                        input_obj=item.input_obj,
-                                        expected_output_obj=item.expected_output_obj,
-                                        output_obj=normalized_output,
-                                        trajectory=item.trajectory,
-                                        expected_trajectory=item.expected_trajectory,
-                                        full_dataset_entry=enhanced_entry)
+def test_eval_input_item_copy_with_updates():
+    """Test that EvalInputItem.copy_with_updates correctly copies and updates fields."""
+    # Create a test EvalInputItem
+    test_item = EvalInputItem(id="1",
+                              input_obj="What is 10 / 3?",
+                              expected_output_obj="3.33",
+                              output_obj="The result is 3.333333333",
+                              trajectory=[],
+                              expected_trajectory=[],
+                              full_dataset_entry={"test": "data"})
 
-        processed_items.append(normalized_item)
+    # Test updating multiple fields
+    updated_item = test_item.copy_with_updates(output_obj="The result is 3.33", expected_output_obj="3.33")
 
-    return EvalInput(eval_input_items=processed_items)
+    # Verify the updated fields
+    assert updated_item.output_obj == "The result is 3.33"
+    assert updated_item.expected_output_obj == "3.33"
+
+    # Verify other fields are preserved
+    assert updated_item.id == "1"
+    assert updated_item.input_obj == "What is 10 / 3?"
+    assert updated_item.full_dataset_entry == {"test": "data"}
+
+    # Verify the original item is unchanged
+    assert test_item.output_obj == "The result is 3.333333333"
+    assert test_item.expected_output_obj == "3.33"
