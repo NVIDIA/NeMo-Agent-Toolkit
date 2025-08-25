@@ -67,7 +67,7 @@ The NIM LLM provider is defined by the {py:class}`~nat.llm.nim_llm.NIMModelConfi
 * `max_retries` - The maximum number of retries for the request
 
 :::{note}
-`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Model-Gated Fields](../../extend/model-gated-fields.md) for details.
+`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/gated-fields.md) for details.
 :::
 
 ### OpenAI
@@ -89,7 +89,7 @@ The OpenAI LLM provider is defined by the {py:class}`~nat.llm.openai_llm.OpenAIM
 * `max_retries` - The maximum number of retries for the request
 
 :::{note}
-`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Model-Gated Fields](../../extend/model-gated-fields.md) for details.
+`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/gated-fields.md) for details.
 :::
 
 ### AWS Bedrock
@@ -124,7 +124,7 @@ The Azure OpenAI LLM provider is defined by the {py:class}`~nat.llm.azure_openai
 * `max_retries` - The maximum number of retries for the request
 
 :::{note}
-`temperature` is model-gated and may not be supported by all models. See [Model-Gated Fields](../../extend/model-gated-fields.md) for details.
+`temperature` is model-gated and may not be supported by all models. See [Gated Fields](../../extend/gated-fields.md) for details.
 :::
 
 
