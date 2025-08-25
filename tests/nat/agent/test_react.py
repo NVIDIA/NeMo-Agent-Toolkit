@@ -32,6 +32,7 @@ from nat.agent.react_agent.output_parser import MISSING_ACTION_INPUT_AFTER_ACTIO
 from nat.agent.react_agent.output_parser import ReActOutputParser
 from nat.agent.react_agent.output_parser import ReActOutputParserException
 from nat.agent.react_agent.register import ReActAgentWorkflowConfig
+from nat.data_models.llm import LLMBaseConfig
 
 
 async def test_state_schema():
@@ -56,9 +57,14 @@ def mock_config():
     return ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', verbose=True)
 
 
-def test_react_init(mock_config_react_agent, mock_llm, mock_tool):
+@pytest.fixture(name='mock_llm_config', scope="module")
+def mock_llm_config():
+    return LLMBaseConfig()
+
+
+def test_react_init(mock_config_react_agent, mock_llm_config, mock_llm, mock_tool):
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
-    prompt = create_react_agent_prompt(mock_config_react_agent)
+    prompt = create_react_agent_prompt(mock_config_react_agent, mock_llm_config)
     agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=mock_config_react_agent.verbose)
     assert isinstance(agent, ReActAgentGraph)
     assert agent.llm == mock_llm
@@ -68,9 +74,9 @@ def test_react_init(mock_config_react_agent, mock_llm, mock_tool):
 
 
 @pytest.fixture(name='mock_react_agent', scope="module")
-def mock_agent(mock_config_react_agent, mock_llm, mock_tool):
+def mock_agent(mock_config_react_agent, mock_llm_config, mock_llm, mock_tool):
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
-    prompt = create_react_agent_prompt(mock_config_react_agent)
+    prompt = create_react_agent_prompt(mock_config_react_agent, mock_llm_config)
     agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=mock_config_react_agent.verbose)
     return agent
 
@@ -416,26 +422,26 @@ async def test_output_parser_missing_action_input(mock_react_output_parser):
     assert ex.value.observation == MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE
 
 
-def test_react_additional_instructions(mock_llm, mock_tool):
+def test_react_additional_instructions(mock_llm_config, mock_llm, mock_tool):
     config_react_agent = ReActAgentWorkflowConfig(tool_names=['test'],
                                                   llm_name='test',
                                                   verbose=True,
                                                   additional_instructions="Talk like a parrot and repeat the question.")
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
-    prompt = create_react_agent_prompt(config_react_agent)
+    prompt = create_react_agent_prompt(config_react_agent, mock_llm_config)
     agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=config_react_agent.verbose)
     assert isinstance(agent, ReActAgentGraph)
     assert "Talk like a parrot" in agent.agent.get_prompts()[0].messages[0].prompt.template
 
 
-def test_react_custom_system_prompt(mock_llm, mock_tool):
+def test_react_custom_system_prompt(mock_llm_config, mock_llm, mock_tool):
     config_react_agent = ReActAgentWorkflowConfig(
         tool_names=['test'],
         llm_name='test',
         verbose=True,
         system_prompt="Refuse to run any of the following tools: {tools}.  or ones named: {tool_names}")
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
-    prompt = create_react_agent_prompt(config_react_agent)
+    prompt = create_react_agent_prompt(config_react_agent, mock_llm_config)
     agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=config_react_agent.verbose)
     assert isinstance(agent, ReActAgentGraph)
     assert "Refuse" in agent.agent.get_prompts()[0].messages[0].prompt.template
@@ -552,7 +558,7 @@ def test_config_alias_json_serialization():
     assert config_from_dict.max_tool_calls == 40
 
 
-def test_react_agent_with_alias_config(mock_llm, mock_tool):
+def test_react_agent_with_alias_config(mock_llm_config, mock_llm, mock_tool):
     """Test that ReActAgentGraph works correctly with alias configuration."""
     config = ReActAgentWorkflowConfig(
         tool_names=['test'],
@@ -562,7 +568,7 @@ def test_react_agent_with_alias_config(mock_llm, mock_tool):
         max_iterations=25,
         verbose=True)
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
-    prompt = create_react_agent_prompt(config)
+    prompt = create_react_agent_prompt(config, mock_llm_config)
     agent = ReActAgentGraph(llm=mock_llm,
                             prompt=prompt,
                             tools=tools,

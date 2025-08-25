@@ -381,5 +381,5 @@ def create_react_agent_prompt(config: "ReActAgentWorkflowConfig", llm_config: LL
                 MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)]
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt:
         messages.insert(0, ("system", llm_config.thinking_system_prompt))
-    prompt = ChatPromptTemplate(messages)
+    prompt = ChatPromptTemplate.from_messages(messages)
     return prompt

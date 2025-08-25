@@ -49,10 +49,9 @@ class ThinkingMixin(
     def thinking_system_prompt(self) -> str | None:
         """
         Returns the system prompt to use for thinking.
-        - For NVIDIA Nemotron models, returns "/think" if thinking is enabled, "/no_think" otherwise.
-        - For Llama Nemotron models, returns "detailed thinking: on" if thinking is enabled,
-          "detailed thinking: off" otherwise.
-        - If thinking is not supported on the model, returns None.
+        For NVIDIA Nemotron, returns "/think" if enabled, else "/no_think".
+        For Llama Nemotron, returns "detailed thinking on" if enabled, else "detailed thinking off".
+        If thinking is not supported on the model, returns None.
 
         Returns:
             str | None: The system prompt to use for thinking.
@@ -64,4 +63,4 @@ class ThinkingMixin(
                 if _NVIDIA_NEMOTRON_REGEX.match(getattr(self, key)):
                     return "/think" if self.thinking else "/no_think"
                 elif _LLAMA_NEMOTRON_REGEX.match(getattr(self, key)):
-                    return f"detailed thinking: {'on' if self.thinking else 'off'}"
+                    return f"detailed thinking {'on' if self.thinking else 'off'}"
