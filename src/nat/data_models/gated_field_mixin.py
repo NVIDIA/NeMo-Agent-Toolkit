@@ -48,15 +48,14 @@ class GatedFieldMixin(Generic[T]):
                 The name of the field.
     default_if_supported: `T | None`
                           The default value of the field if it is supported for the key.
+    keys: `Sequence[str]`
+          A sequence of keys that are used to validate the field.
     unsupported: `Sequence[Pattern[str]] | None`
                  A sequence of regex patterns that match the key names NOT supported for the field.
                  Defaults to None.
     supported: `Sequence[Pattern[str]] | None`
                A sequence of regex patterns that match the key names supported for the field.
                Defaults to None.
-    keys: `Sequence[str]`
-          A sequence of keys that are used to validate the field.
-          Defaults to ("model_name", "model", "azure_deployment",)
     """
 
     def __init_subclass__(
