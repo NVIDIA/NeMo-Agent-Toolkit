@@ -23,11 +23,7 @@ import os
 import re
 import sys
 
-# Now import gitutils. Ignore flake8 error here since there is no other way to
-# set up imports
-import gitutils  # noqa: E402
-
-# pylint: disable=global-statement
+import gitutils
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +48,7 @@ ExemptFiles: list[re.Pattern] = [
     re.compile(r"PULL_REQUEST_TEMPLATE.md"),  # Ignore the PR template,
     re.compile(r"[^ \/\n]*conda/environments/.*\.yaml$"),  # Ignore generated environment files
     re.compile(r"^LICENSE\.md$"),  # Ignore the license file itself
+    re.compile(r"^examples/.*/data/.*.md$"),  # Ignore data files in examples
 ]
 
 # this will break starting at year 10000, which is probably OK :)
@@ -93,7 +90,6 @@ def replace_current_year(line, start, end):
     # first turn a simple regex into double (if applicable). then update years
     res = CheckSimple.sub(r"Copyright (c) \1-\1, NVIDIA CORPORATION", line)
 
-    # pylint: disable=consider-using-f-string
     res = CheckDouble.sub(r"Copyright (c) {:04d}-{:04d}, NVIDIA CORPORATION".format(start, end), res)
     return res
 
@@ -126,13 +122,12 @@ def insert_license(f, this_year, first_line):
     return [f, 1, "License inserted", replace_line]
 
 
-def check_copyright(  # pylint: disable=too-many-positional-arguments
-        f,
-        update_current_year,
-        verify_apache_v2=False,
-        update_start_year=False,
-        do_insert_license=False,
-        git_add=False):
+def check_copyright(f,
+                    update_current_year,
+                    verify_apache_v2=False,
+                    update_start_year=False,
+                    do_insert_license=False,
+                    git_add=False):
     """
     Checks for copyright headers and their years
     """
@@ -236,11 +231,10 @@ def _main():
     repo, this script will just look for uncommitted files and in case of CI
     it compares between branches "$PR_TARGET_BRANCH" and "current-pr-branch"
     """
-    log_level = logging.getLevelName(os.environ.get("AIQ_LOG_LEVEL", "INFO"))
+    log_level = logging.getLevelName(os.environ.get("NAT_LOG_LEVEL", "INFO"))
     logging.basicConfig(format="%(levelname)s:%(message)s", level=log_level)
 
     ret_val = 0
-    global ExemptFiles
 
     argparser = argparse.ArgumentParser("Checks for a consistent copyright header in git's modified files")
     argparser.add_argument("--update-start-year",
@@ -325,7 +319,7 @@ def _main():
 
     (args, dirs) = argparser.parse_known_args()
     try:
-        ExemptFiles = ExemptFiles + [re.compile(pathName) for pathName in args.exclude]
+        ExemptFiles.extend([re.compile(pathName) for pathName in args.exclude])
     except re.error as re_exception:
         logger.exception("Regular expression error: %s", re_exception, exc_info=True)
         return 1

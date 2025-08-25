@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pickle
+import mimetypes
 import sys
 
-from aiq.object_store.models import ObjectStoreItem
+from nat.object_store.models import ObjectStoreItem
 
 # Usage: python serialize_file.py <file_path>
 
@@ -29,7 +29,7 @@ file_path = sys.argv[1]
 with open(file_path, "rb") as f:
     data = f.read()
 
-item = ObjectStoreItem(data=data, )
+item = ObjectStoreItem(data=data, content_type=mimetypes.guess_type(file_path)[0], metadata={})
 
-with open(file_path + ".pkl", "wb") as f:
-    pickle.dump(item, f)
+with open(file_path + ".json", "w", encoding="utf-8") as f:
+    f.write(item.model_dump_json())

@@ -69,13 +69,11 @@ echo "Starting to process files..."
 # Process each file
 find "$DIR" -type f | while IFS= read -r filepath; do
   relpath="${filepath#$DIR/}"
-  filepath_abs=$(realpath "$filepath")
 
   echo "Processing file: ${relpath}"
   fsize=$(stat -c%s "$filepath")
-  # Serialize the file
   python serialize_file.py "$filepath"
-  serialized_file="${filepath}.pkl"
+  serialized_file="${filepath}.json"
 
   ${MYSQL[@]} <<EOF
 USE \`$DB\`;

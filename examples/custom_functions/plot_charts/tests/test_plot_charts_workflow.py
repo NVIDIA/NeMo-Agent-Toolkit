@@ -20,9 +20,9 @@ import logging
 from pathlib import Path
 
 import pytest
-from aiq_plot_charts.register import PlotChartsWorkflowConfig
 
-from aiq.runtime.loader import load_workflow
+from nat.runtime.loader import load_workflow
+from nat_plot_charts.register import PlotChartsWorkflowConfig
 
 logger = logging.getLogger(__name__)
 

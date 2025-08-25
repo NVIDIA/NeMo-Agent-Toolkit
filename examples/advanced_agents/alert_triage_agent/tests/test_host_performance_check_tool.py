@@ -17,8 +17,8 @@ import json
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-from aiq_alert_triage_agent.host_performance_check_tool import _parse_stdout_lines
-from aiq_alert_triage_agent.prompts import HostPerformanceCheckPrompts
+from nat_alert_triage_agent.host_performance_check_tool import _parse_stdout_lines
+from nat_alert_triage_agent.prompts import HostPerformanceCheckPrompts
 
 EXAMPLE_CPU_USAGE_OUTPUT = """
 03:45:00 PM  CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
@@ -117,7 +117,7 @@ async def test_parse_stdout_lines_success():
     mock_config.parsing_prompt = HostPerformanceCheckPrompts.PARSING_PROMPT
 
     # Mock the LLM response
-    with patch('aiq_alert_triage_agent.utils.llm_ainvoke') as mock_llm:
+    with patch('nat_alert_triage_agent.utils.llm_ainvoke') as mock_llm:
         mock_llm.return_value = EXAMPLE_LLM_PARSED_OUTPUT
 
         # Call the function
@@ -141,7 +141,7 @@ async def test_parse_stdout_lines_success():
 
 async def test_parse_stdout_lines_llm_error():
     # Simulate LLM throwing an exception
-    with patch('aiq_alert_triage_agent.utils.llm_ainvoke') as mock_llm:
+    with patch('nat_alert_triage_agent.utils.llm_ainvoke') as mock_llm:
         mock_llm.side_effect = Exception("LLM error")
         mock_llm.return_value = None
 
