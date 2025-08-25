@@ -28,8 +28,10 @@ import os
 import sys
 import typing
 import uuid
+import warnings
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
+from collections.abc import Sequence
 from unittest import mock
 
 import pytest
@@ -44,6 +46,7 @@ from langchain_core.outputs import ChatGeneration
 from langchain_core.outputs import ChatResult
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
+from pydantic.warnings import PydanticDeprecatedSince20
 
 TESTS_DIR = os.path.dirname(__file__)
 PROJECT_DIR = os.path.dirname(TESTS_DIR)
@@ -330,7 +333,10 @@ async def mock_llm():
             generation = ChatGeneration(message=message)
             return ChatResult(generations=[generation], llm_output={'mock_llm_response': True})
 
-        def bind_tools(self, tools: list[BaseTool], **kwargs: typing.Any) -> BaseChatModel:
+        def bind_tools(
+                self,
+                tools: Sequence[dict[str, typing.Any] | type | Callable | BaseTool],  # noqa: UP006
+                **kwargs: typing.Any) -> BaseChatModel:
             return self
 
         @property
@@ -368,8 +374,14 @@ def mock_tool():
 
 @pytest.fixture(scope="function", autouse=True)
 def patched_async_memory_client(monkeypatch):
-
-    from mem0.client.main import MemoryClient
+    # Suppress Pydantic's class-based Config deprecation only during mem0 import
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            category=PydanticDeprecatedSince20,
+            module=r"^pydantic\._internal\._config$",
+        )
+        from mem0.client.main import MemoryClient
 
     mock_method = mock.MagicMock(return_value=None)
     monkeypatch.setattr(MemoryClient, "_validate_api_key", mock_method)
