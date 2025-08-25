@@ -94,7 +94,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
 
     llm_config = builder.get_llm_config(config.llm_name)
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt:
-        planner_messages.insert(1, ("system", llm_config.thinking_system_prompt))
+        planner_messages.insert(0, ("system", llm_config.thinking_system_prompt))
     planner_prompt = ChatPromptTemplate(planner_messages)
 
     solver_system_prompt = SOLVER_SYSTEM_PROMPT if config.solver_prompt is None else config.solver_prompt
@@ -106,7 +106,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
 
     solver_messages = [("system", solver_system_prompt), ("user", SOLVER_USER_PROMPT)]
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt:
-        solver_messages.insert(1, ("system", llm_config.thinking_system_prompt))
+        solver_messages.insert(0, ("system", llm_config.thinking_system_prompt))
     solver_prompt = ChatPromptTemplate(solver_messages)
 
     # we can choose an LLM for the ReWOO agent in the config file
