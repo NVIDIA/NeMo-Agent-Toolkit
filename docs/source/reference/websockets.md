@@ -16,15 +16,15 @@ limitations under the License.
 -->
 
 # WebSocket Message Schema
-This document defines the schema for WebSocket messages exchanged between the client and the AIQ toolkit server. Its primary
-purpose is to guide users on how to interact with the AIQ toolkit server via WebSocket connection. Users can reliably
+This document defines the schema for WebSocket messages exchanged between the client and the NeMo Agent toolkit server. Its primary
+purpose is to guide users on how to interact with the NeMo Agent toolkit server via WebSocket connection. Users can reliably
 send and receive data while ensuring compatibility with the web server’s expected format. Additionally, this schema
 provides flexibility for users to build and customize their own user interface by defining how different message types
 should be handled, displayed, and processed. With a clear understanding of the message structure, developers can
-seamlessly integrate their customized user interfaces with the AIQ toolkit server.
+seamlessly integrate their customized user interfaces with the NeMo Agent toolkit server.
 
 ## Overview
-The message schema described below facilitates transactional interactions with the AIQ toolkit server. The messages follow a
+The message schema described below facilitates transactional interactions with the NeMo Agent toolkit server. The messages follow a
 structured JSON format to ensure consistency in communication and can be categorized into two main types: `User Messages`
 and `System Messages`. User messages are sent from the client to the server. System messages are sent from the server
 to the client.
@@ -41,7 +41,7 @@ to the client.
 - `schema_type`:  Defines the response schema for a given workflow
 - `id`: A unique identifier for the message.
     - Purpose: Used for tracking, referencing, and updating messages.
-- `thread_id`: Identifies the conversation thread to which the message belongs.
+- `conversation_id`: A unique identifier used to associate all messages and interactions with a specific conversation session.
     - Purpose: Groups-related messages within the same conversation/chat feed.
 - `parent_id`: Links a message to its originating message.
     -   Optional: Used for responses, updates, or continuations of earlier messages.
@@ -75,7 +75,7 @@ running workflow.
   "type": "user_message",
   "schema_type": "string",
   "id": "string",
-  "thread_id": "string",
+  "conversation_id": "string",
   "content": {
     "messages": [
       {
@@ -172,6 +172,7 @@ Definition: This message contains the intermediate step content from a running w
   "thread_id": "thread_456",
   "parent_id": "id from user message",
   "intermediate_parent_id": "default",
+  "conversation_id": "string",
   "content": {
     "name": "name of the step - example Query rephrasal",
     "payload": "Step information, it can be json or code block or it can be plain text"
@@ -191,6 +192,7 @@ Definition: This message contains the final response content from a running work
   "id": "token_001",
   "thread_id": "thread_456",
   "parent_id": "id from user message",
+  "conversation_id": "string",
   "content": {
     "text": "Response token can be json, code block or plain text"
   },
@@ -208,6 +210,7 @@ Definition: This message sends various types of error content to the client.
   "id": "token_001",
   "thread_id": "thread_456",
   "parent_id": "id from user message",
+  "conversation_id": "string",
   "content": {
       "code": "111", "message": "ValidationError", "details": "The provided email format is invalid."
   },
@@ -227,6 +230,7 @@ System Human Interaction messages are sent from the server to the client contain
   "id": "interaction_303",
   "thread_id": "thread_456",
   "parent_id": "id from user message",
+  "conversation_id": "string",
   "content": {
       "input_type": "text",
       "text": "Hello, how are you today?",
@@ -245,6 +249,7 @@ System Human Interaction messages are sent from the server to the client contain
   "id": "interaction_304",
   "thread_id": "thread_456",
   "parent_id": "msg_123",
+  "conversation_id": "string",
   "content": {
       "input_type": "binary_choice",
       "text": "Should I continue or cancel?",
@@ -268,10 +273,11 @@ System Human Interaction messages are sent from the server to the client contain
 #### Radio Multiple Choice Interaction Example:
 ```json
 {
-  "type": "system_human_interaction",
+  "type": "system_interaction_message",
   "id": "interaction_305",
   "thread_id": "thread_456",
   "parent_id": "msg_123",
+  "conversation_id": "string",
   "content": {
     "input_type": "radio",
     "text": "I'll send you updates about the analysis progress. Please select your preferred notification method:",
@@ -306,10 +312,11 @@ System Human Interaction messages are sent from the server to the client contain
 #### Checkbox Multiple Choice Interaction Example:
 ```json
 {
-  "type": "system_human_interaction_name",
+  "type": "system_interaction_message",
   "id": "interaction_306",
   "thread_id": "thread_456",
   "parent_id": "msg_123",
+  "conversation_id": "string",
   "content": {
     "input_type": "checkbox",
     "text": "The analysis will take approximately 30 minutes to complete. Select all notification methods you'd like to enable:",
@@ -344,12 +351,12 @@ System Human Interaction messages are sent from the server to the client contain
 #### Dropdown Multiple Choice Interaction Example:
 ```json
 {
-  "type": "system_human_interaction",
-  "id": "interaction_305",
+  "type": "system_interaction_message",
+  "id": "interaction_307",
   "thread_id": "thread_456",
   "parent_id": "msg_123",
+  "conversation_id": "string",
   "content": {
-    "interaction": "system_human_interaction_name",
     "input_type": "dropdown",
     "text": "I'll send you updates about the analysis progress. Please select your preferred notification method:",
     "options": [

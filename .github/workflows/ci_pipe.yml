@@ -39,6 +39,9 @@ on:
         description: 'The base SHA of the PR'
         required: true
         type: string
+    secrets:
+      CODECOV_TOKEN:
+        required: true
 
 # We only support ubuntu, so bash is the default
 defaults:
@@ -49,9 +52,9 @@ env:
   GH_TOKEN: "${{ github.token }}"
   GIT_COMMIT: "${{ github.sha }}"
   BASE_SHA: "${{ inputs.base_sha }}"
-  BUILD_AIQ_COMPAT: "true"
+  BUILD_NAT_COMPAT: "true"
   RAPIDS_CONDA_RETRY_MAX: "5"
-  WORKSPACE: "${{ github.workspace }}/aiqtoolkit"
+  WORKSPACE: "${{ github.workspace }}/nat"
   WORKSPACE_TMP: "${{ github.workspace }}/tmp"
   UV_CACHE_DIR: .uv-cache
 
@@ -84,11 +87,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          path: 'aiqtoolkit'
+          fetch-depth: 0
+          path: 'nat'
 
       - name: Check
         shell: bash
-        run: ./aiqtoolkit/ci/scripts/github/checks.sh
+        run: ./nat/ci/scripts/github/checks.sh
 
   test:
     name: Test
@@ -108,16 +112,21 @@ jobs:
           - python-version: "3.12"
             container: ${{ inputs.py_12_container }}
 
+    env:
+      CI_PYTHON_VERSION: ${{ matrix.python-version }}
+      CI_ARCH: ${{ matrix.arch }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           fetch-tags: true
-          path: 'aiqtoolkit'
+          path: 'nat'
 
       - name: Test:linux:${{ matrix.arch }}:py${{ matrix.python-version }}
         shell: bash
-        run: ./aiqtoolkit/ci/scripts/github/tests.sh
+        run: ./nat/ci/scripts/github/tests.sh
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
@@ -125,9 +134,20 @@ jobs:
         if: ${{ always() }}
         with:
           name: "test-results-${{ matrix.arch }}-py${{ matrix.python-version }}"
-          path: "${{ github.workspace }}/tmp/*.xml"
+          path: "${{ github.workspace }}/tmp/reports/*.xml"
           if-no-files-found: error
-
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        # Upload test results even if the tests fail
+        if: ${{ always() }}
+        with:
+          directory: "${{ github.workspace }}/tmp/reports"
+          env_vars: CI_ARCH,CI_PYTHON_VERSION
+          fail_ci_if_error: true
+          flags: unittests
+          name: nat-code-cov-${{ matrix.arch }}-py${{ matrix.python-version }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
 
   documentation:
     name: Documentation
@@ -144,11 +164,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-tags: true
-          path: 'aiqtoolkit'
+          path: 'nat'
 
       - name: build_docs
         shell: bash
-        run: ./aiqtoolkit/ci/scripts/github/docs.sh
+        run: ./nat/ci/scripts/github/docs.sh
 
       - name: Upload Documentation
         uses: actions/upload-artifact@v4
@@ -175,11 +195,11 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          path: 'aiqtoolkit'
+          path: 'nat'
 
       - name: build_wheels
         shell: bash
-        run: ./aiqtoolkit/ci/scripts/github/build_wheel.sh
+        run: ./nat/ci/scripts/github/build_wheel.sh
 
       - name: Upload Wheels
         uses: actions/upload-artifact@v4
