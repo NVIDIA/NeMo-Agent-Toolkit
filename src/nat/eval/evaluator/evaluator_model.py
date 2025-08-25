@@ -30,11 +30,8 @@ class EvalInputItem(BaseModel):
     full_dataset_entry: typing.Any
 
     def copy_with_updates(self, **updates) -> "EvalInputItem":
-        """Copy this EvalInputItem with optional field updates.
-        Args:
-            **updates: Field values to override in the copy
-        Returns:
-            New EvalInputItem with all fields copied and updates applied
+        """
+        Copy EvalInputItem with optional field updates.
         """
         # Get all current fields
         item_data = self.model_dump()
