@@ -252,3 +252,110 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
         return result
 
     return sync_wrapper
+
+
+def track_unregistered_function(func: Any = None, *, name: str | None = None, metadata: dict[str, Any] | None = None):
+    """
+    Decorator that wraps any function with scope management and automatic tracking.
+
+    - Sets active function context using the function name
+    - Leverages Context.push_active_function for built-in tracking
+    - Avoids duplicate tracking entries by relying on NAT's built-in systems
+
+    Args:
+        func: The function to wrap
+        name: Custom name to use for tracking instead of func.__name__
+        metadata: Additional metadata to include in tracking
+    """
+    function_name: str = name if name else (func.__name__ if func else "<unknown_function>")
+
+    # If called as @track_unregistered_function(...) but not immediately passed a function
+    if func is None:
+
+        def decorator_wrapper(actual_func):
+            return track_unregistered_function(actual_func, name=name, metadata=metadata)
+
+        return decorator_wrapper
+
+    # --- Validate metadata ---
+    if metadata is not None:
+        if not isinstance(metadata, dict):
+            raise TypeError("metadata must be a dict[str, Any].")
+        if any(not isinstance(k, str) for k in metadata.keys()):
+            raise TypeError("All metadata keys must be strings.")
+
+    trace_metadata = TraceMetadata(provided_metadata=metadata)
+
+    # --- Now detect the function type and wrap accordingly ---
+    if inspect.isasyncgenfunction(func):
+        # ---------------------
+        # ASYNC GENERATOR
+        # ---------------------
+
+        @functools.wraps(func)
+        async def async_gen_wrapper(*args, **kwargs):
+            context = Context.get()
+            input_data = args[0] if args else kwargs
+
+            # Only do context management - let push_active_function handle tracking
+            with context.push_active_function(function_name, input_data=input_data) as manager:
+                final_outputs = []
+                async for item in func(*args, **kwargs):
+                    final_outputs.append(item)
+                    yield item
+
+                manager.set_output(final_outputs)
+
+        return async_gen_wrapper
+
+    if inspect.iscoroutinefunction(func):
+        # ---------------------
+        # ASYNC FUNCTION
+        # ---------------------
+        @functools.wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            context = Context.get()
+            input_data = args[0] if args else kwargs
+
+            # Only do context management - let push_active_function handle tracking
+            with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
+                result = await func(*args, **kwargs)
+                manager.set_output(result)
+                return result
+
+        return async_wrapper
+
+    if inspect.isgeneratorfunction(func):
+        # ---------------------
+        # SYNC GENERATOR
+        # ---------------------
+        @functools.wraps(func)
+        def sync_gen_wrapper(*args, **kwargs):
+            context = Context.get()
+            input_data = args[0] if args else kwargs
+
+            # Only do context management - let push_active_function handle tracking
+            with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
+                final_outputs = []
+                for item in func(*args, **kwargs):
+                    final_outputs.append(item)
+                    yield item
+
+                manager.set_output(final_outputs)
+
+        return sync_gen_wrapper
+
+    @functools.wraps(func)
+    def sync_wrapper(*args, **kwargs):
+        context = Context.get()
+        input_data = args[0] if args else kwargs
+
+        # Only do context management - let push_active_function handle tracking
+        with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
+            result = func(*args, **kwargs)
+            manager.set_output(result)
+            return result
+
+    return sync_wrapper
+
+    return sync_wrapper
