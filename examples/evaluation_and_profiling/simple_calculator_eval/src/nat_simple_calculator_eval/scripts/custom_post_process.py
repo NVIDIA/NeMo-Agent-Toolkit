@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def add_metadata_and_filter(eval_input: EvalInput) -> EvalInput:
     """
-    Example custom post-process function that:
+    Example custom pre-evaluation process function that:
     1. Adds metadata to each eval input item
     2. Filters out items based on certain criteria
     3. Enriches the full_dataset_entry with additional information
@@ -34,7 +34,7 @@ def add_metadata_and_filter(eval_input: EvalInput) -> EvalInput:
     the workflow has run but before evaluation begins.
 
     Args:
-        eval_input: The EvalInput object to post-process
+        eval_input: The EvalInput object to pre-evaluation process
 
     Returns:
         Modified EvalInput object with additional metadata and filtering applied
@@ -50,8 +50,8 @@ def add_metadata_and_filter(eval_input: EvalInput) -> EvalInput:
 
         # Add metadata to the full_dataset_entry
         enhanced_entry = item.full_dataset_entry.copy() if item.full_dataset_entry else {}
-        enhanced_entry['post_process_timestamp'] = datetime.now(timezone.utc).isoformat()
-        enhanced_entry['post_process_version'] = "1.0"
+        enhanced_entry['pre_eval_process_timestamp'] = datetime.now(timezone.utc).isoformat()
+        enhanced_entry['pre_eval_process_version'] = "1.0"
         enhanced_entry['has_output'] = bool(item.output_obj)
 
         # Add additional analysis based on the output
@@ -70,7 +70,7 @@ def add_metadata_and_filter(eval_input: EvalInput) -> EvalInput:
 
         processed_items.append(enhanced_item)
 
-    logger.info("Post-processing complete: %d items processed from %d original items",
+    logger.info("Pre-evaluation processing complete: %d items processed from %d original items",
                 len(processed_items),
                 len(eval_input.eval_input_items))
 
@@ -79,11 +79,11 @@ def add_metadata_and_filter(eval_input: EvalInput) -> EvalInput:
 
 def normalize_calculator_outputs(eval_input: EvalInput) -> EvalInput:
     """
-    Example custom post-process function specifically for calculator workflows.
+    Example custom pre-evaluation process function specifically for calculator workflows.
     Normalizes numerical outputs to ensure consistent formatting for evaluation.
 
     Args:
-        eval_input: The EvalInput object to post-process
+        eval_input: The EvalInput object to pre-evaluation process
 
     Returns:
         EvalInput object with normalized numerical outputs

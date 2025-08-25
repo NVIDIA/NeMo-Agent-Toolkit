@@ -497,18 +497,18 @@ def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
     assert all(item.full_dataset_entry['difficulty'] == 'medium' for item in eval_input.eval_input_items)
 
 
-def test_custom_post_process_function():
-    """Test that custom post-process function is correctly applied to EvalInput."""
+def test_custom_pre_eval_process_function():
+    """Test that custom pre-evaluation process function is correctly applied to EvalInput."""
 
     # Create a simple dataset config
     dataset_config = EvalDatasetJsonConfig()
 
-    # Create dataset handler with custom post-process function
-    custom_function = f"{__name__}.sample_post_process_function"
+    # Create dataset handler with custom pre-evaluation process function
+    custom_function = f"{__name__}.sample_pre_eval_process_function"
     dataset_handler = DatasetHandler(dataset_config=dataset_config,
                                      reps=1,
                                      concurrency=1,
-                                     custom_post_process_function=custom_function)
+                                     custom_pre_eval_process_function=custom_function)
 
     # Create a simple EvalInput for testing
     test_items = [
@@ -530,8 +530,8 @@ def test_custom_post_process_function():
 
     test_eval_input = EvalInput(eval_input_items=test_items)
 
-    # Apply the custom post-process function
-    processed_eval_input = dataset_handler.post_process_eval_input(test_eval_input)
+    # Apply the custom pre-evaluation process function
+    processed_eval_input = dataset_handler.pre_eval_process_eval_input(test_eval_input)
 
     # Verify the function was applied
     assert len(processed_eval_input.eval_input_items) == 2
@@ -547,9 +547,9 @@ def test_custom_post_process_function():
     assert second_item.full_dataset_entry.get('output_normalized') is True
 
 
-def sample_post_process_function(eval_input: EvalInput) -> EvalInput:
+def sample_pre_eval_process_function(eval_input: EvalInput) -> EvalInput:
     """
-    Simple test post-process function that normalizes numerical outputs.
+    Simple test pre-evaluation process function that normalizes numerical outputs.
     This mimics the behavior of the normalize_calculator_outputs function.
     """
     import re

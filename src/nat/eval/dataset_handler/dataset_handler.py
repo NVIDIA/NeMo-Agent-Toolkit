@@ -43,7 +43,7 @@ class DatasetHandler:
                  concurrency: int,
                  num_passes: int = 1,
                  adjust_dataset_size: bool = False,
-                 custom_post_process_function: str | None = None):
+                 custom_pre_eval_process_function: str | None = None):
         from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         self.dataset_config = dataset_config
@@ -55,8 +55,8 @@ class DatasetHandler:
         self.num_passes = num_passes
         self.adjust_dataset_size = adjust_dataset_size
 
-        # Custom post-process function
-        self.custom_post_process_function = custom_post_process_function
+        # Custom pre-evaluation process function
+        self.custom_pre_eval_process_function = custom_pre_eval_process_function
 
         # Helpers
         self.intermediate_step_adapter = IntermediateStepAdapter()
@@ -335,42 +335,43 @@ class DatasetHandler:
         filtered_steps = self.intermediate_step_adapter.filter_intermediate_steps(intermediate_steps, event_filter)
         return self.intermediate_step_adapter.serialize_intermediate_steps(filtered_steps)
 
-    def post_process_eval_input(self, eval_input: EvalInput) -> EvalInput:
+    def pre_eval_process_eval_input(self, eval_input: EvalInput) -> EvalInput:
         """
-        Post-process the eval input using custom function if provided.
+        Pre-evaluation process the eval input using custom function if provided.
 
-        The custom post-process function should have the signature:
-        def custom_post_process(eval_input: EvalInput) -> EvalInput
+        The custom pre-evaluation process function should have the signature:
+        def custom_pre_eval_process(eval_input: EvalInput) -> EvalInput
 
         Args:
-            eval_input: The EvalInput object to post-process
+            eval_input: The EvalInput object to pre-evaluation process
 
         Returns:
-            The post-processed EvalInput object
+            The pre-evaluation processed EvalInput object
         """
-        if self.custom_post_process_function:
+        if self.custom_pre_eval_process_function:
             try:
-                custom_function = self._load_custom_post_process_function()
+                custom_function = self._load_custom_pre_eval_process_function()
                 processed = custom_function(eval_input)
                 if not isinstance(processed, EvalInput):
-                    raise TypeError(f"Custom post-process function '{self.custom_post_process_function}' must return "
-                                    f"EvalInput, got {type(processed)}")
+                    raise TypeError(
+                        f"Custom pre-evaluation process function '{self.custom_pre_eval_process_function}' must return "
+                        f"EvalInput, got {type(processed)}")
                 return processed
             except Exception as e:
-                raise RuntimeError(
-                    f"Error calling custom post-process function '{self.custom_post_process_function}': {e}") from e
+                raise RuntimeError(f"Error calling custom pre-evaluation process function "
+                                   f"'{self.custom_pre_eval_process_function}': {e}") from e
 
         return eval_input
 
-    def _load_custom_post_process_function(self):
+    def _load_custom_pre_eval_process_function(self):
         """
-        Import and return the custom post-process function using standard Python import path.
+        Import and return the custom pre-evaluation process function using standard Python import path.
         """
         # Split the function path to get module and function name
-        if "." not in self.custom_post_process_function:
-            raise ValueError(f"Invalid custom_post_process_function '{self.custom_post_process_function}'. "
+        if "." not in self.custom_pre_eval_process_function:
+            raise ValueError(f"Invalid custom_pre_eval_process_function '{self.custom_pre_eval_process_function}'. "
                              "Expected format: '<module_path>.<function_name>'")
-        module_path, function_name = self.custom_post_process_function.rsplit(".", 1)
+        module_path, function_name = self.custom_pre_eval_process_function.rsplit(".", 1)
 
         # Import the module
         module = importlib.import_module(module_path)
@@ -382,7 +383,7 @@ class DatasetHandler:
         custom_function = getattr(module, function_name)
 
         if not callable(custom_function):
-            raise ValueError(f"'{self.custom_post_process_function}' is not callable")
+            raise ValueError(f"'{self.custom_pre_eval_process_function}' is not callable")
 
         return custom_function
 

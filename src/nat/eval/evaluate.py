@@ -486,14 +486,14 @@ class EvaluationRun:
                                        usage_stats=UsageStats(),
                                        profiler_results=ProfilerResults())
 
-        custom_post_process_function = self.eval_config.general.output.custom_post_process_function \
+        custom_pre_eval_process_function = self.eval_config.general.output.custom_pre_eval_process_function \
             if self.eval_config.general.output else None
         dataset_handler = DatasetHandler(dataset_config=dataset_config,
                                          reps=self.config.reps,
                                          concurrency=self.eval_config.general.max_concurrency,
                                          num_passes=self.config.num_passes,
                                          adjust_dataset_size=self.config.adjust_dataset_size,
-                                         custom_post_process_function=custom_post_process_function)
+                                         custom_pre_eval_process_function=custom_pre_eval_process_function)
         self.eval_input = dataset_handler.get_eval_input_from_dataset(self.config.dataset)
         if not self.eval_input.eval_input_items:
             logger.info("Dataset is empty. Nothing to evaluate.")
@@ -520,8 +520,8 @@ class EvaluationRun:
                                                          max_concurrency=self.eval_config.general.max_concurrency)
                     await self.run_workflow_local(session_manager)
 
-                # Post-process the workflow output
-                self.eval_input = dataset_handler.post_process_eval_input(self.eval_input)
+                # Pre-evaluation process the workflow output
+                self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
 
                 # Evaluate
                 evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
