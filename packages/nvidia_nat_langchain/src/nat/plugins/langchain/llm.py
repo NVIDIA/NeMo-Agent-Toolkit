@@ -15,12 +15,6 @@
 
 from typing import TypeVar
 
-from langchain_core.language_models import BaseChatModel
-from langchain_core.language_models import LanguageModelInput
-from langchain_core.messages import HumanMessage
-from langchain_core.messages import SystemMessage
-from langchain_core.prompt_values import PromptValue
-
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
@@ -33,10 +27,15 @@ from nat.llm.openai_llm import OpenAIModelConfig
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
-ModelType = TypeVar("ModelType", bound=BaseChatModel)
+ModelType = TypeVar("ModelType")
 
 
 def langchain_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+
+    from langchain_core.language_models import LanguageModelInput
+    from langchain_core.messages import HumanMessage
+    from langchain_core.messages import SystemMessage
+    from langchain_core.prompt_values import PromptValue
 
     def injector(messages: LanguageModelInput) -> LanguageModelInput:
         if isinstance(messages, PromptValue):
