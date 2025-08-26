@@ -103,7 +103,7 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):
         def _convert_from_str(input_str: str) -> tool.input_schema:
             return tool.input_schema.model_validate_json(input_str)
 
-        async def _response_fn(tool_input: tool.input_schema | None = None, **kwargs) -> str:
+        async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
             # Run the tool, catching any errors and sending to agent for correction
             try:
                 if tool_input:
