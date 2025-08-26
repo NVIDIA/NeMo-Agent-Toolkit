@@ -17,7 +17,7 @@ import logging
 
 from pydantic import BaseModel
 
-from nat.builder.context import AIQContextState
+from nat.builder.context import ContextState
 from nat.plugins.data_flywheel.observability.exporter.dfw_exporter import DFWExporter
 from nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin import ElasticsearchMixin
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ElasticsearchContractVersion
@@ -29,7 +29,7 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
     """Elasticsearch-specific Data Flywheel exporter."""
 
     def __init__(self,
-                 context_state: AIQContextState | None = None,
+                 context_state: ContextState | None = None,
                  client_id: str = "default",
                  contract_version: ElasticsearchContractVersion = ElasticsearchContractVersion.VERSION_1_1,
                  batch_size: int = 100,

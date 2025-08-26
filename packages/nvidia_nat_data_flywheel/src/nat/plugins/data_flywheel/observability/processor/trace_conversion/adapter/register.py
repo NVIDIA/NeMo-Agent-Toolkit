@@ -18,7 +18,7 @@
 # isort:skip_file
 
 # Import any adapters which need to be automatically registered here
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.adapters.elasticsearch import \
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.adapter.elasticsearch import \
     nim_converter
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.adapters.elasticsearch import \
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.adapter.elasticsearch import \
     openai_converter

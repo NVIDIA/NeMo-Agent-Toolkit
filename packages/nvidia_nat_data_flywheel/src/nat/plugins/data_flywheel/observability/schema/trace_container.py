@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import TypeAdapter
 from pydantic import field_validator
+from pydantic import model_validator
 
 from nat.data_models.span import Span
 
@@ -56,8 +57,10 @@ class TraceContainer(BaseModel):
                     f"Union validation failed: none of the registered schemas match this data structure. {e}") from e
         return v
 
-    def __init__(self, **data):
-        """Initialize TraceSource and ensure union is built."""
+    @model_validator(mode='before')
+    @classmethod
+    def ensure_union_built(cls, data):
+        """Ensure union is built before validation."""
         # Trigger union building on first instantiation if needed
         try:
             from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import (
@@ -66,7 +69,7 @@ class TraceContainer(BaseModel):
             TraceAdapterRegistry.get_current_union()  # This ensures union is built and model updated
         except ImportError:
             pass  # Registry not available
-        super().__init__(**data)
+        return data
 
     @classmethod
     def __init_subclass__(cls, **kwargs):

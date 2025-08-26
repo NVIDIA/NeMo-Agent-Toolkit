@@ -59,12 +59,19 @@ ROLE_MAP = {
 FINISH_REASON_MAP = {"tool_calls": FinishReason.TOOL_CALLS, "stop": FinishReason.STOP, "length": FinishReason.LENGTH}
 
 
-def _convert_role(role: str) -> str:
-    """Convert role to standard format with fallback."""
+def convert_role(role: str) -> str:
+    """Convert role to standard format with fallback.
+
+    Args:
+        role (str): The role to convert
+
+    Returns:
+        str: The converted role
+    """
     return ROLE_MAP.get(role, DEFAULT_ROLE)
 
 
-def _create_message_by_role(role: str, content: str | None, **kwargs) -> Message:
+def create_message_by_role(role: str, content: str | None, **kwargs) -> Message:
     """Factory function for creating messages by role.
 
     Args:
@@ -78,7 +85,7 @@ def _create_message_by_role(role: str, content: str | None, **kwargs) -> Message
     Raises:
         ValueError: If the role is unsupported
     """
-    role = _convert_role(role)
+    role = convert_role(role)
 
     match role:
         case "user":
@@ -102,7 +109,7 @@ def _create_message_by_role(role: str, content: str | None, **kwargs) -> Message
             raise ValueError(f"Unsupported message role: {role}. Supported roles: {list(ROLE_MAP.keys())}")
 
 
-def _create_tool_calls(tool_calls_data: list) -> list[ToolCall]:
+def create_tool_calls(tool_calls_data: list) -> list[ToolCall]:
     """Create standardized tool calls from raw data.
 
     Args:
@@ -140,7 +147,7 @@ def _create_tool_calls(tool_calls_data: list) -> list[ToolCall]:
     return validated_tool_calls
 
 
-def _convert_message_to_dfw(message: OpenAIMessage) -> Message:
+def convert_message_to_dfw(message: OpenAIMessage) -> Message:
     """Convert a message to appropriate DFW message type with improved structure.
 
     Args:
@@ -166,15 +173,15 @@ def _convert_message_to_dfw(message: OpenAIMessage) -> Message:
     tool_calls = []
     raw_tool_calls = message.additional_kwargs.get("tool_calls", [])
     if raw_tool_calls:
-        tool_calls = _create_tool_calls(raw_tool_calls)
+        tool_calls = create_tool_calls(raw_tool_calls)
 
     # # Get tool_call_id for tool messages
     tool_call_id = message.tool_call_id or None
 
-    return _create_message_by_role(role=role, content=content, tool_calls=tool_calls, tool_call_id=tool_call_id)
+    return create_message_by_role(role=role, content=content, tool_calls=tool_calls, tool_call_id=tool_call_id)
 
 
-def _validate_and_convert_tools(tools_schema: list) -> list[RequestTool]:
+def validate_and_convert_tools(tools_schema: list) -> list[RequestTool]:
     """Validate and convert tools schema to RequestTool format.
 
     Args:
@@ -219,7 +226,7 @@ def _validate_and_convert_tools(tools_schema: list) -> list[RequestTool]:
     return request_tools
 
 
-def _convert_chat_response(chat_response: dict, span_name: str = "", index: int = 0) -> ResponseChoice:
+def convert_chat_response(chat_response: dict, span_name: str = "", index: int = 0) -> ResponseChoice:
     """Convert a chat response to a DFW payload with better error context.
 
     Args:
@@ -250,7 +257,7 @@ def _convert_chat_response(chat_response: dict, span_name: str = "", index: int 
     if additional_kwargs is not None:
         tool_calls = additional_kwargs.get("tool_calls", [])
         if tool_calls is not None:
-            validated_tool_calls = _create_tool_calls(tool_calls)
+            validated_tool_calls = create_tool_calls(tool_calls)
 
     # If there are no tool calls, set the content to None
     if len(validated_tool_calls) > 0:
@@ -284,14 +291,14 @@ def convert_langchain_openai(trace_source: TraceContainer) -> DFWESRecord:
     messages = []
     for message in trace_source.source.input_value:
         try:
-            msg_result = _convert_message_to_dfw(message)
+            msg_result = convert_message_to_dfw(message)
             messages.append(msg_result)
         except ValueError as e:
             raise ValueError(f"Failed to convert message in trace source: {e}") from e
 
     # Get tools schema
     tools_schema = trace_source.source.metadata.tools_schema
-    request_tools = _validate_and_convert_tools(tools_schema) if tools_schema else []
+    request_tools = validate_and_convert_tools(tools_schema) if tools_schema else []
 
     # Construct a Request object
     model_name = str(trace_source.span.attributes.get("nat.subspan.name", "unknown"))
@@ -312,7 +319,7 @@ def convert_langchain_openai(trace_source: TraceContainer) -> DFWESRecord:
     chat_responses = trace_source.source.metadata.chat_responses or []
     for idx, chat_response in enumerate(chat_responses):
         try:
-            response_choice = _convert_chat_response(chat_response, trace_source.span.name, index=idx)
+            response_choice = convert_chat_response(chat_response, trace_source.span.name, index=idx)
             response_choices.append(response_choice)
         except ValueError as e:
             raise ValueError(f"Failed to convert chat response {idx}: {e}") from e

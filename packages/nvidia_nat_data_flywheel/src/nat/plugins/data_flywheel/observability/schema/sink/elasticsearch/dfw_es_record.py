@@ -25,7 +25,7 @@ from pydantic import Field
 from pydantic import field_validator
 from pydantic import model_validator
 
-from nat.plugins.data_flywheel.observability.schema.registry import register_schema
+from nat.plugins.data_flywheel.observability.schema.schema_registry import register_schema
 
 logger = logging.getLogger(__name__)
 

@@ -17,7 +17,7 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from nat.plugins.data_flywheel.observability.schema.registry import SchemaRegistry
+from nat.plugins.data_flywheel.observability.schema.schema_registry import SchemaRegistry
 
 
 class ElasticsearchContractVersion(str, Enum):

@@ -17,12 +17,16 @@ import logging
 
 # pylint: disable=line-too-long
 # flake8: noqa
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.adapters.elasticsearch.openai_converter import \
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.adapter.elasticsearch.openai_converter import \
     convert_langchain_openai
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import register_adapter
-from nat.plugins.data_flywheel.observability.schema.provider.nim_trace_source import NIMTraceSource
-from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import DFWESRecord
-from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import \
+    register_adapter
+from nat.plugins.data_flywheel.observability.schema.provider.nim_trace_source import \
+    NIMTraceSource
+from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import \
+    DFWESRecord
+from nat.plugins.data_flywheel.observability.schema.trace_container import \
+    TraceContainer
 
 logger = logging.getLogger(__name__)
 
