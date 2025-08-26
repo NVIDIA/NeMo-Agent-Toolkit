@@ -15,29 +15,39 @@
 
 import pytest
 
+from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 
 
 class MockClass:
 
-    def sync_method(self, message: str, *args, **kwargs):
-        return (message, args, kwargs)
+    def sync_method(self, *args, **kwargs):
+        return (args, kwargs)
 
-    async def async_method(self, message: str, *args, **kwargs):
-        return (message, args, kwargs)
+    async def async_method(self, *args, **kwargs):
+        return (args, kwargs)
 
-    def gen_method(self, message: str, *args, **kwargs):
-        yield (message, args, kwargs)
+    def gen_method(self, *args, **kwargs):
+        yield (args, kwargs)
 
-    async def agen_method(self, message: str, *args, **kwargs):
-        yield (message, args, kwargs)
-
-
-def add_thinking(x: str) -> str:
-    return "thinking " + x
+    async def agen_method(self, *args, **kwargs):
+        yield (args, kwargs)
 
 
-def test_patch_with_thinking_sync():
+def add_thinking(x: str, *args, **kwargs) -> FunctionArgumentWrapper:
+    return FunctionArgumentWrapper(("thinking " + x), *args, **kwargs)
+
+
+def add_thinking_with_args(*args, **kwargs) -> FunctionArgumentWrapper:
+    return FunctionArgumentWrapper("thinking", *args, **kwargs)
+
+
+def add_thinking_with_kwargs(*args, **kwargs) -> FunctionArgumentWrapper:
+    return FunctionArgumentWrapper(*args, thinking=True, **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_patch_with_thinking_in_place():
     args = (
         123,
         "foo",
@@ -45,43 +55,30 @@ def test_patch_with_thinking_sync():
     )
     kwargs = {"foo": "bar", "baz": 123}
     mock_obj = MockClass()
-    patched_obj = patch_with_thinking(mock_obj, ["sync_method"], add_thinking)
+    patched_obj = patch_with_thinking(
+        mock_obj,
+        ["sync_method", "async_method", "gen_method", "agen_method"],
+        add_thinking,
+    )
     assert patched_obj is mock_obj
+
+    expected = (("thinking test", *args), kwargs)
+
     actual = patched_obj.sync_method("test", *args, **kwargs)
-    assert actual == ("thinking test", args, kwargs)
+    assert actual == expected
 
-
-@pytest.mark.asyncio
-async def test_patch_with_thinking_async():
-    args = (
-        123,
-        "foo",
-        None,
-    )
-    kwargs = {"foo": "bar", "baz": 123}
-    mock_obj = MockClass()
-    patched_obj = patch_with_thinking(mock_obj, ["async_method"], add_thinking)
-    assert patched_obj is mock_obj
     actual = await patched_obj.async_method("test", *args, **kwargs)
-    assert actual == ("thinking test", args, kwargs)
+    assert actual == expected
 
-
-def test_patch_with_thinking_gen():
-    args = (
-        123,
-        "foo",
-        None,
-    )
-    kwargs = {"foo": "bar", "baz": 123}
-    mock_obj = MockClass()
-    patched_obj = patch_with_thinking(mock_obj, ["gen_method"], add_thinking)
-    assert patched_obj is mock_obj
     for item in patched_obj.gen_method("test", *args, **kwargs):
-        assert item == ("thinking test", args, kwargs)
+        assert item == expected
+
+    async for item in patched_obj.agen_method("test", *args, **kwargs):
+        assert item == expected
 
 
 @pytest.mark.asyncio
-async def test_patch_with_thinking_agen():
+async def test_patch_with_thinking_modify_args():
     args = (
         123,
         "foo",
@@ -89,7 +86,54 @@ async def test_patch_with_thinking_agen():
     )
     kwargs = {"foo": "bar", "baz": 123}
     mock_obj = MockClass()
-    patched_obj = patch_with_thinking(mock_obj, ["agen_method"], add_thinking)
+    patched_obj = patch_with_thinking(
+        mock_obj,
+        ["sync_method", "async_method", "gen_method", "agen_method"],
+        add_thinking_with_args,
+    )
     assert patched_obj is mock_obj
+
+    expected = (("thinking", "test", *args), kwargs)
+
+    actual = patched_obj.sync_method("test", *args, **kwargs)
+    assert actual == expected
+
+    actual = await patched_obj.async_method("test", *args, **kwargs)
+    assert actual == expected
+
+    for item in patched_obj.gen_method("test", *args, **kwargs):
+        assert item == expected
+
     async for item in patched_obj.agen_method("test", *args, **kwargs):
-        assert item == ("thinking test", args, kwargs)
+        assert item == expected
+
+
+@pytest.mark.asyncio
+async def test_patch_with_thinking_modify_kwargs():
+    args = (
+        123,
+        "foo",
+        None,
+    )
+    kwargs = {"foo": "bar", "baz": 123}
+    mock_obj = MockClass()
+    patched_obj = patch_with_thinking(
+        mock_obj,
+        ["sync_method", "async_method", "gen_method", "agen_method"],
+        add_thinking_with_kwargs,
+    )
+    assert patched_obj is mock_obj
+
+    expected = (("test", *args), {"thinking": True, **kwargs})
+
+    actual = patched_obj.sync_method("test", *args, **kwargs)
+    assert actual == expected
+
+    actual = await patched_obj.async_method("test", *args, **kwargs)
+    assert actual == expected
+
+    for item in patched_obj.gen_method("test", *args, **kwargs):
+        assert item == expected
+
+    async for item in patched_obj.agen_method("test", *args, **kwargs):
+        assert item == expected

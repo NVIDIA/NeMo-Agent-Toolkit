@@ -24,16 +24,32 @@ from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 ModelType = TypeVar("ModelType")
 
 
-def crewai_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+def _crewai_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
 
-    def injector(messages: list[dict[str, str]]) -> list[dict[str, str]]:
-        return [{"role": "system", "content": system_prompt}] + messages
+    def injector(messages: list[dict[str, str]], *args, **kwargs) -> FunctionArgumentWrapper:
+        """
+        Inject a system prompt into the messages.
+
+        The messages are the first (non-object) argument to the function.
+        The rest of the arguments are passed through unchanged.
+
+        Args:
+            messages: The messages to inject the system prompt into.
+            *args: The rest of the arguments to the function.
+            **kwargs: The rest of the keyword arguments to the function.
+
+        Returns:
+            FunctionArgumentWrapper: An object that contains the transformed args and kwargs.
+        """
+        new_messages = [{"role": "system", "content": system_prompt}] + messages
+        return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 
     return patch_with_thinking(
         client,
@@ -78,7 +94,7 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
     client = LLM(**config_obj)
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = crewai_thinking_injector(client, llm_config.thinking_system_prompt)
+        client = _crewai_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
 
@@ -116,7 +132,7 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
     client = LLM(**config_obj)
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = crewai_thinking_injector(client, llm_config.thinking_system_prompt)
+        client = _crewai_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
 
@@ -140,7 +156,7 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
     client = LLM(**config_obj)
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = crewai_thinking_injector(client, llm_config.thinking_system_prompt)
+        client = _crewai_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
 

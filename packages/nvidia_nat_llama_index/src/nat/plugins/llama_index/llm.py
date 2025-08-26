@@ -25,19 +25,33 @@ from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 ModelType = TypeVar("ModelType")
 
 
-def llama_index_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+def _llama_index_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
     from llama_index.core.base.llms.types import ChatMessage
 
-    def injector(messages: Sequence[ChatMessage]) -> Sequence[ChatMessage]:
-        msgs = list(messages)
-        msgs.insert(0, ChatMessage(role="system", content=system_prompt))
-        return msgs
+    def injector(messages: Sequence[ChatMessage], *args, **kwargs) -> FunctionArgumentWrapper:
+        """
+        Inject a system prompt into the messages.
+
+        The messages are the first (non-object) argument to the function.
+        The rest of the arguments are passed through unchanged.
+
+        Args:
+            messages: The messages to inject the system prompt into.
+            *args: The rest of the arguments to the function.
+            **kwargs: The rest of the keyword arguments to the function.
+
+        Returns:
+            FunctionArgumentWrapper: An object that contains the transformed args and kwargs.
+        """
+        new_messages = [ChatMessage(role="system", content=system_prompt)] + list(messages)
+        return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 
     return patch_with_thinking(
         client,
@@ -56,7 +70,7 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
     llm = Bedrock(**kwargs)
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        llm = llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
+        llm = _llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,
@@ -77,7 +91,7 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
     llm = AzureOpenAI(**kwargs)
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        llm = llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
+        llm = _llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,
@@ -99,6 +113,9 @@ async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
         del kwargs["base_url"]
 
     llm = NVIDIA(**kwargs)
+
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        llm = _llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,
@@ -122,7 +139,7 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
     llm = OpenAI(**kwargs)
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        llm = llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
+        llm = _llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,

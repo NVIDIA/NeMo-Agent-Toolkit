@@ -25,13 +25,14 @@ from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 ModelType = TypeVar("ModelType")
 
 
-def langchain_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+def _langchain_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
 
     from langchain_core.language_models import LanguageModelInput
     from langchain_core.messages import HumanMessage
@@ -39,20 +40,39 @@ def langchain_thinking_injector(client: ModelType, system_prompt: str) -> ModelT
     from langchain_core.messages.base import BaseMessage
     from langchain_core.prompt_values import PromptValue
 
-    def injector(messages: LanguageModelInput) -> LanguageModelInput:
+    def injector(messages: LanguageModelInput, *args, **kwargs) -> FunctionArgumentWrapper:
+        """
+        Inject a system prompt into the messages.
+
+        The messages are the first (non-object) argument to the function.
+        The rest of the arguments are passed through unchanged.
+
+        Args:
+            messages: The messages to inject the system prompt into.
+            *args: The rest of the arguments to the function.
+            **kwargs: The rest of the keyword arguments to the function.
+
+        Returns:
+            FunctionArgumentWrapper: An object that contains the transformed args and kwargs.
+
+        Raises:
+            ValueError: If the messages are not a valid type for LanguageModelInput.
+        """
         system_message = SystemMessage(content=system_prompt)
         if isinstance(messages, PromptValue):
-            msgs = messages.to_messages()
-            return [system_message, *msgs]
+            new_messages = [system_message, *messages.to_messages()]
+            return FunctionArgumentWrapper(new_messages, *args, **kwargs)
         elif isinstance(messages, str):
-            return [system_message, HumanMessage(content=messages)]
+            new_messages = [system_message, HumanMessage(content=messages)]
+            return FunctionArgumentWrapper(new_messages, *args, **kwargs)
         elif isinstance(messages, Sequence):
             if all(isinstance(m, BaseMessage) for m in messages):
-                return [system_message, *list(messages)]
+                new_messages = [system_message, *list(messages)]
+                return FunctionArgumentWrapper(new_messages, *args, **kwargs)
             raise ValueError(
                 "Unsupported sequence element types for LanguageModelInput; expected Sequence[BaseMessage].")
         else:
-            return messages
+            return FunctionArgumentWrapper(messages, *args, **kwargs)
 
     return patch_with_thinking(
         client,
@@ -69,7 +89,7 @@ async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, _builder: Bui
     client = ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = langchain_thinking_injector(client, llm_config.thinking_system_prompt)
+        client = _langchain_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,
@@ -88,7 +108,7 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
     client = AzureChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = langchain_thinking_injector(client, llm_config.thinking_system_prompt)
+        client = _langchain_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,
@@ -107,7 +127,7 @@ async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
     client = ChatNVIDIA(**llm_config.model_dump(exclude={"type"}, by_alias=True))
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = langchain_thinking_injector(client, llm_config.thinking_system_prompt)
+        client = _langchain_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,
@@ -132,7 +152,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
     client = ChatOpenAI(**kwargs)
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = langchain_thinking_injector(client, llm_config.thinking_system_prompt)
+        client = _langchain_thinking_injector(client, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,

@@ -22,28 +22,42 @@ from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 ModelType = TypeVar("ModelType")
 
 
-def semantic_kernel_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+def _semantic_kernel_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
     from semantic_kernel.contents.chat_history import ChatHistory
     from semantic_kernel.contents.chat_message_content import ChatMessageContent
     from semantic_kernel.contents.utils.author_role import AuthorRole
 
-    def injector(messages: ChatHistory) -> ChatHistory:
-        if messages.system_message is None:
-            return ChatHistory(
-                messages=messages.messages,
-                system_message=system_prompt,
-            )
+    def injector(chat_history: ChatHistory, *args, **kwargs) -> FunctionArgumentWrapper:
+        """
+        Inject a system prompt into the chat_history.
+
+        The chat_history is the first (non-object) argument to the function.
+        The rest of the arguments are passed through unchanged.
+
+        Args:
+            chat_history: The ChatHistory object to inject the system prompt into.
+            *args: The rest of the arguments to the function.
+            **kwargs: The rest of the keyword arguments to the function.
+
+        Returns:
+            FunctionArgumentWrapper: An object that contains the transformed args and kwargs.
+        """
+        if chat_history.system_message is None:
+            new_messages = ChatHistory(chat_history.messages, system_message=system_prompt)
+            return FunctionArgumentWrapper(new_messages, *args, **kwargs)
         else:
-            return ChatHistory(
-                messages=[ChatMessageContent(role=AuthorRole.SYSTEM, content=system_prompt)] + messages.messages,
-                system_message=messages.system_message,
+            new_messages = ChatHistory(
+                [ChatMessageContent(role=AuthorRole.SYSTEM, content=system_prompt)] + chat_history.messages,
+                system_message=chat_history.system_message,
             )
+            return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 
     return patch_with_thinking(
         client,
@@ -65,7 +79,7 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
     )
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        llm = semantic_kernel_thinking_injector(llm, llm_config.thinking_system_prompt)
+        llm = _semantic_kernel_thinking_injector(llm, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,
@@ -84,7 +98,7 @@ async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builde
     llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name)
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        llm = semantic_kernel_thinking_injector(llm, llm_config.thinking_system_prompt)
+        llm = _semantic_kernel_thinking_injector(llm, llm_config.thinking_system_prompt)
 
     if isinstance(llm_config, RetryMixin):
         llm = patch_with_retry(llm,
