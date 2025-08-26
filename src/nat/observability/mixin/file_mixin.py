@@ -103,7 +103,7 @@ class FileExportMixin(ResourceConflictMixin):
                     self._current_file_path.unlink()
                     logger.info("Cleaned up existing file: %s", self._current_file_path)
                 except OSError as e:
-                    logger.error("Error removing existing file %s: %s", self._current_file_path, e)
+                    logger.exception("Error removing existing file %s: %s", self._current_file_path, e)
 
     def _get_resource_identifiers(self) -> dict[str, Any]:
         """Return the file resources this instance will use.
@@ -154,10 +154,10 @@ class FileExportMixin(ResourceConflictMixin):
                     old_file.unlink()
                     logger.info("Cleaned up old log file during init: %s", old_file)
                 except OSError as e:
-                    logger.error("Error removing old file %s: %s", old_file, e)
+                    logger.exception("Error removing old file %s: %s", old_file, e)
 
         except Exception as e:
-            logger.error("Error during initialization cleanup: %s", e)
+            logger.exception("Error during initialization cleanup: %s", e)
 
     async def _should_roll_file(self) -> bool:
         """Check if the current file should be rolled based on size."""
@@ -191,7 +191,7 @@ class FileExportMixin(ResourceConflictMixin):
             await self._cleanup_old_files()
 
         except OSError as e:
-            logger.error("Error rolling file %s: %s", self._current_file_path, e)
+            logger.exception("Error rolling file %s: %s", self._current_file_path, e)
 
     async def _cleanup_old_files(self) -> None:
         """Remove old rolled files beyond the maximum count."""
@@ -209,10 +209,10 @@ class FileExportMixin(ResourceConflictMixin):
                     old_file.unlink()
                     logger.info("Cleaned up old log file: %s", old_file)
                 except OSError as e:
-                    logger.error("Error removing old file %s: %s", old_file, e)
+                    logger.exception("Error removing old file %s: %s", old_file, e)
 
         except Exception as e:
-            logger.error("Error during cleanup: %s", e)
+            logger.exception("Error during cleanup: %s", e)
 
     async def export_processed(self, item: str | list[str]) -> None:
         """Export a processed string or list of strings.
@@ -248,7 +248,7 @@ class FileExportMixin(ResourceConflictMixin):
                         await f.write("\n")
 
         except Exception as e:
-            logger.error("Error exporting event: %s", e, exc_info=True)
+            logger.exception("Error exporting event: %s", e)
 
     def get_current_file_path(self) -> Path:
         """Get the current file path being written to.

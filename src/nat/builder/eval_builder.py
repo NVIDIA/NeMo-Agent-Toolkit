@@ -61,7 +61,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
             # Store the evaluator
             self._evaluators[name] = ConfiguredEvaluator(config=config, instance=info_obj)
         except Exception as e:
-            logger.error("Error %s adding evaluator `%s` with config `%s`", e, name, config, exc_info=True)
+            logger.error("Error %s adding evaluator `%s` with config `%s`", e, name, config)
             raise
 
     @override

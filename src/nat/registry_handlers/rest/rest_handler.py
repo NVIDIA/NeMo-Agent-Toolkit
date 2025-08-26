@@ -155,7 +155,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
             validated_pull_response = PullResponse(status={
                 "status": StatusEnum.ERROR, "message": msg, "action": ActionEnum.PULL
             })
-            logger.exception(validated_pull_response.status.message, exc_info=True)
+            logger.exception(validated_pull_response.status.message)
 
             yield validated_pull_response
 

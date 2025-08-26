@@ -121,7 +121,7 @@ def execute_code_subprocess(generated_code: str, queue):
         resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
         resource.setrlimit(resource.RLIMIT_DATA, (limit, limit))
     except Exception as e:
-        logger.error("Failed to set resource limits, PID: %s, error: %s", os.getpid(), e)
+        logger.exception("Failed to set resource limits, PID: %s, error: %s", os.getpid(), e)
 
     stdout_capture = StringIO()
     stderr_capture = StringIO()

@@ -118,7 +118,7 @@ def _parse_alert_data(input_message: str) -> dict | None:
     try:
         return json.loads(alert_json_str.replace("'", '"'))
     except Exception as e:
-        utils.logger.error("Failed to parse alert from input message: %s", e)
+        utils.logger.exception("Failed to parse alert from input message: %s", e)
         return None
 
 
@@ -230,7 +230,7 @@ async def maintenance_check(config: MaintenanceCheckToolConfig, builder: Builder
         try:
             alert_time = datetime.strptime(alert_time_str, "%Y-%m-%dT%H:%M:%S.%f")
         except ValueError as e:
-            utils.logger.error("Failed to parse alert time from input message: %s, skipping maintenance check", e)
+            utils.logger.exception("Failed to parse alert time from input message: %s, skipping maintenance check", e)
             return NO_ONGOING_MAINTENANCE_STR
 
         maintenance_df = _load_maintenance_data(maintenance_data_path)
@@ -242,7 +242,7 @@ async def maintenance_check(config: MaintenanceCheckToolConfig, builder: Builder
         try:
             maintenance_start_str, maintenance_end_str = maintenance_info
         except ValueError:
-            utils.logger.error(
+            utils.logger.exception(
                 "Failed to parse maintenance info into start and end times: %s, skipping maintenance check",
                 maintenance_info)
             return NO_ONGOING_MAINTENANCE_STR

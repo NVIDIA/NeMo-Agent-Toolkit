@@ -215,7 +215,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 job_store.cleanup_expired_jobs()
                 logger.debug("Expired %s jobs cleaned up", name)
             except Exception as e:
-                logger.error("Error during %s job cleanup: %s", name, e)
+                logger.exception("Error during %s job cleanup: %s", name, e)
             await asyncio.sleep(sleep_time_sec)
 
     async def create_cleanup_task(self, app: FastAPI, name: str, job_store: JobStore, sleep_time_sec: int = 300):
@@ -301,7 +301,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                         job_store.update_status(job_id, "success", output_path=str(parent_dir))
                 except Exception as e:
-                    logger.error("Error in evaluation job %s: %s", job_id, str(e))
+                    logger.exception("Error in evaluation job %s: %s", job_id, str(e))
                     job_store.update_status(job_id, "failure", error=str(e))
 
         async def start_evaluation(request: EvaluateRequest, background_tasks: BackgroundTasks, http_request: Request):
@@ -735,7 +735,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                             result_type=result_type)
                     job_store.update_status(job_id, "success", output=result)
                 except Exception as e:
-                    logger.error("Error in evaluation job %s: %s", job_id, e)
+                    logger.exception("Error in evaluation job %s: %s", job_id, e)
                     job_store.update_status(job_id, "failure", error=str(e))
 
         def _job_status_to_response(job: JobInfo) -> AsyncGenerationStatusResponse:

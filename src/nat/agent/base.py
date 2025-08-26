@@ -182,9 +182,10 @@ class BaseAgent(ABC):
                 await asyncio.sleep(sleep_time)
 
         # All retries exhausted, return error message
-        error_content = "Tool call failed after all retry attempts. Last error: %s" % str(last_exception)
-        logger.error("%s %s", AGENT_LOG_PREFIX, error_content)
-        return ToolMessage(name=tool.name, tool_call_id=tool.name, content=error_content, status="error")
+        logger.error("%s Tool call failed after all retry attempts. Last error: %s",
+                     AGENT_LOG_PREFIX,
+                     str(last_exception))
+        return ToolMessage(name=tool.name, tool_call_id=tool.name, content=str(last_exception), status="error")
 
     def _log_tool_response(self, tool_name: str, tool_input: Any, tool_response: str, max_chars: int = 1000) -> None:
         """

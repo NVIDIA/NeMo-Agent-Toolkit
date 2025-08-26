@@ -64,7 +64,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             # in tool calling agents, we bind the tools to the LLM, to pass the tools' input schemas at runtime
             self.bound_llm = llm.bind_tools(tools)
         except NotImplementedError as ex:
-            logger.error("%s Failed to bind tools: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
+            logger.error("%s Failed to bind tools: %s", AGENT_LOG_PREFIX, ex)
             raise
 
         if prompt is not None:

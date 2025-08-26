@@ -396,7 +396,7 @@ def get_transitive_dependencies(distribution_names: list[str]) -> dict[str, set[
                     except importlib.metadata.PackageNotFoundError:
                         pass
 
-                logger.error("Distribution %s not found (tried common variations)", dist_name)
+                logger.exception("Distribution %s not found (tried common variations)", dist_name)
                 result[dist_name] = set()
 
     return result

@@ -97,7 +97,7 @@ def find_package_root(package_name: str) -> Path | None:
         try:
             info = json.loads(direct_url)
         except json.JSONDecodeError:
-            logger.error("Malformed direct_url.json for package: %s", package_name)
+            logger.exception("Malformed direct_url.json for package: %s", package_name)
             return None
 
         if not info.get("dir_info", {}).get("editable"):

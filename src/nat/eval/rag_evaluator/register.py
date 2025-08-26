@@ -104,7 +104,7 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
             raise ValueError(message) from e
         except AttributeError as e:
             message = f"Ragas metric {metric_name} not found {e}."
-            logger.error(message)
+            logger.exception(message)
             return None
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:

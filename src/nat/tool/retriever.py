@@ -75,7 +75,7 @@ async def retriever_tool(config: RetrieverConfig, builder: Builder):
             return retrieved_context
 
         except RetrieverError as e:
-            logger.error("Retriever threw an error: %s. Returning an empty response.", e, exc_info=True)
+            logger.exception("Retriever threw an error: %s. Returning an empty response.", e)
             if config.raise_errors:
                 raise
             return RetrieverOutput(results=[])

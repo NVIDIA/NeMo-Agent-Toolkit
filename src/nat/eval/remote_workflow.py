@@ -74,7 +74,7 @@ class EvaluationRemoteWorkflowHandler:
                             if chunk_data.get("value"):
                                 final_response = chunk_data.get("value")
                         except json.JSONDecodeError as e:
-                            logger.error("Failed to parse generate response chunk: %s", e)
+                            logger.exception("Failed to parse generate response chunk: %s", e)
                             continue
                     elif line.startswith(INTERMEDIATE_DATA_PREFIX):
                         # This is an intermediate step
@@ -90,12 +90,12 @@ class EvaluationRemoteWorkflowHandler:
                                                                  payload=payload)
                             intermediate_steps.append(intermediate_step)
                         except (json.JSONDecodeError, ValidationError) as e:
-                            logger.error("Failed to parse intermediate step: %s", e)
+                            logger.exception("Failed to parse intermediate step: %s", e)
                             continue
 
         except aiohttp.ClientError as e:
             # Handle connection or HTTP-related errors
-            logger.error("Request failed for question %s: %s", question, e)
+            logger.exception("Request failed for question %s: %s", question, e)
             item.output_obj = None
             item.trajectory = []
             return

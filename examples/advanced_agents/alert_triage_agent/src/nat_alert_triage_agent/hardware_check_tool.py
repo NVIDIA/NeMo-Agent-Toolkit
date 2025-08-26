@@ -61,7 +61,7 @@ def _get_ipmi_monitor_data(ip_address, username, password):
 
     except subprocess.CalledProcessError as e:
         # Log error and return None if command fails
-        utils.logger.error("Error executing IPMI monitoring command. Details: %s", e.stderr)
+        utils.logger.exception("Error executing IPMI monitoring command. Details: %s", e.stderr)
         return None
 
 
