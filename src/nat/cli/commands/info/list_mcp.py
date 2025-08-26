@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import anyio
 import asyncio
 import json
 import logging
@@ -64,7 +65,13 @@ def format_tool(tool: Any) -> dict[str, str | None]:
     input_schema = getattr(tool, 'input_schema', None) or getattr(tool, 'inputSchema', None)
 
     # Normalize schema to JSON string
-    if hasattr(input_schema, "schema_json"):
+    if input_schema is None:
+        return {
+            "name": name,
+            "description": description,
+            "input_schema": None,
+        }
+    elif hasattr(input_schema, "schema_json"):
         schema_str = input_schema.schema_json(indent=2)
     elif isinstance(input_schema, dict):
         schema_str = json.dumps(input_schema, indent=2)
@@ -328,7 +335,7 @@ def list_mcp(ctx, direct, url, transport, command, args, env, tool, detail, json
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
 
     fetcher = list_tools_direct if direct else list_tools_and_schemas
-    tools = asyncio.run(fetcher, command, url, tool, transport, stdio_args, stdio_env)
+    tools = anyio.run(fetcher, command, url, tool, transport, stdio_args, stdio_env)
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))
