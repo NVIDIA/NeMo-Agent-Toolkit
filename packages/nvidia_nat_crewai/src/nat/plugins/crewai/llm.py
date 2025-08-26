@@ -75,21 +75,20 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
         }, by_alias=True),
     }
 
-    api_key = config_obj.get("api_key") or os.environ.get("AZURE_OPENAI_API_KEY") or os.environ.get("AZURE_API_KEY")
+    api_key = llm_config.api_key or os.environ.get("AZURE_OPENAI_API_KEY") or os.environ.get("AZURE_API_KEY")
     if api_key is None:
         raise ValueError("Azure API key is not set")
     os.environ["AZURE_API_KEY"] = api_key
-    api_base = (config_obj.get("azure_endpoint") or os.environ.get("AZURE_OPENAI_ENDPOINT")
+    api_base = (llm_config.azure_endpoint or os.environ.get("AZURE_OPENAI_ENDPOINT")
                 or os.environ.get("AZURE_API_BASE"))
     if api_base is None:
         raise ValueError("Azure endpoint is not set")
     os.environ["AZURE_API_BASE"] = api_base
 
     os.environ["AZURE_API_VERSION"] = llm_config.api_version
-    model = config_obj.get("azure_deployment") or os.environ.get("AZURE_MODEL_DEPLOYMENT")
+    model = llm_config.azure_deployment or os.environ.get("AZURE_MODEL_DEPLOYMENT")
     if model is None:
         raise ValueError("Azure model deployment is not set")
-
     config_obj["model"] = model
 
     client = LLM(**config_obj)
