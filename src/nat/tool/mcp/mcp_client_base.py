@@ -216,7 +216,7 @@ class MCPSSEClient(MCPBaseClient):
 
     Args:
       url (str): The url of the MCP server
-      client_type (str): The type of client to use ('sse' or 'stdio')
+      transport (str): The type of transport to use ('sse', 'stdio', or 'streamable-http')
     """
 
     def __init__(self, url: str, transport: str = 'sse'):
