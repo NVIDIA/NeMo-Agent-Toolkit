@@ -17,7 +17,6 @@ Comprehensive tests for environment variable handling and API key fixtures.
 """
 
 import os
-from unittest.mock import patch
 
 import pytest
 
