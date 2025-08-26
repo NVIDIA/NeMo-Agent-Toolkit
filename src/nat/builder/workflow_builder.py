@@ -17,39 +17,31 @@ import dataclasses
 import inspect
 import logging
 import warnings
-from contextlib import AbstractAsyncContextManager
-from contextlib import AsyncExitStack
-from contextlib import asynccontextmanager
+from contextlib import (AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager)
 
 from nat.authentication.interfaces import AuthProviderBase
-from nat.builder.builder import Builder
-from nat.builder.builder import UserManagerHolder
-from nat.builder.component_utils import ComponentInstanceData
-from nat.builder.component_utils import build_dependency_sequence
-from nat.builder.context import Context
-from nat.builder.context import ContextState
+from nat.builder.builder import Builder, UserManagerHolder
+from nat.builder.component_utils import (ComponentInstanceData, build_dependency_sequence)
+from nat.builder.context import Context, ContextState
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
-from nat.builder.function import Function
-from nat.builder.function import LambdaFunction
+from nat.builder.function import Function, LambdaFunction
 from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
 from nat.builder.retriever import RetrieverProviderInfo
 from nat.builder.workflow import Workflow
-from nat.cli.type_registry import GlobalTypeRegistry
-from nat.cli.type_registry import TypeRegistry
+from nat.cli.type_registry import GlobalTypeRegistry, TypeRegistry
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.component import ComponentGroup
-from nat.data_models.component_ref import AuthenticationRef
-from nat.data_models.component_ref import EmbedderRef
-from nat.data_models.component_ref import FunctionRef
-from nat.data_models.component_ref import LLMRef
-from nat.data_models.component_ref import MemoryRef
-from nat.data_models.component_ref import ObjectStoreRef
-from nat.data_models.component_ref import RetrieverRef
-from nat.data_models.component_ref import TTCStrategyRef
-from nat.data_models.config import Config
-from nat.data_models.config import GeneralConfig
+from nat.data_models.component_ref import (AuthenticationRef,
+                                           EmbedderRef,
+                                           FunctionRef,
+                                           LLMRef,
+                                           MemoryRef,
+                                           ObjectStoreRef,
+                                           RetrieverRef,
+                                           TTCStrategyRef)
+from nat.data_models.config import Config, GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
@@ -59,10 +51,11 @@ from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
-from nat.experimental.decorators.experimental_warning_decorator import experimental
-from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
-from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
-from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.experimental.decorators.experimental_warning_decorator import \
+    experimental
+from nat.experimental.test_time_compute.models.stage_enums import (PipelineTypeEnum, StageTypeEnum)
+from nat.experimental.test_time_compute.models.strategy_base import \
+    StrategyBase
 from nat.memory.interfaces import MemoryEditor
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
@@ -420,8 +413,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Wrap in the correct wrapper
             return tool_wrapper_reg.build_fn(fn_name, fn.instance, self)
         except Exception as e:
-            logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
-            raise e
+            logger.error("Error fetching tool `%s`: %s", fn_name, e, exc_info=True)
+            raise
 
     @override
     async def add_llm(self, name: str | LLMRef, config: LLMBaseConfig):
@@ -436,8 +429,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             self._llms[name] = ConfiguredLLM(config=config, instance=info_obj)
         except Exception as e:
-            logger.error("Error adding llm `%s` with config `%s`", name, config, exc_info=True)
-            raise e
+            logger.error("Error adding llm `%s` with config `%s`: %s", name, config, e, exc_info=True)
+            raise
 
     @override
     async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str):
@@ -457,8 +450,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Return a frameworks specific client
             return client
         except Exception as e:
-            logger.error("Error getting llm `%s` with wrapper `%s`", llm_name, wrapper_type, exc_info=True)
-            raise e
+            logger.error("Error getting llm `%s` with wrapper `%s`: %s", llm_name, wrapper_type, e, exc_info=True)
+            raise
 
     @override
     def get_llm_config(self, llm_name: str | LLMRef) -> LLMBaseConfig:
@@ -508,8 +501,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             return info_obj
         except Exception as e:
-            logger.error("Error adding authentication `%s` with config `%s`", name, config, exc_info=True)
-            raise e
+            logger.error("Error adding authentication `%s` with config `%s`: %s", name, config, e, exc_info=True)
+            raise
 
     @override
     async def get_auth_provider(self, auth_provider_name: str) -> AuthProviderBase:
@@ -552,9 +545,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             self._embedders[name] = ConfiguredEmbedder(config=config, instance=info_obj)
         except Exception as e:
-            logger.error("Error adding embedder `%s` with config `%s`", name, config, exc_info=True)
-
-            raise e
+            logger.error("Error adding embedder `%s` with config `%s`: %s", name, config, e, exc_info=True)
+            raise
 
     @override
     async def get_embedder(self, embedder_name: str | EmbedderRef, wrapper_type: LLMFrameworkEnum | str):
@@ -574,8 +566,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Return a frameworks specific client
             return client
         except Exception as e:
-            logger.error("Error getting embedder `%s` with wrapper `%s`", embedder_name, wrapper_type, exc_info=True)
-            raise e
+            logger.error("Error getting embedder `%s` with wrapper `%s`: %s",
+                         embedder_name,
+                         wrapper_type,
+                         e,
+                         exc_info=True)
+            raise
 
     @override
     def get_embedder_config(self, embedder_name: str | EmbedderRef) -> EmbedderBaseConfig:
@@ -660,9 +656,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             self._retrievers[name] = ConfiguredRetriever(config=config, instance=info_obj)
 
         except Exception as e:
-            logger.error("Error adding retriever `%s` with config `%s`", name, config, exc_info=True)
-
-            raise e
+            logger.error("Error adding retriever `%s` with config `%s`: %s", name, config, e, exc_info=True)
+            raise
 
         # return info_obj
 
@@ -687,8 +682,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Return a frameworks specific client
             return client
         except Exception as e:
-            logger.error("Error getting retriever `%s` with wrapper `%s`", retriever_name, wrapper_type, exc_info=True)
-            raise e
+            logger.error("Error getting retriever `%s` with wrapper `%s`: %s",
+                         retriever_name,
+                         wrapper_type,
+                         e,
+                         exc_info=True)
+            raise
 
     @override
     async def get_retriever_config(self, retriever_name: str | RetrieverRef) -> RetrieverBaseConfig:
@@ -712,9 +711,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             self._ttc_strategies[name] = ConfiguredTTCStrategy(config=config, instance=info_obj)
 
         except Exception as e:
-            logger.error("Error adding TTC strategy `%s` with config `%s`", name, config, exc_info=True)
-
-            raise e
+            logger.error("Error adding TTC strategy `%s` with config `%s`: %s", name, config, e, exc_info=True)
+            raise
 
     @override
     async def get_ttc_strategy(self,
@@ -742,8 +740,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             return instance
         except Exception as e:
-            logger.error("Error getting TTC strategy `%s`", strategy_name, exc_info=True)
-            raise e
+            logger.error("Error getting TTC strategy `%s`: %s", strategy_name, e, exc_info=True)
+            raise
 
     @override
     async def get_ttc_strategy_config(self,
@@ -1106,6 +1104,86 @@ class ChildBuilder(Builder):
     @override
     async def get_retriever_config(self, retriever_name: str) -> RetrieverBaseConfig:
         return await self._workflow_builder.get_retriever_config(retriever_name=retriever_name)
+
+    @override
+    def get_user_manager(self) -> UserManagerHolder:
+        return self._workflow_builder.get_user_manager()
+
+    @override
+    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
+        return self._workflow_builder.get_function_dependencies(fn_name)
+
+    @override
+    def get_user_manager(self) -> UserManagerHolder:
+        return self._workflow_builder.get_user_manager()
+
+    @override
+    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
+        return self._workflow_builder.get_function_dependencies(fn_name)
+
+    @override
+    def get_user_manager(self) -> UserManagerHolder:
+        return self._workflow_builder.get_user_manager()
+
+    @override
+    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
+        return self._workflow_builder.get_function_dependencies(fn_name)
+
+    @override
+    def get_user_manager(self) -> UserManagerHolder:
+        return self._workflow_builder.get_user_manager()
+
+    @override
+    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
+        return self._workflow_builder.get_function_dependencies(fn_name)
+
+    @override
+    def get_user_manager(self) -> UserManagerHolder:
+        return self._workflow_builder.get_user_manager()
+
+    @override
+    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
+        return self._workflow_builder.get_function_dependencies(fn_name)
+
+    @override
+    def get_user_manager(self) -> UserManagerHolder:
+        return self._workflow_builder.get_user_manager()
+
+    @override
+    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
+        return self._workflow_builder.get_function_dependencies(fn_name)
+
+    @override
+    def get_user_manager(self) -> UserManagerHolder:
+        return self._workflow_builder.get_user_manager()
+
+    @override
+    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
+        return self._workflow_builder.get_function_dependencies(fn_name)
+
+    @override
+    def get_user_manager(self) -> UserManagerHolder:
+        return self._workflow_builder.get_user_manager()
+
+    @override
+    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
+        return self._workflow_builder.get_function_dependencies(fn_name)
+
+    @override
+    def get_user_manager(self) -> UserManagerHolder:
+        return self._workflow_builder.get_user_manager()
+
+    @override
+    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
+        return self._workflow_builder.get_function_dependencies(fn_name)
+
+    @override
+    def get_user_manager(self) -> UserManagerHolder:
+        return self._workflow_builder.get_user_manager()
+
+    @override
+    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
+        return self._workflow_builder.get_function_dependencies(fn_name)
 
     @override
     def get_user_manager(self) -> UserManagerHolder:

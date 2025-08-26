@@ -27,16 +27,15 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from nat.agent.base import AGENT_CALL_LOG_MESSAGE
-from nat.agent.base import AGENT_LOG_PREFIX
-from nat.agent.base import INPUT_SCHEMA_MESSAGE
-from nat.agent.base import NO_INPUT_ERROR_MESSAGE
-from nat.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
-from nat.agent.base import AgentDecision
-from nat.agent.base import BaseAgent
+from nat.agent.base import (AGENT_CALL_LOG_MESSAGE,
+                            AGENT_LOG_PREFIX,
+                            INPUT_SCHEMA_MESSAGE,
+                            NO_INPUT_ERROR_MESSAGE,
+                            TOOL_NOT_FOUND_ERROR_MESSAGE,
+                            AgentDecision,
+                            BaseAgent)
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +99,7 @@ class ReWOOAgentGraph(BaseAgent):
                              tool_name,
                              ex,
                              exc_info=True)
-            raise ex
+            raise
 
     @staticmethod
     def _get_current_step(state: ReWOOGraphState) -> int:
@@ -203,7 +202,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         except Exception as ex:
             logger.exception("%s Failed to call planner_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
-            raise ex
+            raise
 
     async def executor_node(self, state: ReWOOGraphState):
         try:
@@ -269,22 +268,15 @@ class ReWOOAgentGraph(BaseAgent):
                                                   RunnableConfig(callbacks=self.callbacks),
                                                   max_retries=3)
 
-            # ToolMessage only accepts str or list[str | dict] as content.
-            # Convert into list if the response is a dict.
-            if isinstance(tool_response, dict):
-                tool_response = [tool_response]
-
-            tool_response_message = ToolMessage(name=tool, tool_call_id=tool, content=tool_response)
-
             if self.detailed_logs:
                 self._log_tool_response(requested_tool.name, tool_input_parsed, str(tool_response))
 
-            intermediate_results[placeholder] = tool_response_message
+            intermediate_results[placeholder] = tool_response
             return {"intermediate_results": intermediate_results}
 
         except Exception as ex:
             logger.exception("%s Failed to call executor_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
-            raise ex
+            raise
 
     async def solver_node(self, state: ReWOOGraphState):
         try:
@@ -328,7 +320,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         except Exception as ex:
             logger.exception("%s Failed to call solver_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
-            raise ex
+            raise
 
     async def conditional_edge(self, state: ReWOOGraphState):
         try:
@@ -373,7 +365,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         except Exception as ex:
             logger.exception("%s Failed to build ReWOO Graph: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
-            raise ex
+            raise
 
     async def build_graph(self):
         try:
@@ -382,7 +374,7 @@ class ReWOOAgentGraph(BaseAgent):
             return self.graph
         except Exception as ex:
             logger.exception("%s Failed to build ReWOO Graph: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
-            raise ex
+            raise
 
     @staticmethod
     def validate_planner_prompt(planner_prompt: str) -> bool:
@@ -411,4 +403,7 @@ class ReWOOAgentGraph(BaseAgent):
             error_text = "\n".join(errors)
             logger.exception("%s %s", AGENT_LOG_PREFIX, error_text)
             raise ValueError(error_text)
+        return True
+        return True
+        return True
         return True

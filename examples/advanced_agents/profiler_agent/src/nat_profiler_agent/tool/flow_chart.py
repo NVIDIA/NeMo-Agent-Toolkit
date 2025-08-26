@@ -104,7 +104,7 @@ async def flow_chart(config: FlowChartConfig, builder: Builder):
         )
     except Exception as e:
         logger.error("Error in flow_chart tool: %s", e, exc_info=True)
-        raise e
+        raise
     finally:
         # clean up temp directory
         import shutil

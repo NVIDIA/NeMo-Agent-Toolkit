@@ -15,9 +15,7 @@
 
 import json
 import statistics
-from datetime import UTC
-from datetime import datetime
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import requests
 from pydantic import Field
@@ -172,7 +170,7 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
 
         except Exception as e:
             utils.logger.error("Error during telemetry metrics host performance check: %s", str(e))
-            raise e
+            raise
 
     yield FunctionInfo.from_fn(
         _arun,

@@ -114,7 +114,7 @@ async def hardware_check_tool(config: HardwareCheckToolConfig, builder: Builder)
         except Exception as e:
             # Log and re-raise any errors that occur
             utils.logger.error("Error during hardware check: %s", str(e))
-            raise e
+            raise
 
     yield FunctionInfo.from_fn(
         _arun,

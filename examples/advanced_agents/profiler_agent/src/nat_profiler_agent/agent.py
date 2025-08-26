@@ -15,21 +15,15 @@
 
 import logging
 import uuid
-from typing import Any
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage
-from langchain_core.messages import BaseMessage
-from langchain_core.messages import HumanMessage
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage, ToolMessage)
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
-
-from nat_profiler_agent.data_models import ExecPlan
-from nat_profiler_agent.data_models import TraceInfo
+from nat_profiler_agent.data_models import ExecPlan, TraceInfo
 from nat_profiler_agent.tool.flow_chart import FlowChartOutput
 from nat_profiler_agent.tool.px_query import PxQueryOutput
 from nat_profiler_agent.tool.token_usage import TokenUsageOutput
@@ -116,8 +110,8 @@ class ProfilerAgent:
             logger.info("ProfilerAgent Graph built and compiled successfully")
             return self.graph
         except Exception as ex:
-            logger.exception("Failed to build ProfilerAgent Graph: %s", ex, exc_info=ex)
-            raise ex
+            logger.exception("Failed to build ProfilerAgent Graph: %s", ex, exc_info=True)
+            raise
 
     async def agent_node(self, state: ProfilerAgentState):
         try:
@@ -143,7 +137,7 @@ class ProfilerAgent:
             return state
         except Exception as ex:
             logger.exception("Failed to call agent_node: %s", ex, exc_info=True)
-            raise ex
+            raise
 
     async def executor_node(self, state: ProfilerAgentState):
         # check if the tool is px_query
@@ -158,7 +152,7 @@ class ProfilerAgent:
                 self.update_state(state, tool_result)
         except Exception as ex:
             logger.exception("Failed to call executor_node: %s", ex, exc_info=True)
-            raise ex
+            raise
         return state
 
     async def response_composer_node(self, state: ProfilerAgentState):
@@ -171,7 +165,7 @@ class ProfilerAgent:
             return state
         except Exception as ex:
             logger.exception("Failed to call response_composer_node: %s", ex, exc_info=True)
-            raise ex
+            raise
 
     def update_state(self, state: ProfilerAgentState, tool_response: Any) -> ProfilerAgentState:
         """Update the state with the tool response."""

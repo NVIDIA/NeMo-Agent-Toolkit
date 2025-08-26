@@ -65,7 +65,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             self.bound_llm = llm.bind_tools(tools)
         except NotImplementedError as ex:
             logger.error("%s Failed to bind tools: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
-            raise ex
+            raise
 
         if prompt is not None:
             system_prompt = SystemMessage(content=prompt)
@@ -101,7 +101,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             return state
         except Exception as ex:
             logger.exception("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
-            raise ex
+            raise
 
     async def conditional_edge(self, state: ToolCallAgentGraphState):
         try:
@@ -144,7 +144,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             return state
         except Exception as ex:
             logger.exception("%s Failed to call tool_node: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
-            raise ex
+            raise
 
     async def build_graph(self):
         try:
@@ -161,7 +161,7 @@ class ToolCallAgentGraph(DualNodeAgent):
                 ex,
                 exc_info=ex,
             )
-            raise ex
+            raise
 
 
 def create_tool_calling_agent_prompt(config: "ToolCallAgentWorkflowConfig") -> str | None:

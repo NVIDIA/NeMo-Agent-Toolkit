@@ -15,8 +15,7 @@
 
 import logging
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
@@ -24,8 +23,7 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import RetrieverRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.retriever.interface import Retriever
-from nat.retriever.models import RetrieverError
-from nat.retriever.models import RetrieverOutput
+from nat.retriever.models import RetrieverError, RetrieverOutput
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +75,9 @@ async def retriever_tool(config: RetrieverConfig, builder: Builder):
             return retrieved_context
 
         except RetrieverError as e:
+            logger.error("Retriever threw an error: %s. Returning an empty response.", e, exc_info=True)
             if config.raise_errors:
-                raise e
-            logger.warning("Retriever threw an error: %s. Returning an empty response.", e)
+                raise
             return RetrieverOutput(results=[])
 
     yield FunctionInfo.from_fn(

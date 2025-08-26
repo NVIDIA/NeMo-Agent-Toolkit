@@ -23,17 +23,12 @@ from uuid import uuid4
 from pydantic import BaseModel
 from tqdm import tqdm
 
-from nat.data_models.evaluate import EvalConfig
-from nat.data_models.evaluate import JobEvictionPolicy
-from nat.eval.config import EvaluationRunConfig
-from nat.eval.config import EvaluationRunOutput
+from nat.data_models.evaluate import EvalConfig, JobEvictionPolicy
+from nat.eval.config import EvaluationRunConfig, EvaluationRunOutput
 from nat.eval.dataset_handler.dataset_handler import DatasetHandler
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutput
-from nat.eval.usage_stats import UsageStats
-from nat.eval.usage_stats import UsageStatsItem
-from nat.eval.usage_stats import UsageStatsLLM
+from nat.eval.evaluator.evaluator_model import (EvalInput, EvalInputItem,
+                                                EvalOutput)
+from nat.eval.usage_stats import UsageStats, UsageStatsItem, UsageStatsLLM
 from nat.eval.utils.output_uploader import OutputUploader
 from nat.eval.utils.weave_eval import WeaveEvaluationIntegration
 from nat.profiler.data_models import ProfilerResults
@@ -92,7 +87,8 @@ class EvaluationRun:
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
         # get the prompt and completion tokens from the intermediate steps
-        from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+        from nat.profiler.intermediate_property_adapter import \
+            IntermediatePropertyAdaptor
         steps = [IntermediatePropertyAdaptor.from_intermediate_step(step) for step in item.trajectory]
         usage_stats_per_llm = {}
         total_tokens = 0
@@ -168,15 +164,15 @@ class EvaluationRun:
                 intermediate_future = None
 
                 try:
-
                     # Start usage stats and intermediate steps collection in parallel
                     intermediate_future = pull_intermediate()
                     runner_result = runner.result()
                     base_output = await runner_result
                     intermediate_steps = await intermediate_future
                 except NotImplementedError as e:
+                    logger.exception("Failed to run the workflow: %s", e, exc_info=True)
                     # raise original error
-                    raise e
+                    raise
                 except Exception as e:
                     logger.exception("Failed to run the workflow: %s", e, exc_info=True)
                     # stop processing if a workflow error occurs
@@ -389,8 +385,8 @@ class EvaluationRun:
     def apply_overrides(self):
         from nat.cli.cli_utils.config_override import load_and_override_config
         from nat.data_models.config import Config
-        from nat.runtime.loader import PluginTypes
-        from nat.runtime.loader import discover_and_register_plugins
+        from nat.runtime.loader import (PluginTypes,
+                                        discover_and_register_plugins)
         from nat.utils.data_models.schema_validator import validate_schema
 
         # Register plugins before validation
@@ -552,6 +548,12 @@ class EvaluationRun:
             await output_uploader.upload_directory()
 
         return EvaluationRunOutput(workflow_output_file=self.workflow_output_file,
+                                   evaluator_output_files=self.evaluator_output_files,
+                                   workflow_interrupted=self.workflow_interrupted,
+                                   eval_input=self.eval_input,
+                                   evaluation_results=self.evaluation_results,
+                                   usage_stats=self.usage_stats,
+                                   profiler_results=profiler_results)
                                    evaluator_output_files=self.evaluator_output_files,
                                    workflow_interrupted=self.workflow_interrupted,
                                    eval_input=self.eval_input,

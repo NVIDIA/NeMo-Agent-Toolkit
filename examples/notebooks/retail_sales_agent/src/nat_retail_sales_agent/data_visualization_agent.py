@@ -21,8 +21,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
-from nat.data_models.component_ref import FunctionRef
-from nat.data_models.component_ref import LLMRef
+from nat.data_models.component_ref import FunctionRef, LLMRef
 from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -43,11 +42,8 @@ class DataVisualizationAgentConfig(FunctionBaseConfig, name="data_visualization_
 
 @register_function(config_type=DataVisualizationAgentConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def data_visualization_agent_function(config: DataVisualizationAgentConfig, builder: Builder):
-    from langchain_core.messages import AIMessage
-    from langchain_core.messages import BaseMessage
-    from langchain_core.messages import HumanMessage
-    from langchain_core.messages import SystemMessage
-    from langchain_core.messages import ToolMessage
+    from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
+                                         SystemMessage, ToolMessage)
     from langgraph.graph import StateGraph
     from langgraph.prebuilt import ToolNode
     from pydantic import BaseModel
@@ -166,8 +162,8 @@ async def data_visualization_agent_function(config: DataVisualizationAgentConfig
         logger.info("Data Visualization Agent Graph built and compiled successfully")
 
     except Exception as ex:
-        logger.exception("Failed to build Data Visualization Agent Graph: %s", ex, exc_info=ex)
-        raise ex
+        logger.exception("Failed to build Data Visualization Agent Graph: %s", ex, exc_info=True)
+        raise
 
     async def _arun(user_query: str) -> str:
         """
@@ -186,6 +182,11 @@ async def data_visualization_agent_function(config: DataVisualizationAgentConfig
 
     try:
         yield FunctionInfo.from_fn(_arun, description=config.description)
+
+    except GeneratorExit:
+        print("Function exited early!")
+    finally:
+        print("Cleaning up retail_sales_agent workflow.")
 
     except GeneratorExit:
         print("Function exited early!")

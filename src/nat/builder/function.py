@@ -156,7 +156,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                 return result
             except Exception as e:
                 logger.error("Error with ainvoke in function with input: %s.", value, exc_info=True)
-                raise e
+                raise
 
     @typing.final
     async def acall_invoke(self, *args, **kwargs):
@@ -193,7 +193,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                 args,
                 kwargs,
                 self.input_schema)
-            raise e
+            raise
 
     @abstractmethod
     async def _astream(self, value: InputT) -> AsyncGenerator[StreamingOutputT]:
@@ -253,7 +253,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
             except Exception as e:
                 logger.error("Error with astream in function with input: %s.", value, exc_info=True)
-                raise e
+                raise
 
     @typing.final
     async def acall_stream(self, *args, **kwargs):
@@ -294,7 +294,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                     args,
                     kwargs,
                     self.input_schema)
-                raise e
+                raise
 
 
 class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):

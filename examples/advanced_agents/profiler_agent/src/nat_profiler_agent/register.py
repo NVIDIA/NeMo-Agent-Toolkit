@@ -109,8 +109,8 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
 
     try:
         yield FunctionInfo.create(single_fn=_profiler_agent)
-    except Exception as e:
+    except Exception:
         logger.error("Error in profiler agent, exit early", exc_info=True)
-        raise e
+        raise
     finally:
         logger.info("Profiler agent finished")

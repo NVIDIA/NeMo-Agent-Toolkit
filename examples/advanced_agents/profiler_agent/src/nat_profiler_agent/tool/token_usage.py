@@ -105,7 +105,7 @@ async def token_usage(config: TokenUsageConfig, builder: Builder):
         )
     except Exception as e:
         logger.error("Error in token_usage tool: %s", e, exc_info=True)
-        raise e
+        raise
     finally:
         # We won't clean up temp_dir here since the image paths will be needed later
         pass

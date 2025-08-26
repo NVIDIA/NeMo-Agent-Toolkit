@@ -159,7 +159,7 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig, bu
 
         except Exception as e:
             utils.logger.error("Error during host performance check: %s", str(e))
-            raise e
+            raise
 
     yield FunctionInfo.from_fn(
         _arun,

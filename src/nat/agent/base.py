@@ -16,17 +16,14 @@
 import asyncio
 import json
 import logging
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
 
 from colorama import Fore
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage
-from langchain_core.messages import BaseMessage
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph.graph import CompiledGraph
@@ -157,6 +154,11 @@ class BaseAgent(ABC):
                     return ToolMessage(name=tool.name,
                                        tool_call_id=tool.name,
                                        content=f"The tool {tool.name} provided an empty response.")
+
+                # ToolMessage only accepts str or list[str | dict] as content.
+                # Convert into list if the response is a dict.
+                if isinstance(response, dict):
+                    response = [response]
 
                 return ToolMessage(name=tool.name, tool_call_id=tool.name, content=response)
 

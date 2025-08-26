@@ -19,34 +19,28 @@ import re
 import typing
 from json import JSONDecodeError
 
-from langchain_core.agents import AgentAction
-from langchain_core.agents import AgentFinish
+from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks.base import AsyncCallbackHandler
-from langchain_core.language_models import BaseChatModel
-from langchain_core.language_models import LanguageModelInput
+from langchain_core.language_models import BaseChatModel, LanguageModelInput
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.prompts import MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from nat.agent.base import AGENT_CALL_LOG_MESSAGE
-from nat.agent.base import AGENT_LOG_PREFIX
-from nat.agent.base import INPUT_SCHEMA_MESSAGE
-from nat.agent.base import NO_INPUT_ERROR_MESSAGE
-from nat.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
-from nat.agent.base import AgentDecision
+from nat.agent.base import (AGENT_CALL_LOG_MESSAGE,
+                            AGENT_LOG_PREFIX,
+                            INPUT_SCHEMA_MESSAGE,
+                            NO_INPUT_ERROR_MESSAGE,
+                            TOOL_NOT_FOUND_ERROR_MESSAGE,
+                            AgentDecision)
 from nat.agent.dual_node import DualNodeAgent
-from nat.agent.react_agent.output_parser import ReActOutputParser
-from nat.agent.react_agent.output_parser import ReActOutputParserException
-from nat.agent.react_agent.prompt import SYSTEM_PROMPT
-from nat.agent.react_agent.prompt import USER_PROMPT
+from nat.agent.react_agent.output_parser import (ReActOutputParser, ReActOutputParserException)
+from nat.agent.react_agent.prompt import SYSTEM_PROMPT, USER_PROMPT
 
 if typing.TYPE_CHECKING:
     from nat.agent.react_agent.register import ReActAgentWorkflowConfig
@@ -129,7 +123,7 @@ class ReActAgentGraph(DualNodeAgent):
                              tool_name,
                              ex,
                              exc_info=True)
-            raise ex
+            raise
 
     async def agent_node(self, state: ReActGraphState):
         try:
@@ -234,7 +228,7 @@ class ReActAgentGraph(DualNodeAgent):
                     working_state.append(HumanMessage(content=str(ex.observation)))
         except Exception as ex:
             logger.exception("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
-            raise ex
+            raise
 
     async def conditional_edge(self, state: ReActGraphState):
         try:
@@ -329,8 +323,8 @@ class ReActAgentGraph(DualNodeAgent):
             logger.debug("%s ReAct Graph built and compiled successfully", AGENT_LOG_PREFIX)
             return self.graph
         except Exception as ex:
-            logger.exception("%s Failed to build ReAct Graph: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
-            raise ex
+            logger.exception("%s Failed to build ReAct Graph: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
+            raise
 
     @staticmethod
     def validate_system_prompt(system_prompt: str) -> bool:
