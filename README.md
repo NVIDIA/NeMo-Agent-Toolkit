@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/nvidia-nemo-agent-toolkit-badge.png)](https://mseep.ai/app/nvidia-nemo-agent-toolkit)
+
 <!--
 SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
