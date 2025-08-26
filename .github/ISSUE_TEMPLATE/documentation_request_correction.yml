@@ -16,7 +16,7 @@
 name: Documentation - Correction/Update Request
 description: Request corrections or updates to existing documentation
 type: "Documentation"
-labels: ["doc"]
+labels: ["doc", "Needs Triage"]
 
 body:
   - type: markdown

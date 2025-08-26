@@ -95,20 +95,6 @@ def mock_aiohttp_session_fixture():
         yield mock_aiohttp_session
 
 
-@pytest.fixture(name="restore_environ")
-def restore_environ_fixture():
-    orig_vars = os.environ.copy()
-    yield os.environ
-
-    # Iterating over a copy of the keys as we will potentially be deleting keys in the loop
-    for key in list(os.environ.keys()):
-        orig_val = orig_vars.get(key)
-        if orig_val is not None:
-            os.environ[key] = orig_val
-        else:
-            del (os.environ[key])
-
-
 @pytest.fixture(name="set_test_api_keys")
 def set_test_api_keys_fixture(restore_environ):
     for key in ("NGC_API_KEY", "NVD_API_KEY", "NVIDIA_API_KEY", "OPENAI_API_KEY", "SERPAPI_API_KEY"):
