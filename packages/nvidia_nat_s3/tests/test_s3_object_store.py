@@ -36,18 +36,21 @@ def fixture_s3_server(fail_missing: bool):
         client = session.create_client("s3",
                                        aws_access_key_id="minioadmin",
                                        aws_secret_access_key="minioadmin",
-                                       region_name=None,
                                        endpoint_url="http://localhost:9000")
-        client.list_directory_buckets()
+        client.head_bucket(Bucket="test")
         yield
     except ImportError:
         if fail_missing:
             raise
         pytest.skip("aioboto3 not installed, skipping S3 tests")
     except Exception as e:
-        if fail_missing:
+        import botocore.exceptions
+        if isinstance(e, botocore.exceptions.ClientError) and e.response['Error']['Code'] == '404':
+            yield  # Bucket does not exist, but server is reachable
+        elif fail_missing:
             raise
-        pytest.skip(f"Error connecting to S3 server: {e}, skipping S3 tests")
+        else:
+            pytest.skip(f"Error connecting to S3 server: {e}, skipping S3 tests")
 
 
 @pytest.mark.integration
