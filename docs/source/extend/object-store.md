@@ -156,7 +156,8 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
    @register_object_store(config_type=MyCustomObjectStoreConfig)
    async def my_custom_object_store(config: MyCustomObjectStoreConfig, _builder: Builder):
        from .my_custom_object_store import MyCustomObjectStore
-       yield MyCustomObjectStore(**config.model_dump(exclude={"type"}))
+       async with MyCustomObjectStore(**config.model_dump(exclude={"type"})) as store:
+           yield store
    ```
 
 4. **Use in config**: In your NeMo Agent toolkit config, you can do something like:
