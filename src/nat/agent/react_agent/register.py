@@ -65,6 +65,9 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
         default=None,
         description="Provides the SYSTEM_PROMPT to use with the agent")  # defaults to SYSTEM_PROMPT in prompt.py
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
+    log_response_max_chars: int = Field(
+        default=1000,
+        description="Maximum number of characters to display in logs when logging tool responses.")
     use_openai_api: bool = Field(default=False,
                                  description=("Use OpenAI API for the input/output types to the function. "
                                               "If False, strings will be used."))
@@ -100,6 +103,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         tools=tools,
         use_tool_schema=config.include_tool_input_schema_in_tool_description,
         detailed_logs=config.verbose,
+        log_response_max_chars=config.log_response_max_chars,
         retry_agent_response_parsing_errors=config.retry_agent_response_parsing_errors,
         parse_agent_response_max_retries=config.parse_agent_response_max_retries,
         tool_call_max_retries=config.tool_call_max_retries,
