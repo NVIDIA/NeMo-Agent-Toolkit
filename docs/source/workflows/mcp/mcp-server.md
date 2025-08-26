@@ -32,7 +32,7 @@ nat mcp --config_file examples/getting_started/simple_calculator/configs/config.
 ```
 
 This will load the workflow configuration from the specified file, start an MCP server on the default host (localhost) and port (9901), and publish all tools from the workflow as MCP tools.
-The MCP server will be available at `http://localhost:9901/mcp/` using streamable-http transport. You can also use the `sse` transport for backwards compatibility via the `--transport` flag for example:
+The MCP server will be available at `http://localhost:9901/mcp` using streamable-http transport. You can also use the `sse` transport for backwards compatibility via the `--transport` flag for example:
 ```bash
 nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml --transport sse
 ```
@@ -58,7 +58,7 @@ nat mcp --config_file examples/getting_started/simple_calculator/configs/config.
 
 ## Displaying MCP Tools published by an MCP server
 
-To list the tools published by the MCP server you can use the `nat info mcp` command. This command acts as a MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp/` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
+To list the tools published by the MCP server you can use the `nat info mcp` command. This command acts as a MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
 
 ```bash
 nat info mcp
@@ -116,25 +116,25 @@ In this example, we will use NeMo Agent toolkit as both a MCP client and a MCP s
 nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
 ```
 
-The functions in `config-mcp-math.yml` are configured to use the calculator tools published by the MCP server running on `http://localhost:9901/mcp/` using streamable-http transport.
+The functions in `config-mcp-math.yml` are configured to use the calculator tools published by the MCP server running on `http://localhost:9901/mcp` using streamable-http transport.
 `examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml`:
 ```yaml
 functions:
   calculator_multiply:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp/"
+    url: "http://localhost:9901/mcp"
     transport: "streamable-http"
     mcp_tool_name: calculator_multiply
     description: "Returns the product of two numbers"
   calculator_inequality:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp/"
+    url: "http://localhost:9901/mcp"
     transport: "streamable-http"
     mcp_tool_name: calculator_inequality
     description: "Returns the inequality of two numbers"
   calculator_divide:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp/"
+    url: "http://localhost:9901/mcp"
     transport: "streamable-http"
     mcp_tool_name: calculator_divide
     description: "Returns the quotient of two numbers"
@@ -142,7 +142,7 @@ functions:
     _type: current_datetime
   calculator_subtract:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp/"
+    url: "http://localhost:9901/mcp"
     transport: "streamable-http"
     mcp_tool_name: calculator_subtract
     description: "Returns the difference of two numbers"

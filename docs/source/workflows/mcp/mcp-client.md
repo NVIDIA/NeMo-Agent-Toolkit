@@ -71,7 +71,7 @@ For streamable-http mode, you only need to specify the server URL and the tool n
 functions:
   mcp_tool_a:
     _type: mcp_tool_wrapper
-    url: "http://localhost:8080/mcp/"
+    url: "http://localhost:8080/mcp"
     mcp_tool_name: tool_a
   mcp_tool_b:
     _type: mcp_tool_wrapper
@@ -115,7 +115,7 @@ functions:
     env:
       GITHUB_PERSONAL_ACCESS_TOKEN: "${input:github_token}"
 ```
-Note: STDIO mode support is experimental. Note that you should use `mcp_client` instead of `mcp_tool_wrapper` as the function type for `stdio` mode. `mcp_client` allows you to connect to a MCP server, dynamically discover the tools it serves, and use them as NeMo Agent toolkit functions.
+Note: STDIO mode support is experimental. Note that you should use `mcp_client` instead of `mcp_tool_wrapper` as the function type for `stdio` mode. `mcp_client` allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. Details on how to use `mcp_client` will be provided in future commits as the feature is developed. Also see `examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml` for a complete example.
 
 Once configured, a Pydantic input schema will be generated based on the input schema provided by the MCP server. This input schema is included with the configured function and is accessible by any agent or function calling the configured `mcp_tool_wrapper` function. The `mcp_tool_wrapper` function can accept the following type of arguments as long as they satisfy the input schema:
  * a validated instance of it's input schema
@@ -167,7 +167,7 @@ functions:
       args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
 ```
 
-This configuration launches the MCP server directly as a `subprocess` instead of connecting to a running server. Run it with:
+This configuration launches the MCP server directly as a `subprocess` instead of connecting to a running server. It dynamically discovers the tools served by the MCP server and registers them as NeMo Agent toolkit functions. Run it with:
 ```bash
 nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```

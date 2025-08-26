@@ -54,7 +54,7 @@ llms:
 
 workflow:
   _type: react_agent
-  # ideally we should be able to fetch all dynamic tools without enumerating them here
+  # List all tools that are needed for the workflow from the MCP servers
   tool_names: ["get_current_time_mcp_tool", "calculator_multiply", "calculator_divide", "calculator_subtract", "calculator_inequality"]
   llm_name: nim_llm
   verbose: true
