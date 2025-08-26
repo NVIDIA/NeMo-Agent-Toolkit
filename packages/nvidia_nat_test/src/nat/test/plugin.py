@@ -186,10 +186,11 @@ def restore_environ_fixture():
     orig_vars = os.environ.copy()
     yield os.environ
 
+    for key, value in orig_vars.items():
+        os.environ[key] = value
+
+    # Delete any new environment variables
     # Iterating over a copy of the keys as we will potentially be deleting keys in the loop
     for key in list(os.environ.keys()):
-        orig_val = orig_vars.get(key)
-        if orig_val is not None:
-            os.environ[key] = orig_val
-        else:
+        if key not in orig_vars:
             del (os.environ[key])

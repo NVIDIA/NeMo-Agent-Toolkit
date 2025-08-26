@@ -45,7 +45,7 @@ def test_require_env_variables(fail_on_missing: bool, env_vars: dict[str, str | 
             os.environ[env_var] = value
         else:
             has_missing = True
-            assert env_var not in os.environ
+            os.environ.pop(env_var, None)
 
     if has_missing:
         if fail_on_missing:
