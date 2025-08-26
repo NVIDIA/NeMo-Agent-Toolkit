@@ -17,11 +17,13 @@ import dataclasses
 import inspect
 import logging
 import warnings
-from contextlib import (AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager)
+from contextlib import (AbstractAsyncContextManager, AsyncExitStack,
+                        asynccontextmanager)
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder, UserManagerHolder
-from nat.builder.component_utils import (ComponentInstanceData, build_dependency_sequence)
+from nat.builder.component_utils import (ComponentInstanceData,
+                                         build_dependency_sequence)
 from nat.builder.context import Context, ContextState
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -33,13 +35,9 @@ from nat.builder.workflow import Workflow
 from nat.cli.type_registry import GlobalTypeRegistry, TypeRegistry
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.component import ComponentGroup
-from nat.data_models.component_ref import (AuthenticationRef,
-                                           EmbedderRef,
-                                           FunctionRef,
-                                           LLMRef,
-                                           MemoryRef,
-                                           ObjectStoreRef,
-                                           RetrieverRef,
+from nat.data_models.component_ref import (AuthenticationRef, EmbedderRef,
+                                           FunctionRef, LLMRef, MemoryRef,
+                                           ObjectStoreRef, RetrieverRef,
                                            TTCStrategyRef)
 from nat.data_models.config import Config, GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
@@ -53,7 +51,8 @@ from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import \
     experimental
-from nat.experimental.test_time_compute.models.stage_enums import (PipelineTypeEnum, StageTypeEnum)
+from nat.experimental.test_time_compute.models.stage_enums import (
+    PipelineTypeEnum, StageTypeEnum)
 from nat.experimental.test_time_compute.models.strategy_base import \
     StrategyBase
 from nat.memory.interfaces import MemoryEditor
@@ -1104,86 +1103,6 @@ class ChildBuilder(Builder):
     @override
     async def get_retriever_config(self, retriever_name: str) -> RetrieverBaseConfig:
         return await self._workflow_builder.get_retriever_config(retriever_name=retriever_name)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._workflow_builder.get_user_manager()
-
-    @override
-    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
-        return self._workflow_builder.get_function_dependencies(fn_name)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._workflow_builder.get_user_manager()
-
-    @override
-    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
-        return self._workflow_builder.get_function_dependencies(fn_name)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._workflow_builder.get_user_manager()
-
-    @override
-    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
-        return self._workflow_builder.get_function_dependencies(fn_name)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._workflow_builder.get_user_manager()
-
-    @override
-    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
-        return self._workflow_builder.get_function_dependencies(fn_name)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._workflow_builder.get_user_manager()
-
-    @override
-    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
-        return self._workflow_builder.get_function_dependencies(fn_name)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._workflow_builder.get_user_manager()
-
-    @override
-    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
-        return self._workflow_builder.get_function_dependencies(fn_name)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._workflow_builder.get_user_manager()
-
-    @override
-    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
-        return self._workflow_builder.get_function_dependencies(fn_name)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._workflow_builder.get_user_manager()
-
-    @override
-    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
-        return self._workflow_builder.get_function_dependencies(fn_name)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._workflow_builder.get_user_manager()
-
-    @override
-    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
-        return self._workflow_builder.get_function_dependencies(fn_name)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._workflow_builder.get_user_manager()
-
-    @override
-    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
-        return self._workflow_builder.get_function_dependencies(fn_name)
 
     @override
     def get_user_manager(self) -> UserManagerHolder:
