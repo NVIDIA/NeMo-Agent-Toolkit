@@ -42,6 +42,7 @@ class OpenAITraceSourceBase(TraceSourceBase):
     @field_validator("input_value", mode="before")
     @classmethod
     def validate_input_value(cls, v: Any) -> list[OpenAIMessage]:
+        """Validate the input value for the OpenAITraceSource."""
         if v is None:
             raise ValueError("Input value is required")
 
@@ -67,19 +68,34 @@ class OpenAITraceSourceBase(TraceSourceBase):
 
         raise ValueError(f"Invalid input_value format: {v}")
 
+    # @field_validator("metadata", mode="before")
+    # @classmethod
+    # def validate_metadata(cls, v: Any) -> dict[str, Any]:
+    #     """Validate the metadata for the OpenAITraceSource."""
+    #     if v is None:
+    #         return {}
+
+    #     if isinstance(v, str):
+    #         metadata = deserialize_span_attribute(v)
+    #         if not isinstance(metadata, dict):
+    #             raise ValueError(f"Invalid metadata format: {metadata}")
+    #         return metadata
+
+    #     raise ValueError(f"Invalid metadata format: {v}")
+
     @field_validator("metadata", mode="before")
     @classmethod
-    def validate_tools_schema(cls, v: Any) -> dict[str, Any]:
+    def validate_metadata(cls, v: Any) -> "OpenAIMetadata | dict[str, Any]":
+        """Normalize metadata supplied as OpenAIMetadata, dict, or JSON string."""
         if v is None:
             return {}
-
+        if isinstance(v, OpenAIMetadata):
+            return v
         if isinstance(v, str):
-            metadata = deserialize_span_attribute(v)
-            if not isinstance(metadata, dict):
-                raise ValueError(f"Invalid metadata format: {metadata}")
-            return metadata
-
-        raise ValueError(f"Invalid metadata format: {v}")
+            v = deserialize_span_attribute(v)
+        if isinstance(v, dict):
+            return v
+        raise ValueError(f"Invalid metadata format: {v!r}")
 
 
 class OpenAITraceSource(OpenAITraceSourceBase):

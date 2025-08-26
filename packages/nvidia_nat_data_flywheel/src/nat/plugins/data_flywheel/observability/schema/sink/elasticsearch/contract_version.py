@@ -20,11 +20,11 @@ from pydantic import BaseModel
 from nat.plugins.data_flywheel.observability.schema.schema_registry import SchemaRegistry
 
 
-class ElasticsearchContractVersion(str, Enum):
+class ContractVersion(str, Enum):
     """The contract version for Elasticsearch schema."""
 
-    VERSION_1_0 = "1.0"
-    VERSION_1_1 = "1.1"
+    V1_0 = "1.0"
+    V1_1 = "1.1"
 
     def get_contract_class(self) -> type[BaseModel]:
         """Get the Pydantic model class for this contract version."""

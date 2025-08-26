@@ -16,15 +16,16 @@
 from typing import Any
 
 from pydantic import BaseModel
+from pydantic import Field
 
 
 # LangChain message models for validation
 class OpenAIMessage(BaseModel):
-    content: str | None = None
-    additional_kwargs: dict[str, Any] = {}
-    response_metadata: dict[str, Any] = {}
-    type: str
-    name: str | None = None
+    content: str | None = Field(default=None, description="The content of the message.")
+    additional_kwargs: dict[str, Any] = Field(default_factory=dict, description="Additional kwargs for the message.")
+    response_metadata: dict[str, Any] = Field(default_factory=dict, description="Response metadata for the message.")
+    type: str = Field(description="The type of the message.")
+    name: str | None = Field(default=None, description="The name of the message.")
     id: str | None = None
-    example: bool = False
-    tool_call_id: str | None = None
+    example: bool = Field(default=False, description="Whether the message is an example.")
+    tool_call_id: str | None = Field(default=None, description="The tool call ID for the message.")

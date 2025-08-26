@@ -14,6 +14,7 @@
 # limitations under the License.
 
 #  schemas are auto-discovered by the discovery system - no manual imports needed
-from .contract_version import ElasticsearchContractVersion
+from .contract_version import ContractVersion
+from .dfw_es_record import DFWESRecord
 
-__all__ = ["ElasticsearchContractVersion"]
+__all__ = ["DFWESRecord", "ContractVersion"]

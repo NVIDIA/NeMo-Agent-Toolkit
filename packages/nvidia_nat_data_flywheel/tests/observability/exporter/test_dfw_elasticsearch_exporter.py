@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 from nat.builder.context import AIQContextState
 from nat.plugins.data_flywheel.observability.exporter.dfw_elasticsearch_exporter import DFWElasticsearchExporter
-from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ElasticsearchContractVersion
+from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ContractVersion
 
 
 class MockContractSchema(BaseModel):
@@ -57,7 +57,7 @@ class TestDFWElasticsearchExporter:
 
         # Verify initialization completed without errors
         assert exporter is not None
-        assert exporter.contract_version == ElasticsearchContractVersion.VERSION_1_1  # default
+        assert exporter.contract_version == ContractVersion.V1_1  # default
         assert exporter._index == 'test_index'
         assert exporter._elastic_client == mock_elasticsearch_client
 
@@ -86,7 +86,7 @@ class TestDFWElasticsearchExporter:
 
         exporter = DFWElasticsearchExporter(context_state=context_state,
                                             client_id="test_client",
-                                            contract_version=ElasticsearchContractVersion.VERSION_1_0,
+                                            contract_version=ContractVersion.V1_0,
                                             batch_size=50,
                                             flush_interval=2.0,
                                             max_queue_size=500,
@@ -99,7 +99,7 @@ class TestDFWElasticsearchExporter:
 
         # Verify initialization completed without errors
         assert exporter is not None
-        assert exporter.contract_version == ElasticsearchContractVersion.VERSION_1_0
+        assert exporter.contract_version == ContractVersion.V1_0
         assert exporter._index == 'custom_index'
         assert exporter._elastic_client == mock_elasticsearch_client
 
@@ -152,14 +152,12 @@ class TestDFWElasticsearchExporter:
         }
 
         # Test with VERSION_1_0
-        exporter_v1_0 = DFWElasticsearchExporter(contract_version=ElasticsearchContractVersion.VERSION_1_0,
-                                                 **elasticsearch_kwargs)
+        exporter_v1_0 = DFWElasticsearchExporter(contract_version=ContractVersion.V1_0, **elasticsearch_kwargs)
         contract_v1_0 = exporter_v1_0.export_contract
         assert issubclass(contract_v1_0, BaseModel)
 
         # Test with VERSION_1_1
-        exporter_v1_1 = DFWElasticsearchExporter(contract_version=ElasticsearchContractVersion.VERSION_1_1,
-                                                 **elasticsearch_kwargs)
+        exporter_v1_1 = DFWElasticsearchExporter(contract_version=ContractVersion.V1_1, **elasticsearch_kwargs)
         contract_v1_1 = exporter_v1_1.export_contract
         assert issubclass(contract_v1_1, BaseModel)
 
@@ -427,7 +425,7 @@ class TestDFWElasticsearchExporterIntegration:
 
         # Create exporter with comprehensive parameters
         exporter = DFWElasticsearchExporter(client_id="integration_test_client",
-                                            contract_version=ElasticsearchContractVersion.VERSION_1_0,
+                                            contract_version=ContractVersion.V1_0,
                                             batch_size=25,
                                             flush_interval=1.5,
                                             max_queue_size=250,
@@ -438,7 +436,7 @@ class TestDFWElasticsearchExporterIntegration:
 
         # Verify all components were initialized
         assert exporter is not None
-        assert exporter.contract_version == ElasticsearchContractVersion.VERSION_1_0
+        assert exporter.contract_version == ContractVersion.V1_0
         assert exporter._index == 'integration_index'
         assert exporter._elastic_client == mock_elasticsearch_client
 
@@ -455,18 +453,18 @@ class TestDFWElasticsearchExporterIntegration:
         """Test that multiple exporter instances are independent."""
         with patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type'), \
              patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type'), \
-             patch('elasticsearch.AsyncElasticsearch') as mock_elasticsearch:
+             patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch') as mock_elasticsearch:  # noqa: E501
 
             mock_elasticsearch.return_value = AsyncMock()
 
             exporter1 = DFWElasticsearchExporter(client_id="client1",
-                                                 contract_version=ElasticsearchContractVersion.VERSION_1_0,
+                                                 contract_version=ContractVersion.V1_0,
                                                  endpoint='http://es1.test:9200',
                                                  index='index1',
                                                  elasticsearch_auth=('user1', 'pass1'))
 
             exporter2 = DFWElasticsearchExporter(client_id="client2",
-                                                 contract_version=ElasticsearchContractVersion.VERSION_1_1,
+                                                 contract_version=ContractVersion.V1_1,
                                                  endpoint='http://es2.test:9200',
                                                  index='index2',
                                                  elasticsearch_auth=('user2', 'pass2'))

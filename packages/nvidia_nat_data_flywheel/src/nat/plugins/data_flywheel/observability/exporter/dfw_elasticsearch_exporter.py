@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from nat.builder.context import ContextState
 from nat.plugins.data_flywheel.observability.exporter.dfw_exporter import DFWExporter
 from nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin import ElasticsearchMixin
-from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ElasticsearchContractVersion
+from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ContractVersion
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
     def __init__(self,
                  context_state: ContextState | None = None,
                  client_id: str = "default",
-                 contract_version: ElasticsearchContractVersion = ElasticsearchContractVersion.VERSION_1_1,
+                 contract_version: ContractVersion = ContractVersion.V1_1,
                  batch_size: int = 100,
                  flush_interval: float = 5.0,
                  max_queue_size: int = 1000,

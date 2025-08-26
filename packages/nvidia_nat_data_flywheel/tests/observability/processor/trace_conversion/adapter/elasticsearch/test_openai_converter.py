@@ -176,26 +176,26 @@ class TestCreateMessageByRole:
         assert result.role == "user"
 
     def test_create_message_with_none_content_for_required_roles(self):
-        """Test that None content raises assertion for roles that require content."""
+        """Test that None content raises ValueError for roles that require content."""
         # User message requires content
         try:
             create_message_by_role("user", None)
-            assert False, "Expected AssertionError for None content in user message"
-        except AssertionError as e:
+            assert False, "Expected ValueError for None content in user message"
+        except ValueError as e:
             assert "User message content cannot be None" in str(e)
 
         # System message requires content
         try:
             create_message_by_role("system", None)
-            assert False, "Expected AssertionError for None content in system message"
-        except AssertionError as e:
+            assert False, "Expected ValueError for None content in system message"
+        except ValueError as e:
             assert "System message content cannot be None" in str(e)
 
         # Tool message requires content
         try:
             create_message_by_role("tool", None)
-            assert False, "Expected AssertionError for None content in tool message"
-        except AssertionError as e:
+            assert False, "Expected ValueError for None content in tool message"
+        except ValueError as e:
             assert "Tool message content cannot be None" in str(e)
 
 

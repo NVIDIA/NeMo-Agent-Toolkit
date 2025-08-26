@@ -38,7 +38,7 @@ def _get_string_value(value: Any) -> str:
         str: String representation of the value
     """
     if isinstance(value, Enum):
-        return value.value
+        return str(value.value)
     return str(value)
 
 
@@ -96,7 +96,7 @@ def get_trace_container(span: Span, client_id: str) -> TraceContainer:
                          f"Original error: {e}") from e
 
 
-def span_to_dfw_record(span: Span, to_type: type[BaseModel], client_id: str) -> BaseModel | None:
+def span_to_dfw_record(span: Span, to_type: type[BaseModel], client_id: str) -> BaseModel:
     """Convert a span to Data Flywheel record using registered trace adapters.
 
     Creates a TraceContainer from the span, automatically detects the trace source type
@@ -104,15 +104,16 @@ def span_to_dfw_record(span: Span, to_type: type[BaseModel], client_id: str) -> 
     to the specified target type.
 
     Args:
-        span (Span): The span containing trace data to convert
-        to_type (type[BaseModel]): Target Pydantic model type for the conversion
-        client_id (str): Client identifier to include in the trace data
+        span (Span): The span containing trace data to convert.
+        to_type (type[BaseModel]): Target Pydantic model type for the conversion.
+        client_id (str): Client identifier to include in the trace data.
 
     Returns:
-        BaseModel | None: Converted record of the specified type, or None if conversion fails
+        BaseModel: Converted record of the specified type.
 
     Raises:
-        ValueError: If no converter is registered for the detected source type -> target type
+        ValueError: If no converter is registered for the detected source type -> target type,
+            or if the conversion fails.
     """
     trace_container = get_trace_container(span, client_id)
     return TraceAdapterRegistry.convert(trace_container, to_type=to_type)

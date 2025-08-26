@@ -89,10 +89,12 @@ def create_message_by_role(role: str, content: str | None, **kwargs) -> Message:
 
     match role:
         case "user":
-            assert content is not None, "User message content cannot be None"
+            if content is None:
+                raise ValueError("User message content cannot be None")
             return UserMessage(content=content, role="user")
         case "system":
-            assert content is not None, "System message content cannot be None"
+            if content is None:
+                raise ValueError("System message content cannot be None")
             return SystemMessage(content=content, role="system")
         case "assistant":
             tool_calls = kwargs.get("tool_calls", [])
@@ -101,7 +103,8 @@ def create_message_by_role(role: str, content: str | None, **kwargs) -> Message:
             return AssistantMessage(content=content, role="assistant", tool_calls=tool_calls if tool_calls else None)
         case "tool":
             tool_call_id = kwargs.get("tool_call_id", "")
-            assert content is not None, "Tool message content cannot be None"
+            if content is None:
+                raise ValueError("Tool message content cannot be None")
             return ToolMessage(content=content, role="tool", tool_call_id=tool_call_id)
         case "function":
             return FunctionMessage(content=content, role="function")
@@ -241,7 +244,7 @@ def convert_chat_response(chat_response: dict, span_name: str = "", index: int =
         ValueError: If the chat response is invalid
     """
     message = chat_response.get("message", {})
-    if message is None:
+    if message is None or not message:
         raise ValueError(f"Chat response missing message for span: '{span_name}'")
 
     # Get content
@@ -264,7 +267,10 @@ def convert_chat_response(chat_response: dict, span_name: str = "", index: int =
         content = None
 
     # Map finish reason to enum
-    mapped_finish_reason = FINISH_REASON_MAP.get(finish_reason)
+    if isinstance(finish_reason, str):
+        mapped_finish_reason = FINISH_REASON_MAP.get(finish_reason)
+    else:
+        mapped_finish_reason = None
 
     response_choice = ResponseChoice(message=ResponseMessage(
         content=content, role="assistant", tool_calls=validated_tool_calls if validated_tool_calls else None),

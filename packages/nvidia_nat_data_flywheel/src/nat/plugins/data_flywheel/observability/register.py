@@ -21,7 +21,7 @@ from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
-from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ElasticsearchContractVersion
+from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ContractVersion
 
 logger = logging.getLogger(__name__)
 
@@ -29,17 +29,15 @@ logger = logging.getLogger(__name__)
 class DFWElasticsearchTelemetryExporter(TelemetryExporterBaseConfig,
                                         BatchConfigMixin,
                                         name="data_flywheel_elasticsearch"):
-    """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
+    """A telemetry exporter to transmit traces to NVIDIA Data Flywheel via Elasticsearch."""
 
     client_id: str = Field(description="The data flywheel client ID.")
     index: str = Field(description="The elasticsearch index name.")
     endpoint: str = Field(description="The elasticsearch endpoint.")
-    contract_version: ElasticsearchContractVersion = Field(
-        default=ElasticsearchContractVersion.VERSION_1_1,
-        description="The DFW Elasticsearch record schema version to use.")
+    contract_version: ContractVersion = Field(default=ContractVersion.V1_1,
+                                              description="The DFW Elasticsearch record schema version to use.")
     elasticsearch_auth: tuple[str, str] = Field(
-        default=("elastic", "password"),
-        description="The elasticsearch authentication credentials (username, password).")
+        default_factory=tuple, description="The elasticsearch authentication credentials (username, password).")
     headers: dict | None = Field(default=None, description="Additional headers for elasticsearch requests.")
 
 
