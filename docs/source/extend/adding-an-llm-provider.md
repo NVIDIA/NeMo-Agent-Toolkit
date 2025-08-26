@@ -82,7 +82,7 @@ class OpenAIModelConfig(LLMBaseConfig, RetryMixin, name="openai"):
 
 ### Model-Gated Fields
 
-Some configuration parameters are only valid for certain models. The toolkit provides built-in mixins that automatically validate and default these parameters based on the selected model. For details on the mechanism, see [Model-Gated Configuration Fields](./model-gated-fields.md).
+Some configuration parameters are only valid for certain models. The toolkit provides built-in mixins that automatically validate and default these parameters based on the selected model. For details on the mechanism, see [Gated Fields](./gated-fields.md).
 
 - `TemperatureMixin`: adds a `temperature` field in [0, 1], with a default of `0.0` when supported
 - `TopPMixin`: adds a `top_p` field in [0, 1], with a default of `1.0` when supported

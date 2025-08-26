@@ -22,6 +22,22 @@ from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
+# pylint: disable=unused-argument
+
+
+def extract_numbers(text: str) -> list[str]:
+    """
+    Extract numerical values (including floats) from text.
+
+    Args:
+        text: Input text containing numbers
+
+    Returns:
+        List of number strings found in the text
+    """
+    import re
+    return re.findall(r"\d+(?:\.\d+)?", text)
+
 
 def validate_number_count(numbers: list[str], expected_count: int, action: str) -> str | None:
     if len(numbers) < expected_count:
@@ -38,15 +54,13 @@ class InequalityToolConfig(FunctionBaseConfig, name="calculator_inequality"):
 @register_function(config_type=InequalityToolConfig)
 async def calculator_inequality(tool_config: InequalityToolConfig, builder: Builder):
 
-    import re
-
     async def _calculator_inequality(text: str) -> str:
-        numbers = re.findall(r"\d+", text)
+        numbers = extract_numbers(text)
         validation_error = validate_number_count(numbers, expected_count=2, action="compare")
         if validation_error:
             return validation_error
-        a = int(numbers[0])
-        b = int(numbers[1])
+        a = float(numbers[0])
+        b = float(numbers[1])
         if a > b:
             return f"First number {a} is greater than the second number {b}"
         if a < b:
@@ -68,10 +82,8 @@ class MultiplyToolConfig(FunctionBaseConfig, name="calculator_multiply"):
 @register_function(config_type=MultiplyToolConfig)
 async def calculator_multiply(config: MultiplyToolConfig, builder: Builder):
 
-    import re
-
     async def _calculator_multiply(text: str) -> str:
-        numbers = re.findall(r"\d+", text)
+        numbers = extract_numbers(text)
         validation_error = validate_number_count(numbers, expected_count=2, action="multiply")
         if validation_error:
             return validation_error
@@ -94,15 +106,13 @@ class DivisionToolConfig(FunctionBaseConfig, name="calculator_divide"):
 @register_function(config_type=DivisionToolConfig)
 async def calculator_divide(config: DivisionToolConfig, builder: Builder):
 
-    import re
-
     async def _calculator_divide(text: str) -> str:
-        numbers = re.findall(r"\d+", text)
+        numbers = extract_numbers(text)
         validation_error = validate_number_count(numbers, expected_count=2, action="divide")
         if validation_error:
             return validation_error
-        a = int(numbers[0])
-        b = int(numbers[1])
+        a = float(numbers[0])
+        b = float(numbers[1])
 
         return f"The result of {a} / {b} is {a / b}"
 
@@ -120,10 +130,8 @@ class SubtractToolConfig(FunctionBaseConfig, name="calculator_subtract"):
 @register_function(config_type=SubtractToolConfig)
 async def calculator_subtract(config: SubtractToolConfig, builder: Builder):
 
-    import re
-
     async def _calculator_subtract(text: str) -> str:
-        numbers = re.findall(r"\d+", text)
+        numbers = extract_numbers(text)
         validation_error = validate_number_count(numbers, expected_count=2, action="subtract")
         if validation_error:
             return validation_error
