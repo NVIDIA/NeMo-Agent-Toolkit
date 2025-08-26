@@ -108,7 +108,7 @@ async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
     def _convert_from_str(input_str: str) -> BaseModel:
         return input_schema.model_validate_json(input_str)
 
-    async def _response_fn(tool_input: input_schema | None = None, **kwargs) -> str:
+    async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
         try:
             if tool_input:
                 return await tool.acall(tool_input.model_dump())
