@@ -23,8 +23,6 @@ from nat.data_models.span import Span
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.observability.processor.batching_processor import BatchingProcessor
 from nat.observability.processor.falsy_batch_filter_processor import DictBatchFilterProcessor
-from nat.observability.processor.processor_factory import processor_factory_from_type
-from nat.observability.processor.processor_factory import processor_factory_to_type
 from nat.plugins.data_flywheel.observability.processor import DFWToDictProcessor
 from nat.plugins.data_flywheel.observability.processor import SpanToDFWRecordProcessor
 
@@ -44,6 +42,7 @@ class DFWExporter(SpanExporter[Span, dict]):
     """Abstract base class for Data Flywheel exporters."""
 
     def __init__(self,
+                 export_contract: type[BaseModel],
                  context_state: ContextState | None = None,
                  batch_size: int = 100,
                  flush_interval: float = 5.0,
@@ -54,6 +53,7 @@ class DFWExporter(SpanExporter[Span, dict]):
         """Initialize the Data Flywheel exporter.
 
         Args:
+            export_contract: The Pydantic model type for the export contract.
             context_state: The context state to use for the exporter.
             batch_size: The batch size for exporting spans.
             flush_interval: The flush interval in seconds for exporting spans.
@@ -64,24 +64,21 @@ class DFWExporter(SpanExporter[Span, dict]):
         """
         super().__init__(context_state)
 
-        ConcreteSpanToDFWRecordProcessor = processor_factory_to_type(SpanToDFWRecordProcessor,
-                                                                     to_type=self.export_contract)
-        ConcreteDFWToDictProcessor = processor_factory_from_type(DFWToDictProcessor, from_type=self.export_contract)
+        # Store the contract for property access
+        self._export_contract = export_contract
 
-        self.add_processor(ConcreteSpanToDFWRecordProcessor(client_id=client_id))  # type: ignore
-        self.add_processor(ConcreteDFWToDictProcessor())
-
+        # Define the processor chain
+        self.add_processor(SpanToDFWRecordProcessor[export_contract](client_id=client_id))
+        self.add_processor(DFWToDictProcessor[export_contract]())
         self.add_processor(
             DictBatchingProcessor(batch_size=batch_size,
                                   flush_interval=flush_interval,
                                   max_queue_size=max_queue_size,
                                   drop_on_overflow=drop_on_overflow,
                                   shutdown_timeout=shutdown_timeout))
-
         self.add_processor(DictBatchFilterProcessor())
 
     @property
-    @abstractmethod
     def export_contract(self) -> type[BaseModel]:
         """The export contract used for processing spans before converting to dict.
 
@@ -91,7 +88,7 @@ class DFWExporter(SpanExporter[Span, dict]):
         Returns:
             type[BaseModel]: The Pydantic model type for the export contract.
         """
-        pass
+        return self._export_contract
 
     @abstractmethod
     async def export_processed(self, item: dict | list[dict]) -> None:

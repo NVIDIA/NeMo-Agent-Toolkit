@@ -34,17 +34,11 @@ class MockContractSchema(BaseModel):
 class TestDFWElasticsearchExporter:
     """Test cases for DFWElasticsearchExporter class."""
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    def test_elasticsearch_exporter_initialization_defaults(self,
-                                                            mock_elasticsearch,
-                                                            mock_factory_from,
-                                                            mock_factory_to):
+    def test_elasticsearch_exporter_initialization_defaults(self, mock_elasticsearch):
         """Test DFWElasticsearchExporter initialization with default parameters."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch_client = AsyncMock()
         mock_elasticsearch.return_value = mock_elasticsearch_client
 
@@ -67,17 +61,11 @@ class TestDFWElasticsearchExporter:
             basic_auth=('user', 'pass'),
             headers={"Accept": "application/vnd.elasticsearch+json; compatible-with=8"})
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    def test_elasticsearch_exporter_initialization_custom_params(self,
-                                                                 mock_elasticsearch,
-                                                                 mock_factory_from,
-                                                                 mock_factory_to):
+    def test_elasticsearch_exporter_initialization_custom_params(self, mock_elasticsearch):
         """Test DFWElasticsearchExporter initialization with custom parameters."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch_client = AsyncMock()
         mock_elasticsearch.return_value = mock_elasticsearch_client
 
@@ -108,14 +96,11 @@ class TestDFWElasticsearchExporter:
                                                    basic_auth=('admin', 'secret'),
                                                    headers=custom_headers)
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    def test_export_contract_property(self, mock_elasticsearch, mock_factory_from, mock_factory_to):
+    def test_export_contract_property(self, mock_elasticsearch):
         """Test that export_contract property delegates to contract_version.get_contract_class()."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch.return_value = AsyncMock()
 
         # Mock the contract version to return our mock schema
@@ -137,14 +122,11 @@ class TestDFWElasticsearchExporter:
         # Verify get_contract_class was called (may be called multiple times during initialization)
         assert mock_contract_version.get_contract_class.call_count >= 1
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    def test_export_contract_with_real_enum_values(self, mock_elasticsearch, mock_factory_from, mock_factory_to):
+    def test_export_contract_with_real_enum_values(self, mock_elasticsearch):
         """Test export_contract with real ElasticsearchContractVersion enum values."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch.return_value = AsyncMock()
 
         elasticsearch_kwargs = {
@@ -165,14 +147,11 @@ class TestDFWElasticsearchExporter:
         assert contract_v1_0 is not None
         assert contract_v1_1 is not None
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    async def test_export_processed_delegates_to_parent(self, mock_elasticsearch, mock_factory_from, mock_factory_to):
+    async def test_export_processed_delegates_to_parent(self, mock_elasticsearch):
         """Test that export_processed delegates to the parent class (ElasticsearchMixin)."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch_client = AsyncMock()
         mock_elasticsearch.return_value = mock_elasticsearch_client
 
@@ -189,14 +168,11 @@ class TestDFWElasticsearchExporter:
         # Verify the elasticsearch client's index method was called
         mock_elasticsearch_client.index.assert_called_once_with(index='test_index', document=test_doc)
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    async def test_export_processed_bulk_operations(self, mock_elasticsearch, mock_factory_from, mock_factory_to):
+    async def test_export_processed_bulk_operations(self, mock_elasticsearch):
         """Test export_processed with bulk operations (list of documents)."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch_client = AsyncMock()
         mock_elasticsearch.return_value = mock_elasticsearch_client
 
@@ -226,17 +202,11 @@ class TestDFWElasticsearchExporter:
         }]
         mock_elasticsearch_client.bulk.assert_called_once_with(operations=expected_operations)
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    def test_elasticsearch_exporter_with_none_context_state(self,
-                                                            mock_elasticsearch,
-                                                            mock_factory_from,
-                                                            mock_factory_to):
+    def test_elasticsearch_exporter_with_none_context_state(self, mock_elasticsearch):
         """Test DFWElasticsearchExporter handles None context_state properly."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch.return_value = AsyncMock()
 
         elasticsearch_kwargs = {
@@ -251,14 +221,11 @@ class TestDFWElasticsearchExporter:
         # Should initialize without errors
         assert exporter is not None
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    def test_elasticsearch_exporter_headers_default(self, mock_elasticsearch, mock_factory_from, mock_factory_to):
+    def test_elasticsearch_exporter_headers_default(self, mock_elasticsearch):
         """Test that default headers are applied when none provided."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch.return_value = AsyncMock()
 
         elasticsearch_kwargs = {
@@ -291,14 +258,11 @@ class TestDFWElasticsearchExporter:
 class TestDFWElasticsearchExporterErrorCases:
     """Test error cases and edge cases for DFWElasticsearchExporter."""
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    async def test_export_processed_invalid_item_type(self, mock_elasticsearch, mock_factory_from, mock_factory_to):
+    async def test_export_processed_invalid_item_type(self, mock_elasticsearch):
         """Test export_processed with invalid item types."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch.return_value = AsyncMock()
 
         elasticsearch_kwargs = {
@@ -314,14 +278,11 @@ class TestDFWElasticsearchExporterErrorCases:
         with pytest.raises(ValueError, match="Invalid item type"):
             await exporter.export_processed(12345)  # type: ignore  # Intentional type error for testing
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    async def test_export_processed_empty_list(self, mock_elasticsearch, mock_factory_from, mock_factory_to):
+    async def test_export_processed_empty_list(self, mock_elasticsearch):
         """Test export_processed with empty list (should return without error)."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch_client = AsyncMock()
         mock_elasticsearch.return_value = mock_elasticsearch_client
 
@@ -338,14 +299,11 @@ class TestDFWElasticsearchExporterErrorCases:
         mock_elasticsearch_client.bulk.assert_not_called()
         mock_elasticsearch_client.index.assert_not_called()
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    async def test_export_processed_mixed_list_types(self, mock_elasticsearch, mock_factory_from, mock_factory_to):
+    async def test_export_processed_mixed_list_types(self, mock_elasticsearch):
         """Test export_processed with list containing non-dict items."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch.return_value = AsyncMock()
 
         elasticsearch_kwargs = {
@@ -360,14 +318,11 @@ class TestDFWElasticsearchExporterErrorCases:
                 "valid": "dict"
             }, "invalid_string", 123])  # type: ignore  # Intentional type error for testing
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    async def test_elasticsearch_client_exceptions(self, mock_elasticsearch, mock_factory_from, mock_factory_to):
+    async def test_elasticsearch_client_exceptions(self, mock_elasticsearch):
         """Test behavior when Elasticsearch client operations raise exceptions."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
+
         mock_elasticsearch_client = AsyncMock()
         mock_elasticsearch_client.index.side_effect = Exception("Elasticsearch connection error")
         mock_elasticsearch.return_value = mock_elasticsearch_client
@@ -382,13 +337,9 @@ class TestDFWElasticsearchExporterErrorCases:
         with pytest.raises(Exception, match="Elasticsearch connection error"):
             await exporter.export_processed({"test": "data"})
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
-    def test_elasticsearch_client_initialization_failure(self, mock_factory_from, mock_factory_to):
+    def test_elasticsearch_client_initialization_failure(self):
         """Test behavior when Elasticsearch client initialization fails."""
         # Setup mocks
-        mock_factory_to.return_value = Mock()
-        mock_factory_from.return_value = Mock()
 
         with patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch',
                    side_effect=Exception("Client init error")):
@@ -403,23 +354,9 @@ class TestDFWElasticsearchExporterErrorCases:
 class TestDFWElasticsearchExporterIntegration:
     """Integration tests for DFWElasticsearchExporter functionality."""
 
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type')
-    @patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type')
     @patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch')
-    def test_full_initialization_integration(self, mock_elasticsearch, mock_factory_from, mock_factory_to):
+    def test_full_initialization_integration(self, mock_elasticsearch):
         """Test complete initialization with both DFWExporter and ElasticsearchMixin functionality."""
-        # Setup mocks for processor factories
-        mock_span_processor_class = Mock()
-        mock_span_processor_instance = Mock()
-        mock_span_processor_class.return_value = mock_span_processor_instance
-
-        mock_dict_processor_class = Mock()
-        mock_dict_processor_instance = Mock()
-        mock_dict_processor_class.return_value = mock_dict_processor_instance
-
-        mock_factory_to.return_value = mock_span_processor_class
-        mock_factory_from.return_value = mock_dict_processor_class
-
         mock_elasticsearch_client = AsyncMock()
         mock_elasticsearch.return_value = mock_elasticsearch_client
 
@@ -445,15 +382,10 @@ class TestDFWElasticsearchExporterIntegration:
                                                    basic_auth=('test_user', 'test_pass'),
                                                    headers={'X-Test': 'integration'})
 
-        # Verify processor instantiation
-        mock_span_processor_class.assert_called_once_with(client_id="integration_test_client")
-        mock_dict_processor_class.assert_called_once_with()
-
     def test_multiple_exporter_instances_independence(self):
         """Test that multiple exporter instances are independent."""
-        with patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_to_type'), \
-             patch('nat.plugins.data_flywheel.observability.exporter.dfw_exporter.processor_factory_from_type'), \
-             patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch') as mock_elasticsearch:  # noqa: E501
+        with patch('nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin.AsyncElasticsearch'
+                   ) as mock_elasticsearch:  # noqa: E501
 
             mock_elasticsearch.return_value = AsyncMock()
 

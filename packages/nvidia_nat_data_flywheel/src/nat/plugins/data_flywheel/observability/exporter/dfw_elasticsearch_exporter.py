@@ -15,8 +15,6 @@
 
 import logging
 
-from pydantic import BaseModel
-
 from nat.builder.context import ContextState
 from nat.plugins.data_flywheel.observability.exporter.dfw_exporter import DFWExporter
 from nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin import ElasticsearchMixin
@@ -58,7 +56,8 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
         # Initialize both mixins - ElasticsearchMixin expects elasticsearch_kwargs,
         # DFWExporter expects the standard exporter parameters
         self.contract_version = contract_version
-        super().__init__(context_state=context_state,
+        super().__init__(export_contract=contract_version.get_contract_class(),
+                         context_state=context_state,
                          batch_size=batch_size,
                          flush_interval=flush_interval,
                          max_queue_size=max_queue_size,
@@ -66,15 +65,6 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
                          shutdown_timeout=shutdown_timeout,
                          client_id=client_id,
                          **elasticsearch_kwargs)
-
-    @property
-    def export_contract(self) -> type[BaseModel]:
-        """Get the Pydantic model class for the configured Elasticsearch contract version.
-
-        Returns:
-            type[BaseModel]: The contract schema class for this version
-        """
-        return self.contract_version.get_contract_class()
 
     async def export_processed(self, item: dict | list[dict]) -> None:
         """Export processed DFW records to Elasticsearch.
