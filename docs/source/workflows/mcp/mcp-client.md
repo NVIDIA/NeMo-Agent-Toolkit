@@ -95,13 +95,13 @@ functions:
 ```
 SSE mode is supported for backwards compatibility with existing systems.
 
-### STDIO Mode Configuration
+### STDIO Mode Configuration (Experimental)
 For STDIO mode, you need to specify the command to run and any additional arguments or environment variables:
 
 ```yaml
 functions:
   github_mcp:
-    _type: mcp_tool_wrapper
+    _type: mcp_client
     client_type: stdio
     command: "docker"
     args: [
@@ -114,10 +114,8 @@ functions:
     ]
     env:
       GITHUB_PERSONAL_ACCESS_TOKEN: "${input:github_token}"
-    mcp_tool_name: "github_tool"
 ```
-
-The optional configuration parameters (`description` and `return_exception`) provide additional control over the tool behavior. The `description` parameter should only be used if the description provided by the MCP server is not sufficient, or if there is no description provided by the server. The `return_exception` parameter controls whether exceptions are returned as messages or raised directly.
+Note: STDIO mode support is experimental. Note that you should use `mcp_client` instead of `mcp_tool_wrapper` as the function type for `stdio` mode. `mcp_client` allows you to connect to a MCP server, dynamically discover the tools it serves, and use them as NeMo Agent toolkit functions.
 
 Once configured, a Pydantic input schema will be generated based on the input schema provided by the MCP server. This input schema is included with the configured function and is accessible by any agent or function calling the configured `mcp_tool_wrapper` function. The `mcp_tool_wrapper` function can accept the following type of arguments as long as they satisfy the input schema:
  * a validated instance of it's input schema
@@ -156,23 +154,22 @@ nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date
 ```
 This will use the `mcp_time_tool` function to get the current hour of the day from the MCP server.
 
-### Using STDIO Mode
+### Using STDIO Mode (Experimental)
 Alternatively, you can run the same example using stdio mode with the `config-mcp-date-stdio.yml` configuration:
 
 ```yaml
 functions:
-  mcp_time_tool:
-    _type: mcp_tool_wrapper
-    client_type: stdio
-    command: "python"
-    args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
-    mcp_tool_name: get_current_time
-    description: "Returns the current date and time from the MCP server"
+  mcp_time:
+    _type: mcp_client
+    server:
+      transport: stdio
+      command: "python"
+      args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
 ```
 
 This configuration launches the MCP server directly as a `subprocess` instead of connecting to a running server. Run it with:
 ```bash
-nat run --config_file examples/simple_calculator/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 Ensure that MCP server time package is installed in your environment before running the workflow.
 ```bash
