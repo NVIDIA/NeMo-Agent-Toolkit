@@ -16,6 +16,7 @@
 from contextlib import asynccontextmanager
 
 import pytest
+import pytest_asyncio
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.mysql.object_store import MySQLObjectStoreClientConfig
@@ -26,7 +27,7 @@ from nat.test.object_store_tests import ObjectStoreTests
 # docker run --rm -ti --name test-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -d -p 3306:3306 mysql:9.3
 
 
-@pytest.fixture(name="mysql_server", scope="module")
+@pytest_asyncio.fixture(name="mysql_server", scope="module")
 async def fixture_mysql_server(fail_missing: bool):
     """Fixture to safely skip MySQL based tests if MySQL is not running"""
     try:
