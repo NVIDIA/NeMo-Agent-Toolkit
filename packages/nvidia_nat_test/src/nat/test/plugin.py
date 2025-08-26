@@ -180,6 +180,7 @@ def azure_openai_keys_fixture(fail_missing: bool):
         "variable to be defined.",
         fail_missing=fail_missing)
 
+
 @pytest.fixture(name="restore_environ")
 def restore_environ_fixture():
     orig_vars = os.environ.copy()
