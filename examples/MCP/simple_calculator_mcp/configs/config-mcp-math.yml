@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This config file shows how to use the MCP server to get the current date and time.
+# This config file shows how to use the MCP server to access the `math` tools.
 # Here the workflow acts as a MCP client and connects to the MCP server running
 # on the specified URL. streamable-http is the recommended transport for HTTP-based
 # connections, but sse is also supported for backwards compatibility.

@@ -95,7 +95,7 @@ functions:
 ```
 SSE mode is supported for backwards compatibility with existing systems.
 
-### STDIO Mode Configuration (Experimental)
+### 🧪 STDIO Mode Configuration (Experimental)
 For STDIO mode, you need to specify the command to run and any additional arguments or environment variables:
 
 ```yaml
@@ -115,7 +115,7 @@ functions:
     env:
       GITHUB_PERSONAL_ACCESS_TOKEN: "${input:github_token}"
 ```
-Note: STDIO mode support is experimental. Note that you should use `mcp_client` instead of `mcp_tool_wrapper` as the function type for `stdio` mode. `mcp_client` allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. Details on how to use `mcp_client` will be provided in future commits as the feature is developed. Also see `examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml` for a complete example.
+STDIO mode support is experimental. Note that you should use `mcp_client` instead of `mcp_tool_wrapper` as the function type for `stdio` mode. `mcp_client` allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. Details on how to use `mcp_client` will be provided in future commits as the feature is developed. Also see `examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml` for a complete example.
 
 Once configured, a Pydantic input schema will be generated based on the input schema provided by the MCP server. This input schema is included with the configured function and is accessible by any agent or function calling the configured `mcp_tool_wrapper` function. The `mcp_tool_wrapper` function can accept the following type of arguments as long as they satisfy the input schema:
  * a validated instance of it's input schema
@@ -154,7 +154,7 @@ nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date
 ```
 This will use the `mcp_time_tool` function to get the current hour of the day from the MCP server.
 
-### Using STDIO Mode (Experimental)
+### 🧪 Using STDIO Mode (Experimental)
 Alternatively, you can run the same example using stdio mode with the `config-mcp-date-stdio.yml` configuration:
 
 ```yaml
