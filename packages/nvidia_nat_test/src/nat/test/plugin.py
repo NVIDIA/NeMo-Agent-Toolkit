@@ -115,7 +115,7 @@ def fail_missing(pytestconfig: pytest.Config) -> bool:
     yield pytestconfig.getoption("fail_missing")
 
 
-def require_env_variable(varnames: list[str], reason: str, fail_missing: bool = False) -> dict[str, str]:
+def require_env_variables(varnames: list[str], reason: str, fail_missing: bool = False) -> dict[str, str]:
     """
     Checks if the given environment variable is set, and returns its value if it is. If the variable is not set, and
     `fail_missing` is False the test will ve skipped, otherwise a `RuntimeError` will be raised.
@@ -138,7 +138,7 @@ def openai_api_key_fixture(fail_missing: bool):
     """
     Use for integration tests that require an Openai API key.
     """
-    yield require_env_variable(
+    yield require_env_variables(
         varnames=["OPENAI_API_KEY"],
         reason="openai integration tests require the `OPENAI_API_KEY` environment variable to be defined.",
         fail_missing=fail_missing)
@@ -149,7 +149,7 @@ def nvidia_api_key_fixture(fail_missing: bool):
     """
     Use for integration tests that require an Nvidia API key.
     """
-    yield require_env_variable(
+    yield require_env_variables(
         varnames=["NVIDIA_API_KEY"],
         reason="Nvidia integration tests require the `NVIDIA_API_KEY` environment variable to be defined.",
         fail_missing=fail_missing)
@@ -161,7 +161,7 @@ def aws_keys_fixture(fail_missing: bool):
     Use for integration tests that require AWS credentials.
     """
 
-    yield require_env_variable(
+    yield require_env_variables(
         varnames=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
         reason=
         "AWS integration tests require the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables to be "
@@ -174,7 +174,7 @@ def azure_openai_keys_fixture(fail_missing: bool):
     """
     Use for integration tests that require Azure OpenAI credentials.
     """
-    yield require_env_variable(
+    yield require_env_variables(
         varnames=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
         reason="Azure integration tests require the `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` environment "
         "variable to be defined.",
