@@ -31,6 +31,7 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
 from nat.runtime.user_metadata import RequestAttributes
 from nat.utils.reactive.subject import Subject
@@ -174,7 +175,10 @@ class Context:
         return self._context_state.user_message_id.get()
 
     @contextmanager
-    def push_active_function(self, function_name: str, input_data: typing.Any | None):
+    def push_active_function(self,
+                             function_name: str,
+                             input_data: typing.Any | None,
+                             metadata: dict[str, typing.Any] | TraceMetadata | None = None):
         """
         Set the 'active_function' in context, push an invocation node,
         AND create an OTel child span for that function call.
@@ -195,7 +199,8 @@ class Context:
             IntermediateStepPayload(UUID=current_function_id,
                                     event_type=IntermediateStepType.FUNCTION_START,
                                     name=function_name,
-                                    data=StreamEventData(input=input_data)))
+                                    data=StreamEventData(input=input_data),
+                                    metadata=metadata))
 
         manager = ActiveFunctionContextManager()
 
