@@ -71,14 +71,14 @@ async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
     from agno.models.nvidia import Nvidia
 
     config_obj = {
-        "id": f"{llm_config.model_name}",
-        **llm_config.model_dump(exclude={"type", "model_name"}, by_alias=True),
+        **llm_config.model_dump(
+            exclude={"type", "model_name"},
+            by_alias=True,
+            exclude_none=True,
+        ),
     }
 
-    if "base_url" in config_obj and config_obj.get("base_url") is None:
-        config_obj.pop("base_url", None)
-
-    client = Nvidia(**config_obj)  # type: ignore[arg-type]
+    client = Nvidia(**config_obj, id=llm_config.model_name)
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -89,10 +89,13 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
     from agno.models.openai import OpenAIChat
 
     config_obj = {
-        "id": f"{llm_config.model_name}",
-        **llm_config.model_dump(exclude={"type", "model_name"}, by_alias=True),
+        **llm_config.model_dump(
+            exclude={"type", "model_name"},
+            by_alias=True,
+            exclude_none=True,
+        ),
     }
 
-    client = OpenAIChat(**config_obj)
+    client = OpenAIChat(**config_obj, id=llm_config.model_name)
 
     yield _patch_llm_based_on_config(client, llm_config)

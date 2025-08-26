@@ -24,9 +24,10 @@ from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.temperature_mixin import TemperatureMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
+from nat.data_models.top_p_mixin import TopPMixin
 
 
-class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, TemperatureMixin, ThinkingMixin, name="aws_bedrock"):
+class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, TemperatureMixin, TopPMixin, ThinkingMixin, name="aws_bedrock"):
     """An AWS Bedrock llm provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=())
@@ -35,14 +36,7 @@ class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, TemperatureMixin, Thinkin
     model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
                             serialization_alias="model",
                             description="The model name for the hosted AWS Bedrock.")
-    max_tokens: int | None = Field(default=1024,
-                                   gt=0,
-                                   description="Maximum number of tokens to generate."
-                                   "This field is ONLY required when using AWS Bedrock with Langchain.")
-    context_size: int | None = Field(default=1024,
-                                     gt=0,
-                                     description="Maximum number of tokens to generate."
-                                     "This field is ONLY required when using AWS Bedrock with LlamaIndex.")
+    max_tokens: int | None = Field(default=1024, gt=0, description="Maximum number of tokens to generate.")
 
     # Client parameters
     region_name: str | None = Field(default="None", description="AWS region to use.")

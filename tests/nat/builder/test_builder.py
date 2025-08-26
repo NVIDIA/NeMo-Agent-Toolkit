@@ -99,7 +99,7 @@ class TObjectStoreConfig(ObjectStoreBaseConfig, name="test_object_store"):
     raise_error: bool = False
 
 
-class TestTTCStrategyConfig(TTCStrategyBaseConfig, name="test_ttc_strategy"):
+class TTTCStrategyConfig(TTCStrategyBaseConfig, name="test_ttc_strategy"):
     raise_error: bool = False
 
 
@@ -219,8 +219,8 @@ async def _register():
 
         yield TestTelemetryExporter()
 
-    @register_ttc_strategy(config_type=TestTTCStrategyConfig)
-    async def register_ttc(config: TestTTCStrategyConfig, builder: Builder):
+    @register_ttc_strategy(config_type=TTTCStrategyConfig)
+    async def register_ttc(config: TTTCStrategyConfig, builder: Builder):
 
         if config.raise_error:
             raise ValueError("Error")
@@ -675,21 +675,21 @@ async def test_add_ttc_strategy():
 
     async with WorkflowBuilder() as builder:
         # Normal case
-        await builder.add_ttc_strategy("ttc_strategy", TestTTCStrategyConfig())
+        await builder.add_ttc_strategy("ttc_strategy", TTTCStrategyConfig())
 
         # Provider raises
         with pytest.raises(ValueError):
-            await builder.add_ttc_strategy("ttc_strategy_err", TestTTCStrategyConfig(raise_error=True))
+            await builder.add_ttc_strategy("ttc_strategy_err", TTTCStrategyConfig(raise_error=True))
 
         # Duplicate name
         with pytest.raises(ValueError):
-            await builder.add_ttc_strategy("ttc_strategy", TestTTCStrategyConfig())
+            await builder.add_ttc_strategy("ttc_strategy", TTTCStrategyConfig())
 
 
 async def test_get_ttc_strategy_and_config():
 
     async with WorkflowBuilder() as builder:
-        cfg = TestTTCStrategyConfig()
+        cfg = TTTCStrategyConfig()
         await builder.add_ttc_strategy("ttc_strategy", cfg)
 
         strat = await builder.get_ttc_strategy(
@@ -730,7 +730,7 @@ async def test_built_config():
     memory_config = TMemoryConfig()
     retriever_config = TRetrieverProviderConfig()
     object_store_config = TObjectStoreConfig()
-    ttc_config = TestTTCStrategyConfig()
+    ttc_config = TTTCStrategyConfig()
 
     async with WorkflowBuilder(general_config=general_config) as builder:
 

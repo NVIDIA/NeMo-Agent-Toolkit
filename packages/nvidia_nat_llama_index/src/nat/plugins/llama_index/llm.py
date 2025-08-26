@@ -73,9 +73,11 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
 
     from llama_index.llms.bedrock import Bedrock
 
-    kwargs = llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True)
-
-    llm = Bedrock(**kwargs)
+    # LlamaIndex uses context_size instead of max_tokens
+    llm = Bedrock(
+        **llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True),
+        context_size=llm_config.max_tokens,
+    )
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -85,9 +87,7 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
 
     from llama_index.llms.azure_openai import AzureOpenAI
 
-    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
-
-    llm = AzureOpenAI(**kwargs)
+    llm = AzureOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -97,12 +97,7 @@ async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
 
     from llama_index.llms.nvidia import NVIDIA
 
-    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
-
-    if ("base_url" in kwargs and kwargs["base_url"] is None):
-        del kwargs["base_url"]
-
-    llm = NVIDIA(**kwargs)
+    llm = NVIDIA(**llm_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -112,11 +107,6 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from llama_index.llms.openai import OpenAI
 
-    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
-
-    if ("base_url" in kwargs and kwargs["base_url"] is None):
-        del kwargs["base_url"]
-
-    llm = OpenAI(**kwargs)
+    llm = OpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
