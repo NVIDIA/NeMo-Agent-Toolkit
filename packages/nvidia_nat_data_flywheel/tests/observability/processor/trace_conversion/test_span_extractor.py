@@ -21,9 +21,9 @@ from nat.data_models.intermediate_step import TokenUsageBaseModel
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.span import Span
 from nat.data_models.span import SpanContext
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.common import extract_timestamp
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.common import extract_token_usage
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.common import extract_usage_info
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_extractor import extract_timestamp
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_extractor import extract_token_usage
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_extractor import extract_usage_info
 
 
 class TestExtractTokenUsage:
@@ -220,7 +220,7 @@ class TestExtractUsageInfo:
         assert result.num_llm_calls == 2
         assert result.seconds_between_calls == 0
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.common.extract_token_usage')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_extractor.extract_token_usage')
     def test_extract_usage_info_calls_extract_token_usage(self, mock_extract_token_usage):
         """Test that extract_usage_info calls extract_token_usage."""
         mock_token_usage = TokenUsageBaseModel(prompt_tokens=50, completion_tokens=25, total_tokens=75)
@@ -315,7 +315,7 @@ class TestExtractTimestamp:
         assert isinstance(result, int)
         assert result == 0
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.common.logger')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_extractor.logger')
     def test_extract_timestamp_with_invalid_string(self, mock_logger):
         """Test extracting timestamp with invalid string value."""
         span = Span(name="test_span", context=SpanContext(), attributes={"nat.event_timestamp": "invalid_timestamp"})
@@ -326,7 +326,7 @@ class TestExtractTimestamp:
         assert result == 0  # Default value for invalid input
         mock_logger.warning.assert_called_once_with("Invalid timestamp in span '%s', using 0", "test_span")
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.common.logger')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_extractor.logger')
     def test_extract_timestamp_with_none_value(self, mock_logger):
         """Test extracting timestamp with None value."""
         span = Span(name="test_span", context=SpanContext(), attributes={"nat.event_timestamp": None})
@@ -337,7 +337,7 @@ class TestExtractTimestamp:
         assert result == 0  # Default value for None
         mock_logger.warning.assert_called_once_with("Invalid timestamp in span '%s', using 0", "test_span")
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.common.logger')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_extractor.logger')
     def test_extract_timestamp_with_complex_object(self, mock_logger):
         """Test extracting timestamp with complex object that can't be converted."""
         span = Span(name="test_span", context=SpanContext(), attributes={"nat.event_timestamp": {"complex": "object"}})
@@ -367,7 +367,7 @@ class TestExtractTimestamp:
         assert isinstance(result, int)
         assert result == large_timestamp
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.common.logger')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_extractor.logger')
     def test_extract_timestamp_with_empty_string(self, mock_logger):
         """Test extracting timestamp with empty string."""
         span = Span(name="test_span", context=SpanContext(), attributes={"nat.event_timestamp": ""})
@@ -530,7 +530,8 @@ class TestErrorHandlingAndEdgeCases:
             attributes={"nat.event_timestamp": True}  # Boolean instead of number
         )
 
-        with patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.common.logger') as mock_logger:
+        with patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_extractor.logger'
+                   ) as mock_logger:
             timestamp = extract_timestamp(span_with_invalid_timestamp)
             assert timestamp == 0
             mock_logger.warning.assert_called_once()

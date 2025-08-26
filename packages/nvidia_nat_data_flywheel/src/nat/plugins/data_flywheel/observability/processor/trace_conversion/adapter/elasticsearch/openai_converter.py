@@ -17,8 +17,8 @@ import json
 import logging
 
 from nat.data_models.intermediate_step import ToolSchema
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.common import extract_timestamp
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.common import extract_usage_info
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_extractor import extract_timestamp
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_extractor import extract_usage_info
 from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import register_adapter
 from nat.plugins.data_flywheel.observability.schema.provider.openai_message import OpenAIMessage
 from nat.plugins.data_flywheel.observability.schema.provider.openai_trace_source import OpenAITraceSource
