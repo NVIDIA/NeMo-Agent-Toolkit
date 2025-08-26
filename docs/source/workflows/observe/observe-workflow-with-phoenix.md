@@ -88,4 +88,4 @@ After reinstalling, restart the Phoenix server:
 phoenix serve
 ```
 
-For more Arize-Phoenix details, view the documentation [here](https://docs.arize.com/phoenix).
+For more Arize-Phoenix details, view the documentation [here](https://arize.com/docs/phoenix).
