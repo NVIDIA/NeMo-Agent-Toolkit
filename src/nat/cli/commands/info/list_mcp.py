@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import anyio
 import asyncio
 import json
 import logging
@@ -31,6 +30,32 @@ logging.getLogger("mcp.client.sse").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
+
+
+def validate_transport_combination(transport: str, command: str | None, args: str | None, env: str | None) -> bool:
+    """
+    Validate transport and parameter combinations, returning False if invalid.
+
+    Args:
+        transport: The transport type ('sse', 'stdio', or 'streamable-http')
+        command: Command for stdio transport
+        args: Arguments for stdio transport
+        env: Environment variables for stdio transport
+
+    Returns:
+        bool: True if valid, False if invalid (error message already displayed)
+    """
+    if transport == 'stdio':
+        if not command:
+            click.echo("[ERROR] --command is required when using stdio client type", err=True)
+            return False
+    elif transport in ['sse', 'streamable-http']:
+        if command or args or env:
+            click.echo(
+                "[ERROR] --command, --args, and --env are not allowed when using sse or streamable-http client type",
+                err=True)
+            return False
+    return True
 
 
 class MCPPingResult(BaseModel):
@@ -176,7 +201,7 @@ async def list_tools_direct(command, url, tool_name=None, transport='sse', args=
     from mcp.client.sse import sse_client
     from mcp.client.stdio import StdioServerParameters
     from mcp.client.stdio import stdio_client
-    from mcp.client.streamable_http import streamablehttp_client
+    from nat.tool.mcp.patched_transports import streamablehttp_client
 
     try:
         if transport == 'stdio':
@@ -199,12 +224,14 @@ async def list_tools_direct(command, url, tool_name=None, transport='sse', args=
             client = get_sse_client
 
         if transport == 'streamable-http':
-            async with client() as (read, write, get_session_id):
+            async with client() as ctx:
+                read, write = (ctx[0], ctx[1]) if isinstance(ctx, tuple) else ctx
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     response = await session.list_tools()
         else:
-            async with client() as (read, write):
+            async with client() as ctx:
+                read, write = (ctx[0], ctx[1]) if isinstance(ctx, tuple) else ctx
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     response = await session.list_tools()
@@ -234,7 +261,12 @@ async def list_tools_direct(command, url, tool_name=None, transport='sse', args=
         return []
 
 
-async def ping_mcp_server(url: str, timeout: int) -> MCPPingResult:
+async def ping_mcp_server(url: str,
+                          timeout: int,
+                          transport: str = 'streamable-http',
+                          command: str | None = None,
+                          args: list[str] | None = None,
+                          env: dict[str, str] | None = None) -> MCPPingResult:
     """Ping an MCP server to check if it's responsive.
 
     Args:
@@ -246,18 +278,29 @@ async def ping_mcp_server(url: str, timeout: int) -> MCPPingResult:
     """
     from mcp.client.session import ClientSession
     from mcp.client.sse import sse_client
+    from nat.tool.mcp.patched_transports import streamablehttp_client
+    from mcp.client.stdio import StdioServerParameters
+    from mcp.client.stdio import stdio_client
 
     async def _ping_operation():
-        async with sse_client(url) as (read, write):
+        # Select transport
+        if transport == 'stdio':
+            stdio_args_local: list[str] = args or []
+            if not command:
+                raise RuntimeError("--command is required for stdio transport")
+            client_ctx = stdio_client(server=StdioServerParameters(command=command, args=stdio_args_local, env=env))
+        elif transport == 'sse':
+            client_ctx = sse_client(url)
+        else:  # streamable-http
+            client_ctx = streamablehttp_client(url=url)
+
+        async with client_ctx as ctx:
+            read, write = (ctx[0], ctx[1]) if isinstance(ctx, tuple) else ctx
             async with ClientSession(read, write) as session:
-                # Initialize the session
                 await session.initialize()
 
-                # Record start time just before ping
                 start_time = time.time()
-                # Send ping request
                 await session.send_ping()
-
                 end_time = time.time()
                 response_time_ms = round((end_time - start_time) * 1000, 2)
 
@@ -281,9 +324,9 @@ async def ping_mcp_server(url: str, timeout: int) -> MCPPingResult:
 @click.option('--direct', is_flag=True, help='Bypass MCPBuilder and use direct MCP protocol')
 @click.option(
     '--url',
-    default='http://localhost:9901/mcp/',
+    default='http://localhost:9901/mcp',
     show_default=True,
-    help='MCP server URL (e.g. http://localhost:8080/mcp/ for streamable-http, http://localhost:8080/sse for sse)')
+    help='MCP server URL (e.g. http://localhost:8080/mcp for streamable-http, http://localhost:8080/sse for sse)')
 @click.option('--transport',
               type=click.Choice(['sse', 'stdio', 'streamable-http']),
               default='streamable-http',
@@ -307,7 +350,7 @@ def list_mcp(ctx, direct, url, transport, command, args, env, tool, detail, json
     Args:
         ctx (click.Context): Click context object for command invocation
         direct (bool): Whether to bypass MCPBuilder and use direct MCP protocol
-        url (str): MCP server URL to connect to (default: http://localhost:9901/mcp/)
+        url (str): MCP server URL to connect to (default: http://localhost:9901/mcp)
         tool (str | None): Optional specific tool name to retrieve detailed info for
         detail (bool): Whether to show full details (description + schema) for all tools
         json_output (bool): Whether to output tool metadata in JSON format instead of text
@@ -322,62 +365,74 @@ def list_mcp(ctx, direct, url, transport, command, args, env, tool, detail, json
     if ctx.invoked_subcommand is not None:
         return
 
-    if transport == 'stdio':
-        if not command:
-            click.echo("[ERROR] --command is required when using stdio client type", err=True)
-            return
+    if not validate_transport_combination(transport, command, args, env):
+        return
 
     if transport in ['sse', 'streamable-http']:
         if not url:
             click.echo("[ERROR] --url is required when using sse or streamable-http client type", err=True)
-            return
-        if command or args or env:
-            click.echo(
-                "[ERROR] --command, --args, and --env are not allowed when using sse or streamable-http client type",
-                err=True)
             return
 
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
 
     fetcher = list_tools_direct if direct else list_tools_and_schemas
-    tools = anyio.run(fetcher, command, url, tool, transport, stdio_args, stdio_env)
+    tools = asyncio.run(fetcher(command, url, tool, transport, stdio_args, stdio_env))
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))
     elif tool:
-        for tool_dict in tools:
+        for tool_dict in (tools or []):
             print_tool(tool_dict, detail=True)
     elif detail:
-        for tool_dict in tools:
+        for tool_dict in (tools or []):
             print_tool(tool_dict, detail=True)
     else:
-        for tool_dict in tools:
+        for tool_dict in (tools or []):
             click.echo(tool_dict.get('name', 'Unknown tool'))
 
 
 @list_mcp.command()
-@click.option('--url', default='http://localhost:9901/mcp/', show_default=True, help='MCP server URL')
+@click.option('--url',
+              default='http://localhost:9901/mcp',
+              show_default=True,
+              help='MCP server URL (e.g. http://localhost:8080/mcp for streamable-http, http://localhost:8080/sse for sse)')
+@click.option('--transport',
+              type=click.Choice(['sse', 'stdio', 'streamable-http']),
+              default='streamable-http',
+              show_default=True,
+              help='Type of client to use for ping')
+@click.option('--command', help='For stdio: The command to run (e.g. mcp-server)')
+@click.option('--args', help='For stdio: Additional arguments for the command (space-separated)')
+@click.option('--env', help='For stdio: Environment variables in KEY=VALUE format (space-separated)')
 @click.option('--timeout', default=60, show_default=True, help='Timeout in seconds for ping request')
 @click.option('--json-output', is_flag=True, help='Output ping result in JSON format')
-def ping(url: str, timeout: int, json_output: bool) -> None:
+def ping(url: str, transport: str, command: str | None, args: str | None, env: str | None, timeout: int,
+         json_output: bool) -> None:
     """Ping an MCP server to check if it's responsive.
 
     This command sends a ping request to the MCP server and measures the response time.
     It's useful for health checks and monitoring server availability.
 
     Args:
-        url (str): MCP server URL to ping (default: http://localhost:9901/mcp/)
+        url (str): MCP server URL to ping (default: http://localhost:9901/mcp)
         timeout (int): Timeout in seconds for the ping request (default: 60)
         json_output (bool): Whether to output the result in JSON format
 
     Examples:
         nat info mcp ping                                    # Ping default server
-        nat info mcp ping --url http://custom-server:9901/mcp/ # Ping custom server
+        nat info mcp ping --url http://custom-server:9901/mcp # Ping custom server
         nat info mcp ping --timeout 10                      # Use 10 second timeout
         nat info mcp ping --json-output                     # Get JSON format output
     """
-    result = asyncio.run(ping_mcp_server(url, timeout))
+    # Validate combinations similar to parent command
+    if not validate_transport_combination(transport, command, args, env):
+        return
+
+    stdio_args = args.split() if args else []
+    stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
+
+    result = asyncio.run(ping_mcp_server(url, timeout, transport, command, stdio_args, stdio_env))
 
     if json_output:
         click.echo(result.model_dump_json(indent=2))
