@@ -32,6 +32,7 @@ async def fixture_mysql_server(fail_missing: bool):
     try:
         import aiomysql
         await aiomysql.connect(host='127.0.0.1', port=3306, user='root', password='my-secret-pw')
+        yield
     except ImportError:
         if fail_missing:
             raise

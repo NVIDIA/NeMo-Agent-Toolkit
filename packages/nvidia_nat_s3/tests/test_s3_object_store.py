@@ -27,7 +27,31 @@ from nat.test.object_store_tests import ObjectStoreTests
 #     server /data --console-address ":9001"
 
 
+@pytest.fixture(name="s3_server", scope="module")
+def fixture_s3_server(fail_missing: bool):
+    """Fixture to safely skip S3 based tests if S3 is not running"""
+    try:
+        import botocore.session
+        session = botocore.session.get_session()
+        client = session.create_client("s3",
+                                       aws_access_key_id="minioadmin",
+                                       aws_secret_access_key="minioadmin",
+                                       region_name=None,
+                                       endpoint_url="http://localhost:9000")
+        client.list_directory_buckets()
+        yield
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("aioboto3 not installed, skipping S3 tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        pytest.skip(f"Error connecting to S3 server: {e}, skipping S3 tests")
+
+
 @pytest.mark.integration
+@pytest.mark.usefixtures("s3_server")
 class TestS3ObjectStore(ObjectStoreTests):
 
     @asynccontextmanager
