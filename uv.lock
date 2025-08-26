@@ -1475,14 +1475,14 @@ wheels = [
 
 [[package]]
 name = "elasticsearch"
-version = "8.17.2"
+version = "8.17.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "elastic-transport" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5b/3d/f563e58f45d23565c0d0316a565638ce312f536b882a3281b8047fb4a58f/elasticsearch-8.17.2.tar.gz", hash = "sha256:ff7f1db8aeefd87ceba4edce3aa4070994582e6cf029d2e67b74e66d634509db", size = 602691, upload-time = "2025-03-04T12:14:27.382Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/57/f61579940df4771971aede5b355f64c758f56d8cc9bd4407d669c2f0dd2f/elasticsearch-8.17.0.tar.gz", hash = "sha256:c1069bf2204ba8fab29ff00b2ce6b37324b2cc6ff593283b97df43426ec13053", size = 460268, upload-time = "2024-12-16T06:30:00.731Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/50/16306f4722ca2fcb64a5875bc1fa9b4d0bcb08c05967f60c23acd4cbb019/elasticsearch-8.17.2-py3-none-any.whl", hash = "sha256:2d058dcddd8f2686cd431a916cdf983f9fb7d211d902834f564ab7df05ba6478", size = 717971, upload-time = "2025-03-04T12:14:23.843Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/82/832ff4bdb53429af0025f5032c8b4f3ba18915e08ce16fc55aa09e900e26/elasticsearch-8.17.0-py3-none-any.whl", hash = "sha256:15965240fe297279f0e68b260936d9ced9606aa7ef8910b9b56727f96ef00d5b", size = 571182, upload-time = "2024-12-16T06:29:53.828Z" },
 ]
 
 [[package]]
@@ -4980,7 +4980,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "elasticsearch", specifier = "==8.17.2" },
+    { name = "elasticsearch", specifier = "~=8.17" },
     { name = "nvidia-nat", editable = "." },
 ]
 

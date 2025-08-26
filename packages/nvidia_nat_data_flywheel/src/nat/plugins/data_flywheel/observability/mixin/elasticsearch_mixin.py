@@ -31,16 +31,16 @@ class ElasticsearchMixin:
                  *args,
                  endpoint: str,
                  index: str,
-                 elasticsearch_auth: tuple,
-                 headers: dict | None = None,
+                 elasticsearch_auth: tuple[str, str],
+                 headers: dict[str, str] | None = None,
                  **kwargs):
         """Initialize the elasticsearch exporter.
 
         Args:
             endpoint (str): The elasticsearch endpoint.
             index (str): The elasticsearch index.
-            elasticsearch_auth (dict): The elasticsearch authentication credentials.
-            headers (dict): The elasticsearch headers.
+            elasticsearch_auth (tuple[str, str]): The elasticsearch authentication credentials.
+            headers (dict[str, str] | None): The elasticsearch headers.
         """
         if headers is None:
             headers = {"Accept": "application/vnd.elasticsearch+json; compatible-with=8"}

@@ -16,15 +16,19 @@
 import json
 from typing import Any
 
+# Type alias for all possible JSON values
+JSONValue = dict[str, Any] | list[Any] | str | int | float | bool | None
 
-def deserialize_span_attribute(value: dict[str, Any] | list[Any] | str) -> dict[str, Any] | list[Any]:
-    """Deserialize a string input value to a dictionary, list, or None.
+
+def deserialize_span_attribute(value: dict[str, Any] | list[Any] | str) -> JSONValue:
+    """Deserialize a string input value to any valid JSON value.
 
     Args:
         value (str): The input value to deserialize
 
     Returns:
-        dict | list: The deserialized input value
+        JSONValue: The deserialized input value, which can be a dictionary, list,
+                   string, number (int/float), boolean, or None
 
     Raises:
         ValueError: If parsing fails

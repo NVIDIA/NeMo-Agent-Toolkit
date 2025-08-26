@@ -260,7 +260,7 @@ def track_unregistered_function(func: Any = None, *, name: str | None = None, me
 
     - Sets active function context using the function name
     - Leverages Context.push_active_function for built-in tracking
-    - Avoids duplicate tracking entries by relying on NAT's built-in systems
+    - Avoids duplicate tracking entries by relying on the library's built-in systems
 
     Args:
         func: The function to wrap
@@ -298,7 +298,7 @@ def track_unregistered_function(func: Any = None, *, name: str | None = None, me
             input_data = args[0] if args else kwargs
 
             # Only do context management - let push_active_function handle tracking
-            with context.push_active_function(function_name, input_data=input_data) as manager:
+            with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
                 final_outputs = []
                 async for item in func(*args, **kwargs):
                     final_outputs.append(item)
@@ -355,7 +355,5 @@ def track_unregistered_function(func: Any = None, *, name: str | None = None, me
             result = func(*args, **kwargs)
             manager.set_output(result)
             return result
-
-    return sync_wrapper
 
     return sync_wrapper
