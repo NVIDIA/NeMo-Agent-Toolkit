@@ -176,6 +176,52 @@ To run the evaluation using the custom dataset parser, run the following command
 ```bash
 nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-custom-dataset-format.yml
 ```
+### Custom Pre-evaluation Process Function
+You can provide a custom function to process the eval input after the workflow runs but before evaluation begins. This allows you to modify, filter, or enrich the evaluation data.
+
+**Example:**
+`examples/evaluation_and_profiling/simple_calculator_eval/configs/config-with-custom-post-process.yml`:
+```yaml
+eval:
+  general:
+    output:
+      dir: .tmp/nat/examples/simple_calculator/eval-with-post-process
+      custom_pre_eval_process_function: nat_simple_calculator_eval.scripts.custom_post_process.normalize_calculator_outputs
+    dataset:
+      _type: json
+      file_path: examples/getting_started/simple_calculator/src/nat_simple_calculator/data/simple_calculator.json
+```
+This example configuration uses a custom pre-evaluation process function to normalize numerical outputs for consistent evaluation.
+
+The custom pre-evaluation process function is a Python function that takes an `EvalInputItem` object and returns a modified `EvalInputItem` object.
+**Helper Function**: You can use the `copy_with_updates()` method in the `EvalInputItem` object to easily update only specific fields while preserving all others:
+```python
+# Update only the output_obj field
+return item.copy_with_updates(output_obj="new output")
+
+# Update multiple fields
+return item.copy_with_updates(
+    output_obj="new output",
+    expected_output_obj="new expected"
+)
+```
+
+Signature of the sample custom pre-evaluation process function is as follows:
+```python
+def normalize_calculator_outputs(item: EvalInputItem) -> EvalInputItem:
+```
+
+Common use cases for custom pre-evaluation process functions include:
+- **Data normalization**: Standardize formats for consistent evaluation
+- **Quality filtering**: Remove incomplete or invalid workflow outputs
+- **Metadata enhancement**: Add processing information to dataset entries
+- **Output transformation**: Modify generated answers before evaluation
+
+To run the evaluation using the custom pre-evaluation process function, run the following command:
+```bash
+nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-with-custom-post-process.yml
+```
+
 
 ## NeMo Agent Toolkit Built-in Evaluators
 NeMo Agent toolkit provides the following built-in evaluator:

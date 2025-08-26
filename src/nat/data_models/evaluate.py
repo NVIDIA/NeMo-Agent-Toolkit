@@ -57,6 +57,9 @@ class EvalOutputConfig(BaseModel):
     dir: Path = Path("./.tmp/nat/examples/default/")
     # S3 prefix for the workflow and evaluation results
     remote_dir: str | None = None
+    # Custom function to pre-evaluation process the eval input
+    # Format: "module.path.function_name"
+    custom_pre_eval_process_function: str | None = None
     # Custom scripts to run after the workflow and evaluation results are saved
     custom_scripts: dict[str, EvalCustomScriptConfig] = {}
     # S3 config for uploading the contents of the output directory
