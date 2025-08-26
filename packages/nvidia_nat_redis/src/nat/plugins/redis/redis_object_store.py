@@ -30,7 +30,7 @@ class RedisObjectStore(ObjectStore):
     """
     Implementation of ObjectStore that stores objects in Redis.
 
-    Each object is stored as a single binary value at key "nat:object_store:bucket:{bucket_name}:{object_key}".
+    Each object is stored as a single binary value at key "nat/object_store/{bucket_name}/{object_key}".
     """
 
     def __init__(self, *, bucket_name: str, host: str, port: int, db: int):

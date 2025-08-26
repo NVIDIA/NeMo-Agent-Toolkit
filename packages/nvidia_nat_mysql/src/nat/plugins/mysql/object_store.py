@@ -62,5 +62,5 @@ async def mysql_object_store_client(config: MySQLObjectStoreClientConfig, _build
 
     from .mysql_object_store import MySQLObjectStore
 
-    async with MySQLObjectStore(**config.model_dump(exclude={"type"})) as store:
+    async with MySQLObjectStore(**config.model_dump(exclude={"type"}, exclude_none=True)) as store:
         yield store
