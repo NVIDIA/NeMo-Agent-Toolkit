@@ -82,6 +82,7 @@ except ImportError:
     JobStore = None
 
 
+# TODO: Prior to merging remove all/most of the job store related asserts and remove commented out code
 class FastApiFrontEndPluginWorkerBase(ABC):
 
     def __init__(self, config: Config):

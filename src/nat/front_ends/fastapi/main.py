@@ -16,9 +16,9 @@
 import logging
 import os
 
-from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import (
-    FastApiFrontEndPluginWorkerBase, )
-from nat.front_ends.fastapi.utils import get_config_file_path, import_class_from_string
+from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
+from nat.front_ends.fastapi.utils import get_config_file_path
+from nat.front_ends.fastapi.utils import import_class_from_string
 from nat.runtime.loader import load_config
 
 logger = logging.getLogger(__name__)
