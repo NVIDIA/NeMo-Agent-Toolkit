@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from typing import TypeVar
 
 from nat.builder.builder import Builder
@@ -72,29 +71,14 @@ async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
     from agno.models.nvidia import Nvidia
 
     config_obj = {
-        **llm_config.model_dump(exclude={"type", "model_name"}, by_alias=True),
         "id": f"{llm_config.model_name}",
+        **llm_config.model_dump(exclude={"type", "model_name"}, by_alias=True),
     }
 
-    # Because Agno uses a different environment variable for the API key, we need to set it here manually
-    if ("api_key" not in config_obj or config_obj["api_key"] is None):
+    if "base_url" in config_obj and config_obj.get("base_url") is None:
+        config_obj.pop("base_url", None)
 
-        if ("NVIDIA_API_KEY" in os.environ):
-            # Dont need to do anything. User has already set the correct key
-            pass
-        else:
-            nvidai_api_key = os.getenv("NVIDIA_API_KEY")
-
-            if (nvidai_api_key is not None):
-                # Transfer the key to the correct environment variable
-                os.environ["NVIDIA_API_KEY"] = nvidai_api_key
-
-    # Create Nvidia instance with conditional base_url
-    kwargs = {"id": config_obj.get("id")}
-    if "base_url" in config_obj and config_obj.get("base_url") is not None:
-        kwargs["base_url"] = config_obj.get("base_url")
-
-    client = Nvidia(**kwargs)  # type: ignore[arg-type]
+    client = Nvidia(**config_obj)  # type: ignore[arg-type]
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -104,13 +88,11 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from agno.models.openai import OpenAIChat
 
-    # Use model_dump to get the proper field values with correct types
-    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
+    config_obj = {
+        "id": f"{llm_config.model_name}",
+        **llm_config.model_dump(exclude={"type", "model_name"}, by_alias=True),
+    }
 
-    # AGNO uses 'id' instead of 'model' for the model name
-    if "model" in kwargs:
-        kwargs["id"] = kwargs.pop("model")
-
-    client = OpenAIChat(**kwargs)
+    client = OpenAIChat(**config_obj)
 
     yield _patch_llm_based_on_config(client, llm_config)

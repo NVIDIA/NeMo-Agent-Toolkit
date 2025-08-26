@@ -108,17 +108,10 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
     }
 
     # Because CrewAI uses a different environment variable for the API key, we need to set it here manually
-    if ("api_key" not in config_obj or config_obj["api_key"] is None):
-
-        if ("NVIDIA_NIM_API_KEY" in os.environ):
-            # Dont need to do anything. User has already set the correct key
-            pass
-        else:
-            nvidai_api_key = os.getenv("NVIDIA_API_KEY")
-
-            if (nvidai_api_key is not None):
-                # Transfer the key to the correct environment variable for LiteLLM
-                os.environ["NVIDIA_NIM_API_KEY"] = nvidai_api_key
+    if config_obj.get("api_key") is None and "NVIDIA_NIM_API_KEY" not in os.environ:
+        nvidia_api_key = os.getenv("NVIDIA_API_KEY")
+        if nvidia_api_key is not None:
+            os.environ["NVIDIA_NIM_API_KEY"] = nvidia_api_key
 
     client = LLM(**config_obj)
 
