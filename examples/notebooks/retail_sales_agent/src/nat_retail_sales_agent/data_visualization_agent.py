@@ -187,8 +187,3 @@ async def data_visualization_agent_function(config: DataVisualizationAgentConfig
         print("Function exited early!")
     finally:
         print("Cleaning up retail_sales_agent workflow.")
-
-    except GeneratorExit:
-        print("Function exited early!")
-    finally:
-        print("Cleaning up retail_sales_agent workflow.")
