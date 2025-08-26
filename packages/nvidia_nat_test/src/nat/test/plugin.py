@@ -106,8 +106,8 @@ def function_registry_fixture():
         yield registry
 
 
-@pytest.fixture(scope="session")
-def fail_missing(pytestconfig: pytest.Config) -> bool:
+@pytest.fixture(scope="session", name="fail_missing")
+def fail_missing_fixture(pytestconfig: pytest.Config) -> bool:
     """
     Returns the value of the `fail_missing` flag, when false tests requiring unmet dependencies will be skipped, when
     True they will fail.
@@ -179,3 +179,16 @@ def azure_openai_keys_fixture(fail_missing: bool):
         reason="Azure integration tests require the `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` environment "
         "variable to be defined.",
         fail_missing=fail_missing)
+
+@pytest.fixture(name="restore_environ")
+def restore_environ_fixture():
+    orig_vars = os.environ.copy()
+    yield os.environ
+
+    # Iterating over a copy of the keys as we will potentially be deleting keys in the loop
+    for key in list(os.environ.keys()):
+        orig_val = orig_vars.get(key)
+        if orig_val is not None:
+            os.environ[key] = orig_val
+        else:
+            del (os.environ[key])
