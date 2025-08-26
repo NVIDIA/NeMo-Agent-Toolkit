@@ -48,6 +48,8 @@ from nat.eval.evaluator.evaluator_model import EvalOutputItem
 from nat.profiler.data_models import ProfilerResults
 from nat.runtime.session import SessionManager
 
+# pylint: disable=unused-argument # arguments are passed to setup the fixtures
+
 
 @pytest.fixture
 def default_eval_run_config():
@@ -298,8 +300,8 @@ async def test_run_workflow_remote_success(evaluation_run, generated_answer):
     Mock RemoteWorkflowHandler and test evaluation with a remote workflow.
     """
     # Patch the remote handler
-    with patch("nat.eval.remote_workflow.EvaluationRemoteWorkflowHandler") as MockHandler:
-        mock_handler = MockHandler.return_value
+    with patch("nat.eval.remote_workflow.EvaluationRemoteWorkflowHandler") as mock_handler:
+        handler_instance = mock_handler.return_value
 
         async def fake_run_workflow_remote(eval_input):
             """
@@ -309,7 +311,7 @@ async def test_run_workflow_remote_success(evaluation_run, generated_answer):
                 item.output_obj = generated_answer
             return eval_input
 
-        mock_handler.run_workflow_remote = AsyncMock(side_effect=fake_run_workflow_remote)
+        handler_instance.run_workflow_remote = AsyncMock(side_effect=fake_run_workflow_remote)
 
         # Run the remote evaluation (this calls the mocked handler)
         await evaluation_run.run_workflow_remote()
@@ -511,6 +513,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
          patch("nat.builder.eval_builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
          patch("nat.eval.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
          patch("nat.eval.evaluate.OutputUploader", return_value=mock_uploader), \
+         patch("nat.eval.evaluate.EvaluationRunOutput", return_value=MagicMock()) as mock_eval_run_output, \
          patch.object(evaluation_run, "run_workflow_local",
                       wraps=evaluation_run.run_workflow_local) as mock_run_workflow, \
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \
@@ -546,6 +549,9 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
         # Ensure custom scripts are run and directory is uploaded
         mock_uploader.run_custom_scripts.assert_called_once()
         mock_uploader.upload_directory.assert_awaited_once()
+
+        # Ensure EvaluationRunOutput was created (this prevents the Pydantic validation error)
+        mock_eval_run_output.assert_called()
 
 
 def test_append_job_id_to_output_dir(default_eval_config):

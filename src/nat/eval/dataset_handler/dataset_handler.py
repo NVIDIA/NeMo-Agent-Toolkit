@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 import json
 import math
 from pathlib import Path
@@ -41,7 +42,8 @@ class DatasetHandler:
                  reps: int,
                  concurrency: int,
                  num_passes: int = 1,
-                 adjust_dataset_size: bool = False):
+                 adjust_dataset_size: bool = False,
+                 custom_pre_eval_process_function: str | None = None):
         from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         self.dataset_config = dataset_config
@@ -52,6 +54,9 @@ class DatasetHandler:
         self.concurrency = concurrency
         self.num_passes = num_passes
         self.adjust_dataset_size = adjust_dataset_size
+
+        # Custom pre-evaluation process function
+        self.custom_pre_eval_process_function = custom_pre_eval_process_function
 
         # Helpers
         self.intermediate_step_adapter = IntermediateStepAdapter()
@@ -329,6 +334,66 @@ class DatasetHandler:
             event_filter = self.intermediate_step_adapter.DEFAULT_EVENT_FILTER
         filtered_steps = self.intermediate_step_adapter.filter_intermediate_steps(intermediate_steps, event_filter)
         return self.intermediate_step_adapter.serialize_intermediate_steps(filtered_steps)
+
+    def pre_eval_process_eval_input(self, eval_input: EvalInput) -> EvalInput:
+        """
+        Pre-evaluation process the eval input using custom function if provided.
+
+        The custom pre-evaluation process function should have the signature:
+        def custom_pre_eval_process(item: EvalInputItem) -> EvalInputItem
+
+        The framework will iterate through all items and call this function on each one.
+
+        Args:
+            eval_input: The EvalInput object to pre-evaluation process
+
+        Returns:
+            The pre-evaluation processed EvalInput object
+        """
+        if self.custom_pre_eval_process_function:
+            try:
+                custom_function = self._load_custom_pre_eval_process_function()
+                processed_items = []
+
+                for item in eval_input.eval_input_items:
+                    processed_item = custom_function(item)
+                    if not isinstance(processed_item, EvalInputItem):
+                        raise TypeError(f"Custom pre-evaluation '{self.custom_pre_eval_process_function}' must return "
+                                        f"EvalInputItem, got {type(processed_item)}")
+                    processed_items.append(processed_item)
+
+                return EvalInput(eval_input_items=processed_items)
+            except Exception as e:
+                raise RuntimeError(f"Error calling custom pre-evaluation process function "
+                                   f"'{self.custom_pre_eval_process_function}': {e}") from e
+
+        return eval_input
+
+    def _load_custom_pre_eval_process_function(self):
+        """
+        Import and return the custom pre-evaluation process function using standard Python import path.
+
+        The function should process individual EvalInputItem objects.
+        """
+        # Split the function path to get module and function name
+        if "." not in self.custom_pre_eval_process_function:
+            raise ValueError(f"Invalid custom_pre_eval_process_function '{self.custom_pre_eval_process_function}'. "
+                             "Expected format: '<module_path>.<function_name>'")
+        module_path, function_name = self.custom_pre_eval_process_function.rsplit(".", 1)
+
+        # Import the module
+        module = importlib.import_module(module_path)
+
+        # Get the function from the module
+        if not hasattr(module, function_name):
+            raise AttributeError(f"Function '{function_name}' not found in module '{module_path}'")
+
+        custom_function = getattr(module, function_name)
+
+        if not callable(custom_function):
+            raise ValueError(f"'{self.custom_pre_eval_process_function}' is not callable")
+
+        return custom_function
 
     def publish_eval_input(self,
                            eval_input,

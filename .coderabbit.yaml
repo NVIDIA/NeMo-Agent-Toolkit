@@ -121,11 +121,13 @@ reviews:
       instructions: >-
         Apply this label when the PR introduces changes that break backward compatibility, modify existing APIs in
         incompatible ways, creates a behavioral change, or require users to update their code when upgrading. If you
-        apply this label, do not apply the "non-breaking" label.
+        apply this label, do not apply the "non-breaking" label. Do not apply this label if the PR already has either
+        the "breaking" or "non-breaking" label.
     - label: bug
       instructions: >-
         Apply this label when the PR fixes a defect, error, or unexpected behavior in the existing codebase. If you
-        apply this label do not apply the "doc", "feature request", or "improvement" labels.
+        apply this label do not apply the "doc", "feature request", or "improvement" labels. Do not apply this label if
+        the PR already has either the "bug", "doc", "feature request", or "improvement" labels.
     - label: DO NOT MERGE
       instructions: >-
         Apply this label to PRs that should not be merged due to critical issues, incomplete work, or other blocking
@@ -134,7 +136,8 @@ reviews:
     - label: doc
       instructions: >-
         Apply this label when the PR primarily adds, updates, or improves documentation including README files. If you
-        apply this label do not apply the "bug", "feature request", or "improvement" labels.
+        apply this label do not apply the "bug", "feature request", or "improvement" labels. Do not apply this label if
+        the PR already has either the "bug", "doc", "feature request", or "improvement" labels.
     - label: duplicate
       instructions: >-
         Apply this label when the PR addresses the same issue or implements the same feature as another existing
@@ -146,12 +149,14 @@ reviews:
     - label: feature request
       instructions: >-
         Apply this label when the PR implements new functionality, adds new features, or introduces new capabilities
-        to the toolkit. If you apply this label do not apply the "bug", "doc", or "improvement" labels.
+        to the toolkit. If you apply this label do not apply the "bug", "doc", or "improvement" labels. Do not apply
+        this label if  the PR already has either the "bug", "doc", "feature request", or "improvement" labels.
     - label: improvement
       instructions: >-
         Apply this label when the PR enhances existing functionality without adding completely new features, such as
         performance optimizations, code refactoring, or usability enhancements. If you apply this label do not apply
-        the "bug", "doc", or "feature request" labels.
+        the "bug", "doc", or "feature request" labels. Do not apply this label if the PR already has either the "bug",
+        "doc", "feature request", or "improvement" labels.
     - label: invalid
       instructions: >-
         Apply this label when the PR contains invalid changes, doesn't follow project guidelines, or has fundamental
@@ -160,7 +165,8 @@ reviews:
       instructions: >-
         Apply this label when the PR introduces changes that maintain backward compatibility, does not create a
         behavioral change, and does not require users to modify their existing code. If you apply this label, do not
-        apply the "breaking" label.
+        apply the "breaking" label. Do not apply this label if the PR already has either the "breaking" or
+        "non-breaking" label.
 
   tools:
     ruff:
