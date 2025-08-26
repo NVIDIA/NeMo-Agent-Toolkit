@@ -16,7 +16,7 @@
 name: Feature Request Form
 description: Request new or improved functionality or changes to existing functionality
 type: "Enhancement"
-labels: ["feature request"]
+labels: ["feature request", "Needs Triage"]
 
 body:
   - type: markdown
