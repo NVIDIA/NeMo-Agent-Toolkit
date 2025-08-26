@@ -38,7 +38,7 @@ functions:
     _type: mcp_client
     server:
       transport: streamable-http
-      url: "http://localhost:9901/mcp/"
+      url: "http://localhost:9901/mcp"
     # load all tools and use the names and descriptions from the server
 
 llms:

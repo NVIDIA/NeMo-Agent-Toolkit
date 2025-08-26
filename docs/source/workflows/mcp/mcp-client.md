@@ -75,7 +75,7 @@ functions:
     mcp_tool_name: tool_a
   mcp_tool_b:
     _type: mcp_tool_wrapper
-    url: "http://localhost:8080/mcp/"
+    url: "http://localhost:8080/mcp"
     mcp_tool_name: tool_b
 ```
 
