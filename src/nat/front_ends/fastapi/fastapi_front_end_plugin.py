@@ -21,20 +21,20 @@ import typing
 
 from nat.builder.front_end import FrontEndBase
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import (
-    FastApiFrontEndPluginWorkerBase, )
+from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
 from nat.front_ends.fastapi.main import get_app
 from nat.front_ends.fastapi.utils import get_class_name
 from nat.utils.io.yaml_tools import yaml_dump
 
-logger = logging.getLogger(__name__)
+if (typing.TYPE_CHECKING):
+    from nat.data_models.config import Config
 
 logger = logging.getLogger(__name__)
 
 
 class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
-    def __init__(self, full_config: "AIQConfig"):
+    def __init__(self, full_config: "Config"):
         super().__init__(full_config)
 
         # This attribute is set if dask is installed, and an external cluster is not used (scheduler_address is None)
@@ -42,8 +42,7 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
         self._cleanup_future = None
 
     def get_worker_class(self) -> type[FastApiFrontEndPluginWorkerBase]:
-        from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import (
-            FastApiFrontEndPluginWorker, )
+        from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
         return FastApiFrontEndPluginWorker
 
@@ -59,7 +58,7 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
     @staticmethod
     async def _periodic_cleanup(scheduler_address: str, sleep_time_sec: int = 300):
-        from aiq.front_ends.fastapi.job_store import JobStore
+        from nat.front_ends.fastapi.job_store import JobStore
         job_store = JobStore(scheduler_address=scheduler_address)
 
         logger.info("Starting periodic cleanup of expired jobs every %d seconds", sleep_time_sec)
@@ -75,7 +74,8 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
     async def _submit_cleanup_task(self, scheduler_address: str):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
-        from dask.distributed import Client, fire_and_forget
+        from dask.distributed import Client
+        from dask.distributed import fire_and_forget
 
         client = await Client(self._cluster, asynchronous=True)
         self._cleanup_future = client.submit(self._periodic_cleanup, scheduler_address=scheduler_address)
@@ -109,16 +109,17 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
             if scheduler_address is not None:
 
-                from aiq.front_ends.fastapi.job_store import Base, get_db_engine
+                from nat.front_ends.fastapi.job_store import Base
+                from nat.front_ends.fastapi.job_store import get_db_engine
 
                 db_engine = get_db_engine(self.front_end_config.db_url)
                 Base.metadata.create_all(db_engine)  # create tables if they do not exist
 
                 await self._submit_cleanup_task(scheduler_address)
-                os.environ["AIQ_DASK_SCHEDULER_ADDRESS"] = scheduler_address
+                os.environ["NAT_DASK_SCHEDULER_ADDRESS"] = scheduler_address
 
                 # If self.front_end_config.db_url is None, then we need to get the actual resolved url from the engine
-                os.environ["AIQ_JOB_STORE_DB_URL"] = str(db_engine.url)
+                os.environ["NAT_JOB_STORE_DB_URL"] = str(db_engine.url)
 
             # Write to YAML file
             yaml_dump(config_dict, config_file)

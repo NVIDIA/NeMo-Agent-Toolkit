@@ -20,16 +20,25 @@ import shutil
 import typing
 from collections.abc import Callable
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import UTC
+from datetime import datetime
+from datetime import timedelta
 from enum import Enum
 from operator import attrgetter
 from uuid import uuid4
 
 import dask.config
-from dask.distributed import Client, Future, Variable, fire_and_forget
+from dask.distributed import Client
+from dask.distributed import Future
+from dask.distributed import Variable
+from dask.distributed import fire_and_forget
 from pydantic import BaseModel
-from sqlalchemy import String, create_engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+from sqlalchemy import String
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import mapped_column
 
 if typing.TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -266,7 +275,7 @@ class JobStore:
 
 def get_db_engine(db_url: str | None = None) -> "Engine":
     if db_url is None:
-        db_url = os.environ.get("AIQ_JOB_STORE_DB_URL")
+        db_url = os.environ.get("NAT_JOB_STORE_DB_URL")
         if db_url is None:
             dot_tmp_dir = os.path.join(os.getcwd(), ".tmp")
             os.makedirs(dot_tmp_dir, exist_ok=True)
