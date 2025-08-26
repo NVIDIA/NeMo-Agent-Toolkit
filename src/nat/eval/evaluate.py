@@ -554,9 +554,3 @@ class EvaluationRun:
                                    evaluation_results=self.evaluation_results,
                                    usage_stats=self.usage_stats,
                                    profiler_results=profiler_results)
-                                   evaluator_output_files=self.evaluator_output_files,
-                                   workflow_interrupted=self.workflow_interrupted,
-                                   eval_input=self.eval_input,
-                                   evaluation_results=self.evaluation_results,
-                                   usage_stats=self.usage_stats,
-                                   profiler_results=profiler_results)
