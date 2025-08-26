@@ -66,6 +66,7 @@ class TestGetTraceContainer:
         # Clear registry before each test
         try:
             # yapf: disable
+            # pylint: disable=import-outside-toplevel
             from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import (
                 TraceAdapterRegistry,
             )
@@ -274,6 +275,7 @@ class TestSpanToDfwRecord:
         # Clear registry before each test
         try:
             # yapf: disable
+            # pylint: disable=import-outside-toplevel
             from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import (
                 TraceAdapterRegistry,
             )
@@ -426,6 +428,7 @@ class TestIntegrationScenarios:
         # Clear registry before each test
         try:
             # yapf: disable
+            # pylint: disable=import-outside-toplevel
             from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import (
                 TraceAdapterRegistry,
             )
@@ -504,6 +507,8 @@ class TestErrorHandlingAndEdgeCases:
         """Setup and cleanup registry for test isolation."""
         # Clear registry before each test
         try:
+            # yapf: disable
+            # pylint: disable=import-outside-toplevel
             from nat.plugins.data_flywheel.observability.processor.trace_conversion.trace_adapter_registry import (
                 TraceAdapterRegistry,
             )
@@ -546,7 +551,7 @@ class TestErrorHandlingAndEdgeCases:
         assert callable(span_to_dfw_record)
 
         # Verify they can be imported and used (basic smoke test)
-        # yapf: disable
+        # pylint: disable=import-outside-toplevel, reimported
         from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record import (
             get_trace_container as imported_get_container,
         )

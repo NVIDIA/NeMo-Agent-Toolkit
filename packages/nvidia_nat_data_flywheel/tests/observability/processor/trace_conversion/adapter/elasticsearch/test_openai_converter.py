@@ -202,7 +202,7 @@ class TestCreateMessageByRole:
 class TestCreateToolCalls:
     """Test suite for create_tool_calls function."""
 
-    def testcreate_tool_calls_with_valid_data(self):
+    def test_create_tool_calls_with_valid_data(self):
         """Test creating tool calls with valid data."""
         tool_calls_data = [{"function": {"name": "get_weather", "arguments": '{"location": "New York"}'}}]
 
@@ -214,7 +214,7 @@ class TestCreateToolCalls:
         assert result[0].function.name == "get_weather"
         assert result[0].function.arguments == {"location": "New York"}
 
-    def testcreate_tool_calls_with_dict_arguments(self):
+    def test_create_tool_calls_with_dict_arguments(self):
         """Test creating tool calls when arguments are already a dict."""
         tool_calls_data = [{"function": {"name": "calculate", "arguments": {"x": 10, "y": 20}}}]
 
@@ -224,7 +224,7 @@ class TestCreateToolCalls:
         assert result[0].function.name == "calculate"
         assert result[0].function.arguments == {"x": 10, "y": 20}
 
-    def testcreate_tool_calls_with_invalid_json_arguments(self):
+    def test_create_tool_calls_with_invalid_json_arguments(self):
         """Test creating tool calls with invalid JSON arguments."""
         tool_calls_data = [{"function": {"name": "broken_func", "arguments": "invalid json {"}}]
 
@@ -238,7 +238,7 @@ class TestCreateToolCalls:
             assert result[0].function.arguments == {}  # Should fallback to empty dict
             mock_logger.warning.assert_called_once()
 
-    def testcreate_tool_calls_with_missing_function_name(self):
+    def test_create_tool_calls_with_missing_function_name(self):
         """Test creating tool calls with missing function name."""
         tool_calls_data = [{"function": {"arguments": '{"param": "value"}'}}]
 
@@ -248,7 +248,7 @@ class TestCreateToolCalls:
         assert result[0].function.name == "unknown"  # Should fallback to "unknown"
         assert result[0].function.arguments == {"param": "value"}
 
-    def testcreate_tool_calls_with_empty_function_name(self):
+    def test_create_tool_calls_with_empty_function_name(self):
         """Test creating tool calls with empty function name."""
         tool_calls_data = [{"function": {"name": "", "arguments": "{}"}}]
 
@@ -257,7 +257,7 @@ class TestCreateToolCalls:
         assert len(result) == 1
         assert result[0].function.name == "unknown"  # Should fallback to "unknown"
 
-    def testcreate_tool_calls_with_none_function_name(self):
+    def test_create_tool_calls_with_none_function_name(self):
         """Test creating tool calls with None function name."""
         tool_calls_data = [{"function": {"name": None, "arguments": "{}"}}]
 
@@ -266,7 +266,7 @@ class TestCreateToolCalls:
         assert len(result) == 1
         assert result[0].function.name == "unknown"  # Should fallback to "unknown"
 
-    def testcreate_tool_calls_with_invalid_tool_call_structure(self):
+    def test_create_tool_calls_with_invalid_tool_call_structure(self):
         """Test creating tool calls with invalid structure."""
         # Non-dict tool call should be skipped
         tool_calls_data = ["invalid", {"function": {"name": "valid_func", "arguments": "{}"}}]
@@ -276,7 +276,7 @@ class TestCreateToolCalls:
         assert len(result) == 1
         assert result[0].function.name == "valid_func"
 
-    def testcreate_tool_calls_with_invalid_function_structure(self):
+    def test_create_tool_calls_with_invalid_function_structure(self):
         """Test creating tool calls with invalid function structure."""
         # Non-dict function should be skipped
         tool_calls_data = [{"function": "not_a_dict"}, {"function": {"name": "valid_func", "arguments": "{}"}}]
@@ -286,12 +286,12 @@ class TestCreateToolCalls:
         assert len(result) == 1
         assert result[0].function.name == "valid_func"
 
-    def testcreate_tool_calls_with_empty_list(self):
+    def test_create_tool_calls_with_empty_list(self):
         """Test creating tool calls with empty list."""
         result = create_tool_calls([])
         assert len(result) == 0
 
-    def testcreate_tool_calls_with_multiple_tool_calls(self):
+    def test_create_tool_calls_with_multiple_tool_calls(self):
         """Test creating multiple tool calls."""
         tool_calls_data = [{
             "function": {
@@ -401,7 +401,7 @@ class TestConvertMessageToDfw:
 class TestValidateAndConvertTools:
     """Test suite for validate_and_convert_tools function."""
 
-    def testvalidate_and_convert_tools_with_valid_schema(self):
+    def test_validate_and_convert_tools_with_valid_schema(self):
         """Test validating and converting valid tools schema."""
         tools_schema = [{
             "function": {
@@ -425,7 +425,7 @@ class TestValidateAndConvertTools:
         assert result[0].function.name == "get_weather"
         assert result[0].function.description == "Get current weather information"
 
-    def testvalidate_and_convert_tools_with_tool_schema_object(self):
+    def test_validate_and_convert_tools_with_tool_schema_object(self):
         """Test validating and converting ToolSchema objects."""
         from nat.data_models.intermediate_step import ToolDetails
         from nat.data_models.intermediate_step import ToolParameters
@@ -445,7 +445,7 @@ class TestValidateAndConvertTools:
         assert result[0].function.name == "calculate"
         assert result[0].function.description == "Perform calculations"
 
-    def testvalidate_and_convert_tools_with_invalid_tool_type(self):
+    def test_validate_and_convert_tools_with_invalid_tool_type(self):
         """Test validating tools with invalid tool type."""
         tools_schema = [
             "invalid_tool", {
@@ -466,7 +466,7 @@ class TestValidateAndConvertTools:
             assert result[0].function.name == "valid"
             mock_logger.warning.assert_called()
 
-    def testvalidate_and_convert_tools_with_missing_function_key(self):
+    def test_validate_and_convert_tools_with_missing_function_key(self):
         """Test validating tools with missing 'function' key."""
         tools_schema = [{
             "type": "function"
@@ -490,7 +490,7 @@ class TestValidateAndConvertTools:
             assert result[0].function.name == "valid"
             mock_logger.warning.assert_called()
 
-    def testvalidate_and_convert_tools_with_invalid_function_type(self):
+    def test_validate_and_convert_tools_with_invalid_function_type(self):
         """Test validating tools with invalid function type."""
         tools_schema = [{
             "function": "not_a_dict"
@@ -514,7 +514,7 @@ class TestValidateAndConvertTools:
             assert result[0].function.name == "valid"
             mock_logger.warning.assert_called()
 
-    def testvalidate_and_convert_tools_with_missing_required_fields(self):
+    def test_validate_and_convert_tools_with_missing_required_fields(self):
         """Test validating tools with missing required fields."""
         tools_schema = [
             {
@@ -545,7 +545,7 @@ class TestValidateAndConvertTools:
             assert result[0].function.name == "complete"
             assert mock_logger.warning.call_count == 2  # Two warnings for incomplete tools
 
-    def testvalidate_and_convert_tools_with_function_creation_error(self):
+    def test_validate_and_convert_tools_with_function_creation_error(self):
         """Test handling errors during FunctionDetails creation."""
         tools_schema = [{
             "function": {
@@ -563,12 +563,12 @@ class TestValidateAndConvertTools:
             assert len(result) == 0  # Should return empty list due to creation error
             mock_logger.warning.assert_called()
 
-    def testvalidate_and_convert_tools_with_empty_list(self):
+    def test_validate_and_convert_tools_with_empty_list(self):
         """Test validating empty tools list."""
         result = validate_and_convert_tools([])
         assert len(result) == 0
 
-    def testvalidate_and_convert_tools_with_multiple_valid_tools(self):
+    def test_validate_and_convert_tools_with_multiple_valid_tools(self):
         """Test validating multiple valid tools."""
         tools_schema = [{
             "function": {
@@ -607,7 +607,7 @@ class TestValidateAndConvertTools:
 class TestConvertChatResponse:
     """Test suite for convert_chat_response function."""
 
-    def testconvert_chat_response_basic(self):
+    def test_convert_chat_response_basic(self):
         """Test converting basic chat response."""
         chat_response = {
             "message": {
@@ -627,7 +627,7 @@ class TestConvertChatResponse:
         assert result.finish_reason == FinishReason.STOP
         assert result.index == 0
 
-    def testconvert_chat_response_with_tool_calls(self):
+    def test_convert_chat_response_with_tool_calls(self):
         """Test converting chat response with tool calls."""
         chat_response = {
             "message": {
@@ -655,7 +655,7 @@ class TestConvertChatResponse:
         assert len(result.message.tool_calls) == 1
         assert result.message.tool_calls[0].function.name == "search"
 
-    def testconvert_chat_response_with_length_finish_reason(self):
+    def test_convert_chat_response_with_length_finish_reason(self):
         """Test converting chat response with length finish reason."""
         chat_response = {
             "message": {
@@ -671,7 +671,7 @@ class TestConvertChatResponse:
 
         assert result.finish_reason == FinishReason.LENGTH
 
-    def testconvert_chat_response_with_unknown_finish_reason(self):
+    def test_convert_chat_response_with_unknown_finish_reason(self):
         """Test converting chat response with unknown finish reason."""
         chat_response = {
             "message": {
@@ -687,7 +687,7 @@ class TestConvertChatResponse:
 
         assert result.finish_reason is None  # Should be None for unmapped finish reasons
 
-    def testconvert_chat_response_missing_message(self):
+    def test_convert_chat_response_missing_message(self):
         """Test converting chat response with missing message."""
         chat_response = {}
 
@@ -698,7 +698,7 @@ class TestConvertChatResponse:
             # Either ValueError for missing message or TypeError for finish_reason handling
             assert "Chat response missing message" in str(e) or "unhashable type" in str(e)
 
-    def testconvert_chat_response_with_none_message(self):
+    def test_convert_chat_response_with_none_message(self):
         """Test converting chat response with None message."""
         chat_response = {"message": None}
 
@@ -708,7 +708,7 @@ class TestConvertChatResponse:
         except ValueError as e:
             assert "Chat response missing message" in str(e)
 
-    def testconvert_chat_response_with_none_additional_kwargs(self):
+    def test_convert_chat_response_with_none_additional_kwargs(self):
         """Test converting chat response with None additional_kwargs."""
         chat_response = {
             "message": {
@@ -726,7 +726,7 @@ class TestConvertChatResponse:
         assert result.message.content == "Response with None additional_kwargs"
         assert result.message.tool_calls is None
 
-    def testconvert_chat_response_with_none_tool_calls(self):
+    def test_convert_chat_response_with_none_tool_calls(self):
         """Test converting chat response with None tool_calls."""
         chat_response = {
             "message": {
