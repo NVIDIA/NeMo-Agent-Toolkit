@@ -198,10 +198,16 @@ async def list_tools_direct(command, url, tool_name=None, transport='sse', args=
 
             client = get_sse_client
 
-        async with client() as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                response = await session.list_tools()
+        if transport == 'streamable-http':
+            async with client() as (read, write, get_session_id):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    response = await session.list_tools()
+        else:
+            async with client() as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    response = await session.list_tools()
 
                 tools = []
                 for tool in response.tools:
