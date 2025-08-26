@@ -13,14 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-
 from nat.builder.context import ContextState
 from nat.plugins.data_flywheel.observability.exporter.dfw_exporter import DFWExporter
 from nat.plugins.data_flywheel.observability.mixin.elasticsearch_mixin import ElasticsearchMixin
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ContractVersion
-
-logger = logging.getLogger(__name__)
 
 
 class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):

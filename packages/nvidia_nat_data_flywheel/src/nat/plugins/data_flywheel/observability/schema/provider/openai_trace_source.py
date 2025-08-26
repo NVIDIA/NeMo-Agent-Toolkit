@@ -18,6 +18,7 @@ from typing import Any
 from typing import TypeVar
 
 from pydantic import BaseModel
+from pydantic import Field
 from pydantic import field_validator
 
 from nat.data_models.intermediate_step import ToolSchema
@@ -31,11 +32,17 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAIMetadata(BaseModel):
-    tools_schema: list[ToolSchema] | None = None
-    chat_responses: list[dict[str, Any]] | None = None
+    """Metadata for the OpenAITraceSource."""
+
+    tools_schema: list[ToolSchema] | None = Field(default=None,
+                                                  description="The tools schema for the OpenAITraceSource.")
+    chat_responses: list[dict[str, Any]] | None = Field(default=None,
+                                                        description="The chat responses for the OpenAITraceSource.")
 
 
 class OpenAITraceSourceBase(TraceSourceBase):
+    """Base class for the OpenAITraceSource."""
+
     input_value: list[OpenAIMessage]
     metadata: OpenAIMetadata
 
@@ -68,21 +75,6 @@ class OpenAITraceSourceBase(TraceSourceBase):
 
         raise ValueError(f"Invalid input_value format: {v}")
 
-    # @field_validator("metadata", mode="before")
-    # @classmethod
-    # def validate_metadata(cls, v: Any) -> dict[str, Any]:
-    #     """Validate the metadata for the OpenAITraceSource."""
-    #     if v is None:
-    #         return {}
-
-    #     if isinstance(v, str):
-    #         metadata = deserialize_span_attribute(v)
-    #         if not isinstance(metadata, dict):
-    #             raise ValueError(f"Invalid metadata format: {metadata}")
-    #         return metadata
-
-    #     raise ValueError(f"Invalid metadata format: {v}")
-
     @field_validator("metadata", mode="before")
     @classmethod
     def validate_metadata(cls, v: Any) -> "OpenAIMetadata | dict[str, Any]":
@@ -99,4 +91,5 @@ class OpenAITraceSourceBase(TraceSourceBase):
 
 
 class OpenAITraceSource(OpenAITraceSourceBase):
+    """Concrete OpenAI trace source."""
     pass
