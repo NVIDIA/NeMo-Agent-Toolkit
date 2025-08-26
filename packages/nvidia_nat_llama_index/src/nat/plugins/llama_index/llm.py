@@ -19,45 +19,53 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.type_utils import override
 
 ModelType = TypeVar("ModelType")
 
 
-def _llama_index_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
+
     from llama_index.core.base.llms.types import ChatMessage
 
-    def injector(messages: Sequence[ChatMessage], *args, **kwargs) -> FunctionArgumentWrapper:
-        """
-        Inject a system prompt into the messages.
+    class LlamaIndexThinkingInjector(BaseThinkingInjector):
 
-        The messages are the first (non-object) argument to the function.
-        The rest of the arguments are passed through unchanged.
+        @override
+        def inject(self, messages: Sequence[ChatMessage], *args, **kwargs) -> FunctionArgumentWrapper:
+            new_messages = [ChatMessage(role="system", content=self.system_prompt)] + list(messages)
+            return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 
-        Args:
-            messages: The messages to inject the system prompt into.
-            *args: The rest of the arguments to the function.
-            **kwargs: The rest of the keyword arguments to the function.
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = patch_with_thinking(
+            client,
+            LlamaIndexThinkingInjector(
+                system_prompt=llm_config.thinking_system_prompt,
+                function_names=[
+                    "chat",
+                    "stream_chat",
+                    "achat",
+                    "astream_chat",
+                ],
+            ))
 
-        Returns:
-            FunctionArgumentWrapper: An object that contains the transformed args and kwargs.
-        """
-        new_messages = [ChatMessage(role="system", content=system_prompt)] + list(messages)
-        return FunctionArgumentWrapper(new_messages, *args, **kwargs)
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
 
-    return patch_with_thinking(
-        client,
-        function_names=["chat", "stream_chat", "achat", "astream_chat"],
-        system_prompt_injector=injector,
-    )
+    return client
 
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -69,16 +77,7 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
 
     llm = Bedrock(**kwargs)
 
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        llm = _llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
-
-    if isinstance(llm_config, RetryMixin):
-        llm = patch_with_retry(llm,
-                               retries=llm_config.num_retries,
-                               retry_codes=llm_config.retry_on_status_codes,
-                               retry_on_messages=llm_config.retry_on_errors)
-
-    yield llm
+    yield _patch_llm_based_on_config(llm, llm_config)
 
 
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -90,16 +89,7 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
 
     llm = AzureOpenAI(**kwargs)
 
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        llm = _llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
-
-    if isinstance(llm_config, RetryMixin):
-        llm = patch_with_retry(llm,
-                               retries=llm_config.num_retries,
-                               retry_codes=llm_config.retry_on_status_codes,
-                               retry_on_messages=llm_config.retry_on_errors)
-
-    yield llm
+    yield _patch_llm_based_on_config(llm, llm_config)
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -114,16 +104,7 @@ async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
 
     llm = NVIDIA(**kwargs)
 
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        llm = _llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
-
-    if isinstance(llm_config, RetryMixin):
-        llm = patch_with_retry(llm,
-                               retries=llm_config.num_retries,
-                               retry_codes=llm_config.retry_on_status_codes,
-                               retry_on_messages=llm_config.retry_on_errors)
-
-    yield llm
+    yield _patch_llm_based_on_config(llm, llm_config)
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -138,13 +119,4 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
 
     llm = OpenAI(**kwargs)
 
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        llm = _llama_index_thinking_injector(llm, llm_config.thinking_system_prompt)
-
-    if isinstance(llm_config, RetryMixin):
-        llm = patch_with_retry(llm,
-                               retries=llm_config.num_retries,
-                               retry_codes=llm_config.retry_on_status_codes,
-                               retry_on_messages=llm_config.retry_on_errors)
-
-    yield llm
+    yield _patch_llm_based_on_config(llm, llm_config)

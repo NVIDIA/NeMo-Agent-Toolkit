@@ -17,8 +17,10 @@ import functools
 import inspect
 import logging
 import types
+from abc import abstractmethod
 from collections.abc import AsyncGenerator
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 from typing import Callable
 from typing import TypeVar
@@ -51,26 +53,54 @@ class FunctionArgumentWrapper:
         return f"FunctionArgumentWrapper(args={self.args}, kwargs={self.kwargs})"
 
 
-def _thinking_injector(system_prompt_injector: Callable[[MessagesType], FunctionArgumentWrapper]):
+@dataclass
+class BaseThinkingInjector:
+    """
+    Base class for thinking injectors.
+
+    Args:
+        system_prompt: The system prompt to inject.
+        function_names: The function names to inject the system prompt into.
+    """
+
+    system_prompt: str
+    function_names: list[str]
+
+    @abstractmethod
+    def inject(self, *args, **kwargs) -> FunctionArgumentWrapper:
+        """
+        Inject the system prompt into the arguments.
+
+        Args:
+            args: The arguments to inject the system prompt into.
+            kwargs: The keyword arguments to inject the system prompt into.
+
+        Returns:
+            FunctionArgumentWrapper: An object that contains the transformed args and kwargs.
+        """
+        pass
+
+
+def _make_thinking_decorator(injector: BaseThinkingInjector):
 
     def decorate(fn: Callable[..., Any]) -> Callable[..., Any]:
 
         async def _call_async(obj: object, *call_args, **call_kwargs) -> Any:
-            new_args = system_prompt_injector(*call_args, **call_kwargs)
+            new_args = injector.inject(*call_args, **call_kwargs)
             return await fn(obj, *new_args.args, **new_args.kwargs)
 
         async def _agen(obj: object, *call_args, **call_kwargs) -> AsyncGenerator[Any, None]:
-            new_args = system_prompt_injector(*call_args, **call_kwargs)
+            new_args = injector.inject(*call_args, **call_kwargs)
             async for item in fn(obj, *new_args.args, **new_args.kwargs):
                 yield item
 
         def _gen(obj: object, *call_args, **call_kwargs) -> Iterable[Any]:
-            new_args = system_prompt_injector(*call_args, **call_kwargs)
+            new_args = injector.inject(*call_args, **call_kwargs)
             yield from fn(obj, *new_args.args, **new_args.kwargs)
             return
 
         def _sync(obj: object, *call_args, **call_kwargs) -> Any:
-            new_args = system_prompt_injector(*call_args, **call_kwargs)
+            new_args = injector.inject(*call_args, **call_kwargs)
             return fn(obj, *new_args.args, **new_args.kwargs)
 
         # Decide which wrapper to return
@@ -88,64 +118,71 @@ def _thinking_injector(system_prompt_injector: Callable[[MessagesType], Function
     return decorate
 
 
-def patch_with_thinking(obj: ModelType,
-                        function_names: list[str],
-                        system_prompt_injector: Callable[..., FunctionArgumentWrapper]) -> ModelType:
+def patch_with_thinking(obj: ModelType, injector: BaseThinkingInjector) -> ModelType:
     """
     Patch the given object with a decorator that injects a system prompt into the supplied messages.
     There is an assumption that the first non-object argument is the messages.
 
     Args:
         obj: The object to patch.
-        function_names: The names of the functions to patch.
-        system_prompt_injector: A function that injects a system prompt into the arguments.
-                                The arguments to this function must always contain `args` and `kwargs` to
-                                prevent the function from being called with the wrong number of arguments.
-                                Returns a `FunctionArgumentWrapper` that contains the new arguments and keyword
-                                arguments. The wrapper is then used to invoke the function with the new arguments
-                                and keyword arguments.
+        injector: The injector to use.
 
     Returns:
         The patched object.
 
     Examples:
+        >>> from nat.llm.utils.thinking import BaseThinkingInjector
         >>> from nat.llm.utils.thinking import FunctionArgumentWrapper
         >>> from nat.llm.utils.thinking import patch_with_thinking
-        >>>
-        >>> def add_thinking(x: str, *args, **kwargs) -> FunctionArgumentWrapper:
-        ...     return FunctionArgumentWrapper(("thinking " + x), *args, **kwargs)
-        >>>
-        >>> def add_thinking_with_args(*args, **kwargs) -> FunctionArgumentWrapper:
-        ...     return FunctionArgumentWrapper("thinking", *args, **kwargs)
-        >>>
-        >>> def add_thinking_with_kwargs(*args, **kwargs) -> FunctionArgumentWrapper:
-        ...     return FunctionArgumentWrapper(*args, thinking=True, **kwargs)
         >>>
         >>> class MockClass:
         ...     def sync_method(self, *args, **kwargs):
         ...         return (args, kwargs)
         ...
-        >>> mock_obj = MockClass()
-        >>> patched_obj = patch_with_thinking(mock_obj, ["sync_method"], add_thinking)
+        >>> mock_obj_1 = MockClass()
+        >>> class AddThinking(BaseThinkingInjector):
+        ...     def inject(self, x: str, *args, **kwargs) -> FunctionArgumentWrapper:
+        ...         return FunctionArgumentWrapper(("thinking " + x), *args, **kwargs)
+        >>>
+        >>> patched_obj = patch_with_thinking(mock_obj_1, AddThinking(
+        ...     system_prompt="thinking",
+        ...     function_names=["sync_method"],
+        ... ))
         >>> patched_obj.sync_method("test", 1, 2, 3, foo="bar")
         (('thinking test', 1, 2, 3), {'foo': 'bar'})
         >>>
-        >>> patched_obj = patch_with_thinking(mock_obj, ["sync_method"], add_thinking_with_args)
+        >>> mock_obj_2 = MockClass()
+        >>> class AddThinkingWithArgs(BaseThinkingInjector):
+        ...     def inject(self, *args, **kwargs) -> FunctionArgumentWrapper:
+        ...         return FunctionArgumentWrapper("thinking", *args, **kwargs)
+        >>>
+        >>> patched_obj = patch_with_thinking(mock_obj_2, AddThinkingWithArgs(
+        ...     system_prompt="thinking",
+        ...     function_names=["sync_method"],
+        ... ))
         >>> patched_obj.sync_method("test", 1, 2, 3, foo="bar")
         (('thinking', 'test', 1, 2, 3), {'foo': 'bar'})
         >>>
-        >>> patched_obj = patch_with_thinking(mock_obj, ["sync_method"], add_thinking_with_kwargs)
+        >>> mock_obj_3 = MockClass()
+        >>> class AddThinkingWithKwargs(BaseThinkingInjector):
+        ...     def inject(self, *args, **kwargs) -> FunctionArgumentWrapper:
+        ...         return FunctionArgumentWrapper(*args, thinking=True, **kwargs)
+        >>>
+        >>> patched_obj = patch_with_thinking(mock_obj_3, AddThinkingWithKwargs(
+        ...     system_prompt="thinking",
+        ...     function_names=["sync_method"],
+        ... ))
         >>> patched_obj.sync_method("test", 1, 2, 3, foo="bar")
-        ((1, 2, 3), {'thinking': True, 'foo': 'bar'})
+        (('test', 1, 2, 3), {'thinking': True, 'foo': 'bar'})
     """
 
-    decorator = _thinking_injector(system_prompt_injector)
+    decorator = _make_thinking_decorator(injector)
 
     cls = obj if inspect.isclass(obj) else type(obj)
     cls_name = getattr(cls, "__name__", str(cls))
 
     for name, _ in inspect.getmembers(cls, callable):
-        if name not in function_names:
+        if name not in injector.function_names:
             continue
 
         descriptor = inspect.getattr_static(cls, name)

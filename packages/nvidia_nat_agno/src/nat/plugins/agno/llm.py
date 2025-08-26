@@ -19,43 +19,51 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.type_utils import override
 
 ModelType = TypeVar("ModelType")
 
 
-def _agno_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
+
     from agno.models.message import Message
 
-    def injector(messages: list[Message], *args, **kwargs) -> FunctionArgumentWrapper:
-        """
-        Inject a system prompt into the messages.
+    class AgnoThinkingInjector(BaseThinkingInjector):
 
-        The messages are the first (non-object) argument to the function.
-        The rest of the arguments are passed through unchanged.
+        from agno.models.message import Message
 
-        Args:
-            messages: The messages to inject the system prompt into.
-            *args: The rest of the arguments to the function.
-            **kwargs: The rest of the keyword arguments to the function.
+        @override
+        def inject(self, messages: list[Message], *args, **kwargs) -> FunctionArgumentWrapper:
+            new_messages = [Message(role="system", content=self.system_prompt)] + messages
+            return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 
-        Returns:
-            FunctionArgumentWrapper: An object that contains the transformed args and kwargs.
-        """
-        new_messages = [Message(role="system", content=system_prompt)] + messages
-        return FunctionArgumentWrapper(new_messages, *args, **kwargs)
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = patch_with_thinking(
+            client,
+            AgnoThinkingInjector(system_prompt=llm_config.thinking_system_prompt,
+                                 function_names=[
+                                     "invoke_stream",
+                                     "invoke",
+                                     "ainvoke",
+                                     "ainvoke_stream",
+                                 ]))
 
-    return patch_with_thinking(
-        client,
-        function_names=["invoke_stream", "invoke", "ainvoke", "ainvoke_stream"],
-        system_prompt_injector=injector,
-    )
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    return client
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
@@ -88,17 +96,7 @@ async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
 
     client = Nvidia(**kwargs)  # type: ignore[arg-type]
 
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = _agno_thinking_injector(client, llm_config.thinking_system_prompt)
-
-    if isinstance(llm_config, RetryMixin):
-
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
-    yield client
+    yield _patch_llm_based_on_config(client, llm_config)
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
@@ -115,13 +113,4 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 
     client = OpenAIChat(**kwargs)
 
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = _agno_thinking_injector(client, llm_config.thinking_system_prompt)
-
-    if isinstance(llm_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
-    yield client
+    yield _patch_llm_based_on_config(client, llm_config)

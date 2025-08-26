@@ -19,43 +19,44 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.type_utils import override
 
 ModelType = TypeVar("ModelType")
 
 
-def _crewai_thinking_injector(client: ModelType, system_prompt: str) -> ModelType:
+def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
 
-    def injector(messages: list[dict[str, str]], *args, **kwargs) -> FunctionArgumentWrapper:
-        """
-        Inject a system prompt into the messages.
+    class CrewAIThinkingInjector(BaseThinkingInjector):
 
-        The messages are the first (non-object) argument to the function.
-        The rest of the arguments are passed through unchanged.
+        @override
+        def inject(self, messages: list[dict[str, str]], *args, **kwargs) -> FunctionArgumentWrapper:
+            new_messages = [{"role": "system", "content": self.system_prompt}] + messages
+            return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 
-        Args:
-            messages: The messages to inject the system prompt into.
-            *args: The rest of the arguments to the function.
-            **kwargs: The rest of the keyword arguments to the function.
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = patch_with_thinking(
+            client, CrewAIThinkingInjector(
+                system_prompt=llm_config.thinking_system_prompt,
+                function_names=["call"],
+            ))
 
-        Returns:
-            FunctionArgumentWrapper: An object that contains the transformed args and kwargs.
-        """
-        new_messages = [{"role": "system", "content": system_prompt}] + messages
-        return FunctionArgumentWrapper(new_messages, *args, **kwargs)
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
 
-    return patch_with_thinking(
-        client,
-        function_names=["call"],
-        system_prompt_injector=injector,
-    )
+    return client
 
 
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
@@ -93,17 +94,7 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
 
     client = LLM(**config_obj)
 
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = _crewai_thinking_injector(client, llm_config.thinking_system_prompt)
-
-    if isinstance(llm_config, RetryMixin):
-
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
-    yield client
+    yield _patch_llm_based_on_config(client, llm_config)
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
@@ -131,17 +122,7 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
 
     client = LLM(**config_obj)
 
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = _crewai_thinking_injector(client, llm_config.thinking_system_prompt)
-
-    if isinstance(llm_config, RetryMixin):
-
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
-    yield client
+    yield _patch_llm_based_on_config(client, llm_config)
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
@@ -155,14 +136,4 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
 
     client = LLM(**config_obj)
 
-    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
-        client = _crewai_thinking_injector(client, llm_config.thinking_system_prompt)
-
-    if isinstance(llm_config, RetryMixin):
-
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
-    yield client
+    yield _patch_llm_based_on_config(client, llm_config)

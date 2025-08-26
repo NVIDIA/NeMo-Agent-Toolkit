@@ -15,6 +15,7 @@
 
 import pytest
 
+from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 
@@ -34,16 +35,22 @@ class MockClass:
         yield (args, kwargs)
 
 
-def add_thinking(x: str, *args, **kwargs) -> FunctionArgumentWrapper:
-    return FunctionArgumentWrapper(("thinking " + x), *args, **kwargs)
+class AddThinking(BaseThinkingInjector):
+
+    def inject(self, x: str, *args, **kwargs) -> FunctionArgumentWrapper:
+        return FunctionArgumentWrapper(("thinking " + x), *args, **kwargs)
 
 
-def add_thinking_with_args(*args, **kwargs) -> FunctionArgumentWrapper:
-    return FunctionArgumentWrapper("thinking", *args, **kwargs)
+class AddThinkingWithArgs(BaseThinkingInjector):
+
+    def inject(self, *args, **kwargs) -> FunctionArgumentWrapper:
+        return FunctionArgumentWrapper("thinking", *args, **kwargs)
 
 
-def add_thinking_with_kwargs(*args, **kwargs) -> FunctionArgumentWrapper:
-    return FunctionArgumentWrapper(*args, thinking=True, **kwargs)
+class AddThinkingWithKwargs(BaseThinkingInjector):
+
+    def inject(self, *args, **kwargs) -> FunctionArgumentWrapper:
+        return FunctionArgumentWrapper(*args, thinking=True, **kwargs)
 
 
 @pytest.mark.asyncio
@@ -57,8 +64,15 @@ async def test_patch_with_thinking_in_place():
     mock_obj = MockClass()
     patched_obj = patch_with_thinking(
         mock_obj,
-        ["sync_method", "async_method", "gen_method", "agen_method"],
-        add_thinking,
+        AddThinking(
+            system_prompt="thinking",
+            function_names=[
+                "sync_method",
+                "async_method",
+                "gen_method",
+                "agen_method",
+            ],
+        ),
     )
     assert patched_obj is mock_obj
 
@@ -88,8 +102,15 @@ async def test_patch_with_thinking_modify_args():
     mock_obj = MockClass()
     patched_obj = patch_with_thinking(
         mock_obj,
-        ["sync_method", "async_method", "gen_method", "agen_method"],
-        add_thinking_with_args,
+        AddThinkingWithArgs(
+            system_prompt="thinking",
+            function_names=[
+                "sync_method",
+                "async_method",
+                "gen_method",
+                "agen_method",
+            ],
+        ),
     )
     assert patched_obj is mock_obj
 
@@ -119,8 +140,15 @@ async def test_patch_with_thinking_modify_kwargs():
     mock_obj = MockClass()
     patched_obj = patch_with_thinking(
         mock_obj,
-        ["sync_method", "async_method", "gen_method", "agen_method"],
-        add_thinking_with_kwargs,
+        AddThinkingWithKwargs(
+            system_prompt="thinking",
+            function_names=[
+                "sync_method",
+                "async_method",
+                "gen_method",
+                "agen_method",
+            ],
+        ),
     )
     assert patched_obj is mock_obj
 
