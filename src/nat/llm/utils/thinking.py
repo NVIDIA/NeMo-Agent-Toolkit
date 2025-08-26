@@ -41,8 +41,8 @@ class FunctionArgumentWrapper:
         Initialize the FunctionArgumentWrapper.
 
         Args:
-            *args: The arguments to the function.
-            **kwargs: The keyword arguments to the function.
+            args: The arguments to the function.
+            kwargs: The keyword arguments to the function.
         """
         self.args = args
         self.kwargs = kwargs
@@ -99,7 +99,7 @@ def patch_with_thinking(obj: ModelType,
         obj: The object to patch.
         function_names: The names of the functions to patch.
         system_prompt_injector: A function that injects a system prompt into the arguments.
-                                The arguments to this function must always contain `*args` and `**kwargs` to
+                                The arguments to this function must always contain `args` and `kwargs` to
                                 prevent the function from being called with the wrong number of arguments.
                                 Returns a `FunctionArgumentWrapper` that contains the new arguments and keyword
                                 arguments. The wrapper is then used to invoke the function with the new arguments

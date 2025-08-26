@@ -59,7 +59,10 @@ def _langchain_thinking_injector(client: ModelType, system_prompt: str) -> Model
             ValueError: If the messages are not a valid type for LanguageModelInput.
         """
         system_message = SystemMessage(content=system_prompt)
-        if isinstance(messages, PromptValue):
+        if isinstance(messages, BaseMessage):
+            new_messages = [system_message, messages]
+            return FunctionArgumentWrapper(new_messages, *args, **kwargs)
+        elif isinstance(messages, PromptValue):
             new_messages = [system_message, *messages.to_messages()]
             return FunctionArgumentWrapper(new_messages, *args, **kwargs)
         elif isinstance(messages, str):
