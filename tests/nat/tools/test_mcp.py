@@ -39,7 +39,7 @@ def _create_test_mcp_server(port: int):
 
     @s.tool()
     async def return_42(param: str):
-        return f"{param} 42 {os.environ['TEST']}"
+        return f"{param} 42 {os.environ.get('TEST', '')}"
 
     @s.tool()
     async def throw_error(param: str):
