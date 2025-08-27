@@ -24,6 +24,7 @@ from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
+from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.tool.mcp.mcp_client_base import MCPBaseClient
 
 logger = logging.getLogger(__name__)
@@ -108,6 +109,7 @@ async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
     def _convert_from_str(input_str: str) -> BaseModel:
         return input_schema.model_validate_json(input_str)
 
+    @experimental(feature_name="mcp_client")
     async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
         try:
             if tool_input:
@@ -122,7 +124,6 @@ async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
                              input_schema=input_schema,
                              converters=[_convert_from_str])
     yield fn
-
 
 @register_function(MCPClientConfig)
 async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder):
@@ -165,7 +166,9 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
                     tool_description=tool_cfg["description"],
                 ))
 
+        @experimental(feature_name="mcp_client")
         async def idle_fn(text: str) -> str:
+            # This function is a placeholder and will be removed when function groups are used
             return f"MCP client connected: {text}"
 
         yield FunctionInfo.create(single_fn=idle_fn, description="MCP client")
