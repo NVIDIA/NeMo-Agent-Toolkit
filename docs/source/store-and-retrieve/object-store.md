@@ -71,6 +71,7 @@ The NeMo Agent toolkit includes several object store providers:
 - **In-Memory Object Store**: In-memory storage for development and testing. See `src/nat/object_store/in_memory_object_store.py`
 - **S3 Object Store**: Amazon S3 and S3-compatible storage (like MinIO). See `packages/nvidia_nat_s3/src/nat/plugins/s3/s3_object_store.py`
 - **MySQL Object Store**: MySQL database-backed storage. See `packages/nvidia_nat_mysql/src/nat/plugins/mysql/mysql_object_store.py`
+- **Redis Object Store**: Redis key-value store. See `packages/nvidia_nat_redis/src/nat/plugins/redis/redis_object_store.py`
 
 ## Usage
 
@@ -108,6 +109,17 @@ object_stores:
     bucket_name: my-bucket
 ```
 
+Example configuration for Redis storage:
+```yaml
+object_stores:
+  my_object_store:
+    _type: redis
+    host: localhost
+    port: 6379
+    db: 0
+    bucket_name: my-bucket
+```
+
 ### Using Object Stores in Functions
 Object stores can be used as components in custom functions. You can instantiate an object store client using the builder:
 
@@ -133,7 +145,7 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
     await object_store.upsert_object("greeting.txt", ObjectStoreItem(
         data=b"Goodbye, World!",
         content_type="text/plain",
-        metadata={"author", "user123"}
+        metadata={"author": "user123"}
     ))
 
     # Retrieve an object
@@ -165,9 +177,9 @@ object_stores:
 ```
 
 This enables HTTP endpoints for object store operations:
-- **PUT** `/static/{file_path}` - Update an existing object
+- **PUT** `/static/{file_path}` - Create or replace an object at the given path (upsert)
   ```console
-  $ curl -X PUT --upload-file data.txt http://localhost:9000/static/folder/data.txt
+  $ curl -X PUT --data-binary @data.txt http://localhost:9000/static/folder/data.txt
   ```
 - **GET** `/static/{file_path}` - Download an object
   ```console
@@ -175,7 +187,7 @@ This enables HTTP endpoints for object store operations:
   ```
 - **POST** `/static/{file_path}` - Upload a new object
   ```console
-  $ curl -X POST --upload-file data_new.txt http://localhost:9000/static/folder/data.txt
+  $ curl -X POST --data-binary @data_new.txt http://localhost:9000/static/folder/data.txt
   ```
 - **DELETE** `/static/{file_path}` - Delete an object
   ```console

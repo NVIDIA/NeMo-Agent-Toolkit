@@ -66,8 +66,13 @@ class ReWOOAgentGraph(BaseAgent):
                  tools: list[BaseTool],
                  use_tool_schema: bool = True,
                  callbacks: list[AsyncCallbackHandler] | None = None,
-                 detailed_logs: bool = False):
-        super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
+                 detailed_logs: bool = False,
+                 log_response_max_chars: int = 1000):
+        super().__init__(llm=llm,
+                         tools=tools,
+                         callbacks=callbacks,
+                         detailed_logs=detailed_logs,
+                         log_response_max_chars=log_response_max_chars)
 
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
