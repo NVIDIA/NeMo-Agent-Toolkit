@@ -29,6 +29,7 @@ from nat.tool.mcp.mcp_client_base import MCPBaseClient
 
 logger = logging.getLogger(__name__)
 
+# All functions in this file are experimental
 
 class ToolOverrideConfig(BaseModel):
     """
@@ -68,7 +69,6 @@ class MCPServerConfig(BaseModel):
             if not self.url:
                 raise ValueError("url is required when using sse or streamable-http transport")
 
-
 class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
     """
     Configuration for connecting to an MCP server as a client and exposing selected tools.
@@ -87,7 +87,6 @@ class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
     def model_post_init(self, __context):
         super().model_post_init(__context)
         # ServerConfig already validates mutually exclusive fields
-
 
 class MCPSingleToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
     client: MCPBaseClient = Field(..., description="MCP client to use for the tool")
