@@ -201,7 +201,7 @@ async def list_tools_direct(command, url, tool_name=None, transport='sse', args=
     from mcp.client.sse import sse_client
     from mcp.client.stdio import StdioServerParameters
     from mcp.client.stdio import stdio_client
-    from nat.tool.mcp.patched_transports import streamablehttp_client
+    from mcp.client.streamable_http import streamablehttp_client
 
     try:
         if transport == 'stdio':
@@ -278,7 +278,7 @@ async def ping_mcp_server(url: str,
     """
     from mcp.client.session import ClientSession
     from mcp.client.sse import sse_client
-    from nat.tool.mcp.patched_transports import streamablehttp_client
+    from mcp.client.streamable_http import streamablehttp_client
     from mcp.client.stdio import StdioServerParameters
     from mcp.client.stdio import stdio_client
 
