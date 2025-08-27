@@ -23,6 +23,8 @@ from nat.data_models.span import Span
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.observability.processor.batching_processor import BatchingProcessor
 from nat.observability.processor.falsy_batch_filter_processor import DictBatchFilterProcessor
+from nat.observability.processor.processor_factory import processor_factory_from_type
+from nat.observability.processor.processor_factory import processor_factory_to_type
 from nat.plugins.data_flywheel.observability.processor import DFWToDictProcessor
 from nat.plugins.data_flywheel.observability.processor import SpanToDFWRecordProcessor
 
@@ -68,8 +70,10 @@ class DFWExporter(SpanExporter[Span, dict]):
         self._export_contract = export_contract
 
         # Define the processor chain
-        self.add_processor(SpanToDFWRecordProcessor[export_contract](client_id=client_id))
-        self.add_processor(DFWToDictProcessor[export_contract]())
+        ConcreteSpanToDFWRecordProcessor = processor_factory_to_type(SpanToDFWRecordProcessor, export_contract)
+        ConcreteDFWToDictProcessor = processor_factory_from_type(DFWToDictProcessor, export_contract)
+        self.add_processor(ConcreteSpanToDFWRecordProcessor(client_id=client_id))  # type: ignore
+        self.add_processor(ConcreteDFWToDictProcessor())
         self.add_processor(
             DictBatchingProcessor(batch_size=batch_size,
                                   flush_interval=flush_interval,
