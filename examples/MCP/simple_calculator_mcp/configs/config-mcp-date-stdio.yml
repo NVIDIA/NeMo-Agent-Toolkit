@@ -18,6 +18,14 @@
 # on the specified URL. streamable-http is the recommended transport for HTTP-based
 # connections, but sse is also supported for backwards compatibility.
 
+# This config file shows -
+# 1. how to use a local MCP server to get the current date and time using stdio transport.
+# 2. how to access a remote MCP server using streamable-http transport for math operations.
+#
+# As the mcp_server_time is running locally ensure that the package "mcp_server_time" is installed
+# on your local machine. For example, if you are using pip, you can install it with:
+# uv pip install mcp-server-time
+
 general:
   use_uvloop: true
 
@@ -54,7 +62,9 @@ llms:
 
 workflow:
   _type: react_agent
-  # List all tools that are needed for the workflow from the MCP servers
+  # List all tools that are needed for the workflow from the two MCP servers
+  # get_current_time_mcp_tool is from the local mcp_server_time server
+  # calculator_multiply, calculator_divide, calculator_subtract, calculator_inequality are from the remote mcp_server_math server
   tool_names: ["get_current_time_mcp_tool", "calculator_multiply", "calculator_divide", "calculator_subtract", "calculator_inequality"]
   llm_name: nim_llm
   verbose: true

@@ -207,9 +207,3 @@ def _filter_and_configure_tools(all_tools: dict, tool_filter) -> dict[str, dict]
                 logger.warning("Unsupported override type for '%s': %s", name, type(override))
                 result[name] = {"function_name": name, "description": tool.description}
         return result
-
-
-"""
-TODO:
-- Add a way to get all dynamic tools with hitl
-"""
