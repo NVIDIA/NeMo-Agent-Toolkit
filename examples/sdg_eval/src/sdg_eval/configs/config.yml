@@ -1,0 +1,12 @@
+general:
+  use_uvloop: true
+  logging:
+    console:
+      _type: console
+      level: INFO
+
+  front_end:
+    _type: console
+
+workflow:
+  _type: sdg_eval_workflow
