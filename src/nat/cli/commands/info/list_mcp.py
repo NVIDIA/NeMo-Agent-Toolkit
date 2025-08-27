@@ -134,7 +134,7 @@ def print_tool(tool_dict: dict[str, str | None], detail: bool = False) -> None:
 
 
 async def list_tools_and_schemas(command, url, tool_name=None, transport='sse', args=None, env=None):
-    """List MCP tools using MCPBuilder with structured exception handling.
+    """List MCP tools using NAT MCPClient with structured exception handling.
 
     Args:
         url (str): MCP server URL to connect to
@@ -176,7 +176,7 @@ async def list_tools_and_schemas(command, url, tool_name=None, transport='sse', 
 
 
 async def list_tools_direct(command, url, tool_name=None, transport='sse', args=None, env=None):
-    """List MCP tools using direct MCP protocol with exception conversion.
+    """List MCP tools using direct MCP protocol with structured exception handling.
 
     Bypasses MCPBuilder and uses raw MCP ClientSession and SSE client directly.
     Converts raw exceptions to structured MCPErrors for consistent user experience.
@@ -205,47 +205,35 @@ async def list_tools_direct(command, url, tool_name=None, transport='sse', args=
 
     try:
         if transport == 'stdio':
-
             def get_stdio_client():
                 return stdio_client(server=StdioServerParameters(command=command, args=args, env=env))
-
             client = get_stdio_client
         elif transport == 'streamable-http':
-
             def get_streamable_http_client():
                 return streamablehttp_client(url=url)
-
             client = get_streamable_http_client
-        else:  # transport
-
+        else:
             def get_sse_client():
                 return sse_client(url=url)
-
             client = get_sse_client
 
-        if transport == 'streamable-http':
-            async with client() as ctx:
-                read, write = (ctx[0], ctx[1]) if isinstance(ctx, tuple) else ctx
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    response = await session.list_tools()
-        else:
-            async with client() as ctx:
-                read, write = (ctx[0], ctx[1]) if isinstance(ctx, tuple) else ctx
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    response = await session.list_tools()
+        async with client() as ctx:
+            read, write = (ctx[0], ctx[1]) if isinstance(ctx, tuple) else ctx
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                response = await session.list_tools()
 
-                tools = []
-                for tool in response.tools:
-                    if tool_name:
-                        if tool.name == tool_name:
-                            return [format_tool(tool)]
-                    else:
-                        tools.append(format_tool(tool))
-                if tool_name and not tools:
-                    click.echo(f"[INFO] Tool '{tool_name}' not found.")
-                return tools
+        tools = []
+        for tool in response.tools:
+            if tool_name:
+                if tool.name == tool_name:
+                    tools.append(format_tool(tool))
+            else:
+                tools.append(format_tool(tool))
+
+        if tool_name and not tools:
+            click.echo(f"[INFO] Tool '{tool_name}' not found.")
+        return tools
     except Exception as e:
         # Convert raw exceptions to structured MCPError for consistency
         from nat.utils.exception_handlers.mcp import convert_to_mcp_error
