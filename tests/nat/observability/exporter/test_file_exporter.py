@@ -210,7 +210,7 @@ class TestFileExporterFunctionality:
         with patch('nat.observability.mixin.file_mixin.logger') as mock_logger:
             await exporter.export_processed('{"test": "data"}')
             # Verify error was logged (implementation logs errors but doesn't re-raise)
-            mock_logger.error.assert_called()
+            mock_logger.exception.assert_called()
 
     def test_export_method_inheritance(self, mock_context_state, sample_intermediate_step, tmp_path):
         """Test that export method works through inheritance."""
