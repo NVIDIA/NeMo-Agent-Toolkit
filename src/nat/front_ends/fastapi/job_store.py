@@ -32,12 +32,15 @@ from dask.distributed import Variable
 from dask.distributed import fire_and_forget
 from pydantic import BaseModel
 from sqlalchemy import String
+from sqlalchemy import and_
 from sqlalchemy import create_engine
 from sqlalchemy import select
+from sqlalchemy import update
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import expression as sa_expr
 
 if typing.TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -71,6 +74,10 @@ class JobInfo(Base):
     updated_at: Mapped[datetime]
     expiry_seconds: Mapped[int]
     output: Mapped[str] = mapped_column(nullable=True)
+    is_expired: Mapped[bool] = mapped_column(default=False, index=True)
+
+    def __str__(self):
+        return f"JobInfo(job_id={self.job_id}, status={self.status})"
 
 
 class JobStore:
@@ -212,7 +219,7 @@ class JobStore:
     async def get_status(self, job_id: str) -> JobStatus:
         job = await self.get_job(job_id)
         if job is not None:
-            return job.status
+            return JobStatus(job.status)
         else:
             return JobStatus.NOT_FOUND
 
@@ -249,47 +256,53 @@ class JobStore:
         """
         now = datetime.now(UTC)
 
+        stmt = select(JobInfo).where(
+            and_(JobInfo.is_expired == sa_expr.false(),
+                 JobInfo.status.not_in(self.ACTIVE_STATUS))).order_by(JobInfo.updated_at.desc())
         # Filter out active jobs
-        async with (self.client() as client, self.lock()):
-            jobs: dict[str, JobInfo] = await client.get_metadata(["jobs"], default={})
-            finished_jobs = {job_id: job for job_id, job in jobs.items() if job.status not in self.ACTIVE_STATUS}
+        with self._session.begin() as session:
+            async with self.client() as client:
 
-            # Sort finished jobs by updated_at descending
-            sorted_finished = sorted(finished_jobs.items(), key=lambda item: item[1].updated_at, reverse=True)
+                finished_jobs = session.scalars(stmt).all()
 
-            # Always keep the most recent finished job
-            jobs_to_check = sorted_finished[1:]
+                # Always keep the most recent finished job
+                jobs_to_check = finished_jobs[1:]
 
-            expired_ids = []
-            for job_id, job in jobs_to_check:
-                expires_at = self.get_expires_at(job)
-                if expires_at and now > expires_at:
-                    expired_ids.append(job_id)
-                    # cleanup output dir if present
-                    if job.output_path:
-                        logger.info("Cleaning up output directory for job %s at %s", job_id, job.output_path)
-                        # If it is a file remove it
-                        if os.path.isfile(job.output_path):
-                            os.remove(job.output_path)
-                        # If it is a directory remove it
-                        elif os.path.isdir(job.output_path):
-                            shutil.rmtree(job.output_path)
+                expired_ids = []
+                for job in jobs_to_check:
+                    expires_at = self.get_expires_at(job)
+                    if expires_at and now > expires_at:
+                        expired_ids.append(job.job_id)
+                        # cleanup output dir if present
+                        if job.output_path:
+                            logger.info("Cleaning up output directory for job %s at %s", job.job_id, job.output_path)
+                            # If it is a file remove it
+                            if os.path.isfile(job.output_path):
+                                os.remove(job.output_path)
+                            # If it is a directory remove it
+                            elif os.path.isdir(job.output_path):
+                                shutil.rmtree(job.output_path)
 
-            if len(expired_ids) > 0:
-                var = Variable(name=job_id, client=self._client)
-                try:
-                    future = var.get(timeout=0)
-                    if isinstance(future, Future):
-                        await client.cancel([future], force=True, reason="Expired job cleanup")
+                if len(expired_ids) > 0:
+                    successfully_expired = []
+                    for job_id in expired_ids:
+                        try:
+                            var = Variable(name=job_id, client=client)
+                            try:
+                                future = var.get(timeout=0)
+                                if isinstance(future, Future):
+                                    await client.cancel([future], force=True, reason="Expired job cleanup")
 
-                except TimeoutError:
-                    pass
+                            except TimeoutError:
+                                pass
 
-                var.delete()
-                for job_id in expired_ids:
-                    del jobs[job_id]
+                            var.delete()
+                            successfully_expired.append(job_id)
+                        except Exception as e:
+                            logger.error("Failed to expire %s: %s", job_id, e)
 
-                await client.set_metadata(["jobs"], jobs)
+                    session.execute(
+                        (update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True)))
 
 
 def get_db_engine(db_url: str | None = None, echo: bool = False) -> "Engine":
