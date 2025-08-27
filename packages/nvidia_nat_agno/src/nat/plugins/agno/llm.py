@@ -13,70 +13,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+from typing import TypeVar
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import BaseThinkingInjector
+from nat.llm.utils.thinking import FunctionArgumentWrapper
+from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.type_utils import override
+
+ModelType = TypeVar("ModelType")
 
 
-@register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
-async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
+def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
 
-    from agno.models.nvidia import Nvidia
+    from agno.models.message import Message
 
-    config_obj = {
-        **llm_config.model_dump(exclude={"type", "model_name"}, by_alias=True),
-        "id": f"{llm_config.model_name}",
-    }
+    class AgnoThinkingInjector(BaseThinkingInjector):
 
-    # Because Agno uses a different environment variable for the API key, we need to set it here manually
-    if ("api_key" not in config_obj or config_obj["api_key"] is None):
+        from agno.models.message import Message
 
-        if ("NVIDIA_API_KEY" in os.environ):
-            # Dont need to do anything. User has already set the correct key
-            pass
-        else:
-            nvidai_api_key = os.getenv("NVIDIA_API_KEY")
+        @override
+        def inject(self, messages: list[Message], *args, **kwargs) -> FunctionArgumentWrapper:
+            new_messages = [Message(role="system", content=self.system_prompt)] + messages
+            return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 
-            if (nvidai_api_key is not None):
-                # Transfer the key to the correct environment variable
-                os.environ["NVIDIA_API_KEY"] = nvidai_api_key
-
-    # Create Nvidia instance with conditional base_url
-    kwargs = {"id": config_obj.get("id")}
-    if "base_url" in config_obj and config_obj.get("base_url") is not None:
-        kwargs["base_url"] = config_obj.get("base_url")
-
-    client = Nvidia(**kwargs)  # type: ignore[arg-type]
-
-    if isinstance(client, RetryMixin):
-
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
-    yield client
-
-
-@register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
-async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
-
-    from agno.models.openai import OpenAIChat
-
-    # Use model_dump to get the proper field values with correct types
-    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
-
-    # AGNO uses 'id' instead of 'model' for the model name
-    if "model" in kwargs:
-        kwargs["id"] = kwargs.pop("model")
-
-    client = OpenAIChat(**kwargs)
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = patch_with_thinking(
+            client,
+            AgnoThinkingInjector(system_prompt=llm_config.thinking_system_prompt,
+                                 function_names=[
+                                     "invoke_stream",
+                                     "invoke",
+                                     "ainvoke",
+                                     "ainvoke_stream",
+                                 ]))
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,
@@ -84,4 +62,40 @@ async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
                                   retry_codes=llm_config.retry_on_status_codes,
                                   retry_on_messages=llm_config.retry_on_errors)
 
-    yield client
+    return client
+
+
+@register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
+async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
+
+    from agno.models.nvidia import Nvidia
+
+    config_obj = {
+        **llm_config.model_dump(
+            exclude={"type", "model_name"},
+            by_alias=True,
+            exclude_none=True,
+        ),
+    }
+
+    client = Nvidia(**config_obj, id=llm_config.model_name)
+
+    yield _patch_llm_based_on_config(client, llm_config)
+
+
+@register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
+async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
+
+    from agno.models.openai import OpenAIChat
+
+    config_obj = {
+        **llm_config.model_dump(
+            exclude={"type", "model_name"},
+            by_alias=True,
+            exclude_none=True,
+        ),
+    }
+
+    client = OpenAIChat(**config_obj, id=llm_config.model_name)
+
+    yield _patch_llm_based_on_config(client, llm_config)

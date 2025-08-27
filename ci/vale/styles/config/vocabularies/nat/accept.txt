@@ -91,6 +91,7 @@ NIM(s?)
 npm
 NumPy
 NVIDIA
+Nemotron
 OAuth
 URIs
 OTel

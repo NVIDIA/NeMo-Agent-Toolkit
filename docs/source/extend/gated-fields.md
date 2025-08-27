@@ -41,7 +41,7 @@ from nat.data_models.gated_field_mixin import GatedFieldMixin
 
 class FrequencyPenaltyMixin(
     BaseModel,
-    GatedFieldMixin[float],
+    GatedFieldMixin,
     field_name="frequency_penalty",
     default_if_supported=0.0,
     keys=("model_name", "model", "azure_deployment"),
@@ -55,7 +55,7 @@ class FrequencyPenaltyMixin(
 ```python
 class AzureOnlyMixin(
     BaseModel,
-    GatedFieldMixin[int],
+    GatedFieldMixin,
     field_name="some_param",
     default_if_supported=1,
     keys=("azure_deployment",),
@@ -76,6 +76,11 @@ class AzureOnlyMixin(
   - Field: `top_p` in [0, 1]
   - Default when supported: `1.0`
   - Not supported on GPT-5 models
+
+- {py:class}`~nat.data_models.thinking_mixin.ThinkingMixin`
+  - Field: `thinking: bool | None`
+  - Default when supported: `None` (use model default)
+  - Only currently supported on Nemotron models
 
 ### Example: Integrating into a Provider Configuration
 
