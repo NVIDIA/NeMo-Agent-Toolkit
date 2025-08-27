@@ -37,7 +37,10 @@ class DualNodeAgent(BaseAgent):
                  callbacks: list[AsyncCallbackHandler] | None = None,
                  detailed_logs: bool = False,
                  log_response_max_chars: int = 1000):
-        super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs,
+        super().__init__(llm=llm,
+                         tools=tools,
+                         callbacks=callbacks,
+                         detailed_logs=detailed_logs,
                          log_response_max_chars=log_response_max_chars)
 
     @abstractmethod

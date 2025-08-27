@@ -320,8 +320,10 @@ class TestLogToolResponse:
         """Test that _log_tool_response uses the instance's log_response_max_chars setting
         when max_chars is not provided.
         """
+
         # Create a concrete implementation of BaseAgent for testing
         class TestAgent(BaseAgent):
+
             async def _build_graph(self, state_schema: type) -> CompiledGraph:
                 return Mock(spec=CompiledGraph)
 

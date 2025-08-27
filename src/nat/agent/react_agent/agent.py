@@ -78,7 +78,10 @@ class ReActAgentGraph(DualNodeAgent):
                  parse_agent_response_max_retries: int = 1,
                  tool_call_max_retries: int = 1,
                  pass_tool_call_errors_to_agent: bool = True):
-        super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs, 
+        super().__init__(llm=llm,
+                         tools=tools,
+                         callbacks=callbacks,
+                         detailed_logs=detailed_logs,
                          log_response_max_chars=log_response_max_chars)
         self.parse_agent_response_max_retries = (parse_agent_response_max_retries
                                                  if retry_agent_response_parsing_errors else 1)

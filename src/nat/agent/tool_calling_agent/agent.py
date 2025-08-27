@@ -58,7 +58,10 @@ class ToolCallAgentGraph(DualNodeAgent):
         log_response_max_chars: int = 1000,
         handle_tool_errors: bool = True,
     ):
-        super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs,
+        super().__init__(llm=llm,
+                         tools=tools,
+                         callbacks=callbacks,
+                         detailed_logs=detailed_logs,
                          log_response_max_chars=log_response_max_chars)
         # some LLMs support tool calling
         # these models accept the tool's input schema and decide when to use a tool based on the input's relevance
