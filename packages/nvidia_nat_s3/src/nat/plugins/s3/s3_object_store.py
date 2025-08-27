@@ -23,7 +23,6 @@ from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
 from nat.object_store.interfaces import ObjectStore
 from nat.object_store.models import ObjectStoreItem
-from nat.plugins.s3.object_store import S3ObjectStoreClientConfig
 
 logger = logging.getLogger(__name__)
 
@@ -33,31 +32,31 @@ class S3ObjectStore(ObjectStore):
     S3ObjectStore is an ObjectStore implementation that uses S3 as the underlying storage.
     """
 
-    def __init__(self, config: S3ObjectStoreClientConfig):
+    def __init__(self,
+                 *,
+                 bucket_name: str,
+                 endpoint_url: str | None,
+                 access_key: str | None,
+                 secret_key: str | None,
+                 region: str | None):
 
         super().__init__()
 
-        self.bucket_name = config.bucket_name
+        self.bucket_name = bucket_name
         self.session = aioboto3.Session()
         self._client: BaseClient | None = None
         self._client_context = None
 
-        if not config.access_key:
-            raise ValueError("Access key is not set. Please specify it in the environment variable "
-                             "'{S3ObjectStoreClientConfig.ACCESS_KEY_ENV}'.")
+        self._client_args: dict = {}
+        if access_key and secret_key:
+            self._client_args["aws_access_key_id"] = access_key
+            self._client_args["aws_secret_access_key"] = secret_key
+        if region:
+            self._client_args["region_name"] = region
+        if endpoint_url:
+            self._client_args["endpoint_url"] = endpoint_url
 
-        if not config.secret_key:
-            raise ValueError("Secret key is not set. Please specify it in the environment variable "
-                             "'{S3ObjectStoreClientConfig.SECRET_KEY_ENV}'.")
-
-        self._client_args = {
-            "aws_access_key_id": config.access_key,
-            "aws_secret_access_key": config.secret_key,
-            "region_name": config.region,
-            "endpoint_url": config.endpoint_url
-        }
-
-    async def __aenter__(self):
+    async def __aenter__(self) -> "S3ObjectStore":
 
         if self._client_context is not None:
             raise RuntimeError("Connection already established")
@@ -79,7 +78,7 @@ class S3ObjectStore(ObjectStore):
 
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
 
         if self._client_context is None:
             raise RuntimeError("Connection not established")
@@ -112,11 +111,12 @@ class S3ObjectStore(ObjectStore):
         except ClientError as e:
             http_status_code = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode", None)
             if http_status_code == 412:
-                raise KeyAlreadyExistsError(key=key,
-                                            additional_message=f"S3 object {self.bucket_name}/{key} already exists")
-            else:
-                # Other errors — rethrow or handle accordingly
-                raise
+                raise KeyAlreadyExistsError(
+                    key=key,
+                    additional_message=f"S3 object {self.bucket_name}/{key} already exists",
+                ) from e
+            # Other errors — rethrow or handle accordingly
+            raise
 
     async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:
 
@@ -146,9 +146,8 @@ class S3ObjectStore(ObjectStore):
             return ObjectStoreItem(data=data, content_type=response['ContentType'], metadata=response['Metadata'])
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
-                raise NoSuchKeyError(key=key, additional_message=str(e))
-            else:
-                raise
+                raise NoSuchKeyError(key=key, additional_message=str(e)) from e
+            raise
 
     async def delete_object(self, key: str) -> None:
         if self._client is None:
@@ -158,9 +157,8 @@ class S3ObjectStore(ObjectStore):
             await self._client.get_object(Bucket=self.bucket_name, Key=key)
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
-                raise NoSuchKeyError(key=key, additional_message=str(e))
-            else:
-                raise
+                raise NoSuchKeyError(key=key, additional_message=str(e)) from e
+            raise
 
         results = await self._client.delete_object(Bucket=self.bucket_name, Key=key)
 

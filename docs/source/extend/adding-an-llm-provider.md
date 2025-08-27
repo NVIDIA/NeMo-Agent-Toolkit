@@ -80,12 +80,13 @@ class OpenAIModelConfig(LLMBaseConfig, RetryMixin, name="openai"):
     seed: int | None = Field(default=None, description="Random seed to set for generation.")
 ```
 
-### Model-Gated Fields
+### Gated Field Mixins
 
-Some configuration parameters are only valid for certain models. The toolkit provides built-in mixins that automatically validate and default these parameters based on the selected model. For details on the mechanism, see [Gated Fields](./gated-fields.md).
+Some configuration parameters are only valid for certain models or may be dependent on other parameters. The toolkit provides built-in mixins that automatically validate and default these parameters based on a specified field. For details on the mechanism, see [Gated Fields](./gated-fields.md).
 
-- `TemperatureMixin`: adds a `temperature` field in [0, 1], with a default of `0.0` when supported
-- `TopPMixin`: adds a `top_p` field in [0, 1], with a default of `1.0` when supported
+- `TemperatureMixin`: adds a `temperature` field in [0, 1], with a default of `0.0` when supported by a model
+- `TopPMixin`: adds a `top_p` field in [0, 1], with a default of `1.0` when supported by a model
+- `ThinkingMixin`: adds a `thinking` field, with a default of `None` when supported by a model. If supported, the `thinking_system_prompt` property will return the system prompt to use for thinking.
 
 :::{note}
 The built-in mixins may reject certain fields for models that do not support them (for example, GPT-5 models currently reject `temperature` and `top_p`). If a gated field is explicitly set on an unsupported model, validation will fail.

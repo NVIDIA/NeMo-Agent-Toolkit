@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import re
 
 import aiomysql
 from aiomysql.pool import Pool
@@ -22,7 +23,6 @@ from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
 from nat.object_store.interfaces import ObjectStore
 from nat.object_store.models import ObjectStoreItem
-from nat.plugins.mysql.object_store import MySQLObjectStoreClientConfig
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
@@ -33,70 +33,78 @@ class MySQLObjectStore(ObjectStore):
     Implementation of ObjectStore that stores objects in a MySQL database.
     """
 
-    def __init__(self, config: MySQLObjectStoreClientConfig):
-
+    def __init__(self, *, bucket_name: str, host: str, port: int, username: str | None, password: str | None):
         super().__init__()
 
-        self._config = config
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", bucket_name):
+            raise ValueError("bucket_name must match [A-Za-z0-9_-]+")
+
+        self._bucket_name = bucket_name
+        self._host = host
+        self._port = port
+        self._username = username
+        self._password = password
+
         self._conn_pool: Pool | None = None
 
-        self._schema = f"`bucket_{self._config.bucket_name}`"
+    @property
+    def _schema(self) -> str:
+        return f"`bucket_{self._bucket_name}`"
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "MySQLObjectStore":
 
         if self._conn_pool is not None:
             raise RuntimeError("Connection already established")
 
         self._conn_pool = await aiomysql.create_pool(
-            host=self._config.host,
-            port=self._config.port,
-            user=self._config.username,
-            password=self._config.password,
+            host=self._host,
+            port=self._port,
+            user=self._username,
+            password=self._password,
             autocommit=False,  # disable autocommit for transactions
         )
         assert self._conn_pool is not None
 
-        logger.info("Created connection pool for %s at %s:%s",
-                    self._config.bucket_name,
-                    self._config.host,
-                    self._config.port)
+        logger.info("Created connection pool for %s at %s:%s", self._bucket_name, self._host, self._port)
 
         async with self._conn_pool.acquire() as conn:
             async with conn.cursor() as cur:
 
-                # Create schema (database) if doesn't exist
-                await cur.execute(f"CREATE SCHEMA IF NOT EXISTS {self._schema} DEFAULT CHARACTER SET utf8mb4;")
-                await cur.execute(f"USE {self._schema};")
+                # Suppress MySQL "IF NOT EXISTS" notes that surface as warnings in the driver
+                await cur.execute("SET sql_notes = 0;")
+                try:
+                    # Create schema (database) if doesn't exist
+                    await cur.execute(f"CREATE SCHEMA IF NOT EXISTS {self._schema} DEFAULT CHARACTER SET utf8mb4;")
+                    await cur.execute(f"USE {self._schema};")
 
-                # Create metadata table_schema
-                await cur.execute("""
-                CREATE TABLE IF NOT EXISTS object_meta (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    path VARCHAR(768) NOT NULL UNIQUE,
-                    size BIGINT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB;
-                """)
+                    # Create metadata table_schema
+                    await cur.execute("""
+                    CREATE TABLE IF NOT EXISTS object_meta (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        path VARCHAR(768) NOT NULL UNIQUE,
+                        size BIGINT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB;
+                    """)
 
-                # Create blob data table
-                await cur.execute("""
-                CREATE TABLE IF NOT EXISTS object_data (
-                    id INT PRIMARY KEY,
-                    data LONGBLOB NOT NULL,
-                    FOREIGN KEY (id) REFERENCES object_meta(id) ON DELETE CASCADE
-                ) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
-                """)
+                    # Create blob data table
+                    await cur.execute("""
+                    CREATE TABLE IF NOT EXISTS object_data (
+                        id INT PRIMARY KEY,
+                        data LONGBLOB NOT NULL,
+                        FOREIGN KEY (id) REFERENCES object_meta(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+                    """)
+                finally:
+                    await cur.execute("SET sql_notes = 1;")
 
             await conn.commit()
 
-        logger.info("Created schema and tables for %s at %s:%s",
-                    self._config.bucket_name,
-                    self._config.host,
-                    self._config.port)
+        logger.info("Created schema and tables for %s at %s:%s", self._bucket_name, self._host, self._port)
 
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
 
         if not self._conn_pool:
             raise RuntimeError("Connection not established")
@@ -123,7 +131,7 @@ class MySQLObjectStore(ObjectStore):
                                       (key, len(item.data)))
                     if cur.rowcount == 0:
                         raise KeyAlreadyExistsError(
-                            key=key, additional_message=f"MySQL table {self._config.bucket_name} already has key {key}")
+                            key=key, additional_message=f"MySQL table {self._bucket_name} already has key {key}")
                     await cur.execute("SELECT id FROM object_meta WHERE path=%s FOR UPDATE;", (key, ))
                     (obj_id, ) = await cur.fetchone()
                     blob = item.model_dump_json()
@@ -147,8 +155,8 @@ class MySQLObjectStore(ObjectStore):
                     await cur.execute(
                         """
                         INSERT INTO object_meta (path, size)
-                        VALUES (%s, %s)
-                        ON DUPLICATE KEY UPDATE size=VALUES(size), created_at=CURRENT_TIMESTAMP
+                        VALUES (%s, %s) AS new
+                        ON DUPLICATE KEY UPDATE size=new.size, created_at=CURRENT_TIMESTAMP
                         """, (key, len(item.data)))
                     await cur.execute("SELECT id FROM object_meta WHERE path=%s FOR UPDATE;", (key, ))
                     (obj_id, ) = await cur.fetchone()
@@ -178,8 +186,8 @@ class MySQLObjectStore(ObjectStore):
                 """, (key, ))
                 row = await cur.fetchone()
                 if not row:
-                    raise NoSuchKeyError(
-                        key=key, additional_message=f"MySQL table {self._config.bucket_name} does not have key {key}")
+                    raise NoSuchKeyError(key=key,
+                                         additional_message=f"MySQL table {self._bucket_name} does not have key {key}")
                 return ObjectStoreItem.model_validate_json(row[0].decode("utf-8"))
 
     @override
@@ -202,8 +210,7 @@ class MySQLObjectStore(ObjectStore):
 
                     if cur.rowcount == 0:
                         raise NoSuchKeyError(
-                            key=key,
-                            additional_message=f"MySQL table {self._config.bucket_name} does not have key {key}")
+                            key=key, additional_message=f"MySQL table {self._bucket_name} does not have key {key}")
 
                     await conn.commit()
                 except Exception:

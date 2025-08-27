@@ -4393,12 +4393,13 @@ requires-dist = [
 name = "nat-user-report"
 source = { editable = "examples/object_store/user_report" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["mysql", "s3"] },
+    { name = "nvidia-nat", extra = ["mysql", "redis", "s3"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nvidia-nat", extras = ["mysql"], editable = "." },
+    { name = "nvidia-nat", extras = ["redis"], editable = "." },
     { name = "nvidia-nat", extras = ["s3"], editable = "." },
 ]
 
