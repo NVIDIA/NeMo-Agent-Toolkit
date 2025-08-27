@@ -4266,7 +4266,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "nvidia-nat", extras = ["langchain", "profiling", "telemetry"], editable = "." },
-    { name = "pydantic", specifier = ">=2.11" },
+    { name = "pydantic", specifier = "~=2.11" },
 ]
 
 [[package]]
@@ -5221,7 +5221,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "nvidia-nat", editable = "." },
-    { name = "semantic-kernel", specifier = "~=1.35.0" },
+    { name = "semantic-kernel", specifier = "~=1.35" },
 ]
 
 [[package]]
