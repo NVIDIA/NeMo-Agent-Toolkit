@@ -32,12 +32,10 @@ from . import utils
 from .prompts import TelemetryMetricsHostPerformanceCheckPrompts
 
 
-class TelemetryMetricsHostPerformanceCheckToolConfig(
-    FunctionBaseConfig, name="telemetry_metrics_host_performance_check"
-):
-    description: str = Field(
-        default=TelemetryMetricsHostPerformanceCheckPrompts.TOOL_DESCRIPTION, description="Description of the tool."
-    )
+class TelemetryMetricsHostPerformanceCheckToolConfig(FunctionBaseConfig,
+                                                     name="telemetry_metrics_host_performance_check"):
+    description: str = Field(default=TelemetryMetricsHostPerformanceCheckPrompts.TOOL_DESCRIPTION,
+                             description="Description of the tool.")
     llm_name: LLMRef
     prompt: str = Field(
         default=TelemetryMetricsHostPerformanceCheckPrompts.PROMPT,
@@ -104,9 +102,8 @@ def _get_llm_analysis_input(timestamp_value_list):
 
     # Convert Unix timestamps to ISO format datetime strings and preserve values
     # Example: "2022-01-17 12:00:00" for timestamp 1642435200
-    data = [
-        [datetime.fromtimestamp(entry[0]).strftime("%Y-%m-%d %H:%M:%S"), entry[1]] for entry in timestamp_value_list
-    ]
+    data = [[datetime.fromtimestamp(entry[0]).strftime("%Y-%m-%d %H:%M:%S"), entry[1]]
+            for entry in timestamp_value_list]
 
     # Extract metric values and convert to float for statistical analysis
     # Assumes values are numeric strings or numbers
@@ -120,9 +117,9 @@ def _get_llm_analysis_input(timestamp_value_list):
 
 
 @register_function(config_type=TelemetryMetricsHostPerformanceCheckToolConfig)
-async def telemetry_metrics_host_performance_check_tool(
-    config: TelemetryMetricsHostPerformanceCheckToolConfig, builder: Builder
-):
+async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetricsHostPerformanceCheckToolConfig,
+                                                        builder: Builder):
+
     async def _arun(host_id: str) -> str:
         utils.log_header("Telemetry Metrics CPU Usage Pattern Analysis", dash_length=100)
 
