@@ -18,6 +18,7 @@ from typing import Literal
 
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import BaseModel
 
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
