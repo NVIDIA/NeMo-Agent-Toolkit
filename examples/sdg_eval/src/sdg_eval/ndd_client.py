@@ -1,8 +1,12 @@
 # flake8: noqa: E501, BLE001
+# pylint: disable=C0301
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
-from pydantic import Field, BaseModel
+from pydantic import Field
+from pydantic import BaseModel
+
+from sdg_eval import data_models
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
@@ -11,225 +15,225 @@ from nat.data_models.function import FunctionBaseConfig
 logger = logging.getLogger(__name__)
 
 
-class NDDClientConfig(FunctionBaseConfig, name="ndd_client"):
-    """Configuration for the NeMo Data Designer client tool."""
-    model_name: str = Field(default="gpt-3.5-turbo", description="Model to use for data generation")
-    num_samples: int = Field(default=10, description="Number of synthetic samples to generate")
-    temperature: float = Field(default=0.7, description="Temperature for data generation")
-    seed: Optional[int] = Field(default=None, description="Random seed for reproducibility")
+class NDDClientConnectionConfig(BaseModel):
+    """Configuration for NeMo Data Designer client connection."""
+    ndd_client_url: str = Field(default="http://localhost:8000", description="URL of the NeMo Data Designer container")
+    ndd_client_timeout: int = Field(default=600, description="Timeout for the NeMo Data Designer client")
+    ndd_datastore_url: str = Field(default="http://localhost:3000", description="URL of the NMS Datastore container")
 
 
-class DataGenerationRequest(BaseModel):
-    """Request model for data generation."""
-    prompt: str = Field(description="Prompt for data generation")
-    schema: Optional[Dict[str, Any]] = Field(default=None, description="Schema to follow for generated data")
-    examples: Optional[List[Dict[str, Any]]] = Field(default=None, description="Example data points")
-    instructions: Optional[str] = Field(default=None, description="Additional instructions for generation")
+class NDDWorkflowConfig(FunctionBaseConfig, name="ndd_workflow"):
+    """Configuration for the NeMo Data Designer workflow."""
+
+    ndd_client_cfg: NDDClientConnectionConfig = Field(
+        default_factory=NDDClientConnectionConfig,
+        description=("Configuration dict for the NeMo Data Designer client.")
+    )
+
+    ndd_model_cfg: List[Dict[str, str]] = Field(
+        default_factory=list,
+        description=("List of model assignments. Each item in the list is a dict"
+                     "each dict mapping model_alias -> llm_name"
+                     "e.g., [{'candidate_llm': 'openai_llm'}]")
+    )
 
 
-class DataGenerationResponse(BaseModel):
-    """Response model for data generation."""
-    generated_data: List[Dict[str, Any]] = Field(description="Generated synthetic data")
-    metadata: Dict[str, Any] = Field(description="Generation metadata")
-    success: bool = Field(description="Whether generation was successful")
-    error_message: Optional[str] = Field(default=None, description="Error message if generation failed")
-
-
-@register_function(config_type=NDDClientConfig)
-async def ndd_client_function(config: NDDClientConfig, _builder: Builder):
+@register_function(config_type=NDDWorkflowConfig)
+async def ndd_client_function(config: NDDWorkflowConfig, builder: Builder):
     """NeMo Data Designer client for synthetic data generation."""
 
-    async def generate_synthetic_data(request: DataGenerationRequest) -> DataGenerationResponse:
+    from nemo_microservices import NeMoMicroservices
+    from nemo_microservices.beta.data_designer import (
+        DataDesignerConfigBuilder,
+        DataDesignerClient
+    )
+
+    from nemo_microservices.beta.data_designer.config import columns as C
+    from nemo_microservices.beta.data_designer.config import params as P
+
+    # Initialize NDD client and parse model configs
+    ndd = DataDesignerClient(client=NeMoMicroservices(
+        base_url=config.ndd_client_cfg.ndd_client_url,
+        timeout=config.ndd_client_cfg.ndd_client_timeout
+    ))
+
+    async def parse_model_config(ndd_model_cfg: List[Dict[str, str]]) -> List[Dict[str, Any]]:
+        """Parse the model cfg and create NDD model cfg using NAT LLM configs"""
+        ndd_model_configs = []
+
+        for single_model_cfg in ndd_model_cfg:
+            # Extract model alias and llm name from the dict
+            model_alias = list(single_model_cfg.keys())[0]
+            llm_name = single_model_cfg[model_alias]
+
+            # Get the LLM config from NAT using the builder
+            try:
+                llm_config = _builder.get_llm_config(llm_name)
+                if not llm_config:
+                    logger.warning("LLM '%s' not found in NAT config", llm_name)
+                    continue
+
+                # Get inference parameters
+                inference_params = {
+                    "temperature": getattr(llm_config, 'temperature', 0.7),
+                    "max_tokens": getattr(llm_config, 'max_tokens', 1024),
+                    "top_p": getattr(llm_config, 'top_p', 0.95),
+                }
+
+                # Get connection parameters
+                model_id = getattr(llm_config, 'model_name', llm_name)
+                base_url = getattr(llm_config, 'base_url', None)
+
+                logger.info("Configuring NDD model: alias=%s, llm=%s, model_id=%s, base_url=%s, params=%s",
+                           model_alias, llm_name, model_id, base_url, inference_params)
+
+                # Create a NeMo Data Designer model config
+                ndd_model_configs.append(
+                    P.ModelConfig(
+                        alias=model_alias,
+                        inference_parameters=P.InferenceParameters(
+                            **inference_params
+                        ),
+                        model=P.Model(
+                            api_endpoint=P.ApiEndpoint(
+                                model_id=model_id,
+                                url=base_url,
+                            ),
+                            model_id=model_id
+                        )
+                    )
+                )
+
+            except Exception as e:
+                logger.error("Failed to configure model '%s' with LLM '%s': %s", model_alias, llm_name, e)
+                continue
+
+        return ndd_model_configs
+
+    async def get_tool_names(agent_tool_details: data_models.AgentToolDetails) -> List[str]:
+        """Get the tool names from the agent tool details"""
+        tool_names = [tool.name for tool in agent_tool_details.tools]
+
+        # we add a field so that we can also generate examples where no tool is called
+        tool_names.append([])
+        return tool_names
+
+    async def generate_synthetic_data(agent_tool_details: data_models.AgentToolDetails) -> str:
         """Generate synthetic data using NeMo Data Designer patterns."""
         try:
-            logger.info("Generating %d synthetic samples", config.num_samples)
+            # Parse and configure models from NAT LLM configs
+            ndd_model_configs = await parse_model_config(config.ndd_model_cfg)
+            logger.info("Configured %d models for NDD workflow", len(ndd_model_configs))
 
-            generated_samples = []
+            config_builder = DataDesignerConfigBuilder(model_configs=ndd_model_configs)
 
-            # Simulate synthetic data generation based on the prompt and schema
-            for i in range(config.num_samples):
-                sample = await _generate_single_sample(
-                    prompt=request.prompt,
-                    schema=request.schema,
-                    examples=request.examples,
-                    instructions=request.instructions,
-                    seed=config.seed + i if config.seed else None
+            # get the names of the tools that are available to the agent
+            tool_names = await get_tool_names(agent_tool_details)
+
+            # convert the agent tool details to a json schema to pass to the LLM
+            agent_tool_details_json = agent_tool_details.model_json_schema() if agent_tool_details else {}
+
+            #########################################################
+            # COLUMN 1: TOOL CALLED; SAMPLED COLUMN
+            #########################################################
+            # add a column for the name of the tool that will be called in each scenario
+            # we also add an emoty list so that we can generate examples where no tool is called
+            config_builder.add_column(
+                C.SamplerColumn(
+                    name="tool_name",
+                    type=P.SamplerType.CATEGORY,
+                    params=P.CategorySamplerParams(values=tool_names),
+                    description=("The tool that will be called in the given scenario."
+                                 "Empty list means no tool is called."),
+                ))
+
+            #########################################################
+            # COLUMN 2: SCENARIO DIFFICULTY; SAMPLED COLUMN
+            #########################################################
+            # add a column for the user query that will be called in each scenario
+            config_builder.add_column(
+                C.SamplerColumn(
+                    name="scenario_difficulty",
+                    type=P.SamplerType.CATEGORY,
+                    params=P.CategorySamplerParams(values=["easy", "medium", "hard"]),
+                    description=("The difficulty of the generated scenario."),
+                ))
+
+            #########################################################
+            # COLUMN 3: SCENARIO DESCRIPTION; LLM GENERATED COLUMN
+            #########################################################
+            # add a column for the scenario description that will be generated by the LLM
+            config_builder.add_column(
+                C.LLMStructuredColumn(
+                    name="scenario_description",
+                    model_alias="candidate_llm",
+                    system_prompt=("You are a helpful assistant that helps users generate synthetic ground truth data"
+                                   "to evaluate the performance of an agent a.k.a scenario. Your task is to generate a "
+                                   "description of a scenario that the agent will be evaluated on. "
+                                   "It must be consistent with the purpose and capabilities of the agent."),
+                    user_prompt=("Generate a description of a scenario that uses the tool {{ tool_name }}. "
+                                 "The difficulty of the scenario should be: {{ scenario_difficulty }}. "
+                                 "The capabilities of the agent / tools available to it are provided here: \n"
+                                 f"{agent_tool_details_json}"
+                                 ),
+                    output_schema=data_models.ScenarioDescription,
+                    ))
+
+            #########################################################
+            # COLUMN 4: USER QUERY; LLM GENERATED COLUMN
+            #########################################################
+            # add a column for the user query that will be generated by the LLM
+            config_builder.add_column(
+                C.LLMStructuredColumn(
+                    name="user_query",
+                    model_alias="candidate_llm",
+                    system_prompt=("You are a helpful assistant that helps users generate synthetic ground truth data"
+                                   "to evaluate the performance of an agent a.k.a scenario. Your task is to generate a "
+                                   "user query that the agent will be evaluated on based on the scenario description. "
+                                   "It must be consistent with the purpose and capabilities of the agent."),
+                    user_prompt=("Generate a user query that the agent will be evaluated on based on the"
+                                 "scenario description. The scenario description is: {{ scenario_description }}"
+                                 "The difficulty of the scenario is: {{ scenario_difficulty }}"
+                                 "The capabilities of the agent / tools available to it are provided here: \n"
+                                 f"{agent_tool_details_json}"),
+                    output_schema=data_models.UserQuery,
+                    )
                 )
-                generated_samples.append(sample)
 
-            metadata = {
-                "model_name": config.model_name,
-                "num_samples": config.num_samples,
-                "temperature": config.temperature,
-                "seed": config.seed,
-                "prompt_length": len(request.prompt),
-                "schema_provided": request.schema is not None,
-                "examples_provided": request.examples is not None and len(request.examples) > 0
-            }
+            #########################################################
+            # COLUMN 5: AGENT RESPONSE; LLM GENERATED COLUMN
+            #########################################################
+            # add a column for the agent response that will be generated by the LLM
+            config_builder.add_column(
+                C.LLMStructuredColumn(
+                    name="agent_response",
+                    model_alias="candidate_llm",
+                    system_prompt=("You are a helpful assistant that helps users generate synthetic ground truth data"
+                                   "to evaluate the performance of an agent a.k.a scenario. Given the user query and "
+                                   "scenario description, your task is to generate the response that the agent should "
+                                   "respond with. It must be consistent with the purpose and capabilities "
+                                   "of the agent."),
+                    user_prompt=("Generate the correct response that the agent should respond with given the user query. "
+                                 "The user query is: {{ user_query }}. "
+                                 "The scenario description is: {{ scenario_description }}. "
+                                 "The scenario difficulty is: {{ scenario_difficulty }}. "
+                                 "The capabilities of the agent / tools available to it are provided here: \n"
+                                 f"{agent_tool_details_json}."),
+                    output_schema=data_models.UserQuery,
+                    )
+                )
 
-            return DataGenerationResponse(
-                generated_data=generated_samples,
-                metadata=metadata,
-                success=True
-            )
+
+            return "test"
 
         except Exception as e:
             logger.error("Data generation failed: %s", str(e))
-            return DataGenerationResponse(
-                generated_data=[],
-                metadata={},
-                success=False,
-                error_message=str(e)
-            )
-
-    async def _generate_single_sample(
-        prompt: str,
-        schema: Optional[Dict[str, Any]] = None,
-        examples: Optional[List[Dict[str, Any]]] = None,
-        instructions: Optional[str] = None,
-        seed: Optional[int] = None
-    ) -> Dict[str, Any]:
-        """Generate a single synthetic data sample."""
-
-        # Basic synthetic data generation logic
-        # In a real implementation, this would use NeMo Data Designer APIs
-
-        sample = {}
-
-        # If schema is provided, generate data following the schema
-        if schema and "properties" in schema:
-            for field_name, field_spec in schema["properties"].items():
-                field_type = field_spec.get("type", "string")
-
-                if field_type == "string":
-                    sample[field_name] = f"synthetic_{field_name}_{seed or 'default'}"
-                elif field_type == "integer":
-                    sample[field_name] = (seed or 42) % 100
-                elif field_type == "number":
-                    sample[field_name] = (seed or 3.14) * 0.1
-                elif field_type == "boolean":
-                    sample[field_name] = (seed or 1) % 2 == 0
-                elif field_type == "array":
-                    sample[field_name] = [f"item_{i}" for i in range(2)]
-                else:
-                    sample[field_name] = f"synthetic_value_{seed or 'default'}"
-
-        # If examples are provided, use them as templates
-        elif examples and len(examples) > 0:
-            template = examples[0]
-            for key, value in template.items():
-                if isinstance(value, str):
-                    sample[key] = f"synthetic_{value}_{seed or 'default'}"
-                elif isinstance(value, int):
-                    sample[key] = value + (seed or 1)
-                elif isinstance(value, float):
-                    sample[key] = value * 1.1
-                else:
-                    sample[key] = value
-
-        # Default generation based on prompt
-        else:
-            sample = {
-                "generated_text": f"Synthetic data based on: {prompt[:50]}...",
-                "sample_id": seed or "default",
-                "prompt_hash": hash(prompt) % 1000
-            }
-
-        # Add generation metadata
-        sample["_generation_metadata"] = {
-            "prompt_snippet": prompt[:100],
-            "instructions": instructions,
-            "generated_at": "synthetic_timestamp",
-            "seed": seed
-        }
-
-        return sample
-
-    async def create_dataset_from_schema(schema: Dict[str, Any], _num_samples: int = None) -> Dict[str, Any]:
-        """Create a complete dataset from a schema definition."""
-        try:
-            request = DataGenerationRequest(
-                prompt="Generate data following the provided schema",
-                schema=schema,
-                instructions="Create diverse, realistic synthetic data"
-            )
-
-            response = await generate_synthetic_data(request)
-
-            if response.success:
-                dataset = {
-                    "data": response.generated_data,
-                    "schema": schema,
-                    "metadata": {
-                        **response.metadata,
-                        "dataset_size": len(response.generated_data),
-                        "schema_fields": list(schema.get("properties", {}).keys())
-                    }
-                }
-                return {"dataset": dataset, "success": True}
-            else:
-                return {"error": response.error_message, "success": False}
-
-        except Exception as e:
-            logger.error("Dataset creation failed: %s", str(e))
-            return {"error": str(e), "success": False}
-
-    async def augment_existing_data(existing_data: List[Dict[str, Any]], augmentation_factor: int = 2) -> Dict[str, Any]:
-        """Augment existing data by generating similar synthetic samples."""
-        try:
-            if not existing_data:
-                return {"error": "No existing data provided", "success": False}
-
-            # Use existing data as examples
-            request = DataGenerationRequest(
-                prompt="Generate similar data to the provided examples",
-                examples=existing_data[:5],  # Use first 5 as examples
-                instructions="Create variations that maintain the same structure and style"
-            )
-
-            # Generate augmented data
-            total_samples = len(existing_data) * augmentation_factor
-            original_num_samples = config.num_samples
-            config.num_samples = total_samples
-
-            response = await generate_synthetic_data(request)
-            config.num_samples = original_num_samples  # Reset
-
-            if response.success:
-                augmented_dataset = {
-                    "original_data": existing_data,
-                    "synthetic_data": response.generated_data,
-                    "combined_data": existing_data + response.generated_data,
-                    "metadata": {
-                        **response.metadata,
-                        "original_size": len(existing_data),
-                        "synthetic_size": len(response.generated_data),
-                        "total_size": len(existing_data) + len(response.generated_data),
-                        "augmentation_factor": augmentation_factor
-                    }
-                }
-                return {"augmented_dataset": augmented_dataset, "success": True}
-            else:
-                return {"error": response.error_message, "success": False}
-
-        except Exception as e:
-            logger.error("Data augmentation failed: %s", str(e))
-            return {"error": str(e), "success": False}
+            return str(e)
 
     try:
         yield FunctionInfo.create(
             single_fn=generate_synthetic_data,
             description="Generate synthetic data using NeMo Data Designer patterns",
-        )
-
-        yield FunctionInfo.create(
-            single_fn=create_dataset_from_schema,
-            description="Create a complete synthetic dataset from a schema definition",
-        )
-
-        yield FunctionInfo.create(
-            single_fn=augment_existing_data,
-            description="Augment existing data with synthetic samples",
         )
 
     except GeneratorExit:

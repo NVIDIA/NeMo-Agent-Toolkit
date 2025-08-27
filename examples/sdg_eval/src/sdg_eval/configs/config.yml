@@ -8,5 +8,41 @@ general:
   front_end:
     _type: console
 
+
+functions:
+  ndd_workflow:
+    _type: ndd_workflow
+    ndd_client_cfg:
+      ndd_client_url: http://localhost:8000
+      ndd_client_timeout: 600
+      ndd_datastore_url: http://localhost:3000
+    ndd_model_cfg:
+        - candidate_llm: openai_llm
+        - judge_llm: nim_llama33-70b
+
+
+llms:
+  nim_llama33-70b:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.6
+    top_p: 0.95
+    max_tokens: 1024
+    base_url: https://nim.aire.nvidia.com/v1/
+  openai_llm:
+    _type: openai
+    model_name: gpt-4o
+    temperature: 0.6
+    max_tokens: 1024
+    base_url: https://gpt-oss-120b-v4-runai-flops-test.inference.b8721236.dgxcloud.ai/v1
+  nim_llama31-8b:
+    _type: nim
+    model_name: meta/llama-3.1-8b-instruct
+    temperature: 0.3
+    top_p: 0.95
+    max_tokens: 1024
+    base_url: https://nim.aire.nvidia.com/v1/
+
 workflow:
   _type: sdg_eval_workflow
+  tools: [ndd_workflow]

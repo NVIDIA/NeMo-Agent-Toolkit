@@ -13,6 +13,7 @@ name = "sdg_eval"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=0.1",
+  "nemo-microservices[data-designer]~=1.1.0",
 ]
 requires-python = ">=3.11,<3.13"
 description = "Custom NeMo Agent Toolkit Workflow"
