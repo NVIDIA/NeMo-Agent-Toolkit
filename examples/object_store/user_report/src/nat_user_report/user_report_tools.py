@@ -96,10 +96,9 @@ async def user_report_group(config: UserReportConfig, builder: Builder):
         await object_store.delete_object(key=key)
         return f"User report for {user_id} with date {date} deleted"
 
-    yield FunctionGroup(config=config,
-                        functions={
-                            "get": (get, config.get_description),
-                            "put": (put, config.put_description),
-                            "update": (update, config.update_description),
-                            "delete": (delete, config.delete_description)
-                        })
+    group = FunctionGroup(config=config)
+    group.add_function("get", get, description=config.get_description)
+    group.add_function("put", put, description=config.put_description)
+    group.add_function("update", update, description=config.update_description)
+    group.add_function("delete", delete, description=config.delete_description)
+    yield group

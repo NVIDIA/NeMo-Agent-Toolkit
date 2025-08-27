@@ -85,6 +85,7 @@ Workflow Configuration <./workflows/workflow-configuration.md>
 ./workflows/embedders.md
 ./workflows/retrievers.md
 Functions <./workflows/functions/index.md>
+./workflows/function-groups.md
 ./workflows/mcp/index.md
 Evaluate Workflows <./workflows/evaluate.md>
 Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
@@ -107,6 +108,7 @@ Object Store <./store-and-retrieve/object-store.md>
 :caption: Extend
 
 Writing Custom Functions <./extend/functions.md>
+Writing Custom Function Groups <./extend/function-groups.md>
 Extending the NeMo Agent Toolkit Using Plugins <./extend/plugins.md>
 Sharing Components <./extend/sharing-components.md>
 Adding a Custom Evaluator <./extend/custom-evaluator.md>

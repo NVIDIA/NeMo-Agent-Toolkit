@@ -97,9 +97,10 @@ class MCPFrontEndPluginWorkerBase(ABC):
         for function_name, function in workflow.functions.items():
             functions[function_name] = function
 
-        for function_group in workflow.function_groups.values():
-            for function_name, function in function_group.get_functions().items():
-                functions[function_name] = function
+        if workflow.function_groups:
+            for function_group in workflow.function_groups.values():
+                for function_name, function in function_group.get_accessible_functions().items():
+                    functions[function_name] = function
 
         functions[workflow.config.workflow.type] = workflow
 

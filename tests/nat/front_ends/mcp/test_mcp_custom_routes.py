@@ -70,13 +70,13 @@ async def test_custom_mcp_worker(mcp_nat_config: Config):
     mock_workflow = Mock()
     mock_workflow.functions = {"test_function": Mock()}  # Simple dict with one mock function
     function_group_mock = Mock()
-    function_group_mock.get_functions.return_value = {"inner_function": Mock()}
+    function_group_mock.get_accessible_functions.return_value = {"group1.inner_function": Mock()}
     mock_workflow.function_groups = {"group1": function_group_mock}
     mock_workflow.config.workflow.type = "test_workflow"
     mock_builder.build.return_value = mock_workflow
 
     # Mock the register_function_with_mcp so we skip function registration entirely
-    with patch('nat.front_ends.mcp.tool_converter.register_function_with_mcp'):
+    with patch('nat.front_ends.mcp.tool_converter.register_function_with_mcp') as mock_register_function:
         # Test that the worker can add routes
         await worker.add_routes(mcp, mock_builder)
 
@@ -90,6 +90,11 @@ async def test_custom_mcp_worker(mcp_nat_config: Config):
     assert len(custom_routes) > 0, "Custom route /custom should be added"
     assert len(api_status_routes) > 0, "Custom route /api/status should be added"
     assert len(health_routes) > 0, "Health route /health should be added"
+
+    # Ensure accessible functions from function_group were surfaced to registration
+    assert any(
+        call.args[1] == "group1.inner_function" for call in mock_register_function.call_args_list
+    ), "Expected inner_function from function_group to be registered"
 
 
 def test_runner_class_configuration(mcp_nat_config: Config):

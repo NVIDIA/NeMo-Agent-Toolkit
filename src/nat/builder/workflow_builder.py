@@ -547,22 +547,13 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             current_function_group = self._function_groups[n]
             # walk through all functions in the function group -- guaranteed to not be fallible
 
-            if current_function_group.config.expose:
-                for fn_name, fn_instance in current_function_group.instance.get_exposed_functions().items():
-                    try:
-                        # Wrap in the correct wrapper and add to tools list
-                        tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
-                    except Exception as e:
-                        logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
-                        raise e
-            else:
-                for fn_name, fn_instance in current_function_group.instance.get_functions().items():
-                    try:
-                        # Wrap in the correct wrapper and add to tools list
-                        tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
-                    except Exception as e:
-                        logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
-                        raise e
+            for fn_name, fn_instance in current_function_group.instance.get_accessible_functions().items():
+                try:
+                    # Wrap in the correct wrapper and add to tools list
+                    tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
+                except Exception as e:
+                    logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
+                    raise e
 
         return tools
 

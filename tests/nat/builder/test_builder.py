@@ -291,12 +291,13 @@ async def _register():
             """Subtract two numbers."""
             return a - b
 
-        yield FunctionGroup(config=config,
-                            functions={
-                                "add": (add, "Add two numbers"),
-                                "multiply": (multiply, "Multiply two numbers"),
-                                "subtract": (subtract, "Subtract two numbers")
-                            })
+        group = FunctionGroup(config=config)
+
+        group.add_function("add", add, description="Add two numbers")
+        group.add_function("multiply", multiply, description="Multiply two numbers")
+        group.add_function("subtract", subtract, description="Subtract two numbers")
+
+        yield group
 
     @register_function_group(config_type=EmptyExposesFunctionGroupConfig)
     async def register_empty_exposes_group(config: EmptyExposesFunctionGroupConfig, builder: Builder):
@@ -309,7 +310,11 @@ async def _register():
             """Internal function that is not exposed."""
             return x * 2
 
-        yield FunctionGroup(config=config, functions={"internal_function": (internal_function, "Internal function")})
+        group = FunctionGroup(config=config)
+
+        group.add_function("internal_function", internal_function, description="Internal function")
+
+        yield group
 
     @register_function_group(config_type=AllExposesFunctionGroupConfig)
     async def register_all_exposes_group(config: AllExposesFunctionGroupConfig, builder: Builder):
@@ -330,12 +335,13 @@ async def _register():
             """Subtract two numbers."""
             return a - b
 
-        yield FunctionGroup(config=config,
-                            functions={
-                                "add": (add, "Add two numbers"),
-                                "multiply": (multiply, "Multiply two numbers"),
-                                "subtract": (subtract, "Subtract two numbers")
-                            })
+        group = FunctionGroup(config=config)
+
+        group.add_function("add", add, description="Add two numbers")
+        group.add_function("multiply", multiply, description="Multiply two numbers")
+        group.add_function("subtract", subtract, description="Subtract two numbers")
+
+        yield group
 
     @register_function_group(config_type=FailingFunctionGroupConfig)
     async def register_failing_function_group(config: FailingFunctionGroupConfig, builder: Builder):

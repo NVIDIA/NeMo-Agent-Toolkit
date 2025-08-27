@@ -347,29 +347,55 @@ class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
 
 
 class FunctionGroup:
+    """
+    A group of functions that can be used together, sharing the same configuration, context, and resources.
+    """
 
-    def __init__(self,
-                 *,
-                 config: FunctionGroupBaseConfig,
-                 functions: dict[str, tuple[Callable, str]] | None = None,
-                 instance_name: str | None = None):
+    def __init__(self, *, config: FunctionGroupBaseConfig, instance_name: str | None = None):
+        """
+        Creates a new function group.
 
+        Parameters
+        ----------
+        config : FunctionGroupBaseConfig
+            The configuration for the function group.
+        instance_name : str | None, optional
+            The name of the function group. If not provided, the type of the function group will be used.
+        """
         self._config = config
         self._instance_name = instance_name or config.type
         self._context = Context.get()
         self._functions: dict[str, Function] = {}
 
-        if functions is not None:
-            for name, (fn, description) in functions.items():
-                self.add_function(name, fn, description)
+    def add_function(self,
+                     name: str,
+                     fn: Callable,
+                     *,
+                     input_schema: type[BaseModel] | None = None,
+                     description: str | None = None,
+                     converters: list[Callable] | None = None):
+        """
+        Adds a function to the function group.
 
-    def add_function(self, name: str, fn: Callable, description: str):
-        if name is None:
-            raise ValueError("Function name cannot be None")
-        if fn is None:
-            raise ValueError("Function cannot be None")
-        if description is None:
-            raise ValueError("Function description cannot be None")
+        Parameters
+        ----------
+        name : str
+            The name of the function.
+        fn : Callable
+            The function to add to the function group.
+        input_schema : type[BaseModel] | None, optional
+            The input schema for the function.
+        description : str | None, optional
+            The description of the function.
+        converters : list[Callable] | None, optional
+            The converters to use for the function.
+
+        Raises
+        ------
+        ValueError
+            When the function name is empty or contains whitespace.
+            When the function already exists in the function group.
+        """
         if not name:
             raise ValueError("Function name cannot be empty")
         if any(c.isspace() for c in name):
@@ -377,15 +403,58 @@ class FunctionGroup:
         if name in self._functions:
             raise ValueError(f"Function {name} already exists in function group {self._instance_name}")
 
-        info = FunctionInfo.from_fn(fn, description=description)
+        info = FunctionInfo.from_fn(fn, input_schema=input_schema, description=description, converters=converters)
         full_name = f"{self._instance_name}.{name}"
         lambda_fn = LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name=full_name)
         self._functions[name] = lambda_fn
 
-    def get_functions(self) -> dict[str, Function]:
-        return {f"{self._instance_name}.{name}": func for name, func in self._functions.items()}
+    def get_accessible_functions(self) -> dict[str, Function]:
+        """
+        Returns a dictionary of all accessible functions in the function group.
+        If the function group is configured to not expose any function, this will return all functions in the group.
+        If the function group is configured to expose some functions, this will return only the exposed functions.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all accessible functions in the function group.
+
+        Raises
+        ------
+        ValueError
+            When the function group is configured to expose functions that are not found in the group.
+        """
+        if self._config.expose:
+            return self.get_exposed_functions()
+        else:
+            return {f"{self._instance_name}.{name}": func for name, func in self._functions.items()}
+
+    def get_config(self) -> FunctionGroupBaseConfig:
+        """
+        Returns the configuration for the function group.
+
+        Returns
+        -------
+        FunctionGroupBaseConfig
+            The configuration for the function group.
+        """
+        return self._config
 
     def get_exposed_functions(self) -> dict[str, Function]:
+        """
+        Returns a dictionary of all exposed functions in the function group.
+        If the function group is configured to not expose any functions, this will return an empty dictionary.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all exposed functions in the function group.
+
+        Raises
+        ------
+        ValueError
+            When the function group is configured to expose functions that are not found in the group.
+        """
         if set(self._config.expose) - set(self._functions.keys()):
             raise ValueError(f"Function group {self._instance_name} exposes functions that are not found in the group. "
                              f"Available functions: {list(self._functions.keys())}")

@@ -60,9 +60,10 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
         error_type = e['type']
         if error_type == 'union_tag_invalid' and "ctx" in e and not logged_once:
             requested_type = e["ctx"]["tag"]
-            if (info.field_name in ('workflow', 'functions', 'function_groups')):
-                registered_keys = GlobalTypeRegistry.get().get_registered_functions() + \
-                    GlobalTypeRegistry.get().get_registered_function_groups()
+            if (info.field_name in ('workflow', 'functions')):
+                registered_keys = GlobalTypeRegistry.get().get_registered_functions()
+            elif (info.field_name == "function_groups"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_function_groups()
             elif (info.field_name == "authentication"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_auth_providers()
             elif (info.field_name == "llms"):
@@ -362,8 +363,7 @@ class Config(HashableBaseModel):
                                      typing.Annotated[type_registry.compute_annotation(TTCStrategyBaseConfig),
                                                       Discriminator(TypedBaseModel.discriminator)]]
 
-        WorkflowAnnotation = typing.Annotated[(type_registry.compute_annotation(FunctionBaseConfig)
-                                               | type_registry.compute_annotation(FunctionGroupBaseConfig)),
+        WorkflowAnnotation = typing.Annotated[(type_registry.compute_annotation(FunctionBaseConfig)),
                                               Discriminator(TypedBaseModel.discriminator)]
 
         should_rebuild = False
