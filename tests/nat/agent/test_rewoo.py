@@ -239,12 +239,11 @@ async def test_executor_node_handle_input_types(mock_rewoo_agent):
         ]),
         intermediate_results={})
     await mock_rewoo_agent.executor_node(mock_state)
-    # The actual behavior is that dict input gets converted to string representation
-    # and stored as string content in ToolMessage
-    assert isinstance(mock_state.intermediate_results["#E1"].content, str)
+    # The actual behavior is that dict input is converted to list and stored as list content in ToolMessage
+    assert isinstance(mock_state.intermediate_results["#E1"].content, list)
     # Call executor node again to make sure the intermediate result is correctly processed in the next step
     await mock_rewoo_agent.executor_node(mock_state)
-    assert isinstance(mock_state.intermediate_results["#E2"].content, str)
+    assert isinstance(mock_state.intermediate_results["#E2"].content, list)
 
 
 async def test_executor_node_should_not_be_invoked_after_all_steps_executed(mock_rewoo_agent):
