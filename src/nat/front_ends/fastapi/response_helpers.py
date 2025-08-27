@@ -17,12 +17,11 @@ import asyncio
 import typing
 from collections.abc import AsyncGenerator
 
-from nat.data_models.api_server import (ResponseIntermediateStep,
-                                        ResponsePayloadOutput,
-                                        ResponseSerializable)
+from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.api_server import ResponsePayloadOutput
+from nat.data_models.api_server import ResponseSerializable
 from nat.data_models.step_adaptor import StepAdaptorConfig
-from nat.front_ends.fastapi.intermediate_steps_subscriber import \
-    pull_intermediate
+from nat.front_ends.fastapi.intermediate_steps_subscriber import pull_intermediate
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 from nat.runtime.session import SessionManager
 from nat.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
@@ -193,5 +192,4 @@ async def generate_streaming_response_full_as_str(payload: typing.Any,
             yield item.get_stream_data()
         else:
             raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
-                             str(type(item)))
                              str(type(item)))
