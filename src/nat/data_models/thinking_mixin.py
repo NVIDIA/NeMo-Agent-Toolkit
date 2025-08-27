@@ -20,6 +20,8 @@ from pydantic import Field
 
 from nat.data_models.gated_field_mixin import GatedFieldMixin
 
+# The system prompt format for thinking is different for these, so we need to distinguish them here with two separate
+# regex patterns
 _NVIDIA_NEMOTRON_REGEX = re.compile(r"^nvidia/nvidia.*nemotron", re.IGNORECASE)
 _LLAMA_NEMOTRON_REGEX = re.compile(r"^nvidia/llama.*nemotron", re.IGNORECASE)
 _MODEL_KEYS = ("model_name", "model", "azure_deployment")
