@@ -74,10 +74,7 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
     from llama_index.llms.bedrock import Bedrock
 
     # LlamaIndex uses context_size instead of max_tokens
-    llm = Bedrock(
-        **llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True),
-        context_size=llm_config.max_tokens,
-    )
+    llm = Bedrock(**llm_config.model_dump(exclude={"type", "top_p"}, by_alias=True), )
 
     yield _patch_llm_based_on_config(llm, llm_config)
 

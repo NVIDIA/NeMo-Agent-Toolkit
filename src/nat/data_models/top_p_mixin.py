@@ -23,7 +23,7 @@ from nat.data_models.gated_field_mixin import GatedFieldMixin
 
 class TopPMixin(
         BaseModel,
-        GatedFieldMixin[float],
+        GatedFieldMixin,
         field_name="top_p",
         default_if_supported=1.0,
         keys=("model_name", "model", "azure_deployment"),

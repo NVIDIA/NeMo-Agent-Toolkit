@@ -41,7 +41,7 @@ from nat.data_models.gated_field_mixin import GatedFieldMixin
 
 class FrequencyPenaltyMixin(
     BaseModel,
-    GatedFieldMixin[float],
+    GatedFieldMixin,
     field_name="frequency_penalty",
     default_if_supported=0.0,
     keys=("model_name", "model", "azure_deployment"),
@@ -55,7 +55,7 @@ class FrequencyPenaltyMixin(
 ```python
 class AzureOnlyMixin(
     BaseModel,
-    GatedFieldMixin[int],
+    GatedFieldMixin,
     field_name="some_param",
     default_if_supported=1,
     keys=("azure_deployment",),

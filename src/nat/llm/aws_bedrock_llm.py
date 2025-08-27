@@ -37,6 +37,12 @@ class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, TemperatureMixin, TopPMix
                             serialization_alias="model",
                             description="The model name for the hosted AWS Bedrock.")
     max_tokens: int | None = Field(default=1024, gt=0, description="Maximum number of tokens to generate.")
+    context_size: int | None = Field(
+        default=1024,
+        gt=0,
+        description="The maximum number of tokens available for input. This is only required for LlamaIndex. "
+        "This field is ignored for Langchain.",
+    )
 
     # Client parameters
     region_name: str | None = Field(default="None", description="AWS region to use.")

@@ -27,7 +27,7 @@ _MODEL_KEYS = ("model_name", "model", "azure_deployment")
 
 class ThinkingMixin(
         BaseModel,
-        GatedFieldMixin[bool],
+        GatedFieldMixin,
         field_name="thinking",
         default_if_supported=None,
         keys=_MODEL_KEYS,
