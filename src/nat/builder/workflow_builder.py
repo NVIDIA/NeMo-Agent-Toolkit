@@ -817,7 +817,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         else:
             logger.error("No remaining components to build")
 
-        logger.error("Original error: %s", original_error)
+        logger.error("Original error: %s", original_error, exc_info=True)
 
     def _log_build_failure_component(self,
                                      failing_component: ComponentInstanceData,
