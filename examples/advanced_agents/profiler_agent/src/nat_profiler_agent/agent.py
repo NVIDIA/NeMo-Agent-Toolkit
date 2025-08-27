@@ -15,15 +15,21 @@
 
 import logging
 import uuid
-from typing import Any, TypedDict
+from typing import Any
+from typing import TypedDict
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage, ToolMessage)
+from langchain_core.messages import AIMessage
+from langchain_core.messages import BaseMessage
+from langchain_core.messages import HumanMessage
+from langchain_core.messages import ToolMessage
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
-from nat_profiler_agent.data_models import ExecPlan, TraceInfo
+
+from nat_profiler_agent.data_models import ExecPlan
+from nat_profiler_agent.data_models import TraceInfo
 from nat_profiler_agent.tool.flow_chart import FlowChartOutput
 from nat_profiler_agent.tool.px_query import PxQueryOutput
 from nat_profiler_agent.tool.token_usage import TokenUsageOutput

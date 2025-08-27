@@ -218,8 +218,7 @@ class MessageValidator:
             return validated_message_type
 
         except ValueError as e:
-            logger.exception("Error type not found converting data to validated websocket message content: %s",
-                             str(e))
+            logger.exception("Error type not found converting data to validated websocket message content: %s", str(e))
             return WebSocketMessageType.ERROR_MESSAGE
 
     async def get_intermediate_step_parent_id(self, data_model: ResponseIntermediateStep) -> str:

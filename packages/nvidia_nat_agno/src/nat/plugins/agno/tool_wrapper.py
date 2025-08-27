@@ -17,7 +17,6 @@ import asyncio
 import json
 import logging
 import textwrap
-import traceback
 from typing import Any
 from typing import Awaitable
 from typing import Callable

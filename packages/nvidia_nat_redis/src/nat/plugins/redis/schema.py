@@ -17,8 +17,11 @@ import logging
 
 import redis.asyncio as redis
 import redis.exceptions as redis_exceptions
-from redis.commands.search.field import TagField, TextField, VectorField
-from redis.commands.search.indexDefinition import IndexDefinition, IndexType
+from redis.commands.search.field import TagField
+from redis.commands.search.field import TextField
+from redis.commands.search.field import VectorField
+from redis.commands.search.indexDefinition import IndexDefinition
+from redis.commands.search.indexDefinition import IndexType
 
 logger = logging.getLogger(__name__)
 

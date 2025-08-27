@@ -183,7 +183,7 @@ class TunableRagEvaluator(BaseEvaluator):
                     reasoning = parsed_response["reasoning"]
                 except KeyError as e:
                     logger.exception("Missing required keys in default scoring response: %s",
-                                 ", ".join(str(arg) for arg in e.args))
+                                     ", ".join(str(arg) for arg in e.args))
                     reasoning = f"Error in evaluator from parsing judge LLM response. Missing required key(s): {', '.join(str(arg) for arg in e.args)}"
 
                 coverage_weight = self.default_score_weights.get("coverage", 1 / 3)
