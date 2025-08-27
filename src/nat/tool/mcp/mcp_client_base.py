@@ -22,7 +22,7 @@ from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any
-from typing import override
+from nat.utils.type_utils import override
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client

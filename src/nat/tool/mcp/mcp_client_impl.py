@@ -99,6 +99,17 @@ class MCPSingleToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
     model_config = {"arbitrary_types_allowed": True}
 
 
+def _get_server_name_safe(client: MCPBaseClient) -> str:
+
+    # Avoid leaking env secrets from stdio client in logs.
+    if client.transport == "stdio":
+        safe_server = f"stdio: {client.command}"
+    else:
+        safe_server = f"{client.transport}: {client.url}"
+
+    return safe_server
+
+
 @register_function(config_type=MCPSingleToolConfig)
 async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
     """
@@ -109,7 +120,7 @@ async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
         tool.set_description(description=config.tool_description)
     input_schema = tool.input_schema
 
-    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, config.client.server_name)
+    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, _get_server_name_safe(config.client))
 
     def _convert_from_str(input_str: str) -> BaseModel:
         return input_schema.model_validate_json(input_str)
@@ -129,6 +140,7 @@ async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
                              input_schema=input_schema,
                              converters=[_convert_from_str])
     yield fn
+
 
 @register_function(MCPClientConfig)
 async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder):
@@ -154,7 +166,7 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
         raise ValueError(f"Unsupported transport: {config.server.transport}")
 
     client = client_cls()
-    logger.info("Configured to use MCP server at %s", client.server_name)
+    logger.info("Configured to use MCP server at %s", _get_server_name_safe(client))
 
     # client aenter connects to the server and stores the client in the exit stack
     # so it's cleaned up when the workflow is done
