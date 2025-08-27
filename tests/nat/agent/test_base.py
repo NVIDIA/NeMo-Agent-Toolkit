@@ -317,20 +317,19 @@ class TestLogToolResponse:
         assert str(tool_input) in caplog.text
 
     def test_log_tool_response_uses_instance_max_chars(self, caplog):
-        """Test that _log_tool_response uses the instance's log_response_max_chars setting when max_chars is not provided."""
-        from unittest.mock import Mock
-        from nat.agent.base import BaseAgent
-        
+        """Test that _log_tool_response uses the instance's log_response_max_chars setting
+        when max_chars is not provided.
+        """
         # Create a concrete implementation of BaseAgent for testing
         class TestAgent(BaseAgent):
-            async def _build_graph(self):
-                return None
-        
+            async def _build_graph(self, state_schema: type) -> CompiledGraph:
+                return Mock(spec=CompiledGraph)
+
         # Create a TestAgent instance with custom log_response_max_chars
         mock_llm = Mock()
         mock_tools = []
         agent = TestAgent(llm=mock_llm, tools=mock_tools, detailed_logs=True, log_response_max_chars=50)
-        
+
         tool_name = "TestTool"
         tool_input = {"query": "test"}
         tool_response = "x" * 100  # Longer than the instance's max_chars (50)
