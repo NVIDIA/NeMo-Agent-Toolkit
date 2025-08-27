@@ -96,6 +96,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         self._job_store = None
         self._http_flow_handler: HTTPAuthenticationFlowHandler | None = HTTPAuthenticationFlowHandler()
         self._scheduler_address = os.environ.get("NAT_DASK_SCHEDULER_ADDRESS")
+        self._db_url = os.environ.get("NAT_JOB_STORE_DB_URL")
 
         if self._scheduler_address is not None:
             if not _DASK_AVAILABLE:
@@ -103,7 +104,10 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
             try:
                 assert JobStore is not None, "JobStore should be imported when Dask is available"
-                self._job_store = JobStore(scheduler_address=self._scheduler_address)
+                assert self._db_url is not None, "NAT_JOB_STORE_DB_URL environment variable must be set when using Dask"
+                from nat.front_ends.fastapi.job_store import get_db_engine
+                db_engine = get_db_engine(self._db_url)
+                self._job_store = JobStore(scheduler_address=self._scheduler_address, db_engine=db_engine)
                 self._dask_available = True
                 logger.debug("Connected to Dask scheduler at %s", self._scheduler_address)
             except Exception as e:

@@ -113,7 +113,9 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                 from nat.front_ends.fastapi.job_store import get_db_engine
 
                 db_engine = get_db_engine(self.front_end_config.db_url)
-                Base.metadata.create_all(db_engine)  # create tables if they do not exist
+                async with db_engine.begin() as conn:
+                    await conn.run_sync(Base.metadata.create_all, db_engine,
+                                        checkfirst=True)  # create tables if they do not exist
 
                 await self._submit_cleanup_task(scheduler_address)
                 os.environ["NAT_DASK_SCHEDULER_ADDRESS"] = scheduler_address

@@ -18,6 +18,7 @@ import logging
 import os
 import shutil
 import typing
+from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from datetime import UTC
@@ -26,24 +27,25 @@ from datetime import timedelta
 from enum import Enum
 from uuid import uuid4
 
-from dask.distributed import Client
+from dask.distributed import Client as DaskClient
 from dask.distributed import Future
 from dask.distributed import Variable
 from dask.distributed import fire_and_forget
 from pydantic import BaseModel
 from sqlalchemy import String
 from sqlalchemy import and_
-from sqlalchemy import create_engine
 from sqlalchemy import select
 from sqlalchemy import update
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import expression as sa_expr
 
 if typing.TYPE_CHECKING:
     from sqlalchemy.engine import Engine
+    from sqlalchemy.ext.asyncio import AsyncEngine
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +78,7 @@ class JobInfo(Base):
     output: Mapped[str] = mapped_column(nullable=True)
     is_expired: Mapped[bool] = mapped_column(default=False, index=True)
 
-    def __str__(self):
+    def __repr__(self):
         return f"JobInfo(job_id={self.job_id}, status={self.status})"
 
 
@@ -89,6 +91,8 @@ class JobStore:
     ----------
     scheduler_address: str
         The address of the Dask scheduler.
+    db_engine: AsyncEngine
+        The database engine for the job store.
     """
 
     MIN_EXPIRY = 600  # 10 minutes
@@ -98,19 +102,30 @@ class JobStore:
     # active jobs are exempt from expiry
     ACTIVE_STATUS = {"running", "submitted"}
 
-    def __init__(self, scheduler_address: str, db_engine: "Engine"):
+    def __init__(self, scheduler_address: str, db_engine: "AsyncEngine"):
         self._scheduler_address = scheduler_address
-        self._client: Client | None = None
+        self._client: DaskClient | None = None
 
         # Disabling expire_on_commit allows us to detach (expunge) job instances from the session
-        self._session = sessionmaker(db_engine, expire_on_commit=False)
+        self._session = async_sessionmaker(db_engine, expire_on_commit=False)
 
     @asynccontextmanager
-    async def client(self):
+    async def client(self) -> AsyncGenerator[DaskClient]:
+        """
+        Get the Dask client.
+        """
         if self._client is None:
-            self._client = await Client(address=self._scheduler_address, asynchronous=True)
+            self._client = await DaskClient(address=self._scheduler_address, asynchronous=True)
 
         yield self._client
+
+    @asynccontextmanager
+    async def session(self) -> AsyncGenerator["AsyncSession"]:
+        """
+        Async context manager for a SQLAlchemy session which explicitly begins a transaction.
+        """
+        async with self._session.begin() as session:
+            yield session
 
     async def close(self):
         """Close the Dask client."""
@@ -125,10 +140,14 @@ class JobStore:
 
         return job_id
 
-    async def create_job(self,
-                         config_file: str | None = None,
-                         job_id: str | None = None,
-                         expiry_seconds: int = DEFAULT_EXPIRY) -> str:
+    async def _create_job(self,
+                          config_file: str | None = None,
+                          job_id: str | None = None,
+                          expiry_seconds: int = DEFAULT_EXPIRY) -> str:
+        """
+        Create a job and add it to the job store. This should not be called directly, but instead be called by
+        `submit_job`
+        """
         job_id = self.ensure_job_id(job_id)
 
         clamped_expiry = max(self.MIN_EXPIRY, min(expiry_seconds, self.MAX_EXPIRY))
@@ -144,7 +163,7 @@ class JobStore:
                       output_path=None,
                       expiry_seconds=clamped_expiry)
 
-        with self._session.begin() as session:
+        async with self.session() as session:
             session.add(job)
 
         logger.info("Created new job %s with config %s", job_id, config_file)
@@ -157,12 +176,13 @@ class JobStore:
                          expiry_seconds: int = DEFAULT_EXPIRY,
                          job_fn: Callable[..., typing.Any],
                          job_args: list[typing.Any],
-                         **job_kwargs) -> (str, Future):
-        job_id = await self.create_job(job_id=job_id, config_file=config_file, expiry_seconds=expiry_seconds)
+                         **job_kwargs) -> tuple[str, Future]:
+        job_id = await self._create_job(job_id=job_id, config_file=config_file, expiry_seconds=expiry_seconds)
 
         # We are intentionally not using job_id as the key, since Dask will clear the associated metadata once
         # the job has completed, and we want the metadata to persist until the job expires.
         async with self.client() as client:
+            # TODO: Remove these prior to merging
             print("\n***************\nsubmitting job\n***************\n", flush=True)
             print(f"job_args: {job_args}, job_kwargs: {job_kwargs}\n***************\n", flush=True)
             future = client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
@@ -184,8 +204,8 @@ class JobStore:
                             output_path: str | None = None,
                             output: BaseModel | None = None):
 
-        with self._session.begin() as session:
-            job: JobInfo = session.get(JobInfo, job_id)
+        async with self.session() as session:
+            job: JobInfo = await session.get(JobInfo, job_id)
 
             job.status = status
             job.error = error
@@ -206,14 +226,14 @@ class JobStore:
         """
         Get all jobs, potentially costly if there are many jobs.
         """
-        with self._session.begin() as session:
-            jobs = session.scalars(select(JobInfo)).all()
+        async with self.session() as session:
+            jobs = await session.scalars(select(JobInfo)).all()
 
         return jobs
 
     async def get_job(self, job_id: str) -> JobInfo | None:
         """Get a job by its ID."""
-        with self._session.begin() as session:
+        async with self.session() as session:
             return session.get(JobInfo, job_id)
 
     async def get_status(self, job_id: str) -> JobStatus:
@@ -226,8 +246,8 @@ class JobStore:
     async def get_last_job(self) -> JobInfo | None:
         """Get the last created job."""
         stmt = select(JobInfo).order_by(JobInfo.created_at.desc())
-        with self._session.begin() as session:
-            last_job = session.scalars(stmt).first()
+        async with self.session() as session:
+            last_job = await session.scalars(stmt).first()
 
         if last_job is None:
             logger.info("No jobs found in job store")
@@ -239,7 +259,7 @@ class JobStore:
     async def get_jobs_by_status(self, status: JobStatus) -> list[JobInfo]:
         """Get all jobs with the specified status."""
         stmt = select(JobInfo).where(JobInfo.status == status)
-        with self._session.begin() as session:
+        async with self.session() as session:
             return session.scalars(stmt).all()
 
     def get_expires_at(self, job: JobInfo) -> datetime | None:
@@ -260,52 +280,63 @@ class JobStore:
             and_(JobInfo.is_expired == sa_expr.false(),
                  JobInfo.status.not_in(self.ACTIVE_STATUS))).order_by(JobInfo.updated_at.desc())
         # Filter out active jobs
-        with self._session.begin() as session:
-            async with self.client() as client:
+        async with (self.client() as client, self.session() as session):
+            finished_jobs = await session.scalars(stmt).all()
 
-                finished_jobs = session.scalars(stmt).all()
+            # Always keep the most recent finished job
+            jobs_to_check = finished_jobs[1:]
 
-                # Always keep the most recent finished job
-                jobs_to_check = finished_jobs[1:]
+            expired_ids = []
+            for job in jobs_to_check:
+                expires_at = self.get_expires_at(job)
+                if expires_at and now > expires_at:
+                    expired_ids.append(job.job_id)
+                    # cleanup output dir if present
+                    if job.output_path:
+                        logger.info("Cleaning up output directory for job %s at %s", job.job_id, job.output_path)
+                        # If it is a file remove it
+                        if os.path.isfile(job.output_path):
+                            os.remove(job.output_path)
+                        # If it is a directory remove it
+                        elif os.path.isdir(job.output_path):
+                            shutil.rmtree(job.output_path)
 
-                expired_ids = []
-                for job in jobs_to_check:
-                    expires_at = self.get_expires_at(job)
-                    if expires_at and now > expires_at:
-                        expired_ids.append(job.job_id)
-                        # cleanup output dir if present
-                        if job.output_path:
-                            logger.info("Cleaning up output directory for job %s at %s", job.job_id, job.output_path)
-                            # If it is a file remove it
-                            if os.path.isfile(job.output_path):
-                                os.remove(job.output_path)
-                            # If it is a directory remove it
-                            elif os.path.isdir(job.output_path):
-                                shutil.rmtree(job.output_path)
-
-                if len(expired_ids) > 0:
-                    successfully_expired = []
-                    for job_id in expired_ids:
+            if len(expired_ids) > 0:
+                successfully_expired = []
+                for job_id in expired_ids:
+                    try:
+                        var = Variable(name=job_id, client=client)
                         try:
-                            var = Variable(name=job_id, client=client)
-                            try:
-                                future = var.get(timeout=0)
-                                if isinstance(future, Future):
-                                    await client.cancel([future], force=True, reason="Expired job cleanup")
+                            future = var.get(timeout=0)
+                            if isinstance(future, Future):
+                                await client.cancel([future], force=True, reason="Expired job cleanup")
 
-                            except TimeoutError:
-                                pass
+                        except TimeoutError:
+                            pass
 
-                            var.delete()
-                            successfully_expired.append(job_id)
-                        except Exception as e:
-                            logger.error("Failed to expire %s: %s", job_id, e)
+                        var.delete()
+                        successfully_expired.append(job_id)
+                    except Exception as e:
+                        logger.error("Failed to expire %s: %s", job_id, e)
 
-                    session.execute(
-                        (update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True)))
+                await session.execute(
+                    (update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True)))
 
 
-def get_db_engine(db_url: str | None = None, echo: bool = False) -> "Engine":
+def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool = True) -> "Engine | AsyncEngine":
+    """
+    Create a SQLAlchemy database engine, this should only be run once per process
+
+    Parameters
+    ----------
+    db_url: str | None
+        The database URL to connect to. Refer to https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls
+    echo: bool
+        If True, SQLAlchemy will log all SQL statements. Useful for debugging.
+    use_async: bool
+        If True, use the async database engine.
+        The JobStore class requires an async database engine, setting `use_async` to False is only usefull for testing.
+    """
     if db_url is None:
         db_url = os.environ.get("NAT_JOB_STORE_DB_URL")
         if db_url is None:
@@ -318,4 +349,10 @@ def get_db_engine(db_url: str | None = None, echo: bool = False) -> "Engine":
 
             db_url = f"sqlite:///{db_file}"
 
-    return create_engine(db_url, echo=echo)
+    if use_async:
+        # This is actually a blocking call, it just returns an AsyncEngine
+        from sqlalchemy.ext.asyncio import create_async_engine as create_engine_fn
+    else:
+        from sqlalchemy import create_engine as create_engine_fn
+
+    return create_engine_fn(db_url, echo=echo)
