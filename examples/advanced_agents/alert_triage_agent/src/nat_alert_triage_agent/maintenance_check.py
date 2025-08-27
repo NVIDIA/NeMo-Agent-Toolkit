@@ -188,8 +188,8 @@ def _summarize_alert(llm, prompt_template, alert, maintenance_start_str, mainten
     """
     sys_prompt = prompt_template.format(maintenance_start_str=maintenance_start_str,
                                         maintenance_end_str=maintenance_end_str)
-    prompt_template = ChatPromptTemplate([("system", sys_prompt), MessagesPlaceholder("msgs")])
-    summarization_chain = prompt_template | llm
+    prompt = ChatPromptTemplate.from_messages([("system", sys_prompt), MessagesPlaceholder("msgs")])
+    summarization_chain = prompt | llm
     alert_json_str = json.dumps(alert)
     result = summarization_chain.invoke({"msgs": [HumanMessage(content=alert_json_str)]}).content
     return result
@@ -208,7 +208,7 @@ async def maintenance_check(config: MaintenanceCheckToolConfig, builder: Builder
         # and infrastructure setup. The key is to check if a host is under maintenance during
         # the time of an alert, to help determine if the alert can be deprioritized.
         if config.skip_maintenance_check:
-            utils.logger.info("Skipping maintenance check")
+            utils.logger.info("Skipping maintenance check according to the config.")
             return NO_ONGOING_MAINTENANCE_STR
 
         utils.log_header("Maintenance Checker")
