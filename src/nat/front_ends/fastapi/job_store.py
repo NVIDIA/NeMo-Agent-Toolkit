@@ -24,10 +24,8 @@ from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from enum import Enum
-from operator import attrgetter
 from uuid import uuid4
 
-import dask.config
 from dask.distributed import Client
 from dask.distributed import Future
 from dask.distributed import Variable
@@ -35,10 +33,11 @@ from dask.distributed import fire_and_forget
 from pydantic import BaseModel
 from sqlalchemy import String
 from sqlalchemy import create_engine
+from sqlalchemy import select
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import Session
 from sqlalchemy.orm import mapped_column
+from sqlalchemy.orm import sessionmaker
 
 if typing.TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -65,16 +64,25 @@ class JobInfo(Base):
 
     job_id: Mapped[str] = mapped_column(primary_key=True)
     status: Mapped[JobStatus] = mapped_column(String(11))
-    config_file: Mapped[str]
-    error: Mapped[str]
-    output_path: Mapped[str]
+    config_file: Mapped[str] = mapped_column(nullable=True)
+    error: Mapped[str] = mapped_column(nullable=True)
+    output_path: Mapped[str] = mapped_column(nullable=True)
     created_at: Mapped[datetime]
     updated_at: Mapped[datetime]
     expiry_seconds: Mapped[int]
-    output: Mapped[str]
+    output: Mapped[str] = mapped_column(nullable=True)
 
 
 class JobStore:
+    """
+    Tracks and manages jobs submitted to the Dask scheduler, along with persisting job metadata (JobInfo objects) into
+    a database.
+
+    Parameters
+    ----------
+    scheduler_address: str
+        The address of the Dask scheduler.
+    """
 
     MIN_EXPIRY = 600  # 10 minutes
     MAX_EXPIRY = 86400  # 24 hours
@@ -83,9 +91,12 @@ class JobStore:
     # active jobs are exempt from expiry
     ACTIVE_STATUS = {"running", "submitted"}
 
-    def __init__(self, scheduler_address: str):
+    def __init__(self, scheduler_address: str, db_engine: "Engine"):
         self._scheduler_address = scheduler_address
         self._client: Client | None = None
+
+        # Disabling expire_on_commit allows us to detach (expunge) job instances from the session
+        self._session = sessionmaker(db_engine, expire_on_commit=False)
 
     @asynccontextmanager
     async def client(self):
@@ -126,6 +137,9 @@ class JobStore:
                       output_path=None,
                       expiry_seconds=clamped_expiry)
 
+        with self._session.begin() as session:
+            session.add(job)
+
         logger.info("Created new job %s with config %s", job_id, config_file)
         return job_id
 
@@ -163,8 +177,8 @@ class JobStore:
                             output_path: str | None = None,
                             output: BaseModel | None = None):
 
-        try:
-            job: JobInfo = await client.get_metadata(["jobs", job_id])
+        with self._session.begin() as session:
+            job: JobInfo = session.get(JobInfo, job_id)
 
             job.status = status
             job.error = error
@@ -181,17 +195,19 @@ class JobStore:
 
             job.output = output
 
-        except KeyError as e:
-            raise ValueError(f"Job {job_id} not found") from e
-
     async def get_all_jobs(self) -> list[JobInfo]:
-        job_dict: dict[str, JobInfo] = await client.get_metadata(["jobs"], default={})
-        return list(job_dict.values())
+        """
+        Get all jobs, potentially costly if there are many jobs.
+        """
+        with self._session.begin() as session:
+            jobs = session.scalars(select(JobInfo)).all()
+
+        return jobs
 
     async def get_job(self, job_id: str) -> JobInfo | None:
         """Get a job by its ID."""
-        async with (self.client() as client, self.lock()):
-            return await client.get_metadata(["jobs", job_id], default=None)
+        with self._session.begin() as session:
+            return session.get(JobInfo, job_id)
 
     async def get_status(self, job_id: str) -> JobStatus:
         job = await self.get_job(job_id)
@@ -202,19 +218,22 @@ class JobStore:
 
     async def get_last_job(self) -> JobInfo | None:
         """Get the last created job."""
-        jobs = await self.get_all_jobs()
-        if len(jobs) == 0:
-            logger.info("No jobs found in job store")
-            return None
+        stmt = select(JobInfo).order_by(JobInfo.created_at.desc())
+        with self._session.begin() as session:
+            last_job = session.scalars(stmt).first()
 
-        last_job = max(jobs, key=attrgetter('created_at'))
-        logger.info("Retrieved last job %s created at %s", last_job.job_id, last_job.created_at)
+        if last_job is None:
+            logger.info("No jobs found in job store")
+        else:
+            logger.info("Retrieved last job %s created at %s", last_job.job_id, last_job.created_at)
+
         return last_job
 
     async def get_jobs_by_status(self, status: JobStatus) -> list[JobInfo]:
         """Get all jobs with the specified status."""
-        jobs = await self.get_all_jobs()
-        return [job for job in jobs if job.status == status]
+        stmt = select(JobInfo).where(JobInfo.status == status)
+        with self._session.begin() as session:
+            return session.scalars(stmt).all()
 
     def get_expires_at(self, job: JobInfo) -> datetime | None:
         """Get the time for a job to expire."""
@@ -273,7 +292,7 @@ class JobStore:
                 await client.set_metadata(["jobs"], jobs)
 
 
-def get_db_engine(db_url: str | None = None) -> "Engine":
+def get_db_engine(db_url: str | None = None, echo: bool = False) -> "Engine":
     if db_url is None:
         db_url = os.environ.get("NAT_JOB_STORE_DB_URL")
         if db_url is None:
@@ -286,4 +305,4 @@ def get_db_engine(db_url: str | None = None) -> "Engine":
 
             db_url = f"sqlite:///{db_file}"
 
-    return create_engine(db_url)
+    return create_engine(db_url, echo=echo)
