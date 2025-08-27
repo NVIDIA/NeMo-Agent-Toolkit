@@ -17,6 +17,7 @@ import logging
 
 from pydantic import AliasChoices
 from pydantic import Field
+from pydantic import PositiveInt
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -52,6 +53,8 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
         default=None,
         description="Provides the SOLVER_PROMPT to use with the agent")  # defaults to SOLVER_PROMPT in prompt.py
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
+    log_response_max_chars: PositiveInt = Field(
+        default=1000, description="Maximum number of characters to display in logs when logging tool responses.")
     use_openai_api: bool = Field(default=False,
                                  description=("Use OpenAI API for the input/output types to the function. "
                                               "If False, strings will be used."))
@@ -113,7 +116,8 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
                                                  solver_prompt=solver_prompt,
                                                  tools=tools,
                                                  use_tool_schema=config.include_tool_input_schema_in_tool_description,
-                                                 detailed_logs=config.verbose).build_graph()
+                                                 detailed_logs=config.verbose,
+                                                 log_response_max_chars=config.log_response_max_chars).build_graph()
 
     async def _response_fn(input_message: ChatRequest) -> ChatResponse:
         try:
