@@ -110,10 +110,12 @@ For streamable-http mode, you only need to specify the server URL and the tool n
 functions:
   mcp_tool_a:
     _type: mcp_tool_wrapper
+    transport: streamable-http
     url: "http://localhost:8080/mcp"
     mcp_tool_name: tool_a
   mcp_tool_b:
     _type: mcp_tool_wrapper
+    transport: streamable-http
     url: "http://localhost:8080/mcp"
     mcp_tool_name: tool_b
 ```
@@ -135,10 +137,12 @@ For SSE mode, you only need to specify the server URL and the tool name:
 functions:
   mcp_tool_a:
     _type: mcp_tool_wrapper
+    transport: sse
     url: "http://localhost:8080/sse"
     mcp_tool_name: tool_a
   mcp_tool_b:
     _type: mcp_tool_wrapper
+    transport: sse
     url: "http://localhost:8080/sse"
     mcp_tool_name: tool_b
 ```
@@ -151,18 +155,19 @@ For STDIO mode, you need to specify the command to run and any additional argume
 functions:
   github_mcp:
     _type: mcp_client
-    client_type: stdio
-    command: "docker"
-    args: [
-      "run",
-      "-i",
-      "--rm",
-      "-e",
-      "GITHUB_PERSONAL_ACCESS_TOKEN",
-      "ghcr.io/github/github-mcp-server"
-    ]
-    env:
-      GITHUB_PERSONAL_ACCESS_TOKEN: "${input:github_token}"
+    server:
+      transport: stdio
+      command: "docker"
+      args: [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ]
+      env:
+        GITHUB_PERSONAL_ACCESS_TOKEN: "${input:github_token}"
 ```
 STDIO mode support is experimental. Note that you should use `mcp_client` instead of `mcp_tool_wrapper` as the function type for `stdio` mode. `mcp_client` allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. Details on how to use `mcp_client` will be provided in future commits as the feature is developed. Also see `examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml` for a complete example.
 

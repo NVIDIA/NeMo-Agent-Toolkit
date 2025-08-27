@@ -270,7 +270,7 @@ class MCPStdioClient(MCPBaseClient):
 
     @property
     def server_name(self):
-        return f"stdio:{self._command}:{self._args}:{self._env}"
+        return f"stdio:{self._command}"
 
     @property
     def args(self) -> list[str] | None:

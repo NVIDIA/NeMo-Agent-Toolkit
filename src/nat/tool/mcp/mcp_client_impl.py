@@ -89,6 +89,9 @@ class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
         # ServerConfig already validates mutually exclusive fields
 
 class MCPSingleToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
+    """
+    Configuration for wrapping a single tool from an MCP server as a NeMo Agent toolkit function.
+    """
     client: MCPBaseClient = Field(..., description="MCP client to use for the tool")
     tool_name: str = Field(..., description="Name of the tool to use")
     tool_description: str | None = Field(default=None, description="Description of the tool")
@@ -98,6 +101,9 @@ class MCPSingleToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
 
 @register_function(config_type=MCPSingleToolConfig)
 async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
+    """
+    Wrap a single tool from an MCP server as a NeMo Agent toolkit function.
+    """
     tool = await config.client.get_tool(config.tool_name)
     if config.tool_description:
         tool.set_description(description=config.tool_description)

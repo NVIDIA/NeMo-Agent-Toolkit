@@ -33,7 +33,7 @@ nat mcp --config_file examples/getting_started/simple_calculator/configs/config.
 
 This will load the workflow configuration from the specified file, start an MCP server on the default host (localhost) and port (9901), and publish all tools from the workflow as MCP tools. The MCP server is available at `http://localhost:9901/mcp` using streamable-http transport.
 
-You can also use the `sse` transport for backwards compatibility via the `--transport` flag for example:
+You can also use the `sse` (Server-Sent Events) transport for backwards compatibility via the `--transport` flag for example:
 ```bash
 nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml --transport sse
 ```
