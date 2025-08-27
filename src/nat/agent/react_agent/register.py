@@ -17,6 +17,7 @@ import logging
 
 from pydantic import AliasChoices
 from pydantic import Field
+from pydantic import PositiveInt
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -65,7 +66,7 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
         default=None,
         description="Provides the SYSTEM_PROMPT to use with the agent")  # defaults to SYSTEM_PROMPT in prompt.py
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
-    log_response_max_chars: int = Field(
+    log_response_max_chars: PositiveInt = Field(
         default=1000,
         description="Maximum number of characters to display in logs when logging tool responses.")
     use_openai_api: bool = Field(default=False,
