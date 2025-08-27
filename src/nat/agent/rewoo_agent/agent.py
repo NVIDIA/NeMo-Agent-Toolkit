@@ -202,7 +202,7 @@ class ReWOOAgentGraph(BaseAgent):
             return {"plan": plan, "steps": steps}
 
         except Exception as ex:
-            logger.exception("%s Failed to call planner_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
+            logger.error("%s Failed to call planner_node: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     async def executor_node(self, state: ReWOOGraphState):
@@ -276,7 +276,7 @@ class ReWOOAgentGraph(BaseAgent):
             return {"intermediate_results": intermediate_results}
 
         except Exception as ex:
-            logger.exception("%s Failed to call executor_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
+            logger.error("%s Failed to call executor_node: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     async def solver_node(self, state: ReWOOGraphState):
@@ -320,7 +320,7 @@ class ReWOOAgentGraph(BaseAgent):
             return {"result": output_message}
 
         except Exception as ex:
-            logger.exception("%s Failed to call solver_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
+            logger.error("%s Failed to call solver_node: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     async def conditional_edge(self, state: ReWOOGraphState):
@@ -402,9 +402,6 @@ class ReWOOAgentGraph(BaseAgent):
             errors.append("The solver prompt cannot be empty.")
         if errors:
             error_text = "\n".join(errors)
-            logger.exception("%s %s", AGENT_LOG_PREFIX, error_text)
+            logger.error("%s %s", AGENT_LOG_PREFIX, error_text)
             raise ValueError(error_text)
-        return True
-        return True
-        return True
         return True

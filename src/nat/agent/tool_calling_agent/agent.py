@@ -100,7 +100,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             state.messages += [response]
             return state
         except Exception as ex:
-            logger.exception("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
+            logger.error("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     async def conditional_edge(self, state: ToolCallAgentGraphState):

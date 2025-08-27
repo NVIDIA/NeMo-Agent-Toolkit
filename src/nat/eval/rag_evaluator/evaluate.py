@@ -102,7 +102,7 @@ class RAGEvaluator:
         """Converts the ragas EvaluationResult to nat EvalOutput"""
 
         if not results_dataset:
-            logger.exception("Ragas evaluation failed with no results")
+            logger.error("Ragas evaluation failed with no results", exc_info=True)
             return EvalOutput(average_score=0.0, eval_output_items=[])
 
         scores: list[dict[str, float]] = results_dataset.scores

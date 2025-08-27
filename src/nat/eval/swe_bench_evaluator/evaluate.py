@@ -135,7 +135,7 @@ class SweBenchEvaluator:
         filtered_outputs = [output for output in swebench_outputs if output.instance_id in valid_instance_ids]
 
         if not filtered_outputs:
-            logger.exception("No supported outputs; nothing to evaluate")
+            logger.error("No supported outputs; nothing to evaluate", exc_info=True)
             return None, None
 
         # Write SWEBenchOutput to file

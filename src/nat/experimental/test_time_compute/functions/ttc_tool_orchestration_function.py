@@ -154,7 +154,7 @@ async def register_ttc_tool_orchestration_function(
         tasks = []
         for item in ttc_items:
             if item.name not in function_map:
-                logger.exception(f"Function '{item.name}' not found in function map.")
+                logger.error(f"Function '{item.name}' not found in function map.", exc_info=True)
                 item.output = f"Error: Function '{item.name}' not found in function map. Check your input"
             else:
                 fn = function_map[item.name]

@@ -166,7 +166,7 @@ async def data_visualization_agent_function(config: DataVisualizationAgentConfig
         logger.info("Data Visualization Agent Graph built and compiled successfully")
 
     except Exception as ex:
-        logger.exception("Failed to build Data Visualization Agent Graph: %s", ex, exc_info=True)
+        logger.error("Failed to build Data Visualization Agent Graph: %s", ex)
         raise
 
     async def _arun(user_query: str) -> str:

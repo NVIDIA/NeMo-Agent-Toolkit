@@ -174,7 +174,7 @@ class EvaluationRun:
                     base_output = await runner_result
                     intermediate_steps = await intermediate_future
                 except NotImplementedError as e:
-                    logger.exception("Failed to run the workflow: %s", e, exc_info=True)
+                    logger.error("Failed to run the workflow: %s", e)
                     # raise original error
                     raise
                 except Exception as e:
