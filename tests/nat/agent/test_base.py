@@ -31,7 +31,7 @@ from nat.agent.base import BaseAgent
 class MockBaseAgent(BaseAgent):
     """Mock implementation of BaseAgent for testing."""
 
-    def __init__(self, detailed_logs=True):
+    def __init__(self, detailed_logs=True, log_response_max_chars=1000):
         # Create simple mock objects without pydantic restrictions
         self.llm = Mock()
         self.tools = [Mock(), Mock()]
@@ -39,6 +39,7 @@ class MockBaseAgent(BaseAgent):
         self.tools[1].name = "Tool B"
         self.callbacks = []
         self.detailed_logs = detailed_logs
+        self.log_response_max_chars = log_response_max_chars
 
     async def _build_graph(self, state_schema: type) -> CompiledGraph:
         """Mock implementation."""
@@ -285,20 +286,20 @@ class TestLogToolResponse:
         tool_response = "x" * 1500  # Longer than default max_chars (1000)
 
         with caplog.at_level(logging.INFO):
-            base_agent._log_tool_response(tool_name, tool_input, tool_response, max_chars=1000)
+            base_agent._log_tool_response(tool_name, tool_input, tool_response)
 
         assert "Calling tools: TestTool" in caplog.text
         assert "...(rest of response truncated)" in caplog.text
         assert len(caplog.text) < len(tool_response)
 
-    def test_log_tool_response_with_custom_max_chars(self, base_agent, caplog):
-        """Test logging with response that exceeds custom max_chars."""
+    def test_log_tool_response_with_default_max_chars(self, base_agent, caplog):
+        """Test logging with response that exceeds default max_chars (1000)."""
         tool_name = "TestTool"
         tool_input = {"query": "test"}
-        tool_response = "x" * 100
+        tool_response = "x" * 1500  # Longer than default max_chars (1000)
 
         with caplog.at_level(logging.INFO):
-            base_agent._log_tool_response(tool_name, tool_input, tool_response, max_chars=50)
+            base_agent._log_tool_response(tool_name, tool_input, tool_response)
 
         assert "Calling tools: TestTool" in caplog.text
         assert "...(rest of response truncated)" in caplog.text
@@ -314,6 +315,35 @@ class TestLogToolResponse:
 
         assert "Calling tools: TestTool" in caplog.text
         assert str(tool_input) in caplog.text
+
+    def test_log_tool_response_uses_instance_max_chars(self, caplog):
+        """Test that _log_tool_response uses the instance's log_response_max_chars setting
+        when max_chars is not provided.
+        """
+
+        # Create a concrete implementation of BaseAgent for testing
+        class TestAgent(BaseAgent):
+
+            async def _build_graph(self, state_schema: type) -> CompiledGraph:
+                return Mock(spec=CompiledGraph)
+
+        # Create a TestAgent instance with custom log_response_max_chars
+        mock_llm = Mock()
+        mock_tools = []
+        agent = TestAgent(llm=mock_llm, tools=mock_tools, detailed_logs=True, log_response_max_chars=50)
+
+        tool_name = "TestTool"
+        tool_input = {"query": "test"}
+        tool_response = "x" * 100  # Longer than the instance's max_chars (50)
+
+        with caplog.at_level(logging.INFO):
+            agent._log_tool_response(tool_name, tool_input, tool_response)
+
+        assert "Calling tools: TestTool" in caplog.text
+        assert "...(rest of response truncated)" in caplog.text
+        # Verify that only 50 characters were logged (plus the truncation message)
+        # The log format is "Tool's response: \nxxxxxxxxx...(rest of response truncated)"
+        assert "x" * 50 + "...(rest of response truncated)" in caplog.text
 
 
 class TestParseJson:
