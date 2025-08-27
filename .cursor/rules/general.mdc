@@ -57,6 +57,12 @@ These are the overarching standards that every **source, test, documentation and
 - Use `typing.Annotated` for units or extra metadata when useful.
 - Treat `pyright` warnings (configured in `pyproject.toml`) as errors during development.
 
+## Exception Handling
+
+- Preserve stack traces and prevent duplicate logging when handling exceptions.
+- When re-raising exceptions: use bare `raise` statements to maintain the original stack trace, and use `logger.error()` for logging (not `logger.exception()`) to avoid duplicate stack trace output.
+- When catching and logging exceptions without re-raising: always use `logger.exception()` (equivalent to `logger.error(exc_info=True)`) to capture the full stack trace information.
+
 ## Documentation
 
 - Provide Google-style docstrings for every public module, class, function and CLI command.
