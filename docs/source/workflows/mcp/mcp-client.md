@@ -34,8 +34,11 @@ The MCP client can connect to MCP servers using different transport types. The c
 - **`stdio`**: Standard input/output transport for local process communication
 
 ## Usage
-Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions through configuration of an `mcp_tool_wrapper`.
+Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions through configuration of an `mcp_tool_wrapper` or `mcp_client`.
+- `mcp_tool_wrapper` is a simple configuration that allows you to connect to a MCP server and wrap a single tool as a NeMo Agent toolkit function.
+- `mcp_client` is a more flexible configuration that allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. Support for `mcp_client` is experimental.
 
+### `mcp_tool_wrapper` Configuration
 ```python
 class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     """
@@ -64,6 +67,42 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
 ```
 In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as a NeMo Agent toolkit function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between NeMo Agent toolkit functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
 
+### 🧪 `mcp_client` Configuration (Experimental)
+
+```python
+class MCPServerConfig(BaseModel):
+    """
+    Server connection details for MCP client.
+    Supports stdio, sse, and streamable-http transports.
+    streamable-http is the recommended default for HTTP-based connections.
+    """
+    transport: Literal["stdio", "sse", "streamable-http"] = Field(
+        ..., description="Transport type to connect to the MCP server (stdio, sse, or streamable-http)")
+    url: HttpUrl | None = Field(default=None,
+                                description="URL of the MCP server (for sse or streamable-http transport)")
+    command: str | None = Field(default=None,
+                                description="Command to run for stdio transport (e.g. 'python' or 'docker')")
+    args: list[str] | None = Field(default=None, description="Arguments for the stdio command")
+    env: dict[str, str] | None = Field(default=None, description="Environment variables for the stdio process")
+
+class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
+    """
+    Configuration for connecting to an MCP server as a client and exposing selected tools.
+    """
+    server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
+    tool_filter: dict[str, ToolOverrideConfig] | list[str] | None = Field(
+        default=None,
+        description="""Filter or map tools to expose from the server (list or dict).
+        Can be:
+        - A list of tool names to expose: ['tool1', 'tool2']
+        - A dict mapping tool names to override configs:
+          {'tool1': {'alias': 'new_name', 'description': 'New desc'}}
+          {'tool2': {'description': 'Override description only'}}  # alias defaults to 'tool2'
+        """)
+```
+
+`mcp_client` is a more flexible configuration that allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. `mcp_client` can be used instead of `mcp_tool_wrapper` if you want to dynamically discover tools or if your transport type is `stdio`. `mcp_client` also supports filtering and overriding tool names and descriptions.
+
 ### Streamable-HTTP Mode Configuration
 For streamable-http mode, you only need to specify the server URL and the tool name:
 
@@ -77,6 +116,16 @@ functions:
     _type: mcp_tool_wrapper
     url: "http://localhost:8080/mcp"
     mcp_tool_name: tool_b
+```
+You can use `mcp_client` instead of `mcp_tool_wrapper` if you want to dynamically discover tools:
+
+```yaml
+functions:
+  mcp_client:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "http://localhost:8080/mcp"
 ```
 
 ### SSE Mode Configuration
