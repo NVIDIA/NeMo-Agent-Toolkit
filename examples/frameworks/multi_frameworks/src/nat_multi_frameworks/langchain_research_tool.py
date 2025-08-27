@@ -98,7 +98,7 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
 
         except Exception as e:
             output_summary = f"this search on web search with topic:{topic} yield not results with an error:{e}"
-            logger.exception("error in executing tool: %s", e, exc_info=True)
+            logger.exception("error in executing tool: %s", e)
             pass
 
         return output_summary

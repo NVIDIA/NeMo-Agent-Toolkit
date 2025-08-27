@@ -149,7 +149,7 @@ class Runner:
 
             return result
         except Exception as e:
-            logger.exception("Error running workflow: %s", e)
+            logger.error("Error running workflow: %s", e)
             event_stream = self._context_state.event_stream.get()
             if event_stream:
                 event_stream.on_complete()
@@ -181,7 +181,7 @@ class Runner:
                     event_stream.on_complete()
 
         except Exception as e:
-            logger.exception("Error running workflow: %s", e)
+            logger.error("Error running workflow: %s", e)
             event_stream = self._context_state.event_stream.get()
             if event_stream:
                 event_stream.on_complete()

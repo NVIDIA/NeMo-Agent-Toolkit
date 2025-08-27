@@ -40,7 +40,7 @@ class IntermediateStepAdapter:
             try:
                 validated_steps.append(IntermediateStep.model_validate(step_data))
             except Exception as e:
-                logger.exception("Validation failed for step: %r, Error: %s", step_data, e, exc_info=True)
+                logger.exception("Validation failed for step: %r, Error: %s", step_data, e)
         return validated_steps
 
     def serialize_intermediate_steps(self, intermediate_steps: list[IntermediateStep]) -> list[dict]:

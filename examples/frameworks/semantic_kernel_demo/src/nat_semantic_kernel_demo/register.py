@@ -125,6 +125,6 @@ async def semantic_kernel_travel_planning_workflow(config: SKTravelPlanningWorkf
     try:
         yield FunctionInfo.create(single_fn=_response_fn, converters=[convert_dict_to_str])
     except GeneratorExit:
-        logger.exception("Exited early!", exc_info=True)
+        logger.exception("Exited early!")
     finally:
         logger.debug("Cleaning up")

@@ -86,7 +86,7 @@ async def nvidia_rag_tool(config: NVIDIARAGToolConfig, builder: Builder):
                     [await aformat_document(doc, document_prompt) for doc in docs])
                 return parsed_output
             except Exception as e:
-                logger.exception("Error while running the tool", exc_info=True)
+                logger.exception("Error while running the tool")
                 return f"Error while running the tool: {e}"
 
         yield FunctionInfo.from_fn(

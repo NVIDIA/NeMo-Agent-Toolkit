@@ -115,12 +115,7 @@ class ToolCallAgentGraph(DualNodeAgent):
                 logger.debug("%s Final answer:\n%s", AGENT_LOG_PREFIX, state.messages[-1].content)
             return AgentDecision.END
         except Exception as ex:
-            logger.exception(
-                "%s Failed to determine whether agent is calling a tool: %s",
-                AGENT_LOG_PREFIX,
-                ex,
-                exc_info=True,
-            )
+            logger.exception("%s Failed to determine whether agent is calling a tool: %s", AGENT_LOG_PREFIX, ex)
             logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
             return AgentDecision.END
 
@@ -143,7 +138,7 @@ class ToolCallAgentGraph(DualNodeAgent):
 
             return state
         except Exception as ex:
-            logger.exception("%s Failed to call tool_node: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
+            logger.error("%s Failed to call tool_node: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     async def build_graph(self):
@@ -155,12 +150,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             )
             return self.graph
         except Exception as ex:
-            logger.exception(
-                "%s Failed to build Tool Calling Agent Graph: %s",
-                AGENT_LOG_PREFIX,
-                ex,
-                exc_info=ex,
-            )
+            logger.error("%s Failed to build Tool Calling Agent Graph: %s", AGENT_LOG_PREFIX, ex)
             raise
 
 

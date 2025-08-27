@@ -140,7 +140,7 @@ def search(config_file: str,
             logger.error("Search channel '%s' has not been configured.", channel)
             return
     except Exception as e:
-        logger.exception("Error loading user settings: %s", e, exc_info=True)
+        logger.exception("Error loading user settings: %s", e)
         return
 
     asyncio.run(

@@ -41,7 +41,7 @@ def get_epics_tool(root_path: str) -> str:
             data = json.load(json_file)
             logger.debug("Data successfully loaded from %s", filename)
     except Exception as e:
-        logger.exception("An error occurred while loading the file: %s", e, exc_info=True)
+        logger.exception("An error occurred while loading the file: %s", e)
         return None
 
     return data

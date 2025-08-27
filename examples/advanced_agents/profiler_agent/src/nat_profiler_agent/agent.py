@@ -116,7 +116,7 @@ class ProfilerAgent:
             logger.info("ProfilerAgent Graph built and compiled successfully")
             return self.graph
         except Exception as ex:
-            logger.exception("Failed to build ProfilerAgent Graph: %s", ex, exc_info=True)
+            logger.error("Failed to build ProfilerAgent Graph: %s", ex)
             raise
 
     async def agent_node(self, state: ProfilerAgentState):
@@ -142,7 +142,7 @@ class ProfilerAgent:
                 state["messages"].append(HumanMessage(content=message))
             return state
         except Exception as ex:
-            logger.exception("Failed to call agent_node: %s", ex, exc_info=True)
+            logger.error("Failed to call agent_node: %s", ex)
             raise
 
     async def executor_node(self, state: ProfilerAgentState):
@@ -157,7 +157,7 @@ class ProfilerAgent:
                 tool_result = await self.tools[tool_name].ainvoke(input={"df_path": state["df_path"]})
                 self.update_state(state, tool_result)
         except Exception as ex:
-            logger.exception("Failed to call executor_node: %s", ex, exc_info=True)
+            logger.error("Failed to call executor_node: %s", ex)
             raise
         return state
 
@@ -170,7 +170,7 @@ class ProfilerAgent:
                 self.update_state(state, tool_response)
             return state
         except Exception as ex:
-            logger.exception("Failed to call response_composer_node: %s", ex, exc_info=True)
+            logger.error("Failed to call response_composer_node: %s", ex)
             raise
 
     def update_state(self, state: ProfilerAgentState, tool_response: Any) -> ProfilerAgentState:

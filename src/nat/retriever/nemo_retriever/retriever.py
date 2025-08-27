@@ -143,7 +143,7 @@ class NemoRetriever(Retriever):
                 return _wrap_nemo_results(output=output, content_field="content")
 
         except Exception as e:
-            logger.exception("Encountered an error when retrieving results from Nemo Retriever: %s", e)
+            logger.error("Encountered an error when retrieving results from Nemo Retriever: %s", e)
             raise CollectionUnavailableError(
                 f"Error when retrieving documents from {collection_name} for query '{query}'") from e
 

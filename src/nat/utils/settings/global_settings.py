@@ -55,7 +55,7 @@ def configure_registry_channel(config_type: RegistryHandlerBaseConfig, channel_n
                 channel_registry_pre[field] = getattr(validated_field_model, field)
                 break
             except Exception as e:
-                logger.exception(e, exc_info=True)
+                logger.exception(e)
                 logger.warning("Invalid '%s' input, input must be of type %s.", field, info.annotation)
 
     validated_model = config_type(**channel_registry_pre)
@@ -78,7 +78,7 @@ def add_channel_interative(channel_type: str) -> None:
     try:
         ChannelConfigType = registry.get_registered_channel_info_by_channel_type(channel_type=channel_type).config_type
     except Exception as e:
-        logger.exception("Invalid channel type: %s", e, exc_info=True)
+        logger.exception("Invalid channel type: %s", e)
         return
 
     while (True):

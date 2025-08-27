@@ -94,7 +94,7 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
                 if tool_info:
                     tool_name = tool_info.name
             except Exception as e:
-                logger.exception("Error getting tool name: %s", e, exc_info=True)
+                logger.exception("Error getting tool name: %s", e)
 
             try:
                 # Pre-call usage event
@@ -132,7 +132,7 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
                 return result
 
             except Exception as e:
-                logger.exception("ToolUsage._use error: %s", e)
+                logger.error("ToolUsage._use error: %s", e)
                 raise
 
         return wrapped_tool_use
@@ -158,7 +158,7 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
                 for message in kwargs.get('messages', []):
                     model_input += message.get('content', "")
             except Exception as e:
-                logger.exception("Error getting model input: %s", e, exc_info=True)
+                logger.exception("Error getting model input: %s", e)
 
             # Record the start event
             input_stats = IntermediateStepPayload(
@@ -182,7 +182,7 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
                     msg = choice.model_extra["message"]
                     model_output += msg.get('content', "")
             except Exception as e:
-                logger.exception("Error getting model output: %s", e, exc_info=True)
+                logger.exception("Error getting model output: %s", e)
 
             now = time.time()
             # Record the end event

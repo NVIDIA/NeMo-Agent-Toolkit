@@ -242,7 +242,7 @@ async def maintenance_check(config: MaintenanceCheckToolConfig, builder: Builder
         try:
             maintenance_start_str, maintenance_end_str = maintenance_info
         except ValueError:
-            utils.logger.exception(
+            utils.logger.error(
                 "Failed to parse maintenance info into start and end times: %s, skipping maintenance check",
                 maintenance_info)
             return NO_ONGOING_MAINTENANCE_STR

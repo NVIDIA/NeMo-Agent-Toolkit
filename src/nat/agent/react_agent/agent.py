@@ -127,8 +127,7 @@ class ReActAgentGraph(DualNodeAgent):
             logger.exception("%s Unable to find tool with the name %s\n%s",
                              AGENT_LOG_PREFIX,
                              tool_name,
-                             ex,
-                             exc_info=True)
+                             ex)
             raise
 
     async def agent_node(self, state: ReActGraphState):
@@ -252,7 +251,7 @@ class ReActAgentGraph(DualNodeAgent):
                          agent_output.tool_input)
             return AgentDecision.TOOL
         except Exception as ex:
-            logger.exception("Failed to determine whether agent is calling a tool: %s", ex, exc_info=True)
+            logger.exception("Failed to determine whether agent is calling a tool: %s", ex)
             logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
             return AgentDecision.END
 

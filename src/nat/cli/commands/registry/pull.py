@@ -66,7 +66,7 @@ async def pull_artifact(registry_handler_config: RegistryHandlerBaseConfig, pack
             validated_packages = PullRequestPackages(packages=package_list)
 
         except Exception as e:
-            logger.exception("Error processing package names: %s", e, exc_info=True)
+            logger.exception("Error processing package names: %s", e)
             return
 
         await stack.enter_async_context(registry_handler.pull(packages=validated_packages))
@@ -112,7 +112,7 @@ def pull(channel: str, config_file: str, packages: str) -> None:
             logger.error("Pull channel '%s' has not been configured.", channel)
             return
     except Exception as e:
-        logger.exception("Error loading user settings: %s", e, exc_info=True)
+        logger.exception("Error loading user settings: %s", e)
         return
 
     asyncio.run(pull_artifact(pull_channel_config, packages))

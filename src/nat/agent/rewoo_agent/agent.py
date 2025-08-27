@@ -95,11 +95,7 @@ class ReWOOAgentGraph(BaseAgent):
         try:
             return self.tools_dict.get(tool_name)
         except Exception as ex:
-            logger.exception("%s Unable to find tool with the name %s\n%s",
-                             AGENT_LOG_PREFIX,
-                             tool_name,
-                             ex,
-                             exc_info=True)
+            logger.error("%s Unable to find tool with the name %s\n%s", AGENT_LOG_PREFIX, tool_name, ex)
             raise
 
     @staticmethod
@@ -336,10 +332,7 @@ class ReWOOAgentGraph(BaseAgent):
             return AgentDecision.TOOL
 
         except Exception as ex:
-            logger.exception("%s Failed to determine whether agent is calling a tool: %s",
-                             AGENT_LOG_PREFIX,
-                             ex,
-                             exc_info=True)
+            logger.exception("%s Failed to determine whether agent is calling a tool: %s", AGENT_LOG_PREFIX, ex)
             logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
             return AgentDecision.END
 
@@ -365,7 +358,7 @@ class ReWOOAgentGraph(BaseAgent):
             return self.graph
 
         except Exception as ex:
-            logger.exception("%s Failed to build ReWOO Graph: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
+            logger.error("%s Failed to build ReWOO Graph: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     async def build_graph(self):
@@ -374,7 +367,7 @@ class ReWOOAgentGraph(BaseAgent):
             logger.debug("%s ReWOO Graph built and compiled successfully", AGENT_LOG_PREFIX)
             return self.graph
         except Exception as ex:
-            logger.exception("%s Failed to build ReWOO Graph: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
+            logger.error("%s Failed to build ReWOO Graph: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     @staticmethod
@@ -391,7 +384,7 @@ class ReWOOAgentGraph(BaseAgent):
                 errors.append(error_message)
         if errors:
             error_text = "\n".join(errors)
-            logger.exception("%s %s", AGENT_LOG_PREFIX, error_text)
+            logger.error("%s %s", AGENT_LOG_PREFIX, error_text)
             raise ValueError(error_text)
         return True
 

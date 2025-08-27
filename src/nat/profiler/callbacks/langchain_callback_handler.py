@@ -106,7 +106,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         try:
             model_name = kwargs.get("metadata")["ls_model_name"]
         except Exception as e:
-            logger.exception("Error getting model name: %s", e, exc_info=True)
+            logger.exception("Error getting model name: %s", e)
 
         run_id = str(kwargs.get("run_id", str(uuid4())))
         self._run_id_to_model_name[run_id] = model_name
@@ -144,7 +144,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         try:
             model_name = metadata["ls_model_name"] if metadata else kwargs.get("metadata")["ls_model_name"]
         except Exception as e:
-            logger.exception("Error getting model name: %s", e, exc_info=True)
+            logger.exception("Error getting model name: %s", e)
 
         run_id = str(run_id)
         self._run_id_to_model_name[run_id] = model_name
@@ -173,13 +173,13 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         try:
             model_name = self._run_id_to_model_name.get(str(kwargs.get("run_id", "")), "")
         except Exception as e:
-            logger.exception("Error getting model name: %s", e, exc_info=True)
+            logger.exception("Error getting model name: %s", e)
 
         usage_metadata = {}
         try:
             usage_metadata = kwargs.get("chunk").message.usage_metadata if kwargs.get("chunk") else {}
         except Exception as e:
-            logger.exception("Error getting usage metadata: %s", e, exc_info=True)
+            logger.exception("Error getting usage metadata: %s", e)
 
         stats = IntermediateStepPayload(
             event_type=IntermediateStepType.LLM_NEW_TOKEN,
@@ -206,7 +206,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
             try:
                 model_name = self._run_id_to_model_name.get(str(kwargs.get("run_id", "")), "")
             except Exception as e_inner:
-                logger.exception("Error getting model name: %s from outer error %s", e_inner, e, exc_info=True)
+                logger.exception("Error getting model name: %s from outer error %s", e_inner, e)
 
         try:
             generation = response.generations[0][0]

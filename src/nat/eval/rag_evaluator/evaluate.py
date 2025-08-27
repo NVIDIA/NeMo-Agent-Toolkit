@@ -169,7 +169,7 @@ class RAGEvaluator:
                                              _pbar=pbar)
         except Exception as e:
             # On exception we still continue with other evaluators. Log and return an avg_score of 0.0
-            logger.exception("Error evaluating ragas metric, Error: %s", e, exc_info=True)
+            logger.exception("Error evaluating ragas metric, Error: %s", e)
             results_dataset = None
         finally:
             pbar.close()
