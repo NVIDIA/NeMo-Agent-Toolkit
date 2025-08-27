@@ -32,13 +32,17 @@ from . import utils
 from .prompts import TelemetryMetricsHostPerformanceCheckPrompts
 
 
-class TelemetryMetricsHostPerformanceCheckToolConfig(FunctionBaseConfig,
-                                                     name="telemetry_metrics_host_performance_check"):
-    description: str = Field(default=TelemetryMetricsHostPerformanceCheckPrompts.TOOL_DESCRIPTION,
-                             description="Description of the tool.")
+class TelemetryMetricsHostPerformanceCheckToolConfig(
+    FunctionBaseConfig, name="telemetry_metrics_host_performance_check"
+):
+    description: str = Field(
+        default=TelemetryMetricsHostPerformanceCheckPrompts.TOOL_DESCRIPTION, description="Description of the tool."
+    )
     llm_name: LLMRef
-    prompt: str = Field(default=TelemetryMetricsHostPerformanceCheckPrompts.PROMPT,
-                        description="Main prompt for the telemetry metrics host performance check task.")
+    prompt: str = Field(
+        default=TelemetryMetricsHostPerformanceCheckPrompts.PROMPT,
+        description="Main prompt for the telemetry metrics host performance check task.",
+    )
     offline_mode: bool = Field(default=True, description="Whether to run in offline model")
     metrics_url: str = Field(default="", description="URL of the monitoring system")
 
@@ -100,8 +104,9 @@ def _get_llm_analysis_input(timestamp_value_list):
 
     # Convert Unix timestamps to ISO format datetime strings and preserve values
     # Example: "2022-01-17 12:00:00" for timestamp 1642435200
-    data = [[datetime.fromtimestamp(entry[0]).strftime("%Y-%m-%d %H:%M:%S"), entry[1]]
-            for entry in timestamp_value_list]
+    data = [
+        [datetime.fromtimestamp(entry[0]).strftime("%Y-%m-%d %H:%M:%S"), entry[1]] for entry in timestamp_value_list
+    ]
 
     # Extract metric values and convert to float for statistical analysis
     # Assumes values are numeric strings or numbers
@@ -115,9 +120,9 @@ def _get_llm_analysis_input(timestamp_value_list):
 
 
 @register_function(config_type=TelemetryMetricsHostPerformanceCheckToolConfig)
-async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetricsHostPerformanceCheckToolConfig,
-                                                        builder: Builder):
-
+async def telemetry_metrics_host_performance_check_tool(
+    config: TelemetryMetricsHostPerformanceCheckToolConfig, builder: Builder
+):
     async def _arun(host_id: str) -> str:
         utils.log_header("Telemetry Metrics CPU Usage Pattern Analysis", dash_length=100)
 
@@ -150,7 +155,8 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
                 data_str = utils.load_column_or_static(
                     df=df,
                     host_id=host_id,
-                    column="telemetry_metrics_host_performance_check_tool:performance_check_output")
+                    column="telemetry_metrics_host_performance_check_tool:performance_check_output",
+                )
                 data = json.loads(data_str)
 
             # Extract the timestamp-value timeseries from the response
