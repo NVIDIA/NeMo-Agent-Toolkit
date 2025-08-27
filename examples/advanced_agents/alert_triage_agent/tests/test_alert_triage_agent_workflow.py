@@ -20,11 +20,10 @@ import json
 import logging
 from pathlib import Path
 
-import pytest
 import yaml
-from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 
 from nat.runtime.loader import load_workflow
+from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
 
