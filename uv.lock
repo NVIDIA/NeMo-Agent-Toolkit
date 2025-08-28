@@ -19,6 +19,7 @@ members = [
     "nvidia-nat-agno",
     "nvidia-nat-all",
     "nvidia-nat-crewai",
+    "nvidia-nat-data-flywheel",
     "nvidia-nat-ingestion",
     "nvidia-nat-langchain",
     "nvidia-nat-llama-index",
@@ -1504,6 +1505,33 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9d/a4/e44218c2b394e31a6dd0d6b095c4e1f32d0be54c2a4b250032d717647bab/durationpy-0.10.tar.gz", hash = "sha256:1fa6893409a6e739c9c72334fc65cca1f355dbdd93405d30f726deb5bde42fba", size = 3335, upload-time = "2025-05-17T13:52:37.26Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/0d/9feae160378a3553fa9a339b0e9c1a048e147a4127210e286ef18b730f03/durationpy-0.10-py3-none-any.whl", hash = "sha256:3b41e1b601234296b4fb368338fdcd3e13e0b4fb5b67345948f4f2bf9868b286", size = 3922, upload-time = "2025-05-17T13:52:36.463Z" },
+]
+
+[[package]]
+name = "elastic-transport"
+version = "8.17.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6a/54/d498a766ac8fa475f931da85a154666cc81a70f8eb4a780bc8e4e934e9ac/elastic_transport-8.17.1.tar.gz", hash = "sha256:5edef32ac864dca8e2f0a613ef63491ee8d6b8cfb52881fa7313ba9290cac6d2", size = 73425, upload-time = "2025-03-13T07:28:30.776Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cf/cd/b71d5bc74cde7fc6fd9b2ff9389890f45d9762cbbbf81dc5e51fd7588c4a/elastic_transport-8.17.1-py3-none-any.whl", hash = "sha256:192718f498f1d10c5e9aa8b9cf32aed405e469a7f0e9d6a8923431dbb2c59fb8", size = 64969, upload-time = "2025-03-13T07:28:29.031Z" },
+]
+
+[[package]]
+name = "elasticsearch"
+version = "8.19.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "elastic-transport" },
+    { name = "python-dateutil" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/05/00/7304af19770b9c53afe7b5b75433a1b0355d8725b4d8ed54a3f47d2a4f99/elasticsearch-8.19.0.tar.gz", hash = "sha256:66fe755e55127afc47c68eca6858006932d9d128b68834a15e7e9894517cfb67", size = 777512, upload-time = "2025-07-30T10:19:11.374Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/73/05fe3d053d6154dd92a5f8ce3c67685af983c988aa6244e5512ea73f0d1f/elasticsearch-8.19.0-py3-none-any.whl", hash = "sha256:33eee4ec4244ef217952eeee0adff64a409120a1401c3bd35790e22145727e3f", size = 926924, upload-time = "2025-07-30T10:19:06.884Z" },
 ]
 
 [[package]]
@@ -4742,6 +4770,9 @@ all = [
 crewai = [
     { name = "nvidia-nat-crewai" },
 ]
+data-flywheel = [
+    { name = "nvidia-nat-data-flywheel" },
+]
 examples = [
     { name = "nat-agno-personal-finance" },
     { name = "nat-alert-triage-agent" },
@@ -4893,6 +4924,7 @@ requires-dist = [
     { name = "nvidia-nat-agno", marker = "extra == 'agno'", editable = "packages/nvidia_nat_agno" },
     { name = "nvidia-nat-all", marker = "extra == 'all'", editable = "packages/nvidia_nat_all" },
     { name = "nvidia-nat-crewai", marker = "extra == 'crewai'", editable = "packages/nvidia_nat_crewai" },
+    { name = "nvidia-nat-data-flywheel", marker = "extra == 'data-flywheel'", editable = "packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-ingestion", marker = "extra == 'ingestion'", editable = "packages/nvidia_nat_ingestion" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-llama-index", marker = "extra == 'llama-index'", editable = "packages/nvidia_nat_llama_index" },
@@ -4925,7 +4957,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["all", "agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "gunicorn"]
+provides-extras = ["all", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "gunicorn"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -5032,6 +5064,20 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "crewai", specifier = "~=0.95.0" },
+    { name = "nvidia-nat", editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-data-flywheel"
+source = { editable = "packages/nvidia_nat_data_flywheel" }
+dependencies = [
+    { name = "elasticsearch" },
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "elasticsearch", specifier = "~=8.1" },
     { name = "nvidia-nat", editable = "." },
 ]
 

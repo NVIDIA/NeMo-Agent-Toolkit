@@ -61,6 +61,7 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 all = ["nvidia-nat-all"] # meta-package
 agno = ["nvidia-nat-agno"]
 crewai = ["nvidia-nat-crewai"]
+data-flywheel = ["nvidia-nat-data-flywheel"]
 ingestion = ["nvidia-nat-ingestion"] # meta-package
 langchain = ["nvidia-nat-langchain"]
 llama-index = ["nvidia-nat-llama-index"]
@@ -125,6 +126,7 @@ config-settings = { editable_mode = "compat" }
 nvidia-nat-all = { workspace = true }
 nvidia-nat-agno = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
+nvidia-nat-data-flywheel = { workspace = true }
 nvidia-nat-ingestion = { workspace = true }
 nvidia-nat-langchain = { workspace = true }
 nvidia-nat-llama-index = { workspace = true }
