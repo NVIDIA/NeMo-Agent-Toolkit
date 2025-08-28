@@ -78,10 +78,10 @@ test:python_tests:
   artifacts:
     when: always
     reports:
-      junit: report_*.xml
+      junit: pytest_junit_report*.xml
       coverage_report:
         coverage_format: cobertura  # or jacoco
-        path: report_pytest_coverage.xml
+        path: pytest_coverage_report*.xml
 
 docs:build:
   stage: docs
