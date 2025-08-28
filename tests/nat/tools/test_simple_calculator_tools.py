@@ -20,6 +20,8 @@ from nat_simple_calculator.register import MultiplyToolConfig
 from nat_simple_calculator.register import SubtractToolConfig
 
 
+# This test is to ensure ToolTestRunner is working correctly, and also a demonstration of how to test tools
+# in complete isolation without requiring spinning up entire workflows, agents, and external services.
 async def test_inequality_tool():
     """Test inequality tool logic directly."""
 
