@@ -199,8 +199,8 @@ class MCPBaseClient(ABC):
         Returns:
             MCPToolClient for the configured tool.
 
-        Raise:
-            ValueError if no tool is available with that name.
+        Raises:
+            MCPToolNotFoundError: If no tool is available with that name.
         """
         if not self._exit_stack:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
