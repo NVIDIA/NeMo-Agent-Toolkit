@@ -175,7 +175,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             try:
                 processed_item = await processor.process(processed_item)
             except Exception as e:
-                logger.error("Error in processor %s: %s", processor.__class__.__name__, e, exc_info=True)
+                logger.exception("Error in processor %s: %s", processor.__class__.__name__, e)
                 # Continue with unprocessed item rather than failing
         return processed_item
 
@@ -214,7 +214,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             try:
                 source_index = self._processors.index(source_processor)
             except ValueError:
-                logger.error("Source processor %s not found in pipeline", source_processor.__class__.__name__)
+                logger.exception("Source processor %s not found in pipeline", source_processor.__class__.__name__)
                 return
 
             # Process through remaining processors (skip the source processor)
@@ -225,10 +225,9 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             await self._export_final_item(processed_item)
 
         except Exception as e:
-            logger.error("Failed to continue pipeline processing after %s: %s",
-                         source_processor.__class__.__name__,
-                         e,
-                         exc_info=True)
+            logger.exception("Failed to continue pipeline processing after %s: %s",
+                             source_processor.__class__.__name__,
+                             e)
 
     async def _export_with_processing(self, item: PipelineInputT) -> None:
         """Export an item after processing it through the pipeline.
@@ -248,7 +247,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             await self._export_final_item(final_item, raise_on_invalid=True)
 
         except Exception as e:
-            logger.error("Failed to export item '%s': %s", item, e, exc_info=True)
+            logger.error("Failed to export item '%s': %s", item, e)
             raise
 
     @override
@@ -293,7 +292,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             task.add_done_callback(self._tasks.discard)
 
         except Exception as e:
-            logger.error("%s: Failed to create task: %s", self.name, e, exc_info=True)
+            logger.error("%s: Failed to create task: %s", self.name, e)
             raise
 
     @override
@@ -316,7 +315,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
                 await asyncio.gather(*shutdown_tasks, return_exceptions=True)
                 logger.debug("Successfully shut down %d processors", len(shutdown_tasks))
             except Exception as e:
-                logger.error("Error shutting down processors: %s", e, exc_info=True)
+                logger.exception("Error shutting down processors: %s", e)
 
         # Call parent cleanup
         await super()._cleanup()

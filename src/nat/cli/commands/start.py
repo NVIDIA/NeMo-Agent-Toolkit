@@ -224,7 +224,7 @@ class StartCommandGroup(click.Group):
             return asyncio.run(run_plugin())
 
         except Exception as e:
-            logger.error("Failed to initialize workflow", exc_info=True)
+            logger.error("Failed to initialize workflow")
             raise click.ClickException(str(e)) from e
 
     def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:

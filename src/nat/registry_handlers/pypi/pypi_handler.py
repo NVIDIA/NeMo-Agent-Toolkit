@@ -85,7 +85,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
             validated_publish_response = PublishResponse(status={
                 "status": StatusEnum.ERROR, "message": msg, "action": ActionEnum.PUBLISH
             })
-            logger.exception(validated_publish_response.status.message, exc_info=True)
+            logger.exception(validated_publish_response.status.message)
 
             yield validated_publish_response
 
@@ -149,7 +149,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
             validated_pull_response = PullResponse(status={
                 "status": StatusEnum.ERROR, "message": msg, "action": ActionEnum.PULL
             })
-            logger.exception(validated_pull_response.status.message, exc_info=True)
+            logger.exception(validated_pull_response.status.message)
 
             yield validated_pull_response
 
@@ -212,7 +212,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
 
         except Exception as e:
             msg = f"Error searching for artifacts: {e}"
-            logger.exception(msg, exc_info=True)
+            logger.exception(msg)
             validated_search_response = SearchResponse(params=query,
                                                        status={
                                                            "status": StatusEnum.ERROR,

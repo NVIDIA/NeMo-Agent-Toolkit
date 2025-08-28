@@ -44,7 +44,7 @@ def extract_file_from_patch(patch_content: str) -> str | None:
                     return parts[2][2:]  # Remove 'b/' prefix
         return None
     except Exception as e:
-        logger.exception("Error extracting file from patch: %s", e, exc_info=True)
+        logger.exception("Error extracting file from patch: %s", e)
         return None
 
 
@@ -102,7 +102,7 @@ async def ast_tool(tool_config: AstToolConfig, builder: Builder):
             return {'file_path': file_path, 'symbols': symbols, 'imports': imports, 'source': source_code}
 
         except Exception as e:
-            logger.exception("Error analyzing file %s %s", file_path, e, exc_info=True)
+            logger.exception("Error analyzing file %s %s", file_path, e)
             return {'file_path': file_path, 'error': str(e)}
 
     async def ast_operations(args_str: str) -> str:

@@ -52,6 +52,11 @@ reviews:
             def my_function(param1: int, param2: str) -> bool:
                 pass
             ```
+        - For **Python exception handling**, ensure proper stack trace preservation:
+          - When re-raising exceptions: use bare `raise` statements to maintain the original stack trace,
+            and use `logger.error()` (not `logger.exception()`) to avoid duplicate stack trace output.
+          - When catching and logging exceptions without re-raising: always use `logger.exception()`
+            to capture the full stack trace information.
 
         # Documentation Review Instructions
         - Verify that documentation and comments are clear and comprehensive.
@@ -62,8 +67,8 @@ reviews:
           spelling mistakes but are listed in the `ci/vale/styles/config/vocabularies/nat/accept.txt` file are OK.
 
         # Misc.
-        - All code should be licensed under the Apache License 2.0, and should contain an Apache License 2.0 header
-          comment at the top of each file.
+        - All code (except .mdc files that contain Cursor rules) should be licensed under the Apache License 2.0,
+          and should contain an Apache License 2.0 header comment at the top of each file.
         - Confirm that copyright years are up-to date whenever a file is changed.
 
     - path: "docs/source/**/*"

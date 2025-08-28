@@ -213,7 +213,7 @@ def load_and_override_config(config_file: Path, overrides: tuple[tuple[str, str]
                 yaml.dump(effective_config, default_flow_style=False),
             )
         except Exception as e:
-            logger.exception("Modified configuration failed validation: %s", e, exc_info=True)
+            logger.error("Modified configuration failed validation: %s", e)
             raise click.BadParameter(f"Modified configuration failed validation: {str(e)}")
         finally:
             # Clean up the temporary file

@@ -133,7 +133,7 @@ class LocalRegistryHandler(AbstractRegistryHandler):
                                                            "message": msg,
                                                            "action": ActionEnum.SEARCH
                                                        })
-            logger.exception(validated_search_response.status.message, exc_info=True)
+            logger.exception(validated_search_response.status.message)
 
             yield validated_search_response
 
@@ -168,7 +168,7 @@ class LocalRegistryHandler(AbstractRegistryHandler):
             validated_remove_response = RemoveResponse(status={
                 "status": StatusEnum.ERROR, "message": msg, "action": ActionEnum.REMOVE
             })  # type: ignore
-            logger.exception(validated_remove_response.status.message, exc_info=True)
+            logger.exception(validated_remove_response.status.message)
 
             yield validated_remove_response
 

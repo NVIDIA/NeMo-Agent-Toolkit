@@ -210,7 +210,7 @@ def discover_and_register_plugins(plugin_type: PluginTypes):
                 # Optionally, you can mark the plugin as unavailable or take other actions
 
             except Exception:
-                logger.exception("An error occurred while loading plugin '%s': {e}", entry_point.name, exc_info=True)
+                logger.exception("An error occurred while loading plugin '%s'", entry_point.name)
 
             finally:
                 count += 1

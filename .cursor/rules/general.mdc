@@ -32,14 +32,29 @@ These are the overarching standards that every **source, test, documentation and
 
 - All importable Python code lives under `src/` or `packages/<pkg>/src/` so namespace-packages resolve correctly.
 - Each example is an installable package in `examples/<example_name>` and exposes an `__main__.py` for `python -m <example_name>` execution.
+- **Examples directory guidelines**:
+  - At minimum, examples should contain a `README.md` or `README.ipynb` file.
+  - Python code should be placed in a `src/` subdirectory with a `pyproject.toml` file.
+  - Scripts should be placed in a `scripts/` subdirectory (optional).
+  - YAML files should be placed in a `configs/` subdirectory.
+  - Sample data files should be placed in a `data/` subdirectory and checked into git-lfs.
+- **Packages directory guidelines**:
+  - Each package should contain a `pyproject.toml` file.
+  - The `pyproject.toml` should declare a dependency on `nvidia-nat` or another package with a name starting with `nvidia-nat-`.
+  - Dependencies should use `~=<version>` format with two-digit versions (e.g., `~=1.0`).
+  - If packages contain Python code, they should have tests in a `tests/` directory at the same level as `pyproject.toml`.
 - Unit tests live in `tests/` (or `examples/*/tests`) and use the markers defined in `pyproject.toml` (e.g. `e2e`, `integration`).
-- Documentation sources are Markdown files under `docs/source`.
+- Documentation sources are Markdown files under `docs/source`. Image files should be placed in `docs/source/_static` directory.
 - Configuration files consumed by code are stored next to that code in a `configs/` folder.
 - Large / binary assets **must** be committed with Git-LFS and placed in a neighbouring `data/` folder.
 - Shell or utility scripts belong in `scripts/` or `ci/scripts/` – never mix them with library code.
+- **Source code organization**:
+  - `src/aiq/**/*`: Maintains backward compatibility with previous toolkit version. Should almost never be modified.
+  - `src/nat/**/*`: Contains core functionality. Changes should prioritize backward compatibility.
 
 ## Code Formatting & Imports
 
+- Follow [PEP 20](https://peps.python.org/pep-0020/) and [PEP 8](https://peps.python.org/pep-0008/) for Python style guidelines.
 - Run **yapf** second (PEP 8 base, `column_limit = 120`).
 - Indent with 4 spaces, never tabs, and ensure every file ends with a single newline.
 - CI fails if formatting is wrong; run `pre-commit run --all-files` locally before pushing.
@@ -57,25 +72,57 @@ These are the overarching standards that every **source, test, documentation and
 - Use `typing.Annotated` for units or extra metadata when useful.
 - Treat `pyright` warnings (configured in `pyproject.toml`) as errors during development.
 
+## Exception Handling
+
+- Preserve stack traces and prevent duplicate logging when handling exceptions.
+- When re-raising exceptions: use bare `raise` statements to maintain the original stack trace, and use `logger.error()` for logging (not `logger.exception()`) to avoid duplicate stack trace output.
+- When catching and logging exceptions without re-raising: always use `logger.exception()` (equivalent to `logger.error(exc_info=True)`) to capture the full stack trace information.
+
 ## Documentation
 
 - Provide Google-style docstrings for every public module, class, function and CLI command.
 - The first line must be a concise description ending with a period (Vale checks this).
 - Surround code entities with backticks to avoid Vale false-positives.
 - Keep docs in sync with code; the **documentation** pipeline will fail on Sphinx errors or broken links.
+- **Documentation quality requirements**:
+  - Documentation must be clear and comprehensive.
+  - Do not include TODOs, FIXMEs, or placeholder text like "lorem ipsum".
+  - Avoid offensive or outdated terms.
+  - Ensure documentation is free of spelling mistakes.
+  - Do not use words listed in `ci/vale/styles/config/vocabularies/nat/reject.txt`.
+  - Words that might appear to be spelling mistakes but are listed in `ci/vale/styles/config/vocabularies/nat/accept.txt` are acceptable.
 
 ## Testing
 
 - Use **pytest** with `pytest-asyncio` for asynchronous code.
 - Name test files `test_*.py` and store them alongside the code in a `tests/` folder.
+- **Test naming and structure**:
+  - Test functions should be named using the `test_` prefix, using snake_case.
+  - Any frequently repeated code should be extracted into pytest fixtures.
+  - Pytest fixtures should define the name argument when applying the pytest.fixture decorator.
+  - The fixture function being decorated should be named using the `fixture_` prefix, using snake_case.
+  - Example:
+    ```python
+    @pytest.fixture(name="my_fixture")
+    def fixture_my_fixture():
+        pass
+    ```
 - Maintain **≥ 80 %** coverage; add or update tests when introducing changes.
 - Mock external services with `pytest_httpserver` or `unittest.mock` instead of hitting live endpoints.
 - Mark expensive tests with `@pytest.mark.slow` or `@pytest.mark.integration` so they can be skipped in the default test suite.
+
+## Security
+
+- Never commit API keys, credentials or personal data; use environment variables or `.env` files excluded from Git.
+- Validate and sanitise all user input, especially in web or CLI interfaces.
+- Prefer `httpx` with SSL verification enabled by default and follow OWASP Top-10 recommendations.
+- Periodically run `uv pip list --outdated` and upgrade dependencies.
 
 ## Continuous Integration
 
 - Never commit code that fails `pre-commit run --all-files` or `ci/scripts/run_ci_local.sh check`.
 - Every file must start with the standard SPDX Apache-2.0 header.
+- **Copyright requirements**: Confirm that copyright years are up-to-date whenever a file is changed.
 - New dependencies must be added to **both** `pyproject.toml` (alphabetically) and `uv.lock` via `uv pip install <pkg> --sync`.
 - Sign commits with `--signoff` to comply with the Developer Certificate of Origin (DCO).
 
@@ -84,13 +131,6 @@ These are the overarching standards that every **source, test, documentation and
 - The project follows **semantic versioning** (MAJOR.MINOR.PATCH).  Patch releases must remain backward-compatible.
 - Version numbers are derived automatically by `setuptools-scm`; never hard-code them in code or docs.
 - Add user-visible changes to `CHANGELOG.md` under the appropriate section.
-
-## Security
-
-- Never commit API keys, credentials or personal data; use environment variables or `.env` files excluded from Git.
-- Validate and sanitise all user input, especially in web or CLI interfaces.
-- Prefer `httpx` with SSL verification enabled by default and follow OWASP Top-10 recommendations.
-- Periodically run `uv pip list --outdated` and upgrade dependencies.
 
 ## Performance
 

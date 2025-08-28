@@ -116,7 +116,7 @@ async def monitoring_process_check_tool(config: MonitoringProcessCheckToolConfig
 
         except Exception as e:
             utils.logger.error("Error during monitoring process check: %s", str(e))
-            raise e
+            raise
 
     yield FunctionInfo.from_fn(
         _arun,

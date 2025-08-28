@@ -457,7 +457,7 @@ async def custom_telemetry_exporter(config: CustomTelemetryExporter, builder: Bu
         yield exporter
 
     except Exception as ex:
-        logger.error(f"Failed to create custom telemetry exporter: {ex}", exc_info=True)
+        logger.error(f"Failed to create custom telemetry exporter: {ex}")
         raise
 ```
 

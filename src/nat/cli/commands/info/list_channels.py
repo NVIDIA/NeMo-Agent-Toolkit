@@ -29,4 +29,4 @@ def list_channels(channel_type: str):
     try:
         settings.print_channel_settings(channel_type=channel_type)
     except Exception as e:
-        logger.exception("Error listing channels: %s", e, exc_info=True)
+        logger.exception("Error listing channels: %s", e)

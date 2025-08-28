@@ -113,4 +113,4 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
             try:
                 os.remove(config_file_name)
             except OSError as e:
-                logger.error(f"Warning: Failed to delete temp file {config_file_name}: {e}")
+                logger.exception(f"Warning: Failed to delete temp file {config_file_name}: {e}")

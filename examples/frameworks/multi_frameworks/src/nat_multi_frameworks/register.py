@@ -176,6 +176,6 @@ async def multi_frameworks_workflow(config: MultiFrameworksWorkflowConfig, build
     try:
         yield _response_fn
     except GeneratorExit:
-        logger.exception("Exited early!", exc_info=True)
+        logger.exception("Exited early!")
     finally:
         logger.debug("Cleaning up multi_frameworks workflow.")

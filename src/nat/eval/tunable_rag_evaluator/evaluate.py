@@ -182,8 +182,8 @@ class TunableRagEvaluator(BaseEvaluator):
                     relevance_score = parsed_response["relevance_score"]
                     reasoning = parsed_response["reasoning"]
                 except KeyError as e:
-                    logger.error("Missing required keys in default scoring response: %s",
-                                 ", ".join(str(arg) for arg in e.args))
+                    logger.exception("Missing required keys in default scoring response: %s",
+                                     ", ".join(str(arg) for arg in e.args))
                     reasoning = f"Error in evaluator from parsing judge LLM response. Missing required key(s): {', '.join(str(arg) for arg in e.args)}"
 
                 coverage_weight = self.default_score_weights.get("coverage", 1 / 3)
@@ -215,7 +215,7 @@ class TunableRagEvaluator(BaseEvaluator):
                     reasoning = f"Error in evaluator from parsing judge LLM response. Missing required key(s): {', '.join(str(arg) for arg in e.args)}"
                     raise
         except (KeyError, ValueError) as e:
-            logger.error("Error parsing judge LLM response: %s", e)
+            logger.exception("Error parsing judge LLM response: %s", e)
             score = 0.0
             reasoning = "Error in evaluator from parsing judge LLM response."
 

@@ -37,8 +37,10 @@ class TelemetryMetricsHostPerformanceCheckToolConfig(FunctionBaseConfig,
     description: str = Field(default=TelemetryMetricsHostPerformanceCheckPrompts.TOOL_DESCRIPTION,
                              description="Description of the tool.")
     llm_name: LLMRef
-    prompt: str = Field(default=TelemetryMetricsHostPerformanceCheckPrompts.PROMPT,
-                        description="Main prompt for the telemetry metrics host performance check task.")
+    prompt: str = Field(
+        default=TelemetryMetricsHostPerformanceCheckPrompts.PROMPT,
+        description="Main prompt for the telemetry metrics host performance check task.",
+    )
     offline_mode: bool = Field(default=True, description="Whether to run in offline model")
     metrics_url: str = Field(default="", description="URL of the monitoring system")
 
@@ -150,7 +152,8 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
                 data_str = utils.load_column_or_static(
                     df=df,
                     host_id=host_id,
-                    column="telemetry_metrics_host_performance_check_tool:performance_check_output")
+                    column="telemetry_metrics_host_performance_check_tool:performance_check_output",
+                )
                 data = json.loads(data_str)
 
             # Extract the timestamp-value timeseries from the response
@@ -172,7 +175,7 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
 
         except Exception as e:
             utils.logger.error("Error during telemetry metrics host performance check: %s", str(e))
-            raise e
+            raise
 
     yield FunctionInfo.from_fn(
         _arun,

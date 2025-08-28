@@ -133,7 +133,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             return ChatResponse.from_string(str(output_message.content))
 
         except Exception as ex:
-            logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
+            logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
             # here, we can implement custom error messages
             if config.verbose:
                 return ChatResponse.from_string(str(ex))

@@ -88,7 +88,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
             validated_publish_response = PublishResponse(status={
                 "status": StatusEnum.ERROR, "message": msg, "action": ActionEnum.PUBLISH
             })
-            logger.exception(validated_publish_response.status.message, exc_info=True)
+            logger.exception(validated_publish_response.status.message)
 
             yield validated_publish_response
 
@@ -155,7 +155,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
             validated_pull_response = PullResponse(status={
                 "status": StatusEnum.ERROR, "message": msg, "action": ActionEnum.PULL
             })
-            logger.exception(validated_pull_response.status.message, exc_info=True)
+            logger.exception(validated_pull_response.status.message)
 
             yield validated_pull_response
 
@@ -193,7 +193,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
                                                            "message": msg,
                                                            "action": ActionEnum.SEARCH
                                                        })
-            logger.exception(validated_search_response.status.message, exc_info=True)
+            logger.exception(validated_search_response.status.message)
 
             yield validated_search_response
 
@@ -228,7 +228,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
             validated_remove_response = RemoveResponse(status={
                 "status": StatusEnum.ERROR, "message": msg, "action": ActionEnum.REMOVE
             })
-            logger.exception(validated_remove_response.status.message, exc_info=True)
+            logger.exception(validated_remove_response.status.message)
 
             yield validated_remove_response
 

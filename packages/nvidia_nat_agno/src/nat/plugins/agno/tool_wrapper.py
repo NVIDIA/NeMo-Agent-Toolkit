@@ -17,7 +17,6 @@ import asyncio
 import json
 import logging
 import textwrap
-import traceback
 from typing import Any
 from typing import Awaitable
 from typing import Callable
@@ -287,9 +286,7 @@ def execute_agno_tool(name: str,
         return process_future.result(timeout=30)  # 30-second timeout for processing
 
     except Exception as e:
-        logger.exception(f"Error executing Agno tool {name}: {e}")
-        error_traceback = traceback.format_exc()
-        logger.error(f"Exception traceback: {error_traceback}")
+        logger.error("Error executing Agno tool %s: %s", name, e)
         raise
 
 

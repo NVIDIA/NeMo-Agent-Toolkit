@@ -93,7 +93,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             output_message = state.messages[-1]
             return output_message.content
         except Exception as ex:
-            logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
+            logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
             if config.verbose:
                 return str(ex)
             return "I seem to be having a problem."
@@ -101,6 +101,6 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
     try:
         yield FunctionInfo.from_fn(_response_fn, description=config.description)
     except GeneratorExit:
-        logger.exception("%s Workflow exited early!", AGENT_LOG_PREFIX, exc_info=True)
+        logger.exception("%s Workflow exited early!", AGENT_LOG_PREFIX)
     finally:
         logger.debug("%s Cleaning up react_agent workflow.", AGENT_LOG_PREFIX)

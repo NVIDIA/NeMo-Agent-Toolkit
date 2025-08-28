@@ -168,17 +168,17 @@ class EvaluationRun:
                 intermediate_future = None
 
                 try:
-
                     # Start usage stats and intermediate steps collection in parallel
                     intermediate_future = pull_intermediate()
                     runner_result = runner.result()
                     base_output = await runner_result
                     intermediate_steps = await intermediate_future
                 except NotImplementedError as e:
+                    logger.error("Failed to run the workflow: %s", e)
                     # raise original error
-                    raise e
+                    raise
                 except Exception as e:
-                    logger.exception("Failed to run the workflow: %s", e, exc_info=True)
+                    logger.exception("Failed to run the workflow: %s", e)
                     # stop processing if a workflow error occurs
                     self.workflow_interrupted = True
 
@@ -317,7 +317,7 @@ class EvaluationRun:
                 logger.info("Deleting old job directory: %s", dir_to_delete)
                 shutil.rmtree(dir_to_delete)
             except Exception as e:
-                logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e, exc_info=True)
+                logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e)
 
     def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
@@ -367,7 +367,7 @@ class EvaluationRun:
 
             await self.weave_eval.alog_score(eval_output, evaluator_name)
         except Exception as e:
-            logger.exception("An error occurred while running evaluator %s: %s", evaluator_name, e, exc_info=True)
+            logger.exception("An error occurred while running evaluator %s: %s", evaluator_name, e)
 
     async def run_evaluators(self, evaluators: dict[str, Any]):
         """Run all configured evaluators asynchronously."""
@@ -380,7 +380,7 @@ class EvaluationRun:
         try:
             await asyncio.gather(*tasks)
         except Exception as e:
-            logger.exception("An error occurred while running evaluators: %s", e, exc_info=True)
+            logger.error("An error occurred while running evaluators: %s", e)
             raise
         finally:
             # Finish prediction loggers in Weave

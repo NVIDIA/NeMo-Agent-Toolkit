@@ -160,6 +160,11 @@ class BaseAgent(ABC):
                                        tool_call_id=tool.name,
                                        content=f"The tool {tool.name} provided an empty response.")
 
+                # ToolMessage only accepts str or list[str | dict] as content.
+                # Convert into list if the response is a dict.
+                if isinstance(response, dict):
+                    response = [response]
+
                 return ToolMessage(name=tool.name, tool_call_id=tool.name, content=response)
 
             except Exception as e:
@@ -183,7 +188,7 @@ class BaseAgent(ABC):
 
         # All retries exhausted, return error message
         error_content = "Tool call failed after all retry attempts. Last error: %s" % str(last_exception)
-        logger.error("%s %s", AGENT_LOG_PREFIX, error_content)
+        logger.error("%s %s", AGENT_LOG_PREFIX, error_content, exc_info=True)
         return ToolMessage(name=tool.name, tool_call_id=tool.name, content=error_content, status="error")
 
     def _log_tool_response(self, tool_name: str, tool_input: Any, tool_response: str) -> None:

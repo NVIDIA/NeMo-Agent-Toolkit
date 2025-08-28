@@ -89,7 +89,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     if config.additional_planner_instructions:
         planner_system_prompt += f"{config.additional_planner_instructions}"
     if not ReWOOAgentGraph.validate_planner_prompt(planner_system_prompt):
-        logger.exception("Invalid planner prompt")
+        logger.error("Invalid planner prompt")
         raise ValueError("Invalid planner prompt")
     planner_prompt = ChatPromptTemplate([("system", planner_system_prompt), ("user", PLANNER_USER_PROMPT)])
 
@@ -97,7 +97,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     if config.additional_solver_instructions:
         solver_system_prompt += f"{config.additional_solver_instructions}"
     if not ReWOOAgentGraph.validate_solver_prompt(solver_system_prompt):
-        logger.exception("Invalid solver prompt")
+        logger.error("Invalid solver prompt")
         raise ValueError("Invalid solver prompt")
     solver_prompt = ChatPromptTemplate([("system", solver_system_prompt), ("user", SOLVER_USER_PROMPT)])
 
@@ -141,7 +141,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
             return ChatResponse.from_string(output_message)
 
         except Exception as ex:
-            logger.exception("ReWOO Agent failed with exception: %s", ex, exc_info=ex)
+            logger.exception("ReWOO Agent failed with exception: %s", ex)
             # here, we can implement custom error messages
             if config.verbose:
                 return ChatResponse.from_string(str(ex))
