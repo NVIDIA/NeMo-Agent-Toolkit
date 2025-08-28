@@ -105,9 +105,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
             try:
                 assert JobStore is not None, "JobStore should be imported when Dask is available"
                 assert self._db_url is not None, "NAT_JOB_STORE_DB_URL environment variable must be set when using Dask"
-                from nat.front_ends.fastapi.job_store import get_db_engine
-                db_engine = get_db_engine(self._db_url, use_async=True)
-                self._job_store = JobStore(scheduler_address=self._scheduler_address, db_engine=db_engine)
+                self._job_store = JobStore(scheduler_address=self._scheduler_address, db_url=self._db_url)
                 self._dask_available = True
                 logger.debug("Connected to Dask scheduler at %s", self._scheduler_address)
             except Exception as e:
@@ -274,10 +272,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         }
 
         # TODO: Find another way to limit the number of concurrent evaluations
-        async def run_evaluation(scheduler_address: str, job_id: str, config_file: str, reps: int):
+        async def run_evaluation(scheduler_address: str, db_url: str, job_id: str, config_file: str, reps: int):
             """Background task to run the evaluation."""
             assert JobStore is not None, "JobStore should be imported when Dask is available"
-            job_store = JobStore(scheduler_address=scheduler_address)
+            job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
 
             try:
                 # We have two config files, one for the workflow and one for the evaluation
@@ -324,7 +322,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     config_file=request.config_file,
                     expiry_seconds=request.expiry_seconds,
                     job_fn=run_evaluation,
-                    job_args=[self._scheduler_address, job_id, request.config_file, request.reps])
+                    job_args=[self._scheduler_address, self._db_url, job_id, request.config_file, request.reps])
 
                 logger.info("Submitted evaluation job %s with config %s", job_id, request.config_file)
 
@@ -753,10 +751,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                  updated_at=job.updated_at,
                                                  expires_at=self._job_store.get_expires_at(job))
 
-        async def run_generation(scheduler_address: str, job_id: str, payload: typing.Any, result_type_name: str):
+        async def run_generation(scheduler_address: str,
+                                 db_url: str,
+                                 job_id: str,
+                                 payload: typing.Any,
+                                 result_type_name: str):
             """Background task to run the evaluation."""
             assert JobStore is not None, "JobStore should be initialized when Dask is available"
-            job_store = JobStore(scheduler_address=scheduler_address)
+            job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
             try:
                 config_file_path = get_config_file_path()
                 result_type = import_class_from_string(result_type_name)
@@ -790,6 +792,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                                    job_fn=run_generation,
                                                                    job_args=[
                                                                        self._scheduler_address,
+                                                                       self._db_url,
                                                                        job_id,
                                                                        request.model_dump(mode="json"),
                                                                        get_class_name(final_result_type)

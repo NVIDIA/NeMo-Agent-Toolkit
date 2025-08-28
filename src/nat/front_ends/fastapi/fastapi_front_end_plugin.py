@@ -59,10 +59,8 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
     @staticmethod
     async def _periodic_cleanup(scheduler_address: str, db_url: str, sleep_time_sec: int = 300):
         from nat.front_ends.fastapi.job_store import JobStore
-        from nat.front_ends.fastapi.job_store import get_db_engine
 
-        db_engine = get_db_engine(db_url, use_async=True)
-        job_store = JobStore(scheduler_address=scheduler_address, db_engine=db_engine)
+        job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
 
         logger.info("Starting periodic cleanup of expired jobs every %d seconds", sleep_time_sec)
         await asyncio.sleep(sleep_time_sec)

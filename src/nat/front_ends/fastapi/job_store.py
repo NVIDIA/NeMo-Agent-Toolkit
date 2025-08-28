@@ -104,9 +104,15 @@ class JobStore:
     # active jobs are exempt from expiry
     ACTIVE_STATUS = {"running", "submitted"}
 
-    def __init__(self, scheduler_address: str, db_engine: "AsyncEngine"):
+    def __init__(self, scheduler_address: str, db_engine: "AsyncEngine | None" = None, db_url: str | None = None):
         self._scheduler_address = scheduler_address
         self._client: DaskClient | None = None
+
+        if db_engine is None:
+            if db_url is None:
+                raise ValueError("Either db_engine or db_url must be provided")
+
+            db_engine = get_db_engine(db_url, use_async=True)
 
         # Disabling expire_on_commit allows us to detach (expunge) job instances from the session
         session_maker = async_sessionmaker(db_engine, expire_on_commit=False)
