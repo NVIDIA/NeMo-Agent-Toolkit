@@ -106,7 +106,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                 assert JobStore is not None, "JobStore should be imported when Dask is available"
                 assert self._db_url is not None, "NAT_JOB_STORE_DB_URL environment variable must be set when using Dask"
                 from nat.front_ends.fastapi.job_store import get_db_engine
-                db_engine = get_db_engine(self._db_url)
+                db_engine = get_db_engine(self._db_url, use_async=True)
                 self._job_store = JobStore(scheduler_address=self._scheduler_address, db_engine=db_engine)
                 self._dask_available = True
                 logger.debug("Connected to Dask scheduler at %s", self._scheduler_address)
