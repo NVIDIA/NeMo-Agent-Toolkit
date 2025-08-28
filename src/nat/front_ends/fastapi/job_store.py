@@ -18,6 +18,7 @@ import logging
 import os
 import shutil
 import typing
+from asyncio import current_task
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from contextlib import asynccontextmanager
@@ -36,6 +37,7 @@ from sqlalchemy import String
 from sqlalchemy import and_
 from sqlalchemy import select
 from sqlalchemy import update
+from sqlalchemy.ext.asyncio import async_scoped_session
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
@@ -107,7 +109,11 @@ class JobStore:
         self._client: DaskClient | None = None
 
         # Disabling expire_on_commit allows us to detach (expunge) job instances from the session
-        self._session = async_sessionmaker(db_engine, expire_on_commit=False)
+        session_maker = async_sessionmaker(db_engine, expire_on_commit=False)
+
+        # The async_scoped_session ensures that the same session is used within the same task, and that no two tasks
+        # share the same session.
+        self._session = async_scoped_session(session_maker, scopefunc=current_task)
 
     @asynccontextmanager
     async def client(self) -> AsyncGenerator[DaskClient]:
@@ -126,6 +132,9 @@ class JobStore:
         """
         async with self._session.begin() as session:
             yield session
+
+        # Removes the current task key from the session registry, preventing potential memory leaks
+        await self._session.remove()
 
     async def close(self):
         """Close the Dask client."""
