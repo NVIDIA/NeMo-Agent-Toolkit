@@ -20,7 +20,6 @@ import json
 import logging
 from pathlib import Path
 
-import pytest
 import yaml
 
 from nat.runtime.loader import load_workflow
@@ -29,7 +28,6 @@ from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.e2e
 async def test_full_workflow():
 
     package_name = inspect.getmodule(AlertTriageAgentWorkflowConfig).__package__
@@ -41,7 +39,7 @@ async def test_full_workflow():
         config = yaml.safe_load(file)
         input_filepath = config["eval"]["general"]["dataset"]["file_path"]
 
-    input_filepath_abs = importlib.resources.files(package_name).joinpath("../../../../", input_filepath).absolute()
+    input_filepath_abs = importlib.resources.files(package_name).joinpath("../../../../../", input_filepath).absolute()
 
     # Load input data
     with open(input_filepath_abs, 'r') as f:

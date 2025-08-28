@@ -47,7 +47,7 @@ def test_load_maintenance_data():
     with open(config_file, "r") as file:
         config = yaml.safe_load(file)
         maintenance_data_path = config["functions"]["maintenance_check"]["static_data_path"]
-    maintenance_data_path_abs = importlib.resources.files(package_name).joinpath("../../../../",
+    maintenance_data_path_abs = importlib.resources.files(package_name).joinpath("../../../../../",
                                                                                  maintenance_data_path).absolute()
 
     # Test successful loading with actual maintenance data file
@@ -214,6 +214,12 @@ async def test_maintenance_check_tool():
             'input': "{'host_id': 'host2', 'timestamp': '2024-03-21T10:00:00.000'}",
             'expected_maintenance': True,
             'mock_summary': 'Ongoing maintenance summary'
+        },
+        # Test 7: Skip maintenance check
+        {
+            'input': "{'host_id': 'host1', 'timestamp': '2024-03-21T10:00:00.000'}",
+            'skip_maintenance_check': True,
+            'expected_maintenance': False
         }
     ]
 
@@ -245,6 +251,8 @@ async def test_maintenance_check_tool():
 
                 # Run test cases
                 for case in test_cases:
+                    config.skip_maintenance_check = case.get('skip_maintenance_check', False)
+
                     # Mock the alert summarization function
                     with patch('nat_alert_triage_agent.maintenance_check._summarize_alert') as mock_summarize:
                         if case['expected_maintenance']:
