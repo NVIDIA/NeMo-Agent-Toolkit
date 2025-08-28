@@ -15,6 +15,7 @@
 
 import asyncio
 import logging
+import inspect
 import typing
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
@@ -448,17 +449,15 @@ class ToolTestRunner:
             if input_data is not None:
                 if isinstance(tool_function, Function):
                     result = await tool_function.ainvoke(input_data)
-                elif asyncio.iscoroutinefunction(tool_function):
-                    result = await tool_function(input_data)
                 else:
-                    result = tool_function(input_data)
+                    maybe_result = tool_function(input_data)
+                    result = await maybe_result if inspect.isawaitable(maybe_result) else maybe_result
             elif isinstance(tool_function, Function):
                 # Function objects require input, so pass None if no input_data
                 result = await tool_function.ainvoke(None)
-            elif asyncio.iscoroutinefunction(tool_function):
-                result = await tool_function()
             else:
-                result = tool_function()
+                maybe_result = tool_function()
+                result = await maybe_result if inspect.isawaitable(maybe_result) else maybe_result
 
             # Assert expected output if provided
             if expected_output is not None:
