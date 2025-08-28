@@ -74,16 +74,14 @@ test:python_tests:
   script:
     - echo "Running tests"
     - ./ci/scripts/gitlab/tests.sh
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
   coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
   artifacts:
     when: always
     reports:
-      junit: report_*.xml
+      junit: pytest_junit_report*.xml
       coverage_report:
         coverage_format: cobertura  # or jacoco
-        path: report_pytest_coverage.xml
+        path: pytest_coverage_report*.xml
 
 docs:build:
   stage: docs
