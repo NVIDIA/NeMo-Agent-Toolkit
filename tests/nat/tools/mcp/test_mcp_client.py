@@ -151,11 +151,11 @@ async def test_function(mcp_client: MCPBaseClient):
             fn_obj = await builder.add_function(name="test_function",
                                                 config=MCPToolConfig(url=HttpUrl(mcp_client.url),
                                                                      mcp_tool_name="return_42",
-                                                                     transport=mcp_client.transport))
+                                                                     transport="sse"))
         elif isinstance(mcp_client, MCPStdioClient):
             fn_obj = await builder.add_function(name="test_function",
                                                 config=MCPToolConfig(mcp_tool_name="return_42",
-                                                                     transport=mcp_client.transport,
+                                                                     transport="stdio",
                                                                      command=mcp_client.command,
                                                                      args=mcp_client.args,
                                                                      env=mcp_client.env))
@@ -163,7 +163,7 @@ async def test_function(mcp_client: MCPBaseClient):
             fn_obj = await builder.add_function(name="test_function",
                                                 config=MCPToolConfig(url=HttpUrl(mcp_client.url),
                                                                      mcp_tool_name="return_42",
-                                                                     transport=mcp_client.transport))
+                                                                     transport="streamable-http"))
         else:
             raise ValueError(f"Invalid client type: {type(mcp_client)}")
 
