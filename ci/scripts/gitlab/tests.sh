@@ -26,12 +26,12 @@ rapids-logger "Git Version: $(git describe)"
 rapids-logger "Running tests"
 set +e
 
-PYTEST_ADDOPTS=""
+PYTEST_ARGS=""
 if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
-       PYTEST_ADDOPTS="--run_slow --run_e2e --run_integration"
+       PYTEST_ARGS="--run_slow --run_e2e --run_integration"
 fi
 
-pytest ${PYTEST_ADDOPTS}  \
+pytest ${PYTEST_ARGS}  \
        --junit-xml=${CI_PROJECT_DIR}/report_pytest.xml \
        --cov=nat --cov-report term-missing \
        --cov-report=xml:${CI_PROJECT_DIR}/report_pytest_coverage.xml
