@@ -57,9 +57,12 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
         return get_class_name(worker_class)
 
     @staticmethod
-    async def _periodic_cleanup(scheduler_address: str, sleep_time_sec: int = 300):
+    async def _periodic_cleanup(scheduler_address: str, db_url: str, sleep_time_sec: int = 300):
         from nat.front_ends.fastapi.job_store import JobStore
-        job_store = JobStore(scheduler_address=scheduler_address)
+        from nat.front_ends.fastapi.job_store import get_db_engine
+
+        db_engine = get_db_engine(db_url, use_async=True)
+        job_store = JobStore(scheduler_address=scheduler_address, db_engine=db_engine)
 
         logger.info("Starting periodic cleanup of expired jobs every %d seconds", sleep_time_sec)
         await asyncio.sleep(sleep_time_sec)
@@ -72,13 +75,13 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
             await asyncio.sleep(sleep_time_sec)
 
-    async def _submit_cleanup_task(self, scheduler_address: str):
+    async def _submit_cleanup_task(self, scheduler_address: str, db_url: str):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
         from dask.distributed import Client
         from dask.distributed import fire_and_forget
 
         client = await Client(self._cluster, asynchronous=True)
-        self._cleanup_future = client.submit(self._periodic_cleanup, scheduler_address=scheduler_address)
+        self._cleanup_future = client.submit(self._periodic_cleanup, scheduler_address=scheduler_address, db_url=db_url)
         fire_and_forget(self._cleanup_future)
 
     async def run(self):
@@ -116,11 +119,13 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                 async with db_engine.begin() as conn:
                     await conn.run_sync(Base.metadata.create_all, checkfirst=True)  # create tables if they do not exist
 
-                await self._submit_cleanup_task(scheduler_address)
-                os.environ["NAT_DASK_SCHEDULER_ADDRESS"] = scheduler_address
+                # If self.front_end_config.db_url is None, then we need to get the actual url from the engine
+                db_url = str(db_engine.url)
+                await self._submit_cleanup_task(scheduler_address=scheduler_address, db_url=db_url)
 
-                # If self.front_end_config.db_url is None, then we need to get the actual resolved url from the engine
-                os.environ["NAT_JOB_STORE_DB_URL"] = str(db_engine.url)
+                # Set environment variabls such that the worker subprocesses will know how to connect to dask and to
+                # the database
+                os.environ.update({"NAT_DASK_SCHEDULER_ADDRESS": scheduler_address, "NAT_JOB_STORE_DB_URL": db_url})
 
             # Write to YAML file
             yaml_dump(config_dict, config_file)
