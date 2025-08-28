@@ -1,11 +1,23 @@
-"""
-Functional tests for src/nat/tool/mcp/mcp_client_impl.py
-Focus on behavior (tool wrapping, filtering, handler integration), not class/type basics.
-"""
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 
 import asyncio
 from contextlib import asynccontextmanager
 from typing import Any, cast
+from unittest.mock import patch, MagicMock, AsyncMock
 
 import pytest
 from pydantic import BaseModel
@@ -18,7 +30,6 @@ from nat.tool.mcp.mcp_client_impl import MCPSingleToolConfig
 from nat.tool.mcp.mcp_client_impl import ToolOverrideConfig
 from nat.tool.mcp.mcp_client_impl import _filter_and_configure_tools
 from nat.tool.mcp.mcp_client_base import MCPBaseClient
-from pydantic.networks import HttpUrl
 
 
 class _InputSchema(BaseModel):
@@ -73,7 +84,7 @@ class _FakeSession:
 
 
 class _FakeMCPClient(MCPBaseClient):
-    def __init__(self, *, tools: dict[str, _FakeTool], transport: str = "sse", url: str | None = None,
+    def __init__(self, *, tools: dict[str, _FakeTool], transport: str = "streamable-http", url: str | None = None,
                  command: str | None = None) -> None:
         super().__init__(transport)
         self._tools_map = tools
@@ -99,7 +110,6 @@ class _FakeMCPClient(MCPBaseClient):
         return self._tools_map[tool_name]
 
 
-@pytest.mark.anyio
 async def test_mcp_single_tool_happy_path_kwargs():
     client = _FakeMCPClient(tools={"echo": _FakeTool("echo", "Echo tool")})
 
@@ -114,7 +124,6 @@ async def test_mcp_single_tool_happy_path_kwargs():
         assert result == "ok value"
 
 
-@pytest.mark.anyio
 async def test_mcp_single_tool_returns_error_string_on_exception():
     client = _FakeMCPClient(tools={"err": _ErrorTool("err", "Err tool")})
 
@@ -153,24 +162,22 @@ def test_filter_and_configure_tools_dict_overrides_alias_and_description(caplog)
     assert out == {"raw": {"function_name": "alias", "description": "new desc"}}
 
 
-@pytest.mark.anyio
-async def test_mcp_client_function_handler_registers_tools(monkeypatch):
+@patch("nat.tool.mcp.mcp_client_base.MCPSSEClient")
+@patch("nat.tool.mcp.mcp_client_base.MCPStdioClient")
+@patch("nat.tool.mcp.mcp_client_base.MCPStreamableHTTPClient")
+async def test_mcp_client_function_handler_registers_tools(mock_mcp_streamable_http_client, mock_mcp_stdio_client, mock_mcp_sse_client):
     # Prepare fake client classes to be used by the handler
     fake_tools = {"t1": _FakeTool("t1", "d1"), "t2": _FakeTool("t2", "d2")}
 
     def _mk_client(_: str):
         return _FakeMCPClient(tools=fake_tools, transport="sse", url="http://x")
 
-    # Monkeypatch the symbols the handler resolves inside the function
-    # Patch the source module where the handler imports client classes
-    monkeypatch.setattr("nat.tool.mcp.mcp_client_base.MCPSSEClient", lambda url: _mk_client(url), raising=True)
-    monkeypatch.setattr("nat.tool.mcp.mcp_client_base.MCPStdioClient",
-                        lambda command, args, env: _FakeMCPClient(tools=fake_tools, transport="stdio",
-                                                                 command=command), raising=True)
-    monkeypatch.setattr("nat.tool.mcp.mcp_client_base.MCPStreamableHTTPClient", lambda url: _mk_client(url),
-                        raising=True)
+    # Set up the mock side effects
+    mock_mcp_sse_client.side_effect = lambda url: _mk_client(url)
+    mock_mcp_stdio_client.side_effect = lambda command, args, env: _FakeMCPClient(tools=fake_tools, transport="stdio", command=command)
+    mock_mcp_streamable_http_client.side_effect = lambda url: _mk_client(url)
 
-    server_cfg = MCPServerConfig(transport="sse", url=cast(HttpUrl, "http://fake"))
+    server_cfg = MCPServerConfig(transport="sse", url=cast(Any, "http://fake"))
     client_cfg = MCPClientConfig(server=server_cfg, tool_filter=["t1"])  # only expose t1
 
     async with WorkflowBuilder() as builder:
