@@ -200,6 +200,8 @@ class JobStore:
         async with self.client() as client:
             logger.debug("Submitting job with job_args: %s, job_kwargs: %s", job_args, job_kwargs)
             future = client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
+
+            # Store the future in a variable, this allows us to potentially cancel the future later if needed
             future_var = Variable(name=job_id, client=self._client)
             await future_var.set(future)
 
