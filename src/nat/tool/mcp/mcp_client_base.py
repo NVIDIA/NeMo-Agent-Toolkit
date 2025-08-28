@@ -78,7 +78,7 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
             else:
                 item_type = _type_map.get(item_properties.get("type", "string"), Any)
             field_type = list[item_type]
-                elif isinstance(json_type, list):
+        elif isinstance(json_type, list):
             field_type = None
             for t in json_type:
                 mapped = _type_map.get(t, Any)
