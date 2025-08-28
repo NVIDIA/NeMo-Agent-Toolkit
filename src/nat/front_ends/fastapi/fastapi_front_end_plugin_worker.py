@@ -810,7 +810,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                                    ])
 
                     try:
-                        _ = future.result(timeout=request.sync_timeout)
+                        _ = await future.result(timeout=request.sync_timeout)
                         job = await self._job_store.get_job(job_id)
                         assert job is not None, "Job should exist after future result"
                         response.status_code = 200
