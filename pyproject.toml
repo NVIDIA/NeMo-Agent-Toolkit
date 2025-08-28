@@ -116,6 +116,7 @@ gunicorn = [
 
 # Optional dependency needed when async endpoints are needed
 async_endpoints = [
+  "aiosqlite~=0.21",
   "dask~=2025.5",
   "distributed~=2025.5",
   "sqlalchemy[asyncio]~=2.0",

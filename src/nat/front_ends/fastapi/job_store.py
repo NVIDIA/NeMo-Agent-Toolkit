@@ -356,7 +356,12 @@ def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool
                 logger.warning("Database file %s already exists, it will be overwritten.", db_file)
                 os.remove(db_file)
 
-            db_url = f"sqlite:///{db_file}"
+            if use_async:
+                driver = "+aiosqlite"
+            else:
+                driver = ""
+
+            db_url = f"sqlite{driver}:///{db_file}"
 
     if use_async:
         # This is actually a blocking call, it just returns an AsyncEngine
