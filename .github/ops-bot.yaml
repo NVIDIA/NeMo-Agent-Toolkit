@@ -20,4 +20,4 @@ auto_merger: true
 branch_checker: true
 label_checker: true
 release_drafter: true
-forward_merger: false # Disabled for now, re-enable if needed
+forward_merger: true
