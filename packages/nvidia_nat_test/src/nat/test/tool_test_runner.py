@@ -84,7 +84,7 @@ class MockBuilder(Builder):
         """Add a mock auth provider that returns a fixed response."""
         self._mocks[f"auth_provider_{name}"] = mock_response
 
-    async def add_ttc_strategy(self, name: str, config: TTCStrategyBaseConfig):
+    async def add_ttc_strategy(self, name: str, config: TTCStrategyBaseConfig) -> None:
         """Mock implementation (no‑op)."""
         pass
 
@@ -107,7 +107,7 @@ class MockBuilder(Builder):
         """Mock implementation."""
         return TTCStrategyBaseConfig()
 
-    async def add_auth_provider(self, name: str, config: AuthProviderBaseConfig):
+    async def add_auth_provider(self, name: str, config: AuthProviderBaseConfig) -> None:
         """Mock implementation (no‑op)."""
         pass
 
@@ -156,7 +156,7 @@ class MockBuilder(Builder):
         """Mock implementation."""
         pass
 
-    async def add_llm(self, name: str, config):
+    async def add_llm(self, name: str, config) -> None:
         """Mock implementation."""
         pass
 
@@ -174,7 +174,7 @@ class MockBuilder(Builder):
         """Mock implementation."""
         return LLMBaseConfig()
 
-    async def add_embedder(self, name: str, config):
+    async def add_embedder(self, name: str, config) -> None:
         """Mock implementation."""
         pass
 
@@ -192,7 +192,7 @@ class MockBuilder(Builder):
         """Mock implementation."""
         return EmbedderBaseConfig()
 
-    async def add_memory_client(self, name: str, config):
+    async def add_memory_client(self, name: str, config) -> None:
         """Mock implementation."""
         pass
 
@@ -210,7 +210,7 @@ class MockBuilder(Builder):
         """Mock implementation."""
         return MemoryBaseConfig()
 
-    async def add_retriever(self, name: str, config):
+    async def add_retriever(self, name: str, config) -> None:
         """Mock implementation."""
         pass
 
@@ -227,7 +227,7 @@ class MockBuilder(Builder):
         """Mock implementation."""
         return RetrieverBaseConfig()
 
-    async def add_object_store(self, name: str, config: ObjectStoreBaseConfig):
+    async def add_object_store(self, name: str, config: ObjectStoreBaseConfig) -> None:
         """Mock implementation for object store."""
         pass
 
