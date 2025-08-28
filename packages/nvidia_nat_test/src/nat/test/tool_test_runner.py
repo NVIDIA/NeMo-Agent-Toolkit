@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import asyncio
-import logging
 import inspect
+import logging
 import typing
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
