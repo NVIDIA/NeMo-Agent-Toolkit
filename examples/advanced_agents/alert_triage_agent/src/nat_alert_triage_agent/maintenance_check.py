@@ -18,6 +18,9 @@ import os
 from datetime import datetime
 
 import pandas as pd
+from langchain_core.messages import HumanMessage
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import MessagesPlaceholder
 from pydantic import Field
 
 from nat.builder.builder import Builder
@@ -42,6 +45,11 @@ class MaintenanceCheckToolConfig(FunctionBaseConfig, name="maintenance_check"):
         default="examples/advanced_agents/alert_triage_agent/data/maintenance_static_dataset.csv",
         description=(
             "Path to the static maintenance data CSV file. If not provided, the tool will not check for maintenance."))
+    skip_maintenance_check: bool = Field(
+        default=False,
+        description=(
+            "Whether to skip the maintenance check. If True, the tool will not check for maintenance and default to"
+            " NO_ONGOING_MAINTENANCE_STR."))
 
 
 def _load_maintenance_data(path: str) -> pd.DataFrame:
@@ -178,14 +186,10 @@ def _summarize_alert(llm, prompt_template, alert, maintenance_start_str, mainten
     Returns:
         str: A markdown-formatted report summarizing the alert and maintenance status
     """
-    from langchain_core.messages import HumanMessage
-    from langchain_core.prompts import ChatPromptTemplate
-    from langchain_core.prompts import MessagesPlaceholder
-
     sys_prompt = prompt_template.format(maintenance_start_str=maintenance_start_str,
                                         maintenance_end_str=maintenance_end_str)
-    prompt_template = ChatPromptTemplate([("system", sys_prompt), MessagesPlaceholder("msgs")])
-    summarization_chain = prompt_template | llm
+    prompt = ChatPromptTemplate.from_messages([("system", sys_prompt), MessagesPlaceholder("msgs")])
+    summarization_chain = prompt | llm
     alert_json_str = json.dumps(alert)
     result = summarization_chain.invoke({"msgs": [HumanMessage(content=alert_json_str)]}).content
     return result
@@ -203,6 +207,9 @@ async def maintenance_check(config: MaintenanceCheckToolConfig, builder: Builder
         # Users should implement their own maintenance check logic specific to their environment
         # and infrastructure setup. The key is to check if a host is under maintenance during
         # the time of an alert, to help determine if the alert can be deprioritized.
+        if config.skip_maintenance_check:
+            utils.logger.info("Skipping maintenance check according to the config.")
+            return NO_ONGOING_MAINTENANCE_STR
 
         utils.log_header("Maintenance Checker")
 

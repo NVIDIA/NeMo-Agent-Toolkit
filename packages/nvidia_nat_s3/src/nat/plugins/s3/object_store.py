@@ -41,9 +41,9 @@ class S3ObjectStoreClientConfig(ObjectStoreBaseConfig, name="s3"):
 
 
 @register_object_store(config_type=S3ObjectStoreClientConfig)
-async def s3_object_store_client(config: S3ObjectStoreClientConfig, builder: Builder):
+async def s3_object_store_client(config: S3ObjectStoreClientConfig, _builder: Builder):
 
-    from nat.plugins.s3.s3_object_store import S3ObjectStore
+    from .s3_object_store import S3ObjectStore
 
-    async with S3ObjectStore(config) as store:
+    async with S3ObjectStore(**config.model_dump(exclude={"type"}, exclude_none=True)) as store:
         yield store

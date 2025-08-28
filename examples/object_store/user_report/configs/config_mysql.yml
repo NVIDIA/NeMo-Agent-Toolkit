@@ -26,7 +26,7 @@ object_stores:
     host: localhost
     port: 3306
     username: root
-    password: my_password
+    password: ${MYSQL_ROOT_PASSWORD:-my_password}
     bucket_name: my-bucket
 
 llms:

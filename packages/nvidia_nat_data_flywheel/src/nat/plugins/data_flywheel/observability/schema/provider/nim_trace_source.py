@@ -13,23 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import mimetypes
-import sys
+import logging
 
-from nat.object_store.models import ObjectStoreItem
+from nat.plugins.data_flywheel.observability.schema.provider.openai_trace_source import OpenAITraceSourceBase
 
-# Usage: python serialize_file.py <file_path>
+logger = logging.getLogger(__name__)
 
-if len(sys.argv) != 2:
-    print("Usage: python serialize_file.py <file_path>")
-    sys.exit(1)
 
-file_path = sys.argv[1]
-
-with open(file_path, "rb") as f:
-    data = f.read()
-
-item = ObjectStoreItem(data=data, content_type=mimetypes.guess_type(file_path)[0], metadata={})
-
-with open(file_path + ".json", "w", encoding="utf-8") as f:
-    f.write(item.model_dump_json())
+class NIMTraceSource(OpenAITraceSourceBase):
+    pass

@@ -19,3 +19,4 @@
 # Import any providers which need to be automatically registered here
 
 from . import memory
+from . import object_store

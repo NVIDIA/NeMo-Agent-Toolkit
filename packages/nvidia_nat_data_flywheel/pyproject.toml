@@ -1,0 +1,44 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nat.*"]
+
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../.."
+
+
+[project]
+name = "nvidia-nat-data-flywheel"
+dynamic = ["version"]
+dependencies = [
+  # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
+  # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
+  # Keep sorted!!!
+  "elasticsearch~=8.1",
+  "nvidia-nat~=1.3",
+]
+requires-python = ">=3.11,<3.13"
+description = "Subpackage for NVIDIA Data Flywheel Blueprint integration in NeMo Agent Toolkit"
+readme = "src/nat/meta/pypi.md"
+keywords = ["ai", "observability", "nemo", "data flywheel"]
+classifiers = ["Programming Language :: Python"]
+
+
+[tool.uv]
+config-settings = { editable_mode = "compat" }
+
+
+[tool.uv.sources]
+nvidia-nat = { workspace = true }
+
+
+[project.entry-points.'nat.components']
+nat_data_flywheel_observability = "nat.plugins.data_flywheel.observability.register"
+nat_data_flywheel_adapter = "nat.plugins.data_flywheel.observability.processor.trace_conversion.adapter.register"
+nat_data_flywheel_schema = "nat.plugins.data_flywheel.observability.schema.register"
