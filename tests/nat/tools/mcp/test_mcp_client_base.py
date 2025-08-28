@@ -44,12 +44,6 @@ def _create_test_mcp_server(port: int):
 
     return s
 
-
-@pytest.fixture(name="test_mcp_server")
-def _get_test_mcp_server(httpserver: HTTPServer):
-    httpserver.expect_request("/sse", )
-
-
 @pytest.fixture(name="mcp_client", params=["stdio", "sse", "streamable-http"])
 async def mcp_client_fixture(request: pytest.FixtureRequest):
 
@@ -62,7 +56,7 @@ async def mcp_client_fixture(request: pytest.FixtureRequest):
         if request.param == "stdio":
 
             client = MCPStdioClient(command="python",
-                                    args=[__file__, "--transport", request.param],
+                                    args=[__file__],
                                     env={"TEST": os.environ["TEST"]})
 
         elif request.param == "sse":
@@ -95,7 +89,7 @@ async def mcp_client_fixture(request: pytest.FixtureRequest):
 
             tg.create_task(server.serve())
 
-            client = MCPStreamableHTTPClient(url="http://localhost:8124/mcp/")
+            client = MCPStreamableHTTPClient(url="http://localhost:8124/mcp")
 
         else:
             raise ValueError(f"Invalid transport: {request.param}")
@@ -111,7 +105,7 @@ async def mcp_client_fixture(request: pytest.FixtureRequest):
     await asyncio.sleep(1)
 
 
-async def test_mcp_client(mcp_client: MCPBaseClient):
+async def test_mcp_client_base_methods(mcp_client: MCPBaseClient):
 
     async with mcp_client:
 

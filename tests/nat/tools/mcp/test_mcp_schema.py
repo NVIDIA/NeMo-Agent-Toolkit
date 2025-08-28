@@ -145,16 +145,16 @@ def test_schema_generation(sample_schema):
     # 1. present
     # 2. has a default value of None
     # 3. has a type of str | None
-    assert "optional_string_field_no_default" in m.model_fields
+    assert "optional_string_field_no_default" in _model.model_fields
     assert m.optional_string_field_no_default is None
-    field_type = m.model_fields["optional_string_field_no_default"].annotation
+    field_type = _model.model_fields["optional_string_field_no_default"].annotation
     args = get_args(field_type)
     assert str in args and type(None) in args, f"Expected str | None, got {field_type}"
 
     # Check that the optional union field is present
-    assert "optional_union_field" in m.model_fields
+    assert "optional_union_field" in _model.model_fields
     assert m.optional_union_field is None
-    field_type = m.model_fields["optional_union_field"].annotation
+    field_type = _model.model_fields["optional_union_field"].annotation
     args = get_args(field_type)
     assert str in args and type(None) in args and int in args, f"Expected str | None | int, got {field_type}"
 
