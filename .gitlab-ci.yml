@@ -74,8 +74,6 @@ test:python_tests:
   script:
     - echo "Running tests"
     - ./ci/scripts/gitlab/tests.sh
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
   coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
   artifacts:
     when: always
