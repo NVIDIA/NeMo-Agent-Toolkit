@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Literal, Optional
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -67,7 +67,6 @@ class ScenarioDescription(BaseModel):
     generated"""
 
     scenario_desc: str = Field(
-        ...,
         description=(
             "A description of the scenario for which a synthetic "
             "example must be generated"
@@ -78,19 +77,31 @@ class ScenarioDescription(BaseModel):
 class UserQuery(BaseModel):
     """A simulated user query to the agent"""
 
-    user_query: str = Field(..., description="The user query to the agent")
+    user_query: str = Field(description="The user query to the agent")
 
 
-class ToolCall(BaseModel):
+class ToolArg(BaseModel):
+    """Represents a single tool argument as a name-value pair"""
+    name: str = Field(description="Name of the argument")
+    value: Any = Field(description="Value of the argument")
+
+
+class FunctionCall(BaseModel):
     """Represents a single tool call"""
-    type: str = Field(default="function", description="Type of tool call")
-    function: Dict[str, Any] = Field(
-        description="Function details including name and arguments"
+    type:  Literal["function_call"] = Field(
+        description="Type of tool call (always 'function_call')"
+    )
+    name: str = Field(description="Name of the function to call")
+    arguments: List[ToolArg] = Field(
+        description=(
+            "List of function arguments as name-value pairs - MUST contain "
+            "realistic values based on the function's input requirements"
+        )
     )
 
 
-class AgentResponse(BaseModel):
-    """A synthetic response from the agent following OpenAI message format"""
+class AgentStep(BaseModel):
+    """A single step in the agent's response trajectory"""
 
     content: Optional[str] = Field(
         default=None,
@@ -98,16 +109,28 @@ class AgentResponse(BaseModel):
             "Text content of the response (null if tool calls are made)"
         )
     )
-    tool_calls: Optional[List[ToolCall]] = Field(
+    tool_calls: Optional[List[FunctionCall]] = Field(
         default=None,
-        description="List of tool calls (null if text response)"
+        description=(
+            "List of tool calls. Null if the agent is providing a text "
+            "response (in this case content is populated)"
+        )
     )
 
     @model_validator(mode='after')
-    def validate_response_type(self):
+    def validate_trajectory_type(self):
         """Ensure exactly one of content or tool_calls is populated"""
         if self.content is not None and self.tool_calls is not None:
             raise ValueError("Cannot have both content and tool_calls")
         if self.content is None and self.tool_calls is None:
             raise ValueError("Must have either content or tool_calls")
         return self
+
+
+class AgentTrajectory(BaseModel):
+    """Complete sequence of agent steps to solve a user query"""
+    steps: List[AgentStep] = Field(
+        description="Ordered sequence of agent steps to solve the query",
+        min_length=1,
+        max_length=10
+    )

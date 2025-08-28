@@ -19,6 +19,7 @@ functions:
     ndd_model_cfg:
         - candidate_llm: openai_llm
         - judge_llm: nim_llama33-70b
+    output_dir: ./ndd_output
 
 
 llms:
@@ -31,8 +32,9 @@ llms:
     base_url: https://nim.aire.nvidia.com/v1/
   openai_llm:
     _type: openai
-    model_name: gpt-4o
-    temperature: 0.6
+    model_name: openai/gpt-oss-120b
+    temperature: 0.7
+    top_p: 0.95
     max_tokens: 1024
     base_url: https://gpt-oss-120b-v4-runai-flops-test.inference.b8721236.dgxcloud.ai/v1
   nim_llama31-8b:
@@ -44,5 +46,5 @@ llms:
     base_url: https://nim.aire.nvidia.com/v1/
 
 workflow:
-  _type: sdg_eval_workflow
+  _type: sdg_workflow
   tools: [ndd_workflow]

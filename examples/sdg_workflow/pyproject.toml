@@ -9,7 +9,7 @@ git_describe_command = "git describe --long --first-parent"
 root = "../.."
 
 [project]
-name = "sdg_eval"
+name = "sdg_workflow"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=0.1",
@@ -23,4 +23,4 @@ classifiers = ["Programming Language :: Python"]
 nvidia-nat = { path = "../..", editable = true }
 
 [project.entry-points.'nat.components']
-sdg_eval = "sdg_eval.register"
+sdg_workflow = "sdg_workflow.register"

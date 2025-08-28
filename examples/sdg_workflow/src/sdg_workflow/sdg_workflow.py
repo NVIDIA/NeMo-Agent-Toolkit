@@ -15,14 +15,16 @@ from nat.runtime.loader import load_config
 logger = logging.getLogger(__name__)
 
 
-class SDGEvalConfig(FunctionBaseConfig, name="sdg_eval_workflow"):
-    """Configuration for the schema extraction tool."""
+class SDGWorkflowConfig(FunctionBaseConfig, name="sdg_workflow"):
+    """Configuration for the NeMo DD Synthetic Data Generation Workflow"""
     pass
 
 
-@register_function(config_type=SDGEvalConfig)
-async def sdg_eval_function(_config: SDGEvalConfig, _builder: Builder):
-    """Extract input/output schemas for all functions in a NAT agent config."""
+@register_function(config_type=SDGWorkflowConfig)
+async def sdg_workflow(config: SDGWorkflowConfig, builder: Builder):
+    """NeMo DD Synthetic Data Generation Workflow"""
+
+    from sdg_workflow.data_models import AgentToolDetails
 
     def extract_function_info(func_name: str, workflow_builder: Any) -> Dict[str, Any] | None:
         """Extract complete schema info for a function and return as dict."""
@@ -124,10 +126,22 @@ async def sdg_eval_function(_config: SDGEvalConfig, _builder: Builder):
 
             # Parse function specifications and get complete result
             agent_tool_details = await parse_nat_agent_cfg(nat_agent_cfg_path)
-
             logger.info("Extracted schema details for %d tools", agent_tool_details['tools_count'])
 
-            return json.dumps(agent_tool_details)
+
+            agent_tool_details_model = AgentToolDetails(**agent_tool_details)
+
+            # Call NDD function to generate synthetic data
+            ndd_function = builder.get_function("ndd_workflow")
+            synthetic_data_result = await ndd_function.ainvoke(agent_tool_details_model)
+
+
+            # Return both the extracted schema details and synthetic data result
+            result = {
+                'agent_tool_details': agent_tool_details,
+                'synthetic_data_result': synthetic_data_result
+            }
+            return json.dumps(result)
 
         except Exception as e:
             logger.error("Schema extraction failed: %s", e)
@@ -142,4 +156,4 @@ async def sdg_eval_function(_config: SDGEvalConfig, _builder: Builder):
     except GeneratorExit:
         logger.warning("Function exited early!")
     finally:
-        logger.info("Cleaning up sdg_eval workflow.")
+        logger.info("Cleaning up sdg_workflow.")
