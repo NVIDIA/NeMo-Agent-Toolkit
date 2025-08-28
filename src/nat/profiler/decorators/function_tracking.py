@@ -272,35 +272,6 @@ def track_unregistered_function(func: Callable[..., Any] | None = None,
         func: The function to wrap (auto-detected when used without parentheses)
         name: Custom name to use for tracking instead of func.__name__
         metadata: Additional metadata to include in tracking
-
-    Examples:
-        Basic usage (no parentheses):
-            @track_unregistered_function
-            def my_func(x: int) -> int:
-                return x * 2
-
-        Basic usage (with parentheses):
-            @track_unregistered_function()
-            def another_func(x: int) -> int:
-                return x * 3
-
-        With custom name:
-            @track_unregistered_function(name="custom_calculation")
-            def calculate(a: int, b: int) -> int:
-                return a + b
-
-        With metadata:
-            @track_unregistered_function(name="api_call", metadata={"version": "1.0"})
-            async def api_request(url: str) -> dict:
-                # ... implementation
-                return response_data
-
-        Manual application (without @ syntax):
-            def legacy_function(data: str) -> str:
-                return data.upper()
-
-            # Apply decorator manually
-            legacy_function = track_unregistered_function(legacy_function, name="legacy_handler")
     """
 
     # If called with parameters: @track_unregistered_function(name="...", metadata={...})
