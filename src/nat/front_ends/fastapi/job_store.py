@@ -198,17 +198,11 @@ class JobStore:
         # We are intentionally not using job_id as the key, since Dask will clear the associated metadata once
         # the job has completed, and we want the metadata to persist until the job expires.
         async with self.client() as client:
-            # TODO: Remove these prior to merging
-            print("\n***************\nsubmitting job\n***************\n", flush=True)
-            print(f"job_args: {job_args}, job_kwargs: {job_kwargs}\n***************\n", flush=True)
+            logger.debug("Submitting job with job_args: %s, job_kwargs: %s", job_args, job_kwargs)
             future = client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
-
-            print(f"\n***************\nconstructing future for job future={future}\n***************\n", flush=True)
             future_var = Variable(name=job_id, client=self._client)
-
-            print("\n***************\nsetting future for job\n***************\n", flush=True)
             await future_var.set(future)
-            print(f"\n***************\ndone - setting future for job future={future}\n***************\n", flush=True)
+
             fire_and_forget(future)
 
         return (job_id, future)
@@ -232,7 +226,7 @@ class JobStore:
 
             if isinstance(output, BaseModel):
                 # Convert BaseModel to JSON string for storage
-                output = output.model_dump_json(mode="json", round_trip=True)
+                output = output.model_dump_json(round_trip=True)
 
             if isinstance(output, (dict, list)):
                 # Convert dict or list to JSON string for storage

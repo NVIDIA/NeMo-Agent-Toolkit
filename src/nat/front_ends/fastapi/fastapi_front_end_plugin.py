@@ -17,6 +17,7 @@ import asyncio
 import logging
 import os
 import tempfile
+import traceback
 import typing
 
 from nat.builder.front_end import FrontEndBase
@@ -70,6 +71,7 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                 logger.debug("Expired jobs cleaned up")
             except Exception as e:
                 logger.error("Error during job cleanup: %s", e)
+                logger.debug(traceback.format_exc())
 
             await asyncio.sleep(sleep_time_sec)
 

@@ -14,8 +14,10 @@
 # limitations under the License.
 
 import asyncio
+import json
 import logging
 import os
+import traceback
 import typing
 from abc import ABC
 from abc import abstractmethod
@@ -97,6 +99,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         self._http_flow_handler: HTTPAuthenticationFlowHandler | None = HTTPAuthenticationFlowHandler()
         self._scheduler_address = os.environ.get("NAT_DASK_SCHEDULER_ADDRESS")
         self._db_url = os.environ.get("NAT_JOB_STORE_DB_URL")
+        self._config_file_path = get_config_file_path()
 
         if self._scheduler_address is not None:
             if not _DASK_AVAILABLE:
@@ -272,17 +275,20 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         }
 
         # TODO: Find another way to limit the number of concurrent evaluations
-        async def run_evaluation(scheduler_address: str, db_url: str, job_id: str, config_file: str, reps: int):
+        async def run_evaluation(scheduler_address: str,
+                                 db_url: str,
+                                 workflow_config_file_path: str,
+                                 job_id: str,
+                                 eval_config_file: str,
+                                 reps: int):
             """Background task to run the evaluation."""
             assert JobStore is not None, "JobStore should be imported when Dask is available"
             job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
 
             try:
                 # We have two config files, one for the workflow and one for the evaluation
-                workflow_config_file_path = get_config_file_path()
-
                 # Create EvaluationRunConfig using the CLI defaults
-                eval_config = EvaluationRunConfig(config_file=Path(config_file), dataset=None, reps=reps)
+                eval_config = EvaluationRunConfig(config_file=Path(eval_config_file), dataset=None, reps=reps)
 
                 # Create a new EvaluationRun with the evaluation-specific config
                 await job_store.update_status(job_id, "running")
@@ -317,12 +323,18 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 job_id = self._job_store.ensure_job_id(request.job_id)
 
-                await self._job_store.submit_job(
-                    job_id=job_id,
-                    config_file=request.config_file,
-                    expiry_seconds=request.expiry_seconds,
-                    job_fn=run_evaluation,
-                    job_args=[self._scheduler_address, self._db_url, job_id, request.config_file, request.reps])
+                await self._job_store.submit_job(job_id=job_id,
+                                                 config_file=request.config_file,
+                                                 expiry_seconds=request.expiry_seconds,
+                                                 job_fn=run_evaluation,
+                                                 job_args=[
+                                                     self._scheduler_address,
+                                                     self._db_url,
+                                                     self._config_file_path,
+                                                     job_id,
+                                                     request.config_file,
+                                                     request.reps
+                                                 ])
 
                 logger.info("Submitted evaluation job %s with config %s", job_id, request.config_file)
 
@@ -739,10 +751,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             return post_openai_api_compatible
 
         def _job_status_to_response(job: "JobInfo") -> AsyncGenerationStatusResponse:
-            assert self._job_store is not None, "JobStore should be initialized when Dask is available"
             job_output = job.output
             if job_output is not None:
-                job_output = job_output.model_dump()
+                job_output = json.loads(job_output)
             return AsyncGenerationStatusResponse(job_id=job.job_id,
                                                  status=job.status,
                                                  error=job.error,
@@ -753,24 +764,24 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         async def run_generation(scheduler_address: str,
                                  db_url: str,
+                                 config_file_path: str,
                                  job_id: str,
-                                 payload: typing.Any,
-                                 result_type_name: str):
-            """Background task to run the evaluation."""
+                                 payload: typing.Any):
+            """Background task to run the workflow."""
             assert JobStore is not None, "JobStore should be initialized when Dask is available"
             job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
             try:
-                config_file_path = get_config_file_path()
-                result_type = import_class_from_string(result_type_name)
                 async with load_workflow(config_file_path) as session_manager:
-                    result = await generate_single_response(payload, session_manager, result_type=result_type)
+                    result = await generate_single_response(payload,
+                                                            session_manager,
+                                                            result_type=session_manager.workflow.single_output_schema)
 
                 await job_store.update_status(job_id, "success", output=result)
             except Exception as e:
-                logger.error("Error in evaluation job %s: %s", job_id, e)
+                logger.error("Error in async job %s: %s", job_id, traceback.format_exc())
                 await job_store.update_status(job_id, "failure", error=str(e))
 
-        def post_async_generation(request_type: type, final_result_type: type):
+        def post_async_generation(request_type: type):
 
             async def start_async_generation(
                     request: request_type, response: Response,
@@ -793,9 +804,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                                    job_args=[
                                                                        self._scheduler_address,
                                                                        self._db_url,
+                                                                       self._config_file_path,
                                                                        job_id,
-                                                                       request.model_dump(mode="json"),
-                                                                       get_class_name(final_result_type)
+                                                                       request.model_dump(mode="json")
                                                                    ])
 
                     try:
@@ -950,8 +961,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 if self._dask_available:
                     app.add_api_route(
                         path=f"{endpoint.path}/async",
-                        endpoint=post_async_generation(request_type=AsyncGenerateRequest,
-                                                       final_result_type=GenerateSingleResponseType),
+                        endpoint=post_async_generation(request_type=AsyncGenerateRequest),
                         methods=[endpoint.method],
                         response_model=AsyncGenerateResponse | AsyncGenerationStatusResponse,
                         description="Start an async generate job",
