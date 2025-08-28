@@ -117,13 +117,15 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
 class MCPBaseClient(ABC):
     """
     Base client for creating a session and connecting to an MCP server
+    Args:
+      transport (str): The type of client to use ('sse', 'stdio', or 'streamable-http')
     """
 
-    def __init__(self, transport: str = 'sse'):
+    def __init__(self, transport: str = 'streamable-http'):
         self._tools = None
         self._transport = transport.lower()
         if self._transport not in ['sse', 'stdio', 'streamable-http']:
-            raise ValueError("client_type must be either 'sse', 'stdio' or 'streamable-http'")
+            raise ValueError("transport must be either 'sse', 'stdio' or 'streamable-http'")
 
         self._exit_stack: AsyncExitStack | None = None
 
@@ -226,11 +228,10 @@ class MCPSSEClient(MCPBaseClient):
 
     Args:
       url (str): The url of the MCP server
-      transport (str): The type of transport to use ('sse', 'stdio', or 'streamable-http')
     """
 
-    def __init__(self, url: str, transport: str = 'sse'):
-        super().__init__(transport)
+    def __init__(self, url: str):
+        super().__init__("sse")
         self._url = url
 
     @property
@@ -261,15 +262,14 @@ class MCPStdioClient(MCPBaseClient):
       command (str): The command to run
       args (list[str] | None): Additional arguments for the command
       env (dict[str, str] | None): Environment variables to set for the process
-      client_type (str): The type of client to use ('sse' or 'stdio')
     """
 
     def __init__(self,
                  command: str,
                  args: list[str] | None = None,
-                 env: dict[str, str] | None = None,
-                 transport: str = 'stdio'):
-        super().__init__(transport)
+                 env: dict[str, str] | None = None
+                 ):
+        super().__init__("stdio")
         self._command = command
         self._args = args
         self._env = env
@@ -307,10 +307,13 @@ class MCPStdioClient(MCPBaseClient):
 class MCPStreamableHTTPClient(MCPBaseClient):
     """
     Client for creating a session and connecting to an MCP server using streamable-http
+
+    Args:
+      url (str): The url of the MCP server
     """
 
-    def __init__(self, url: str, transport: str = 'streamable-http'):
-        super().__init__(transport)
+    def __init__(self, url: str):
+        super().__init__("streamable-http")
 
         self._url = url
 
