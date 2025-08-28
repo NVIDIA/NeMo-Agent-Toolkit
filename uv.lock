@@ -4738,7 +4738,7 @@ all = [
 async-endpoints = [
     { name = "dask" },
     { name = "distributed" },
-    { name = "sqlalchemy" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
 ]
 crewai = [
     { name = "nvidia-nat-crewai" },
@@ -4924,7 +4924,7 @@ requires-dist = [
     { name = "pyyaml", specifier = "~=6.0" },
     { name = "ragas", specifier = "~=0.2.14" },
     { name = "rich", specifier = "~=13.9" },
-    { name = "sqlalchemy", marker = "extra == 'async-endpoints'", specifier = "~=2.0" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'async-endpoints'", specifier = "~=2.0" },
     { name = "tabulate", specifier = "~=0.9" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },

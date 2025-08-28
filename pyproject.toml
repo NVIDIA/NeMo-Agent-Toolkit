@@ -115,7 +115,11 @@ gunicorn = [
 ]
 
 # Optional dependency needed when async endpoints are needed
-async_endpoints = ["dask~=2025.5", "distributed~=2025.5", "sqlalchemy~=2.0"]
+async_endpoints = [
+  "dask~=2025.5",
+  "distributed~=2025.5",
+  "sqlalchemy[asyncio]~=2.0",
+]
 
 [tool.uv]
 config-settings = { editable_mode = "compat" }
