@@ -130,8 +130,9 @@ class JobStore:
         """
         Async context manager for a SQLAlchemy session which explicitly begins a transaction.
         """
-        async with self._session.begin() as session:
-            yield session
+        async with self._session() as session:
+            async with session.begin():
+                yield session
 
         # Removes the current task key from the session registry, preventing potential memory leaks
         await self._session.remove()
@@ -215,6 +216,8 @@ class JobStore:
 
         async with self.session() as session:
             job: JobInfo = await session.get(JobInfo, job_id)
+            if job is None:
+                raise ValueError(f"Job {job_id} not found in job store")
 
             job.status = status
             job.error = error
@@ -236,14 +239,12 @@ class JobStore:
         Get all jobs, potentially costly if there are many jobs.
         """
         async with self.session() as session:
-            jobs = await session.scalars(select(JobInfo)).all()
-
-        return jobs
+            return await session.scalars(select(JobInfo)).all()
 
     async def get_job(self, job_id: str) -> JobInfo | None:
         """Get a job by its ID."""
         async with self.session() as session:
-            return session.get(JobInfo, job_id)
+            return await session.get(JobInfo, job_id)
 
     async def get_status(self, job_id: str) -> JobStatus:
         job = await self.get_job(job_id)
@@ -269,7 +270,7 @@ class JobStore:
         """Get all jobs with the specified status."""
         stmt = select(JobInfo).where(JobInfo.status == status)
         async with self.session() as session:
-            return session.scalars(stmt).all()
+            return await session.scalars(stmt).all()
 
     def get_expires_at(self, job: JobInfo) -> datetime | None:
         """Get the time for a job to expire."""
@@ -290,7 +291,7 @@ class JobStore:
                  JobInfo.status.not_in(self.ACTIVE_STATUS))).order_by(JobInfo.updated_at.desc())
         # Filter out active jobs
         async with (self.client() as client, self.session() as session):
-            finished_jobs = await session.scalars(stmt).all()
+            finished_jobs = (await session.execute(stmt)).scalars().all()
 
             # Always keep the most recent finished job
             jobs_to_check = finished_jobs[1:]
