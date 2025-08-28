@@ -36,21 +36,22 @@ class DFWElasticsearchTelemetryExporter(TelemetryExporterBaseConfig,
     endpoint: str = Field(description="The elasticsearch endpoint.")
     contract_version: ContractVersion = Field(default=ContractVersion.V1_1,
                                               description="The DFW Elasticsearch record schema version to use.")
-    elasticsearch_auth: tuple[str, str] = Field(
-        default_factory=tuple, description="The elasticsearch authentication credentials (username, password).")
+    username: str | None = Field(default=None, description="The elasticsearch username.")
+    password: str | None = Field(default=None, description="The elasticsearch password.")
     headers: dict | None = Field(default=None, description="Additional headers for elasticsearch requests.")
 
 
 @register_telemetry_exporter(config_type=DFWElasticsearchTelemetryExporter)
-async def dfw_elasticsearch_telemetry_exporter(config: DFWElasticsearchTelemetryExporter, builder: Builder):  # pylint: disable=unused-argument # noqa: E501
-    from nat.plugins.data_flywheel.observability.exporter.dfw_elasticsearch_exporter import (
-        DFWElasticsearchExporter,  # noqa: F401
-    )
+async def dfw_elasticsearch_telemetry_exporter(config: DFWElasticsearchTelemetryExporter, _builder: Builder):
+    # pylint: disable=import-outside-toplevel
+    from nat.plugins.data_flywheel.observability.exporter.dfw_elasticsearch_exporter import DFWElasticsearchExporter
+
+    elasticsearch_auth = (config.username, config.password) if config.username and config.password else ()
 
     yield DFWElasticsearchExporter(client_id=config.client_id,
                                    index=config.index,
                                    endpoint=config.endpoint,
-                                   elasticsearch_auth=config.elasticsearch_auth,
+                                   elasticsearch_auth=elasticsearch_auth,
                                    headers=config.headers,
                                    contract_version=config.contract_version,
                                    batch_size=config.batch_size,

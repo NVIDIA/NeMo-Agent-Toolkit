@@ -16,7 +16,9 @@
 import functools
 import inspect
 import uuid
+from collections.abc import Callable
 from typing import Any
+from typing import cast
 
 from pydantic import BaseModel
 
@@ -254,28 +256,64 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
     return sync_wrapper
 
 
-def track_unregistered_function(func: Any = None, *, name: str | None = None, metadata: dict[str, Any] | None = None):
+def track_unregistered_function(func: Callable[..., Any] | None = None,
+                                *,
+                                name: str | None = None,
+                                metadata: dict[str, Any] | None = None) -> Callable[..., Any]:
     """
     Decorator that wraps any function with scope management and automatic tracking.
 
     - Sets active function context using the function name
     - Leverages Context.push_active_function for built-in tracking
     - Avoids duplicate tracking entries by relying on the library's built-in systems
+    - Supports sync/async functions and generators
 
     Args:
-        func: The function to wrap
+        func: The function to wrap (auto-detected when used without parentheses)
         name: Custom name to use for tracking instead of func.__name__
         metadata: Additional metadata to include in tracking
-    """
-    function_name: str = name if name else (func.__name__ if func else "<unknown_function>")
 
-    # If called as @track_unregistered_function(...) but not immediately passed a function
+    Examples:
+        Basic usage (no parentheses):
+            @track_unregistered_function
+            def my_func(x: int) -> int:
+                return x * 2
+
+        Basic usage (with parentheses):
+            @track_unregistered_function()
+            def another_func(x: int) -> int:
+                return x * 3
+
+        With custom name:
+            @track_unregistered_function(name="custom_calculation")
+            def calculate(a: int, b: int) -> int:
+                return a + b
+
+        With metadata:
+            @track_unregistered_function(name="api_call", metadata={"version": "1.0"})
+            async def api_request(url: str) -> dict:
+                # ... implementation
+                return response_data
+
+        Manual application (without @ syntax):
+            def legacy_function(data: str) -> str:
+                return data.upper()
+
+            # Apply decorator manually
+            legacy_function = track_unregistered_function(legacy_function, name="legacy_handler")
+    """
+
+    # If called with parameters: @track_unregistered_function(name="...", metadata={...})
     if func is None:
 
-        def decorator_wrapper(actual_func):
-            return track_unregistered_function(actual_func, name=name, metadata=metadata)
+        def decorator_wrapper(actual_func: Callable[..., Any]) -> Callable[..., Any]:
+            # Cast to ensure type checker understands this returns a callable
+            return cast(Callable[..., Any], track_unregistered_function(actual_func, name=name, metadata=metadata))
 
         return decorator_wrapper
+
+    # Direct decoration: @track_unregistered_function or recursive call with actual function
+    function_name: str = name if name else func.__name__
 
     # --- Validate metadata ---
     if metadata is not None:
@@ -295,8 +333,10 @@ def track_unregistered_function(func: Any = None, *, name: str | None = None, me
         @functools.wraps(func)
         async def async_gen_wrapper(*args, **kwargs):
             context = Context.get()
-            input_data = args[0] if args else kwargs
-
+            input_data = (
+                *args,
+                kwargs,
+            )
             # Only do context management - let push_active_function handle tracking
             with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
                 final_outputs = []
@@ -315,7 +355,10 @@ def track_unregistered_function(func: Any = None, *, name: str | None = None, me
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
             context = Context.get()
-            input_data = args[0] if args else kwargs
+            input_data = (
+                *args,
+                kwargs,
+            )
 
             # Only do context management - let push_active_function handle tracking
             with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
@@ -332,7 +375,10 @@ def track_unregistered_function(func: Any = None, *, name: str | None = None, me
         @functools.wraps(func)
         def sync_gen_wrapper(*args, **kwargs):
             context = Context.get()
-            input_data = args[0] if args else kwargs
+            input_data = (
+                *args,
+                kwargs,
+            )
 
             # Only do context management - let push_active_function handle tracking
             with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
@@ -348,7 +394,10 @@ def track_unregistered_function(func: Any = None, *, name: str | None = None, me
     @functools.wraps(func)
     def sync_wrapper(*args, **kwargs):
         context = Context.get()
-        input_data = args[0] if args else kwargs
+        input_data = (
+            *args,
+            kwargs,
+        )
 
         # Only do context management - let push_active_function handle tracking
         with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
