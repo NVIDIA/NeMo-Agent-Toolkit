@@ -22,7 +22,6 @@ from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any
-from nat.utils.type_utils import override
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -36,6 +35,7 @@ from pydantic import create_model
 
 from nat.tool.mcp.exceptions import MCPToolNotFoundError
 from nat.utils.exception_handlers.mcp import mcp_exception_handler
+from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 
@@ -264,11 +264,7 @@ class MCPStdioClient(MCPBaseClient):
       env (dict[str, str] | None): Environment variables to set for the process
     """
 
-    def __init__(self,
-                 command: str,
-                 args: list[str] | None = None,
-                 env: dict[str, str] | None = None
-                 ):
+    def __init__(self, command: str, args: list[str] | None = None, env: dict[str, str] | None = None):
         super().__init__("stdio")
         self._command = command
         self._args = args

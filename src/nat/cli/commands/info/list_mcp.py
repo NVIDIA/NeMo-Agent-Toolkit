@@ -205,16 +205,22 @@ async def list_tools_direct(command, url, tool_name=None, transport='sse', args=
 
     try:
         if transport == 'stdio':
+
             def get_stdio_client():
                 return stdio_client(server=StdioServerParameters(command=command, args=args, env=env))
+
             client = get_stdio_client
         elif transport == 'streamable-http':
+
             def get_streamable_http_client():
                 return streamablehttp_client(url=url)
+
             client = get_streamable_http_client
         else:
+
             def get_sse_client():
                 return sse_client(url=url)
+
             client = get_sse_client
 
         async with client() as ctx:
@@ -266,9 +272,9 @@ async def ping_mcp_server(url: str,
     """
     from mcp.client.session import ClientSession
     from mcp.client.sse import sse_client
-    from mcp.client.streamable_http import streamablehttp_client
     from mcp.client.stdio import StdioServerParameters
     from mcp.client.stdio import stdio_client
+    from mcp.client.streamable_http import streamablehttp_client
 
     async def _ping_operation():
         # Select transport
@@ -381,10 +387,11 @@ def list_mcp(ctx, direct, url, transport, command, args, env, tool, detail, json
 
 
 @list_mcp.command()
-@click.option('--url',
-              default='http://localhost:9901/mcp',
-              show_default=True,
-              help='MCP server URL (e.g. http://localhost:8080/mcp for streamable-http, http://localhost:8080/sse for sse)')
+@click.option(
+    '--url',
+    default='http://localhost:9901/mcp',
+    show_default=True,
+    help='MCP server URL (e.g. http://localhost:8080/mcp for streamable-http, http://localhost:8080/sse for sse)')
 @click.option('--transport',
               type=click.Choice(['sse', 'stdio', 'streamable-http']),
               default='streamable-http',
@@ -395,7 +402,12 @@ def list_mcp(ctx, direct, url, transport, command, args, env, tool, detail, json
 @click.option('--env', help='For stdio: Environment variables in KEY=VALUE format (space-separated)')
 @click.option('--timeout', default=60, show_default=True, help='Timeout in seconds for ping request')
 @click.option('--json-output', is_flag=True, help='Output ping result in JSON format')
-def ping(url: str, transport: str, command: str | None, args: str | None, env: str | None, timeout: int,
+def ping(url: str,
+         transport: str,
+         command: str | None,
+         args: str | None,
+         env: str | None,
+         timeout: int,
          json_output: bool) -> None:
     """Ping an MCP server to check if it's responsive.
 

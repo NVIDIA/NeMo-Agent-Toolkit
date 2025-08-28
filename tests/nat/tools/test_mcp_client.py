@@ -15,13 +15,11 @@
 import argparse
 import asyncio
 import os
-from typing import get_args
 
 import pytest
 import uvicorn
 from mcp.server.fastmcp.server import FastMCP
 from mcp.types import TextContent
-from pydantic import ValidationError
 from pydantic.networks import HttpUrl
 from pytest_httpserver import HTTPServer
 
