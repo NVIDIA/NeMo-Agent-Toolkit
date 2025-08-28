@@ -98,8 +98,9 @@ The AWS Bedrock LLM provider is defined by the {py:class}`~nat.llm.aws_bedrock_l
 
 * `model_name` - The name of the model to use
 * `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model. This field is ignored for LlamaIndex.
 * `max_tokens` - The maximum number of tokens to generate
-* `context_size` - The context size to use for the model
+* `context_size` - The maximum number of tokens available for input. This is only required for LlamaIndex. This field is ignored for LangChain.
 * `region_name` - The region to use for the model
 * `base_url` - The base URL to use for the model
 * `credentials_profile_name` - The credentials profile name to use for the model

@@ -58,9 +58,9 @@ class MySQLObjectStoreClientConfig(ObjectStoreBaseConfig, name="mysql"):
 
 
 @register_object_store(config_type=MySQLObjectStoreClientConfig)
-async def mysql_object_store_client(config: MySQLObjectStoreClientConfig, builder: Builder):
+async def mysql_object_store_client(config: MySQLObjectStoreClientConfig, _builder: Builder):
 
     from .mysql_object_store import MySQLObjectStore
 
-    async with MySQLObjectStore(config) as store:
+    async with MySQLObjectStore(**config.model_dump(exclude={"type"}, exclude_none=True)) as store:
         yield store
