@@ -197,7 +197,7 @@ async def show_tickets_tool(config: ShowTicketsToolConfig, builder: Builder):
                 data = json.load(json_file)
                 logger.debug("Data successfully loaded from %s", filename)
         except Exception as e:
-            logger.exception("An error occurred while loading the file: %s", e)
+            logger.error("An error occurred while loading the file: %s", e)
             raise
         # If we have a "raw_response", it means we couldn't parse JSON
         if "raw_response" in data:

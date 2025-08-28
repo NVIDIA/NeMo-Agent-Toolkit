@@ -129,7 +129,7 @@ class ReActAgentGraph(DualNodeAgent):
         try:
             return self.tools_dict.get(tool_name)
         except Exception as ex:
-            logger.exception("%s Unable to find tool with the name %s\n%s", AGENT_LOG_PREFIX, tool_name, ex)
+            logger.error("%s Unable to find tool with the name %s\n%s", AGENT_LOG_PREFIX, tool_name, ex)
             raise
 
     async def agent_node(self, state: ReActGraphState):

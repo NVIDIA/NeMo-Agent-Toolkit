@@ -506,10 +506,10 @@ class CalcRunner:
                 continue
             try:
                 calc_output = CalcRunnerOutput.model_validate_json(calc_runner_output_path.read_text())
-            except ValidationError as e:
+            except ValidationError:
                 logger.exception("Failed to validate calc runner output file %s. Skipping job %s.",
                                  calc_runner_output_path,
-                                 e)
+                                 job_dir.name)
                 continue
 
             # Extract sizing metrics from calc_data
