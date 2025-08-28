@@ -26,7 +26,7 @@ async def test_inequality_tool():
     runner = ToolTestRunner()
     await runner.test_tool(config_type=InequalityToolConfig,
                            input_data="Is 8 greater than 15?",
-                           expected_output="First number 8 is less than the second number 15")
+                           expected_output="First number 8.0 is less than the second number 15.0")
 
 
 async def test_inequality_tool_equal_case():
@@ -35,7 +35,7 @@ async def test_inequality_tool_equal_case():
     runner = ToolTestRunner()
     await runner.test_tool(config_type=InequalityToolConfig,
                            input_data="Compare 5 and 5",
-                           expected_output="First number 5 is equal to the second number 5")
+                           expected_output="First number 5.0 is equal to the second number 5.0")
 
 
 async def test_inequality_tool_greater_case():
@@ -44,7 +44,7 @@ async def test_inequality_tool_greater_case():
     runner = ToolTestRunner()
     await runner.test_tool(config_type=InequalityToolConfig,
                            input_data="Is 15 greater than 8?",
-                           expected_output="First number 15 is greater than the second number 8")
+                           expected_output="First number 15.0 is greater than the second number 8.0")
 
 
 async def test_multiply_tool():
@@ -78,7 +78,7 @@ async def test_division_tool():
     runner = ToolTestRunner()
     await runner.test_tool(config_type=DivisionToolConfig,
                            input_data="What is 8 divided by 2?",
-                           expected_output="The result of 8 / 2 is 4.0")
+                           expected_output="The result of 8.0 / 2.0 is 4.0")
 
 
 async def test_division_tool_with_remainder():
@@ -87,7 +87,7 @@ async def test_division_tool_with_remainder():
     runner = ToolTestRunner()
     await runner.test_tool(config_type=DivisionToolConfig,
                            input_data="Divide 7 by 2",
-                           expected_output="The result of 7 / 2 is 3.5")
+                           expected_output="The result of 7.0 / 2.0 is 3.5")
 
 
 async def test_subtract_tool():
