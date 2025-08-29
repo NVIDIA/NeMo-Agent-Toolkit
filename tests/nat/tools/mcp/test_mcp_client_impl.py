@@ -13,23 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from contextlib import asynccontextmanager
 from typing import Any
-from unittest.mock import patch
-from unittest.mock import MagicMock
 from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
-import pytest
 from pydantic import BaseModel
 
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.tool.mcp.mcp_client_impl import mcp_client_function_handler
-from nat.tool.mcp.mcp_client_impl import MCPServerConfig
+from nat.tool.mcp.mcp_client_base import MCPBaseClient
 from nat.tool.mcp.mcp_client_impl import MCPClientConfig
+from nat.tool.mcp.mcp_client_impl import MCPServerConfig
 from nat.tool.mcp.mcp_client_impl import MCPSingleToolConfig
 from nat.tool.mcp.mcp_client_impl import ToolOverrideConfig
-from nat.tool.mcp.mcp_client_base import MCPBaseClient
+from nat.tool.mcp.mcp_client_impl import mcp_client_function_handler
 
 
 class _InputSchema(BaseModel):
@@ -58,13 +56,16 @@ class _FakeTool:
 class _FakeMCPClient(MCPBaseClient):
     """Fake MCP client for testing client-server interactions."""
 
-    def __init__(self, *, tools: dict[str, _FakeTool], url: str | None = None,
-                 command: str | None = None, args: list[str] | None = None) -> None:
+    def __init__(self,
+                 *,
+                 tools: dict[str, _FakeTool],
+                 url: str | None = None,
+                 command: str | None = None,
+                 args: list[str] | None = None) -> None:
         super().__init__("stdio")
         self._tools = tools
         self.url = url
         self.command = command
-
 
     async def get_tool(self, name: str) -> _FakeTool:
         """Retrieve a tool by name."""
@@ -86,8 +87,12 @@ def test_filter_and_configure_tools_none_filter_returns_all():
     tools = {"a": _FakeTool("a", "da"), "b": _FakeTool("b", "db")}
     out = _filter_and_configure_tools(tools, tool_filter=None)
     assert out == {
-        "a": {"function_name": "a", "description": "da"},
-        "b": {"function_name": "b", "description": "db"},
+        "a": {
+            "function_name": "a", "description": "da"
+        },
+        "b": {
+            "function_name": "b", "description": "db"
+        },
     }
 
 
@@ -97,7 +102,9 @@ def test_filter_and_configure_tools_list_filter_subsets():
     tools = {"a": _FakeTool("a", "da"), "b": _FakeTool("b", "db")}
     out = _filter_and_configure_tools(tools, tool_filter=["b"])  # type: ignore[arg-type]
     assert out == {
-        "b": {"function_name": "b", "description": "db"},
+        "b": {
+            "function_name": "b", "description": "db"
+        },
     }
 
 
@@ -118,15 +125,9 @@ async def test_mcp_client_function_handler():
             "fake_tool_2": _FakeTool("fake_tool_2", "Another fake tool for testing")
         }
 
-        mock_client.return_value = _FakeMCPClient(
-            tools=fake_tools, command="python", args=["server.py"]
-        )
+        mock_client.return_value = _FakeMCPClient(tools=fake_tools, command="python", args=["server.py"])
 
-        server_cfg = MCPServerConfig(
-            transport="stdio",
-            command="python",
-            args=["server.py"]
-        )
+        server_cfg = MCPServerConfig(transport="stdio", command="python", args=["server.py"])
         client_cfg = MCPClientConfig(server=server_cfg, tool_filter=["fake_tool_1"])
 
         # Mock the WorkflowBuilder
@@ -146,5 +147,5 @@ async def test_mcp_client_function_handler():
         name, cfg = mock_builder.add_function.await_args.args
         assert name == "fake_tool_1"
         assert isinstance(cfg, MCPSingleToolConfig)
-        assert cfg.tool_name == "fake_tool_1"               # original tool name
+        assert cfg.tool_name == "fake_tool_1"  # original tool name
         assert cfg.tool_description == "A fake tool for testing"  # carried through

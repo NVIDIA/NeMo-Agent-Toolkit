@@ -14,16 +14,14 @@
 # limitations under the License.
 
 from contextlib import asynccontextmanager
-from typing import Any, cast
-from unittest.mock import patch
+from typing import Any
 from unittest.mock import MagicMock
-from unittest.mock import AsyncMock
+from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
 from pydantic.networks import HttpUrl
 
-from nat.builder.workflow_builder import WorkflowBuilder
 from nat.tool.mcp.mcp_client_base import MCPBaseClient
 from nat.tool.mcp.mcp_tool import MCPToolConfig
 from nat.tool.mcp.mcp_tool import mcp_tool
@@ -60,8 +58,6 @@ class _FakeMCPClient(MCPBaseClient):
         self._tools = tools
         self.url = url
 
-
-
     async def get_tool(self, name: str) -> _FakeTool:
         """Retrieve a tool by name."""
         return self._tools[name]
@@ -79,11 +75,9 @@ class _FakeMCPClient(MCPBaseClient):
 def test_mcp_tool_config_validation_stdio_requires_command():
     """Test that stdio transport requires command parameter."""
     with pytest.raises(ValueError, match="command is required"):
-        MCPToolConfig(
-            transport="stdio",
-            mcp_tool_name="test_tool"
-            # Missing command
-        )
+        MCPToolConfig(transport="stdio", mcp_tool_name="test_tool"
+                      # Missing command
+                      )
 
 
 def test_mcp_tool_config_validation_stdio_rejects_url():
@@ -100,11 +94,9 @@ def test_mcp_tool_config_validation_stdio_rejects_url():
 def test_mcp_tool_config_validation_http_requires_url():
     """Test that HTTP transports require URL parameter."""
     with pytest.raises(ValueError, match="url is required"):
-        MCPToolConfig(
-            transport="streamable-http",
-            mcp_tool_name="test_tool"
-            # Missing url
-        )
+        MCPToolConfig(transport="streamable-http", mcp_tool_name="test_tool"
+                      # Missing url
+                      )
 
 
 def test_mcp_tool_config_validation_http_rejects_stdio_params():
@@ -122,10 +114,7 @@ def test_mcp_tool_config_validation_http_rejects_stdio_params():
 
 def test_mcp_tool_config_defaults():
     """Test that MCPToolConfig has correct defaults."""
-    config = MCPToolConfig(
-        mcp_tool_name="test_tool",
-        url=HttpUrl("http://localhost:8000/mcp")
-    )
+    config = MCPToolConfig(mcp_tool_name="test_tool", url=HttpUrl("http://localhost:8000/mcp"))
     assert config.transport == "streamable-http"
     assert config.return_exception is True
     assert config.description is None
@@ -137,8 +126,7 @@ def test_mcp_tool_invalid_transport_raises_error():
         MCPToolConfig(
             transport="invalid",  # type: ignore[assignment]
             mcp_tool_name="test_tool",
-            url=HttpUrl("http://localhost:8000/mcp")
-        )
+            url=HttpUrl("http://localhost:8000/mcp"))
 
 
 async def test_mcp_tool_streamable_http_client_initialization():
@@ -147,15 +135,11 @@ async def test_mcp_tool_streamable_http_client_initialization():
         fake_tool = _FakeTool("test_tool", "test description")
         fake_tools = {"test_tool": fake_tool}
 
-        mock_client.side_effect = lambda url: _FakeMCPClient(
-            tools=fake_tools, url=url
-        )
+        mock_client.side_effect = lambda url: _FakeMCPClient(tools=fake_tools, url=url)
 
-        config = MCPToolConfig(
-            transport="streamable-http",
-            mcp_tool_name="test_tool",
-            url=HttpUrl("http://localhost:8000/mcp")
-        )
+        config = MCPToolConfig(transport="streamable-http",
+                               mcp_tool_name="test_tool",
+                               url=HttpUrl("http://localhost:8000/mcp"))
 
         # Mock builder (we don't need it for this test)
         mock_builder = MagicMock()
