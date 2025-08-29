@@ -281,7 +281,13 @@ class JobStore:
         """Get the time for a job to expire."""
         if job.status in self.ACTIVE_STATUS:
             return None
-        return job.updated_at + timedelta(seconds=job.expiry_seconds)
+
+        updated_at = job.updated_at
+        if updated_at.tzinfo is None:
+            # Not all DB backends support timezone aware datetimes
+            updated_at = updated_at.replace(tzinfo=UTC)
+
+        return updated_at + timedelta(seconds=job.expiry_seconds)
 
     async def cleanup_expired_jobs(self):
         """
