@@ -610,7 +610,7 @@ async def test_tool_node_json_input_with_double_quotes(mock_react_agent):
 async def test_tool_node_json_input_with_single_quotes_normalization_enabled(mock_react_agent):
     """Test that JSON with single quotes is normalized to double quotes when normalization is enabled."""
     # Agent should have normalization enabled by default
-    assert mock_react_agent.replace_single_quotes_with_double_quotes_in_tool_input is True
+    assert mock_react_agent.normalize_tool_input_quotes is True
 
     tool_input_single_quotes = "{'query': 'search term', 'limit': 5}"
     mock_state = ReActGraphState(
@@ -638,9 +638,9 @@ async def test_tool_node_json_input_with_single_quotes_normalization_disabled(mo
                             prompt=prompt,
                             tools=tools,
                             detailed_logs=mock_config_react_agent.verbose,
-                            replace_single_quotes_with_double_quotes_in_tool_input=False)
+                            normalize_tool_input_quotes=False)
 
-    assert agent.replace_single_quotes_with_double_quotes_in_tool_input is False
+    assert agent.normalize_tool_input_quotes is False
 
     tool_input_single_quotes = "{'query': 'search term', 'limit': 5}"
     mock_state = ReActGraphState(
@@ -754,17 +754,15 @@ async def test_tool_node_whitespace_handling(mock_react_agent):
 
 
 def test_config_replace_single_quotes_default():
-    """Test that replace_single_quotes_with_double_quotes_in_tool_input defaults to True."""
+    """Test that normalize_tool_input_quotes defaults to True."""
     config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
-    assert config.replace_single_quotes_with_double_quotes_in_tool_input is True
+    assert config.normalize_tool_input_quotes is True
 
 
 def test_config_replace_single_quotes_explicit_false():
-    """Test that replace_single_quotes_with_double_quotes_in_tool_input can be set to False."""
-    config = ReActAgentWorkflowConfig(tool_names=['test'],
-                                      llm_name='test',
-                                      replace_single_quotes_with_double_quotes_in_tool_input=False)
-    assert config.replace_single_quotes_with_double_quotes_in_tool_input is False
+    """Test that normalize_tool_input_quotes can be set to False."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', normalize_tool_input_quotes=False)
+    assert config.normalize_tool_input_quotes is False
 
 
 def test_react_agent_init_with_quote_normalization_param(mock_config_react_agent, mock_llm, mock_tool):
@@ -777,16 +775,16 @@ def test_react_agent_init_with_quote_normalization_param(mock_config_react_agent
                                     prompt=prompt,
                                     tools=tools,
                                     detailed_logs=False,
-                                    replace_single_quotes_with_double_quotes_in_tool_input=True)
-    assert agent_enabled.replace_single_quotes_with_double_quotes_in_tool_input is True
+                                    normalize_tool_input_quotes=True)
+    assert agent_enabled.normalize_tool_input_quotes is True
 
     # Test with normalization disabled
     agent_disabled = ReActAgentGraph(llm=mock_llm,
                                      prompt=prompt,
                                      tools=tools,
                                      detailed_logs=False,
-                                     replace_single_quotes_with_double_quotes_in_tool_input=False)
-    assert agent_disabled.replace_single_quotes_with_double_quotes_in_tool_input is False
+                                     normalize_tool_input_quotes=False)
+    assert agent_disabled.normalize_tool_input_quotes is False
 
 
 # Additional test to specifically verify the JSON parsing logic with quote normalization
@@ -813,7 +811,7 @@ async def test_quote_normalization_json_parsing_logic(mock_config_react_agent, m
                                     prompt=prompt,
                                     tools=tools,
                                     detailed_logs=False,
-                                    replace_single_quotes_with_double_quotes_in_tool_input=True)
+                                    normalize_tool_input_quotes=True)
 
     # Test with single quotes - should be normalized and parsed as JSON
     tool_input_single = "{'query': 'test', 'count': 42}"
@@ -831,7 +829,7 @@ async def test_quote_normalization_json_parsing_logic(mock_config_react_agent, m
                                      prompt=prompt,
                                      tools=tools,
                                      detailed_logs=False,
-                                     replace_single_quotes_with_double_quotes_in_tool_input=False)
+                                     normalize_tool_input_quotes=False)
 
     response = await agent_disabled.tool_node(mock_state)
     response_content = response.tool_responses[-1].content

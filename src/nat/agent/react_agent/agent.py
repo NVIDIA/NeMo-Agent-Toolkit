@@ -78,7 +78,7 @@ class ReActAgentGraph(DualNodeAgent):
                  parse_agent_response_max_retries: int = 1,
                  tool_call_max_retries: int = 1,
                  pass_tool_call_errors_to_agent: bool = True,
-                 replace_single_quotes_with_double_quotes_in_tool_input: bool = True):
+                 normalize_tool_input_quotes: bool = True):
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
@@ -88,8 +88,7 @@ class ReActAgentGraph(DualNodeAgent):
                                                  if retry_agent_response_parsing_errors else 1)
         self.tool_call_max_retries = tool_call_max_retries
         self.pass_tool_call_errors_to_agent = pass_tool_call_errors_to_agent
-        self.replace_single_quotes_with_double_quotes_in_tool_input = \
-            replace_single_quotes_with_double_quotes_in_tool_input
+        self.normalize_tool_input_quotes = normalize_tool_input_quotes
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
@@ -296,7 +295,7 @@ class ReActAgentGraph(DualNodeAgent):
             logger.debug("%s Successfully parsed structured tool input from Action Input", AGENT_LOG_PREFIX)
 
         except JSONDecodeError as original_ex:
-            if self.replace_single_quotes_with_double_quotes_in_tool_input:
+            if self.normalize_tool_input_quotes:
                 # If initial JSON parsing fails, try with quote normalization as a fallback
                 normalized_str = tool_input_str.replace("'", '"')
                 try:

@@ -62,7 +62,7 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
     include_tool_input_schema_in_tool_description: bool = Field(
         default=True, description="Specify inclusion of tool input schemas in the prompt.")
     description: str = Field(default="ReAct Agent Workflow", description="The description of this functions use.")
-    replace_single_quotes_with_double_quotes_in_tool_input: bool = Field(
+    normalize_tool_input_quotes: bool = Field(
         default=True,
         description="Whether to replace single quotes with double quotes in the tool input. "
         "This is useful for tools that expect structured json input.")
@@ -112,8 +112,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         parse_agent_response_max_retries=config.parse_agent_response_max_retries,
         tool_call_max_retries=config.tool_call_max_retries,
         pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent,
-        replace_single_quotes_with_double_quotes_in_tool_input=config.
-        replace_single_quotes_with_double_quotes_in_tool_input).build_graph()
+        normalize_tool_input_quotes=config.normalize_tool_input_quotes).build_graph()
 
     async def _response_fn(input_message: ChatRequest) -> ChatResponse:
         try:
