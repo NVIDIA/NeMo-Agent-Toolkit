@@ -84,6 +84,11 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^docs/source/",
         r"^docs/source/_static",
     ),
+    # allow MCP server references in documentation
+    (
+        r"^docs/source/workflows/mcp/.*\.md$",
+        r"^ghcr\.io/github/github-mcp-server",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
@@ -139,6 +144,8 @@ ALLOWLISTED_WORDS: set[str] = {
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
     # Time zones
     "[A-Z][a-z]+(_[A-Z][a-z]+)*/[A-Z][a-z]+(_[A-Z][a-z]+)*",
+    # Container registry references
+    "ghcr\\.io/.*",
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
