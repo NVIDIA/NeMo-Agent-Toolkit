@@ -37,7 +37,7 @@ You can also use the `sse` (Server-Sent Events) transport for backwards compatib
 ```bash
 nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml --transport sse
 ```
-With this configuration, the MCP server is available at `http://localhost:9901/sse` using sse transport.
+With this configuration, the MCP server is available at `http://localhost:9901/sse` using SSE transport.
 
 You can optionally specify the server settings using the following flags:
 ```bash
