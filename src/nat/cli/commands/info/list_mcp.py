@@ -29,10 +29,8 @@ from nat.utils.exception_handlers.mcp import format_mcp_error
 logging.getLogger("mcp.client.sse").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-logger = logging.getLogger(__name__)
 
-
-def validate_transport_combination(transport: str, command: str | None, args: str | None, env: str | None) -> bool:
+def validate_transport_cli_args(transport: str, command: str | None, args: str | None, env: str | None) -> bool:
     """
     Validate transport and parameter combinations, returning False if invalid.
 
@@ -47,13 +45,11 @@ def validate_transport_combination(transport: str, command: str | None, args: st
     """
     if transport == 'stdio':
         if not command:
-            click.echo("[ERROR] --command is required when using stdio client type", err=True)
+            click.echo("--command is required when using stdio client type", err=True)
             return False
     elif transport in ['sse', 'streamable-http']:
         if command or args or env:
-            click.echo(
-                "[ERROR] --command, --args, and --env are not allowed when using sse or streamable-http client type",
-                err=True)
+            click.echo("--command, --args, and --env are not allowed when using sse or streamable-http client type", err=True)
             return False
     return True
 
@@ -359,7 +355,7 @@ def list_mcp(ctx, direct, url, transport, command, args, env, tool, detail, json
     if ctx.invoked_subcommand is not None:
         return
 
-    if not validate_transport_combination(transport, command, args, env):
+    if not validate_transport_cli_args(transport, command, args, env):
         return
 
     if transport in ['sse', 'streamable-http']:
