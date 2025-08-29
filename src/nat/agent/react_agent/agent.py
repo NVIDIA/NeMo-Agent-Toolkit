@@ -83,7 +83,8 @@ class ReActAgentGraph(DualNodeAgent):
                  retry_agent_response_parsing_errors: bool = True,
                  parse_agent_response_max_retries: int = 1,
                  tool_call_max_retries: int = 1,
-                 pass_tool_call_errors_to_agent: bool = True):
+                 pass_tool_call_errors_to_agent: bool = True,
+                 normalize_tool_input_quotes: bool = True):
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
@@ -93,6 +94,7 @@ class ReActAgentGraph(DualNodeAgent):
                                                  if retry_agent_response_parsing_errors else 1)
         self.tool_call_max_retries = tool_call_max_retries
         self.pass_tool_call_errors_to_agent = pass_tool_call_errors_to_agent
+        self.normalize_tool_input_quotes = normalize_tool_input_quotes
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
@@ -292,35 +294,45 @@ class ReActAgentGraph(DualNodeAgent):
                      agent_thoughts.tool_input)
 
         # Run the tool. Try to use structured input, if possible.
+        tool_input_str = agent_thoughts.tool_input.strip()
+
         try:
-            tool_input_str = str(agent_thoughts.tool_input).strip().replace("'", '"')
-            tool_input_dict = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
+            tool_input = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
             logger.debug("%s Successfully parsed structured tool input from Action Input", AGENT_LOG_PREFIX)
 
-            tool_response = await self._call_tool(requested_tool,
-                                                  tool_input_dict,
-                                                  RunnableConfig(callbacks=self.callbacks),
-                                                  max_retries=self.tool_call_max_retries)
+        except JSONDecodeError as original_ex:
+            if self.normalize_tool_input_quotes:
+                # If initial JSON parsing fails, try with quote normalization as a fallback
+                normalized_str = tool_input_str.replace("'", '"')
+                try:
+                    tool_input = json.loads(normalized_str)
+                    logger.debug("%s Successfully parsed structured tool input after quote normalization",
+                                 AGENT_LOG_PREFIX)
+                except JSONDecodeError:
+                    # the quote normalization failed, use raw string input
+                    logger.debug(
+                        "%s Unable to parse structured tool input after quote normalization. Using Action Input as is."
+                        "\nParsing error: %s",
+                        AGENT_LOG_PREFIX,
+                        original_ex)
+                    tool_input = tool_input_str
+            else:
+                # use raw string input
+                logger.debug(
+                    "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
+                    "\nParsing error: %s",
+                    AGENT_LOG_PREFIX,
+                    original_ex)
+                tool_input = tool_input_str
 
-            if self.detailed_logs:
-                self._log_tool_response(requested_tool.name, tool_input_dict, str(tool_response.content))
-
-        except JSONDecodeError as ex:
-            logger.debug(
-                "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
-                "\nParsing error: %s",
-                AGENT_LOG_PREFIX,
-                ex,
-                exc_info=True)
-            tool_input_str = str(agent_thoughts.tool_input)
-
-            tool_response = await self._call_tool(requested_tool,
-                                                  tool_input_str,
-                                                  RunnableConfig(callbacks=self.callbacks),
-                                                  max_retries=self.tool_call_max_retries)
+        # Call tool once with the determined input (either parsed dict or raw string)
+        tool_response = await self._call_tool(requested_tool,
+                                              tool_input,
+                                              RunnableConfig(callbacks=self.callbacks),
+                                              max_retries=self.tool_call_max_retries)
 
         if self.detailed_logs:
-            self._log_tool_response(requested_tool.name, tool_input_str, str(tool_response.content))
+            self._log_tool_response(requested_tool.name, tool_input, str(tool_response.content))
 
         if not self.pass_tool_call_errors_to_agent:
             if tool_response.status == "error":

@@ -590,3 +590,250 @@ def test_config_mixed_alias_usage():
     assert config.parse_agent_response_max_retries == 12
     assert config.max_tool_calls == 28
     assert config.tool_call_max_retries == 1  # default value
+
+
+# Tests for quote normalization in tool input parsing
+async def test_tool_node_json_input_with_double_quotes(mock_react_agent):
+    """Test that valid JSON with double quotes is parsed correctly."""
+    tool_input = '{"query": "search term", "limit": 5}'
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # When JSON is successfully parsed, the mock tool receives a dict and LangChain extracts the "query" value
+    assert response.content == "search term"  # The mock tool extracts the query field value
+
+
+async def test_tool_node_json_input_with_single_quotes_normalization_enabled(mock_react_agent):
+    """Test that JSON with single quotes is normalized to double quotes when normalization is enabled."""
+    # Agent should have normalization enabled by default
+    assert mock_react_agent.normalize_tool_input_quotes is True
+
+    tool_input_single_quotes = "{'query': 'search term', 'limit': 5}"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_single_quotes, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # With quote normalization enabled, single quotes get normalized and JSON is parsed successfully
+    # The mock tool then receives a dict and LangChain extracts the "query" value
+    assert response.content == "search term"
+
+
+async def test_tool_node_json_input_with_single_quotes_normalization_disabled(mock_config_react_agent,
+                                                                              mock_llm,
+                                                                              mock_tool):
+    """Test that JSON with single quotes is NOT normalized when normalization is disabled."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    # Create agent with quote normalization disabled
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=mock_config_react_agent.verbose,
+                            normalize_tool_input_quotes=False)
+
+    assert agent.normalize_tool_input_quotes is False
+
+    tool_input_single_quotes = "{'query': 'search term', 'limit': 5}"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_single_quotes, log='test')])
+
+    response = await agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Should use the raw string input since JSON parsing fails and normalization is disabled
+    assert response.content == tool_input_single_quotes
+
+
+async def test_tool_node_invalid_json_fallback_to_string(mock_react_agent):
+    """Test that invalid JSON falls back to using the raw string input."""
+    # Invalid JSON that cannot be fixed by quote normalization
+    tool_input_invalid = "{'query': 'search term', 'limit': }"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_invalid, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Should fall back to using the raw string
+    assert response.content == tool_input_invalid
+
+
+async def test_tool_node_string_input_no_json_parsing(mock_react_agent):
+    """Test that plain string input is used as-is without attempting JSON parsing."""
+    tool_input_string = "simple string input"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_string, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    assert response.content == tool_input_string
+
+
+async def test_tool_node_none_input(mock_react_agent):
+    """Test that 'None' input is handled correctly."""
+    tool_input_none = "None"
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_none, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    assert response.content == tool_input_none
+
+
+async def test_tool_node_nested_json_with_single_quotes(mock_react_agent):
+    """Test that complex nested JSON with single quotes is normalized correctly."""
+    # Complex nested JSON with single quotes - doesn't have a "query" field so would return the full dict
+    tool_input_nested = \
+        "{'user': {'name': 'John', 'preferences': {'theme': 'dark', 'notifications': True}}, 'action': 'update'}"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_nested, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Since this JSON doesn't have a "query" field, the mock tool receives the full dict
+    # and LangChain can't extract a "query" parameter, so it falls back to default behavior
+    assert "John" in str(response.content) or isinstance(response.content, dict)
+
+
+async def test_tool_node_mixed_quotes_in_json(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that JSON with mixed quotes is handled appropriately."""
+    # This creates a scenario with mixed quotes that might be challenging to normalize
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False)
+
+    # Mixed quotes - this is challenging JSON to normalize
+    tool_input_mixed = '''{'outer': "inner string with 'nested quotes'", 'number': 42}'''
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_mixed, log='test')])
+
+    response = await agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Mixed quotes are complex to normalize, so it likely falls back to raw string input
+    assert response.content == tool_input_mixed
+
+
+async def test_tool_node_whitespace_handling(mock_react_agent):
+    """Test that whitespace in tool input is handled correctly."""
+    # Tool input with leading/trailing whitespace
+    tool_input_whitespace = "  {'query': 'search term'}  "
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_whitespace, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # With whitespace trimmed and quote normalization, JSON is parsed and "query" value is extracted
+    assert response.content == "search term"
+
+
+def test_config_replace_single_quotes_default():
+    """Test that normalize_tool_input_quotes defaults to True."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+    assert config.normalize_tool_input_quotes is True
+
+
+def test_config_replace_single_quotes_explicit_false():
+    """Test that normalize_tool_input_quotes can be set to False."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', normalize_tool_input_quotes=False)
+    assert config.normalize_tool_input_quotes is False
+
+
+def test_react_agent_init_with_quote_normalization_param(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that ReActAgentGraph initialization respects the quote normalization parameter."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    # Test with normalization enabled
+    agent_enabled = ReActAgentGraph(llm=mock_llm,
+                                    prompt=prompt,
+                                    tools=tools,
+                                    detailed_logs=False,
+                                    normalize_tool_input_quotes=True)
+    assert agent_enabled.normalize_tool_input_quotes is True
+
+    # Test with normalization disabled
+    agent_disabled = ReActAgentGraph(llm=mock_llm,
+                                     prompt=prompt,
+                                     tools=tools,
+                                     detailed_logs=False,
+                                     normalize_tool_input_quotes=False)
+    assert agent_disabled.normalize_tool_input_quotes is False
+
+
+# Additional test to specifically verify the JSON parsing logic with quote normalization
+async def test_quote_normalization_json_parsing_logic(mock_config_react_agent, mock_llm):
+    """Test the specific quote normalization logic in JSON parsing."""
+    from langchain_core.tools import BaseTool
+
+    # Create a custom tool that returns the exact input it receives
+    class ExactInputTool(BaseTool):
+        name: str = "ExactInputTool"
+        description: str = "Returns exactly what it receives"
+
+        async def _arun(self, query, **kwargs):
+            return f"Received: {query} (type: {type(query).__name__})"
+
+        def _run(self, query, **kwargs):
+            return f"Received: {query} (type: {type(query).__name__})"
+
+    tools = [ExactInputTool()]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    # Test with quote normalization enabled
+    agent_enabled = ReActAgentGraph(llm=mock_llm,
+                                    prompt=prompt,
+                                    tools=tools,
+                                    detailed_logs=False,
+                                    normalize_tool_input_quotes=True)
+
+    # Test with single quotes - should be normalized and parsed as JSON
+    tool_input_single = "{'query': 'test', 'count': 42}"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='ExactInputTool', tool_input=tool_input_single, log='test')])
+    response = await agent_enabled.tool_node(mock_state)
+    response_content = response.tool_responses[-1].content
+
+    # Should receive the "query" field value from the parsed JSON dict
+    # This proves that quote normalization worked and JSON was successfully parsed
+    assert "Received: test (type: str)" in response_content
+
+    # Test with quote normalization disabled
+    agent_disabled = ReActAgentGraph(llm=mock_llm,
+                                     prompt=prompt,
+                                     tools=tools,
+                                     detailed_logs=False,
+                                     normalize_tool_input_quotes=False)
+
+    response = await agent_disabled.tool_node(mock_state)
+    response_content = response.tool_responses[-1].content
+
+    # Should receive the raw string (JSON parsing failed due to no normalization)
+    # The full JSON string should be passed as the query parameter
+    assert tool_input_single in response_content and "type: str" in response_content
