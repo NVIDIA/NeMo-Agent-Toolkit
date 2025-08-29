@@ -38,11 +38,23 @@ class TestThinkingMixin:
         class Model(ThinkingMixin):
             model_name: str
 
-        m_true = Model(model_name="NVIDIA/LLaMa-3.1-Nemotron", thinking=True)
+        m_true = Model(model_name="NVIDIA/LLaMa-3.1-Nemotron-v1.0", thinking=True)
         assert m_true.thinking_system_prompt == "detailed thinking on"
 
-        m_false = Model(model_name="nvidia/llama-nemotron", thinking=False)
+        m_false = Model(model_name="NVIDIA/LLaMa-3.1-Nemotron-v1-0", thinking=False)
         assert m_false.thinking_system_prompt == "detailed thinking off"
+
+        m_true = Model(model_name="NVIDIA/LLaMa-3.1-Nemotron-v1.1", thinking=True)
+        assert m_true.thinking_system_prompt == "detailed thinking on"
+
+        m_false = Model(model_name="NVIDIA/LLaMa-3.1-Nemotron-v1.1", thinking=False)
+        assert m_false.thinking_system_prompt == "detailed thinking off"
+
+        m_true = Model(model_name="NVIDIA/LLaMa-3.1-Nemotron-v1-5", thinking=True)
+        assert m_true.thinking_system_prompt == "/think"
+
+        m_false = Model(model_name="NVIDIA/LLaMa-3.1-Nemotron-v1-5", thinking=False)
+        assert m_false.thinking_system_prompt == "/no_think"
 
     def test_supported_default_remains_none(self):
 
@@ -83,7 +95,7 @@ class TestThinkingMixin:
         class Model(ThinkingMixin):
             azure_deployment: str
 
-        m = Model(azure_deployment="nvidia/llama3-nemotron", thinking=True)
+        m = Model(azure_deployment="nvidia/llama3-nemotron-v1-0", thinking=True)
         assert m.thinking_system_prompt == "detailed thinking on"
 
     def test_no_keys_present_defaults_supported_and_prompt_none(self):

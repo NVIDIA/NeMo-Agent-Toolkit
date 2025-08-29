@@ -22,8 +22,7 @@ from nat.data_models.gated_field_mixin import GatedFieldMixin
 
 # The system prompt format for thinking is different for these, so we need to distinguish them here with two separate
 # regex patterns
-_NVIDIA_NEMOTRON_REGEX = re.compile(r"^nvidia/nvidia.*nemotron", re.IGNORECASE)
-_LLAMA_NEMOTRON_REGEX = re.compile(r"^nvidia/llama.*nemotron", re.IGNORECASE)
+_NEMOTRON_REGEX = re.compile(r"^nvidia/(llama|nvidia).*nemotron", re.IGNORECASE)
 _MODEL_KEYS = ("model_name", "model", "azure_deployment")
 
 
@@ -33,7 +32,7 @@ class ThinkingMixin(
         field_name="thinking",
         default_if_supported=None,
         keys=_MODEL_KEYS,
-        supported=(_NVIDIA_NEMOTRON_REGEX, _LLAMA_NEMOTRON_REGEX),
+        supported=(_NEMOTRON_REGEX, ),
 ):
     """
     Mixin class for thinking configuration. Only supported on Nemotron models.
@@ -52,7 +51,8 @@ class ThinkingMixin(
         """
         Returns the system prompt to use for thinking.
         For NVIDIA Nemotron, returns "/think" if enabled, else "/no_think".
-        For Llama Nemotron, returns "detailed thinking on" if enabled, else "detailed thinking off".
+        For Llama Nemotron v1.5, returns "/think" if enabled, else "/no_think".
+        For Llama Nemotron v1.0, returns "detailed thinking on" if enabled, else "detailed thinking off".
         If thinking is not supported on the model, returns None.
 
         Returns:
@@ -60,9 +60,28 @@ class ThinkingMixin(
         """
         if self.thinking is None:
             return None
+
         for key in _MODEL_KEYS:
-            if hasattr(self, key):
-                if _NVIDIA_NEMOTRON_REGEX.match(getattr(self, key)):
-                    return "/think" if self.thinking else "/no_think"
-                elif _LLAMA_NEMOTRON_REGEX.match(getattr(self, key)):
+            model = getattr(self, key, None)
+            if not isinstance(model, str) or model is None:
+                continue
+
+            # Normalize name to reduce checks
+            model = model.lower().translate(str.maketrans("_.", "--"))
+
+            if model.startswith("nvidia/nvidia"):
+                return "/think" if self.thinking else "/no_think"
+
+            if model.startswith("nvidia/llama"):
+                if "v1-0" in model or "v1-1" in model:
                     return f"detailed thinking {'on' if self.thinking else 'off'}"
+
+                if "v1-5" in model:
+                    # v1.5 models are updated to use the /think and /no_think system prompts
+                    return "/think" if self.thinking else "/no_think"
+
+                # Assume any other model is a newer model that uses the /think and /no_think system prompts
+                return "/think" if self.thinking else "/no_think"
+
+        # Unknown model
+        return None
