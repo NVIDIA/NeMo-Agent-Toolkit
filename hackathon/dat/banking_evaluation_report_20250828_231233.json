@@ -1,0 +1,43 @@
+{
+  "report_metadata": {
+    "generated_at": "2025-08-28 23:12:33",
+    "script_version": "1.0",
+    "evaluation_type": "Banking AI Agent Tool Calling"
+  },
+  "evaluation_summary": {
+    "timestamp": "2025-08-28 23:12:33",
+    "evaluation_type": "Banking AI Agent Tool Calling",
+    "total_scenarios": 2,
+    "overall_score": 0.05
+  },
+  "detailed_metrics": {
+    "tool_calling_accuracy": {
+      "function_name_accuracy": {
+        "score": 0.1,
+        "stats": {
+          "count": 10,
+          "mean": 0.1
+        }
+      },
+      "function_name_and_args_accuracy": {
+        "score": 0.0,
+        "stats": {
+          "count": 10
+        }
+      }
+    }
+  },
+  "interpretation": {
+    "score_ranges": {
+      "perfect": "1.0 - AI agent makes exactly the right tool calls",
+      "high": "0.8-0.99 - AI agent makes mostly correct tool calls",
+      "medium": "0.6-0.79 - AI agent makes some correct tool calls",
+      "low": "<0.6 - AI agent struggles with tool calling"
+    }
+  },
+  "recommendations": [
+    "Improve function name selection accuracy",
+    "Enhance parameter extraction and formatting"
+  ],
+  "raw_results": "{'custom-tool-calling': TaskResult(metrics={'tool-calling-accuracy': MetricResult(scores={'function_name_accuracy': Score(value=0.1, stats=ScoreStats(count=10, max=None, mean=0.1, min=None, stddev=None, stderr=None, sum=1.0, sum_squared=None, variance=None)), 'function_name_and_args_accuracy': Score(value=0.0, stats=ScoreStats(count=10, max=None, mean=0.0, min=None, stddev=None, stderr=None, sum=0.0, sum_squared=None, variance=None))})})}"
+}

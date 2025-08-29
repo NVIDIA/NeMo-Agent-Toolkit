@@ -1,0 +1,35 @@
+🏦 BANKING AI AGENT TOOL CALLING EVALUATION REPORT
+============================================================
+
+📅 Generated: 2025-08-28 23:12:33
+🎯 Evaluation Type: Banking AI Agent Tool Calling
+📊 Total Scenarios: 2
+⭐ Overall Score: 0.05
+
+📈 DETAILED METRICS
+------------------------------
+  function_name_accuracy: 0.10
+    count: 10
+    mean: 0.1
+  function_name_and_args_accuracy: 0.00
+    count: 10
+
+🎯 INTERPRETATION
+--------------------
+  Perfect: 1.0 - AI agent makes exactly the right tool calls
+  High: 0.8-0.99 - AI agent makes mostly correct tool calls
+  Medium: 0.6-0.79 - AI agent makes some correct tool calls
+  Low: <0.6 - AI agent struggles with tool calling
+
+💡 RECOMMENDATIONS
+--------------------
+  - Improve function name selection accuracy
+  - Enhance parameter extraction and formatting
+
+📋 NEXT STEPS
+---------------
+1. Review the detailed results above
+2. Identify areas where your banking AI agent needs improvement
+3. Iterate on your agent's tool calling logic
+4. Re-run evaluation to measure improvements
+5. Scale up testing with more diverse banking scenarios
