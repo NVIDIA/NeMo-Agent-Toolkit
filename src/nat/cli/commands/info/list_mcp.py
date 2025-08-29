@@ -49,7 +49,8 @@ def validate_transport_cli_args(transport: str, command: str | None, args: str |
             return False
     elif transport in ['sse', 'streamable-http']:
         if command or args or env:
-            click.echo("--command, --args, and --env are not allowed when using sse or streamable-http client type", err=True)
+            click.echo("--command, --args, and --env are not allowed when using sse or streamable-http client type",
+                       err=True)
             return False
     return True
 
@@ -422,7 +423,7 @@ def ping(url: str,
         nat info mcp ping --json-output                     # Get JSON format output
     """
     # Validate combinations similar to parent command
-    if not validate_transport_combination(transport, command, args, env):
+    if not validate_transport_cli_args(transport, command, args, env):
         return
 
     stdio_args = args.split() if args else []
