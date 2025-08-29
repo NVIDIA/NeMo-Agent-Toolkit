@@ -20,11 +20,11 @@ import pytest
 import uvicorn
 from mcp.server.fastmcp.server import FastMCP
 from mcp.types import TextContent
-from pydantic.networks import HttpUrl
 
-from nat.builder.workflow_builder import WorkflowBuilder
-from nat.tool.mcp.mcp_client_base import (MCPBaseClient, MCPSSEClient, MCPStdioClient, MCPStreamableHTTPClient)
-from nat.tool.mcp.mcp_tool import MCPToolConfig
+from nat.tool.mcp.mcp_client_base import MCPBaseClient
+from nat.tool.mcp.mcp_client_base import MCPSSEClient
+from nat.tool.mcp.mcp_client_base import MCPStdioClient
+from nat.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
 
 
 def _create_test_mcp_server(port: int) -> FastMCP:
@@ -123,6 +123,7 @@ async def mcp_client_fixture(request: pytest.FixtureRequest, unused_tcp_port_fac
                 await server_task
             except asyncio.CancelledError:
                 pass
+
 
 @pytest.mark.skip(reason="Temporarily disabled while debugging MCP server hang")
 async def test_mcp_client_base_methods(mcp_client: MCPBaseClient):
