@@ -69,9 +69,8 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
             try:
                 await job_store.cleanup_expired_jobs()
                 logger.debug("Expired jobs cleaned up")
-            except Exception as e:
-                logger.error("Error during job cleanup: %s", e)
-                logger.debug(traceback.format_exc())
+            except Exception:
+                logger.error("Error during job cleanup: %s", traceback.format_exc())
 
             await asyncio.sleep(sleep_time_sec)
 
