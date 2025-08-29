@@ -15,11 +15,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Launchables for NeMo Agent Toolkit
+# NVIDIA Brev Launchables for NeMo Agent Toolkit
 
-Launchables are an easy way to bundle a hardware and software environment into an easily shareable link, allowing for simple demos of GPU-powered software. Click **Deploy Now** to get started!
+Brev Launchables are an easy way to bundle a hardware and software environment into an easily shareable link, allowing for simple demos of GPU-powered software. Click **Deploy Now** to get started!
 
-NeMo Agent Toolkit offers the following notebooks in Launchable format: 
+NeMo Agent Toolkit offers the following notebooks in Brev Launchable format: 
 
 1. [GPU Cluster Sizing with NeMo-Agent-Toolkit](./GPU_Cluster_Sizing_with_NeMo_Agent_Toolkit.ipynb) [![ Click here to deploy.](https://brev-assets.s3.us-west-1.amazonaws.com/nv-lb-dark.svg)](https://brev.nvidia.com/launchable/deploy?launchableID=env-31yFF6xbCKdp94CBlxHfspTjOn8)
 
