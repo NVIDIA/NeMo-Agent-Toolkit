@@ -84,10 +84,10 @@ You can publish the simple calculator tools via MCP using the `nat mcp` command.
 ## Configuration Examples
 | Configuration File | MCP Server Type | Transport | Available Tools |
 |--------------------|-----------------|-----------------|-----------------|
-| `config-mcp-date.yml` | Date Server | sse | Current time, date formatting |
-| `config-mcp-math.yml` | Math Server | streamable-http | Advanced mathematical operations |
-| `config-combined.yml` | Multiple Servers | sse and streamable-http | Combined demonstration |
-| `config-mcp-date-stdio.yml` | Multiple Servers | stdio and streamable-http | Combined demonstration |
+| `config-mcp-date.yml` | Date Server | `sse` | Current time, date formatting |
+| `config-mcp-math.yml` | Math Server | `streamable-http` | Advanced mathematical operations |
+| `config-combined.yml` | Multiple Servers | `sse` and `streamable-http` | Combined demonstration |
+| `config-mcp-date-stdio.yml` | Multiple Servers | `stdio` and `streamable-http` | Combined demonstration |
 
 ### Running the Workflows
 **Date Server Example:**
