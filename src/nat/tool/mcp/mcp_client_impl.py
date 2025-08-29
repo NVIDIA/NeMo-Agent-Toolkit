@@ -87,11 +87,6 @@ class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
           {'tool2': {'description': 'Override description only'}}  # alias defaults to 'tool2'
         """)
 
-    @model_validator(mode="after")
-    def validate_model(self):
-        # ServerConfig already validates mutually exclusive fields
-        return self
-
 
 class MCPSingleToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
     """
