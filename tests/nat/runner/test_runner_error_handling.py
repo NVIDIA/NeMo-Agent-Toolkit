@@ -128,7 +128,7 @@ class TestErrorHandling:
             assert any("Mock workflow caught exception" in record.message for record in caplog.records)
 
     async def test_function_without_error_handling_logs_properly(self, mock_config_no_error_handling, caplog):
-        """Test that unhandled exceptions in _response_fn() are logged with helpful information."""
+        """Test that unhandled exceptions in _response_fn() are logged with comprehensive helpful information."""
 
         # Set up logging capture
         config = Config(workflow=mock_config_no_error_handling)
@@ -136,7 +136,7 @@ class TestErrorHandling:
             workflow = workflow_builder.build()
             session_manager = SessionManager(workflow)
 
-            test_input = ChatRequest.from_string("test input")
+            test_input = ChatRequest.from_string("test input for error logging")
 
             with caplog.at_level(logging.ERROR):
                 # The error should propagate up from the function
@@ -144,18 +144,8 @@ class TestErrorHandling:
                     async with session_manager.run(test_input) as runner:
                         await runner.result()
 
-            # Check that Runner logged the error with helpful context
-            runner_error_logs = [
-                record for record in caplog.records
-                if record.levelno == logging.ERROR and "Error running workflow" in record.message
-            ]
-            assert len(runner_error_logs) > 0
-
-            # The log should contain information about the error
-            error_log = runner_error_logs[0]
-            assert "Error running workflow" in error_log.message
-            # Note: Runner uses logger.error() not logger.exception(), so exc_info is None
-            # But the error message contains the exception details
+            # Comprehensive log analysis
+            self._verify_comprehensive_error_logging(caplog.records, test_input)
 
     async def test_error_propagation_to_session_manager(self, mock_config_no_error_handling):
         """Test that errors propagate correctly to SessionManager and can be caught."""
@@ -231,70 +221,67 @@ class TestErrorHandling:
             with pytest.raises(RuntimeError, match="Unhandled RuntimeError from mock workflow"):
                 await generate_single_response(test_input, session_manager)
 
-    async def test_multiple_exception_types(self, caplog):
-        """Test handling of different exception types."""
+    async def test_multiple_exception_types_with_detailed_logging(self, caplog):
+        """Test handling of different exception types and verify comprehensive logging for each."""
 
         exception_scenarios = [
-            ("ValueError", "Test ValueError", False),
-            ("RuntimeError", "Test RuntimeError", False),
-            ("TypeError", "Test TypeError", False),
-            ("KeyError", "Test KeyError", False),
+            ("ValueError", "Test ValueError for comprehensive logging", False),
+            ("RuntimeError", "Test RuntimeError for comprehensive logging", False),
+            ("TypeError", "Test TypeError for comprehensive logging", False),
+            ("KeyError", "Test KeyError for comprehensive logging", False),
         ]
 
         for exc_type, exc_msg, should_handle in exception_scenarios:
-            mock_config = MockExceptionWorkflowConfig(exception_type=exc_type,
-                                                      exception_message=exc_msg,
-                                                      handle_error=should_handle,
-                                                      use_openai_api=True)
+            with caplog.at_level(logging.ERROR):
+                # Clear previous log records
+                caplog.clear()
 
-            config = Config(workflow=mock_config)
-            async with WorkflowBuilder.from_config(config=config) as workflow_builder:
-                workflow = workflow_builder.build()
-                session_manager = SessionManager(workflow)
-                test_input = ChatRequest.from_string("test input")
+                mock_config = MockExceptionWorkflowConfig(exception_type=exc_type,
+                                                          exception_message=exc_msg,
+                                                          handle_error=should_handle,
+                                                          use_openai_api=True)
 
-                # Each exception type should propagate correctly
-                if exc_type == "RuntimeError":
-                    exception_class = RuntimeError
-                elif exc_type == "ValueError":
-                    exception_class = ValueError
-                elif exc_type == "TypeError":
-                    exception_class = TypeError
-                elif exc_type == "KeyError":
-                    exception_class = KeyError
-                else:
-                    exception_class = ValueError
+                config = Config(workflow=mock_config)
+                async with WorkflowBuilder.from_config(config=config) as workflow_builder:
+                    workflow = workflow_builder.build()
+                    session_manager = SessionManager(workflow)
+                    test_input = ChatRequest.from_string(f"testing {exc_type} error logging")
 
-                with pytest.raises(exception_class, match=exc_msg):
-                    async with session_manager.run(test_input) as runner:
-                        await runner.result()
+                    # Each exception type should propagate correctly
+                    if exc_type == "RuntimeError":
+                        exception_class = RuntimeError
+                    elif exc_type == "ValueError":
+                        exception_class = ValueError
+                    elif exc_type == "TypeError":
+                        exception_class = TypeError
+                    elif exc_type == "KeyError":
+                        exception_class = KeyError
+                    else:
+                        exception_class = ValueError
+
+                    with pytest.raises(exception_class, match=exc_msg):
+                        async with session_manager.run(test_input) as runner:
+                            await runner.result()
+
+                # Verify logging for this specific exception type
+                self._verify_exception_type_logging(caplog.records, exc_type, exc_msg, test_input)
 
     async def test_logging_contains_function_context(self, mock_config_no_error_handling, caplog):
-        """Test that error logs contain helpful context about function name and scope."""
+        """Test that error logs contain comprehensive context about function name, scope, and execution details."""
 
         config = Config(workflow=mock_config_no_error_handling)
         async with WorkflowBuilder.from_config(config=config) as workflow_builder:
             workflow = workflow_builder.build()
             session_manager = SessionManager(workflow)
-            test_input = ChatRequest.from_string("test input")
+            test_input = ChatRequest.from_string("context test input with specific content")
 
             with caplog.at_level(logging.ERROR):
                 with pytest.raises(RuntimeError):
                     async with session_manager.run(test_input) as runner:
                         await runner.result()
 
-            # Verify logging contains helpful context
-            error_logs = [record for record in caplog.records if record.levelno == logging.ERROR]
-            assert len(error_logs) > 0
-
-            # Check for workflow/runner error logging
-            runner_logs = [log for log in error_logs if "Error running workflow" in log.message]
-            assert len(runner_logs) > 0
-
-            # The log record contains the error message (runner uses logger.error, not logger.exception)
-            runner_log = runner_logs[0]
-            assert "RuntimeError" in runner_log.getMessage() or "Unhandled RuntimeError" in runner_log.getMessage()
-            # The function-level logging does contain more detailed error info
+            # Perform detailed log analysis
+            self._verify_function_context_logging(caplog.records, test_input)
 
     async def test_concurrent_error_handling(self, mock_config_no_error_handling):
         """Test that error handling works correctly with concurrent workflow runs."""
@@ -372,3 +359,237 @@ class TestErrorHandling:
         assert no_handle_config.exception_type == "RuntimeError"
         assert no_handle_config.exception_message == "runtime error test"
         assert not no_handle_config.handle_error
+
+    def _verify_comprehensive_error_logging(self, log_records, test_input):
+        """Helper method to verify comprehensive error logging information."""
+
+        error_logs = [record for record in log_records if record.levelno == logging.ERROR]
+        assert len(error_logs) >= 2, f"Expected at least 2 error log records, got {len(error_logs)}"
+
+        # 1. Function-level error log (more detailed)
+        function_error_logs = [log for log in error_logs if "Error with ainvoke in function" in log.message]
+        assert len(function_error_logs) > 0, "Should have function-level error log"
+
+        function_log = function_error_logs[0]
+
+        # Verify function log contains comprehensive information
+        assert "nat.builder.function" in function_log.name, f"Expected function logger, got {function_log.name}"
+        assert function_log.filename == "function.py", f"Expected function.py, got {function_log.filename}"
+        assert function_log.levelno == logging.ERROR, f"Expected ERROR level, got {function_log.levelno}"
+
+        # Check that the log message contains detailed input context
+        log_message = function_log.getMessage()
+        assert "Error with ainvoke in function with input:" in log_message
+        assert "test input for error logging" in log_message, "Should contain input content"
+        assert "messages=" in log_message, "Should contain message structure info"
+        assert "Unhandled RuntimeError from mock workflow" in log_message, "Should contain original error"
+
+        # 2. Runner-level error log (higher level)
+        runner_error_logs = [log for log in error_logs if "Error running workflow" in log.message]
+        assert len(runner_error_logs) > 0, "Should have runner-level error log"
+
+        runner_log = runner_error_logs[0]
+
+        # Verify runner log contains essential information
+        assert "nat.runtime.runner" in runner_log.name, f"Expected runner logger, got {runner_log.name}"
+        assert runner_log.filename == "runner.py", f"Expected runner.py, got {runner_log.filename}"
+        assert runner_log.levelno == logging.ERROR, f"Expected ERROR level, got {runner_log.levelno}"
+
+        runner_message = runner_log.getMessage()
+        assert "Error running workflow:" in runner_message
+        assert "Unhandled RuntimeError from mock workflow" in runner_message, "Should preserve original error message"
+
+    def _verify_function_context_logging(self, log_records, test_input):
+        """Helper method to verify function context and scope information in logs."""
+
+        error_logs = [record for record in log_records if record.levelno == logging.ERROR]
+
+        # Find the function-level error log
+        function_logs = [log for log in error_logs if "Error with ainvoke in function" in log.message]
+        assert len(function_logs) > 0, "Should have detailed function error log"
+
+        function_log = function_logs[0]
+        log_message = function_log.getMessage()
+
+        # Verify comprehensive function context information
+        context_checks = {
+            "Module/Logger Name":
+                "nat.builder.function" in function_log.name,
+            "File Name":
+                function_log.filename == "function.py",
+            "Function Scope":
+                "Error with ainvoke in function" in log_message,
+            "Input Content":
+                "context test input with specific content" in log_message,
+            "Input Structure":
+                "messages=" in log_message,
+            "Error Type":
+                "RuntimeError" in log_message,
+            "Original Error Message":
+                "Unhandled RuntimeError from mock workflow" in log_message,
+            "Detailed Input Context":
+                any(field in log_message for field in ["frequency_penalty", "max_tokens", "temperature"]),
+        }
+
+        failed_checks = [name for name, passed in context_checks.items() if not passed]
+        assert len(failed_checks) == 0, f"Failed context checks: {failed_checks}"
+
+        # Verify log record has proper metadata
+        assert function_log.levelname == "ERROR"
+        assert function_log.lineno > 0, "Should have line number information"
+        assert function_log.pathname.endswith("function.py"), "Should have correct file path"
+
+        # Check runner-level logging provides workflow context
+        runner_logs = [log for log in error_logs if "Error running workflow" in log.message]
+        assert len(runner_logs) > 0, "Should have runner-level error log"
+
+        runner_log = runner_logs[0]
+        assert "nat.runtime.runner" in runner_log.name, "Should identify runner as error source"
+        assert runner_log.filename == "runner.py", "Should identify runner file"
+
+    def _verify_exception_type_logging(self, log_records, exc_type, exc_msg, test_input):
+        """Helper method to verify comprehensive logging for specific exception types."""
+
+        error_logs = [record for record in log_records if record.levelno == logging.ERROR]
+        assert len(error_logs) >= 1, f"Should have error logs for {exc_type}"
+
+        # Find function-level error logs
+        function_logs = [log for log in error_logs if "Error with ainvoke in function" in log.message]
+
+        if len(function_logs) > 0:
+            function_log = function_logs[0]
+            log_message = function_log.getMessage()
+
+            # Verify exception-specific details are logged
+            exception_checks = {
+                f"{exc_type} in message": exc_type in log_message or exc_msg in log_message,
+                "Input content preserved": f"testing {exc_type} error logging" in log_message,  # Fixed case sensitivity
+                "Function context": "Error with ainvoke in function" in log_message,
+                "Module identification": "nat.builder.function" in function_log.name,
+                "Proper log level": function_log.levelname == "ERROR",
+                "File information": function_log.filename == "function.py",
+                "Line number": function_log.lineno > 0,
+            }
+
+            failed_checks = [name for name, passed in exception_checks.items() if not passed]
+            assert len(failed_checks) == 0, f"Failed checks for {exc_type}: {failed_checks}. Log: {log_message}"
+
+    async def test_error_logging_with_detailed_input_context(self, mock_config_no_error_handling, caplog):
+        """Test that error logs preserve detailed input context and parameters."""
+
+        config = Config(workflow=mock_config_no_error_handling)
+        async with WorkflowBuilder.from_config(config=config) as workflow_builder:
+            workflow = workflow_builder.build()
+            session_manager = SessionManager(workflow)
+
+            # Create input with specific identifiable content
+            test_input = ChatRequest.from_string("Complex input with unique identifier: TEST_ID_12345")
+
+            with caplog.at_level(logging.ERROR):
+                with pytest.raises(RuntimeError):
+                    async with session_manager.run(test_input) as runner:
+                        await runner.result()
+
+            # Find detailed function error log
+            function_logs = [
+                log for log in caplog.records
+                if log.levelno == logging.ERROR and "Error with ainvoke in function" in log.message
+            ]
+            assert len(function_logs) > 0, "Should have detailed function error log"
+
+            function_log = function_logs[0]
+            log_message = function_log.getMessage()
+
+            # Verify comprehensive input context preservation
+            input_context_checks = {
+                "Unique input identifier":
+                    "TEST_ID_12345" in log_message,
+                "Input structure":
+                    "messages=" in log_message,
+                "Message content":
+                    "Complex input with unique identifier" in log_message,
+                "Chat parameters":
+                    any(param in log_message for param in ["frequency_penalty", "max_tokens", "temperature", "model"]),
+                "Input format details":
+                    any(detail in log_message for detail in ["role=", "content=", "user"]),
+            }
+
+            failed_checks = [name for name, passed in input_context_checks.items() if not passed]
+            assert len(failed_checks) == 0, f"Failed input context checks: {failed_checks}"
+
+    async def test_error_logging_source_identification(self, mock_config_no_error_handling, caplog):
+        """Test that error logs clearly identify the source module, function, and execution path."""
+
+        config = Config(workflow=mock_config_no_error_handling)
+        async with WorkflowBuilder.from_config(config=config) as workflow_builder:
+            workflow = workflow_builder.build()
+            session_manager = SessionManager(workflow)
+            test_input = ChatRequest.from_string("source identification test")
+
+            with caplog.at_level(logging.ERROR):
+                with pytest.raises(RuntimeError):
+                    async with session_manager.run(test_input) as runner:
+                        await runner.result()
+
+            error_logs = [record for record in caplog.records if record.levelno == logging.ERROR]
+
+            # Verify we have logs from different parts of the system
+            log_sources = {}
+            for log in error_logs:
+                log_sources[log.name] = log
+
+            # Check expected log sources
+            expected_sources = ["nat.builder.function", "nat.runtime.runner"]
+            found_sources = [source for source in expected_sources if source in log_sources]
+            assert len(found_sources) >= 1, f"Should have logs from expected sources. Found: {list(log_sources.keys())}"
+
+            # Verify each log source provides appropriate information
+            if "nat.builder.function" in log_sources:
+                func_log = log_sources["nat.builder.function"]
+                assert "Error with ainvoke" in func_log.getMessage()
+                assert func_log.filename == "function.py"
+
+            if "nat.runtime.runner" in log_sources:
+                runner_log = log_sources["nat.runtime.runner"]
+                assert "Error running workflow" in runner_log.getMessage()
+                assert runner_log.filename == "runner.py"
+
+    async def test_error_logging_preserves_exception_hierarchy(self, caplog):
+        """Test that error logging preserves exception type hierarchy and details."""
+
+        # Test with custom exception message that includes special characters and details
+        custom_message = "Custom error: Failed operation [ID: abc123] with params {retry: 3, timeout: 30}"
+
+        mock_config = MockExceptionWorkflowConfig(exception_type="ValueError",
+                                                  exception_message=custom_message,
+                                                  handle_error=False,
+                                                  use_openai_api=True)
+
+        config = Config(workflow=mock_config)
+        async with WorkflowBuilder.from_config(config=config) as workflow_builder:
+            workflow = workflow_builder.build()
+            session_manager = SessionManager(workflow)
+            test_input = ChatRequest.from_string("exception hierarchy test")
+
+            with caplog.at_level(logging.ERROR):
+                with pytest.raises(ValueError, match="Custom error"):
+                    async with session_manager.run(test_input) as runner:
+                        await runner.result()
+
+            # Verify exception details are preserved in logs
+            error_logs = [record for record in caplog.records if record.levelno == logging.ERROR]
+
+            # Check that complex error message is preserved exactly
+            found_detailed_error = False
+            for log in error_logs:
+                if custom_message in log.getMessage():
+                    found_detailed_error = True
+
+                    # Verify special characters and structure are preserved
+                    log_msg = log.getMessage()
+                    assert "[ID: abc123]" in log_msg, "Should preserve bracketed IDs"
+                    assert "{retry: 3, timeout: 30}" in log_msg, "Should preserve parameter details"
+                    assert "Failed operation" in log_msg, "Should preserve operation context"
+                    break
+
+            assert found_detailed_error, "Should find log with complete custom error message"
