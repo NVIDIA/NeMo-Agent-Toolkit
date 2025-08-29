@@ -33,6 +33,7 @@ from dask.distributed import Future
 from dask.distributed import Variable
 from dask.distributed import fire_and_forget
 from pydantic import BaseModel
+from sqlalchemy import DateTime
 from sqlalchemy import String
 from sqlalchemy import and_
 from sqlalchemy import select
@@ -74,8 +75,10 @@ class JobInfo(Base):
     config_file: Mapped[str] = mapped_column(nullable=True)
     error: Mapped[str] = mapped_column(nullable=True)
     output_path: Mapped[str] = mapped_column(nullable=True)
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 default=datetime.now(UTC),
+                                                 onupdate=datetime.now(UTC))
     expiry_seconds: Mapped[int]
     output: Mapped[str] = mapped_column(nullable=True)
     is_expired: Mapped[bool] = mapped_column(default=False, index=True)
