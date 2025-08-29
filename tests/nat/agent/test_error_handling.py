@@ -16,12 +16,9 @@
 import asyncio
 import logging
 import pytest
-from fastapi import HTTPException
-from fastapi.testclient import TestClient
 from pydantic import Field
 
 from nat.builder.builder import Builder
-from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
@@ -41,16 +38,6 @@ class MockExceptionWorkflowConfig(FunctionBaseConfig, name="mock_exception_agent
     exception_message: str = Field(default="Test exception", description="Exception message")
     should_handle_error: bool = Field(default=False, description="Whether to handle the error internally")
     description: str = Field(default="Mock Exception Workflow", description="The description of this function's use.")
-    use_openai_api: bool = Field(default=False, description="Use OpenAI API for input/output types")
-
-
-class MockExceptionWorkflowConfigNoHandling(FunctionBaseConfig, name="mock_exception_agent_no_handling"):
-    """
-    Mock workflow config without any error handling in _response_fn().
-    """
-    exception_type: str = Field(default="ValueError", description="Type of exception to throw")
-    exception_message: str = Field(default="Test exception", description="Exception message")
-    description: str = Field(default="Mock Exception Workflow No Handling", description="The description")
     use_openai_api: bool = Field(default=False, description="Use OpenAI API for input/output types")
 
 
@@ -74,39 +61,10 @@ async def mock_exception_workflow(config: MockExceptionWorkflowConfig, builder: 
         except Exception as ex:
             if config.should_handle_error:
                 # Test scenario where function handles its own errors
-                logging.error("Mock workflow caught exception: %s", str(ex))
                 return ChatResponse.from_string(f"Handled error: {str(ex)}")
             else:
                 # Re-raise to test upstream error handling
                 raise
-
-    async def _str_response_fn(input_message: str) -> str:
-        oai_input = GlobalTypeConverter.get().try_convert(input_message, to_type=ChatRequest)
-        oai_output = await _response_fn(oai_input)
-        return GlobalTypeConverter.get().try_convert(oai_output, to_type=str)
-
-    if config.use_openai_api:
-        yield FunctionInfo.from_fn(_response_fn, description=config.description)
-    else:
-        yield FunctionInfo.from_fn(_str_response_fn, description=config.description)
-
-
-@register_function(config_type=MockExceptionWorkflowConfigNoHandling, framework_wrappers=[])
-async def mock_exception_workflow_no_handling(config: MockExceptionWorkflowConfigNoHandling, builder: Builder):
-    """Mock workflow that throws exceptions WITHOUT any error handling in _response_fn()."""
-
-    async def _response_fn(input_message: ChatRequest) -> ChatResponse:
-        # NO try/catch - this will test what happens when function doesn't handle errors
-        if config.exception_type == "RuntimeError":
-            raise RuntimeError(config.exception_message)
-        elif config.exception_type == "ValueError":
-            raise ValueError(config.exception_message)
-        elif config.exception_type == "TypeError":
-            raise TypeError(config.exception_message)
-        elif config.exception_type == "KeyError":
-            raise KeyError(config.exception_message)
-        else:
-            raise ValueError(config.exception_message)
 
     async def _str_response_fn(input_message: str) -> str:
         oai_input = GlobalTypeConverter.get().try_convert(input_message, to_type=ChatRequest)
@@ -133,16 +91,18 @@ class TestErrorHandling:
     @pytest.fixture
     def mock_config_no_error_handling(self):
         """Config for workflow that does NOT handle errors in _response_fn()."""
-        return MockExceptionWorkflowConfigNoHandling(exception_type="RuntimeError",
-                                                     exception_message="Unhandled RuntimeError from mock workflow",
-                                                     use_openai_api=True)
+        return MockExceptionWorkflowConfig(exception_type="RuntimeError",
+                                           exception_message="Unhandled RuntimeError from mock workflow",
+                                           should_handle_error=False,
+                                           use_openai_api=True)
 
     @pytest.fixture
     def mock_config_string_api_no_handling(self):
         """Config for workflow with string API that throws exceptions."""
-        return MockExceptionWorkflowConfigNoHandling(exception_type="ValueError",
-                                                     exception_message="String API test exception",
-                                                     use_openai_api=False)
+        return MockExceptionWorkflowConfig(exception_type="ValueError",
+                                           exception_message="String API test exception",
+                                           should_handle_error=False,
+                                           use_openai_api=False)
 
     async def test_function_with_internal_error_handling(self, mock_config_with_error_handling, caplog):
         """Test that functions with internal error handling work correctly."""
@@ -281,9 +241,10 @@ class TestErrorHandling:
         ]
 
         for exc_type, exc_msg, should_handle in exception_scenarios:
-            mock_config = MockExceptionWorkflowConfigNoHandling(exception_type=exc_type,
-                                                                exception_message=exc_msg,
-                                                                use_openai_api=True)
+            mock_config = MockExceptionWorkflowConfig(exception_type=exc_type,
+                                                      exception_message=exc_msg,
+                                                      should_handle_error=should_handle,
+                                                      use_openai_api=True)
 
             config = Config(workflow=mock_config)
             async with WorkflowBuilder.from_config(config=config) as workflow_builder:
@@ -376,9 +337,10 @@ class TestErrorHandling:
         """Test that original error messages are preserved through the error handling chain."""
 
         custom_error_message = "Very specific error message that should be preserved"
-        mock_config = MockExceptionWorkflowConfigNoHandling(exception_type="ValueError",
-                                                            exception_message=custom_error_message,
-                                                            use_openai_api=True)
+        mock_config = MockExceptionWorkflowConfig(exception_type="ValueError",
+                                                  exception_message=custom_error_message,
+                                                  should_handle_error=False,
+                                                  use_openai_api=True)
 
         config = Config(workflow=mock_config)
         async with WorkflowBuilder.from_config(config=config) as workflow_builder:
@@ -403,7 +365,9 @@ class TestErrorHandling:
         assert not valid_config.should_handle_error  # Default
 
         # Config without error handling should also work
-        no_handle_config = MockExceptionWorkflowConfigNoHandling(exception_type="RuntimeError",
-                                                                 exception_message="runtime error test")
+        no_handle_config = MockExceptionWorkflowConfig(exception_type="RuntimeError",
+                                                       exception_message="runtime error test",
+                                                       should_handle_error=False)
         assert no_handle_config.exception_type == "RuntimeError"
         assert no_handle_config.exception_message == "runtime error test"
+        assert not no_handle_config.should_handle_error
