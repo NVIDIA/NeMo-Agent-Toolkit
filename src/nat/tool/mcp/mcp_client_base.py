@@ -117,8 +117,9 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
 class MCPBaseClient(ABC):
     """
     Base client for creating a session and connecting to an MCP server
+
     Args:
-      transport (str): The type of client to use ('sse', 'stdio', or 'streamable-http')
+        transport (str): The type of client to use ('sse', 'stdio', or 'streamable-http')
     """
 
     def __init__(self, transport: str = 'streamable-http'):

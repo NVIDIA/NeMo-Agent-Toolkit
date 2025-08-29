@@ -296,7 +296,7 @@ default_role = "py:obj"
 # The defauylt docstring for Pydantic models contains some docstrings that cause parsing warnings for docutils.
 # While this string is tightly tied to a specific version of Pydantic, it is hoped that this will be resolved in future
 # versions of Pydantic.
-PYDANTIC_DEFAULT_DOCSTRING = 'Usage docs: https://docs.pydantic.dev/2.10/concepts/models/\n'
+PYDANTIC_DEFAULT_DOCSTRING = "A base class for creating Pydantic models."
 
 
 def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonObject", skip: bool,
@@ -305,7 +305,7 @@ def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonO
     if not skip:
         bases = getattr(obj, 'bases', [])
         if (not skip and ('pydantic.BaseModel' in bases or 'EndpointBase' in bases)
-                and obj.docstring.startswith(PYDANTIC_DEFAULT_DOCSTRING)):
+                and PYDANTIC_DEFAULT_DOCSTRING in obj.docstring):
             obj.docstring = ""
 
     return skip
