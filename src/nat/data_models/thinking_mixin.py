@@ -62,13 +62,14 @@ class ThinkingMixin(
             return None
 
         for key in _MODEL_KEYS:
-            if not hasattr(self, key):
+            model = getattr(self, key, None)
+            if not isinstance(model, str) or model is None:
                 continue
 
             # Normalize name to reduce checks
-            model = getattr(self, key).lower().translate(str.maketrans("_.", "--"))
+            model = model.lower().translate(str.maketrans("_.", "--"))
 
-            if model.startswith("nvidia/nvidia-nemotron"):
+            if model.startswith("nvidia/nvidia"):
                 return "/think" if self.thinking else "/no_think"
 
             if model.startswith("nvidia/llama"):
@@ -78,6 +79,9 @@ class ThinkingMixin(
                 if "v1-5" in model:
                     # v1.5 models are updated to use the /think and /no_think system prompts
                     return "/think" if self.thinking else "/no_think"
+
+                # Assume any other model is a newer model that uses the /think and /no_think system prompts
+                return "/think" if self.thinking else "/no_think"
 
         # Unknown model
         return None
