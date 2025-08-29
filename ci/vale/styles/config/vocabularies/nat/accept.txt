@@ -49,6 +49,7 @@ DB(s?)
 [Dd]ev
 [Dd]evcontainer(s?)
 [Dd]ocstring(s?)
+Dynatrace
 [Ee]mbedder(s?)
 [Ee]ngineerable
 [Ee]val
