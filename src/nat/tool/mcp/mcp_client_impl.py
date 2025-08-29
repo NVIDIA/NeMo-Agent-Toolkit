@@ -19,6 +19,7 @@ from typing import Literal
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import model_validator
 
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
@@ -55,10 +56,9 @@ class MCPServerConfig(BaseModel):
     args: list[str] | None = Field(default=None, description="Arguments for the stdio command")
     env: dict[str, str] | None = Field(default=None, description="Environment variables for the stdio process")
 
-    def model_post_init(self, __context):
+    @model_validator(mode="after")
+    def validate_model(self):
         """Validate that stdio and SSE/Streamable HTTP properties are mutually exclusive."""
-        super().model_post_init(__context)
-
         if self.transport == "stdio":
             if self.url is not None:
                 raise ValueError("url should not be set when using stdio transport")
@@ -69,6 +69,7 @@ class MCPServerConfig(BaseModel):
                 raise ValueError("command, args, and env should not be set when using sse or streamable-http transport")
             if not self.url:
                 raise ValueError("url is required when using sse or streamable-http transport")
+        return self
 
 
 class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
@@ -86,9 +87,10 @@ class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
           {'tool2': {'description': 'Override description only'}}  # alias defaults to 'tool2'
         """)
 
-    def model_post_init(self, __context):
-        super().model_post_init(__context)
+    @model_validator(mode="after")
+    def validate_model(self):
         # ServerConfig already validates mutually exclusive fields
+        return self
 
 
 class MCPSingleToolConfig(FunctionBaseConfig, name="mcp_single_tool"):

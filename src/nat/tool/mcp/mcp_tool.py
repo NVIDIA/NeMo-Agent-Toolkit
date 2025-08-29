@@ -19,6 +19,7 @@ from typing import Literal
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import model_validator
 
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
@@ -55,10 +56,9 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         If false, raise the exception.
         """)
 
-    def model_post_init(self, __context):
+    @model_validator(mode="after")
+    def validate_model(self):
         """Validate that stdio and SSE/Streamable HTTP properties are mutually exclusive."""
-        super().model_post_init(__context)
-
         if self.transport == 'stdio':
             if self.url is not None:
                 raise ValueError("url should not be set when using stdio client type")
@@ -70,6 +70,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
                     "command, args, and env should not be set when using streamable-http or sse client type")
             if not self.url:
                 raise ValueError("url is required when using streamable-http or sse client type")
+        return self
 
 
 @register_function(config_type=MCPToolConfig)
