@@ -17,6 +17,7 @@ Authlib
 [Bb]ackpressure
 [Bb]atcher
 [Bb]oolean
+[Bb]rev
 [Cc]allable(s?)
 # Documentation for ccache only capitalizes the name at the start of a sentence https://ccache.dev/
 [Cc]cache
@@ -72,6 +73,7 @@ Langfuse
 LangChain
 LangGraph
 LangSmith
+[Ll]aunchable(s?)
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
 LLM(s?)
