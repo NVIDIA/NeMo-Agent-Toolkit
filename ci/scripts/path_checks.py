@@ -144,8 +144,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
     # Time zones
     "[A-Z][a-z]+(_[A-Z][a-z]+)*/[A-Z][a-z]+(_[A-Z][a-z]+)*",
-    # Container registry references
-    "ghcr\\.io/.*",
+    "ghcr\\.io/.*",  # Container registry references
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
