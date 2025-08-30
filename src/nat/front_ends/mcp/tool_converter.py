@@ -117,8 +117,7 @@ def create_function_wrapper(
 
                     logger.debug("Starting observability context for function %s", function_name)
                     context_state = ContextState.get()
-                    exporter_manager = workflow.exporter_manager.get()
-                    async with exporter_manager.start(context_state=context_state):
+                    async with workflow.exporter_manager.start(context_state=context_state):
                         return await func_call()
 
                 # Special handling for ChatRequest
@@ -203,8 +202,8 @@ def get_function_description(function: FunctionBase) -> str:
 
     The description is determined using the following precedence:
        1. If the function is a Workflow and has a 'description' attribute, use it.
-       2. If the Workflow's config has a 'topic', use it.
-       3. If the Workflow's config has a 'description', use it.
+       2. If the Workflow's config has a 'description', use it.
+       3. If the Workflow's config has a 'topic', use it.
        4. If the function is a regular Function, use its 'description' attribute.
 
     Args:

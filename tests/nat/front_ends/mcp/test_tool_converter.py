@@ -44,17 +44,13 @@ class MockRegularSchema(BaseModel):
 def create_mock_workflow_with_observability():
     """Create a mock workflow with proper observability setup."""
     mock_workflow = MagicMock(spec=Workflow)
-
-    # Update to match new API - no underscores
     mock_workflow.exporter_manager = MagicMock()
-    mock_exporter_manager = MagicMock()
-    mock_workflow.exporter_manager.get.return_value = mock_exporter_manager
 
     # Create a proper async context manager mock
     async_context_manager = AsyncMock()
     async_context_manager.__aenter__ = AsyncMock(return_value=None)
     async_context_manager.__aexit__ = AsyncMock(return_value=None)
-    mock_exporter_manager.start.return_value = async_context_manager
+    mock_workflow.exporter_manager.start.return_value = async_context_manager
 
     return mock_workflow
 
@@ -131,7 +127,7 @@ class TestCreateFunctionWrapper:
 
         # Assert
         assert result == "result"
-        mock_workflow.exporter_manager.get.assert_called_once()
+        mock_workflow.exporter_manager.start.assert_called_once_with(context_state=mock_context_state)
         mock_context_state_class.get.assert_called_once()
 
     async def test_wrapper_execution_without_workflow_fails(self):
@@ -282,7 +278,7 @@ class TestIntegrationScenarios:
         await wrapper(name="test", age=25)
 
         # Assert - Check that observability was started with correct context
-        mock_workflow.exporter_manager.get.assert_called_once()
+        mock_workflow.exporter_manager.start.assert_called_once_with(context_state=mock_context_state)
         mock_context_state_class.get.assert_called_once()
 
     @patch('nat.front_ends.mcp.tool_converter.ContextState')
@@ -305,5 +301,5 @@ class TestIntegrationScenarios:
             await wrapper(name="test", age=25)
 
         # Observability context should still have been started
-        mock_workflow.exporter_manager.get.assert_called_once()
+        mock_workflow.exporter_manager.start.assert_called_once_with(context_state=mock_context_state)
         mock_context_state_class.get.assert_called_once()
