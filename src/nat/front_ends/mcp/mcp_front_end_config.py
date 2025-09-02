@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Literal
+
 from pydantic import Field
 
 from nat.data_models.front_end import FrontEndBaseConfig
@@ -32,5 +34,8 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     log_level: str = Field(default="INFO", description="Log level for the MCP server (default: INFO)")
     tool_names: list[str] = Field(default_factory=list,
                                   description="The list of tools MCP server will expose (default: all tools)")
+    transport: Literal["sse", "streamable-http"] = Field(
+        default="streamable-http",
+        description="Transport type for the MCP server (default: streamable-http, backwards compatible with sse)")
     runner_class: str | None = Field(
         default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")

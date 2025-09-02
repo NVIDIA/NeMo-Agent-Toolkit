@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import logging
+from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import model_validator
 
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
@@ -33,8 +35,16 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     function.
     """
     # Add your custom configuration parameters here
-    url: HttpUrl = Field(description="The URL of the MCP server")
+    url: HttpUrl | None = Field(default=None,
+                                description="The URL of the MCP server (for streamable-http or sse modes)")
     mcp_tool_name: str = Field(description="The name of the tool served by the MCP Server that you want to use")
+    transport: Literal["sse", "stdio", "streamable-http"] = Field(
+        default="streamable-http",
+        description="The type of transport to use (default: streamable-http, backwards compatible with sse)")
+    command: str | None = Field(default=None,
+                                description="The command to run for stdio mode (e.g. 'docker' or 'python')")
+    args: list[str] | None = Field(default=None, description="Additional arguments for the stdio command")
+    env: dict[str, str] | None = Field(default=None, description="Environment variables to set for the stdio process")
     description: str | None = Field(default=None,
                                     description="""
         Description for the tool that will override the description provided by the MCP server. Should only be used if
@@ -46,51 +56,78 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         If false, raise the exception.
         """)
 
+    @model_validator(mode="after")
+    def validate_model(self):
+        """Validate that stdio and SSE/Streamable HTTP properties are mutually exclusive."""
+        if self.transport == 'stdio':
+            if self.url is not None:
+                raise ValueError("url should not be set when using stdio client type")
+            if not self.command:
+                raise ValueError("command is required when using stdio client type")
+        elif self.transport in ['streamable-http', 'sse']:
+            if self.command is not None or self.args is not None or self.env is not None:
+                raise ValueError(
+                    "command, args, and env should not be set when using streamable-http or sse client type")
+            if not self.url:
+                raise ValueError("url is required when using streamable-http or sse client type")
+        return self
+
 
 @register_function(config_type=MCPToolConfig)
 async def mcp_tool(config: MCPToolConfig, builder: Builder):
     """
-    Generate a NAT Function that wraps a tool provided by the MCP server.
+    Generate a NeMo Agent Toolkit Function that wraps a tool provided by the MCP server.
     """
 
-    from nat.tool.mcp.mcp_client import MCPBuilder
-    from nat.tool.mcp.mcp_client import MCPToolClient
+    from nat.tool.mcp.mcp_client_base import MCPSSEClient
+    from nat.tool.mcp.mcp_client_base import MCPStdioClient
+    from nat.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
+    from nat.tool.mcp.mcp_client_base import MCPToolClient
 
-    client = MCPBuilder(url=str(config.url))
+    # Initialize the client
+    if config.transport == 'stdio':
+        client = MCPStdioClient(command=config.command, args=config.args, env=config.env)
+    elif config.transport == 'streamable-http':
+        client = MCPStreamableHTTPClient(url=str(config.url))
+    elif config.transport == 'sse':
+        client = MCPSSEClient(url=str(config.url))
+    else:
+        raise ValueError(f"Invalid transport type: {config.transport}")
 
-    tool: MCPToolClient = await client.get_tool(config.mcp_tool_name)
-    if config.description:
-        tool.set_description(description=config.description)
+    async with client:
+        # If the tool is found create a MCPToolClient object and set the description if provided
+        tool: MCPToolClient = await client.get_tool(config.mcp_tool_name)
+        if config.description:
+            tool.set_description(description=config.description)
 
-    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, str(config.url))
+        logger.info("Configured to use tool: %s from MCP server at %s", tool.name, client.server_name)
 
-    def _convert_from_str(input_str: str) -> tool.input_schema:
-        return tool.input_schema.model_validate_json(input_str)
+        def _convert_from_str(input_str: str) -> tool.input_schema:
+            return tool.input_schema.model_validate_json(input_str)
 
-    async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
-        # Run the tool, catching any errors and sending to agent for correction
-        try:
-            if tool_input:
-                args = tool_input.model_dump()
-                return await tool.acall(args)
-
-            _ = tool.input_schema.model_validate(kwargs)
-            filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
-            return await tool.acall(filtered_kwargs)
-        except Exception as e:
-            if config.return_exception:
+        async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
+            # Run the tool, catching any errors and sending to agent for correction
+            try:
                 if tool_input:
-                    logger.warning("Error calling tool %s with serialized input: %s",
-                                   tool.name,
-                                   tool_input.model_dump(),
-                                   exc_info=True)
-                else:
-                    logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
-                return str(e)
-            # If the tool call fails, raise the exception.
-            raise
+                    args = tool_input.model_dump()
+                    return await tool.acall(args)
 
-    yield FunctionInfo.create(single_fn=_response_fn,
-                              description=tool.description,
-                              input_schema=tool.input_schema,
-                              converters=[_convert_from_str])
+                _ = tool.input_schema.model_validate(kwargs)
+                return await tool.acall(kwargs)
+            except Exception as e:
+                if config.return_exception:
+                    if tool_input:
+                        logger.warning("Error calling tool %s with serialized input: %s",
+                                       tool.name,
+                                       tool_input.model_dump(),
+                                       exc_info=True)
+                    else:
+                        logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
+                    return str(e)
+                # If the tool call fails, raise the exception.
+                raise
+
+        yield FunctionInfo.create(single_fn=_response_fn,
+                                  description=tool.description,
+                                  input_schema=tool.input_schema,
+                                  converters=[_convert_from_str])

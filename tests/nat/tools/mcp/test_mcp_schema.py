@@ -17,14 +17,8 @@ from typing import get_args
 
 import pytest
 from pydantic import ValidationError
-from pytest_httpserver import HTTPServer
 
-from nat.tool.mcp.mcp_client import model_from_mcp_schema
-
-
-@pytest.fixture(name="test_mcp_server")
-def _get_test_mcp_server(httpserver: HTTPServer):
-    httpserver.expect_request("/sse", )
+from nat.tool.mcp.mcp_client_base import model_from_mcp_schema
 
 
 @pytest.fixture(name="sample_schema")
@@ -151,16 +145,16 @@ def test_schema_generation(sample_schema):
     # 1. present
     # 2. has a default value of None
     # 3. has a type of str | None
-    assert hasattr(m, "optional_string_field_no_default")
+    assert "optional_string_field_no_default" in _model.model_fields
     assert m.optional_string_field_no_default is None
-    field_type = m.model_fields["optional_string_field_no_default"].annotation
+    field_type = _model.model_fields["optional_string_field_no_default"].annotation
     args = get_args(field_type)
     assert str in args and type(None) in args, f"Expected str | None, got {field_type}"
 
     # Check that the optional union field is present
-    assert hasattr(m, "optional_union_field")
+    assert "optional_union_field" in _model.model_fields
     assert m.optional_union_field is None
-    field_type = m.model_fields["optional_union_field"].annotation
+    field_type = _model.model_fields["optional_union_field"].annotation
     args = get_args(field_type)
     assert str in args and type(None) in args and int in args, f"Expected str | None | int, got {field_type}"
 

@@ -102,12 +102,24 @@ class StartCommandGroup(click.Group):
                 raise ValueError(f"Invalid field '{name}'.Unions are only supported for optional parameters.")
 
             # Handle the types
-            if (issubclass(decomposed_type.root, Path)):
+            # Literal[...] -> map to click.Choice([...])
+            if (decomposed_type.origin is typing.Literal):
+                # typing.get_args returns the literal values; ensure they are strings for Click
+                literal_values = [str(v) for v in decomposed_type.args]
+                param_type = click.Choice(literal_values)
+
+            elif (issubclass(decomposed_type.root, Path)):
                 param_type = click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path)
 
             elif (issubclass(decomposed_type.root, (list, tuple, set))):
                 if (len(decomposed_type.args) == 1):
-                    param_type = decomposed_type.args[0]
+                    inner = DecomposedType(decomposed_type.args[0])
+                    # Support containers of Literal values -> multiple Choice
+                    if (inner.origin is typing.Literal):
+                        literal_values = [str(v) for v in inner.args]
+                        param_type = click.Choice(literal_values)
+                    else:
+                        param_type = inner.root
                 else:
                     param_type = None
 

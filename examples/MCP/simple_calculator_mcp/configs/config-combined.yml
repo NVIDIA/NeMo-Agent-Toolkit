@@ -25,22 +25,28 @@ functions:
   # These tools are from the MCP server deployed by the toolkit
   calculator_multiply:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_multiply
     description: "Returns the product of two numbers"
   calculator_inequality:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_inequality
     description: "Returns the inequality of two numbers"
   calculator_divide:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_divide
     description: "Returns the quotient of two numbers"
+  current_datetime:
+    _type: current_datetime
   calculator_subtract:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_subtract
     description: "Returns the difference of two numbers"
   # This tool is from the containerized MCP server not deployed by the toolkit

@@ -31,7 +31,13 @@ To start an MCP server publishing all tools from your workflow, run the followin
 nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 
-This will load the workflow configuration from the specified file, start an MCP server on the default host (localhost) and port (9901), and publish all tools from the workflow as MCP tools.
+This will load the workflow configuration from the specified file, start an MCP server on the default host (localhost) and port (9901), and publish all tools from the workflow as MCP tools. The MCP server is available at `http://localhost:9901/mcp` using streamable-http transport.
+
+You can also use the `sse` (Server-Sent Events) transport for backwards compatibility via the `--transport` flag for example:
+```bash
+nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml --transport sse
+```
+With this configuration, the MCP server is available at `http://localhost:9901/sse` using SSE transport.
 
 You can optionally specify the server settings using the following flags:
 ```bash
@@ -54,7 +60,7 @@ nat mcp --config_file examples/getting_started/simple_calculator/configs/config.
 
 ## Displaying MCP Tools published by an MCP server
 
-To list the tools published by the MCP server you can use the `nat info mcp` command. This command acts as a MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/sse`).
+To list the tools published by the MCP server you can use the `nat info mcp` command. This command acts as a MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
 
 ```bash
 nat info mcp
@@ -112,30 +118,34 @@ In this example, we will use NeMo Agent toolkit as both a MCP client and a MCP s
 nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
 ```
 
-The functions in `config-mcp-math.yml` are configured to use the calculator tools published by the MCP server running on `http://localhost:9901/sse`.
+The functions in `config-mcp-math.yml` are configured to use the calculator tools published by the MCP server running on `http://localhost:9901/mcp` using streamable-http transport.
 `examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml`:
 ```yaml
 functions:
   calculator_multiply:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_multiply
     description: "Returns the product of two numbers"
   calculator_inequality:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_inequality
     description: "Returns the inequality of two numbers"
   calculator_divide:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_divide
     description: "Returns the quotient of two numbers"
   current_datetime:
     _type: current_datetime
   calculator_subtract:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_subtract
     description: "Returns the difference of two numbers"
 ```
@@ -164,12 +174,11 @@ Sample output:
 ### Using the `nat info mcp ping` command
 You can also test if an MCP server is responsive and healthy using the `nat info mcp ping` command:
 ```bash
-nat info mcp ping --url http://localhost:9901/sse
+nat info mcp ping --url http://localhost:9901/mcp
 ```
-This launches a MCP client that connects to the MCP server and sends a `MCP ping` message to the server.
 
-Sample output for a healthy server:
+Sample output:
 ```
-Server at http://localhost:9901/sse is healthy (response time: 4.35ms)
+Server at http://localhost:9901/mcp is healthy (response time: 4.35ms)
 ```
 This is useful for health checks and monitoring.

@@ -11,7 +11,7 @@ name = "nat_email_phishing_analyzer"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.3",
-  "arize-phoenix==6.1.*",
+  "arize-phoenix~=11.28",
   "bs4==0.0.2",
   "networkx~=3.4",
   "openinference-instrumentation-langchain==0.1.29",

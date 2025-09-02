@@ -84,7 +84,11 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         return self._entry_fn.has_single_output
 
     async def get_all_exporters(self) -> dict[str, BaseExporter]:
-        return await self._exporter_manager.get_all_exporters()
+        return await self.exporter_manager.get_all_exporters()
+
+    @property
+    def exporter_manager(self) -> ExporterManager:
+        return self._exporter_manager.get()
 
     @asynccontextmanager
     async def run(self, message: InputT):
@@ -96,7 +100,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         async with Runner(input_message=message,
                           entry_fn=self._entry_fn,
                           context_state=self._context_state,
-                          exporter_manager=self._exporter_manager.get()) as runner:
+                          exporter_manager=self.exporter_manager) as runner:
 
             # The caller can `yield runner` so they can do `runner.result()` or `runner.result_stream()`
             yield runner
