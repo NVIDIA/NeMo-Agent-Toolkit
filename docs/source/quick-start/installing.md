@@ -62,7 +62,7 @@ NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run 
 
 1. Clone the NeMo Agent toolkit repository to your local machine.
     ```bash
-    git clone -b main git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit
+    git clone -b main https://github.com/NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit
     cd nemo-agent-toolkit
     ```
 
