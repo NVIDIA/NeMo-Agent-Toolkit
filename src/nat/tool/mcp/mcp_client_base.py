@@ -22,6 +22,7 @@ from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any
+from collections.abc import Callable
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -129,12 +130,77 @@ class MCPBaseClient(ABC):
             raise ValueError("transport must be either 'sse', 'stdio' or 'streamable-http'")
 
         self._exit_stack: AsyncExitStack | None = None
-
         self._session: ClientSession | None = None
+
+        # Callback functions for notifications
+        self._log_callback: Callable[[str, str, str, dict], None] | None = None
+        self._progress_callback: Callable[[str, float, float | None, str | None], None] | None = None
 
     @property
     def transport(self) -> str:
         return self._transport
+
+    def set_log_callback(self, callback: Callable[[str, str, str, dict], None]):
+        """Set a callback function to handle log messages.
+
+        Args:
+            callback: Function that receives (level, logger_name, message, data)
+        """
+        self._log_callback = callback
+
+    def set_progress_callback(self, callback: Callable[[str, float, float | None, str | None], None]):
+        """Set a callback function to handle progress notifications.
+
+        Args:
+            callback: Function that receives (progress_token, progress, total, message)
+        """
+        self._progress_callback = callback
+
+    def _create_logging_callback(self):
+        """Create a logging callback function for the MCP session."""
+        async def handle_logging_message(params):
+            """Handle logging notifications from the server."""
+            level = params.level
+            logger_name = params.logger
+            data = params.data
+            message = data.get("message", "")
+
+            # Log to Python logger
+            python_level = getattr(logging, level.upper(), logging.INFO)
+            logger.log(python_level, "[%s] %s: %s", logger_name, level.upper(), message)
+
+            # Call custom callback if set
+            if self._log_callback:
+                try:
+                    self._log_callback(level, logger_name, message, data)
+                except Exception as e:
+                    logger.warning("Error in log callback: %s", e)
+
+        return handle_logging_message
+
+    def _create_progress_callback(self):
+        """Create a progress callback function for the MCP session."""
+        def handle_progress_message(notification):
+            """Handle progress notifications from the server."""
+            progress_token = notification.params.progressToken
+            progress = notification.params.progress
+            total = getattr(notification.params, 'total', None)
+            message = getattr(notification.params, 'message', None)
+
+            # Log to Python logger
+            if message:
+                logger.info("Progress [%s]: %s (%s/%s)", progress_token, message, progress, total or "?")
+            else:
+                logger.info("Progress [%s]: %s/%s", progress_token, progress, total or "?")
+
+            # Call custom callback if set
+            if self._progress_callback:
+                try:
+                    self._progress_callback(progress_token, progress, total, message)
+                except Exception as e:
+                    logger.warning("Error in progress callback: %s", e)
+
+        return handle_progress_message
 
     async def __aenter__(self):
         if self._exit_stack:
@@ -215,11 +281,11 @@ class MCPBaseClient(ABC):
         return tool
 
     @mcp_exception_handler
-    async def call_tool(self, tool_name: str, tool_args: dict | None):
+    async def call_tool(self, tool_name: str, tool_args: dict | None, progress_callback=None):
         if not self._session:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
 
-        result = await self._session.call_tool(tool_name, tool_args)
+        result = await self._session.call_tool(tool_name, tool_args, progress_callback=progress_callback)
         return result
 
 
@@ -250,7 +316,11 @@ class MCPSSEClient(MCPBaseClient):
         Establish a session with an MCP SSE server within an async context
         """
         async with sse_client(url=self._url) as (read, write):
-            async with ClientSession(read, write) as session:
+            async with ClientSession(
+                read,
+                write,
+                logging_callback=self._create_logging_callback()
+            ) as session:
                 await session.initialize()
                 yield session
 
@@ -296,7 +366,11 @@ class MCPStdioClient(MCPBaseClient):
 
         server_params = StdioServerParameters(command=self._command, args=self._args or [], env=self._env)
         async with stdio_client(server_params) as (read, write):
-            async with ClientSession(read, write) as session:
+            async with ClientSession(
+                read,
+                write,
+                logging_callback=self._create_logging_callback()
+            ) as session:
                 await session.initialize()
                 yield session
 
@@ -328,7 +402,11 @@ class MCPStreamableHTTPClient(MCPBaseClient):
         Establish a session with an MCP server via streamable-http within an async context
         """
         async with streamablehttp_client(url=self._url) as (read, write, get_session_id):
-            async with ClientSession(read, write) as session:
+            async with ClientSession(
+                read,
+                write,
+                logging_callback=self._create_logging_callback()
+            ) as session:
                 await session.initialize()
                 yield session
 
@@ -381,14 +459,15 @@ class MCPToolClient:
         """
         self._tool_description = description
 
-    async def acall(self, tool_args: dict) -> str:
+    async def acall(self, tool_args: dict, progress_callback=None) -> str:
         """
         Call the MCP tool with the provided arguments.
 
         Args:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
+            progress_callback: Optional callback function for progress updates.
         """
-        result = await self._session.call_tool(self._tool_name, tool_args)
+        result = await self._session.call_tool(self._tool_name, tool_args, progress_callback=progress_callback)
 
         output = []
 
