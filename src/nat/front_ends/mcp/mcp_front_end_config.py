@@ -31,7 +31,7 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     host: str = Field(default="localhost", description="Host to bind the server to (default: localhost)")
     port: int = Field(default=9901, description="Port to bind the server to (default: 9901)", ge=0, le=65535)
     debug: bool = Field(default=False, description="Enable debug mode (default: False)")
-    log_level: str = Field(default="INFO", description="Log level for the MCP server (default: INFO)")
+    log_level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'] = Field(default="INFO", description="Log level for the MCP server (default: INFO)")
     tool_names: list[str] = Field(default_factory=list,
                                   description="The list of tools MCP server will expose (default: all tools)")
     transport: Literal["sse", "streamable-http"] = Field(
@@ -39,3 +39,7 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
         description="Transport type for the MCP server (default: streamable-http, backwards compatible with sse)")
     runner_class: str | None = Field(
         default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")
+    enable_mcp_logging: bool = Field(
+        default=True, description="Enable MCP protocol logging to clients (default: True)")
+    mcp_log_level: Literal["debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"] = Field(
+        default="info", description="Minimum log level to send via MCP protocol (default: info)")

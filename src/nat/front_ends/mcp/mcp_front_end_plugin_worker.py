@@ -39,7 +39,16 @@ class MCPFrontEndPluginWorkerBase(ABC):
             config: The full NAT configuration
         """
         self.full_config = config
-        self.front_end_config: MCPFrontEndConfig = config.general.front_end
+        self.front_end_config = config.general.front_end
+        self.mcp_server: FastMCP | None = None
+
+    def set_mcp_server(self, mcp_server: FastMCP):
+        """Set the MCP server reference for logging.
+
+        Args:
+            mcp_server: The FastMCP server instance
+        """
+        self.mcp_server = mcp_server
 
     def _setup_health_endpoint(self, mcp: FastMCP):
         """Set up the HTTP health endpoint that exercises MCP ping handler."""
@@ -73,7 +82,9 @@ class MCPFrontEndPluginWorkerBase(ABC):
                                     status_code=503)
 
     @abstractmethod
-    async def add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
+    asyn
+
+    def add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
         """Add routes to the MCP server.
 
         Args:
@@ -97,7 +108,8 @@ class MCPFrontEndPluginWorkerBase(ABC):
         for function_name, function in workflow.functions.items():
             functions[function_name] = function
 
-        functions[workflow.config.workflow.type] = workflow
+        # Add workflow as a function (cast to Function for type compatibility)
+        functions[workflow.config.workflow.type] = workflow  # type: ignore
 
         return functions
 
@@ -136,7 +148,7 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
 
         # Register each function with MCP, passing workflow context for observability
         for function_name, function in functions.items():
-            register_function_with_mcp(mcp, function_name, function, workflow)
+            register_function_with_mcp(mcp, function_name, function, workflow, self.mcp_server, self.front_end_config)
 
         # Add a simple fallback function if no functions were found
         if not functions:

@@ -66,14 +66,22 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
             host=self.front_end_config.host,
             port=self.front_end_config.port,
             debug=self.front_end_config.debug,
-            log_level=self.front_end_config.log_level,
+            log_level=self.front_end_config.log_level
         )
+
+        # Enable MCP logging capability
+        if hasattr(mcp, 'capabilities'):
+            mcp.capabilities["logging"] = {}
+        else:
+            logger.warning("FastMCP does not support capabilities configuration")
 
         # Get the worker instance and set up routes
         worker = self._get_worker_instance()
 
         # Build the workflow and add routes using the worker
         async with WorkflowBuilder.from_config(config=self.full_config) as builder:
+            # Set MCP server reference for logging
+            worker.set_mcp_server(mcp)
             # Add routes through the worker (includes health endpoint and function registration)
             await worker.add_routes(mcp, builder)
 

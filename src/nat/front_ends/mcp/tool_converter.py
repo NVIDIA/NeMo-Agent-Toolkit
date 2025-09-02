@@ -32,12 +32,55 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+async def send_mcp_log(mcp_server, level: str, logger_name: str, message: str, data: dict | None = None, config=None):
+    """Send a log message via MCP protocol.
+
+    Args:
+        mcp_server: The FastMCP server instance
+        level: Log level (debug, info, notice, warning, error, critical, alert, emergency)
+        logger_name: Name of the logger
+        message: Log message
+        data: Additional structured data
+        config: MCP frontend config for logging settings
+    """
+    if not mcp_server:
+        return
+
+    # Check if MCP logging is enabled
+    if config and not config.enable_mcp_logging:
+        return
+
+    # Check log level filtering
+    if config and config.mcp_log_level:
+        log_levels = ["debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"]
+        current_level_index = log_levels.index(level)
+        min_level_index = log_levels.index(config.mcp_log_level)
+        if current_level_index < min_level_index:
+            return
+
+    try:
+        log_data = {"message": message}
+        if data:
+            log_data.update(data)
+
+        await mcp_server.send_notification("notifications/message", {
+            "level": level,
+            "logger": logger_name,
+            "data": log_data
+        })
+    except Exception as e:
+        # Don't let logging errors break the main functionality
+        logger.debug("Failed to send MCP log message: %s", e)
+
+
 def create_function_wrapper(
     function_name: str,
     function: FunctionBase,
     schema: type[BaseModel],
     is_workflow: bool = False,
     workflow: 'Workflow | None' = None,
+    mcp_server=None,
+    config=None,
 ):
     """Create a wrapper function that exposes the actual parameters of a NAT Function as an MCP tool.
 
@@ -47,6 +90,8 @@ def create_function_wrapper(
         schema (type[BaseModel]): The input schema of the function
         is_workflow (bool): Whether the function is a Workflow
         workflow (Workflow | None): The parent workflow for observability context
+        mcp_server: The FastMCP server instance for logging
+        config: MCP frontend config for logging settings
 
     Returns:
         A wrapper function suitable for registration with MCP
@@ -100,6 +145,12 @@ def create_function_wrapper(
             # Remove ctx if present
             if "ctx" in kwargs:
                 del kwargs["ctx"]
+
+            # Send MCP log for function start
+            await send_mcp_log(mcp_server, "info", function_name, f"Starting function {function_name}", {
+                "args": kwargs,
+                "is_workflow": is_workflow
+            }, config)
 
             # Process the function call
             if ctx:
@@ -172,6 +223,12 @@ def create_function_wrapper(
                 if ctx:
                     await ctx.report_progress(100, 100)
 
+                # Send MCP log for successful completion
+                await send_mcp_log(mcp_server, "info", function_name, f"Function {function_name} completed successfully", {
+                    "result_type": type(result).__name__,
+                    "result_length": len(str(result)) if result else 0
+                }, config)
+
                 # Handle different result types for proper formatting
                 if isinstance(result, str):
                     return result
@@ -179,6 +236,12 @@ def create_function_wrapper(
                     return json.dumps(result, default=str)
                 return str(result)
             except Exception as e:
+                # Send MCP log for errors
+                await send_mcp_log(mcp_server, "error", function_name, f"Function {function_name} failed", {
+                    "error": str(e),
+                    "error_type": type(e).__name__
+                }, config)
+
                 if ctx:
                     ctx.error("Error calling function %s: %s", function_name, str(e))
                 raise
@@ -233,13 +296,15 @@ def get_function_description(function: FunctionBase) -> str:
     elif isinstance(function, Function):
         function_description = function.description
 
-    return function_description
+    return function_description or ""
 
 
 def register_function_with_mcp(mcp: FastMCP,
                                function_name: str,
                                function: FunctionBase,
-                               workflow: 'Workflow | None' = None) -> None:
+                               workflow: 'Workflow | None' = None,
+                               mcp_server=None,
+                               config=None) -> None:
     """Register a NAT Function as an MCP tool.
 
     Args:
@@ -247,6 +312,8 @@ def register_function_with_mcp(mcp: FastMCP,
         function_name: The name to register the function under
         function: The NAT Function to register
         workflow: The parent workflow for observability context (if available)
+        mcp_server: The FastMCP server instance for logging (if None, uses mcp parameter)
+        config: MCP frontend config for logging settings
     """
     logger.info("Registering function %s with MCP", function_name)
 
@@ -263,6 +330,9 @@ def register_function_with_mcp(mcp: FastMCP,
     # Get function description
     function_description = get_function_description(function)
 
+    # Use mcp_server if provided, otherwise fall back to mcp parameter
+    server_for_logging = mcp_server if mcp_server is not None else mcp
+
     # Create and register the wrapper function with MCP
-    wrapper_func = create_function_wrapper(function_name, function, input_schema, is_workflow, workflow)
+    wrapper_func = create_function_wrapper(function_name, function, input_schema, is_workflow, workflow, server_for_logging, config)
     mcp.tool(name=function_name, description=function_description)(wrapper_func)
