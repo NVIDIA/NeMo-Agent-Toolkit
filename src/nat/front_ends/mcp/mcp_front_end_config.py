@@ -39,3 +39,9 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
         description="Transport type for the MCP server (default: streamable-http, backwards compatible with sse)")
     runner_class: str | None = Field(
         default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")
+
+    # Auth configuration
+    require_auth: bool = Field(default=False, description="Require OAuth2.1 authorization for MCP server access")
+    auth_server_url: str | None = Field(default=None, description="Authorization server URL for token validation")
+    auth_provider: str | None = Field(default=None, description="Reference to NAT auth provider for token validation")
+    required_scopes: list[str] = Field(default_factory=list, description="Required OAuth2 scopes for MCP access")
