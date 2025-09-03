@@ -1,0 +1,211 @@
+services:
+
+  # Main ingestor server which is responsible for ingestion
+  ingestor-server:
+    container_name: ingestor-server
+    image: nvcr.io/nvstaging/blueprint/ingestor-server:${TAG:-2.3.0.rc0}
+    build:
+      # Set context to repo's root directory
+      context: ../../
+      dockerfile: ./src/nvidia_rag/ingestor_server/Dockerfile
+    # start the server on port 8082 with 4 workers for improved latency on concurrent requests.
+    command: --port 8082 --host 0.0.0.0 --workers 1
+
+    volumes:
+      # Mount the prompt.yaml file to the container, path should be absolute
+      - ${PROMPT_CONFIG_FILE}:${PROMPT_CONFIG_FILE}
+
+    # Common customizations to the pipeline can be controlled using env variables
+    environment:
+      # Path to example directory relative to root
+      EXAMPLE_PATH: 'src/nvidia_rag/ingestor_server'
+
+      # Absolute path to custom prompt.yaml file
+      PROMPT_CONFIG_FILE: ${PROMPT_CONFIG_FILE:-/prompt.yaml}
+
+      ##===Vector DB specific configurations===
+      # URL on which vectorstore is hosted
+      # For custom operators, point to your service (e.g., http://your-custom-vdb:1234)
+      APP_VECTORSTORE_URL: ${APP_VECTORSTORE_URL:-http://milvus:19530}
+      # Type of vectordb used to store embedding. Supported built-ins: "milvus", "elasticsearch".
+      # You can also provide your custom value (e.g., "your_custom_vdb") when you register it in `_get_vdb_op`.
+      APP_VECTORSTORE_NAME: ${APP_VECTORSTORE_NAME:-"milvus"}
+      # Type of vectordb search to be used
+      APP_VECTORSTORE_SEARCHTYPE: ${APP_VECTORSTORE_SEARCHTYPE:-"dense"} # Can be dense or hybrid
+      # Boolean to enable GPU index for milvus vectorstore specific to nvingest
+      APP_VECTORSTORE_ENABLEGPUINDEX: ${APP_VECTORSTORE_ENABLEGPUINDEX:-True}
+      # Boolean to control GPU search for milvus vectorstore specific to nvingest
+      APP_VECTORSTORE_ENABLEGPUSEARCH: ${APP_VECTORSTORE_ENABLEGPUSEARCH:-True}
+      # vectorstore collection name to store embeddings
+      COLLECTION_NAME: ${COLLECTION_NAME:-multimodal_data}
+
+      ##===MINIO specific configurations===
+      MINIO_ENDPOINT: "minio:9010"
+      MINIO_ACCESSKEY: "minioadmin"
+      MINIO_SECRETKEY: "minioadmin"
+
+      NGC_API_KEY: ${NGC_API_KEY:?"NGC_API_KEY is required"}
+      NVIDIA_API_KEY: ${NGC_API_KEY:?"NGC_API_KEY is required"}
+
+      ##===Embedding Model specific configurations===
+      # url on which embedding model is hosted. If "", Nvidia hosted API is used
+      APP_EMBEDDINGS_SERVERURL: ${APP_EMBEDDINGS_SERVERURL-"nemoretriever-embedding-ms:8000"}
+      APP_EMBEDDINGS_MODELNAME: ${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-3.2-nv-embedqa-1b-v2}
+      # For VLM Embedding Model (Nemoretriever-1b-vlm-embed-v1)
+      # APP_EMBEDDINGS_SERVERURL: ${APP_EMBEDDINGS_SERVERURL-"nemoretriever-vlm-embedding-ms:8000"}
+      # APP_EMBEDDINGS_MODELNAME: ${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1}
+      APP_EMBEDDINGS_DIMENSIONS: ${APP_EMBEDDINGS_DIMENSIONS:-2048}
+
+      ##===NV-Ingest Connection Configurations=======
+      APP_NVINGEST_MESSAGECLIENTHOSTNAME: ${APP_NVINGEST_MESSAGECLIENTHOSTNAME:-"nv-ingest-ms-runtime"}
+      APP_NVINGEST_MESSAGECLIENTPORT: ${APP_NVINGEST_MESSAGECLIENTPORT:-7670}
+
+      ##===NV-Ingest Extract Configurations==========
+      APP_NVINGEST_EXTRACTTEXT: ${APP_NVINGEST_EXTRACTTEXT:-True}
+      APP_NVINGEST_EXTRACTINFOGRAPHICS: ${APP_NVINGEST_EXTRACTINFOGRAPHICS:-False}
+      APP_NVINGEST_EXTRACTTABLES: ${APP_NVINGEST_EXTRACTTABLES:-True}
+      APP_NVINGEST_EXTRACTCHARTS: ${APP_NVINGEST_EXTRACTCHARTS:-True}
+      APP_NVINGEST_EXTRACTIMAGES: ${APP_NVINGEST_EXTRACTIMAGES:-False}
+      APP_NVINGEST_EXTRACTPAGEASIMAGE: ${APP_NVINGEST_EXTRACTPAGEASIMAGE:-False}
+      APP_NVINGEST_STRUCTURED_ELEMENTS_MODALITY: ${APP_NVINGEST_STRUCTURED_ELEMENTS_MODALITY:-""} # Select from "image", "text_image"
+      APP_NVINGEST_IMAGE_ELEMENTS_MODALITY: ${APP_NVINGEST_IMAGE_ELEMENTS_MODALITY:-""} # Select from "image"
+      APP_NVINGEST_PDFEXTRACTMETHOD: ${APP_NVINGEST_PDFEXTRACTMETHOD:-None} # Select from pdfium, nemoretriever_parse, None
+      # Extract text by "page" only recommended for documents with pages like .pdf, .docx, etc.
+      APP_NVINGEST_TEXTDEPTH: ${APP_NVINGEST_TEXTDEPTH:-page} # extract by "page" or "document"
+
+      ##===NV-Ingest Splitting Configurations========
+      APP_NVINGEST_CHUNKSIZE: ${APP_NVINGEST_CHUNKSIZE:-512}
+      APP_NVINGEST_CHUNKOVERLAP: ${APP_NVINGEST_CHUNKOVERLAP:-150}
+      APP_NVINGEST_ENABLEPDFSPLITTER: ${APP_NVINGEST_ENABLEPDFSPLITTER:-True}
+      APP_NVINGEST_SEGMENTAUDIO: ${APP_NVINGEST_SEGMENTAUDIO:-False} # Enable audio segmentation for NV Ingest
+
+      ##===NV-Ingest Caption Model configurations====
+      APP_NVINGEST_CAPTIONMODELNAME: ${APP_NVINGEST_CAPTIONMODELNAME:-"nvidia/llama-3.1-nemotron-nano-vl-8b-v1"}
+      # Incase of nvidia-hosted caption model, use the endpoint url as - https://integrate.api.nvidia.com/v1
+      APP_NVINGEST_CAPTIONENDPOINTURL: ${APP_NVINGEST_CAPTIONENDPOINTURL:-"http://vlm-ms:8000/v1/chat/completions"}
+
+      # Choose whether to store the extracted content in the vector store for citation support
+      ENABLE_CITATIONS: ${ENABLE_CITATIONS:-True}
+
+      # Choose the summary model to use for document summary
+      SUMMARY_LLM: ${SUMMARY_LLM:-nvidia/llama-3_3-nemotron-super-49b-v1_5}
+      SUMMARY_LLM_SERVERURL: ${SUMMARY_LLM_SERVERURL-"nim-llm:8000"}
+      SUMMARY_LLM_MAX_CHUNK_LENGTH: ${SUMMARY_LLM_MAX_CHUNK_LENGTH:-50000}
+      SUMMARY_CHUNK_OVERLAP: ${SUMMARY_CHUNK_OVERLAP:-200}
+      # Log level for server, supported level NOTSET, DEBUG, INFO, WARN, ERROR, CRITICAL
+      LOGLEVEL: ${LOGLEVEL:-INFO}
+
+      # [Optional] Redis configuration for task status and result storage
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_DB: ${REDIS_DB:-0}
+
+      # Bulk upload to MinIO
+      ENABLE_MINIO_BULK_UPLOAD: ${ENABLE_MINIO_BULK_UPLOAD:-True}
+      TEMP_DIR: ${TEMP_DIR:-/tmp-data}
+
+      # NV-Ingest Batch Mode Configurations
+      NV_INGEST_FILES_PER_BATCH: ${NV_INGEST_FILES_PER_BATCH:-16}
+      NV_INGEST_CONCURRENT_BATCHES: ${NV_INGEST_CONCURRENT_BATCHES:-4}
+
+    ports:
+      - "8082:8082"
+    expose:
+      - "8082"
+    shm_size: 5gb
+
+  redis:
+    image: "redis/redis-stack:7.2.0-v18"
+    ports:
+      - "6379:6379"
+
+  nv-ingest-ms-runtime:
+    image: nvcr.io/nvstaging/nim/nv-ingest:25.8.0-RC6
+    cpuset: "0-15"
+    volumes:
+      - ${DATASET_ROOT:-./data}:/workspace/data
+    ports:
+      # HTTP API
+      - "7670:7670"
+      # Simple Broker
+      - "7671:7671"
+    cap_add:
+      - sys_nice
+    environment:
+      # Audio model not used in this RAG version
+      - AUDIO_GRPC_ENDPOINT=audio:50051
+      - AUDIO_INFER_PROTOCOL=grpc
+      - CUDA_VISIBLE_DEVICES=0
+      - MAX_INGEST_PROCESS_WORKERS=${MAX_INGEST_PROCESS_WORKERS:-16}
+      - EMBEDDING_NIM_MODEL_NAME=${EMBEDDING_NIM_MODEL_NAME:-${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-3.2-nv-embedqa-1b-v2}}
+      # Incase of self-hosted embedding model, use the endpoint url as - https://integrate.api.nvidia.com/v1
+      - EMBEDDING_NIM_ENDPOINT=${EMBEDDING_NIM_ENDPOINT:-${APP_EMBEDDINGS_SERVERURL-http://nemoretriever-embedding-ms:8000/v1}}
+      # For VLM Embedding Model (Nemoretriever-1b-vlm-embed-v1)
+      # - EMBEDDING_NIM_MODEL_NAME=${EMBEDDING_NIM_MODEL_NAME:-${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1}}
+      # - EMBEDDING_NIM_ENDPOINT=${EMBEDDING_NIM_ENDPOINT:-${APP_EMBEDDINGS_SERVERURL-http://nemoretriever-vlm-embedding-ms:8000/v1}}
+      - INGEST_LOG_LEVEL=WARNING
+      - INGEST_RAY_LOG_LEVEL=PRODUCTION
+      - INGEST_EDGE_BUFFER_SIZE=64
+      - INGEST_DYNAMIC_MEMORY_THRESHOLD=0.8
+      - INGEST_DISABLE_DYNAMIC_SCALING=${INGEST_DISABLE_DYNAMIC_SCALING:-True}
+      - INSTALL_AUDIO_EXTRACTION_DEPS=true
+      # Message client for development
+      #- MESSAGE_CLIENT_HOST=0.0.0.0
+      #- MESSAGE_CLIENT_PORT=7671
+      #- MESSAGE_CLIENT_TYPE=simple # Configure the ingest service to use the simple broker
+      # Message client for production
+      - MESSAGE_CLIENT_HOST=redis
+      - MESSAGE_CLIENT_PORT=6379
+      - MESSAGE_CLIENT_TYPE=redis
+      - MINIO_BUCKET=${MINIO_BUCKET:-nv-ingest}
+      - MRC_IGNORE_NUMA_CHECK=1
+      - NEMORETRIEVER_PARSE_HTTP_ENDPOINT=${NEMORETRIEVER_PARSE_HTTP_ENDPOINT:-http://nemoretriever-parse:8000/v1/chat/completions}
+      - NEMORETRIEVER_PARSE_INFER_PROTOCOL=${NEMORETRIEVER_PARSE_INFER_PROTOCOL:-http}
+      - NEMORETRIEVER_PARSE_MODEL_NAME=${NEMORETRIEVER_PARSE_MODEL_NAME:-nvidia/nemoretriever-parse}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-nvidiaapikey}
+      - NGC_API_KEY=${NGC_API_KEY:-nvidiaapikey}
+      - NVIDIA_BUILD_API_KEY=${NGC_API_KEY:-nvidiaapikey}
+      - NV_INGEST_MAX_UTIL=${NV_INGEST_MAX_UTIL:-48}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      # Self-hosted ocr endpoints.
+      - OCR_GRPC_ENDPOINT=${OCR_GRPC_ENDPOINT:-${PADDLE_GRPC_ENDPOINT:-paddle:8001}}
+      - OCR_HTTP_ENDPOINT=${OCR_HTTP_ENDPOINT:-${PADDLE_HTTP_ENDPOINT:-http://paddle:8000/v1/infer}}
+      - OCR_INFER_PROTOCOL=${OCR_INFER_PROTOCOL:-${PADDLE_INFER_PROTOCOL:-grpc}}
+      - OCR_MODEL_NAME=${OCR_MODEL_NAME:-paddle}
+      # build.nvidia.com hosted ocr endpoints.
+      #- OCR_HTTP_ENDPOINT=https://ai.api.nvidia.com/v1/cv/baidu/paddleocr
+      #- OCR_INFER_PROTOCOL=http
+      - READY_CHECK_ALL_COMPONENTS=False
+      - REDIS_MORPHEUS_TASK_QUEUE=morpheus_task_queue
+      # Self-hosted redis endpoints.
+      # build.nvidia.com hosted yolox endpoints.
+      #- YOLOX_HTTP_ENDPOINT=https://ai.api.nvidia.com/v1/cv/nvidia/nemoretriever-page-elements-v2
+      #- YOLOX_INFER_PROTOCOL=http
+      - YOLOX_GRPC_ENDPOINT=${YOLOX_GRPC_ENDPOINT:-page-elements:8001}
+      - YOLOX_HTTP_ENDPOINT=${YOLOX_HTTP_ENDPOINT:-http://page-elements:8000/v1/infer}
+      - YOLOX_INFER_PROTOCOL=${YOLOX_INFER_PROTOCOL:-grpc}
+      # build.nvidia.com hosted yolox-graphics-elements endpoints.
+      #- YOLOX_GRAPHIC_ELEMENTS_HTTP_ENDPOINT=https://ai.api.nvidia.com/v1/cv/nvidia/nemoretriever-graphic-elements-v1
+      #- YOLOX_GRAPHIC_ELEMENTS_INFER_PROTOCOL=http
+      - YOLOX_GRAPHIC_ELEMENTS_GRPC_ENDPOINT=${YOLOX_GRAPHIC_ELEMENTS_GRPC_ENDPOINT:-graphic-elements:8001}
+      - YOLOX_GRAPHIC_ELEMENTS_HTTP_ENDPOINT=${YOLOX_GRAPHIC_ELEMENTS_HTTP_ENDPOINT:-http://graphic-elements:8000/v1/infer}
+      - YOLOX_GRAPHIC_ELEMENTS_INFER_PROTOCOL=${YOLOX_GRAPHIC_ELEMENTS_INFER_PROTOCOL:-grpc}
+      # build.nvidia.com hosted  yolox-table-elements endpoints.
+      #- YOLOX_TABLE_STRUCTURE_HTTP_ENDPOINT=https://ai.api.nvidia.com/v1/cv/nvidia/nemoretriever-table-structure-v1
+      #- YOLOX_TABLE_STRUCTURE_INFER_PROTOCOL=http
+      - YOLOX_TABLE_STRUCTURE_GRPC_ENDPOINT=${YOLOX_TABLE_STRUCTURE_GRPC_ENDPOINT:-table-structure:8001}
+      - YOLOX_TABLE_STRUCTURE_HTTP_ENDPOINT=${YOLOX_TABLE_STRUCTURE_HTTP_ENDPOINT:-http://table-structure:8000/v1/infer}
+      - YOLOX_TABLE_STRUCTURE_INFER_PROTOCOL=${YOLOX_TABLE_STRUCTURE_INFER_PROTOCOL:-grpc}
+      # Incase of nvidia-hosted caption model, use the endpoint url as - https://integrate.api.nvidia.com/v1/chat/completions
+      - VLM_CAPTION_ENDPOINT=${VLM_CAPTION_ENDPOINT:-http://vlm-ms:8000/v1/chat/completions}
+      - VLM_CAPTION_MODEL_NAME=${VLM_CAPTION_MODEL_NAME:-nvidia/llama-3.1-nemotron-nano-vl-8b-v1}
+      - MODEL_PREDOWNLOAD_PATH=${MODEL_PREDOWNLOAD_PATH:-/workspace/models/}
+    healthcheck:
+      test: curl --fail http://nv-ingest-ms-runtime:7670/v1/health/ready || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+networks:
+  default:
+    name: nvidia-rag

@@ -1,4 +1,5 @@
 ###### Place new entries directly below this line! ######
+examples/rag_library_mode/rag_library_mode/src/rag_library_mode/deploy/volumes/*
 
 # auto-generated chainlit stuff
 chainlit.md
