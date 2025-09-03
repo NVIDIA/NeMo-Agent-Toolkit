@@ -61,35 +61,57 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         """
         super().__init__(context_state)
         self._processors: list[Processor] = []  # List of processors that implement process(item) -> item
+        self._processor_names: dict[str, int] = {}  # Maps processor names to their positions
+        self._pipeline_locked: bool = False  # Prevents modifications after startup
 
-    def add_processor(self, processor: Processor) -> None:
+    def add_processor(self,
+                      processor: Processor,
+                      name: str | None = None,
+                      position: int | None = None,
+                      before: str | None = None,
+                      after: str | None = None) -> None:
         """Add a processor to the processing pipeline.
 
-        Processors are executed in the order they are added.
-        Processors can transform between any types (T -> U).
+        Processors are executed in the order they are added. Processes can transform between any types (T -> U).
+        Supports flexible positioning using names, positions, or relative placement.
 
         Args:
-            processor: The processor to add to the pipeline
-        """
+            processor (Processor): The processor to add to the pipeline
+            name (str | None): Name for the processor (for later reference). Must be unique.
+            position (int | None): Specific position to insert at (0-based index, -1 for append)
+            before (str | None): Insert before the named processor
+            after (str | None): Insert after the named processor
 
-        # Check if the processor is compatible with the last processor in the pipeline
-        if len(self._processors) > 0:
-            try:
-                if not issubclass(processor.input_class, self._processors[-1].output_class):
-                    raise ValueError(f"Processor {processor.__class__.__name__} input type {processor.input_type} "
-                                     f"is not compatible with the {self._processors[-1].__class__.__name__} "
-                                     f"output type {self._processors[-1].output_type}")
-            except TypeError:
-                # Handle cases where input_class or output_class are generic types that can't be used with issubclass
-                # Fall back to type comparison for generic types
-                logger.warning(
-                    "Cannot use issubclass() for type compatibility check between "
-                    "%s (%s) and %s (%s). Skipping compatibility check.",
-                    processor.__class__.__name__,
-                    processor.input_type,
-                    self._processors[-1].__class__.__name__,
-                    self._processors[-1].output_type)
-        self._processors.append(processor)
+        Raises:
+            RuntimeError: If pipeline is locked (after startup)
+            ValueError: If positioning arguments conflict or named processor not found
+        """
+        self._check_pipeline_locked()
+
+        # Determine insertion position
+        insert_position = self._calculate_insertion_position(position, before, after)
+
+        # Validate type compatibility at insertion point
+        self._validate_insertion_compatibility(processor, insert_position)
+
+        # Insert the processor at the calculated position
+        if insert_position == len(self._processors):
+            self._processors.append(processor)
+        else:
+            self._processors.insert(insert_position, processor)
+
+        # Register the processor name if provided
+        if name is not None:
+            if not isinstance(name, str):
+                raise TypeError(f"Processor name must be a string, got {type(name).__name__}")
+            if name in self._processor_names:
+                raise ValueError(f"Processor name '{name}' already exists")
+            self._processor_names[name] = insert_position
+
+            # Update positions for processors that shifted
+            for proc_name, pos in self._processor_names.items():
+                if proc_name != name and pos >= insert_position:
+                    self._processor_names[proc_name] = pos + 1
 
         # Set up pipeline continuation callback for processors that support it
         if isinstance(processor, CallbackProcessor):
@@ -99,20 +121,226 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
 
             processor.set_done_callback(pipeline_callback)
 
-    def remove_processor(self, processor: Processor) -> None:
+    def remove_processor(self, processor: Processor | str | int) -> None:
         """Remove a processor from the processing pipeline.
 
         Args:
-            processor: The processor to remove from the pipeline
+            processor (Processor | str | int): The processor to remove.
+                Processor can be removed by name, position, or object.
+
+        Raises:
+            RuntimeError: If pipeline is locked (after startup)
+            ValueError: If named processor or position not found
+            TypeError: If processor argument has invalid type
         """
-        if processor in self._processors:
-            self._processors.remove(processor)
+        self._check_pipeline_locked()
+
+        # Determine processor and position to remove
+        if isinstance(processor, str):
+            # Remove by name
+            if processor not in self._processor_names:
+                raise ValueError(f"Processor '{processor}' not found in pipeline")
+            position = self._processor_names[processor]
+            processor_obj = self._processors[position]
+        elif isinstance(processor, int):
+            # Remove by position
+            if not (0 <= processor < len(self._processors)):
+                raise ValueError(f"Position {processor} is out of range [0, {len(self._processors) - 1}]")
+            position = processor
+            processor_obj = self._processors[position]
+        elif hasattr(processor, 'process'):  # Duck typing check for Processor
+            # Remove by object (existing behavior)
+            if processor not in self._processors:
+                return  # Silently ignore if not found (existing behavior)
+            position = self._processors.index(processor)
+            processor_obj = processor
+        else:
+            raise TypeError(f"Processor must be a Processor object, string name, or int position, "
+                            f"got {type(processor).__name__}")
+
+        # Remove the processor
+        self._processors.remove(processor_obj)
+
+        # Remove from name mapping and update positions
+        name_to_remove = None
+        for name, pos in self._processor_names.items():
+            if pos == position:
+                name_to_remove = name
+                break
+
+        if name_to_remove:
+            del self._processor_names[name_to_remove]
+
+        # Update positions for processors that shifted
+        for name, pos in self._processor_names.items():
+            if pos > position:
+                self._processor_names[name] = pos - 1
 
     def clear_processors(self) -> None:
         """Clear all processors from the pipeline."""
+        self._check_pipeline_locked()
         self._processors.clear()
+        self._processor_names.clear()
+
+    def reset_pipeline(self) -> None:
+        """Reset the pipeline to allow modifications.
+
+        This unlocks the pipeline and clears all processors, allowing
+        the pipeline to be reconfigured. Can only be called when the
+        exporter is stopped.
+
+        Raises:
+            RuntimeError: If exporter is currently running
+        """
+        if self._running:
+            raise RuntimeError("Cannot reset pipeline while exporter is running. "
+                               "Call stop() first, then reset_pipeline().")
+
+        self._pipeline_locked = False
+        self._processors.clear()
+        self._processor_names.clear()
+        logger.debug("Pipeline reset - unlocked and cleared all processors")
+
+    def get_processor_by_name(self, name: str) -> Processor | None:
+        """Get a processor by its name.
+
+        Args:
+            name (str): The name of the processor to retrieve
+
+        Returns:
+            Processor | None: The processor with the given name, or None if not found
+        """
+        if not isinstance(name, str):
+            raise TypeError(f"Processor name must be a string, got {type(name).__name__}")
+        if name in self._processor_names:
+            position = self._processor_names[name]
+            return self._processors[position]
+        logger.warning("Processor '%s' not found in pipeline", name)
+        return None
+
+    def _check_pipeline_locked(self) -> None:
+        """Check if pipeline is locked and raise error if it is."""
+        if self._pipeline_locked:
+            raise RuntimeError("Cannot modify processor pipeline after exporter has started. "
+                               "Pipeline must be fully configured before calling start().")
+
+    def _calculate_insertion_position(self, position: int | None, before: str | None, after: str | None) -> int:
+        """Calculate the insertion position based on provided arguments.
+
+        Args:
+            position (int | None): Explicit position (0-based index, -1 for append)
+            before (str | None): Insert before this named processor
+            after (str | None): Insert after this named processor
+
+        Returns:
+            int: The calculated insertion position
+
+        Raises:
+            ValueError: If arguments conflict or named processor not found
+        """
+        # Check for conflicting arguments
+        args_provided = sum(x is not None for x in [position, before, after])
+        if args_provided > 1:
+            raise ValueError("Only one of position, before, or after can be specified")
+
+        # Default to append
+        if args_provided == 0:
+            return len(self._processors)
+
+        # Handle explicit position
+        if position is not None:
+            if position == -1:
+                return len(self._processors)
+            if 0 <= position <= len(self._processors):
+                return position
+            raise ValueError(f"Position {position} is out of range [0, {len(self._processors)}]")
+
+        # Handle before/after named processors
+        if before is not None:
+            if not isinstance(before, str):
+                raise TypeError(f"'before' parameter must be a string, got {type(before).__name__}")
+            if before not in self._processor_names:
+                raise ValueError(f"Processor '{before}' not found in pipeline")
+            return self._processor_names[before]
+
+        if after is not None:
+            if not isinstance(after, str):
+                raise TypeError(f"'after' parameter must be a string, got {type(after).__name__}")
+            if after not in self._processor_names:
+                raise ValueError(f"Processor '{after}' not found in pipeline")
+            return self._processor_names[after] + 1
+
+        # Should never reach here
+        return len(self._processors)
+
+    def _validate_insertion_compatibility(self, processor: Processor, position: int) -> None:
+        """Validate type compatibility for processor insertion.
+
+        Args:
+            processor (Processor): The processor to insert
+            position (int): The position where it will be inserted
+
+        Raises:
+            ValueError: If processor is not compatible with neighbors
+        """
+        # Check compatibility with neighbors
+        if position > 0:
+            predecessor = self._processors[position - 1]
+            self._check_processor_compatibility(predecessor,
+                                                processor,
+                                                "predecessor",
+                                                predecessor.output_class,
+                                                processor.input_class,
+                                                str(predecessor.output_type),
+                                                str(processor.input_type))
+
+        if position < len(self._processors):
+            successor = self._processors[position]
+            self._check_processor_compatibility(processor,
+                                                successor,
+                                                "successor",
+                                                processor.output_class,
+                                                successor.input_class,
+                                                str(processor.output_type),
+                                                str(successor.input_type))
+
+    def _check_processor_compatibility(self,
+                                       source_processor: Processor,
+                                       target_processor: Processor,
+                                       relationship: str,
+                                       source_class: type,
+                                       target_class: type,
+                                       source_type: str,
+                                       target_type: str) -> None:
+        """Check type compatibility between two processors.
+
+        Args:
+            source_processor (Processor): The processor providing output
+            target_processor (Processor): The processor receiving input
+            relationship (str): Description of relationship ("predecessor" or "successor")
+            source_class (type): The output class of source processor
+            target_class (type): The input class of target processor
+            source_type (str): String representation of source type
+            target_type (str): String representation of target type
+        """
+        try:
+            if not issubclass(target_class, source_class):
+                raise ValueError(f"Processor {target_processor.__class__.__name__} input type {target_type} "
+                                 f"is not compatible with {relationship} {source_processor.__class__.__name__} "
+                                 f"output type {source_type}")
+        except TypeError:
+            logger.warning(
+                "Cannot use issubclass() for type compatibility check between "
+                "%s (%s) and %s (%s). Skipping compatibility check.",
+                source_processor.__class__.__name__,
+                source_type,
+                target_processor.__class__.__name__,
+                target_type)
 
     async def _pre_start(self) -> None:
+        # Lock the pipeline to prevent further modifications
+        self._pipeline_locked = True
+
         if len(self._processors) > 0:
             first_processor = self._processors[0]
             last_processor = self._processors[-1]
@@ -168,7 +396,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             item (Any): The item to process
 
         Returns:
-            The processed item after running through all processors
+            Any: The processed item after running through all processors
         """
         processed_item = item
         for processor in processors:
@@ -233,7 +461,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         """Export an item after processing it through the pipeline.
 
         Args:
-            item: The item to export
+            item (PipelineInputT): The item to export
         """
         try:
             # Then, run through the processor pipeline
@@ -276,12 +504,16 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         the actual export logic after the item has been processed through the pipeline.
 
         Args:
-            item: The processed item to export (PipelineOutputT type)
+            item (PipelineOutputT | list[PipelineOutputT]): The processed item to export (PipelineOutputT type)
         """
         pass
 
     def _create_export_task(self, coro: Coroutine):
-        """Create task with minimal overhead but proper tracking."""
+        """Create task with minimal overhead but proper tracking.
+
+        Args:
+            coro: The coroutine to create a task for
+        """
         if not self._running:
             logger.warning("%s: Attempted to create export task while not running", self.name)
             return
