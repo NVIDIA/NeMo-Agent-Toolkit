@@ -65,9 +65,9 @@ workflow:
   tool_names:
     - calculator_multiply
     - calculator_inequality
-    - current_datetime
     - calculator_divide
     - calculator_subtract
+    - current_datetime
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3
