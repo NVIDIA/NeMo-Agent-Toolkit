@@ -244,7 +244,7 @@ class JobStore:
         Get all jobs, potentially costly if there are many jobs.
         """
         async with self.session() as session:
-            return await session.scalars(select(JobInfo)).all()
+            return (await session.scalars(select(JobInfo))).all()
 
     async def get_job(self, job_id: str) -> JobInfo | None:
         """Get a job by its ID."""
@@ -262,7 +262,7 @@ class JobStore:
         """Get the last created job."""
         stmt = select(JobInfo).order_by(JobInfo.created_at.desc())
         async with self.session() as session:
-            last_job = await session.scalars(stmt).first()
+            last_job = (await session.scalars(stmt)).first()
 
         if last_job is None:
             logger.info("No jobs found in job store")
