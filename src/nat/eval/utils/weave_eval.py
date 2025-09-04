@@ -44,11 +44,9 @@ class WeaveEvaluationIntegration:
         self.eval_trace_context = eval_trace_context
 
         try:
-            from weave.flow.eval_imperative import EvaluationLogger
-            from weave.flow.eval_imperative import ScoreLogger
+            from weave import EvaluationLogger
             from weave.trace.context import weave_client_context
             self.evaluation_logger_cls = EvaluationLogger
-            self.score_logger_cls = ScoreLogger
             self.weave_client_context = weave_client_context
             self.available = True
         except ImportError:
@@ -94,7 +92,10 @@ class WeaveEvaluationIntegration:
             weave_dataset = self._get_weave_dataset(eval_input)
             config_dict = config.model_dump(mode="json")
             config_dict["name"] = workflow_alias
-            self.eval_logger = self.evaluation_logger_cls(model=config_dict, dataset=weave_dataset)
+            self.eval_logger = self.evaluation_logger_cls(model=config_dict,
+                                                          dataset=weave_dataset,
+                                                          name=workflow_alias,
+                                                          eval_attributes={})
             self.pred_loggers = {}
 
             # Capture the current evaluation call for context propagation
@@ -189,3 +190,4 @@ class WeaveEvaluationIntegration:
         # Log the summary to finish the evaluation, disable auto-summarize
         # as we will be adding profiler metrics to the summary
         self.eval_logger.log_summary(summary, auto_summarize=False)
+        logger.info("Logged Evaluation Summary to Weave")
