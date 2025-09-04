@@ -160,7 +160,7 @@ class TypedBaseModel(BaseModel):
 
     @staticmethod
     def discriminator(v: typing.Any) -> str | None:
-        # If its serialized, then we use the alias
+        # If it's serialized, then we use the alias
         if isinstance(v, dict):
             return v.get("_type", v.get("type"))
 
