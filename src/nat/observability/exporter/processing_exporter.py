@@ -59,8 +59,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
 
         Args:
             context_state (ContextState | None): The context state to use for the exporter.
-            drop_nones (bool): If True, processors that return None will cause the item to be dropped
-                from the pipeline rather than passed to the next processor. Defaults to True.
+            drop_nones (bool): Whether to drop items when processors return None (default: True).
         """
         super().__init__(context_state)
         self._processors: list[Processor] = []  # List of processors that implement process(item) -> item
@@ -129,8 +128,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         """Remove a processor from the processing pipeline.
 
         Args:
-            processor (Processor | str | int): The processor to remove.
-                Processor can be removed by name, position, or object.
+            processor (Processor | str | int): The processor to remove (by name, position, or object).
 
         Raises:
             RuntimeError: If pipeline is locked (after startup)
