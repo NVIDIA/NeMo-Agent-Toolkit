@@ -5191,7 +5191,6 @@ dependencies = [
 requires-dist = [
     { name = "langchain-aws", specifier = "~=0.2.1" },
     { name = "langchain-core", specifier = "~=0.3.7" },
-    { name = "langchain-milvus", specifier = "~=0.1.5" },
     { name = "langchain-milvus", specifier = "~=0.1.8" },
     { name = "langchain-nvidia-ai-endpoints", specifier = "~=0.3.5" },
     { name = "langchain-openai", specifier = "~=0.3.5" },
