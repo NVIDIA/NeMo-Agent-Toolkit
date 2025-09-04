@@ -25,7 +25,7 @@ dependencies = [
   "presidio-anonymizer~=2.2",
   # Weave is pinned to a specfic version as we have seen breaking changes with minor releases
   # Both eval and trace exporting must be tested on any version change
-  "weave~=0.52.6",
+  "weave==0.52.6",
 ]
 requires-python = ">=3.11,<3.13"
 description = "Subpackage for Weave integration in NeMo Agent toolkit"
