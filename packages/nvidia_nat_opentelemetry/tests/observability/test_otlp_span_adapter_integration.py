@@ -34,7 +34,7 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
 
 def create_test_intermediate_step(parent_id="root",

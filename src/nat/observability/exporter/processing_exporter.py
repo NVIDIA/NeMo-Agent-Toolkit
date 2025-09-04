@@ -103,18 +103,21 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         else:
             self._processors.insert(insert_position, processor)
 
-        # Register the processor name if provided
+        # Validate and register processor name if provided (before position updates)
         if name is not None:
             if not isinstance(name, str):
                 raise TypeError(f"Processor name must be a string, got {type(name).__name__}")
             if name in self._processor_names:
                 raise ValueError(f"Processor name '{name}' already exists")
-            self._processor_names[name] = insert_position
 
-            # Update positions for processors that shifted
-            for proc_name, pos in self._processor_names.items():
-                if proc_name != name and pos >= insert_position:
-                    self._processor_names[proc_name] = pos + 1
+        # Always update positions for processors that shifted
+        for proc_name, pos in self._processor_names.items():
+            if pos >= insert_position:
+                self._processor_names[proc_name] = pos + 1
+
+        # Register the processor name after position updates
+        if name is not None:
+            self._processor_names[name] = insert_position
 
         # Set up pipeline continuation callback for processors that support it
         if isinstance(processor, CallbackProcessor):
@@ -326,7 +329,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             target_type (str): String representation of target type
         """
         try:
-            if not issubclass(target_class, source_class):
+            if not issubclass(source_class, target_class):
                 raise ValueError(f"Processor {target_processor.__class__.__name__} input type {target_type} "
                                  f"is not compatible with {relationship} {source_processor.__class__.__name__} "
                                  f"output type {source_type}")
@@ -349,7 +352,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
 
             # validate that the first processor's input type is compatible with the exporter's input type
             try:
-                if not issubclass(first_processor.input_class, self.input_class):
+                if not issubclass(self.input_class, first_processor.input_class):
                     raise ValueError(f"Processor {first_processor.__class__.__name__} input type "
                                      f"{first_processor.input_type} is not compatible with the "
                                      f"{self.input_type} input type")

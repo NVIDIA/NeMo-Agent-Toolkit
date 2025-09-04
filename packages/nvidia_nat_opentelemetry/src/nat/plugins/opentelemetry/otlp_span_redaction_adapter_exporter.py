@@ -65,7 +65,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
             redaction_callback=should_redact,
             redaction_value="REDACTED",
             privacy_tag_key="privacy.level",
-            privacy_tag_value=PrivacyLevel.SENSITIVE,
+            privacy_tag_value=PrivacyLevel.HIGH,
             batch_size=50,
             flush_interval=10.0
         )

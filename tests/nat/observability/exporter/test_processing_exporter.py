@@ -511,6 +511,39 @@ class TestAdvancedPositioning:
         assert processing_exporter._processor_names["inserted"] == 1
         assert processing_exporter._processor_names["second"] == 2
 
+    def test_unnamed_processor_insertion_updates_named_positions(self, processing_exporter):
+        """Test that inserting unnamed processors mid-pipeline updates existing named processor positions."""
+        processor1 = MockProcessor("proc1")  # str -> int
+        processor2 = MockBatchProcessor("proc2")  # int -> list[int]
+
+        # Create a processor that can take int input (compatible with MockProcessor output)
+        class IntToIntProcessor(Processor[int, int]):
+
+            async def process(self, item: int) -> int:
+                return item * 2
+
+        unnamed_processor = IntToIntProcessor()  # int -> int, no name
+
+        processing_exporter.add_processor(processor1, name="first")  # str -> int at position 0
+        processing_exporter.add_processor(processor2, name="second")  # int -> list[int] at position 1
+
+        # Verify initial positions
+        assert processing_exporter._processor_names["first"] == 0
+        assert processing_exporter._processor_names["second"] == 1
+
+        # Insert unnamed processor at position 1 (between first and second)
+        processing_exporter.add_processor(unnamed_processor, position=1)  # No name provided
+
+        # Check that existing named processors' positions were updated correctly
+        assert processing_exporter._processor_names["first"] == 0  # Should remain at 0
+        assert processing_exporter._processor_names["second"] == 2  # Should shift from 1 to 2
+
+        # Verify physical processor order is correct
+        assert len(processing_exporter._processors) == 3
+        assert processing_exporter._processors[0] is processor1  # first
+        assert processing_exporter._processors[1] is unnamed_processor  # unnamed (inserted)
+        assert processing_exporter._processors[2] is processor2  # second (shifted)
+
 
 class TestDropNonesFunctionality:
     """Test drop_nones functionality in pipeline processing."""

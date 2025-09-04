@@ -33,9 +33,9 @@ from nat.data_models.span import Span
 from nat.observability.mixin.tagging_config_mixin import PrivacyLevel
 from nat.observability.processor.header_redaction_processor import HeaderRedactionProcessor
 from nat.observability.processor.span_tagging_processor import SpanTaggingProcessor
+from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
+from nat.plugins.opentelemetry import OTLPSpanHeaderRedactionAdapterExporter
 from nat.plugins.opentelemetry.otel_span import OtelSpan
-from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
-from nat.plugins.opentelemetry.otlp_span_redaction_adapter_exporter import OTLPSpanHeaderRedactionAdapterExporter
 
 
 def create_test_intermediate_step(parent_id="root",
