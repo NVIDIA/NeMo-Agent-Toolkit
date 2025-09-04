@@ -27,18 +27,39 @@ from nat.utils.type_utils import override
 logger = logging.getLogger(__name__)
 
 
+def default_callback(_auth_key: str) -> bool:
+    """Default callback that always returns False."""
+    return False
+
+
 class HeaderRedactionProcessor(SpanRedactionProcessor):
     """Processor that redacts the span based on auth key, span attributes, and callback.
 
     Uses an LRU cache to avoid redundant callback executions for the same auth keys,
     providing bounded memory usage and automatic eviction of least recently used entries.
+
+    Args:
+        attributes: List of span attribute keys to redact.
+        header: The header key to check for authentication.
+        callback: Function to determine if the auth key should trigger redaction.
+        enabled: Whether the processor is enabled (default: True).
+        force_redact: If True, always redact regardless of header checks (default: False).
+        redaction_value: The value to replace redacted attributes with (default: "[REDACTED]").
     """
 
-    def __init__(self, attributes: list[str], header: str, callback: Callable[[str], bool], enabled: bool = True):
-        self.attributes = attributes
+    def __init__(self,
+                 attributes: list[str] | None = None,
+                 header: str | None = None,
+                 callback: Callable[[str], bool] | None = None,
+                 enabled: bool = True,
+                 force_redact: bool = False,
+                 redaction_value: str = "[REDACTED]"):
+        self.attributes = attributes or []
         self.header = header
-        self.callback = callback
+        self.callback = callback or default_callback
         self.enabled = enabled
+        self.force_redact = force_redact
+        self.redaction_value = redaction_value
 
     @override
     def should_redact(self, item: Span, context: Context) -> bool:
@@ -51,12 +72,16 @@ class HeaderRedactionProcessor(SpanRedactionProcessor):
         Returns:
             bool: True if the span should be redacted, False otherwise.
         """
+        # If force_redact is enabled, always redact regardless of other conditions
+        if self.force_redact:
+            return True
+
         if not self.enabled:
             return False
 
         headers: Headers | None = context.metadata.headers
 
-        if headers is None:
+        if headers is None or self.header is None:
             return False
 
         auth_key = headers.get(self.header, None)
@@ -93,6 +118,6 @@ class HeaderRedactionProcessor(SpanRedactionProcessor):
         """
         for key in self.attributes:
             if key in item.attributes:
-                item.attributes[key] = "REDACTED"
+                item.attributes[key] = self.redaction_value
 
         return item

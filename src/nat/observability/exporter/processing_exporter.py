@@ -50,19 +50,23 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
     - Processor pipeline management (add, remove, clear)
     - Type compatibility validation between processors
     - Pipeline processing with error handling
+    - Configurable None filtering: processors returning None can drop items from pipeline
     - Automatic type validation before export
     """
 
-    def __init__(self, context_state: ContextState | None = None):
+    def __init__(self, context_state: ContextState | None = None, drop_nones: bool = True):
         """Initialize the processing exporter.
 
         Args:
-            context_state: The context state to use for the exporter.
+            context_state (ContextState | None): The context state to use for the exporter.
+            drop_nones (bool): If True, processors that return None will cause the item to be dropped
+                from the pipeline rather than passed to the next processor. Defaults to True.
         """
         super().__init__(context_state)
         self._processors: list[Processor] = []  # List of processors that implement process(item) -> item
         self._processor_names: dict[str, int] = {}  # Maps processor names to their positions
         self._pipeline_locked: bool = False  # Prevents modifications after startup
+        self._drop_nones: bool = drop_nones  # Whether to drop None values between processors
 
     def add_processor(self,
                       processor: Processor,
@@ -396,12 +400,18 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             item (Any): The item to process
 
         Returns:
-            Any: The processed item after running through all processors
+            Any: The processed item after running through all processors, or None if
+                drop_nones is True and any processor returned None
         """
         processed_item = item
         for processor in processors:
             try:
                 processed_item = await processor.process(processed_item)
+                # Drop None values between processors if configured to do so
+                if self._drop_nones and processed_item is None:
+                    logger.debug("Processor %s returned None, dropping item from pipeline",
+                                 processor.__class__.__name__)
+                    return None
             except Exception as e:
                 logger.exception("Error in processor %s: %s", processor.__class__.__name__, e)
                 # Continue with unprocessed item rather than failing
@@ -449,6 +459,11 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             remaining_processors = self._processors[source_index + 1:]
             processed_item = await self._process_through_processors(remaining_processors, item)
 
+            # Skip export if remaining pipeline dropped the item (returned None)
+            if processed_item is None:
+                logger.debug("Item was dropped by remaining processor pipeline, skipping export")
+                return
+
             # Export the final result
             await self._export_final_item(processed_item)
 
@@ -466,6 +481,11 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         try:
             # Then, run through the processor pipeline
             final_item: PipelineOutputT = await self._process_pipeline(item)
+
+            # Skip export if pipeline dropped the item (returned None)
+            if final_item is None:
+                logger.debug("Item was dropped by processor pipeline, skipping export")
+                return
 
             # Handle different output types from batch processors
             if isinstance(final_item, list) and len(final_item) == 0:

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from abc import ABC
 from abc import abstractmethod
 from typing import TypeVar
@@ -23,6 +24,8 @@ from nat.observability.processor.processor import Processor
 from nat.utils.type_utils import override
 
 RedactionItemT = TypeVar('RedactionItemT')
+
+logger = logging.getLogger(__name__)
 
 
 class RedactionProcessor(Processor[RedactionItemT, RedactionItemT], ABC):

@@ -95,6 +95,21 @@ class IncompatibleProcessor(Processor[float, bool]):
         return item > 0.0
 
 
+class NoneReturningProcessor(Processor[str, str]):
+    """Processor that returns None for testing drop_nones functionality."""
+
+    def __init__(self, name: str = "NoneReturningProcessor"):
+        self.name = name
+        self.process_called = False
+        self.processed_items = []
+
+    async def process(self, item: str) -> str:
+        """Process that returns None."""
+        self.process_called = True
+        self.processed_items.append(item)
+        return None  # type: ignore  # Intentionally return None for testing drop_nones
+
+
 class MockCallbackProcessor(CallbackProcessor[str, str]):
     """Mock callback processor for testing pipeline continuation."""
 
@@ -128,8 +143,8 @@ class MockCallbackProcessor(CallbackProcessor[str, str]):
 class ConcreteProcessingExporter(ProcessingExporter[str, int]):
     """Concrete implementation of ProcessingExporter for testing."""
 
-    def __init__(self, context_state: ContextState | None = None):
-        super().__init__(context_state)
+    def __init__(self, context_state: ContextState | None = None, drop_nones: bool = True):
+        super().__init__(context_state, drop_nones)
         self.exported_items = []
         self.export_processed_called = False
 
@@ -173,6 +188,19 @@ class TestProcessingExporterInitialization:
         assert exporter._context_state is mock_context_state
         assert not exporter._processors
         assert hasattr(exporter, '_running')  # Inherited from BaseExporter
+        assert exporter._drop_nones  # Default value
+        assert not exporter._pipeline_locked  # Initially unlocked
+        assert exporter._processor_names == {}  # Initially empty
+
+    def test_init_with_drop_nones_false(self, mock_context_state):
+        """Test initialization with drop_nones=False."""
+        exporter = ConcreteProcessingExporter(mock_context_state, drop_nones=False)
+        assert not exporter._drop_nones
+
+    def test_init_default_drop_nones(self, mock_context_state):
+        """Test that drop_nones defaults to True."""
+        exporter = ConcreteProcessingExporter(mock_context_state)
+        assert exporter._drop_nones  # Should default to True
 
     @patch('nat.observability.exporter.processing_exporter.ContextState.get')
     def test_init_without_context_state(self, mock_get_context):
@@ -192,8 +220,388 @@ class TestProcessingExporterInitialization:
         assert hasattr(processing_exporter, 'output_type')  # From TypeIntrospectionMixin
 
 
-class TestProcessorManagement:
-    """Test processor management methods."""
+class TestPipelineLocking:
+    """Test pipeline locking mechanism."""
+
+    async def test_pipeline_locked_after_pre_start(self, processing_exporter):
+        """Test that pipeline is locked after _pre_start is called."""
+        assert not processing_exporter._pipeline_locked
+        await processing_exporter._pre_start()
+        assert processing_exporter._pipeline_locked
+
+    def test_add_processor_when_locked_raises_error(self, processing_exporter):
+        """Test that adding processor when locked raises RuntimeError."""
+        processor = MockProcessor()
+        processing_exporter._pipeline_locked = True
+
+        with pytest.raises(RuntimeError, match="Cannot modify processor pipeline after exporter has started"):
+            processing_exporter.add_processor(processor)
+
+    def test_remove_processor_when_locked_raises_error(self, processing_exporter):
+        """Test that removing processor when locked raises RuntimeError."""
+        processor = MockProcessor()
+        processing_exporter.add_processor(processor)
+        processing_exporter._pipeline_locked = True
+
+        with pytest.raises(RuntimeError, match="Cannot modify processor pipeline after exporter has started"):
+            processing_exporter.remove_processor(processor)
+
+    def test_clear_processors_when_locked_raises_error(self, processing_exporter):
+        """Test that clearing processors when locked raises RuntimeError."""
+        processing_exporter.add_processor(MockProcessor())
+        processing_exporter._pipeline_locked = True
+
+        with pytest.raises(RuntimeError, match="Cannot modify processor pipeline after exporter has started"):
+            processing_exporter.clear_processors()
+
+    async def test_reset_pipeline_when_running_raises_error(self, processing_exporter):
+        """Test that reset_pipeline when running raises RuntimeError."""
+        processing_exporter._running = True
+
+        try:
+            with pytest.raises(RuntimeError, match="Cannot reset pipeline while exporter is running"):
+                processing_exporter.reset_pipeline()
+        finally:
+            # Cleanup: stop the exporter to prevent garbage collection warning
+            await processing_exporter.stop()
+
+    def test_reset_pipeline_when_not_running(self, processing_exporter):
+        """Test successful pipeline reset when not running."""
+        # Add processor and lock pipeline
+        processing_exporter.add_processor(MockProcessor(), name="test_proc")
+        processing_exporter._pipeline_locked = True
+
+        processing_exporter._running = False
+        processing_exporter.reset_pipeline()
+
+        # Verify pipeline was reset
+        assert not processing_exporter._pipeline_locked
+        assert len(processing_exporter._processors) == 0
+        assert len(processing_exporter._processor_names) == 0
+
+
+class TestProcessorNaming:
+    """Test processor naming functionality."""
+
+    def test_add_processor_with_name(self, processing_exporter):
+        """Test adding processor with name."""
+        processor = MockProcessor()
+        processing_exporter.add_processor(processor, name="test_processor")
+
+        assert "test_processor" in processing_exporter._processor_names
+        assert processing_exporter._processor_names["test_processor"] == 0
+
+    def test_add_processor_duplicate_name_raises_error(self, processing_exporter):
+        """Test that duplicate processor names raise ValueError."""
+        processor1 = MockProcessor("proc1")
+        processor2 = MockBatchProcessor("proc2")  # Compatible with MockProcessor output
+
+        processing_exporter.add_processor(processor1, name="test_name")
+
+        with pytest.raises(ValueError, match="Processor name 'test_name' already exists"):
+            processing_exporter.add_processor(processor2, name="test_name")
+
+    def test_add_processor_non_string_name_raises_error(self, processing_exporter):
+        """Test that non-string processor names raise TypeError."""
+        processor = MockProcessor()
+
+        with pytest.raises(TypeError, match="Processor name must be a string"):
+            processing_exporter.add_processor(processor, name=123)  # Invalid type
+
+    def test_get_processor_by_name_exists(self, processing_exporter):
+        """Test getting processor by name when it exists."""
+        processor = MockProcessor()
+        processing_exporter.add_processor(processor, name="test_processor")
+
+        retrieved = processing_exporter.get_processor_by_name("test_processor")
+        assert retrieved is processor
+
+    def test_get_processor_by_name_not_exists(self, processing_exporter, caplog):
+        """Test getting processor by name when it doesn't exist."""
+        with caplog.at_level(logging.WARNING):
+            retrieved = processing_exporter.get_processor_by_name("nonexistent")
+
+        assert retrieved is None
+        assert "Processor 'nonexistent' not found in pipeline" in caplog.text
+
+    def test_get_processor_by_name_non_string_raises_error(self, processing_exporter):
+        """Test that non-string processor names raise TypeError in get."""
+        with pytest.raises(TypeError, match="Processor name must be a string"):
+            processing_exporter.get_processor_by_name(123)  # Invalid type
+
+    def test_remove_processor_by_name(self, processing_exporter):
+        """Test removing processor by name."""
+        processor1 = MockProcessor("proc1")
+        processor2 = MockBatchProcessor("proc2")
+
+        processing_exporter.add_processor(processor1, name="first")
+        processing_exporter.add_processor(processor2, name="second")
+
+        processing_exporter.remove_processor("first")
+
+        assert len(processing_exporter._processors) == 1
+        assert processing_exporter._processors[0] is processor2
+        assert "first" not in processing_exporter._processor_names
+        assert processing_exporter._processor_names["second"] == 0  # Position updated
+
+    def test_remove_processor_by_name_not_exists(self, processing_exporter):
+        """Test removing processor by non-existent name raises ValueError."""
+        with pytest.raises(ValueError, match="Processor 'nonexistent' not found in pipeline"):
+            processing_exporter.remove_processor("nonexistent")
+
+    def test_remove_processor_by_position(self, processing_exporter):
+        """Test removing processor by position."""
+        processor1 = MockProcessor("proc1")
+        processor2 = MockBatchProcessor("proc2")
+
+        processing_exporter.add_processor(processor1, name="first")
+        processing_exporter.add_processor(processor2, name="second")
+
+        processing_exporter.remove_processor(0)  # Remove first processor
+
+        assert len(processing_exporter._processors) == 1
+        assert processing_exporter._processors[0] is processor2
+        assert "first" not in processing_exporter._processor_names
+        assert processing_exporter._processor_names["second"] == 0  # Position updated
+
+    def test_remove_processor_by_invalid_position(self, processing_exporter):
+        """Test removing processor by invalid position raises ValueError."""
+        processing_exporter.add_processor(MockProcessor())
+
+        with pytest.raises(ValueError, match="Position.*is out of range"):
+            processing_exporter.remove_processor(5)  # Out of range
+
+    def test_remove_processor_invalid_type_raises_error(self, processing_exporter):
+        """Test removing processor with invalid type raises TypeError."""
+        with pytest.raises(TypeError, match="Processor must be a Processor object, string name, or int position"):
+            processing_exporter.remove_processor(12.5)  # Invalid type
+
+
+class TestAdvancedPositioning:
+    """Test advanced positioning functionality in add_processor."""
+
+    def test_add_processor_with_position(self, processing_exporter):
+        """Test adding processor at specific position."""
+        processor1 = MockProcessor("proc1")  # str -> int
+        processor2 = MockBatchProcessor("proc2")  # int -> list[int]
+
+        # Create a processor that can take int input (compatible with MockProcessor output)
+        class IntToIntProcessor(Processor[int, int]):
+
+            async def process(self, item: int) -> int:
+                return item * 2
+
+        processor3 = IntToIntProcessor()  # int -> int
+
+        processing_exporter.add_processor(processor1)  # Position 0: str -> int
+        processing_exporter.add_processor(processor2)  # Position 1: int -> list[int]
+        processing_exporter.add_processor(processor3, position=1)  # Insert at position 1: int -> int
+
+        assert len(processing_exporter._processors) == 3
+        assert processing_exporter._processors[0] is processor1  # str -> int
+        assert processing_exporter._processors[1] is processor3  # int -> int (inserted)
+        assert processing_exporter._processors[2] is processor2  # int -> list[int] (shifted)
+
+    def test_add_processor_position_append_with_minus_one(self, processing_exporter):
+        """Test adding processor with position=-1 appends to end."""
+        processor1 = MockProcessor("proc1")
+        processor2 = MockBatchProcessor("proc2")
+
+        processing_exporter.add_processor(processor1)
+        processing_exporter.add_processor(processor2, position=-1)
+
+        assert len(processing_exporter._processors) == 2
+        assert processing_exporter._processors[1] is processor2
+
+    def test_add_processor_position_out_of_range(self, processing_exporter):
+        """Test adding processor with invalid position raises ValueError."""
+        processing_exporter.add_processor(MockProcessor())
+
+        with pytest.raises(ValueError, match="Position.*is out of range"):
+            processing_exporter.add_processor(MockProcessor(), position=5)
+
+    def test_add_processor_before_named_processor(self, processing_exporter):
+        """Test adding processor before named processor."""
+        processor1 = MockProcessor("proc1")  # str -> int
+        processor2 = MockBatchProcessor("proc2")  # int -> list[int]
+
+        # Create a processor that can take int input (compatible with MockProcessor output)
+        class IntToIntProcessor(Processor[int, int]):
+
+            async def process(self, item: int) -> int:
+                return item * 2
+
+        processor3 = IntToIntProcessor()  # int -> int
+
+        processing_exporter.add_processor(processor1, name="first")  # str -> int
+        processing_exporter.add_processor(processor2, name="second")  # int -> list[int]
+        processing_exporter.add_processor(processor3, before="second")  # Insert before "second": int -> int
+
+        assert len(processing_exporter._processors) == 3
+        assert processing_exporter._processors[0] is processor1  # str -> int
+        assert processing_exporter._processors[1] is processor3  # int -> int (before "second")
+        assert processing_exporter._processors[2] is processor2  # int -> list[int]
+
+    def test_add_processor_after_named_processor(self, processing_exporter):
+        """Test adding processor after named processor."""
+        processor1 = MockProcessor("proc1")  # str -> int
+        processor2 = MockBatchProcessor("proc2")  # int -> list[int]
+
+        # Create a processor that can take int input (compatible with MockProcessor output)
+        class IntToIntProcessor(Processor[int, int]):
+
+            async def process(self, item: int) -> int:
+                return item * 2
+
+        processor3 = IntToIntProcessor()  # int -> int
+
+        processing_exporter.add_processor(processor1, name="first")  # str -> int
+        processing_exporter.add_processor(processor2, name="second")  # int -> list[int]
+        processing_exporter.add_processor(processor3, after="first")  # Insert after "first": int -> int
+
+        assert len(processing_exporter._processors) == 3
+        assert processing_exporter._processors[0] is processor1  # str -> int
+        assert processing_exporter._processors[1] is processor3  # int -> int (after "first")
+        assert processing_exporter._processors[2] is processor2  # int -> list[int]
+
+    def test_add_processor_before_nonexistent_raises_error(self, processing_exporter):
+        """Test adding before non-existent processor raises ValueError."""
+        with pytest.raises(ValueError, match="Processor 'nonexistent' not found in pipeline"):
+            processing_exporter.add_processor(MockProcessor(), before="nonexistent")
+
+    def test_add_processor_after_nonexistent_raises_error(self, processing_exporter):
+        """Test adding after non-existent processor raises ValueError."""
+        with pytest.raises(ValueError, match="Processor 'nonexistent' not found in pipeline"):
+            processing_exporter.add_processor(MockProcessor(), after="nonexistent")
+
+    def test_add_processor_conflicting_position_args_raises_error(self, processing_exporter):
+        """Test that conflicting position arguments raise ValueError."""
+        with pytest.raises(ValueError, match="Only one of position, before, or after can be specified"):
+            processing_exporter.add_processor(MockProcessor(), position=0, before="test")
+
+    def test_add_processor_before_non_string_raises_error(self, processing_exporter):
+        """Test that non-string 'before' parameter raises TypeError."""
+        with pytest.raises(TypeError, match="'before' parameter must be a string"):
+            processing_exporter.add_processor(MockProcessor(), before=123)
+
+    def test_add_processor_after_non_string_raises_error(self, processing_exporter):
+        """Test that non-string 'after' parameter raises TypeError."""
+        with pytest.raises(TypeError, match="'after' parameter must be a string"):
+            processing_exporter.add_processor(MockProcessor(), after=123)
+
+    def test_processor_name_position_updates_on_insertion(self, processing_exporter):
+        """Test that processor name positions are updated when inserting in middle."""
+        processor1 = MockProcessor("proc1")  # str -> int
+        processor2 = MockBatchProcessor("proc2")  # int -> list[int]
+
+        # Create a processor that can take int input (compatible with MockProcessor output)
+        class IntToIntProcessor(Processor[int, int]):
+
+            async def process(self, item: int) -> int:
+                return item * 2
+
+        processor3 = IntToIntProcessor()  # int -> int
+
+        processing_exporter.add_processor(processor1, name="first")  # str -> int
+        processing_exporter.add_processor(processor2, name="second")  # int -> list[int]
+        processing_exporter.add_processor(processor3, name="inserted", position=1)  # Insert at position 1: int -> int
+
+        # Check that positions were updated correctly
+        assert processing_exporter._processor_names["first"] == 0
+        assert processing_exporter._processor_names["inserted"] == 1
+        assert processing_exporter._processor_names["second"] == 2
+
+
+class TestDropNonesFunctionality:
+    """Test drop_nones functionality in pipeline processing."""
+
+    async def test_drop_nones_enabled_drops_none_result(self, mock_context_state, caplog):
+        """Test that pipeline drops None results when drop_nones=True."""
+        exporter = ConcreteProcessingExporter(mock_context_state, drop_nones=True)
+        none_processor = NoneReturningProcessor("none_proc")
+
+        exporter.add_processor(none_processor)
+
+        input_item = "test"
+
+        with caplog.at_level(logging.DEBUG):
+            result = await exporter._process_pipeline(input_item)
+
+        # Item should be dropped (return None)
+        assert result is None
+        assert none_processor.process_called
+        assert "returned None, dropping item from pipeline" in caplog.text
+
+    async def test_drop_nones_disabled_passes_none_result(self, mock_context_state):
+        """Test that pipeline passes None results when drop_nones=False."""
+        exporter = ConcreteProcessingExporter(mock_context_state, drop_nones=False)
+        none_processor = NoneReturningProcessor("none_proc")
+
+        exporter.add_processor(none_processor)
+
+        input_item = "test"
+        result = await exporter._process_pipeline(input_item)
+
+        # None should be passed through to next processor/export
+        assert result is None
+        assert none_processor.process_called
+
+    async def test_drop_nones_with_multiple_processors(self, mock_context_state):
+        """Test drop_nones behavior with multiple processors."""
+        exporter = ConcreteProcessingExporter(mock_context_state, drop_nones=True)
+        none_processor = NoneReturningProcessor("none_proc")
+        following_processor = MockProcessor("following_proc")
+
+        exporter.add_processor(none_processor)
+        exporter.add_processor(following_processor)
+
+        input_item = "test"
+        result = await exporter._process_pipeline(input_item)
+
+        # Pipeline should stop at the None-returning processor
+        assert result is None
+        assert none_processor.process_called
+        assert not following_processor.process_called  # Should not be reached
+
+    async def test_export_with_processing_drops_none_items(self, mock_context_state, caplog):
+        """Test that _export_with_processing skips export for dropped items."""
+        exporter = ConcreteProcessingExporter(mock_context_state, drop_nones=True)
+        none_processor = NoneReturningProcessor("none_proc")
+
+        exporter.add_processor(none_processor)
+
+        input_item = "test"
+
+        with caplog.at_level(logging.DEBUG):
+            await exporter._export_with_processing(input_item)
+
+        # Should not call export_processed for dropped items
+        assert not exporter.export_processed_called
+        assert len(exporter.exported_items) == 0
+        assert "Item was dropped by processor pipeline, skipping export" in caplog.text
+
+    async def test_continue_pipeline_after_drops_none_items(self, mock_context_state, caplog):
+        """Test that _continue_pipeline_after skips export for dropped items."""
+        exporter = ConcreteProcessingExporter(mock_context_state, drop_nones=True)
+        callback_processor = MockCallbackProcessor("callback_proc")
+        none_processor = NoneReturningProcessor("none_proc")
+
+        exporter.add_processor(callback_processor)
+        exporter.add_processor(none_processor)
+
+        input_item = "test"
+
+        with caplog.at_level(logging.DEBUG):
+            await exporter._continue_pipeline_after(callback_processor, input_item)
+
+        # Should not call export_processed for dropped items
+        assert not exporter.export_processed_called
+        assert len(exporter.exported_items) == 0
+        assert "Item was dropped by remaining processor pipeline, skipping export" in caplog.text
+
+
+class TestBasicProcessorManagement:
+    """Test basic processor management functionality."""
 
     def test_add_processor_empty_pipeline(self, processing_exporter):
         """Test adding processor to empty pipeline."""
@@ -240,8 +648,8 @@ class TestProcessorManagement:
         assert "Cannot use issubclass() for type compatibility check" in caplog.text
         assert len(processing_exporter._processors) == 2
 
-    def test_remove_processor_exists(self, processing_exporter):
-        """Test removing an existing processor."""
+    def test_remove_processor_by_object_exists(self, processing_exporter):
+        """Test removing an existing processor by object."""
         processor1 = MockProcessor("proc1")
         processor2 = MockBatchProcessor("proc2")  # Compatible: int -> list[int]
 
@@ -253,7 +661,7 @@ class TestProcessorManagement:
         assert len(processing_exporter._processors) == 1
         assert processing_exporter._processors[0] is processor2
 
-    def test_remove_processor_not_exists(self, processing_exporter):
+    def test_remove_processor_by_object_not_exists(self, processing_exporter):
         """Test removing a processor that doesn't exist."""
         processor1 = MockProcessor("proc1")
         processor2 = MockBatchProcessor("proc2")
@@ -277,6 +685,7 @@ class TestProcessorManagement:
         processing_exporter.clear_processors()
 
         assert len(processing_exporter._processors) == 0
+        assert len(processing_exporter._processor_names) == 0
 
 
 class TestTypeValidation:
@@ -328,7 +737,7 @@ class TestTypeValidation:
         class GenericTypeProcessor(Processor[str, int]):
 
             @property
-            def input_class(self):
+            def input_class(self) -> type:
                 # This will cause issubclass to raise TypeError
                 raise TypeError("issubclass() arg 1 must be a class")
 
@@ -560,23 +969,27 @@ class TestExportMethod:
 class TestTaskCreation:
     """Test task creation functionality."""
 
-    def test_create_export_task_when_running(self, processing_exporter):
+    async def test_create_export_task_when_running(self, processing_exporter):
         """Test creating export task when exporter is running."""
         processing_exporter._running = True
         processing_exporter._tasks = set()
 
-        # Use a mock coroutine that doesn't need to be awaited
-        mock_coro = Mock()
+        try:
+            # Use a mock coroutine that doesn't need to be awaited
+            mock_coro = Mock()
 
-        with patch('asyncio.create_task') as mock_create_task:
-            mock_task = Mock()
-            mock_create_task.return_value = mock_task
+            with patch('asyncio.create_task') as mock_create_task:
+                mock_task = Mock()
+                mock_create_task.return_value = mock_task
 
-            processing_exporter._create_export_task(mock_coro)
+                processing_exporter._create_export_task(mock_coro)
 
-            mock_create_task.assert_called_once_with(mock_coro)
-            assert mock_task in processing_exporter._tasks
-            mock_task.add_done_callback.assert_called_once()
+                mock_create_task.assert_called_once_with(mock_coro)
+                assert mock_task in processing_exporter._tasks
+                mock_task.add_done_callback.assert_called_once()
+        finally:
+            # Cleanup: stop the exporter to prevent garbage collection warning
+            await processing_exporter.stop()
 
     def test_create_export_task_when_not_running_warning(self, processing_exporter, caplog):
         """Test creating export task when exporter is not running logs warning."""
@@ -590,19 +1003,23 @@ class TestTaskCreation:
 
         assert "Attempted to create export task while not running" in caplog.text
 
-    def test_create_export_task_error_handling(self, processing_exporter, caplog):
+    async def test_create_export_task_error_handling(self, processing_exporter, caplog):
         """Test error handling in task creation."""
         processing_exporter._running = True
 
-        # Use a mock coroutine that doesn't need to be awaited
-        mock_coro = Mock()
+        try:
+            # Use a mock coroutine that doesn't need to be awaited
+            mock_coro = Mock()
 
-        with patch('asyncio.create_task', side_effect=RuntimeError("Task creation failed")):
-            with pytest.raises(RuntimeError, match="Task creation failed"):
-                with caplog.at_level(logging.ERROR):
-                    processing_exporter._create_export_task(mock_coro)
+            with patch('asyncio.create_task', side_effect=RuntimeError("Task creation failed")):
+                with pytest.raises(RuntimeError, match="Task creation failed"):
+                    with caplog.at_level(logging.ERROR):
+                        processing_exporter._create_export_task(mock_coro)
 
-        assert "Failed to create task" in caplog.text
+            assert "Failed to create task" in caplog.text
+        finally:
+            # Cleanup: stop the exporter to prevent garbage collection warning
+            await processing_exporter.stop()
 
 
 class TestCleanup:
@@ -671,8 +1088,10 @@ class TestCleanup:
         processing_exporter.add_processor(processor)
 
         # Mock processor shutdown to raise an error
-        async def failing_shutdown():
-            raise RuntimeError("Shutdown failed")
+        def failing_shutdown():
+            future = asyncio.Future()
+            future.set_exception(RuntimeError("Shutdown failed"))
+            return future
 
         processor.shutdown = failing_shutdown
 
@@ -724,8 +1143,10 @@ class TestCleanup:
         processing_exporter.add_processor(processor)
 
         # Mock processor shutdown to raise an error
-        async def failing_shutdown():
-            raise RuntimeError("Shutdown failed")
+        def failing_shutdown():
+            future = asyncio.Future()
+            future.set_exception(RuntimeError("Shutdown failed"))
+            return future
 
         processor.shutdown = failing_shutdown
 
@@ -786,13 +1207,12 @@ class TestAbstractMethod:
     def test_export_processed_is_abstract(self):
         """Test that export_processed must be implemented."""
 
+        # Create a class that doesn't implement export_processed
+        class IncompleteExporter(ProcessingExporter[str, int]):
+            pass  # Missing export_processed implementation
+
         # Test that trying to instantiate a class without implementing export_processed raises TypeError
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            # Create a class that doesn't implement export_processed
-            class IncompleteExporter(ProcessingExporter[str, int]):
-                pass  # Missing export_processed implementation
-
-            # This should raise TypeError due to missing abstract method implementation
             IncompleteExporter()
 
 

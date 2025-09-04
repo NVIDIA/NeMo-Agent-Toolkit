@@ -24,12 +24,20 @@ logger = logging.getLogger(__name__)
 
 
 class SpanTaggingProcessor(Processor[Span, Span]):
-    """Processor that tags the span with a tag.
+    """Processor that tags spans with key-value metadata attributes.
 
-    Both tag_key and tag_value are required to tag the span.
+    This processor adds custom tags to spans by setting attributes with a configurable prefix.
+    Tags are only applied when both tag_key and tag_value are provided. The processor uses
+    a span prefix (configurable via NAT_SPAN_PREFIX environment variable) to namespace
+    the tag attributes.
+
+    Args:
+        tag_key: The key name for the tag to add to spans.
+        tag_value: The value for the tag to add to spans.
+        span_prefix: The prefix to use for tag attributes (default: from NAT_SPAN_PREFIX env var or "nat").
     """
 
-    def __init__(self, tag_key: str, tag_value: str | None = None, span_prefix: str | None = None):
+    def __init__(self, tag_key: str | None = None, tag_value: str | None = None, span_prefix: str | None = None):
         self.tag_key = tag_key
         self.tag_value = tag_value
 

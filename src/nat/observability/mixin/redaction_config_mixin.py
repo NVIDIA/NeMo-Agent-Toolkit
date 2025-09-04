@@ -13,25 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
-
 from pydantic import BaseModel
 from pydantic import Field
 
 
-class PrivacyLevel(Enum):
-    """Privacy level for the traces."""
-    NONE = "none"
-    BASIC = "basic"
-    MEDIUM = "medium"
-    HIGH = "high"
-
-
 class RedactionConfigMixin(BaseModel):
-    """Mixin for telemetry exporters that require redaction configuration."""
-    redaction_enabled: bool = Field(default=False, description="Whether to redact PII from the traces.")
+    """Mixin for basic redaction configuration.
+
+    Provides core redaction functionality that can be used standalone
+    or inherited by specialized redaction mixins.
+    """
+    redaction_enabled: bool = Field(default=False, description="Whether to enable redaction processing.")
+    redaction_value: str = Field(default="[REDACTED]", description="Value to replace redacted attributes with.")
     redaction_attributes: list[str] = Field(default_factory=lambda: ["input.value", "output.value", "metadata"],
-                                            description="Attributes to redact from the traces.")
-    redaction_header: str = Field(default="x-redaction-key", description="Header to check for redaction.")
-    tag_key: str = Field(default="privacy_level", description="Key to tag the traces.")
-    tag_value: PrivacyLevel = Field(default=PrivacyLevel.NONE, description="Value to tag the traces.")
+                                            description="Span attributes to redact when redaction is triggered.")
+    force_redaction: bool = Field(default=False, description="Always redact regardless of other conditions.")
+
+
+class HeaderRedactionConfigMixin(RedactionConfigMixin):
+    """Mixin for header-based redaction configuration.
+
+    Inherits core redaction fields (redaction_enabled, redaction_attributes, force_redaction)
+    and adds header-specific configuration for authentication-based redaction decisions.
+
+    Note: The callback function must be provided directly to the processor at runtime.
+    """
+    redaction_header: str = Field(default="x-redaction-key", description="Header to check for redaction decisions.")
