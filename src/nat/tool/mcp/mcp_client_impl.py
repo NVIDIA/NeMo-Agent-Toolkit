@@ -19,6 +19,7 @@ from typing import Literal
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import SecretStr
 from pydantic import model_validator
 
 from nat.builder.builder import Builder
@@ -41,6 +42,51 @@ class ToolOverrideConfig(BaseModel):
     description: str | None = Field(default=None, description="Override the tool description")
 
 
+class MCPAuthConfig(BaseModel):
+    """MCP client authentication configuration."""
+
+    enabled: bool = Field(default=False, description="Enable OAuth2 authentication")
+
+    # Option 1: Explicit configuration
+    authorization_server_url: str | None = Field(
+        default=None, description="Authorization server URL (if not provided, will be discovered from MCP server)")
+
+    # OAuth2 client credentials
+    client_id: str | None = Field(default=None, description="OAuth2 client ID")
+    client_secret: SecretStr | None = Field(default=None, description="OAuth2 client secret")
+
+    # Optional overrides
+    scopes: list[str] | None = Field(default=None,
+                                     description="OAuth2 scopes (if not provided, will use server's default scopes)")
+
+    # Client metadata
+    client_name: str = Field(default="NAT MCP Client", description="OAuth2 client name")
+    redirect_uri: str | None = Field(default=None,
+                                     description="OAuth2 redirect URI (defaults to localhost with random port)")
+
+    # Advanced options
+    use_dynamic_registration: bool = Field(default=True,
+                                           description="Use OAuth2 Dynamic Client Registration if supported")
+    use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
+
+    @model_validator(mode="after")
+    def validate_auth_config(self):
+        """Validate authentication configuration."""
+        if not self.enabled:
+            return self
+
+        # Must have client credentials for OAuth2
+        if not self.client_id and not self.use_dynamic_registration:
+            raise ValueError("client_id is required when auth is enabled and dynamic registration is disabled")
+
+        # For confidential clients, need client_secret
+        # For public clients (dynamic registration), client_secret is optional
+        if not self.use_dynamic_registration and not self.client_secret:
+            raise ValueError("client_secret is required when dynamic registration is disabled")
+
+        return self
+
+
 class MCPServerConfig(BaseModel):
     """
     Server connection details for MCP client.
@@ -56,6 +102,9 @@ class MCPServerConfig(BaseModel):
     args: list[str] | None = Field(default=None, description="Arguments for the stdio command")
     env: dict[str, str] | None = Field(default=None, description="Environment variables for the stdio process")
 
+    # Authentication configuration
+    auth: MCPAuthConfig | None = Field(default=None, description="OAuth2 authentication configuration")
+
     @model_validator(mode="after")
     def validate_model(self):
         """Validate that stdio and SSE/Streamable HTTP properties are mutually exclusive."""
@@ -64,11 +113,15 @@ class MCPServerConfig(BaseModel):
                 raise ValueError("url should not be set when using stdio transport")
             if not self.command:
                 raise ValueError("command is required when using stdio transport")
+            # Auth is not supported for stdio transport
+            if self.auth and self.auth.enabled:
+                raise ValueError("Authentication is not supported for stdio transport")
         elif self.transport in ("sse", "streamable-http"):
             if self.command is not None or self.args is not None or self.env is not None:
                 raise ValueError("command, args, and env should not be set when using sse or streamable-http transport")
             if not self.url:
                 raise ValueError("url is required when using sse or streamable-http transport")
+
         return self
 
 
