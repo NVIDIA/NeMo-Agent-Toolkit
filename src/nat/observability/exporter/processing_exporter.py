@@ -382,7 +382,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
                     self.output_type,
                     e)
 
-    async def _process_pipeline(self, item: PipelineInputT) -> PipelineOutputT:
+    async def _process_pipeline(self, item: PipelineInputT) -> PipelineOutputT | None:
         """Process item through all registered processors.
 
         Args:
@@ -481,7 +481,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         """
         try:
             # Then, run through the processor pipeline
-            final_item: PipelineOutputT = await self._process_pipeline(item)
+            final_item: PipelineOutputT | None = await self._process_pipeline(item)
 
             # Skip export if pipeline dropped the item (returned None)
             if final_item is None:
