@@ -301,12 +301,88 @@ class TestProcessorNaming:
         with pytest.raises(ValueError, match="Processor name 'test_name' already exists"):
             processing_exporter.add_processor(processor2, name="test_name")
 
+    def test_add_processor_atomicity_on_name_validation_failure(self, processing_exporter):
+        """Test that failed name validation leaves processor pipeline unchanged (atomicity)."""
+        # Set up initial state with multiple processors
+        processor1 = MockProcessor("proc1")  # str -> int
+        processor2 = MockBatchProcessor("proc2")  # int -> list[int]
+
+        processing_exporter.add_processor(processor1, name="first")
+        processing_exporter.add_processor(processor2, name="second")
+
+        # Capture initial state
+        initial_processor_count = len(processing_exporter._processors)
+        initial_processor_objects = processing_exporter._processors.copy()
+        initial_name_mapping = processing_exporter._processor_names.copy()
+
+        # Attempt to add processor with duplicate name (should fail)
+        # Make processor3 compatible with processor2's output (list[int] -> ?)
+        class ListToIntProcessor(Processor[list[int], int]):
+
+            async def process(self, item: list[int]) -> int:
+                return sum(item)
+
+        processor3 = ListToIntProcessor()  # list[int] -> int (compatible)
+
+        with pytest.raises(ValueError, match="Processor name 'first' already exists"):
+            processing_exporter.add_processor(processor3, name="first")  # Duplicate name
+
+        # Verify complete atomicity - no partial state changes
+        assert len(processing_exporter._processors) == initial_processor_count, \
+            "Processor count changed after failed operation"
+        assert processing_exporter._processors == initial_processor_objects, \
+            "Processor list modified after failed operation"
+        assert processing_exporter._processor_names == initial_name_mapping, \
+            "Name mapping modified after failed operation"
+
+        # Verify the failed processor was not added anywhere
+        assert processor3 not in processing_exporter._processors, \
+            "Failed processor found in processor list"
+
     def test_add_processor_non_string_name_raises_error(self, processing_exporter):
         """Test that non-string processor names raise TypeError."""
         processor = MockProcessor()
 
         with pytest.raises(TypeError, match="Processor name must be a string"):
             processing_exporter.add_processor(processor, name=123)  # Invalid type
+
+    def test_add_processor_atomicity_on_type_validation_failure(self, processing_exporter):
+        """Test that failed type validation leaves processor pipeline unchanged (atomicity)."""
+        # Set up initial state with multiple processors
+        processor1 = MockProcessor("proc1")  # str -> int
+        processor2 = MockBatchProcessor("proc2")  # int -> list[int]
+
+        processing_exporter.add_processor(processor1, name="first")
+        processing_exporter.add_processor(processor2, name="second")
+
+        # Capture initial state
+        initial_processor_count = len(processing_exporter._processors)
+        initial_processor_objects = processing_exporter._processors.copy()
+        initial_name_mapping = processing_exporter._processor_names.copy()
+
+        # Attempt to add processor with invalid name type (should fail)
+        # Make processor3 compatible with processor2's output (list[int] -> ?)
+        class ListToStringProcessor(Processor[list[int], str]):
+
+            async def process(self, item: list[int]) -> str:
+                return str(sum(item))
+
+        processor3 = ListToStringProcessor()  # list[int] -> str (compatible)
+
+        with pytest.raises(TypeError, match="Processor name must be a string"):
+            processing_exporter.add_processor(processor3, name=123)  # Invalid type
+
+        # Verify complete atomicity - no partial state changes
+        assert len(processing_exporter._processors) == initial_processor_count, \
+            "Processor count changed after failed operation"
+        assert processing_exporter._processors == initial_processor_objects, \
+            "Processor list modified after failed operation"
+        assert processing_exporter._processor_names == initial_name_mapping, \
+            "Name mapping modified after failed operation"
+
+        # Verify the failed processor was not added anywhere
+        assert processor3 not in processing_exporter._processors, \
+            "Failed processor found in processor list"
 
     def test_get_processor_by_name_exists(self, processing_exporter):
         """Test getting processor by name when it exists."""

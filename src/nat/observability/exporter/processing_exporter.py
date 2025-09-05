@@ -97,25 +97,25 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         # Validate type compatibility at insertion point
         self._validate_insertion_compatibility(processor, insert_position)
 
-        # Insert the processor at the calculated position
-        if insert_position == len(self._processors):
-            self._processors.append(processor)
-        else:
-            self._processors.insert(insert_position, processor)
-
-        # Validate and register processor name if provided (before position updates)
+        # Pre-validate name (no side effects yet)
         if name is not None:
             if not isinstance(name, str):
                 raise TypeError(f"Processor name must be a string, got {type(name).__name__}")
             if name in self._processor_names:
                 raise ValueError(f"Processor name '{name}' already exists")
 
-        # Always update positions for processors that shifted
-        for proc_name, pos in self._processor_names.items():
+        # Shift existing name positions (do this before list mutation)
+        for proc_name, pos in list(self._processor_names.items()):
             if pos >= insert_position:
                 self._processor_names[proc_name] = pos + 1
 
-        # Register the processor name after position updates
+        # Insert the processor
+        if insert_position == len(self._processors):
+            self._processors.append(processor)
+        else:
+            self._processors.insert(insert_position, processor)
+
+        # Record the new processor name, if provided
         if name is not None:
             self._processor_names[name] = insert_position
 
