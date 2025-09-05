@@ -43,7 +43,10 @@ class TestLLMConfig(LLMBaseConfig, name="nat_test_llm"):
 
 
 class _ResponseChooser:
-    """Helper class to choose the next response according to config using itertools.cycle and provide sleep functions"""
+    """
+    Helper class to choose the next response according to config using itertools.cycle and provide synchronous
+    and asynchronous sleep functions.
+    """
 
     def __init__(self, response_seq: list[str], delay_ms: int):
         self._cycler = iter_cycle(response_seq) if response_seq else None
