@@ -20,6 +20,7 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from typing import Any
+import re
 
 from colorama import Fore
 from langchain_core.callbacks import AsyncCallbackHandler
@@ -29,6 +30,8 @@ from langchain_core.messages import BaseMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
+from langchain_core.runnables import Runnable
+from langchain_core.language_models import LanguageModelInput
 from langgraph.graph.graph import CompiledGraph
 
 logger = logging.getLogger(__name__)
@@ -80,6 +83,23 @@ class BaseAgent(ABC):
         self.log_response_max_chars = log_response_max_chars
         self.graph = None
 
+    def _maybe_bind_llm_and_yield(self) -> Runnable[LanguageModelInput, BaseMessage]:
+        """
+        Bind additional parameters to the LLM if needed
+        - if the LLM is a smart model, no need to bind any additional parameters
+        - if the LLM is a non-smart model, bind a stop sequence to the LLM
+
+        Returns:
+            Runnable[LanguageModelInput, BaseMessage]: The LLM with any additional parameters bound.
+        """
+        # models that don't need (or don't support)a stop sequence
+        smart_models = re.compile(r"gpt-?5", re.IGNORECASE)
+        if any(smart_models.search(getattr(self.llm, model, "")) for model in ["model", "model_name"]):
+            # no need to bind any additional parameters to the LLM
+            return self.llm
+        # add a stop sequence to the LLM
+        return self.llm.bind(stop=["Observation:"])
+
     async def _stream_llm(self,
                           runnable: Any,
                           inputs: dict[str, Any],
@@ -107,21 +127,25 @@ class BaseAgent(ABC):
 
         return AIMessage(content=output_message)
 
-    async def _call_llm(self, messages: list[BaseMessage]) -> AIMessage:
+    async def _call_llm(self, llm: Runnable, inputs: dict[str, Any], config: RunnableConfig | None = None) -> AIMessage:
         """
         Call the LLM directly. Retry logic is handled automatically by the underlying LLM client.
 
         Parameters
         ----------
-        messages : list[BaseMessage]
-            The messages to send to the LLM
+        llm : Runnable
+            The LLM runnable (prompt | llm or similar)
+        inputs : dict[str, Any]
+            The inputs to pass to the runnable
+        config : RunnableConfig | None
+            The config to pass to the runnable (should include callbacks)
 
         Returns
         -------
         AIMessage
             The LLM response
         """
-        response = await self.llm.ainvoke(messages)
+        response = await llm.ainvoke(inputs, config=config)
         return AIMessage(content=str(response.content))
 
     async def _call_tool(self,

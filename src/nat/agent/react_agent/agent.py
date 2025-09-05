@@ -110,23 +110,6 @@ class ReActAgentGraph(DualNodeAgent):
         self.tools_dict = {tool.name: tool for tool in tools}
         logger.debug("%s Initialized ReAct Agent Graph", AGENT_LOG_PREFIX)
 
-    def _maybe_bind_llm_and_yield(self) -> Runnable[LanguageModelInput, BaseMessage]:
-        """
-        Bind additional parameters to the LLM if needed
-        - if the LLM is a smart model, no need to bind any additional parameters
-        - if the LLM is a non-smart model, bind a stop sequence to the LLM
-
-        Returns:
-            Runnable[LanguageModelInput, BaseMessage]: The LLM with any additional parameters bound.
-        """
-        # models that don't need (or don't support)a stop sequence
-        smart_models = re.compile(r"gpt-?5", re.IGNORECASE)
-        if any(smart_models.search(getattr(self.llm, model, "")) for model in ["model", "model_name"]):
-            # no need to bind any additional parameters to the LLM
-            return self.llm
-        # add a stop sequence to the LLM
-        return self.llm.bind(stop=["Observation:"])
-
     def _get_tool(self, tool_name: str):
         try:
             return self.tools_dict.get(tool_name)
