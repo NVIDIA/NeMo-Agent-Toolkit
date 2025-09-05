@@ -222,7 +222,7 @@ async def test_create_job_with_reps(test_client: TestClient, eval_config_file: s
     data = response.json()
     assert "job_id" in data
     assert data["status"] == "submitted"
-    await await_job([data["job_id"]])
+    await await_job(data["job_id"])
 
 
 @pytest.mark.asyncio
@@ -238,7 +238,7 @@ async def test_create_job_with_expiry(test_client: TestClient, eval_config_file:
     data = response.json()
     assert "job_id" in data
     assert data["status"] == "submitted"
-    await await_job([data["job_id"]])
+    await await_job(data["job_id"])
 
 
 @pytest.mark.asyncio
