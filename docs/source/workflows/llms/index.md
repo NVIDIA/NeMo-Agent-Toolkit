@@ -126,11 +126,11 @@ The Azure OpenAI LLM provider is defined by the {py:class}`~nat.llm.azure_openai
 
 ## Testing Provider
 ### `nat_test_llm`
-`nat_test_llm` is a development/testing provider intended for examples and CI. It is not intended for production use.
+`nat_test_llm` is a development and testing provider intended for examples and CI. It is not intended for production use.
 
-- Installation: `uv pip install nvidia-nat-test`
-- Purpose: Deterministic cycling responses for quick validation
-- Not for production
+* Installation: `uv pip install nvidia-nat-test`
+* Purpose: Deterministic cycling responses for quick validation
+* Not for production
 
 Minimal YAML example with `chat_completion`:
 
@@ -146,8 +146,8 @@ workflow:
   system_prompt: "Say only the answer."
 ```
 
-- Learn how to add your own LLM provider: [Adding an LLM Provider](../../extend/adding-an-llm-provider.md)
-- See a short tutorial using YAML and `nat_test_llm`: [Testing with nat_test_llm](../../tutorials/testing-with-nat-test-llm.md)
+* Learn how to add your own LLM provider: [Adding an LLM Provider](../../extend/adding-an-llm-provider.md)
+* See a short tutorial using YAML and `nat_test_llm`: [Testing with nat_test_llm](../../tutorials/testing-with-nat-test-llm.md)
 
 
 :::{note}
