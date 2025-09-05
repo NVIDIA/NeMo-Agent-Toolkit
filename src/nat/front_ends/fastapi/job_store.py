@@ -139,8 +139,11 @@ class JobStore:
         """
         Async context manager for a SQLAlchemy session which explicitly begins a transaction.
         """
+        print(f"\n***********\nCreating session for task {current_task()} - 0\n***********\n")
         async with self._session() as session:
+            print(f"\n***********\nCreating session for task {current_task()} - 1\n***********\n")
             async with session.begin():
+                print(f"\n***********\nCreating session for task {current_task()} - 2\n***********\n")
                 yield session
 
         # Removes the current task key from the session registry, preventing potential memory leaks
@@ -328,7 +331,7 @@ class JobStore:
                     try:
                         var = Variable(name=job_id, client=client)
                         try:
-                            future = var.get(timeout=0)
+                            future = await var.get(timeout=0)
                             if isinstance(future, Future):
                                 await client.cancel([future], force=True, reason="Expired job cleanup")
 

@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import asyncio
+import os
 import shutil
+import time
 from pathlib import Path
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -30,11 +32,11 @@ from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfi
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
 
-@pytest.fixture(name="auto_set_env_vars", autouse=True)
-def fixture_auto_set_env_vars(setup_db,
-                              set_nat_config_file_env_var,
-                              set_nat_dask_scheduler_env_var,
-                              set_nat_job_store_db_url_env_var):
+@pytest_asyncio.fixture(name="auto_set_env_vars", autouse=True)
+async def fixture_auto_set_env_vars(setup_db,
+                                    set_nat_config_file_env_var,
+                                    set_nat_dask_scheduler_env_var,
+                                    set_nat_job_store_db_url_env_var):
     return
 
 
@@ -53,40 +55,37 @@ def test_config_fixture(nat_config_file_path: Path) -> Config:
     return config
 
 
-@pytest.fixture(autouse=True)
-def patch_evaluation_run():
-    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.EvaluationRun") as MockEvaluationRun:
-        mock_eval_instance = MagicMock()
-        mock_eval_instance.run_and_evaluate = AsyncMock(
-            return_value=MagicMock(workflow_interrupted=False, workflow_output_file="/fake/output/path.json"))
-        MockEvaluationRun.return_value = mock_eval_instance
-        yield MockEvaluationRun
+# @pytest_asyncio.fixture(autouse=True)
+# async def patch_evaluation_run():
+#     with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.EvaluationRun") as MockEvaluationRun:
+#         mock_eval_instance = MagicMock()
+#         mock_eval_instance.run_and_evaluate = AsyncMock(
+#             return_value=MagicMock(workflow_interrupted=False, workflow_output_file="/fake/output/path.json"))
+#         MockEvaluationRun.return_value = mock_eval_instance
+#         yield MockEvaluationRun
 
+# @pytest_asyncio.fixture(name="mock_fire_and_forget", autouse=True)
+# async def mock_fire_and_forget_fixture():
+#     with patch("nat.front_ends.fastapi.job_store.fire_and_forget") as mock_fn:
+#         yield mock_fn
 
-@pytest.fixture(name="mock_fire_and_forget", autouse=True)
-def mock_fire_and_forget_fixture():
-    with patch("nat.front_ends.fastapi.job_store.fire_and_forget") as mock_fn:
-        yield mock_fn
+# @pytest_asyncio.fixture(name="mock_dask_variable", autouse=True)
+# async def mock_dask_variable_fixture():
+#     with patch("nat.front_ends.fastapi.job_store.Variable") as mock_obj:
+#         mock_obj.return_value = mock_obj
+#         mock_obj.set = AsyncMock()
+#         yield mock_obj
 
+# @pytest_asyncio.fixture(autouse=True)
+# async def patch_dask_client():
+#     with patch("nat.front_ends.fastapi.job_store.DaskClient", new_callable=AsyncMock) as mock_dask_client:
 
-@pytest.fixture(name="mock_dask_variable", autouse=True)
-def mock_dask_variable_fixture():
-    with patch("nat.front_ends.fastapi.job_store.Variable") as mock_obj:
-        mock_obj.return_value = mock_obj
-        mock_obj.set = AsyncMock()
-        yield mock_obj
+#         def side_effect(job_fn, *job_args, key, **job_kwargs):
+#             return asyncio.create_task(job_fn(*job_args, **job_kwargs), name="patched-dask-submit-task")
 
-
-@pytest.fixture(autouse=True)
-def patch_dask_client():
-    with patch("nat.front_ends.fastapi.job_store.DaskClient", new_callable=AsyncMock) as mock_dask_client:
-
-        def side_effect(job_fn, *job_args, key, **job_kwargs):
-            return asyncio.create_task(job_fn(*job_args, **job_kwargs), name="patched-dask-submit-task")
-
-        mock_dask_client.return_value = mock_dask_client
-        mock_dask_client.submit = MagicMock(side_effect=side_effect)
-        yield mock_dask_client
+#         mock_dask_client.return_value = mock_dask_client
+#         mock_dask_client.submit = MagicMock(side_effect=side_effect)
+#         yield mock_dask_client
 
 
 @pytest.fixture(name="test_client")
@@ -119,34 +118,57 @@ def create_job(test_client: TestClient, config_file: str, job_id: str | None = N
     return test_client.post("/evaluate", json=payload)
 
 
-async def await_job(mock_fire_and_forget: MagicMock):
+async def await_job(job_id: str):
     """Helper to await a job completion."""
-    mock_fire_and_forget.assert_called()
-    call_args = mock_fire_and_forget.call_args
-    print(f"\n******************\ncall_args: {call_args}\n*****************\n")
-    job_task = call_args[0][0]
+    from dask.distributed import Client as DaskClient
+    from dask.distributed import Future
+    from dask.distributed import Variable
+    from dask.distributed import wait
+    print(f"\n******************\nawaiting job_task: {job_id} - 0\n*****************\n")
 
-    # Await the task to complete
-    print(f"\n******************\nawaiting job_task: {job_task}\n*****************\n")
-    results = await job_task
-    print(f"\n******************\ndone awaiting job_task: {job_task}\n*****************\n")
+    client = await DaskClient(address=os.environ["NAT_DASK_SCHEDULER_ADDRESS"], asynchronous=True)
+    results = None
+
+    print(f"\n******************\nawaiting job_task: {job_id} - 1\n*****************\n")
+    try:
+        var = Variable(name=job_id, client=client)
+        print(f"\n******************\nawaiting job_task: {job_id} - 1.1\n*****************\n")
+        future = await var.get(timeout=5)
+        print(f"\n******************\nawaiting job_task: {job_id} - 1.2 future={future}\n*****************\n")
+        if isinstance(future, Future):
+            print(f"\n******************\nawaiting job_task: {job_id} - 2 future={future}\n*****************\n")
+            t1 = time.time()
+            results = await future.result(timeout=30)
+            t2 = time.time()
+            print(
+                f"\n******************\ndone awaiting job_task: {job_id} - 3 future={future} took {t2 - t1:.2f}s\n*****************\n"
+            )
+
+    finally:
+        print(f"\n******************\ndone awaiting job_task: {job_id} - 4\n*****************\n")
+        await client.close()
+        print(f"\n******************\ndone awaiting job_task: {job_id} - 5\n*****************\n")
+
     return results
 
 
-def test_create_job(test_client: TestClient, eval_config_file: str):
+@pytest.mark.asyncio
+async def test_create_job(test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job."""
     response = create_job(test_client, eval_config_file)
     assert response.status_code == 200
     data = response.json()
     assert "job_id" in data
     assert data["status"] == "submitted"
+    await await_job(data["job_id"])
 
 
-async def test_get_job_status(test_client: TestClient, mock_fire_and_forget: MagicMock, eval_config_file: str):
+@pytest.mark.asyncio
+async def test_get_job_status(test_client: TestClient, eval_config_file: str):
     """Test getting the status of a specific job."""
     create_response = create_job(test_client, eval_config_file)
     job_id = create_response.json()["job_id"]
-    await await_job(mock_fire_and_forget)
+    await await_job(job_id)
 
     status_response = test_client.get(f"/evaluate/job/{job_id}")
     assert status_response.status_code == 200
