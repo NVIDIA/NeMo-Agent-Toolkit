@@ -174,7 +174,7 @@ def update_dependency_graph(config: "Config", instance_config: TypedBaseModel,
         nx.DiGraph: An dependency graph that has been updated with the provided runtime instance.
     """
 
-    for field_name, field_info in instance_config.model_fields.items():
+    for field_name, field_info in type(instance_config).model_fields.items():
 
         for instance_id, value_node in recursive_componentref_discovery(
                 instance_config,
