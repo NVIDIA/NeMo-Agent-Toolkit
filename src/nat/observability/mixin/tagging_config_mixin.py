@@ -23,7 +23,7 @@ from pydantic import Field
 TagValueT = TypeVar("TagValueT")
 
 
-class PrivacyLevel(Enum):
+class PrivacyLevel(str, Enum):
     """Privacy level for the traces."""
     NONE = "none"
     LOW = "low"

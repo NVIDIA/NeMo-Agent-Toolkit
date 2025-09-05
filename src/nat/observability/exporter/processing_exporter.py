@@ -153,7 +153,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
                 raise ValueError(f"Position {processor} is out of range [0, {len(self._processors) - 1}]")
             position = processor
             processor_obj = self._processors[position]
-        elif hasattr(processor, 'process'):  # Duck typing check for Processor
+        elif isinstance(processor, Processor):
             # Remove by object (existing behavior)
             if processor not in self._processors:
                 return  # Silently ignore if not found (existing behavior)
