@@ -46,17 +46,13 @@ class _ResponseChooser:
     """Helper class to choose the next response according to config using itertools.cycle and provide sleep functions"""
 
     def __init__(self, response_seq: list[str], delay_ms: int):
-        self._cycler = iter_cycle(response_seq)
+        self._cycler = iter_cycle(response_seq) if response_seq else None
         self._delay_ms = delay_ms
 
     def next_response(self) -> str:
         if self._cycler is None:
             return ""
-
-        try:
-            return next(self._cycler)
-        except StopIteration:
-            return ""
+        return next(self._cycler)
 
     def sync_sleep(self) -> None:
         time.sleep(self._delay_ms / 1000.0)

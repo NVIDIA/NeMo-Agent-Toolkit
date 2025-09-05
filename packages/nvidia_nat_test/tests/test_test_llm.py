@@ -351,8 +351,8 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str]):
         elif wrapper == LLMFrameworkEnum.LLAMA_INDEX.value:
             for _ in range(len(seq)):
                 r = await client.achat([])
-                outs.append(getattr(r, "text", ""))
-
+                assert hasattr(r, "text"), f"Response {r} missing 'text' attribute"
+                outs.append(r.text)
         elif wrapper == LLMFrameworkEnum.CREWAI.value:
             for i in range(len(seq)):
                 r = client.call([
