@@ -23,7 +23,7 @@ This is currently a scratch pad for planning MCP auth. It will be removed when M
 The NeMo Agent toolkit supports four different authentication approaches for MCP clients, providing flexibility for various deployment scenarios and security requirements.
 
 ### Option 1: No Authentication (Default)
-For public MCP servers that don't require authentication.
+For public MCP servers that don't require authentication. Simply omit the `auth` section.
 
 ```yaml
 functions:
@@ -32,7 +32,7 @@ functions:
     server:
       transport: streamable-http
       url: https://public-mcp-server.com/mcp
-      # No auth configuration needed
+    # No auth section = no authentication
 ```
 
 ### Option 2: Manual Registration + Explicit Auth Server
@@ -42,19 +42,18 @@ Complete manual configuration similar to NAT's existing OAuth2 pattern.
 functions:
   my_mcp_client:
     _type: mcp_client
+    auth:
+      # Explicit auth server configuration (similar to NAT's oauth2_auth_code_flow)
+      authorization_url: https://auth.example.com/oauth/authorize
+      token_url: https://auth.example.com/oauth/token
+      client_id: ${MCP_CLIENT_ID}
+      client_secret: ${MCP_CLIENT_SECRET}
+      redirect_uri: http://localhost:8080/oauth/callback
+      scopes: ["mcp:read", "mcp:write"]
+      use_pkce: true
     server:
       transport: streamable-http
       url: https://protected-mcp-server.com/mcp
-      auth:
-        enabled: true
-        # Explicit auth server configuration (similar to NAT's oauth2_auth_code_flow)
-        authorization_url: https://auth.example.com/oauth/authorize
-        token_url: https://auth.example.com/oauth/token
-        client_id: ${MCP_CLIENT_ID}
-        client_secret: ${MCP_CLIENT_SECRET}
-        redirect_uri: http://localhost:8080/oauth/callback
-        scopes: ["mcp:read", "mcp:write"]
-        use_pkce: true
 ```
 
 ### Option 3: Dynamic Registration + MCP Server Discovery
@@ -64,15 +63,15 @@ Fully automated approach using MCP specification discovery and dynamic client re
 functions:
   my_mcp_client:
     _type: mcp_client
+    auth:
+      # All auth details discovered from MCP server
+      # Client credentials obtained via dynamic registration
+      enable_dynamic_registration: true
+      redirect_uri: http://localhost:8080/oauth/callback
+      use_pkce: true
     server:
       transport: streamable-http
       url: https://protected-mcp-server.com/mcp
-      auth:
-        enabled: true
-        # All auth details discovered from MCP server
-        # Client credentials obtained via dynamic registration
-        enable_dynamic_registration: true
-        redirect_uri: http://localhost:8080/oauth/callback
 ```
 
 ### Option 4: Manual Registration + MCP Server Discovery (Hybrid)
@@ -82,43 +81,90 @@ Pre-registered client credentials with MCP-compliant discovery of auth server de
 functions:
   my_mcp_client:
     _type: mcp_client
+    auth:
+      # Pre-registered client credentials
+      client_id: ${MCP_CLIENT_ID}
+      client_secret: ${MCP_CLIENT_SECRET}
+      # Auth server URLs and scopes discovered from MCP server
+      # authorization_url: <-- discovered via RFC 9728 + RFC 8414
+      # token_url: <-- discovered via RFC 9728 + RFC 8414
+      # scopes: <-- discovered from MCP server metadata
+      redirect_uri: http://localhost:8080/oauth/callback
+      use_pkce: true
     server:
       transport: streamable-http
       url: https://protected-mcp-server.com/mcp
-      auth:
-        enabled: true
-        # Pre-registered client credentials
-        client_id: ${MCP_CLIENT_ID}
-        client_secret: ${MCP_CLIENT_SECRET}
-        # Auth server URLs and scopes discovered from MCP server
-        # authorization_url: <-- discovered via RFC 9728 + RFC 8414
-        # token_url: <-- discovered via RFC 9728 + RFC 8414
-        # scopes: <-- discovered from MCP server metadata
-        redirect_uri: http://localhost:8080/oauth/callback
 ```
 
 ## Configuration Details
 
-### Required Fields
-- `enabled`: Set to `true` to enable OAuth2 authentication
-- `redirect_uri`: OAuth2 callback URL for authorization code flow
+### Required Fields by Option
 
-### Optional Fields
-- `authorization_server_url`: Explicit auth server URL (discovered if not provided)
-- `client_id`: OAuth2 client identifier (obtained via dynamic registration if not provided)
-- `client_secret`: OAuth2 client secret (obtained via dynamic registration if not provided)
+#### **Option 2 (Manual + Explicit)**
+- `authorization_url`: OAuth2 authorization endpoint URL
+- `token_url`: OAuth2 token endpoint URL
+- `client_id`: OAuth2 client identifier
+- `client_secret`: OAuth2 client secret
+
+#### **Option 3 (Dynamic + Discovery)**
+- `enable_dynamic_registration`: Set to `true` to enable automatic client registration
+
+#### **Option 4 (Hybrid)**
+- `client_id`: OAuth2 client identifier (pre-registered)
+- `client_secret`: OAuth2 client secret (pre-registered)
+
+### Optional Fields (All Options)
+- `redirect_uri`: OAuth2 callback URL (defaults to localhost with random port)
 - `scopes`: Required OAuth2 scopes (discovered from MCP server if not provided)
-- `enable_dynamic_registration`: Enable RFC 7591 dynamic client registration (default: true)
-- `enable_pkce`: Enable PKCE for authorization code flow (default: true)
+- `use_pkce`: Enable PKCE for authorization code flow (default: true)
+- `client_name`: OAuth2 client name for dynamic registration (default: "NAT MCP Client")
 
 ### Discovery Process
 When auth server details are not explicitly provided, the client will:
 
 1. **MCP Server Discovery**: Make initial request to MCP server
+   - **MCP-SDK**: Handles 401 response detection and WWW-Authenticate header parsing
+   - **NAT**: Provides server URL and transport configuration
+
 2. **Resource Metadata**: Fetch `/.well-known/oauth-protected-resource` from MCP server
+   - **MCP-SDK**: Automatically fetches and parses resource metadata (RFC 9728)
+   - **NAT**: No additional work required
+
 3. **Auth Server Discovery**: Fetch `/.well-known/oauth-authorization-server` from auth server
+   - **MCP-SDK**: Automatically fetches and parses auth server metadata (RFC 8414)
+   - **NAT**: No additional work required
+
 4. **Dynamic Registration**: Optionally register client with auth server (RFC 7591)
+   - **MCP-SDK**: Handles complete dynamic client registration flow
+   - **NAT**: Provides client metadata (name, redirect URIs, etc.)
+
 5. **Authorization Flow**: Perform OAuth2 authorization code flow with PKCE
+   - **MCP-SDK**: Handles complete OAuth2 flow including PKCE, token exchange, refresh
+   - **NAT**: Provides redirect URI and callback handling
+
+## Token Management
+
+Token management handles the lifecycle of OAuth2 access tokens, including storage, refresh, and expiration handling.
+
+### Token Storage
+- **NAT Integration**: Tokens stored using NAT's existing credential management system
+- **Secure Storage**: Leverages NAT's encrypted credential storage for client secrets and access tokens
+- **Per-Client Isolation**: Each MCP client configuration maintains separate token storage
+
+### Token Refresh
+- **Automatic Refresh**: MCP-SDK handles automatic token refresh using refresh tokens
+- **Background Processing**: Token refresh occurs transparently during MCP operations
+- **Error Handling**: Failed refresh attempts trigger re-authentication flows
+
+### Token Expiration
+- **Proactive Refresh**: Tokens refreshed before expiration to avoid service interruptions
+- **Graceful Degradation**: Expired tokens trigger automatic re-authentication
+- **User Notification**: Clear error messages when manual re-authentication is required
+
+### Integration with NAT Auth System
+- **Credential Provider**: MCP client tokens integrate with NAT's existing `CredentialProvider` system
+- **Environment Variables**: Support for `${TOKEN_VAR}` style token references
+- **Secrets Management**: Compatible with NAT's secrets management for production deployments
 
 ## MCP Server Configuration
 
@@ -130,8 +176,8 @@ For MCP clients to discover authorization servers (Options 3 and 4), the MCP ser
 general:
   front_end:
     _type: mcp
-    host: 0.0.0.0
-    port: 8080
+    host: localhost
+    port: 9091
     # Auth configuration for MCP server
     require_auth: true
     auth_server_url: https://auth.example.com

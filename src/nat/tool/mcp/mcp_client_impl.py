@@ -45,13 +45,11 @@ class ToolOverrideConfig(BaseModel):
 class MCPAuthConfig(BaseModel):
     """MCP client authentication configuration supporting 4 options:
 
-    Option 1: No auth (enabled=False)
+    Option 1: No auth (omit auth section)
     Option 2: Manual registration + explicit auth server (authorization_url + token_url + credentials)
-    Option 3: Dynamic registration + MCP discovery (enabled=True, enable_dynamic_registration=True)
+    Option 3: Dynamic registration + MCP discovery (enable_dynamic_registration=True)
     Option 4: Manual registration + MCP discovery (credentials provided, URLs discovered)
     """
-
-    enabled: bool = Field(default=False, description="Enable OAuth2 authentication")
 
     # Option 2: Explicit auth server configuration (NAT's existing pattern)
     authorization_url: str | None = Field(default=None, description="OAuth2 authorization endpoint URL")
@@ -76,8 +74,6 @@ class MCPAuthConfig(BaseModel):
     @model_validator(mode="after")
     def validate_auth_config(self):
         """Validate authentication configuration for all 4 options."""
-        if not self.enabled:
-            return self
 
         # Check if explicit URLs are provided (Option 2)
         explicit_urls = bool(self.authorization_url or self.token_url)
