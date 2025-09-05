@@ -24,4 +24,5 @@ limitations under the License.
 ./add-tools-to-a-workflow.md
 ./create-a-new-workflow.md
 ./build-a-demo-agent-workflow-using-cursor-rules.md
+./testing-with-nat-test-llm.md
 ```
