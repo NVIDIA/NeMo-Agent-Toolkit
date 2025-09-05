@@ -90,7 +90,6 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
     using the same `FlowState` instance the auth‐handler created.
     """
 
-    os.environ["NAT_CONFIG_FILE"] = str(tmp_path / "config.yaml")
     redirect_port = _free_port()
 
     # Register the correct redirect URI for this run

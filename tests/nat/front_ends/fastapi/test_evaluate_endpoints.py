@@ -17,6 +17,7 @@ import asyncio
 import os
 import shutil
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -41,28 +42,46 @@ async def fixture_auto_set_env_vars(setup_db,
 
 
 @pytest.fixture(name="test_config")
-def test_config_fixture(nat_config_file_path: Path) -> Config:
-    import yaml
+def test_config_fixture() -> Config:
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate=FastApiFrontEndConfig.EndpointBase(
         path="/evaluate", method="POST", description="Test evaluate endpoint"))
 
-    config_dict = config.model_dump(mode="json", by_alias=True, round_trip=True)
-
-    with open(nat_config_file_path, "w", encoding="utf-8") as fh:
-        yaml.dump(config_dict, fh)
-
     return config
 
 
-# @pytest_asyncio.fixture(autouse=True)
-# async def patch_evaluation_run():
-#     with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.EvaluationRun") as MockEvaluationRun:
-#         mock_eval_instance = MagicMock()
-#         mock_eval_instance.run_and_evaluate = AsyncMock(
-#             return_value=MagicMock(workflow_interrupted=False, workflow_output_file="/fake/output/path.json"))
-#         MockEvaluationRun.return_value = mock_eval_instance
-#         yield MockEvaluationRun
+class MockEvaluationRun:
+
+    def __init__(self, *args, **kwargs):
+        print(f"\n***********\nMockEvaluationRun init\n***********\n")
+        pass
+
+    def __call__(self, *args, **kwargs):
+        print(f"\n***********\nMockEvaluationRun call\n***********\n")
+        return self
+
+    async def run_and_evaluate(self, *args, **kwargs):
+        print(f"\n***********\nnMockEvaluationRun.run_and_evaluate\n***********\n")
+        from nat.eval.config import EvaluationRunOutput
+        from nat.eval.evaluator.evaluator_model import EvalInput
+        from nat.profiler.data_models import ProfilerResults
+        result = EvaluationRunOutput(workflow_output_file="/fake/output/path.json",
+                                     evaluator_output_files=[],
+                                     workflow_interrupted=False,
+                                     eval_input=EvalInput(eval_input_items=[]),
+                                     evaluation_results=[],
+                                     usage_stats=None,
+                                     profiler_results=ProfilerResults())
+
+        return result
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def patch_evaluation_run(register_test_workflow):
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.EvaluationRun",
+               new_callable=MockEvaluationRun) as mock_eval_run:
+        yield mock_eval_run
+
 
 # @pytest_asyncio.fixture(name="mock_fire_and_forget", autouse=True)
 # async def mock_fire_and_forget_fixture():
@@ -123,7 +142,6 @@ async def await_job(job_id: str):
     from dask.distributed import Client as DaskClient
     from dask.distributed import Future
     from dask.distributed import Variable
-    from dask.distributed import wait
     print(f"\n******************\nawaiting job_task: {job_id} - 0\n*****************\n")
 
     client = await DaskClient(address=os.environ["NAT_DASK_SCHEDULER_ADDRESS"], asynchronous=True)
@@ -185,10 +203,13 @@ def test_get_job_status_not_found(test_client: TestClient):
     assert response.json()["detail"] == "Job non-existent-id not found"
 
 
-def test_get_last_job(test_client: TestClient, eval_config_file: str):
+@pytest.mark.asyncio
+async def test_get_last_job(test_client: TestClient, eval_config_file: str):
     """Test getting the last created job."""
     for i in range(3):
-        create_job(test_client, eval_config_file, job_id=f"job-{i}")
+        create_response = create_job(test_client, eval_config_file, job_id=f"job-{i}")
+        job_id = create_response.json()["job_id"]
+        await await_job(job_id)
 
     response = test_client.get("/evaluate/job/last")
     assert response.status_code == 200

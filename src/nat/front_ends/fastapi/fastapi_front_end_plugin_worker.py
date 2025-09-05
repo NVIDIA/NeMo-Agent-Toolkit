@@ -297,9 +297,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 print(f"\n******************\nrun_evaluation - 3\n*****************\n")
                 # Create a new EvaluationRun with the evaluation-specific config
                 await job_store.update_status(job_id, "running")
-                print(f"\n******************\nrun_evaluation - 3.1\n*****************\n")
+                print(f"\n******************\nrun_evaluation - 3.1 EvaluationRun={EvaluationRun}\n*****************\n")
                 eval_runner = EvaluationRun(eval_config)
-                print(f"\n******************\nrun_evaluation - 3.2\n*****************\n")
+                print(
+                    f"\n******************\nrun_evaluation - 3.2 eval_runner={eval_runner} workflow_config_file_path={workflow_config_file_path}\n*****************\n"
+                )
                 async with load_workflow(workflow_config_file_path) as session_manager:
                     print(f"\n******************\nrun_evaluation - 3.3\n*****************\n")
                     output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=session_manager,
