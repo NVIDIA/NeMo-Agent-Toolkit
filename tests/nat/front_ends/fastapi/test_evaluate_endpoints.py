@@ -282,4 +282,4 @@ async def test_config_file_outside_curdir(test_client: TestClient, eval_config_f
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "submitted"
-    await await_job([data["job_id"]])
+    await await_job(data["job_id"])
