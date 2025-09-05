@@ -29,11 +29,26 @@ from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfi
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
 
+@pytest.fixture(name="auto_set_env_vars", autouse=True)
+def fixture_auto_set_env_vars(setup_db,
+                              set_nat_config_file_env_var,
+                              set_nat_dask_scheduler_env_var,
+                              set_nat_job_store_db_url_env_var):
+    return
+
+
 @pytest.fixture(name="test_config")
-def test_config_fixture() -> Config:
+def test_config_fixture(nat_config_file_path: Path) -> Config:
+    import yaml
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate=FastApiFrontEndConfig.EndpointBase(
         path="/evaluate", method="POST", description="Test evaluate endpoint"))
+
+    config_dict = config.model_dump(mode="json", by_alias=True, round_trip=True)
+
+    with open(nat_config_file_path, "w", encoding="utf-8") as fh:
+        yaml.dump(config_dict, fh)
+
     return config
 
 
@@ -73,6 +88,7 @@ def create_job(test_client: TestClient, config_file: str, job_id: str | None = N
     if job_id:
         payload["job_id"] = job_id
 
+    print(f"\n******************\ncreate_job with payload: {payload}\n*****************\n")
     return test_client.post("/evaluate", json=payload)
 
 
