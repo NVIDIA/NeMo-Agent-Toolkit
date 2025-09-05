@@ -147,8 +147,9 @@ workflow:
 ```
 
 * Learn how to add your own LLM provider: [Adding an LLM Provider](../../extend/adding-an-llm-provider.md)
+<!-- vale off -->
 * See a short tutorial using YAML and `nat_test_llm`: [Testing with nat_test_llm](../../tutorials/testing-with-nat-test-llm.md)
-
+<!-- vale on -->
 
 :::{note}
 `temperature` is model-gated and may not be supported by all models. See [Gated Fields](../../extend/gated-fields.md) for details.
