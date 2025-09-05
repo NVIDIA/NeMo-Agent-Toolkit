@@ -46,34 +46,34 @@ def test_config_fixture() -> Config:
     return config
 
 
-class MockEvaluationRun:
-    """
-    The MagicMock and AsyncMock classes are not serializable by Dask, so we create a simple mock class here.
-    """
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __call__(self, *args, **kwargs):
-        return self
-
-    async def run_and_evaluate(self, *args, **kwargs):
-        from nat.eval.config import EvaluationRunOutput
-        from nat.eval.evaluator.evaluator_model import EvalInput
-        from nat.profiler.data_models import ProfilerResults
-        result = EvaluationRunOutput(workflow_output_file="/fake/output/path.json",
-                                     evaluator_output_files=[],
-                                     workflow_interrupted=False,
-                                     eval_input=EvalInput(eval_input_items=[]),
-                                     evaluation_results=[],
-                                     usage_stats=None,
-                                     profiler_results=ProfilerResults())
-
-        return result
-
-
 @pytest_asyncio.fixture(autouse=True)
 async def patch_evaluation_run(register_test_workflow):
+
+    class MockEvaluationRun:
+        """
+        The MagicMock and AsyncMock classes are not serializable by Dask, so we create a simple mock class here.
+        """
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __call__(self, *args, **kwargs):
+            return self
+
+        async def run_and_evaluate(self, *args, **kwargs):
+            from nat.eval.config import EvaluationRunOutput
+            from nat.eval.evaluator.evaluator_model import EvalInput
+            from nat.profiler.data_models import ProfilerResults
+            result = EvaluationRunOutput(workflow_output_file="/fake/output/path.json",
+                                         evaluator_output_files=[],
+                                         workflow_interrupted=False,
+                                         eval_input=EvalInput(eval_input_items=[]),
+                                         evaluation_results=[],
+                                         usage_stats=None,
+                                         profiler_results=ProfilerResults())
+
+            return result
+
     with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.EvaluationRun",
                new_callable=MockEvaluationRun) as mock_eval_run:
         yield mock_eval_run
