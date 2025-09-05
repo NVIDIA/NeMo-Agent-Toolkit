@@ -109,7 +109,6 @@ class JobStore:
 
     def __init__(self, scheduler_address: str, db_engine: "AsyncEngine | None" = None, db_url: str | None = None):
         self._scheduler_address = scheduler_address
-        self._client: DaskClient | None = None
 
         if db_engine is None:
             if db_url is None:
@@ -129,10 +128,10 @@ class JobStore:
         """
         Get the Dask client.
         """
-        if self._client is None:
-            self._client = await DaskClient(address=self._scheduler_address, asynchronous=True)
+        client = await DaskClient(address=self._scheduler_address, asynchronous=True)
 
-        yield self._client
+        yield client
+        await client.close()
 
     @asynccontextmanager
     async def session(self) -> AsyncGenerator["AsyncSession"]:
@@ -145,11 +144,6 @@ class JobStore:
 
         # Removes the current task key from the session registry, preventing potential memory leaks
         await self._session.remove()
-
-    async def close(self):
-        """Close the Dask client."""
-        if self._client is not None:
-            await self._client.close()
 
     def ensure_job_id(self, job_id: str | None) -> str:
         """Ensure a job ID is provided, generating a new one if necessary."""
@@ -205,7 +199,7 @@ class JobStore:
             future = client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
 
             # Store the future in a variable, this allows us to potentially cancel the future later if needed
-            future_var = Variable(name=job_id, client=self._client)
+            future_var = Variable(name=job_id, client=client)
             await future_var.set(future)
 
             fire_and_forget(future)
