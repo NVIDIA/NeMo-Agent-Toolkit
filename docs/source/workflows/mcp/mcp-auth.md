@@ -36,7 +36,7 @@ functions:
 ```
 
 ### Option 2: Manual Registration + Explicit Auth Server
-Complete manual configuration identical to NAT's existing OAuth2 pattern.
+Complete manual configuration similar to NAT's existing OAuth2 pattern.
 
 ```yaml
 functions:
@@ -47,7 +47,7 @@ functions:
       url: https://protected-mcp-server.com/mcp
       auth:
         enabled: true
-        # Explicit auth server configuration (same as NAT's oauth2_auth_code_flow)
+        # Explicit auth server configuration (similar to NAT's oauth2_auth_code_flow)
         authorization_url: https://auth.example.com/oauth/authorize
         token_url: https://auth.example.com/oauth/token
         client_id: ${MCP_CLIENT_ID}
@@ -142,12 +142,12 @@ general:
 
 When configured, the NAT MCP server will:
 
-1. **Return 401 responses** for unauthenticated requests with WWW-Authenticate header:
+1. **Return 401 responses** to the MCP client for unauthenticated requests with WWW-Authenticate header:
    ```
    WWW-Authenticate: Bearer realm="mcp", authorization_uri="https://auth.example.com"
    ```
 
-2. **Serve resource metadata** at `/.well-known/oauth-protected-resource`:
+2. **Serve resource metadata** to the MCP client at `/.well-known/oauth-protected-resource`:
    ```json
    {
      "authorization_servers": ["https://auth.example.com"],
@@ -155,23 +155,71 @@ When configured, the NAT MCP server will:
    }
    ```
 
-3. **Validate Bearer tokens** from MCP clients using the configured authorization server
+3. **Validate Bearer tokens** from MCP clients using the configured authorization server. Yet to be implemented.
 
 ### Authorization Server Requirements
 
-The authorization server (`https://auth.example.com`) must:
+The authorization server (`https://auth.example.com`) must support both client-facing and server-facing APIs:
+
+#### **Client-Facing APIs** (used by MCP Client)
 
 1. **Support RFC 8414** - Serve metadata at `/.well-known/oauth-authorization-server`:
    ```json
    {
      "authorization_endpoint": "https://auth.example.com/oauth/authorize",
      "token_endpoint": "https://auth.example.com/oauth/token",
+     "registration_endpoint": "https://auth.example.com/register",
      "scopes_supported": ["mcp:read", "mcp:write"],
      "response_types_supported": ["code"],
      "grant_types_supported": ["authorization_code", "refresh_token"]
    }
    ```
 
-2. **Support token introspection** for the MCP server to validate client tokens
+2. **Support RFC 7591 dynamic client registration** (required for Option 3):
+   - **Registration endpoint**: Accept POST requests to `/register` with client metadata
+   - **Automatic credential generation**: Return `client_id` and `client_secret` for new clients
+   - **Client metadata support**: Handle `client_name`, `redirect_uris`, `grant_types`, `scopes`
+   - **Example registration request**:
+     ```json
+     POST /register
+     {
+       "client_name": "NAT MCP Client",
+       "redirect_uris": ["http://localhost:8080/oauth/callback"],
+       "grant_types": ["authorization_code", "refresh_token"],
+       "response_types": ["code"],
+       "scope": "mcp:read mcp:write"
+     }
+     ```
+   - **Example registration response**:
+     ```json
+     {
+       "client_id": "dynamically-generated-client-123",
+       "client_secret": "auto-generated-secret-456",
+       "client_id_issued_at": 1640995200,
+       "client_secret_expires_at": 1672531200
+     }
+     ```
 
-3. **Optionally support RFC 7591** for dynamic client registration (Option 3)
+#### **Server-Facing APIs** (used by MCP Server)
+
+3. **Support token introspection** - Validate Bearer tokens from MCP clients:
+   - **Introspection endpoint**: Accept POST requests to validate access tokens
+   - **Token validation**: Return token status, scopes, client information
+   - **Example introspection request**:
+     ```json
+     POST /introspect
+     Authorization: Basic <mcp_server_credentials>
+     Content-Type: application/x-www-form-urlencoded
+
+     token=ACCESS_TOKEN_456&token_type_hint=access_token
+     ```
+   - **Example introspection response**:
+     ```json
+     {
+       "active": true,
+       "client_id": "dynamically-generated-client-123",
+       "scope": "mcp:read mcp:write",
+       "exp": 1672531200,
+       "aud": ["https://mcp-server.com"]
+     }
+     ```

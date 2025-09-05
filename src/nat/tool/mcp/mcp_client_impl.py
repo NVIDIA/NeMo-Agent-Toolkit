@@ -43,46 +43,68 @@ class ToolOverrideConfig(BaseModel):
 
 
 class MCPAuthConfig(BaseModel):
-    """MCP client authentication configuration."""
+    """MCP client authentication configuration supporting 4 options:
+
+    Option 1: No auth (enabled=False)
+    Option 2: Manual registration + explicit auth server (authorization_url + token_url + credentials)
+    Option 3: Dynamic registration + MCP discovery (enabled=True, enable_dynamic_registration=True)
+    Option 4: Manual registration + MCP discovery (credentials provided, URLs discovered)
+    """
 
     enabled: bool = Field(default=False, description="Enable OAuth2 authentication")
 
-    # Option 1: Explicit configuration
-    authorization_server_url: str | None = Field(
-        default=None, description="Authorization server URL (if not provided, will be discovered from MCP server)")
+    # Option 2: Explicit auth server configuration (NAT's existing pattern)
+    authorization_url: str | None = Field(default=None, description="OAuth2 authorization endpoint URL")
+    token_url: str | None = Field(default=None, description="OAuth2 token endpoint URL")
 
-    # OAuth2 client credentials
+    # OAuth2 client credentials (Options 2 & 4)
     client_id: str | None = Field(default=None, description="OAuth2 client ID")
     client_secret: SecretStr | None = Field(default=None, description="OAuth2 client secret")
 
-    # Optional overrides
+    # OAuth2 flow configuration
     scopes: list[str] | None = Field(default=None,
                                      description="OAuth2 scopes (if not provided, will use server's default scopes)")
-
-    # Client metadata
-    client_name: str = Field(default="NAT MCP Client", description="OAuth2 client name")
     redirect_uri: str | None = Field(default=None,
                                      description="OAuth2 redirect URI (defaults to localhost with random port)")
 
     # Advanced options
-    use_dynamic_registration: bool = Field(default=True,
-                                           description="Use OAuth2 Dynamic Client Registration if supported")
+    enable_dynamic_registration: bool = Field(default=True,
+                                              description="Enable OAuth2 Dynamic Client Registration (RFC 7591)")
     use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
+    client_name: str = Field(default="NAT MCP Client", description="OAuth2 client name for dynamic registration")
 
     @model_validator(mode="after")
     def validate_auth_config(self):
-        """Validate authentication configuration."""
+        """Validate authentication configuration for all 4 options."""
         if not self.enabled:
             return self
 
-        # Must have client credentials for OAuth2
-        if not self.client_id and not self.use_dynamic_registration:
-            raise ValueError("client_id is required when auth is enabled and dynamic registration is disabled")
+        # Check if explicit URLs are provided (Option 2)
+        explicit_urls = bool(self.authorization_url or self.token_url)
 
-        # For confidential clients, need client_secret
-        # For public clients (dynamic registration), client_secret is optional
-        if not self.use_dynamic_registration and not self.client_secret:
-            raise ValueError("client_secret is required when dynamic registration is disabled")
+        # Option 2: Manual registration + explicit auth server
+        if explicit_urls:
+            if not (self.authorization_url and self.token_url):
+                raise ValueError("Both authorization_url and token_url are required for explicit configuration")
+            if not self.client_id or not self.client_secret:
+                raise ValueError("client_id and client_secret are required for explicit configuration")
+
+        # Option 3: Dynamic registration + MCP discovery
+        elif self.enable_dynamic_registration and not self.client_id:
+            # Pure dynamic registration - no explicit credentials needed
+            pass
+
+        # Option 4: Manual registration + MCP discovery
+        elif self.client_id and self.client_secret:
+            # Has credentials but will discover URLs from MCP server
+            pass
+
+        # Invalid configuration
+        else:
+            raise ValueError("Must provide either: "
+                             "1) authorization_url + token_url + credentials (manual), "
+                             "2) enable_dynamic_registration=True (dynamic), or "
+                             "3) client_id + client_secret (hybrid)")
 
         return self
 
