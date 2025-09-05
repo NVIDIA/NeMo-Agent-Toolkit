@@ -56,53 +56,33 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
         return worker_class(self.full_config)
 
     def _create_token_verifier(self):
-        """Create a token verifier using NAT's auth provider."""
-        if not self.front_end_config.require_auth or not self.front_end_config.auth_provider:
+        """Create a token verifier stub that logs and always returns success."""
+        if not self.front_end_config.require_auth:
             return None
 
         from mcp.server.auth.provider import AccessToken
         from mcp.server.auth.provider import TokenVerifier
 
-        from nat.authentication.interfaces import AuthProviderBase
+        class StubTokenVerifier(TokenVerifier):
 
-        # Get the auth provider from NAT's config
-        auth_providers = self.full_config.authentication or {}
-        auth_provider_config = auth_providers.get(self.front_end_config.auth_provider)
-
-        if not auth_provider_config:
-            raise ValueError(
-                f"Auth provider '{self.front_end_config.auth_provider}' not found in authentication config")
-
-        # Create NAT auth provider instance
-        from nat.authentication.registry import get_auth_provider_class
-        auth_provider_class = get_auth_provider_class(auth_provider_config._type)
-        nat_auth_provider = auth_provider_class(auth_provider_config)
-
-        class NATTokenVerifier(TokenVerifier):
-
-            def __init__(self, nat_provider: AuthProviderBase, server_url: str, required_scopes: list[str]):
-                self.nat_provider = nat_provider
+            def __init__(self, server_url: str, required_scopes: list[str]):
                 self.server_url = server_url
                 self.required_scopes = required_scopes
 
             async def verify_token(self, token: str) -> AccessToken | None:
-                try:
-                    # Use NAT's auth provider to validate the token
-                    auth_result = await self.nat_provider.authenticate()
+                logger.info(f"STUB: Token verification requested for token: {token[:10]}...")
+                logger.info(f"STUB: Server URL: {self.server_url}")
+                logger.info(f"STUB: Required scopes: {self.required_scopes}")
+                logger.info("STUB: Returning successful validation (stub implementation)")
 
-                    # For now, create a basic AccessToken
-                    # TODO: Extract actual client_id, scopes from token validation
-                    return AccessToken(
-                        token=token,
-                        client_id="nat_client",  # TODO: Extract from validated token
-                        scopes=self.required_scopes,
-                        resource=self.server_url)
-                except Exception as e:
-                    logger.warning(f"Token validation failed: {e}")
-                    return None
+                # Always return a successful AccessToken for testing
+                return AccessToken(token=token,
+                                   client_id="stub_client",
+                                   scopes=self.required_scopes,
+                                   resource=self.server_url)
 
         server_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}"
-        return NATTokenVerifier(nat_auth_provider, server_url, self.front_end_config.required_scopes)
+        return StubTokenVerifier(server_url, self.front_end_config.required_scopes)
 
     async def run(self) -> None:
         """Run the MCP server."""
