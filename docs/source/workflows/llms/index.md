@@ -19,7 +19,7 @@ limitations under the License.
 
 ## Supported LLM Providers
 
-NeMo Agent toolkit supports the following LLM providers:
+NVIDIA NeMo Agent toolkit supports the following LLM providers:
 | Provider | Type | Description |
 |----------|------|-------------|
 | [NVIDIA NIM](https://build.nvidia.com) | `nim` | NVIDIA Inference Microservice (NIM) |

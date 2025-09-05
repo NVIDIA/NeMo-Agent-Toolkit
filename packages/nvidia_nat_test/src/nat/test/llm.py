@@ -50,6 +50,7 @@ class _ResponseChooser:
         self._delay_ms = delay_ms
 
     def next_response(self) -> str:
+        """Return the next response in the cycle, or an empty string if no responses are configured."""
         if self._cycler is None:
             return ""
         return next(self._cycler)
