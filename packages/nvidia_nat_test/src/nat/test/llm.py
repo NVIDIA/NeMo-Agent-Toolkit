@@ -81,9 +81,6 @@ async def test_llm_langchain(config: TestLLMConfig, builder: Builder):
 
     class LangChainTestLLM:
 
-        def __init__(self, config: TestLLMConfig) -> None:
-            self.config = config
-
         def invoke(self, messages: Any, **_kwargs: Any) -> AIMessage:
             chooser.sync_sleep()
             return AIMessage(content=chooser.next_response())
@@ -100,7 +97,7 @@ async def test_llm_langchain(config: TestLLMConfig, builder: Builder):
             await chooser.async_sleep()
             yield AIMessage(content=chooser.next_response())
 
-    yield LangChainTestLLM(config)
+    yield LangChainTestLLM()
 
 
 @register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
