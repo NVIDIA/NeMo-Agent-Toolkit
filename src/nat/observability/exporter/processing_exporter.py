@@ -220,7 +220,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         if name in self._processor_names:
             position = self._processor_names[name]
             return self._processors[position]
-        logger.warning("Processor '%s' not found in pipeline", name)
+        logger.debug("Processor '%s' not found in pipeline", name)
         return None
 
     def _check_pipeline_locked(self) -> None:
@@ -343,9 +343,8 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
                 target_type)
 
     async def _pre_start(self) -> None:
-        # Lock the pipeline to prevent further modifications
-        self._pipeline_locked = True
 
+        # Validate that the pipeline is compatible with the exporter
         if len(self._processors) > 0:
             first_processor = self._processors[0]
             last_processor = self._processors[-1]
@@ -382,6 +381,9 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
                     self.output_type,
                     e)
 
+        # Lock the pipeline to prevent further modifications
+        self._pipeline_locked = True
+
     async def _process_pipeline(self, item: PipelineInputT) -> PipelineOutputT | None:
         """Process item through all registered processors.
 
@@ -389,7 +391,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             item (PipelineInputT): The item to process (starts as PipelineInputT, can transform to PipelineOutputT)
 
         Returns:
-            PipelineOutputT: The processed item after running through all processors
+            PipelineOutputT | None: The processed item after running through all processors
         """
         return await self._process_through_processors(self._processors, item)  # type: ignore
 
@@ -529,7 +531,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         """
         pass
 
-    def _create_export_task(self, coro: Coroutine):
+    def _create_export_task(self, coro: Coroutine) -> None:
         """Create task with minimal overhead but proper tracking.
 
         Args:
@@ -549,7 +551,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             raise
 
     @override
-    async def _cleanup(self):
+    async def _cleanup(self) -> None:
         """Enhanced cleanup that shuts down all shutdown-aware processors.
 
         Each processor is responsible for its own cleanup, including routing

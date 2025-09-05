@@ -394,7 +394,7 @@ class TestProcessorNaming:
 
     def test_get_processor_by_name_not_exists(self, processing_exporter, caplog):
         """Test getting processor by name when it doesn't exist."""
-        with caplog.at_level(logging.WARNING):
+        with caplog.at_level(logging.DEBUG):
             retrieved = processing_exporter.get_processor_by_name("nonexistent")
 
         assert retrieved is None
