@@ -21,6 +21,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+import pytest_asyncio
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -62,6 +63,32 @@ def patch_evaluation_run():
         yield MockEvaluationRun
 
 
+@pytest.fixture(name="mock_fire_and_forget", autouse=True)
+def mock_fire_and_forget_fixture():
+    with patch("nat.front_ends.fastapi.job_store.fire_and_forget") as mock_fn:
+        yield mock_fn
+
+
+@pytest.fixture(name="mock_dask_variable", autouse=True)
+def mock_dask_variable_fixture():
+    with patch("nat.front_ends.fastapi.job_store.Variable") as mock_obj:
+        mock_obj.return_value = mock_obj
+        mock_obj.set = AsyncMock()
+        yield mock_obj
+
+
+@pytest.fixture(autouse=True)
+def patch_dask_client():
+    with patch("nat.front_ends.fastapi.job_store.DaskClient", new_callable=AsyncMock) as mock_dask_client:
+
+        def side_effect(job_fn, *job_args, key, **job_kwargs):
+            return asyncio.create_task(job_fn(*job_args, **job_kwargs), name="patched-dask-submit-task")
+
+        mock_dask_client.return_value = mock_dask_client
+        mock_dask_client.submit = MagicMock(side_effect=side_effect)
+        yield mock_dask_client
+
+
 @pytest.fixture(name="test_client")
 def test_client_fixture(test_config: Config) -> TestClient:
     worker = FastApiFrontEndPluginWorker(test_config)
@@ -92,6 +119,20 @@ def create_job(test_client: TestClient, config_file: str, job_id: str | None = N
     return test_client.post("/evaluate", json=payload)
 
 
+async def await_job(mock_fire_and_forget: MagicMock):
+    """Helper to await a job completion."""
+    mock_fire_and_forget.assert_called()
+    call_args = mock_fire_and_forget.call_args
+    print(f"\n******************\ncall_args: {call_args}\n*****************\n")
+    job_task = call_args[0][0]
+
+    # Await the task to complete
+    print(f"\n******************\nawaiting job_task: {job_task}\n*****************\n")
+    results = await job_task
+    print(f"\n******************\ndone awaiting job_task: {job_task}\n*****************\n")
+    return results
+
+
 def test_create_job(test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job."""
     response = create_job(test_client, eval_config_file)
@@ -101,10 +142,11 @@ def test_create_job(test_client: TestClient, eval_config_file: str):
     assert data["status"] == "submitted"
 
 
-def test_get_job_status(test_client: TestClient, eval_config_file: str):
+async def test_get_job_status(test_client: TestClient, mock_fire_and_forget: MagicMock, eval_config_file: str):
     """Test getting the status of a specific job."""
     create_response = create_job(test_client, eval_config_file)
     job_id = create_response.json()["job_id"]
+    await await_job(mock_fire_and_forget)
 
     status_response = test_client.get(f"/evaluate/job/{job_id}")
     assert status_response.status_code == 200

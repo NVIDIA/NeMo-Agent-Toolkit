@@ -282,25 +282,38 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                  eval_config_file: str,
                                  reps: int):
             """Background task to run the evaluation."""
+            print(f"\n******************\nrun_evaluation with job_id={job_id}\n*****************\n")
             assert JobStore is not None, "JobStore should be imported when Dask is available"
             job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
 
+            print(
+                f"\n******************\nrun_evaluation - 2 scheduler_address={scheduler_address}, db_url={db_url}\n*****************\n"
+            )
             try:
                 # We have two config files, one for the workflow and one for the evaluation
                 # Create EvaluationRunConfig using the CLI defaults
                 eval_config = EvaluationRunConfig(config_file=Path(eval_config_file), dataset=None, reps=reps)
 
+                print(f"\n******************\nrun_evaluation - 3\n*****************\n")
                 # Create a new EvaluationRun with the evaluation-specific config
                 await job_store.update_status(job_id, "running")
+                print(f"\n******************\nrun_evaluation - 3.1\n*****************\n")
                 eval_runner = EvaluationRun(eval_config)
+                print(f"\n******************\nrun_evaluation - 3.2\n*****************\n")
                 async with load_workflow(workflow_config_file_path) as session_manager:
+                    print(f"\n******************\nrun_evaluation - 3.3\n*****************\n")
                     output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=session_manager,
                                                                                      job_id=job_id)
+                    print(f"\n******************\nrun_evaluation - 3.4\n*****************\n")
+
+                print(f"\n******************\nrun_evaluation - 4\n*****************\n")
                 if output.workflow_interrupted:
                     await job_store.update_status(job_id, "interrupted")
                 else:
                     parent_dir = os.path.dirname(output.workflow_output_file) if output.workflow_output_file else None
 
+                    print(
+                        f"\n******************\nrun_evaluation with job_id={job_id}=update_status\n*****************\n")
                     await job_store.update_status(job_id, "success", output_path=str(parent_dir))
             except Exception as e:
                 logger.error("Error in evaluation job %s: %s", job_id, str(e))
@@ -321,6 +334,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     if job_status != JobStatus.NOT_FOUND:
                         return EvaluateResponse(job_id=request.job_id, status=job_status)
 
+                print(
+                    f"\n******************\nstart_evaluation with request: {request}\njob_fn={run_evaluation}\n*****************\n"
+                )
                 job_id = self._job_store.ensure_job_id(request.job_id)
 
                 await self._job_store.submit_job(job_id=job_id,
@@ -336,6 +352,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                      request.reps
                                                  ])
 
+                print(f"\n******************\nstart_evaluation with 2\n*****************\n")
                 logger.info("Submitted evaluation job %s with config %s", job_id, request.config_file)
 
                 return EvaluateResponse(job_id=job_id, status=JobStatus.SUBMITTED)
