@@ -161,7 +161,9 @@ def test_get_job_status_not_found(test_client: TestClient):
 async def test_get_last_job(test_client: TestClient, eval_config_file: str):
     """Test getting the last created job."""
     for i in range(3):
-        create_job(test_client, eval_config_file, job_id=f"job-{i}")
+        job_id = f"job-{i}"
+        create_job(test_client, eval_config_file, job_id=job_id)
+        await await_job(job_id)
 
     response = test_client.get("/evaluate/job/last")
     assert response.status_code == 200
@@ -177,11 +179,14 @@ def test_get_last_job_not_found(test_client: TestClient):
 
 
 @pytest.mark.parametrize("set_job_id", [False, True])
-def test_get_all_jobs(test_client: TestClient, eval_config_file: str, set_job_id: bool):
+@pytest.mark.asyncio
+async def test_get_all_jobs(test_client: TestClient, eval_config_file: str, set_job_id: bool):
     """Test retrieving all jobs."""
     for i in range(3):
         job_id = f"job-{i}" if set_job_id else None
-        create_job(test_client, eval_config_file, job_id=job_id)
+        create_response = create_job(test_client, eval_config_file, job_id=job_id)
+        job_id = create_response.json()["job_id"]
+        await await_job(job_id)
 
     response = test_client.get("/evaluate/jobs")
     assert response.status_code == 200
@@ -193,29 +198,35 @@ def test_get_all_jobs(test_client: TestClient, eval_config_file: str, set_job_id
     ("success", 3),
     ("interrupted", 0),
 ])
-def test_get_jobs_by_status(test_client: TestClient, eval_config_file: str, status: str, expected_count: int):
+@pytest.mark.asyncio
+async def test_get_jobs_by_status(test_client: TestClient, eval_config_file: str, status: str, expected_count: int):
     """Test getting jobs filtered by status."""
     for _ in range(3):
-        create_job(test_client, eval_config_file)
+        response = create_job(test_client, eval_config_file)
+        await await_job(response.json()["job_id"])
 
     response = test_client.get(f"/evaluate/jobs?status={status}")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == expected_count
+
     if status == "submitted":
         assert all(job["status"] == "submitted" for job in data)
 
 
-def test_create_job_with_reps(test_client: TestClient, eval_config_file: str):
+@pytest.mark.asyncio
+async def test_create_job_with_reps(test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job with custom repetitions."""
     response = test_client.post("/evaluate", json={"config_file": eval_config_file, "reps": 3})
     assert response.status_code == 200
     data = response.json()
     assert "job_id" in data
     assert data["status"] == "submitted"
+    await await_job([data["job_id"]])
 
 
-def test_create_job_with_expiry(test_client: TestClient, eval_config_file: str):
+@pytest.mark.asyncio
+async def test_create_job_with_expiry(test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job with custom expiry time."""
     response = test_client.post(
         "/evaluate",
@@ -227,9 +238,11 @@ def test_create_job_with_expiry(test_client: TestClient, eval_config_file: str):
     data = response.json()
     assert "job_id" in data
     assert data["status"] == "submitted"
+    await await_job([data["job_id"]])
 
 
-def test_create_job_with_job_id(test_client: TestClient, eval_config_file: str):
+@pytest.mark.asyncio
+async def test_create_job_with_job_id(test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job with a specific job ID."""
     job_id = "test-job-123"
     response = test_client.post("/evaluate", json={"config_file": eval_config_file, "job_id": job_id})
@@ -237,6 +250,7 @@ def test_create_job_with_job_id(test_client: TestClient, eval_config_file: str):
     data = response.json()
     assert data["job_id"] == job_id
     assert data["status"] == "submitted"
+    await await_job(job_id)
 
 
 @pytest.mark.parametrize("job_id", ["test/job/123", "..", ".", "/abolute/path"
@@ -256,7 +270,8 @@ def test_invalid_config_file_doesnt_exist(test_client: TestClient):
     assert response.status_code >= 400 and response.status_code < 500
 
 
-def test_config_file_outside_curdir(test_client: TestClient, eval_config_file: str, tmp_path: Path):
+@pytest.mark.asyncio
+async def test_config_file_outside_curdir(test_client: TestClient, eval_config_file: str, tmp_path: Path):
     """Test creating a job with a config file outside the current directory."""
     dest_config_file = tmp_path / "config.yml"
     shutil.copy(eval_config_file, dest_config_file)
@@ -267,3 +282,4 @@ def test_config_file_outside_curdir(test_client: TestClient, eval_config_file: s
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "submitted"
+    await await_job([data["job_id"]])

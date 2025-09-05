@@ -269,7 +269,7 @@ class JobStore:
         """Get all jobs with the specified status."""
         stmt = select(JobInfo).where(JobInfo.status == status)
         async with self.session() as session:
-            return await session.scalars(stmt).all()
+            return (await session.scalars(stmt)).all()
 
     def get_expires_at(self, job: JobInfo) -> datetime | None:
         """Get the time for a job to expire."""

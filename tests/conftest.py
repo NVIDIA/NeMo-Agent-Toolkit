@@ -81,12 +81,12 @@ def config_file_fixture(test_data_dir: str):
 
 @pytest.fixture(name="eval_config_file")
 def eval_config_file_fixture() -> str:
-    return os.path.join(EXAMPLES_DIR, "evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml")
+    return os.path.join(EXAMPLES_DIR, "evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml")
 
 
 @pytest.fixture(name="simple_config_file")
 def simple_config_file_fixture() -> str:
-    return os.path.join(EXAMPLES_DIR, "getting_started/simple_web_query/configs/config.yml")
+    return os.path.join(EXAMPLES_DIR, "getting_started/simple_calculator/configs/config.yml")
 
 
 @pytest.fixture(name="mock_aiohttp_session")
