@@ -107,8 +107,8 @@ async def patch_evaluation_run(register_test_workflow):
 #         yield mock_dask_client
 
 
-@pytest.fixture(name="test_client")
-def test_client_fixture(test_config: Config) -> TestClient:
+@pytest_asyncio.fixture(name="test_client")
+async def test_client_fixture(test_config: Config) -> TestClient:
     worker = FastApiFrontEndPluginWorker(test_config)
     app = FastAPI()
     worker.set_cors_config(app)
@@ -119,10 +119,7 @@ def test_client_fixture(test_config: Config) -> TestClient:
         mock_session = MagicMock()
         MockSessionManager.return_value = mock_session
 
-        async def setup():
-            await worker.add_evaluate_route(app, session_manager=mock_session)
-
-        asyncio.run(setup())
+        await worker.add_evaluate_route(app, session_manager=mock_session)
 
     return TestClient(app)
 
@@ -137,34 +134,34 @@ def create_job(test_client: TestClient, config_file: str, job_id: str | None = N
     return test_client.post("/evaluate", json=payload)
 
 
-async def await_job(job_id: str):
+def wait_job(job_id: str):
     """Helper to await a job completion."""
     from dask.distributed import Client as DaskClient
     from dask.distributed import Future
     from dask.distributed import Variable
     print(f"\n******************\nawaiting job_task: {job_id} - 0\n*****************\n")
 
-    client = await DaskClient(address=os.environ["NAT_DASK_SCHEDULER_ADDRESS"], asynchronous=True)
+    client = DaskClient(address=os.environ["NAT_DASK_SCHEDULER_ADDRESS"], asynchronous=False)
     results = None
 
     print(f"\n******************\nawaiting job_task: {job_id} - 1\n*****************\n")
     try:
         var = Variable(name=job_id, client=client)
         print(f"\n******************\nawaiting job_task: {job_id} - 1.1\n*****************\n")
-        future = await var.get(timeout=5)
+        future = var.get(timeout=5)
         print(f"\n******************\nawaiting job_task: {job_id} - 1.2 future={future}\n*****************\n")
-        if isinstance(future, Future):
-            print(f"\n******************\nawaiting job_task: {job_id} - 2 future={future}\n*****************\n")
-            t1 = time.time()
-            results = await future.result(timeout=30)
-            t2 = time.time()
-            print(
-                f"\n******************\ndone awaiting job_task: {job_id} - 3 future={future} took {t2 - t1:.2f}s\n*****************\n"
-            )
+
+        print(f"\n******************\nawaiting job_task: {job_id} - 2 future={future}\n*****************\n")
+        t1 = time.time()
+        results = future.result(timeout=30)
+        t2 = time.time()
+        print(
+            f"\n******************\ndone awaiting job_task: {job_id} - 3 future={future} took {t2 - t1:.2f}s\n*****************\n"
+        )
 
     finally:
         print(f"\n******************\ndone awaiting job_task: {job_id} - 4\n*****************\n")
-        await client.close()
+        client.close()
         print(f"\n******************\ndone awaiting job_task: {job_id} - 5\n*****************\n")
 
     return results
@@ -178,7 +175,7 @@ async def test_create_job(test_client: TestClient, eval_config_file: str):
     data = response.json()
     assert "job_id" in data
     assert data["status"] == "submitted"
-    await await_job(data["job_id"])
+    wait_job(data["job_id"])
 
 
 @pytest.mark.asyncio
@@ -186,7 +183,7 @@ async def test_get_job_status(test_client: TestClient, eval_config_file: str):
     """Test getting the status of a specific job."""
     create_response = create_job(test_client, eval_config_file)
     job_id = create_response.json()["job_id"]
-    await await_job(job_id)
+    wait_job(job_id)
 
     status_response = test_client.get(f"/evaluate/job/{job_id}")
     assert status_response.status_code == 200
@@ -207,9 +204,7 @@ def test_get_job_status_not_found(test_client: TestClient):
 async def test_get_last_job(test_client: TestClient, eval_config_file: str):
     """Test getting the last created job."""
     for i in range(3):
-        create_response = create_job(test_client, eval_config_file, job_id=f"job-{i}")
-        job_id = create_response.json()["job_id"]
-        await await_job(job_id)
+        create_job(test_client, eval_config_file, job_id=f"job-{i}")
 
     response = test_client.get("/evaluate/job/last")
     assert response.status_code == 200
