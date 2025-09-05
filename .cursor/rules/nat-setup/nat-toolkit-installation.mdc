@@ -58,6 +58,8 @@ uv venv --seed .venv
 uv venv --seed .venv --python 3.11
 # or
 uv venv --seed .venv --python 3.12
+# or
+uv venv --seed .venv --python 3.13
 
 # Activate the environment
 source .venv/bin/activate
@@ -193,7 +195,7 @@ NeMo Agent Toolkit is ready for development when:
 
 ## Common Installation Issues
 
-1. **Python version mismatch**: Ensure Python 3.11 or 3.12 is used
+1. **Python version mismatch**: Ensure Python 3.11 or 3.12 or 3.13 is used
 2. **Git LFS not installed**: Large files won't download properly
 3. **Submodules not initialized**: Some dependencies will be missing
 4. **Virtual environment not activated**: Commands may not work

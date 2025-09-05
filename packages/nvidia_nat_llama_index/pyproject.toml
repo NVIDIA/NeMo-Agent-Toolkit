@@ -34,11 +34,16 @@ dependencies = [
   "llama-index-readers-file~=0.4.4",
   "llama-index~=0.12.21",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "Subpackage for Llama-Index integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
-classifiers = ["Programming Language :: Python"]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
 
 
 [tool.uv]

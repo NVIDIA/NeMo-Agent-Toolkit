@@ -17,7 +17,7 @@ dependencies = [
   "nvidia-haystack==0.1.2",
   "openai~=1.106", # Pin to compatible range with llama-index
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "Custom NeMo Agent toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 

@@ -37,7 +37,7 @@ async def webquery_tool(config: WebQueryToolConfig, builder: Builder):
 
     from langchain.tools.retriever import create_retriever_tool
     from langchain_community.document_loaders import WebBaseLoader
-    from langchain_community.vectorstores import FAISS
+    from langchain_community.vectorstores import USearch
     from langchain_core.embeddings import Embeddings
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -52,7 +52,7 @@ async def webquery_tool(config: WebQueryToolConfig, builder: Builder):
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=config.chunk_size)
     documents = text_splitter.split_documents(docs)
-    vector = await FAISS.afrom_documents(documents, embeddings)
+    vector = await USearch.afrom_documents(documents, embeddings)
 
     retriever = vector.as_retriever()
 
