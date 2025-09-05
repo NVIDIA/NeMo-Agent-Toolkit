@@ -487,7 +487,7 @@ def rag_intermediate_property_adaptor_fixture(rag_intermediate_steps) -> list[li
             for steps in rag_intermediate_steps]
 
 
-@pytest.fixture(name="dask_cluster")
+@pytest.fixture(name="dask_cluster", scope="session")
 def dask_cluster_fixture(fail_missing: bool) -> "LocalCluster":
     """
     Fixture to provide a Dask LocalCluster for tests.
@@ -504,7 +504,7 @@ def dask_cluster_fixture(fail_missing: bool) -> "LocalCluster":
     cluster.close()
 
 
-@pytest.fixture(name="dask_scheduler_address")
+@pytest.fixture(name="dask_scheduler_address", scope="session")
 def dask_scheduler_address_fixture(dask_cluster: "LocalCluster") -> str:
     """
     Fixture to provide the Dask scheduler address for tests.
