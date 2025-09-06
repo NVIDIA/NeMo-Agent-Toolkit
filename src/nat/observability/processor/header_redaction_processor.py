@@ -50,7 +50,6 @@ class HeaderRedactionProcessor(SpanRedactionProcessor):
         attributes: List of span attribute keys to redact.
         headers: List of header keys to extract and pass to the callback function.
         callback: Function that receives a dict of headers and determines if redaction should occur.
-                 The callback receives headers in the order specified in the headers list.
         enabled: Whether the processor is enabled (default: True).
         force_redact: If True, always redact regardless of header checks (default: False).
         redaction_value: The value to replace redacted attributes with (default: "[REDACTED]").
