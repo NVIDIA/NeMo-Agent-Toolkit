@@ -117,8 +117,13 @@ gunicorn = [
 # Optional dependency needed when async endpoints are needed
 async_endpoints = [
   "aiosqlite~=0.21",
-  "dask~=2025.5",
-  "distributed~=2025.5",
+  # Newer versions of Dask make use of the asyncio loop_factory https://github.com/dask/distributed/pull/7969
+  # which was added in Python 3.12, the problem is that several of our other dependencies puyll in a deprecated
+  # project `nest_asyncio` which patched asyncio.run in an incompatible way.
+  # ref: https://github.com/ipython/ipykernel/issues/548 and https://github.com/explodinggradients/ragas/issues/2259
+  # However llama-index-core, semantic-kernel, and weave also depend on nest_asyncio
+  "dask==2023.6",
+  "distributed==2023.6",
   "sqlalchemy[asyncio]~=2.0",
 ]
 

@@ -1273,21 +1273,21 @@ wheels = [
 
 [[package]]
 name = "dask"
-version = "2025.7.0"
+version = "2023.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "cloudpickle" },
     { name = "fsspec" },
-    { name = "importlib-metadata", marker = "python_full_version < '3.12'" },
+    { name = "importlib-metadata" },
     { name = "packaging" },
     { name = "partd" },
     { name = "pyyaml" },
     { name = "toolz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/08/00/cbb7cb07742955dfe77368aa40725d7000414a8a49f415ba40c5a4379ba9/dask-2025.7.0.tar.gz", hash = "sha256:c3a0d4e78882e85ea81dbc71e6459713e45676e2d17e776c2f3f19848039e4cf", size = 10972242, upload-time = "2025-07-14T20:03:42.701Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/70/9da1c8bd773fe494448fd3a78532d21df10c499ffada926c3a9014323c72/dask-2023.6.0.tar.gz", hash = "sha256:980741966ef4d14c62dfb146f315f57d5eaaa6bedc52866f99687bc6054c2d4b", size = 8514740, upload-time = "2023-06-09T16:44:21.358Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b3/f9/3e04725358c17329652da8c1b2dbd88de723f3dc78bf52ca6d28d52c9279/dask-2025.7.0-py3-none-any.whl", hash = "sha256:073c29c4e99c2400a39a8a67874f35c1d15bf7af9ae3d0c30af3c7c1199f24ae", size = 1475117, upload-time = "2025-07-14T20:03:33.095Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/ae/233e8bc6b02b4d066e607f4335de37bf965f78334bc7b1cb33b5d42fd35d/dask-2023.6.0-py3-none-any.whl", hash = "sha256:294f449108397c4ca7a3bca27e32cb0fe9c65599c57d6301b3b70f825c2457d4", size = 1182567, upload-time = "2023-06-09T16:44:11.975Z" },
 ]
 
 [[package]]
@@ -1424,7 +1424,7 @@ wheels = [
 
 [[package]]
 name = "distributed"
-version = "2025.7.0"
+version = "2023.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1443,9 +1443,9 @@ dependencies = [
     { name = "urllib3" },
     { name = "zict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d4/df/4974e669d5c166fddc5e39c8e2dcde41fd90c7568e205f7bf861dc49b66c/distributed-2025.7.0.tar.gz", hash = "sha256:5f8ec20d3cdfb286452831c6f9ebee84527e9323256c20dd2938d9c6e62c5c18", size = 1108454, upload-time = "2025-07-14T20:03:33.842Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7f/4f/c0a4f1e330f83312f598a310682d5b0cc96ecceabd8a80b74ed1ac94864d/distributed-2023.6.0.tar.gz", hash = "sha256:a5bdd4d15f3e7c8df98513b409753d46a39827a650620cc0c0c5ef2751561280", size = 1062868, upload-time = "2023-06-09T16:42:33.069Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/dc/9f033526ed98b65cda8adbd10b6eeeca0659203f67bd3e065ce172008887/distributed-2025.7.0-py3-none-any.whl", hash = "sha256:51b74526c2bee409ca968ee5532c79de1c1a1713664f5ccf90bdd81f17cfdc73", size = 1015142, upload-time = "2025-07-14T20:03:30.834Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/f1/3f90dc2fb600c72a957623ac06c1000c5ec3cd5c709689c93d54647d62c7/distributed-2023.6.0-py3-none-any.whl", hash = "sha256:dea5c199623aab6babaa5c6a9c98542723c1436d065d28c68ac324266978701b", size = 976090, upload-time = "2023-06-09T16:42:28.702Z" },
 ]
 
 [[package]]
@@ -1567,7 +1567,6 @@ dependencies = [
     { name = "numpy" },
     { name = "packaging" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/92/57/f5af8d68f9a8ec943496aa8fa9b01d7c4e654e918b246f5a0e6c85df6e0d/faiss_cpu-1.9.0.tar.gz", hash = "sha256:587fcea9fa478e9307a388754824a032849d317894a607586c3cdd8c8aeb7233", size = 67785, upload-time = "2024-10-08T07:07:00.355Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f5/a2/b346d976c0adcdeab7d23bf6f58eef6d1c5c9c0bf919353923cf91553049/faiss_cpu-1.9.0-cp311-cp311-macosx_10_14_x86_64.whl", hash = "sha256:b0e9208a36da519dc2eb90e4c44c66a6812a5b68457582d8ed21d04e910e3d1f", size = 7661789, upload-time = "2024-10-08T07:06:26.259Z" },
     { url = "https://files.pythonhosted.org/packages/6b/9f/f0a39439a938818f1add48bd7b79d4b8e12e60f2f0c1e4a0b37b295625e0/faiss_cpu-1.9.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:6a4b2871057560020b83ad7bb5aaf3b97b64f980f9af2ca99ba34eeb4fe38bdf", size = 3215612, upload-time = "2024-10-08T07:06:28.359Z" },
@@ -4859,9 +4858,9 @@ requires-dist = [
     { name = "authlib", specifier = "~=1.3.1" },
     { name = "click", specifier = "~=8.1" },
     { name = "colorama", specifier = "~=0.4.6" },
-    { name = "dask", marker = "extra == 'async-endpoints'", specifier = "~=2025.5" },
+    { name = "dask", marker = "extra == 'async-endpoints'", specifier = "==2023.6" },
     { name = "datasets", specifier = "~=4.0" },
-    { name = "distributed", marker = "extra == 'async-endpoints'", specifier = "~=2025.5" },
+    { name = "distributed", marker = "extra == 'async-endpoints'", specifier = "==2023.6" },
     { name = "expandvars", specifier = "~=1.0" },
     { name = "fastapi", specifier = "~=0.115.5" },
     { name = "gunicorn", marker = "extra == 'gunicorn'", specifier = "~=23.0" },
