@@ -13,11 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 from collections.abc import Mapping
 from enum import Enum
 from typing import Generic
-from typing import TypedDict
 from typing import TypeVar
+
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 from pydantic import BaseModel
 from pydantic import Field
