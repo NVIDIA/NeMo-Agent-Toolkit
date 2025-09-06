@@ -32,7 +32,7 @@ def default_callback(_header_map: dict[str, Any]) -> bool:
     """Default callback that always returns False, indicating no redaction should occur.
 
     Args:
-        _header_map: Dictionary of header names to values (unused).
+        _header_map (dict[str, Any]): Dictionary of header names to values (unused).
 
     Returns:
         bool: Always False, indicating the span should not be redacted.
@@ -115,8 +115,8 @@ class HeaderRedactionProcessor(SpanRedactionProcessor):
         By being static, it avoids the 'self' hashing issue.
 
         Args:
-            callback: The callback function to execute.
-            header_tuple: Tuple of (key, value) pairs from headers in self.headers order.
+            callback (Callable[[dict[str, Any]], bool]): The callback function to execute.
+            header_tuple (tuple): Tuple of (key, value) pairs from headers in self.headers order.
 
         Returns:
             bool: True if the span should be redacted, False otherwise.
