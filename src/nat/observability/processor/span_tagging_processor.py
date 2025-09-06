@@ -56,13 +56,12 @@ class SpanTaggingProcessor(Processor[Span, Span]):
             Span: The tagged span with all configured tags applied.
         """
         for tag_key, tag_value in self.tags.items():
-            if tag_key and tag_value != "":
-                # Convert enum values to strings
-                if hasattr(tag_value, 'value') and callable(getattr(tag_value, 'value', None)) is False:
-                    # It's an enum with a value attribute
-                    value_str = str(getattr(tag_value, 'value'))
-                else:
-                    value_str = str(tag_value)
-                item.set_attribute(f"{self._span_prefix}.{tag_key}", value_str)
+            key = str(tag_key).strip()
+            if not key:
+                continue
+            value_str = str(tag_value.value) if isinstance(tag_value, Enum) else str(tag_value)
+            if value_str == "":
+                continue
+            item.set_attribute(f"{self._span_prefix}.{key}", value_str)
 
         return item
