@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -76,7 +77,7 @@ class TestHeaderRedactionProcessorInitialization:
         processor = HeaderRedactionProcessor()
 
         assert processor.attributes == []
-        assert processor.header is None
+        assert processor.headers == []
         assert processor.callback is default_callback
         assert processor.enabled is True
         assert processor.force_redact is False
@@ -87,17 +88,28 @@ class TestHeaderRedactionProcessorInitialization:
         processor = HeaderRedactionProcessor(attributes=attributes)
 
         assert processor.attributes == attributes
-        assert processor.header is None
+        assert processor.headers == []
         assert processor.callback is default_callback
         assert processor.enabled is True
         assert processor.force_redact is False
 
-    def test_initialization_with_header(self):
-        """Test initialization with custom header."""
-        processor = HeaderRedactionProcessor(header="authorization")
+    def test_initialization_with_single_header(self):
+        """Test initialization with single header."""
+        processor = HeaderRedactionProcessor(headers=["authorization"])
 
         assert processor.attributes == []
-        assert processor.header == "authorization"
+        assert processor.headers == ["authorization"]
+        assert processor.callback is default_callback
+        assert processor.enabled is True
+        assert processor.force_redact is False
+
+    def test_initialization_with_multiple_headers(self):
+        """Test initialization with multiple headers."""
+        headers = ["authorization", "x-api-key", "x-user-id"]
+        processor = HeaderRedactionProcessor(headers=headers)
+
+        assert processor.attributes == []
+        assert processor.headers == headers
         assert processor.callback is default_callback
         assert processor.enabled is True
         assert processor.force_redact is False
@@ -105,13 +117,14 @@ class TestHeaderRedactionProcessorInitialization:
     def test_initialization_with_callback(self):
         """Test initialization with custom callback."""
 
-        def custom_callback(auth_key: str) -> bool:
-            return "admin" in auth_key
+        def custom_callback(headers: dict[str, Any]) -> bool:
+            auth = headers.get("authorization", "")
+            return "admin" in auth
 
         processor = HeaderRedactionProcessor(callback=custom_callback)
 
         assert processor.attributes == []
-        assert processor.header is None
+        assert processor.headers == []
         assert processor.callback is custom_callback
         assert processor.enabled is True
         assert processor.force_redact is False
@@ -121,7 +134,7 @@ class TestHeaderRedactionProcessorInitialization:
         processor = HeaderRedactionProcessor(enabled=False)
 
         assert processor.attributes == []
-        assert processor.header is None
+        assert processor.headers == []
         assert processor.callback is default_callback
         assert processor.enabled is False
         assert processor.force_redact is False
@@ -131,7 +144,7 @@ class TestHeaderRedactionProcessorInitialization:
         processor = HeaderRedactionProcessor(force_redact=True)
 
         assert processor.attributes == []
-        assert processor.header is None
+        assert processor.headers == []
         assert processor.callback is default_callback
         assert processor.enabled is True
         assert processor.force_redact is True
@@ -139,18 +152,20 @@ class TestHeaderRedactionProcessorInitialization:
     def test_initialization_with_all_parameters(self):
         """Test initialization with all parameters specified."""
         attributes = ["user_id", "api_key"]
+        headers = ["x-api-key", "authorization"]
 
-        def callback(auth_key: str) -> bool:
-            return len(auth_key) > 10
+        def callback(headers: dict[str, Any]) -> bool:
+            api_key = headers.get("x-api-key", "")
+            return len(api_key) > 10
 
         processor = HeaderRedactionProcessor(attributes=attributes,
-                                             header="x-api-key",
+                                             headers=headers,
                                              callback=callback,
                                              enabled=False,
                                              force_redact=True)
 
         assert processor.attributes == attributes
-        assert processor.header == "x-api-key"
+        assert processor.headers == headers
         assert processor.callback is callback
         assert processor.enabled is False
         assert processor.force_redact is True
@@ -163,7 +178,7 @@ class TestHeaderRedactionProcessorShouldRedact:
         """Test that force_redact=True always returns True regardless of other conditions."""
         processor = HeaderRedactionProcessor(
             enabled=False,  # Even with enabled=False
-            header=None,  # Even with no header
+            headers=[],  # Even with no headers
             force_redact=True)
 
         # Create context without headers
@@ -179,7 +194,7 @@ class TestHeaderRedactionProcessorShouldRedact:
 
     def test_should_redact_with_enabled_false_returns_false(self):
         """Test that enabled=False returns False (unless force_redact=True)."""
-        processor = HeaderRedactionProcessor(enabled=False, header="authorization", force_redact=False)
+        processor = HeaderRedactionProcessor(enabled=False, headers=["authorization"], force_redact=False)
 
         # Create context with headers
         headers = Headers({"authorization": "Bearer token123"})
@@ -195,7 +210,7 @@ class TestHeaderRedactionProcessorShouldRedact:
 
     def test_should_redact_with_no_headers_returns_false(self, mock_context_no_headers):
         """Test that missing headers returns False."""
-        processor = HeaderRedactionProcessor(header="authorization", enabled=True, force_redact=False)
+        processor = HeaderRedactionProcessor(headers=["authorization"], enabled=True, force_redact=False)
 
         span = Mock(spec=Span)
 
@@ -203,9 +218,9 @@ class TestHeaderRedactionProcessorShouldRedact:
         assert result is False
 
     def test_should_redact_with_no_header_key_returns_false(self, mock_context_with_headers):
-        """Test that missing header key returns False."""
+        """Test that no headers specified returns False."""
         processor = HeaderRedactionProcessor(
-            header=None,  # No header specified
+            headers=[],  # No headers specified
             enabled=True,
             force_redact=False)
 
@@ -217,7 +232,7 @@ class TestHeaderRedactionProcessorShouldRedact:
     def test_should_redact_with_missing_header_value_returns_false(self):
         """Test that missing header value returns False."""
         processor = HeaderRedactionProcessor(
-            header="missing-header",  # Header not in the Headers
+            headers=["missing-header"],  # Header not in the Headers
             enabled=True,
             force_redact=False)
 
@@ -234,7 +249,7 @@ class TestHeaderRedactionProcessorShouldRedact:
 
     def test_should_redact_with_empty_header_value_returns_false(self):
         """Test that empty header value returns False."""
-        processor = HeaderRedactionProcessor(header="authorization", enabled=True, force_redact=False)
+        processor = HeaderRedactionProcessor(headers=["authorization"], enabled=True, force_redact=False)
 
         headers = Headers({"authorization": ""})  # Empty value
         metadata = Mock(spec=RequestAttributes)
@@ -250,10 +265,10 @@ class TestHeaderRedactionProcessorShouldRedact:
     def test_should_redact_with_callback_returning_true(self):
         """Test that callback returning True results in redaction."""
 
-        def always_redact_callback(auth_key: str) -> bool:
+        def always_redact_callback(headers: dict[str, Any]) -> bool:
             return True
 
-        processor = HeaderRedactionProcessor(header="authorization",
+        processor = HeaderRedactionProcessor(headers=["authorization"],
                                              callback=always_redact_callback,
                                              enabled=True,
                                              force_redact=False)
@@ -272,10 +287,10 @@ class TestHeaderRedactionProcessorShouldRedact:
     def test_should_redact_with_callback_returning_false(self):
         """Test that callback returning False results in no redaction."""
 
-        def never_redact_callback(auth_key: str) -> bool:
+        def never_redact_callback(headers: dict[str, Any]) -> bool:
             return False
 
-        processor = HeaderRedactionProcessor(header="authorization",
+        processor = HeaderRedactionProcessor(headers=["authorization"],
                                              callback=never_redact_callback,
                                              enabled=True,
                                              force_redact=False)
@@ -294,10 +309,11 @@ class TestHeaderRedactionProcessorShouldRedact:
     def test_should_redact_with_conditional_callback(self):
         """Test callback with conditional logic."""
 
-        def conditional_callback(auth_key: str) -> bool:
-            return "admin" in auth_key or len(auth_key) > 20
+        def conditional_callback(headers: dict[str, Any]) -> bool:
+            api_key = headers.get("x-api-key", "")
+            return "admin" in api_key or len(api_key) > 20
 
-        processor = HeaderRedactionProcessor(header="x-api-key",
+        processor = HeaderRedactionProcessor(headers=["x-api-key"],
                                              callback=conditional_callback,
                                              enabled=True,
                                              force_redact=False)
@@ -324,6 +340,67 @@ class TestHeaderRedactionProcessorShouldRedact:
         metadata.headers = headers3
         result3 = processor.should_redact(span, context)
         assert result3 is False
+
+    def test_should_redact_with_multiple_headers(self):
+        """Test new multi-header functionality."""
+
+        def multi_header_callback(headers: dict[str, Any]) -> bool:
+            auth = headers.get("authorization", "")
+            api_key = headers.get("x-api-key", "")
+
+            # Redact if admin user with suspicious API key
+            return "admin" in auth and "suspicious" in api_key
+
+        processor = HeaderRedactionProcessor(headers=["authorization", "x-api-key", "x-user-type"],
+                                             callback=multi_header_callback,
+                                             enabled=True,
+                                             force_redact=False)
+
+        # Test case 1: Should redact (admin + suspicious key)
+        headers1 = Headers({
+            "authorization": "Bearer admin_token", "x-api-key": "suspicious_key", "x-user-type": "admin"
+        })
+        metadata1 = Mock(spec=RequestAttributes)
+        metadata1.headers = headers1
+        context1 = Mock(spec=Context)
+        context1.metadata = metadata1
+
+        span = Mock(spec=Span)
+        result1 = processor.should_redact(span, context1)
+        assert result1 is True
+
+        # Test case 2: Should not redact (regular user)
+        headers2 = Headers({"authorization": "Bearer user_token", "x-api-key": "suspicious_key", "x-user-type": "user"})
+        metadata2 = Mock(spec=RequestAttributes)
+        metadata2.headers = headers2
+        context2 = Mock(spec=Context)
+        context2.metadata = metadata2
+
+        result2 = processor.should_redact(span, context2)
+        assert result2 is False
+
+    def test_should_redact_all_headers_none_skips_callback(self):
+        """Test that when all requested headers are None, callback is not called."""
+
+        def should_not_be_called(headers: dict[str, Any]) -> bool:
+            # This should never be called when all headers are None
+            assert False, "Callback should not be called when all headers are None"
+
+        processor = HeaderRedactionProcessor(headers=["missing-header-1", "missing-header-2"],
+                                             callback=should_not_be_called,
+                                             enabled=True,
+                                             force_redact=False)
+
+        # Create context with different headers than requested
+        headers = Headers({"authorization": "Bearer token"})  # Different headers
+        metadata = Mock(spec=RequestAttributes)
+        metadata.headers = headers
+        context = Mock(spec=Context)
+        context.metadata = metadata
+
+        span = Mock(spec=Span)
+        result = processor.should_redact(span, context)
+        assert result is False  # Should return False without calling callback
 
 
 class TestHeaderRedactionProcessorRedactItem:
@@ -468,20 +545,22 @@ class TestHeaderRedactionProcessorLRUCache:
         """Test that LRU cache avoids redundant callback executions."""
         call_count = 0
 
-        def counting_callback(auth_key: str) -> bool:
+        def counting_callback(headers: dict[str, Any]) -> bool:
             nonlocal call_count
             call_count += 1
+            auth_key = headers.get("authorization", "")
             return "admin" in auth_key
 
-        processor = HeaderRedactionProcessor(header="authorization",
+        processor = HeaderRedactionProcessor(headers=["authorization"],
                                              callback=counting_callback,
                                              enabled=True,
                                              force_redact=False)
 
-        # Call _should_redact_impl multiple times with same auth_key
-        result1 = processor._should_redact_impl("admin_token")
-        result2 = processor._should_redact_impl("admin_token")
-        result3 = processor._should_redact_impl("admin_token")
+        # Call _should_redact_cached multiple times with same header tuple
+        header_tuple1 = (("authorization", "admin_token"), )
+        result1 = processor._should_redact_cached(counting_callback, header_tuple1)
+        result2 = processor._should_redact_cached(counting_callback, header_tuple1)
+        result3 = processor._should_redact_cached(counting_callback, header_tuple1)
 
         assert result1 is True
         assert result2 is True
@@ -489,8 +568,9 @@ class TestHeaderRedactionProcessorLRUCache:
         # Callback should only be called once due to caching
         assert call_count == 1
 
-        # Call with different auth_key
-        result4 = processor._should_redact_impl("user_token")
+        # Call with different header tuple
+        header_tuple2 = (("authorization", "user_token"), )
+        result4 = processor._should_redact_cached(counting_callback, header_tuple2)
         assert result4 is False
         # Should call callback again for new key
         assert call_count == 2
@@ -498,43 +578,48 @@ class TestHeaderRedactionProcessorLRUCache:
     def test_lru_cache_respects_different_auth_keys(self):
         """Test that LRU cache properly handles different auth keys."""
 
-        def selective_callback(auth_key: str) -> bool:
+        def selective_callback(headers: dict[str, Any]) -> bool:
+            auth_key = headers.get("authorization", "")
             return auth_key.startswith("admin")
 
-        processor = HeaderRedactionProcessor(header="authorization",
+        processor = HeaderRedactionProcessor(headers=["authorization"],
                                              callback=selective_callback,
                                              enabled=True,
                                              force_redact=False)
 
-        # Test different auth keys
-        assert processor._should_redact_impl("admin_key1") is True
-        assert processor._should_redact_impl("user_key1") is False
-        assert processor._should_redact_impl("admin_key2") is True
-        assert processor._should_redact_impl("user_key2") is False
+        # Test different auth keys using the cached method directly
+        assert processor._should_redact_cached(selective_callback, (("authorization", "admin_key1"), )) is True
+        assert processor._should_redact_cached(selective_callback, (("authorization", "user_key1"), )) is False
+        assert processor._should_redact_cached(selective_callback, (("authorization", "admin_key2"), )) is True
+        assert processor._should_redact_cached(selective_callback, (("authorization", "user_key2"), )) is False
 
         # Calling same keys again should use cache
-        assert processor._should_redact_impl("admin_key1") is True
-        assert processor._should_redact_impl("user_key1") is False
+        assert processor._should_redact_cached(selective_callback, (("authorization", "admin_key1"), )) is True
+        assert processor._should_redact_cached(selective_callback, (("authorization", "user_key1"), )) is False
 
     def test_lru_cache_info_accessible(self):
         """Test that LRU cache info is accessible for monitoring."""
-        processor = HeaderRedactionProcessor(callback=lambda x: True)
+
+        def test_callback(headers: dict[str, Any]) -> bool:
+            return True
+
+        processor = HeaderRedactionProcessor(callback=test_callback)
 
         # Clear the cache to start fresh (LRU cache is shared across instances)
-        processor._should_redact_impl.cache_clear()
+        processor._should_redact_cached.cache_clear()
 
         # Check initial cache info after clearing
-        cache_info = processor._should_redact_impl.cache_info()
+        cache_info = processor._should_redact_cached.cache_info()
         assert cache_info.hits == 0
         assert cache_info.misses == 0
         assert cache_info.maxsize == 128  # Default maxsize
 
-        # Make some calls
-        processor._should_redact_impl("key1")
-        processor._should_redact_impl("key2")
-        processor._should_redact_impl("key1")  # Cache hit
+        # Make some calls using the same callback function for caching to work
+        processor._should_redact_cached(test_callback, (("authorization", "key1"), ))
+        processor._should_redact_cached(test_callback, (("authorization", "key2"), ))
+        processor._should_redact_cached(test_callback, (("authorization", "key1"), ))  # Cache hit
 
-        cache_info = processor._should_redact_impl.cache_info()
+        cache_info = processor._should_redact_cached.cache_info()
         assert cache_info.hits == 1
         assert cache_info.misses == 2
 
@@ -546,11 +631,12 @@ class TestHeaderRedactionProcessorIntegration:
     async def test_full_redaction_flow_with_headers(self, mock_context_get, sample_span):
         """Test complete redaction flow with headers and callback."""
 
-        def admin_callback(auth_key: str) -> bool:
-            return "admin" in auth_key
+        def admin_callback(headers: dict[str, Any]) -> bool:
+            auth = headers.get("authorization", "")
+            return "admin" in auth
 
         processor = HeaderRedactionProcessor(attributes=["user_id", "session_token"],
-                                             header="authorization",
+                                             headers=["authorization"],
                                              callback=admin_callback,
                                              enabled=True,
                                              force_redact=False)
@@ -583,11 +669,12 @@ class TestHeaderRedactionProcessorIntegration:
     async def test_no_redaction_flow_with_user_token(self, mock_context_get, sample_span):
         """Test no redaction when callback returns False."""
 
-        def admin_only_callback(auth_key: str) -> bool:
-            return "admin" in auth_key
+        def admin_only_callback(headers: dict[str, Any]) -> bool:
+            auth = headers.get("authorization", "")
+            return "admin" in auth
 
         processor = HeaderRedactionProcessor(attributes=["user_id", "session_token"],
-                                             header="authorization",
+                                             headers=["authorization"],
                                              callback=admin_only_callback,
                                              enabled=True,
                                              force_redact=False)
@@ -618,12 +705,12 @@ class TestHeaderRedactionProcessorIntegration:
     async def test_disabled_processor_never_redacts(self, mock_context_get, sample_span):
         """Test that disabled processor never redacts."""
 
-        def always_redact_callback(auth_key: str) -> bool:
+        def always_redact_callback(headers: dict[str, Any]) -> bool:
             return True
 
         processor = HeaderRedactionProcessor(
             attributes=["user_id"],
-            header="authorization",
+            headers=["authorization"],
             callback=always_redact_callback,
             enabled=False,  # Disabled
             force_redact=False)
@@ -654,12 +741,12 @@ class TestHeaderRedactionProcessorIntegration:
     async def test_force_redact_overrides_everything(self, mock_context_get, sample_span):
         """Test that force_redact=True overrides all other conditions."""
 
-        def never_redact_callback(auth_key: str) -> bool:
+        def never_redact_callback(headers: dict[str, Any]) -> bool:
             return False
 
         processor = HeaderRedactionProcessor(
             attributes=["user_id"],
-            header="nonexistent_header",  # Header that doesn't exist
+            headers=["nonexistent_header"],  # Header that doesn't exist
             callback=never_redact_callback,  # Callback that never redacts
             enabled=False,  # Disabled
             force_redact=True  # But force redact is True
@@ -693,10 +780,10 @@ class TestHeaderRedactionProcessorErrorHandling:
     def test_should_redact_with_callback_error_propagates(self):
         """Test that callback errors are propagated."""
 
-        def failing_callback(auth_key: str) -> bool:
+        def failing_callback(headers: dict[str, Any]) -> bool:
             raise ValueError("Callback failed")
 
-        processor = HeaderRedactionProcessor(header="authorization",
+        processor = HeaderRedactionProcessor(headers=["authorization"],
                                              callback=failing_callback,
                                              enabled=True,
                                              force_redact=False)
@@ -714,7 +801,7 @@ class TestHeaderRedactionProcessorErrorHandling:
 
     def test_should_redact_with_context_metadata_error(self):
         """Test error handling when context.metadata access fails."""
-        processor = HeaderRedactionProcessor(header="authorization", enabled=True, force_redact=False)
+        processor = HeaderRedactionProcessor(headers=["authorization"], enabled=True, force_redact=False)
 
         # Create context that raises error when accessing metadata
         context = Mock(spec=Context)
@@ -784,8 +871,8 @@ class TestHeaderRedactionProcessorEdgeCases:
     def test_should_redact_with_case_sensitive_headers(self):
         """Test header matching is case-insensitive (Starlette Headers behavior)."""
         processor = HeaderRedactionProcessor(
-            header="Authorization",  # Capital A
-            callback=lambda x: True,
+            headers=["Authorization"],  # Capital A
+            callback=lambda headers: True,
             enabled=True,
             force_redact=False)
 
@@ -804,8 +891,8 @@ class TestHeaderRedactionProcessorEdgeCases:
 
     def test_should_redact_with_multiple_header_values(self):
         """Test behavior with multiple header values."""
-        processor = HeaderRedactionProcessor(header="authorization",
-                                             callback=lambda x: "token1" in x,
+        processor = HeaderRedactionProcessor(headers=["authorization"],
+                                             callback=lambda headers: "token1" in headers.get("authorization", ""),
                                              enabled=True,
                                              force_redact=False)
 

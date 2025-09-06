@@ -15,6 +15,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -93,7 +94,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterInitialization:
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                           headers=basic_exporter_config["headers"],
                                                           redaction_attributes=redaction_attributes,
-                                                          redaction_header="x-user-id",
+                                                          redaction_headers=["x-user-id"],
                                                           redaction_callback=sample_redaction_callback,
                                                           redaction_enabled=True,
                                                           force_redaction=False)
@@ -106,8 +107,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterInitialization:
     def test_initialization_with_privacy_tagging_params(self, basic_exporter_config):
         """Test initialization with privacy tagging parameters."""
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                                          privacy_tag_key="privacy.level",
-                                                          privacy_tag_value=PrivacyLevel.HIGH)
+                                                          tags={"privacy.level": PrivacyLevel.HIGH})
 
         assert exporter is not None
         assert isinstance(exporter, OTLPSpanAdapterExporter)
@@ -118,8 +118,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterInitialization:
 
         for privacy_level in privacy_levels:
             exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                                              privacy_tag_key="privacy.level",
-                                                              privacy_tag_value=privacy_level)
+                                                              tags={"privacy.level": privacy_level})
             assert exporter is not None
 
     def test_initialization_with_all_parameters(self,
@@ -141,12 +140,11 @@ class TestOTLPSpanHeaderRedactionAdapterExporterInitialization:
             resource_attributes=resource_attributes,
             # Redaction args
             redaction_attributes=redaction_attributes,
-            redaction_header="x-auth-user",
+            redaction_headers=["x-auth-user"],
             redaction_callback=sample_redaction_callback,
             redaction_enabled=True,
             force_redaction=False,
-            privacy_tag_key="privacy.level",
-            privacy_tag_value=PrivacyLevel.HIGH,
+            tags={"privacy.level": PrivacyLevel.HIGH},
             # OTLP args
             endpoint=basic_exporter_config["endpoint"],
             headers=basic_exporter_config["headers"])
@@ -166,11 +164,9 @@ class TestOTLPSpanHeaderRedactionAdapterExporterInitialization:
 
         assert exporter is not None
 
-    def test_initialization_without_privacy_tag_value(self, basic_exporter_config):
-        """Test initialization with privacy_tag_key but no privacy_tag_value."""
-        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                                          privacy_tag_key="privacy.level",
-                                                          privacy_tag_value=None)
+    def test_initialization_with_empty_tags_dict(self, basic_exporter_config):
+        """Test initialization with empty tags dictionary."""
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"], tags={})
 
         assert exporter is not None
 
@@ -204,11 +200,10 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
 
         OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                redaction_attributes=redaction_attributes,
-                                               redaction_header="x-auth-user",
+                                               redaction_headers=["x-auth-user"],
                                                redaction_callback=sample_redaction_callback,
                                                redaction_enabled=True,
-                                               privacy_tag_key="privacy.level",
-                                               privacy_tag_value=PrivacyLevel.MEDIUM)
+                                               tags={"privacy.level": PrivacyLevel.MEDIUM})
 
         # Verify add_processor was called 4 times total:
         # - 2 from parent OtelSpanExporter (SpanToOtelProcessor, OtelSpanBatchProcessor)
@@ -242,11 +237,11 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
                                                       sample_redaction_callback):
         """Test that HeaderRedactionProcessor is configured correctly."""
         redaction_attributes = ["user.email", "user.phone"]
-        redaction_header = "x-user-auth"
+        redaction_headers = ["x-user-auth"]
 
         OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                redaction_attributes=redaction_attributes,
-                                               redaction_header=redaction_header,
+                                               redaction_headers=redaction_headers,
                                                redaction_callback=sample_redaction_callback,
                                                redaction_enabled=True,
                                                force_redaction=False)
@@ -261,7 +256,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
         header_processor = redaction_calls[0][0][0]
         assert isinstance(header_processor, HeaderRedactionProcessor)
         assert header_processor.attributes == redaction_attributes
-        assert header_processor.header == redaction_header
+        assert header_processor.headers == redaction_headers
         assert header_processor.callback == sample_redaction_callback
         assert header_processor.enabled
         assert not header_processor.force_redact
@@ -271,10 +266,9 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
         """Test that SpanTaggingProcessor is configured correctly."""
         privacy_tag_key = "privacy.level"
         privacy_level = PrivacyLevel.HIGH
+        tags = {privacy_tag_key: privacy_level}
 
-        OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                               privacy_tag_key=privacy_tag_key,
-                                               privacy_tag_value=privacy_level)
+        OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"], tags=tags)
 
         # Find the SpanTaggingProcessor call by name
         tagging_calls = [
@@ -285,18 +279,16 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
 
         tagging_processor = tagging_calls[0][0][0]
         assert isinstance(tagging_processor, SpanTaggingProcessor)
-        assert tagging_processor.tag_key == privacy_tag_key
-        assert tagging_processor.tag_value == privacy_level.value  # Should use .value
+        assert tagging_processor.tags == tags
 
     @patch('nat.plugins.opentelemetry.otlp_span_adapter_exporter.OTLPSpanAdapterExporter.add_processor')
     def test_processors_added_with_none_values(self, mock_add_processor, basic_exporter_config):
         """Test that processors are still added even when optional values are None."""
         OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                redaction_attributes=None,
-                                               redaction_header=None,
+                                               redaction_headers=None,
                                                redaction_callback=None,
-                                               privacy_tag_key=None,
-                                               privacy_tag_value=None)
+                                               tags=None)
 
         # Should add 4 processors total (2 from parent + 2 from our class)
         assert mock_add_processor.call_count == 4
@@ -318,8 +310,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
         assert len(tagging_calls) == 1
         tagging_processor = tagging_calls[0][0][0]
         assert isinstance(tagging_processor, SpanTaggingProcessor)
-        assert tagging_processor.tag_key is None
-        assert tagging_processor.tag_value is None
+        assert tagging_processor.tags == {}
 
 
 class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
@@ -350,7 +341,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
 
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                           redaction_attributes=["user.email", "user.phone"],
-                                                          redaction_header="x-user-id",
+                                                          redaction_headers=["x-user-id"],
                                                           redaction_callback=redact_for_test_users,
                                                           redaction_enabled=True)
 
@@ -369,7 +360,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
         """Test with redaction_enabled=False."""
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                           redaction_attributes=["user.email"],
-                                                          redaction_header="x-user-id",
+                                                          redaction_headers=["x-user-id"],
                                                           redaction_enabled=False)
 
         assert exporter is not None
@@ -382,7 +373,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
 
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                           redaction_attributes=["user.email"],
-                                                          redaction_header="x-user-id",
+                                                          redaction_headers=["x-user-id"],
                                                           redaction_callback=test_redaction_callback,
                                                           redaction_enabled=True)
 
@@ -407,7 +398,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
 
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                           redaction_attributes=["user.email"],
-                                                          redaction_header="x-user-id",
+                                                          redaction_headers=["x-user-id"],
                                                           redaction_callback=test_redaction_callback,
                                                           redaction_enabled=True,
                                                           redaction_value=custom_redaction_value)
@@ -434,14 +425,15 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
         context.metadata = metadata
         mock_context_get.return_value = context
 
-        def should_redact_sensitive_users(auth_key: str) -> bool:
-            return auth_key == "sensitive_user"
+        def should_redact_sensitive_users(headers: dict[str, Any]) -> bool:
+            user_id = headers.get("x-user-id", "")
+            return user_id == "sensitive_user"
 
         custom_redaction_value = "***CLASSIFIED***"
 
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                           redaction_attributes=["user.email", "user.ssn"],
-                                                          redaction_header="x-user-id",
+                                                          redaction_headers=["x-user-id"],
                                                           redaction_callback=should_redact_sensitive_users,
                                                           redaction_enabled=True,
                                                           redaction_value=custom_redaction_value)
@@ -484,12 +476,13 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
         context.metadata = metadata
         mock_context_get.return_value = context
 
-        def should_redact_test_users(auth_key: str) -> bool:
-            return auth_key == "test_user"
+        def should_redact_test_users(headers: dict[str, Any]) -> bool:
+            user_id = headers.get("x-user-id", "")
+            return user_id == "test_user"
 
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                           redaction_attributes=["user.email"],
-                                                          redaction_header="x-user-id",
+                                                          redaction_headers=["x-user-id"],
                                                           redaction_callback=should_redact_test_users,
                                                           redaction_enabled=True)
         # No redaction_value specified - should use default "[REDACTED]"
@@ -524,56 +517,47 @@ class TestOTLPSpanHeaderRedactionAdapterExporterPrivacyTagging:
     def test_privacy_level_none(self, basic_exporter_config):
         """Test privacy tagging with PrivacyLevel.NONE."""
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                                          privacy_tag_key="privacy.level",
-                                                          privacy_tag_value=PrivacyLevel.NONE)
+                                                          tags={"privacy.level": PrivacyLevel.NONE})
 
         assert exporter is not None
 
     def test_privacy_level_low(self, basic_exporter_config):
         """Test privacy tagging with PrivacyLevel.LOW."""
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                                          privacy_tag_key="privacy.level",
-                                                          privacy_tag_value=PrivacyLevel.LOW)
+                                                          tags={"privacy.level": PrivacyLevel.LOW})
 
         assert exporter is not None
 
     def test_privacy_level_medium(self, basic_exporter_config):
         """Test privacy tagging with PrivacyLevel.MEDIUM."""
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                                          privacy_tag_key="privacy.level",
-                                                          privacy_tag_value=PrivacyLevel.MEDIUM)
+                                                          tags={"privacy.level": PrivacyLevel.MEDIUM})
 
         assert exporter is not None
 
     def test_privacy_level_high(self, basic_exporter_config):
         """Test privacy tagging with PrivacyLevel.HIGH."""
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                                          privacy_tag_key="privacy.level",
-                                                          privacy_tag_value=PrivacyLevel.HIGH)
+                                                          tags={"privacy.level": PrivacyLevel.HIGH})
 
         assert exporter is not None
 
     def test_custom_privacy_tag_key(self, basic_exporter_config):
         """Test with custom privacy tag key."""
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                                          privacy_tag_key="custom.privacy.classification",
-                                                          privacy_tag_value=PrivacyLevel.MEDIUM)
+                                                          tags={"custom.privacy.classification": PrivacyLevel.MEDIUM})
 
         assert exporter is not None
 
     def test_privacy_tagging_without_tag_key(self, basic_exporter_config):
-        """Test privacy tagging with only tag_value but no tag_key."""
-        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                                          privacy_tag_key=None,
-                                                          privacy_tag_value=PrivacyLevel.HIGH)
+        """Test privacy tagging with None tags."""
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"], tags=None)
 
         assert exporter is not None
 
     def test_privacy_tagging_without_tag_value(self, basic_exporter_config):
-        """Test privacy tagging with only tag_key but no tag_value."""
-        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                                          privacy_tag_key="privacy.level",
-                                                          privacy_tag_value=None)
+        """Test privacy tagging with empty tags dictionary."""
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"], tags={})
 
         assert exporter is not None
 
@@ -660,11 +644,10 @@ class TestOTLPSpanHeaderRedactionAdapterExporterIntegration:
             endpoint=basic_exporter_config["endpoint"],
             headers=basic_exporter_config["headers"],
             redaction_attributes=["user.email"],
-            redaction_header="x-user-id",
+            redaction_headers=["x-user-id"],
             redaction_callback=sample_redaction_callback,
             redaction_enabled=True,
-            privacy_tag_key="privacy.level",
-            privacy_tag_value=PrivacyLevel.HIGH,
+            tags={"privacy.level": PrivacyLevel.HIGH},
             batch_size=1,  # Force immediate processing
             flush_interval=0.1)
 
@@ -700,13 +683,12 @@ class TestOTLPSpanHeaderRedactionAdapterExporterIntegration:
         exporter = OTLPSpanHeaderRedactionAdapterExporter(
             endpoint=basic_exporter_config["endpoint"],
             redaction_attributes=["user.email", "user.ssn"],
-            redaction_header="x-auth-token",
+            redaction_headers=["x-auth-token"],
             redaction_callback=sample_redaction_callback,
             redaction_enabled=True,
             force_redaction=False,
             # No privacy tagging configured
-            privacy_tag_key=None,
-            privacy_tag_value=None,
+            tags=None,
             batch_size=1,
             flush_interval=0.1)
 
@@ -738,13 +720,12 @@ class TestOTLPSpanHeaderRedactionAdapterExporterIntegration:
             endpoint=basic_exporter_config["endpoint"],
             # No redaction configured
             redaction_attributes=None,
-            redaction_header=None,
+            redaction_headers=None,
             redaction_callback=None,
             redaction_enabled=False,
             force_redaction=False,
             # Only privacy tagging
-            privacy_tag_key="compliance.level",
-            privacy_tag_value=PrivacyLevel.MEDIUM,
+            tags={"compliance.level": PrivacyLevel.MEDIUM},
             batch_size=1,
             flush_interval=0.1)
 
@@ -808,7 +789,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterInheritance:
         OTLPSpanHeaderRedactionAdapterExporter(endpoint=endpoint,
                                                headers=headers,
                                                redaction_enabled=True,
-                                               privacy_tag_value=PrivacyLevel.LOW)
+                                               tags={"privacy.level": PrivacyLevel.LOW})
 
         # Verify OTLPSpanExporter was initialized with correct parameters
         mock_otlp_exporter_class.assert_called_once_with(endpoint=endpoint, headers=headers)
@@ -851,7 +832,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterEdgeCases:
 
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                           redaction_attributes=["sensitive_field"],
-                                                          redaction_header="x-environment-user",
+                                                          redaction_headers=["x-environment-user"],
                                                           redaction_callback=complex_callback,
                                                           redaction_enabled=True)
 
@@ -887,7 +868,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterEdgeCases:
                                                           resource_attributes=resource_attributes,
                                                           endpoint=basic_exporter_config["endpoint"],
                                                           redaction_enabled=True,
-                                                          privacy_tag_value=PrivacyLevel.LOW)
+                                                          tags={"privacy.level": PrivacyLevel.LOW})
 
         assert exporter is not None
         assert exporter._resource.attributes["service.name"] == "test-service"
@@ -897,7 +878,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterEdgeCases:
         exporter = OTLPSpanHeaderRedactionAdapterExporter(
             endpoint=basic_exporter_config["endpoint"],
             redaction_attributes=["user.data"],
-            redaction_header="x-auth",
+            redaction_headers=["x-auth"],
             redaction_callback=None,  # Explicitly None
             redaction_enabled=True)
 
@@ -911,8 +892,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterEdgeCases:
             redaction_attributes=["sensitive_data", "user_info"],
             force_redaction=True,  # Always redact
             redaction_enabled=True,
-            privacy_tag_key="security.classification",
-            privacy_tag_value=PrivacyLevel.HIGH)
+            tags={"security.classification": PrivacyLevel.HIGH})
 
         assert exporter is not None
 
@@ -947,8 +927,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterExportFunctionality:
                                                           headers=basic_exporter_config["headers"],
                                                           redaction_attributes=["sensitive_field"],
                                                           redaction_enabled=True,
-                                                          privacy_tag_key="privacy.level",
-                                                          privacy_tag_value=PrivacyLevel.MEDIUM)
+                                                          tags={"privacy.level": PrivacyLevel.MEDIUM})
 
         spans = [mock_otel_span]
 
@@ -974,8 +953,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterExportFunctionality:
         resource_attributes = {"service.name": "redacted-service"}
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                           resource_attributes=resource_attributes,
-                                                          privacy_tag_key="privacy.level",
-                                                          privacy_tag_value=PrivacyLevel.LOW)
+                                                          tags={"privacy.level": PrivacyLevel.LOW})
 
         # Test export_processed method
         await exporter.export_processed(mock_otel_span)
@@ -1003,7 +981,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterExportFunctionality:
 
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
                                                           redaction_enabled=True,
-                                                          privacy_tag_value=PrivacyLevel.HIGH)
+                                                          tags={"privacy.level": PrivacyLevel.HIGH})
 
         spans = [mock_otel_span]
 
@@ -1039,8 +1017,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterBatching:
             flush_interval=10.0,  # Long interval to test batching
             redaction_attributes=["user.email"],
             redaction_enabled=True,
-            privacy_tag_key="privacy.level",
-            privacy_tag_value=PrivacyLevel.MEDIUM)
+            tags={"privacy.level": PrivacyLevel.MEDIUM})
 
         async with exporter.start():
             # Create multiple complete spans (start + end events)
@@ -1096,11 +1073,10 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRealWorldScenarios:
             endpoint="https://api.datadoghq.com/api/v1/traces",
             headers={"DD-API-KEY": "fake-datadog-key"},
             redaction_attributes=["user.email", "user.ip", "request.body"],
-            redaction_header="x-environment",
+            redaction_headers=["x-environment"],
             redaction_callback=datadog_redaction_callback,
             redaction_enabled=True,
-            privacy_tag_key="privacy.level",
-            privacy_tag_value=PrivacyLevel.MEDIUM,
+            tags={"privacy.level": PrivacyLevel.MEDIUM},
             batch_size=100,
             flush_interval=5.0)
 
@@ -1110,11 +1086,10 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRealWorldScenarios:
         """Test configuration for Jaeger OTLP endpoint integration."""
         exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint="http://jaeger-collector:14268/api/traces",
                                                           redaction_attributes=["auth.token", "user.credentials"],
-                                                          redaction_header="authorization",
+                                                          redaction_headers=["authorization"],
                                                           redaction_enabled=True,
                                                           force_redaction=False,
-                                                          privacy_tag_key="compliance.level",
-                                                          privacy_tag_value=PrivacyLevel.HIGH,
+                                                          tags={"compliance.level": PrivacyLevel.HIGH},
                                                           resource_attributes={
                                                               "service.name": "nemo-agent-toolkit",
                                                               "service.version": "1.0.0",
@@ -1138,12 +1113,11 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRealWorldScenarios:
             redaction_attributes=[
                 "user.pii.email", "user.pii.phone", "payment.sensitive_data", "internal.proprietary_info"
             ],
-            redaction_header="x-user-classification",
+            redaction_headers=["x-user-classification"],
             redaction_callback=enterprise_redaction_callback,
             redaction_enabled=True,
             force_redaction=False,
-            privacy_tag_key="enterprise.privacy.classification",
-            privacy_tag_value=PrivacyLevel.HIGH,
+            tags={"enterprise.privacy.classification": PrivacyLevel.HIGH},
             batch_size=200,
             flush_interval=2.0,
             max_queue_size=2000,
@@ -1166,8 +1140,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRealWorldScenarios:
             shutdown_timeout=30.0,
             redaction_attributes=["user.data"],
             redaction_enabled=True,
-            privacy_tag_key="volume.classification",
-            privacy_tag_value=PrivacyLevel.LOW  # Lower privacy for high-volume data
+            tags={"volume.classification": PrivacyLevel.LOW}  # Lower privacy for high-volume data
         )
 
         assert exporter is not None
@@ -1182,12 +1155,11 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRealWorldScenarios:
         exporter = OTLPSpanHeaderRedactionAdapterExporter(
             endpoint="http://localhost:4318/v1/traces",  # Local development endpoint
             redaction_attributes=["test.sensitive_field"],
-            redaction_header="x-test-user",
+            redaction_headers=["x-test-user"],
             redaction_callback=dev_redaction_callback,
             redaction_enabled=True,
             force_redaction=False,
-            privacy_tag_key="dev.privacy.level",
-            privacy_tag_value=PrivacyLevel.NONE,  # Development environment
+            tags={"dev.privacy.level": PrivacyLevel.NONE},  # Development environment
             batch_size=10,  # Small batches for easier debugging
             flush_interval=1.0,  # Fast flushes for immediate feedback
             resource_attributes={

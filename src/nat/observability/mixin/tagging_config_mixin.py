@@ -13,14 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Mapping
 from enum import Enum
 from typing import Generic
+from typing import TypedDict
 from typing import TypeVar
 
 from pydantic import BaseModel
 from pydantic import Field
 
-TagValueT = TypeVar("TagValueT")
+TagDictT = TypeVar("TagDictT", bound=Mapping)
+
+
+class BaseTaggingConfigMixin(BaseModel, Generic[TagDictT]):
+    """Base mixin for tagging spans."""
+    tags: TagDictT | None = Field(default=None)
 
 
 class PrivacyLevel(str, Enum):
@@ -31,20 +38,14 @@ class PrivacyLevel(str, Enum):
     HIGH = "high"
 
 
-class TaggingConfigMixin(BaseModel, Generic[TagValueT]):
-    """Generic mixin for tagging spans with typed values.
-
-    This mixin provides a flexible tagging system where both the tag key
-    and value type can be customized for different use cases.
-    """
-    tag_key: str | None = Field(default=None, description="Key to use when tagging traces.")
-    tag_value: TagValueT | None = Field(default=None, description="Value to tag the traces with.")
+class PrivacyTagSchema(TypedDict, total=False):
+    """Schema for the tags."""
+    privacy_level: PrivacyLevel
 
 
-class PrivacyTaggingConfigMixin(TaggingConfigMixin[PrivacyLevel]):
-    """Mixin for privacy level tagging on spans.
+class PrivacyTaggingConfigMixin(BaseTaggingConfigMixin[PrivacyTagSchema]):
+    """Mixin for privacy level tagging on spans."""
 
-    Specializes TaggingConfigMixin to work with PrivacyLevel enum values,
-    providing a typed interface for privacy-related span tagging.
-    """
-    pass
+
+class CustomTaggingConfigMixin(BaseTaggingConfigMixin[dict[str, str]]):
+    """Mixin for string key-value tagging on spans."""

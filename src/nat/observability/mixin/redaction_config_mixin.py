@@ -38,4 +38,4 @@ class HeaderRedactionConfigMixin(RedactionConfigMixin):
 
     Note: The callback function must be provided directly to the processor at runtime.
     """
-    redaction_header: str = Field(default="x-redaction-key", description="Header to check for redaction decisions.")
+    redaction_headers: list[str] | None = Field(default=None, description="Headers to check for redaction decisions.")

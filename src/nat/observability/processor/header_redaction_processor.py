@@ -16,6 +16,7 @@
 import logging
 from collections.abc import Callable
 from functools import lru_cache
+from typing import Any
 
 from starlette.datastructures import Headers
 
@@ -27,21 +28,29 @@ from nat.utils.type_utils import override
 logger = logging.getLogger(__name__)
 
 
-def default_callback(_auth_key: str) -> bool:
-    """Default callback that always returns False."""
+def default_callback(_header_map: dict[str, Any]) -> bool:
+    """Default callback that always returns False, indicating no redaction should occur.
+
+    Args:
+        _header_map: Dictionary of header names to values (unused).
+
+    Returns:
+        bool: Always False, indicating the span should not be redacted.
+    """
     return False
 
 
 class HeaderRedactionProcessor(SpanRedactionProcessor):
-    """Processor that redacts the span based on auth key, span attributes, and callback.
+    """Processor that redacts the span based on multiple headers and callback logic.
 
-    Uses an LRU cache to avoid redundant callback executions for the same auth keys,
+    Uses an LRU cache to avoid redundant callback executions for the same header combinations,
     providing bounded memory usage and automatic eviction of least recently used entries.
 
     Args:
         attributes: List of span attribute keys to redact.
-        header: The header key to check for authentication.
-        callback: Function to determine if the auth key should trigger redaction.
+        headers: List of header keys to extract and pass to the callback function.
+        callback: Function that receives a dict of headers and determines if redaction should occur.
+                 The callback receives headers in the order specified in the headers list.
         enabled: Whether the processor is enabled (default: True).
         force_redact: If True, always redact regardless of header checks (default: False).
         redaction_value: The value to replace redacted attributes with (default: "[REDACTED]").
@@ -49,13 +58,13 @@ class HeaderRedactionProcessor(SpanRedactionProcessor):
 
     def __init__(self,
                  attributes: list[str] | None = None,
-                 header: str | None = None,
-                 callback: Callable[[str], bool] | None = None,
+                 headers: list[str] | None = None,
+                 callback: Callable[[dict[str, Any]], bool] | None = None,
                  enabled: bool = True,
                  force_redact: bool = False,
                  redaction_value: str = "[REDACTED]"):
         self.attributes = attributes or []
-        self.header = header
+        self.headers = headers or []
         self.callback = callback or default_callback
         self.enabled = enabled
         self.force_redact = force_redact
@@ -63,11 +72,14 @@ class HeaderRedactionProcessor(SpanRedactionProcessor):
 
     @override
     def should_redact(self, item: Span, context: Context) -> bool:
-        """Determine if this span should be redacted based on header auth.
+        """Determine if this span should be redacted based on header values.
+
+        Extracts the specified headers from the context and passes them to the
+        callback function to determine if redaction should occur.
 
         Args:
             item (Span): The span to check.
-            context (Context): The current context.
+            context (Context): The current context containing headers.
 
         Returns:
             bool: True if the span should be redacted, False otherwise.
@@ -81,30 +93,37 @@ class HeaderRedactionProcessor(SpanRedactionProcessor):
 
         headers: Headers | None = context.metadata.headers
 
-        if headers is None or self.header is None:
+        if headers is None or not self.headers:
             return False
 
-        auth_key = headers.get(self.header, None)
+        header_map: dict[str, Any] = {header: headers.get(header, None) for header in self.headers}
 
-        if not auth_key:
+        # Skip callback if no headers were found (all None values)
+        if not header_map or all(value is None for value in header_map.values()):
             return False
 
         # Use LRU cached method to determine if redaction is needed
-        return self._should_redact_impl(auth_key)
+        header_tuple = tuple((header, header_map.get(header)) for header in self.headers)
+        return self._should_redact_cached(self.callback, header_tuple)
 
+    @staticmethod
     @lru_cache(maxsize=128)
-    def _should_redact_impl(self, auth_key: str) -> bool:
-        """Implementation method for checking if redaction should occur.
+    def _should_redact_cached(callback: Callable[[dict[str, Any]], bool], header_tuple: tuple) -> bool:
+        """Static cached method for checking if redaction should occur.
 
         This method uses lru_cache to avoid redundant callback executions.
+        By being static, it avoids the 'self' hashing issue.
 
         Args:
-            auth_key (str): The authentication key to check.
+            callback: The callback function to execute.
+            header_tuple: Tuple of (key, value) pairs from headers in self.headers order.
 
         Returns:
             bool: True if the span should be redacted, False otherwise.
         """
-        return self.callback(auth_key)
+        # Convert tuple back to dict and execute callback
+        header_dict = dict(header_tuple)
+        return callback(header_dict)
 
     @override
     def redact_item(self, item: Span) -> Span:

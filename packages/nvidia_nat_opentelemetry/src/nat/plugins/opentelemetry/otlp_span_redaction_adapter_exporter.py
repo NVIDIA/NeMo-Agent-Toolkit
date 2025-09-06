@@ -15,9 +15,10 @@
 
 import logging
 from collections.abc import Callable
+from enum import Enum
+from typing import Any
 
 from nat.builder.context import ContextState
-from nat.observability.mixin.tagging_config_mixin import PrivacyLevel
 from nat.observability.processor.header_redaction_processor import HeaderRedactionProcessor
 from nat.observability.processor.span_tagging_processor import SpanTaggingProcessor
 from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
@@ -61,11 +62,10 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
             endpoint="https://api.service.com/v1/traces",
             headers={"Authorization": "Bearer your-token"},
             redaction_attributes=["user.email", "request.body"],
-            redaction_header="x-user-id",
+            redaction_headers=["x-user-id"],
             redaction_callback=should_redact,
             redaction_value="REDACTED",
-            privacy_tag_key="privacy.level",
-            privacy_tag_value=PrivacyLevel.HIGH,
+            tags={"privacy.level": PrivacyLevel.HIGH, "service.type": "sensitive"},
             batch_size=50,
             flush_interval=10.0
         )
@@ -84,13 +84,12 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
             resource_attributes: dict[str, str] | None = None,
             # Redaction args
             redaction_attributes: list[str] | None = None,
-            redaction_header: str | None = None,
-            redaction_callback: Callable[[str], bool] | None = None,
+            redaction_headers: list[str] | None = None,
+            redaction_callback: Callable[[dict[str, Any]], bool] | None = None,
             redaction_enabled: bool = False,
             force_redaction: bool = False,
             redaction_value: str = "[REDACTED]",
-            privacy_tag_key: str | None = None,
-            privacy_tag_value: PrivacyLevel | None = None,
+            tags: dict[str, Enum | str] | None = None,
             # OTLPSpanExporterMixin args
             endpoint: str,
             headers: dict[str, str] | None = None,
@@ -106,13 +105,12 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
             shutdown_timeout: Maximum time to wait for export completion during shutdown.
             resource_attributes: Additional resource attributes for spans.
             redaction_attributes: List of span attribute keys to redact when conditions are met.
-            redaction_header: Header key to check for authentication/user identification.
+            redaction_headers: List of header keys to check for authentication/user identification.
             redaction_callback: Function to determine if spans should be redacted based on header value.
             redaction_enabled: Whether the redaction processor is enabled.
             force_redaction: If True, always redact regardless of header checks.
             redaction_value: Value to replace redacted attributes with.
-            privacy_tag_key: Key name for the privacy level tag to add to spans.
-            privacy_tag_value: Privacy level value to assign to spans.
+            tags: Dictionary of tag keys to their values (enums or strings) to add to spans.
             endpoint: The endpoint for the OTLP service.
             headers: The headers for the OTLP service.
             **otlp_kwargs: Additional keyword arguments for the OTLP service.
@@ -130,7 +128,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
 
         # Insert redaction and tagging processors to the front of the processing pipeline
         self.add_processor(HeaderRedactionProcessor(attributes=redaction_attributes,
-                                                    header=redaction_header,
+                                                    headers=redaction_headers,
                                                     callback=redaction_callback,
                                                     enabled=redaction_enabled,
                                                     force_redact=force_redaction,
@@ -138,7 +136,4 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
                            name="header_redaction",
                            position=0)
 
-        self.add_processor(SpanTaggingProcessor(tag_key=privacy_tag_key,
-                                                tag_value=privacy_tag_value.value if privacy_tag_value else None),
-                           name="span_privacy_tagging",
-                           position=1)
+        self.add_processor(SpanTaggingProcessor(tags=tags), name="span_privacy_tagging", position=1)
