@@ -15,6 +15,7 @@
 
 import logging
 import os
+from collections.abc import Mapping
 from enum import Enum
 
 from nat.data_models.span import Span
@@ -33,11 +34,11 @@ class SpanTaggingProcessor(Processor[Span, Span]):
     the tag attributes.
 
         Args:
-            tags: Dictionary of tag keys to their values. Values can be enums (converted to strings) or strings.
+            tags: Mapping of tag keys to their values. Values can be enums (converted to strings) or strings.
             span_prefix: The prefix to use for tag attributes (default: from NAT_SPAN_PREFIX env var or "nat").
     """
 
-    def __init__(self, tags: dict[str, Enum | str] | None = None, span_prefix: str | None = None):
+    def __init__(self, tags: Mapping[str, Enum | str] | None = None, span_prefix: str | None = None):
         self.tags = tags or {}
 
         if span_prefix is None:

@@ -27,12 +27,12 @@ else:
 from pydantic import BaseModel
 from pydantic import Field
 
-TagDictT = TypeVar("TagDictT", bound=Mapping)
+TagMappingT = TypeVar("TagMappingT", bound=Mapping)
 
 
-class BaseTaggingConfigMixin(BaseModel, Generic[TagDictT]):
+class BaseTaggingConfigMixin(BaseModel, Generic[TagMappingT]):
     """Base mixin for tagging spans."""
-    tags: TagDictT | None = Field(default=None)
+    tags: TagMappingT | None = Field(default=None, description="Tags to add to the span.")
 
 
 class PrivacyLevel(str, Enum):

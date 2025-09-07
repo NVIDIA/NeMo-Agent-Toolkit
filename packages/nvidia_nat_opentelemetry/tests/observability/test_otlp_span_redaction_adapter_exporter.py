@@ -220,10 +220,10 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
         assert redaction_call[1]["position"] == 0
         assert isinstance(redaction_call[0][0], HeaderRedactionProcessor)
 
-        # Find our tagging processor call (should have name="span_privacy_tagging")
+        # Find our tagging processor call (should have name="span_sensitivity_tagging")
         tagging_calls = [
             call for call in mock_add_processor.call_args_list
-            if len(call) > 1 and call[1].get("name") == "span_privacy_tagging"
+            if len(call) > 1 and call[1].get("name") == "span_sensitivity_tagging"
         ]
         assert len(tagging_calls) == 1
         tagging_call = tagging_calls[0]
@@ -273,7 +273,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
         # Find the SpanTaggingProcessor call by name
         tagging_calls = [
             call for call in mock_add_processor.call_args_list
-            if len(call) > 1 and call[1].get("name") == "span_privacy_tagging"
+            if len(call) > 1 and call[1].get("name") == "span_sensitivity_tagging"
         ]
         assert len(tagging_calls) == 1
 
@@ -305,7 +305,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
         # Find SpanTaggingProcessor call
         tagging_calls = [
             call for call in mock_add_processor.call_args_list
-            if len(call) > 1 and call[1].get("name") == "span_privacy_tagging"
+            if len(call) > 1 and call[1].get("name") == "span_sensitivity_tagging"
         ]
         assert len(tagging_calls) == 1
         tagging_processor = tagging_calls[0][0][0]

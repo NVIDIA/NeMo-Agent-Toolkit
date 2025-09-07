@@ -15,6 +15,7 @@
 
 import logging
 from collections.abc import Callable
+from collections.abc import Mapping
 from enum import Enum
 from typing import Any
 
@@ -89,7 +90,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
             redaction_enabled: bool = False,
             force_redaction: bool = False,
             redaction_value: str = "[REDACTED]",
-            tags: dict[str, Enum | str] | None = None,
+            tags: Mapping[str, Enum | str] | None = None,
             # OTLPSpanExporterMixin args
             endpoint: str,
             headers: dict[str, str] | None = None,
@@ -110,7 +111,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
             redaction_enabled: Whether the redaction processor is enabled.
             force_redaction: If True, always redact regardless of header checks.
             redaction_value: Value to replace redacted attributes with.
-            tags: Dictionary of tag keys to their values (enums or strings) to add to spans.
+            tags: Mapping of tag keys to their values (enums or strings) to add to spans.
             endpoint: The endpoint for the OTLP service.
             headers: The headers for the OTLP service.
             **otlp_kwargs: Additional keyword arguments for the OTLP service.
@@ -128,7 +129,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
 
         # Insert redaction and tagging processors to the front of the processing pipeline
         self.add_processor(HeaderRedactionProcessor(attributes=redaction_attributes,
-                                                    headers=redaction_headers,
+                                                    headers=redaction_headers or [],
                                                     callback=redaction_callback,
                                                     enabled=redaction_enabled,
                                                     force_redact=force_redaction,
@@ -136,4 +137,4 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
                            name="header_redaction",
                            position=0)
 
-        self.add_processor(SpanTaggingProcessor(tags=tags), name="span_privacy_tagging", position=1)
+        self.add_processor(SpanTaggingProcessor(tags=tags), name="span_sensitivity_tagging", position=1)

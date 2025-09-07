@@ -47,8 +47,8 @@ class HeaderRedactionProcessor(SpanRedactionProcessor):
     providing bounded memory usage and automatic eviction of least recently used entries.
 
     Args:
-        attributes: List of span attribute keys to redact.
         headers: List of header keys to extract and pass to the callback function.
+        attributes: List of span attribute keys to redact.
         callback: Function that receives a dict of headers and determines if redaction should occur.
         enabled: Whether the processor is enabled (default: True).
         force_redact: If True, always redact regardless of header checks (default: False).
@@ -56,14 +56,14 @@ class HeaderRedactionProcessor(SpanRedactionProcessor):
     """
 
     def __init__(self,
+                 headers: list[str],
                  attributes: list[str] | None = None,
-                 headers: list[str] | None = None,
                  callback: Callable[[dict[str, Any]], bool] | None = None,
                  enabled: bool = True,
                  force_redact: bool = False,
                  redaction_value: str = "[REDACTED]"):
+        self.headers = headers
         self.attributes = attributes or []
-        self.headers = headers or []
         self.callback = callback or default_callback
         self.enabled = enabled
         self.force_redact = force_redact

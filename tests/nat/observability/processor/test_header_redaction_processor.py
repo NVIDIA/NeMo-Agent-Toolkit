@@ -74,24 +74,26 @@ class TestHeaderRedactionProcessorInitialization:
 
     def test_default_initialization(self):
         """Test default initialization parameters."""
-        processor = HeaderRedactionProcessor()
+        processor = HeaderRedactionProcessor(headers=[])
 
         assert processor.attributes == []
         assert processor.headers == []
         assert processor.callback is default_callback
         assert processor.enabled is True
         assert processor.force_redact is False
+        assert processor.redaction_value == "[REDACTED]"
 
     def test_initialization_with_attributes(self):
         """Test initialization with custom attributes."""
         attributes = ["user_id", "session_token"]
-        processor = HeaderRedactionProcessor(attributes=attributes)
+        processor = HeaderRedactionProcessor(headers=[], attributes=attributes)
 
         assert processor.attributes == attributes
         assert processor.headers == []
         assert processor.callback is default_callback
         assert processor.enabled is True
         assert processor.force_redact is False
+        assert processor.redaction_value == "[REDACTED]"
 
     def test_initialization_with_single_header(self):
         """Test initialization with single header."""
@@ -121,33 +123,36 @@ class TestHeaderRedactionProcessorInitialization:
             auth = headers.get("authorization", "")
             return "admin" in auth
 
-        processor = HeaderRedactionProcessor(callback=custom_callback)
+        processor = HeaderRedactionProcessor(headers=[], callback=custom_callback)
 
         assert processor.attributes == []
         assert processor.headers == []
         assert processor.callback is custom_callback
         assert processor.enabled is True
         assert processor.force_redact is False
+        assert processor.redaction_value == "[REDACTED]"
 
     def test_initialization_with_enabled_false(self):
         """Test initialization with enabled=False."""
-        processor = HeaderRedactionProcessor(enabled=False)
+        processor = HeaderRedactionProcessor(headers=[], enabled=False)
 
         assert processor.attributes == []
         assert processor.headers == []
         assert processor.callback is default_callback
         assert processor.enabled is False
         assert processor.force_redact is False
+        assert processor.redaction_value == "[REDACTED]"
 
     def test_initialization_with_force_redact_true(self):
         """Test initialization with force_redact=True."""
-        processor = HeaderRedactionProcessor(force_redact=True)
+        processor = HeaderRedactionProcessor(headers=[], force_redact=True)
 
         assert processor.attributes == []
         assert processor.headers == []
         assert processor.callback is default_callback
         assert processor.enabled is True
         assert processor.force_redact is True
+        assert processor.redaction_value == "[REDACTED]"
 
     def test_initialization_with_all_parameters(self):
         """Test initialization with all parameters specified."""
@@ -158,8 +163,8 @@ class TestHeaderRedactionProcessorInitialization:
             api_key = headers.get("x-api-key", "")
             return len(api_key) > 10
 
-        processor = HeaderRedactionProcessor(attributes=attributes,
-                                             headers=headers,
+        processor = HeaderRedactionProcessor(headers=headers,
+                                             attributes=attributes,
                                              callback=callback,
                                              enabled=False,
                                              force_redact=True)
@@ -169,6 +174,7 @@ class TestHeaderRedactionProcessorInitialization:
         assert processor.callback is callback
         assert processor.enabled is False
         assert processor.force_redact is True
+        assert processor.redaction_value == "[REDACTED]"
 
 
 class TestHeaderRedactionProcessorShouldRedact:
@@ -408,7 +414,7 @@ class TestHeaderRedactionProcessorRedactItem:
 
     def test_redact_item_with_single_attribute(self, sample_span):
         """Test redacting a single attribute."""
-        processor = HeaderRedactionProcessor(attributes=["user_id"])
+        processor = HeaderRedactionProcessor(headers=[], attributes=["user_id"])
 
         # Create a copy to avoid mutating the fixture
         test_span = Span(name=sample_span.name,
@@ -428,7 +434,7 @@ class TestHeaderRedactionProcessorRedactItem:
 
     def test_redact_item_with_multiple_attributes(self, sample_span):
         """Test redacting multiple attributes."""
-        processor = HeaderRedactionProcessor(attributes=["user_id", "session_token", "api_key"])
+        processor = HeaderRedactionProcessor(headers=[], attributes=["user_id", "session_token", "api_key"])
 
         # Create a copy to avoid mutating the fixture
         test_span = Span(name=sample_span.name,
@@ -448,7 +454,7 @@ class TestHeaderRedactionProcessorRedactItem:
 
     def test_redact_item_with_missing_attributes(self, sample_span):
         """Test redacting attributes that don't exist in the span."""
-        processor = HeaderRedactionProcessor(attributes=["nonexistent_field", "user_id"])
+        processor = HeaderRedactionProcessor(headers=[], attributes=["nonexistent_field", "user_id"])
 
         # Create a copy to avoid mutating the fixture
         test_span = Span(name=sample_span.name,
@@ -470,7 +476,7 @@ class TestHeaderRedactionProcessorRedactItem:
 
     def test_redact_item_with_empty_attributes_list(self, sample_span):
         """Test redacting with empty attributes list."""
-        processor = HeaderRedactionProcessor(attributes=[])
+        processor = HeaderRedactionProcessor(headers=[], attributes=[])
 
         # Create a copy to avoid mutating the fixture
         test_span = Span(name=sample_span.name,
@@ -489,7 +495,7 @@ class TestHeaderRedactionProcessorRedactItem:
 
     def test_redact_item_modifies_original_span(self, sample_span):
         """Test that redact_item modifies the original span object."""
-        processor = HeaderRedactionProcessor(attributes=["user_id"])
+        processor = HeaderRedactionProcessor(headers=[], attributes=["user_id"])
 
         # Create a copy to avoid mutating the fixture
         test_span = Span(name=sample_span.name,
@@ -511,7 +517,7 @@ class TestHeaderRedactionProcessorRedactItem:
 
     def test_redact_item_preserves_other_span_fields(self, sample_span):
         """Test that redact_item preserves all non-attribute fields."""
-        processor = HeaderRedactionProcessor(attributes=["user_id"])
+        processor = HeaderRedactionProcessor(headers=[], attributes=["user_id"])
 
         # Create a copy to avoid mutating the fixture
         test_span = Span(name=sample_span.name,
@@ -551,16 +557,11 @@ class TestHeaderRedactionProcessorLRUCache:
             auth_key = headers.get("authorization", "")
             return "admin" in auth_key
 
-        processor = HeaderRedactionProcessor(headers=["authorization"],
-                                             callback=counting_callback,
-                                             enabled=True,
-                                             force_redact=False)
-
         # Call _should_redact_cached multiple times with same header tuple
         header_tuple1 = (("authorization", "admin_token"), )
-        result1 = processor._should_redact_cached(counting_callback, header_tuple1)
-        result2 = processor._should_redact_cached(counting_callback, header_tuple1)
-        result3 = processor._should_redact_cached(counting_callback, header_tuple1)
+        result1 = HeaderRedactionProcessor._should_redact_cached(counting_callback, header_tuple1)
+        result2 = HeaderRedactionProcessor._should_redact_cached(counting_callback, header_tuple1)
+        result3 = HeaderRedactionProcessor._should_redact_cached(counting_callback, header_tuple1)
 
         assert result1 is True
         assert result2 is True
@@ -570,7 +571,7 @@ class TestHeaderRedactionProcessorLRUCache:
 
         # Call with different header tuple
         header_tuple2 = (("authorization", "user_token"), )
-        result4 = processor._should_redact_cached(counting_callback, header_tuple2)
+        result4 = HeaderRedactionProcessor._should_redact_cached(counting_callback, header_tuple2)
         assert result4 is False
         # Should call callback again for new key
         assert call_count == 2
@@ -582,20 +583,21 @@ class TestHeaderRedactionProcessorLRUCache:
             auth_key = headers.get("authorization", "")
             return auth_key.startswith("admin")
 
-        processor = HeaderRedactionProcessor(headers=["authorization"],
-                                             callback=selective_callback,
-                                             enabled=True,
-                                             force_redact=False)
-
         # Test different auth keys using the cached method directly
-        assert processor._should_redact_cached(selective_callback, (("authorization", "admin_key1"), )) is True
-        assert processor._should_redact_cached(selective_callback, (("authorization", "user_key1"), )) is False
-        assert processor._should_redact_cached(selective_callback, (("authorization", "admin_key2"), )) is True
-        assert processor._should_redact_cached(selective_callback, (("authorization", "user_key2"), )) is False
+        assert HeaderRedactionProcessor._should_redact_cached(selective_callback,
+                                                              (("authorization", "admin_key1"), )) is True
+        assert HeaderRedactionProcessor._should_redact_cached(selective_callback,
+                                                              (("authorization", "user_key1"), )) is False
+        assert HeaderRedactionProcessor._should_redact_cached(selective_callback,
+                                                              (("authorization", "admin_key2"), )) is True
+        assert HeaderRedactionProcessor._should_redact_cached(selective_callback,
+                                                              (("authorization", "user_key2"), )) is False
 
         # Calling same keys again should use cache
-        assert processor._should_redact_cached(selective_callback, (("authorization", "admin_key1"), )) is True
-        assert processor._should_redact_cached(selective_callback, (("authorization", "user_key1"), )) is False
+        assert HeaderRedactionProcessor._should_redact_cached(selective_callback,
+                                                              (("authorization", "admin_key1"), )) is True
+        assert HeaderRedactionProcessor._should_redact_cached(selective_callback,
+                                                              (("authorization", "user_key1"), )) is False
 
     def test_lru_cache_info_accessible(self):
         """Test that LRU cache info is accessible for monitoring."""
@@ -603,23 +605,21 @@ class TestHeaderRedactionProcessorLRUCache:
         def test_callback(headers: dict[str, Any]) -> bool:
             return True
 
-        processor = HeaderRedactionProcessor(callback=test_callback)
-
         # Clear the cache to start fresh (LRU cache is shared across instances)
-        processor._should_redact_cached.cache_clear()
+        HeaderRedactionProcessor._should_redact_cached.cache_clear()
 
         # Check initial cache info after clearing
-        cache_info = processor._should_redact_cached.cache_info()
+        cache_info = HeaderRedactionProcessor._should_redact_cached.cache_info()
         assert cache_info.hits == 0
         assert cache_info.misses == 0
         assert cache_info.maxsize == 128  # Default maxsize
 
         # Make some calls using the same callback function for caching to work
-        processor._should_redact_cached(test_callback, (("authorization", "key1"), ))
-        processor._should_redact_cached(test_callback, (("authorization", "key2"), ))
-        processor._should_redact_cached(test_callback, (("authorization", "key1"), ))  # Cache hit
+        HeaderRedactionProcessor._should_redact_cached(test_callback, (("authorization", "key1"), ))
+        HeaderRedactionProcessor._should_redact_cached(test_callback, (("authorization", "key2"), ))
+        HeaderRedactionProcessor._should_redact_cached(test_callback, (("authorization", "key1"), ))  # Cache hit
 
-        cache_info = processor._should_redact_cached.cache_info()
+        cache_info = HeaderRedactionProcessor._should_redact_cached.cache_info()
         assert cache_info.hits == 1
         assert cache_info.misses == 2
 
@@ -822,7 +822,7 @@ class TestHeaderRedactionProcessorErrorHandling:
 
     def test_redact_item_with_attribute_access_error(self):
         """Test error handling when attribute access fails."""
-        processor = HeaderRedactionProcessor(attributes=["user_id"])
+        processor = HeaderRedactionProcessor(headers=[], attributes=["user_id"])
 
         # Create span with attributes that raise error
         span = Mock(spec=Span)
@@ -838,18 +838,153 @@ class TestHeaderRedactionProcessorDefaultCallback:
 
     def test_default_callback_always_returns_false(self):
         """Test that default_callback always returns False."""
-        assert default_callback("any_key") is False
-        assert default_callback("admin_key") is False
-        assert default_callback("") is False
-        assert default_callback("very_long_key_with_special_chars!@#") is False
+        assert default_callback({"any_key": "value"}) is False
+        assert default_callback({"admin_key": "admin_token"}) is False
+        assert default_callback({}) is False
+        assert default_callback({"special": "very_long_key_with_special_chars!@#"}) is False
 
     def test_default_callback_used_when_none_provided(self):
         """Test that default callback is used when none provided."""
-        processor = HeaderRedactionProcessor()
+        processor = HeaderRedactionProcessor(headers=[])
         assert processor.callback is default_callback
 
-        processor2 = HeaderRedactionProcessor(callback=None)
+        processor2 = HeaderRedactionProcessor(headers=[], callback=None)
         assert processor2.callback is default_callback
+
+
+class TestHeaderRedactionProcessorCustomRedactionValue:
+    """Test custom redaction value functionality."""
+
+    def test_custom_redaction_value_initialization(self):
+        """Test initialization with custom redaction value."""
+        custom_value = "[CUSTOM_REDACTED]"
+        processor = HeaderRedactionProcessor(headers=[], redaction_value=custom_value)
+
+        assert processor.redaction_value == custom_value
+
+    def test_redact_item_with_custom_value_single_attribute(self, sample_span):
+        """Test redacting with custom value for single attribute."""
+        custom_value = "[CUSTOM_REDACTED]"
+        processor = HeaderRedactionProcessor(headers=[], attributes=["user_id"], redaction_value=custom_value)
+
+        # Create a copy to avoid mutating the fixture
+        test_span = Span(name=sample_span.name,
+                         context=sample_span.context,
+                         parent=sample_span.parent,
+                         start_time=sample_span.start_time,
+                         end_time=sample_span.end_time,
+                         attributes=sample_span.attributes.copy(),
+                         events=sample_span.events)
+
+        result = processor.redact_item(test_span)
+
+        assert result.attributes["user_id"] == custom_value
+        assert result.attributes["session_token"] == "secret_token"  # Unchanged
+        assert result.attributes["api_key"] == "api_secret"  # Unchanged
+
+    def test_redact_item_with_custom_value_multiple_attributes(self, sample_span):
+        """Test redacting with custom value for multiple attributes."""
+        custom_value = "***SENSITIVE***"
+        processor = HeaderRedactionProcessor(headers=[],
+                                             attributes=["user_id", "session_token"],
+                                             redaction_value=custom_value)
+
+        # Create a copy to avoid mutating the fixture
+        test_span = Span(name=sample_span.name,
+                         context=sample_span.context,
+                         parent=sample_span.parent,
+                         start_time=sample_span.start_time,
+                         end_time=sample_span.end_time,
+                         attributes=sample_span.attributes.copy(),
+                         events=sample_span.events)
+
+        result = processor.redact_item(test_span)
+
+        assert result.attributes["user_id"] == custom_value
+        assert result.attributes["session_token"] == custom_value
+        assert result.attributes["api_key"] == "api_secret"  # Unchanged
+        assert result.attributes["normal_field"] == "normal_value"  # Unchanged
+
+    def test_redact_item_with_empty_custom_value(self, sample_span):
+        """Test redacting with empty string as custom value."""
+        custom_value = ""
+        processor = HeaderRedactionProcessor(headers=[], attributes=["user_id"], redaction_value=custom_value)
+
+        # Create a copy to avoid mutating the fixture
+        test_span = Span(name=sample_span.name,
+                         context=sample_span.context,
+                         parent=sample_span.parent,
+                         start_time=sample_span.start_time,
+                         end_time=sample_span.end_time,
+                         attributes=sample_span.attributes.copy(),
+                         events=sample_span.events)
+
+        result = processor.redact_item(test_span)
+
+        assert result.attributes["user_id"] == custom_value  # Empty string
+
+    def test_redact_item_with_special_characters_value(self, sample_span):
+        """Test redacting with special characters in custom value."""
+        custom_value = "🔒[REDACTED]🔒"
+        processor = HeaderRedactionProcessor(headers=[], attributes=["user_id"], redaction_value=custom_value)
+
+        # Create a copy to avoid mutating the fixture
+        test_span = Span(name=sample_span.name,
+                         context=sample_span.context,
+                         parent=sample_span.parent,
+                         start_time=sample_span.start_time,
+                         end_time=sample_span.end_time,
+                         attributes=sample_span.attributes.copy(),
+                         events=sample_span.events)
+
+        result = processor.redact_item(test_span)
+
+        assert result.attributes["user_id"] == custom_value
+
+    def test_redact_item_different_types_with_custom_value(self):
+        """Test redacting different attribute types with custom value."""
+        custom_value = "<<REDACTED>>"
+        processor = HeaderRedactionProcessor(headers=[],
+                                             attributes=["numeric_field", "bool_field", "list_field"],
+                                             redaction_value=custom_value)
+
+        span = Span(name="test",
+                    attributes={
+                        "numeric_field": 12345, "bool_field": True, "list_field": [1, 2, 3], "other_field": "preserve"
+                    },
+                    events=[])
+
+        result = processor.redact_item(span)
+
+        # All specified attributes should use custom value
+        assert result.attributes["numeric_field"] == custom_value
+        assert result.attributes["bool_field"] == custom_value
+        assert result.attributes["list_field"] == custom_value
+        assert result.attributes["other_field"] == "preserve"  # Unchanged
+
+    def test_initialization_with_all_parameters_including_custom_value(self):
+        """Test initialization with all parameters including custom redaction value."""
+        attributes = ["user_id", "api_key"]
+        headers = ["x-api-key", "authorization"]
+        custom_value = "[CUSTOM_REDACTED_VALUE]"
+
+        def callback(headers: dict[str, Any]) -> bool:
+            api_key = headers.get("x-api-key", "")
+            return len(api_key) > 10
+
+        processor = HeaderRedactionProcessor(headers=headers,
+                                             attributes=attributes,
+                                             callback=callback,
+                                             enabled=False,
+                                             force_redact=True,
+                                             redaction_value=custom_value)
+
+        assert processor.attributes == attributes
+        assert processor.headers == headers
+        assert processor.callback is callback
+        assert processor.enabled is False
+        assert processor.force_redact is True
+        assert processor.redaction_value == custom_value
 
 
 class TestHeaderRedactionProcessorTypeIntrospection:
@@ -857,7 +992,7 @@ class TestHeaderRedactionProcessorTypeIntrospection:
 
     def test_header_redaction_processor_types(self):
         """Test type introspection for header redaction processor."""
-        processor = HeaderRedactionProcessor()
+        processor = HeaderRedactionProcessor(headers=[])
 
         assert processor.input_type is Span
         assert processor.output_type is Span
@@ -911,7 +1046,7 @@ class TestHeaderRedactionProcessorEdgeCases:
 
     def test_redact_item_with_none_attribute_values(self):
         """Test redacting attributes with None values."""
-        processor = HeaderRedactionProcessor(attributes=["nullable_field"])
+        processor = HeaderRedactionProcessor(headers=[], attributes=["nullable_field"])
 
         span = Span(name="test", attributes={"nullable_field": None, "other_field": "value"}, events=[])
 
@@ -923,7 +1058,7 @@ class TestHeaderRedactionProcessorEdgeCases:
 
     def test_redact_item_with_non_string_attribute_values(self):
         """Test redacting non-string attribute values."""
-        processor = HeaderRedactionProcessor(attributes=["numeric_field", "bool_field", "list_field"])
+        processor = HeaderRedactionProcessor(headers=[], attributes=["numeric_field", "bool_field", "list_field"])
 
         span = Span(name="test",
                     attributes={
@@ -947,13 +1082,14 @@ class TestHeaderRedactionProcessorPerformance:
         """Test that should_redact has early return optimizations."""
         call_count = 0
 
-        def counting_callback(auth_key: str) -> bool:
+        def counting_callback(headers: dict[str, Any]) -> bool:
             nonlocal call_count
             call_count += 1
             return True
 
         # Test early return for force_redact=True
         processor = HeaderRedactionProcessor(
+            headers=[],
             callback=counting_callback,
             force_redact=True,
             enabled=False  # This should be ignored due to force_redact
@@ -968,7 +1104,7 @@ class TestHeaderRedactionProcessorPerformance:
         assert call_count == 0
 
         # Test early return for enabled=False
-        processor2 = HeaderRedactionProcessor(callback=counting_callback, force_redact=False, enabled=False)
+        processor2 = HeaderRedactionProcessor(headers=[], callback=counting_callback, force_redact=False, enabled=False)
 
         result2 = processor2.should_redact(span, context)
         assert result2 is False
@@ -977,7 +1113,7 @@ class TestHeaderRedactionProcessorPerformance:
 
     def test_redact_item_efficiency_with_no_attributes(self, sample_span):
         """Test that redact_item is efficient when no attributes specified."""
-        processor = HeaderRedactionProcessor(attributes=[])
+        processor = HeaderRedactionProcessor(headers=[], attributes=[])
 
         # Create a copy to avoid mutating the fixture
         test_span = Span(name=sample_span.name,
