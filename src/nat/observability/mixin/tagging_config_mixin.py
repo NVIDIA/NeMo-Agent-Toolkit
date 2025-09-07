@@ -19,13 +19,13 @@ from enum import Enum
 from typing import Generic
 from typing import TypeVar
 
+from pydantic import BaseModel
+from pydantic import Field
+
 if sys.version_info >= (3, 12):
     from typing import TypedDict
 else:
     from typing_extensions import TypedDict
-
-from pydantic import BaseModel
-from pydantic import Field
 
 TagMappingT = TypeVar("TagMappingT", bound=Mapping)
 

@@ -390,7 +390,8 @@ class TestHeaderRedactionProcessorShouldRedact:
 
         def should_not_be_called(headers: dict[str, Any]) -> bool:
             # This should never be called when all headers are None
-            assert False, "Callback should not be called when all headers are None"
+            pytest.fail("Callback should not be called when all headers are None")
+            return False  # Make return type match the function signature
 
         processor = HeaderRedactionProcessor(headers=["missing-header-1", "missing-header-2"],
                                              callback=should_not_be_called,
