@@ -14,7 +14,7 @@ dependencies = [
   "nat_simple_calculator",
   "nat_por_to_jiratickets",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "Simple Calculator Evaluation and Profiling - demonstrates NeMo Agent toolkit evaluation capabilities"
 keywords = ["ai", "hitl", "human in the loop", "agents"]
 classifiers = ["Programming Language :: Python"]

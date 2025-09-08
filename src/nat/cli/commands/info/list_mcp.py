@@ -22,8 +22,16 @@ from typing import Any
 import click
 from pydantic import BaseModel
 
-from nat.tool.mcp.exceptions import MCPError
-from nat.utils.exception_handlers.mcp import format_mcp_error
+try:
+    from nat.plugins.mcp.exception_handler import format_mcp_error
+    from nat.plugins.mcp.exceptions import MCPError
+except ImportError:
+    # Fallback for when MCP client package is not installed
+    MCPError = Exception
+
+    def format_mcp_error(error, include_traceback=False):
+        click.echo(f"Error: {error}", err=True)
+
 
 # Suppress verbose logs from mcp.client.sse and httpx
 logging.getLogger("mcp.client.sse").setLevel(logging.WARNING)
@@ -145,9 +153,15 @@ async def list_tools_and_schemas(command, url, tool_name=None, transport='sse', 
     Raises:
         MCPError: Caught internally and logged, returns empty list instead
     """
-    from nat.tool.mcp.mcp_client_base import MCPSSEClient
-    from nat.tool.mcp.mcp_client_base import MCPStdioClient
-    from nat.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
+    try:
+        from nat.plugins.mcp.client_base import MCPSSEClient
+        from nat.plugins.mcp.client_base import MCPStdioClient
+        from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
+    except ImportError:
+        click.echo(
+            "MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp",
+            err=True)
+        return []
 
     if args is None:
         args = []
@@ -239,8 +253,16 @@ async def list_tools_direct(command, url, tool_name=None, transport='sse', args=
         return tools
     except Exception as e:
         # Convert raw exceptions to structured MCPError for consistency
-        from nat.utils.exception_handlers.mcp import convert_to_mcp_error
-        from nat.utils.exception_handlers.mcp import extract_primary_exception
+        try:
+            from nat.plugins.mcp.exception_handler import convert_to_mcp_error
+            from nat.plugins.mcp.exception_handler import extract_primary_exception
+        except ImportError:
+            # Fallback when MCP client package is not installed
+            def convert_to_mcp_error(exception, url):
+                return Exception(f"Error connecting to {url}: {exception}")
+
+            def extract_primary_exception(exceptions):
+                return exceptions[0] if exceptions else Exception("Unknown error")
 
         if isinstance(e, ExceptionGroup):  # noqa: F821
             primary_exception = extract_primary_exception(list(e.exceptions))

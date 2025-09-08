@@ -23,6 +23,14 @@ You can use NeMo Agent toolkit as an MCP Host with one or more MCP Clients servi
 
 This guide will cover how to use NeMo Agent toolkit as an MCP Host with one or more MCP Clients. For more information on how to use NeMo Agent toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
 
+## Installation
+
+MCP client functionality requires the `nvidia-nat-mcp` package. Install it with:
+
+```bash
+uv pip install nvidia-nat[mcp]
+```
+
 ## MCP Client Configuration
 
 The MCP client can connect to MCP servers using different transport types. The choice of transport should match the server's configuration.
@@ -96,7 +104,7 @@ class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
     Configuration for connecting to an MCP server as a client and exposing selected tools.
     """
     server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
-    tool_filter: dict[str, ToolOverrideConfig] | list[str] | None = Field(
+    tool_filter: dict[str, MCPToolOverrideConfig] | list[str] | None = Field(
         default=None,
         description="""Filter or map tools to expose from the server (list or dict).
         Can be:

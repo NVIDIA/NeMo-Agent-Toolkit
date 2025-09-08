@@ -15,7 +15,7 @@ dynamic = ["version"]
 dependencies = [
   "nvidia-nat[ingestion,langchain,mem0ai]~=1.3",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "Simple NeMo Agent toolkit Rag example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]

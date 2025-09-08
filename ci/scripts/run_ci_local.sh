@@ -56,7 +56,7 @@ USE_HOST_GIT=${USE_HOST_GIT:-0}
 LOCAL_CI_TMP=${LOCAL_CI_TMP:-${NAT_ROOT}/.tmp/local_ci_tmp/${CI_ARCH}}
 DOCKER_EXTRA_ARGS=${DOCKER_EXTRA_ARGS:-""}
 
-CI_CONTAINER=${CI_CONTAINER:-"ghcr.io/astral-sh/uv:python3.12-bookworm"}
+CI_CONTAINER=${CI_CONTAINER:-"ghcr.io/astral-sh/uv:python3.13-bookworm"}
 
 
 # These variables are common to all stages

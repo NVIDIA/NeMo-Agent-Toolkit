@@ -79,10 +79,10 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):
     Generate a NeMo Agent Toolkit Function that wraps a tool provided by the MCP server.
     """
 
-    from nat.tool.mcp.mcp_client_base import MCPSSEClient
-    from nat.tool.mcp.mcp_client_base import MCPStdioClient
-    from nat.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
-    from nat.tool.mcp.mcp_client_base import MCPToolClient
+    from nat.plugins.mcp.client_base import MCPSSEClient
+    from nat.plugins.mcp.client_base import MCPStdioClient
+    from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
+    from nat.plugins.mcp.client_base import MCPToolClient
 
     # Initialize the client
     if config.transport == 'stdio':

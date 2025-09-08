@@ -45,6 +45,12 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
             new_messages = [Message(role="system", content=self.system_prompt)] + messages
             return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
         client = patch_with_thinking(
             client,
@@ -55,12 +61,6 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
                                      "ainvoke",
                                      "ainvoke_stream",
                                  ]))
-
-    if isinstance(llm_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
 
     return client
 

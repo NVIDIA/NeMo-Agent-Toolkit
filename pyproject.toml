@@ -30,7 +30,9 @@ dependencies = [
   "jsonpath-ng~=1.7",
   "mcp~=1.13",
   "networkx~=3.4",
-  "numpy~=1.26",
+  # langchain-aws pins numpy to 1.* for Python <3.12 -- remove once package is updated
+  "numpy~=1.26; python_version < '3.12'",
+  "numpy~=2.3; python_version >= '3.12'",
   "openinference-semantic-conventions~=0.1.14",
   "openpyxl~=3.1",
   "pkce==1.0.3",
@@ -45,12 +47,17 @@ dependencies = [
   "uvicorn[standard]~=0.32.0",
   "wikipedia~=1.4",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "NVIDIA NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 license = { file = "LICENSE.md" }
 keywords = ["ai", "rag", "agents"]
-classifiers = ["Programming Language :: Python"]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 
@@ -65,6 +72,7 @@ data-flywheel = ["nvidia-nat-data-flywheel"]
 ingestion = ["nvidia-nat-ingestion"] # meta-package
 langchain = ["nvidia-nat-langchain"]
 llama-index = ["nvidia-nat-llama-index"]
+mcp = ["nvidia-nat-mcp"]
 mem0ai = ["nvidia-nat-mem0ai"]
 opentelemetry = ["nvidia-nat-opentelemetry"]
 phoenix = ["nvidia-nat-phoenix"]
@@ -130,6 +138,7 @@ nvidia-nat-data-flywheel = { workspace = true }
 nvidia-nat-ingestion = { workspace = true }
 nvidia-nat-langchain = { workspace = true }
 nvidia-nat-llama-index = { workspace = true }
+nvidia-nat-mcp = { workspace = true }
 nvidia-nat-mem0ai = { workspace = true }
 nvidia-nat-mysql = { workspace = true }
 nvidia-nat-opentelemetry = { workspace = true }

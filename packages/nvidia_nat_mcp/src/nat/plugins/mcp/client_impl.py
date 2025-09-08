@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,14 +27,12 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
-from nat.tool.mcp.mcp_client_base import MCPBaseClient
+from nat.plugins.mcp.client_base import MCPBaseClient
 
 logger = logging.getLogger(__name__)
 
-# All functions in this file are experimental
 
-
-class ToolOverrideConfig(BaseModel):
+class MCPToolOverrideConfig(BaseModel):
     """
     Configuration for overriding tool properties when exposing from MCP server.
     """
@@ -148,7 +146,7 @@ class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
     Configuration for connecting to an MCP server as a client and exposing selected tools.
     """
     server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
-    tool_filter: dict[str, ToolOverrideConfig] | list[str] | None = Field(
+    tool_filter: dict[str, MCPToolOverrideConfig] | list[str] | None = Field(
         default=None,
         description="""Filter or map tools to expose from the server (list or dict).
         Can be:
@@ -171,7 +169,6 @@ class MCPSingleToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
 
 
 def _get_server_name_safe(client: MCPBaseClient) -> str:
-
     # Avoid leaking env secrets from stdio client in logs.
     if client.transport == "stdio":
         safe_server = f"stdio: {client.command}"
@@ -222,9 +219,9 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
     - Uses builder's exit stack to manage client lifecycle
     - Applies tool filters if provided
     """
-    from nat.tool.mcp.mcp_client_base import MCPSSEClient
-    from nat.tool.mcp.mcp_client_base import MCPStdioClient
-    from nat.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
+    from nat.plugins.mcp.client_base import MCPSSEClient
+    from nat.plugins.mcp.client_base import MCPStdioClient
+    from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
 
     # Build the appropriate client
     client_cls = {
@@ -243,7 +240,7 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
     # so it's cleaned up when the workflow is done
     async with client:
         all_tools = await client.get_tools()
-        tool_configs = _filter_and_configure_tools(all_tools, config.tool_filter)
+        tool_configs = mcp_filter_tools(all_tools, config.tool_filter)
 
         for tool_name, tool_cfg in tool_configs.items():
             await builder.add_function(
@@ -262,7 +259,7 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
         yield FunctionInfo.create(single_fn=idle_fn, description="MCP client")
 
 
-def _filter_and_configure_tools(all_tools: dict, tool_filter) -> dict[str, dict]:
+def mcp_filter_tools(all_tools: dict, tool_filter) -> dict[str, dict]:
     """
     Apply tool filtering and optional aliasing/description overrides.
 
@@ -290,7 +287,7 @@ def _filter_and_configure_tools(all_tools: dict, tool_filter) -> dict[str, dict]
                 logger.warning("Tool '%s' specified in tool_filter not found in MCP server", name)
                 continue
 
-            if isinstance(override, ToolOverrideConfig):
+            if isinstance(override, MCPToolOverrideConfig):
                 result[name] = {
                     "function_name": override.alias or name, "description": override.description or tool.description
                 }
@@ -298,3 +295,6 @@ def _filter_and_configure_tools(all_tools: dict, tool_filter) -> dict[str, dict]
                 logger.warning("Unsupported override type for '%s': %s", name, type(override))
                 result[name] = {"function_name": name, "description": tool.description}
         return result
+
+    # Fallback for unsupported tool_filter types
+    raise ValueError(f"Unsupported tool_filter type: {type(tool_filter)}")
