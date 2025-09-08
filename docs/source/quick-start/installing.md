@@ -21,11 +21,12 @@ This guide will help you set up your NVIDIA NeMo Agent toolkit development envir
 
 ## Supported LLM APIs
 
-The following LLM APIs are supported:
+The following LLM API providers are supported:
 
 - NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)
 - OpenAI
 - AWS Bedrock
+- Azure OpenAI
 
 ## Framework Integrations
 
@@ -35,6 +36,7 @@ To install these first-party plugin libraries, you can use the full distribution
 
 - `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/)
+- `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
 - `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/)
 - `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
 - `nvidia-nat[mem0ai]` or `nvidia-nat-mem0ai` - [Mem0](https://mem0.ai/)
@@ -50,15 +52,59 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[zep-cloud]` or `nvidia-nat-zep-cloud` - [Zep](https://www.getzep.com/)
 
 
-## Prerequisites
+## Supported Platforms
+
+| Operating System | Architecture | Python Version | Supported |
+|------------------|--------------|---------------|-----------|
+| Linux | x86_64 | 3.11, 3.12, 3.13 | ✅ Tested, Validated in CI |
+| Linux | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested, Validated in CI |
+| macOS | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
+| macOS | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested |
+| Windows | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
+| Windows | aarch64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
+
+## Software Prerequisites
 
 NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run by default. Before you begin using NeMo Agent toolkit, ensure that you meet the following software prerequisites:
 
-- Install [Git](https://git-scm.com/)
-- Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
-- Install [uv](https://docs.astral.sh/uv/getting-started/installation/) (version 0.5.4 or later, latest version is recommended)
+- [Python](https://www.python.org/) 3.11, 3.12, or 3.13
+
+### Additional Prerequisites for Development
+- [Git](https://git-scm.com/)
+- [Git Large File Storage](https://git-lfs.github.com/) (LFS)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (version 0.5.4 or later, latest version is recommended)
+
+## Install from Package
+
+The package installation is recommended for production use.
+
+:::{note}
+To run any examples, you need to install the NeMo Agent toolkit from source.
+:::
+
+To install the latest stable version of NeMo Agent toolkit, run the following command:
+
+```bash
+pip install nvidia-nat
+```
+
+NeMo Agent toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain plugin, run the following:
+
+```bash
+pip install nvidia-nat[langchain] # For LangChain
+```
+
+Or for all optional dependencies:
+
+```bash
+pip install nvidia-nat[all]
+```
+
+The full list of optional dependencies can be found [here](../quick-start/installing.md#framework-integrations).
 
 ## Install From Source
+
+Installing from source is required to run any examples provided in the repository or to contribute to the project.
 
 1. Clone the NeMo Agent toolkit repository to your local machine.
     ```bash
@@ -84,7 +130,7 @@ NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run 
     source .venv/bin/activate
     ```
     :::{note}
-    Python 3.11 and 3.12 is also supported simply replace `3.13` with `3.11` or `3.12` in the `uv` command above.
+    Python 3.11 and 3.12 are also supported simply replace `3.13` with `3.11` or `3.12` in the `uv` command above.
     :::
 
 1. Install the NeMo Agent toolkit library.
@@ -108,7 +154,7 @@ NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run 
     Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
     :::
 
-    In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
+    In addition to plugins, there are optional dependencies needed for profiling. Installing the `profiling` sub-package is required for evaluation and profiling workflows using `nat eval`. To install these dependencies, run the following:
     ```bash
     uv pip install -e '.[profiling]'
     ```

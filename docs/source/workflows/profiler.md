@@ -34,9 +34,14 @@ Will allow for features such as offline-replay or simulation of workflow runs wi
 
 The NeMo Agent toolkit profiler requires additional dependencies not installed by default.
 
-Install these dependencies by running the following command:
+Install these dependencies by running the following command from the root directory of the NeMo Agent toolkit repository:
 ```bash
-uv pip install -e .[profiling]
+uv pip install -e ".[profiling]"
+```
+
+If you are installing from a package, you need to install the `nvidia-nat[profiling]` package by running the following command:
+```bash
+uv pip install nvidia-nat[profiling]
 ```
 
 ## Current Profiler Architecture

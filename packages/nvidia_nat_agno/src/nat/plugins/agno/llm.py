@@ -72,7 +72,7 @@ async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
 
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name"},
+            exclude={"type", "model_name", "thinking"},
             by_alias=True,
             exclude_none=True,
         ),
@@ -90,7 +90,7 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name"},
+            exclude={"type", "model_name", "thinking"},
             by_alias=True,
             exclude_none=True,
         ),
