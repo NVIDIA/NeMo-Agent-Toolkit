@@ -81,7 +81,7 @@ jobs:
   check:
     name: Check
     runs-on: linux-amd64-cpu4
-    timeout-minutes: 30 
+    timeout-minutes: 15
     container:
       image: ${{ inputs.container }}
     strategy:
