@@ -504,7 +504,7 @@ def dask_cluster_fixture(fail_missing: bool) -> "LocalCluster":
             raise
         pytest.skip("Dask is not installed, skipping Dask cluster fixture.")
 
-    cluster = LocalCluster(asynchronous=False)
+    cluster = LocalCluster(asynchronous=False, n_workers=1, threads_per_worker=1)
     yield cluster
     cluster.close()
 
