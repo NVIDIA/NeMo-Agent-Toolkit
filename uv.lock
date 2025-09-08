@@ -4902,7 +4902,7 @@ name = "nat-simple-calculator-mcp"
 source = { editable = "examples/MCP/simple_calculator_mcp" }
 dependencies = [
     { name = "nat-simple-calculator" },
-    { name = "nvidia-nat", extra = ["langchain"] },
+    { name = "nvidia-nat", extra = ["langchain", "mcp"] },
 ]
 
 [package.metadata]
@@ -5358,6 +5358,9 @@ langchain = [
 llama-index = [
     { name = "nvidia-nat-llama-index" },
 ]
+mcp = [
+    { name = "nvidia-nat-mcp" },
+]
 mem0ai = [
     { name = "nvidia-nat-mem0ai" },
 ]
@@ -5476,6 +5479,7 @@ requires-dist = [
     { name = "nvidia-nat-ingestion", marker = "extra == 'ingestion'", editable = "packages/nvidia_nat_ingestion" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-llama-index", marker = "extra == 'llama-index'", editable = "packages/nvidia_nat_llama_index" },
+    { name = "nvidia-nat-mcp", marker = "extra == 'mcp'", editable = "packages/nvidia_nat_mcp" },
     { name = "nvidia-nat-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/nvidia_nat_mem0ai" },
     { name = "nvidia-nat-mysql", marker = "extra == 'mysql'", editable = "packages/nvidia_nat_mysql" },
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'opentelemetry'", editable = "packages/nvidia_nat_opentelemetry" },
@@ -5505,7 +5509,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["all", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "gunicorn"]
+provides-extras = ["all", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "gunicorn"]
 
 [package.metadata.requires-dev]
 dev = [
