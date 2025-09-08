@@ -31,8 +31,7 @@ logger = logging.getLogger(__name__)
 
 class RouterAgentWorkflowConfig(FunctionBaseConfig, name="router_agent"):
     """
-    A Router Agent requires an LLM which supports routing. A router agent takes in the incoming message,
-    combine it with a prompt and the list of branches, and ask a LLM about which branch to take.
+    A router agent takes in the incoming message, combines it with a prompt and the list of branches, and ask a LLM about which branch to take.
     """
     branches: list[FunctionRef] = Field(default_factory=list,
                                         description="The list of branches to provide to the router agent.")
@@ -42,19 +41,7 @@ class RouterAgentWorkflowConfig(FunctionBaseConfig, name="router_agent"):
     detailed_logs: bool = Field(default=False, description="Set the verbosity of the router agent's logging.")
     log_response_max_chars: PositiveInt = Field(
         default=1000, description="Maximum number of characters to display in logs when logging branch responses.")
-    # tool_names: list[FunctionRef] = Field(default_factory=list,
-    #                                       description="The list of branches to provide to the routing agent.")
-    # llm_name: LLMRef = Field(description="The LLM model to use with the routing agent.")
-    # verbose: bool = Field(default=False, description="Set the verbosity of the tool calling agent's logging.")
-    # handle_branch_errors: bool = Field(default=True, description="Specify ability to handle branch calling errors.")
-    # description: str = Field(default="Routing Agent Workflow", description="Description of this functions use.")
-    # max_iterations: int = Field(default=15, description="Number of branch calls before stoping the routing agent.")
-    # log_response_max_chars: PositiveInt = Field(
-    #     default=1000, description="Maximum number of characters to display in logs when logging branch responses.")
-    # system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
-    # prompt: str | None = Field(default=None, description="Provides the prompt to use with the agent.")
-    # additional_instructions: str | None = Field(default=None,
-    #                                             description="Additional instructions appended to the system prompt.")
+    description: str = Field(default="Router Agent Workflow", description="Description of this functions use.")
 
 
 @register_function(config_type=RouterAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -64,20 +51,15 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
 
     from nat.agent.base import AGENT_LOG_PREFIX
     from nat.agent.router_agent.agent import RouterAgentGraph
-    from nat.agent.router_agent.agent import RouterGraphState
+    from nat.agent.router_agent.agent import RouterAgentGraphState
     from nat.agent.router_agent.agent import create_router_agent_prompt
 
-    # prompt = create_routing_agent_prompt(config)
-    # we can choose an LLM for the Routing agent in the config file
+    prompt = create_router_agent_prompt(config)
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    # the agent can run any installed tool, simply install the tool and add it to the config file
-    # the sample tools provided can easily be copied or changed
     branches = builder.get_tools(tool_names=config.branches, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     if not branches:
-        raise ValueError(f"No tools specified for Routing Agent '{config.llm_name}'")
+        raise ValueError(f"No branches specified for Router Agent '{config.llm_name}'")
 
-    prompt = create_router_agent_prompt(config)
-    # construct the Tool Calling Agent Graph from the configured llm, and tools
     graph: CompiledGraph = await RouterAgentGraph(
         llm=llm,
         branches=branches,
@@ -88,19 +70,17 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
 
     async def _response_fn(input_message: str) -> str:
         try:
-            # initialize the starting state with the user query
             input_message = HumanMessage(content=input_message)
-            state = RouterGraphState(messages=[input_message])
-
-            # run the Tool Calling Agent Graph
+            state = RouterAgentGraphState(messages=[input_message])
             state = await graph.ainvoke(state)
-
-            state = RouterGraphState(**state)
+            state = RouterAgentGraphState(**state)
             output_message = state.messages[-1]
+
             return output_message.content
+
         except Exception as ex:
             logger.exception("%s Router Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
-            if config.verbose:
+            if config.detailed_logs:
                 return str(ex)
             return "I seem to be having a problem."
 
