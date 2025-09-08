@@ -4909,6 +4909,7 @@ dependencies = [
 requires-dist = [
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["mcp"], editable = "." },
 ]
 
 [[package]]
