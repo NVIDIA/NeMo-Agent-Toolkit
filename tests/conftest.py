@@ -89,6 +89,11 @@ def simple_config_file_fixture() -> str:
     return os.path.join(EXAMPLES_DIR, "getting_started/simple_calculator/configs/config.yml")
 
 
+@pytest.fixture(name="echo_config_file")
+def echo_config_file_fixture(test_data_dir: str) -> str:
+    return os.path.join(test_data_dir, "echo.yaml")
+
+
 @pytest.fixture(name="mock_aiohttp_session")
 def mock_aiohttp_session_fixture():
     with mock.patch("aiohttp.ClientSession") as mock_aiohttp_session:
@@ -550,13 +555,13 @@ def db_url_fixture(db_engine: "AsyncEngine") -> str:
 
 
 @pytest.fixture(name="set_nat_config_file_env_var")
-def fixture_set_nat_config_file_env_var(restore_environ, simple_config_file: str) -> str:
+def fixture_set_nat_config_file_env_var(restore_environ, echo_config_file: str) -> str:
     """
     Fixture to set the NAT_CONFIG_FILE environment variable for tests.
     This ensures that tests have a consistent configuration file path.
     """
-    os.environ["NAT_CONFIG_FILE"] = simple_config_file
-    return simple_config_file
+    os.environ["NAT_CONFIG_FILE"] = echo_config_file
+    return echo_config_file
 
 
 @pytest.fixture(name="set_nat_dask_scheduler_env_var")
