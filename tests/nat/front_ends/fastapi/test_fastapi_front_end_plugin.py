@@ -207,8 +207,9 @@ async def test_specified_endpoints():
         assert response.json() == {"value": "Hello"}
 
 
+@pytest.mark.parametrize("use_sync_timeout", [True, False])
 @pytest.mark.parametrize("fn_use_openai_api", [True, False])
-async def test_generate_async(fn_use_openai_api: bool):
+async def test_generate_async(fn_use_openai_api: bool, use_sync_timeout: bool):
     if (fn_use_openai_api):
         pytest.skip("Async support for OpenAI API is not implemented yet")
 
@@ -218,6 +219,8 @@ async def test_generate_async(fn_use_openai_api: bool):
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=fn_use_openai_api),
     )
+
+    job_id = f"test_generate_async_{use_sync_timeout}_{fn_use_openai_api}"
 
     workflow_path = f"{front_end_config.workflow.path}/async"
     # oai_path = front_end_config.workflow.openai_api_path
@@ -233,16 +236,28 @@ async def test_generate_async(fn_use_openai_api: bool):
             assert True  # TODO: Implement async support in the EchoFunctionConfig
 
         else:
-            response = await client.post(workflow_path, json={"message": "Hello", "job_id": "1"})
+            payload = {"message": "Hello", "job_id": job_id}
+            if use_sync_timeout:
+                payload["sync_timeout"] = 10
 
-            assert response.status_code == 202
-            assert response.json() == {"job_id": "1", "status": "submitted"}
+            response = await client.post(workflow_path, json=payload)
+
+            if use_sync_timeout:
+                assert response.status_code == 200
+                response_body = response.json()
+                assert response_body["job_id"] == job_id
+                assert response_body["status"] == "success"
+                assert response_body["output"] == {"value": "Hello"}
+            else:
+                assert response.status_code == 202
+                assert response.json() == {"job_id": job_id, "status": "submitted"}
 
         expected_status_values = ("running", "success", "submitted")
-        status_path = f"{workflow_path}/job/1"
+        status_path = f"{workflow_path}/job/{job_id}"
 
         status = None
-        deadline = time.time() + 10  # Wait for up to 10 seconds
+        timeout = 10  # Wait for up to 10 seconds
+        deadline = time.time() + timeout
         while status != "success":
             response = await client.get(status_path)
 
@@ -251,9 +266,9 @@ async def test_generate_async(fn_use_openai_api: bool):
             status = data["status"]
 
             assert status in expected_status_values
-            assert time.time() < deadline, "Job did not complete in time"
             if status != "success":
-                await await_job("1")
+                assert time.time() < deadline, "Job did not complete in time"
+                await await_job(job_id, timeout=timeout)
 
 
 async def test_async_job_status_not_found():
