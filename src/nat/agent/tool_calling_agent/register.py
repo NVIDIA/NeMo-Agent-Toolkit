@@ -47,6 +47,8 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
     system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
     additional_instructions: str | None = Field(default=None,
                                                 description="Additional instructions appended to the system prompt.")
+    return_direct: list[str] | None = Field(
+        default=None, description="List of tool names that should return responses directly without LLM processing.")
 
 
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -74,7 +76,8 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                                                          prompt=prompt,
                                                          detailed_logs=config.verbose,
                                                          log_response_max_chars=config.log_response_max_chars,
-                                                         handle_tool_errors=config.handle_tool_errors).build_graph()
+                                                         handle_tool_errors=config.handle_tool_errors,
+                                                         return_direct=config.return_direct).build_graph()
 
     async def _response_fn(input_message: str) -> str:
         try:

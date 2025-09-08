@@ -23,6 +23,7 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.runnables import RunnableLambda
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
+from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode
 from pydantic import BaseModel
 from pydantic import Field
@@ -57,12 +58,14 @@ class ToolCallAgentGraph(DualNodeAgent):
         detailed_logs: bool = False,
         log_response_max_chars: int = 1000,
         handle_tool_errors: bool = True,
+        return_direct: list[str] | None = None,
     ):
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
                          detailed_logs=detailed_logs,
                          log_response_max_chars=log_response_max_chars)
+
         # some LLMs support tool calling
         # these models accept the tool's input schema and decide when to use a tool based on the input's relevance
         try:
@@ -85,8 +88,8 @@ class ToolCallAgentGraph(DualNodeAgent):
             )
 
         self.agent = prompt_runnable | self.bound_llm
-
         self.tool_caller = ToolNode(tools, handle_tool_errors=handle_tool_errors)
+        self.return_direct = return_direct
         logger.debug("%s Initialized Tool Calling Agent Graph", AGENT_LOG_PREFIX)
 
     async def agent_node(self, state: ToolCallAgentGraphState):
@@ -146,13 +149,55 @@ class ToolCallAgentGraph(DualNodeAgent):
             logger.error("%s Failed to call tool_node: %s", AGENT_LOG_PREFIX, ex)
             raise
 
+    async def tool_conditional_edge(self, state: ToolCallAgentGraphState):
+        try:
+            logger.debug("%s Starting the Tool Conditional Edge", AGENT_LOG_PREFIX)
+            last_message = state.messages[-1]
+
+            if (self.return_direct and hasattr(last_message, 'name') and (last_message.name in self.return_direct)):
+                # Return directly if this tool is in the return_direct list
+                logger.debug("%s Tool %s is set to return directly", AGENT_LOG_PREFIX, last_message.name)
+                return AgentDecision.END
+            else:
+                # Continue to agent for processing
+                logger.debug("%s Tool response will be processed by agent", AGENT_LOG_PREFIX)
+                return AgentDecision.TOOL
+        except Exception as ex:
+            logger.exception("%s Failed to determine tool conditional edge: %s", AGENT_LOG_PREFIX, ex)
+            logger.warning("%s Continuing to agent for processing", AGENT_LOG_PREFIX)
+            return AgentDecision.TOOL
+
+    async def _build_graph(self, state_schema):
+        try:
+            logger.debug("%s Building and compiling the Tool Calling Agent Graph", AGENT_LOG_PREFIX)
+
+            graph = StateGraph(state_schema)
+            graph.add_node("agent", self.agent_node)
+            graph.add_node("tool", self.tool_node)
+
+            if self.return_direct:
+                # go to end of graph if tool is set to return directly
+                tool_conditional_edge_possible_outputs = {AgentDecision.END: "__end__", AgentDecision.TOOL: "agent"}
+                graph.add_conditional_edges("tool", self.tool_conditional_edge, tool_conditional_edge_possible_outputs)
+            else:
+                # otherwise return to agent after tool call
+                graph.add_edge("tool", "agent")
+
+            conditional_edge_possible_outputs = {AgentDecision.TOOL: "tool", AgentDecision.END: "__end__"}
+            graph.add_conditional_edges("agent", self.conditional_edge, conditional_edge_possible_outputs)
+
+            graph.set_entry_point("agent")
+            self.graph = graph.compile()
+
+            return self.graph
+        except Exception as ex:
+            logger.error("%s Failed to build Tool Calling Agent Graph: %s", AGENT_LOG_PREFIX, ex)
+            raise
+
     async def build_graph(self):
         try:
-            await super()._build_graph(state_schema=ToolCallAgentGraphState)
-            logger.debug(
-                "%s Tool Calling Agent Graph built and compiled successfully",
-                AGENT_LOG_PREFIX,
-            )
+            await self._build_graph(state_schema=ToolCallAgentGraphState)
+            logger.debug("%s Tool Calling Agent Graph built and compiled successfully", AGENT_LOG_PREFIX)
             return self.graph
         except Exception as ex:
             logger.error("%s Failed to build Tool Calling Agent Graph: %s", AGENT_LOG_PREFIX, ex)
