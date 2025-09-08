@@ -155,8 +155,8 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
                 return result
             except Exception as e:
-                logger.error("Error with ainvoke in function with input: %s.", value, exc_info=True)
-                raise e
+                logger.error("Error with ainvoke in function with input: %s. Error: %s", value, e)
+                raise
 
     @typing.final
     async def acall_invoke(self, *args, **kwargs):
@@ -186,14 +186,14 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             input_obj = self.input_schema(*args, **kwargs)
 
             return await self.ainvoke(value=input_obj)
-        except Exception as e:
+        except Exception:
             logger.error(
                 "Error in acall_invoke() converting input to function schema. Both args and kwargs were "
                 "supplied which could not be converted to the input schema. args: %s\nkwargs: %s\nschema: %s",
                 args,
                 kwargs,
                 self.input_schema)
-            raise e
+            raise
 
     @abstractmethod
     async def _astream(self, value: InputT) -> AsyncGenerator[StreamingOutputT]:
@@ -252,8 +252,8 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                 manager.set_output(final_output)
 
             except Exception as e:
-                logger.error("Error with astream in function with input: %s.", value, exc_info=True)
-                raise e
+                logger.error("Error with astream in function with input: %s. Error: %s", value, e)
+                raise
 
     @typing.final
     async def acall_stream(self, *args, **kwargs):
@@ -287,14 +287,14 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
                 async for x in self.astream(value=input_obj):
                     yield x
-            except Exception as e:
+            except Exception:
                 logger.error(
                     "Error in acall_stream() converting input to function schema. Both args and kwargs were "
                     "supplied which could not be converted to the input schema. args: %s\nkwargs: %s\nschema: %s",
                     args,
                     kwargs,
                     self.input_schema)
-                raise e
+                raise
 
 
 class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):

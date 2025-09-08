@@ -154,7 +154,7 @@ class MilvusRetriever(Retriever):
                 return _wrap_milvus_results(results, content_field=self.content_field)
 
         except Exception as e:
-            logger.exception("Exception when retrieving results from milvus for query %s: %s", query, e)
+            logger.error("Exception when retrieving results from milvus for query %s: %s", query, e)
             raise RetrieverError(f"Error when retrieving documents from {collection_name} for query '{query}'") from e
 
     async def _search(self,

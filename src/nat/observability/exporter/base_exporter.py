@@ -375,7 +375,7 @@ class BaseExporter(Exporter):
         except asyncio.TimeoutError:
             logger.warning("%s: Some tasks did not complete within %s seconds", self.name, timeout)
         except Exception as e:
-            logger.error("%s: Error while waiting for tasks: %s", self.name, e, exc_info=True)
+            logger.exception("%s: Error while waiting for tasks: %s", self.name, e)
 
     @override
     async def stop(self):

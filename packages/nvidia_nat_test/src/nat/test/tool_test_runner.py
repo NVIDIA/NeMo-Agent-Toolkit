@@ -14,18 +14,29 @@
 # limitations under the License.
 
 import asyncio
+import inspect
 import logging
 import typing
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
+from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.function import Function
 from nat.builder.function_info import FunctionInfo
 from nat.cli.type_registry import GlobalTypeRegistry
+from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function_dependencies import FunctionDependencies
+from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
+from nat.data_models.retriever import RetrieverBaseConfig
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
+from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.object_store.interfaces import ObjectStore
 from nat.runtime.loader import PluginTypes
 from nat.runtime.loader import discover_and_register_plugins
@@ -70,14 +81,16 @@ class MockBuilder(Builder):
         """Add a mock TTC strategy that returns a fixed response."""
         self._mocks[f"ttc_strategy_{name}"] = mock_response
 
-    async def add_ttc_strategy(self, name: str, config):
+    def mock_auth_provider(self, name: str, mock_response: typing.Any):
+        """Add a mock auth provider that returns a fixed response."""
+        self._mocks[f"auth_provider_{name}"] = mock_response
+
+    async def add_ttc_strategy(self, name: str, config: TTCStrategyBaseConfig) -> None:
         """Mock implementation (no‑op)."""
         pass
 
-    async def get_ttc_strategy(self,
-                               strategy_name: str,
-                               pipeline_type: typing.Any = None,
-                               stage_type: typing.Any = None):
+    async def get_ttc_strategy(self, strategy_name: str, pipeline_type: PipelineTypeEnum,
+                               stage_type: StageTypeEnum) -> typing.Any:
         """Return a mock TTC strategy if one is configured."""
         key = f"ttc_strategy_{strategy_name}"
         if key in self._mocks:
@@ -90,10 +103,23 @@ class MockBuilder(Builder):
 
     async def get_ttc_strategy_config(self,
                                       strategy_name: str,
-                                      pipeline_type: typing.Any = None,
-                                      stage_type: typing.Any = None):
+                                      pipeline_type: PipelineTypeEnum,
+                                      stage_type: StageTypeEnum) -> TTCStrategyBaseConfig:
         """Mock implementation."""
+        return TTCStrategyBaseConfig()
+
+    async def add_auth_provider(self, name: str, config: AuthProviderBaseConfig) -> None:
+        """Mock implementation (no‑op)."""
         pass
+
+    async def get_auth_provider(self, auth_provider_name: str) -> AuthProviderBase:
+        """Return a mock auth provider if one is configured."""
+        key = f"auth_provider_{auth_provider_name}"
+        if key in self._mocks:
+            mock_auth = MagicMock()
+            mock_auth.authenticate = AsyncMock(return_value=self._mocks[key])
+            return mock_auth
+        raise ValueError(f"Auth provider '{auth_provider_name}' not mocked. Use mock_auth_provider() to add it.")
 
     async def add_function(self, name: str, config: FunctionBaseConfig) -> Function:
         """Mock implementation - not used in tool testing."""
@@ -109,25 +135,29 @@ class MockBuilder(Builder):
 
     def get_function_config(self, name: str) -> FunctionBaseConfig:
         """Mock implementation."""
-        pass
+        return FunctionBaseConfig()
 
     async def set_workflow(self, config: FunctionBaseConfig) -> Function:
         """Mock implementation."""
-        pass
+        mock_fn = AsyncMock()
+        mock_fn.ainvoke = AsyncMock(return_value="mock_workflow_result")
+        return mock_fn
 
     def get_workflow(self) -> Function:
         """Mock implementation."""
-        pass
+        mock_fn = AsyncMock()
+        mock_fn.ainvoke = AsyncMock(return_value="mock_workflow_result")
+        return mock_fn
 
     def get_workflow_config(self) -> FunctionBaseConfig:
         """Mock implementation."""
-        pass
+        return FunctionBaseConfig()
 
     def get_tool(self, fn_name: str, wrapper_type):
         """Mock implementation."""
         pass
 
-    async def add_llm(self, name: str, config):
+    async def add_llm(self, name: str, config) -> None:
         """Mock implementation."""
         pass
 
@@ -141,11 +171,11 @@ class MockBuilder(Builder):
             return mock_llm
         raise ValueError(f"LLM '{llm_name}' not mocked. Use mock_llm() to add it.")
 
-    def get_llm_config(self, llm_name: str):
+    def get_llm_config(self, llm_name: str) -> LLMBaseConfig:
         """Mock implementation."""
-        pass
+        return LLMBaseConfig()
 
-    async def add_embedder(self, name: str, config):
+    async def add_embedder(self, name: str, config) -> None:
         """Mock implementation."""
         pass
 
@@ -159,11 +189,11 @@ class MockBuilder(Builder):
             return mock_embedder
         raise ValueError(f"Embedder '{embedder_name}' not mocked. Use mock_embedder() to add it.")
 
-    def get_embedder_config(self, embedder_name: str):
+    def get_embedder_config(self, embedder_name: str) -> EmbedderBaseConfig:
         """Mock implementation."""
-        pass
+        return EmbedderBaseConfig()
 
-    async def add_memory_client(self, name: str, config):
+    async def add_memory_client(self, name: str, config) -> None:
         """Mock implementation."""
         pass
 
@@ -177,11 +207,11 @@ class MockBuilder(Builder):
             return mock_memory
         raise ValueError(f"Memory client '{memory_name}' not mocked. Use mock_memory_client() to add it.")
 
-    def get_memory_client_config(self, memory_name: str):
+    def get_memory_client_config(self, memory_name: str) -> MemoryBaseConfig:
         """Mock implementation."""
-        pass
+        return MemoryBaseConfig()
 
-    async def add_retriever(self, name: str, config):
+    async def add_retriever(self, name: str, config) -> None:
         """Mock implementation."""
         pass
 
@@ -194,11 +224,11 @@ class MockBuilder(Builder):
             return mock_retriever
         raise ValueError(f"Retriever '{retriever_name}' not mocked. Use mock_retriever() to add it.")
 
-    async def get_retriever_config(self, retriever_name: str):
+    async def get_retriever_config(self, retriever_name: str) -> RetrieverBaseConfig:
         """Mock implementation."""
-        pass
+        return RetrieverBaseConfig()
 
-    async def add_object_store(self, name: str, config: ObjectStoreBaseConfig):
+    async def add_object_store(self, name: str, config: ObjectStoreBaseConfig) -> None:
         """Mock implementation for object store."""
         pass
 
@@ -216,7 +246,7 @@ class MockBuilder(Builder):
 
     def get_object_store_config(self, object_store_name: str) -> ObjectStoreBaseConfig:
         """Mock implementation for object store config."""
-        pass
+        return ObjectStoreBaseConfig()
 
     def get_user_manager(self):
         """Mock implementation."""
@@ -224,9 +254,9 @@ class MockBuilder(Builder):
         mock_user.get_id = MagicMock(return_value="test_user")
         return mock_user
 
-    def get_function_dependencies(self, fn_name: str):
+    def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
         """Mock implementation."""
-        pass
+        return FunctionDependencies()
 
 
 class ToolTestRunner:
@@ -322,10 +352,15 @@ class ToolTestRunner:
 
             # Execute the tool
             if input_data is not None:
-                if asyncio.iscoroutinefunction(tool_function):
+                if isinstance(tool_function, Function):
+                    result = await tool_function.ainvoke(input_data)
+                elif asyncio.iscoroutinefunction(tool_function):
                     result = await tool_function(input_data)
                 else:
                     result = tool_function(input_data)
+            elif isinstance(tool_function, Function):
+                # Function objects require input, so pass None if no input_data
+                result = await tool_function.ainvoke(None)
             elif asyncio.iscoroutinefunction(tool_function):
                 result = await tool_function()
             else:
@@ -401,8 +436,8 @@ class ToolTestRunner:
             elif isinstance(tool_result, FunctionInfo):
                 if tool_result.single_fn:
                     tool_function = tool_result.single_fn
-                elif tool_result.streaming_fn:
-                    tool_function = tool_result.streaming_fn
+                elif tool_result.stream_fn:
+                    tool_function = tool_result.stream_fn
                 else:
                     raise ValueError("Tool function not found in FunctionInfo")
             elif callable(tool_result):
@@ -412,14 +447,17 @@ class ToolTestRunner:
 
             # Execute the tool
             if input_data is not None:
-                if asyncio.iscoroutinefunction(tool_function):
-                    result = await tool_function(input_data)
+                if isinstance(tool_function, Function):
+                    result = await tool_function.ainvoke(input_data)
                 else:
-                    result = tool_function(input_data)
-            elif asyncio.iscoroutinefunction(tool_function):
-                result = await tool_function()
+                    maybe_result = tool_function(input_data)
+                    result = await maybe_result if inspect.isawaitable(maybe_result) else maybe_result
+            elif isinstance(tool_function, Function):
+                # Function objects require input, so pass None if no input_data
+                result = await tool_function.ainvoke(None)
             else:
-                result = tool_function()
+                maybe_result = tool_function()
+                result = await maybe_result if inspect.isawaitable(maybe_result) else maybe_result
 
             # Assert expected output if provided
             if expected_output is not None:

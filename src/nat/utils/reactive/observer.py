@@ -64,7 +64,7 @@ class Observer(ObserverBase[_T_in_contra]):
                 try:
                     self._on_error(exc)
                 except Exception as e:
-                    logger.exception("Error in on_error callback: %s", e, exc_info=True)
+                    logger.exception("Error in on_error callback: %s", e)
 
     def on_complete(self) -> None:
         if not self._stopped:
@@ -73,4 +73,4 @@ class Observer(ObserverBase[_T_in_contra]):
                 try:
                     self._on_complete()
                 except Exception as e:
-                    logger.exception("Error in on_complete callback: %s", e, exc_info=True)
+                    logger.exception("Error in on_complete callback: %s", e)

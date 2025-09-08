@@ -170,7 +170,7 @@ class WebSocketMessageHandler:
                                            self._workflow_schema_type])).add_done_callback(_done_callback)
 
         except ValueError as e:
-            logger.error("User message content not found: %s", str(e), exc_info=True)
+            logger.exception("User message content not found: %s", str(e))
             await self.create_websocket_message(data_model=Error(code=ErrorTypes.INVALID_USER_MESSAGE_CONTENT,
                                                                  message="User message content could not be found",
                                                                  details=str(e)),
@@ -238,7 +238,7 @@ class WebSocketMessageHandler:
                     f"Message type could not be resolved by input data model: {data_model.model_dump_json()}")
 
         except (ValidationError, TypeError, ValueError) as e:
-            logger.error("A data vaidation error ocurred creating websocket message: %s", str(e), exc_info=True)
+            logger.exception("A data vaidation error ocurred creating websocket message: %s", str(e))
             message = await self._message_validator.create_system_response_token_message(
                 message_type=WebSocketMessageType.ERROR_MESSAGE,
                 conversation_id=self._conversation_id,

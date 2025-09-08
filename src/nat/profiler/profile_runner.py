@@ -282,7 +282,7 @@ class ProfilerRunner:
                 fitted_model = model_trainer.train(all_steps)
                 logger.info("Fitted model for forecasting.")
             except Exception as e:
-                logger.exception("Fitting model failed. %s", e, exc_info=True)
+                logger.exception("Fitting model failed. %s", e)
                 return ProfilerResults()
 
             if self.write_output:

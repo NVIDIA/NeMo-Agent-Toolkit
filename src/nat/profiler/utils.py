@@ -175,7 +175,7 @@ def create_standardized_dataframe(requests_data: list[list[IntermediateStep]]) -
                                  event_type=step.event_type).model_dump(), )
 
     except Exception as e:
-        logger.exception("Error creating standardized DataFrame: %s", e, exc_info=True)
+        logger.exception("Error creating standardized DataFrame: %s", e)
         return pd.DataFrame()
 
     if not all_rows:

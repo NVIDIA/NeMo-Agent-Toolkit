@@ -81,8 +81,17 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
     ),
     (
+        r"^examples/notebooks/launchables/GPU_Cluster_Sizing_with_NeMo_Agent_Toolkit.ipynb",
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml",
+    ),
+    (
         r"^docs/source/",
         r"^docs/source/_static",
+    ),
+    # allow MCP server references in documentation
+    (
+        r"^docs/source/workflows/mcp/.*\.md$",
+        r"^ghcr\.io/github/github-mcp-server",
     ),
 }
 
@@ -139,6 +148,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
     # Time zones
     "[A-Z][a-z]+(_[A-Z][a-z]+)*/[A-Z][a-z]+(_[A-Z][a-z]+)*",
+    "ghcr\\.io/.*",  # Container registry references
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {

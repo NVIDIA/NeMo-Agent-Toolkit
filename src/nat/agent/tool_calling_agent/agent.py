@@ -55,17 +55,22 @@ class ToolCallAgentGraph(DualNodeAgent):
         prompt: str | None = None,
         callbacks: list[AsyncCallbackHandler] = None,
         detailed_logs: bool = False,
+        log_response_max_chars: int = 1000,
         handle_tool_errors: bool = True,
     ):
-        super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
+        super().__init__(llm=llm,
+                         tools=tools,
+                         callbacks=callbacks,
+                         detailed_logs=detailed_logs,
+                         log_response_max_chars=log_response_max_chars)
         # some LLMs support tool calling
         # these models accept the tool's input schema and decide when to use a tool based on the input's relevance
         try:
             # in tool calling agents, we bind the tools to the LLM, to pass the tools' input schemas at runtime
             self.bound_llm = llm.bind_tools(tools)
         except NotImplementedError as ex:
-            logger.error("%s Failed to bind tools: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
-            raise ex
+            logger.error("%s Failed to bind tools: %s", AGENT_LOG_PREFIX, ex)
+            raise
 
         if prompt is not None:
             system_prompt = SystemMessage(content=prompt)
@@ -100,8 +105,8 @@ class ToolCallAgentGraph(DualNodeAgent):
             state.messages += [response]
             return state
         except Exception as ex:
-            logger.exception("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
-            raise ex
+            logger.error("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
+            raise
 
     async def conditional_edge(self, state: ToolCallAgentGraphState):
         try:
@@ -115,12 +120,7 @@ class ToolCallAgentGraph(DualNodeAgent):
                 logger.debug("%s Final answer:\n%s", AGENT_LOG_PREFIX, state.messages[-1].content)
             return AgentDecision.END
         except Exception as ex:
-            logger.exception(
-                "%s Failed to determine whether agent is calling a tool: %s",
-                AGENT_LOG_PREFIX,
-                ex,
-                exc_info=True,
-            )
+            logger.exception("%s Failed to determine whether agent is calling a tool: %s", AGENT_LOG_PREFIX, ex)
             logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
             return AgentDecision.END
 
@@ -143,8 +143,8 @@ class ToolCallAgentGraph(DualNodeAgent):
 
             return state
         except Exception as ex:
-            logger.exception("%s Failed to call tool_node: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
-            raise ex
+            logger.error("%s Failed to call tool_node: %s", AGENT_LOG_PREFIX, ex)
+            raise
 
     async def build_graph(self):
         try:
@@ -155,13 +155,8 @@ class ToolCallAgentGraph(DualNodeAgent):
             )
             return self.graph
         except Exception as ex:
-            logger.exception(
-                "%s Failed to build Tool Calling Agent Graph: %s",
-                AGENT_LOG_PREFIX,
-                ex,
-                exc_info=ex,
-            )
-            raise ex
+            logger.error("%s Failed to build Tool Calling Agent Graph: %s", AGENT_LOG_PREFIX, ex)
+            raise
 
 
 def create_tool_calling_agent_prompt(config: "ToolCallAgentWorkflowConfig") -> str | None:

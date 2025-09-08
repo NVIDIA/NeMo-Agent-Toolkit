@@ -26,9 +26,21 @@ rapids-logger "Git Version: $(git describe)"
 rapids-logger "Running tests"
 set +e
 
-pytest --junit-xml=${CI_PROJECT_DIR}/report_pytest.xml \
+PYTEST_ARGS=""
+REPORT_NAME="${CI_PROJECT_DIR}/pytest_junit_report.xml"
+COV_REPORT_NAME="${CI_PROJECT_DIR}/pytest_coverage_report.xml"
+if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
+       PYTEST_ARGS="--run_slow --run_e2e --run_integration"
+
+       DATE_TAG=$(date +"%Y%m%d")
+       REPORT_NAME="${CI_PROJECT_DIR}/pytest_junit_report_${DATE_TAG}.xml"
+       COV_REPORT_NAME="${CI_PROJECT_DIR}/pytest_coverage_report_${DATE_TAG}.xml"
+fi
+
+pytest ${PYTEST_ARGS}  \
+       --junit-xml=${REPORT_NAME} \
        --cov=nat --cov-report term-missing \
-       --cov-report=xml:${CI_PROJECT_DIR}/report_pytest_coverage.xml
+       --cov-report=xml:${COV_REPORT_NAME}
 PYTEST_RESULTS=$?
 
 exit ${PYTEST_RESULTS}

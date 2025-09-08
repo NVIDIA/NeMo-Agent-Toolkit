@@ -141,7 +141,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                     try:
                         await self._job_store.close()
                     except Exception as e:
-                        logger.error("Error closing Dask client: %s", e)
+                        logger.exception("Error closing Dask client: %s", e)
 
             logger.debug("Closing NAT server from process %s", os.getpid())
 
@@ -303,7 +303,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                     await job_store.update_status(job_id, "success", output_path=str(parent_dir))
             except Exception as e:
-                logger.error("Error in evaluation job %s: %s", job_id, str(e))
+                logger.exception("Error in evaluation job %s: %s", job_id, str(e))
                 await job_store.update_status(job_id, "failure", error=str(e))
 
         async def start_evaluation(request: EvaluateRequest, http_request: Request):
@@ -777,7 +777,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 await job_store.update_status(job_id, "success", output=result)
             except Exception as e:
-                logger.error("Error in async job %s: %s", job_id, traceback.format_exc())
+                logger.exception("Error in async job %s: %s", job_id, traceback.format_exc())
                 await job_store.update_status(job_id, "failure", error=str(e))
 
         def post_async_generation(request_type: type):

@@ -65,7 +65,7 @@ class TrajectoryEvaluator(BaseEvaluator):
                 prediction=generated_answer,
             )
         except Exception as e:
-            logger.exception("Error evaluating trajectory for question: %s, Error: %s", question, e, exc_info=True)
+            logger.exception("Error evaluating trajectory for question: %s, Error: %s", question, e)
             return EvalOutputItem(id=item.id, score=0.0, reasoning=f"Error evaluating trajectory: {e}")
 
         reasoning = {

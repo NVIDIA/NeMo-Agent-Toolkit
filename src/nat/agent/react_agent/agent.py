@@ -73,15 +73,22 @@ class ReActAgentGraph(DualNodeAgent):
                  use_tool_schema: bool = True,
                  callbacks: list[AsyncCallbackHandler] | None = None,
                  detailed_logs: bool = False,
+                 log_response_max_chars: int = 1000,
                  retry_agent_response_parsing_errors: bool = True,
                  parse_agent_response_max_retries: int = 1,
                  tool_call_max_retries: int = 1,
-                 pass_tool_call_errors_to_agent: bool = True):
-        super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
+                 pass_tool_call_errors_to_agent: bool = True,
+                 normalize_tool_input_quotes: bool = True):
+        super().__init__(llm=llm,
+                         tools=tools,
+                         callbacks=callbacks,
+                         detailed_logs=detailed_logs,
+                         log_response_max_chars=log_response_max_chars)
         self.parse_agent_response_max_retries = (parse_agent_response_max_retries
                                                  if retry_agent_response_parsing_errors else 1)
         self.tool_call_max_retries = tool_call_max_retries
         self.pass_tool_call_errors_to_agent = pass_tool_call_errors_to_agent
+        self.normalize_tool_input_quotes = normalize_tool_input_quotes
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
@@ -124,12 +131,8 @@ class ReActAgentGraph(DualNodeAgent):
         try:
             return self.tools_dict.get(tool_name)
         except Exception as ex:
-            logger.exception("%s Unable to find tool with the name %s\n%s",
-                             AGENT_LOG_PREFIX,
-                             tool_name,
-                             ex,
-                             exc_info=True)
-            raise ex
+            logger.error("%s Unable to find tool with the name %s\n%s", AGENT_LOG_PREFIX, tool_name, ex)
+            raise
 
     async def agent_node(self, state: ReActGraphState):
         try:
@@ -233,8 +236,8 @@ class ReActAgentGraph(DualNodeAgent):
                     working_state.append(output_message)
                     working_state.append(HumanMessage(content=str(ex.observation)))
         except Exception as ex:
-            logger.exception("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
-            raise ex
+            logger.error("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
+            raise
 
     async def conditional_edge(self, state: ReActGraphState):
         try:
@@ -252,7 +255,7 @@ class ReActAgentGraph(DualNodeAgent):
                          agent_output.tool_input)
             return AgentDecision.TOOL
         except Exception as ex:
-            logger.exception("Failed to determine whether agent is calling a tool: %s", ex, exc_info=True)
+            logger.exception("Failed to determine whether agent is calling a tool: %s", ex)
             logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
             return AgentDecision.END
 
@@ -285,35 +288,45 @@ class ReActAgentGraph(DualNodeAgent):
                      agent_thoughts.tool_input)
 
         # Run the tool. Try to use structured input, if possible.
+        tool_input_str = agent_thoughts.tool_input.strip()
+
         try:
-            tool_input_str = str(agent_thoughts.tool_input).strip().replace("'", '"')
-            tool_input_dict = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
+            tool_input = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
             logger.debug("%s Successfully parsed structured tool input from Action Input", AGENT_LOG_PREFIX)
 
-            tool_response = await self._call_tool(requested_tool,
-                                                  tool_input_dict,
-                                                  RunnableConfig(callbacks=self.callbacks),
-                                                  max_retries=self.tool_call_max_retries)
+        except JSONDecodeError as original_ex:
+            if self.normalize_tool_input_quotes:
+                # If initial JSON parsing fails, try with quote normalization as a fallback
+                normalized_str = tool_input_str.replace("'", '"')
+                try:
+                    tool_input = json.loads(normalized_str)
+                    logger.debug("%s Successfully parsed structured tool input after quote normalization",
+                                 AGENT_LOG_PREFIX)
+                except JSONDecodeError:
+                    # the quote normalization failed, use raw string input
+                    logger.debug(
+                        "%s Unable to parse structured tool input after quote normalization. Using Action Input as is."
+                        "\nParsing error: %s",
+                        AGENT_LOG_PREFIX,
+                        original_ex)
+                    tool_input = tool_input_str
+            else:
+                # use raw string input
+                logger.debug(
+                    "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
+                    "\nParsing error: %s",
+                    AGENT_LOG_PREFIX,
+                    original_ex)
+                tool_input = tool_input_str
 
-            if self.detailed_logs:
-                self._log_tool_response(requested_tool.name, tool_input_dict, str(tool_response.content))
-
-        except JSONDecodeError as ex:
-            logger.debug(
-                "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
-                "\nParsing error: %s",
-                AGENT_LOG_PREFIX,
-                ex,
-                exc_info=True)
-            tool_input_str = str(agent_thoughts.tool_input)
-
-            tool_response = await self._call_tool(requested_tool,
-                                                  tool_input_str,
-                                                  RunnableConfig(callbacks=self.callbacks),
-                                                  max_retries=self.tool_call_max_retries)
+        # Call tool once with the determined input (either parsed dict or raw string)
+        tool_response = await self._call_tool(requested_tool,
+                                              tool_input,
+                                              RunnableConfig(callbacks=self.callbacks),
+                                              max_retries=self.tool_call_max_retries)
 
         if self.detailed_logs:
-            self._log_tool_response(requested_tool.name, tool_input_str, str(tool_response.content))
+            self._log_tool_response(requested_tool.name, tool_input, str(tool_response.content))
 
         if not self.pass_tool_call_errors_to_agent:
             if tool_response.status == "error":
@@ -329,8 +342,8 @@ class ReActAgentGraph(DualNodeAgent):
             logger.debug("%s ReAct Graph built and compiled successfully", AGENT_LOG_PREFIX)
             return self.graph
         except Exception as ex:
-            logger.exception("%s Failed to build ReAct Graph: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
-            raise ex
+            logger.error("%s Failed to build ReAct Graph: %s", AGENT_LOG_PREFIX, ex)
+            raise
 
     @staticmethod
     def validate_system_prompt(system_prompt: str) -> bool:
@@ -346,7 +359,7 @@ class ReActAgentGraph(DualNodeAgent):
                 errors.append(error_message)
         if errors:
             error_text = "\n".join(errors)
-            logger.exception("%s %s", AGENT_LOG_PREFIX, error_text)
+            logger.error("%s %s", AGENT_LOG_PREFIX, error_text)
             raise ValueError(error_text)
         return True
 
@@ -373,7 +386,7 @@ def create_react_agent_prompt(config: "ReActAgentWorkflowConfig") -> ChatPromptT
 
     valid_prompt = ReActAgentGraph.validate_system_prompt(prompt_str)
     if not valid_prompt:
-        logger.exception("%s Invalid system_prompt", AGENT_LOG_PREFIX)
+        logger.error("%s Invalid system_prompt", AGENT_LOG_PREFIX)
         raise ValueError("Invalid system_prompt")
     prompt = ChatPromptTemplate([("system", prompt_str), ("user", USER_PROMPT),
                                  MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])

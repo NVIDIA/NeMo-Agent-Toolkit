@@ -132,7 +132,7 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
                         if "text" in item:
                             model_input += item["text"]
             except Exception as e:
-                logger.exception("Error in getting model input: %s", e, exc_info=True)
+                logger.exception("Error in getting model input: %s", e)
 
             input_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
                                                   framework=LLMFrameworkEnum.SEMANTIC_KERNEL,
@@ -232,7 +232,7 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
                 return result
 
             except Exception as e:
-                logger.exception("ToolUsage._use error: %s", e)
+                logger.error("ToolUsage._use error: %s", e)
                 raise
 
         return patched_tool_call

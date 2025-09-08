@@ -134,9 +134,9 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
                     logger.debug("Skipping function %s as it's not in tool_names", function_name)
             functions = filtered_functions
 
-        # Register each function with MCP
+        # Register each function with MCP, passing workflow context for observability
         for function_name, function in functions.items():
-            register_function_with_mcp(mcp, function_name, function)
+            register_function_with_mcp(mcp, function_name, function, workflow)
 
         # Add a simple fallback function if no functions were found
         if not functions:

@@ -114,7 +114,7 @@ async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolCo
             return conclusion
         except Exception as e:
             utils.logger.error("Error during connectivity check: %s", str(e))
-            raise e
+            raise
 
     yield FunctionInfo.from_fn(
         _arun,

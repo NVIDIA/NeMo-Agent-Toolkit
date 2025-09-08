@@ -72,8 +72,10 @@ async def console_logging_method(config: ConsoleLoggingMethodConfig, builder: Bu
     """
     Build and return a StreamHandler for console-based logging.
     """
+    import sys
+
     level = getattr(logging, config.level.upper(), logging.INFO)
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(stream=sys.stdout)
     handler.setLevel(level)
     yield handler
 

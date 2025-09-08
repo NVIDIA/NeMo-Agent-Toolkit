@@ -17,6 +17,7 @@ Authlib
 [Bb]ackpressure
 [Bb]atcher
 [Bb]oolean
+[Bb]rev
 [Cc]allable(s?)
 # Documentation for ccache only capitalizes the name at the start of a sentence https://ccache.dev/
 [Cc]cache
@@ -49,6 +50,7 @@ DB(s?)
 [Dd]ev
 [Dd]evcontainer(s?)
 [Dd]ocstring(s?)
+Dynatrace
 [Ee]mbedder(s?)
 [Ee]ngineerable
 [Ee]val
@@ -71,6 +73,7 @@ Langfuse
 LangChain
 LangGraph
 LangSmith
+[Ll]aunchable(s?)
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
 LLM(s?)
@@ -91,6 +94,7 @@ NIM(s?)
 npm
 NumPy
 NVIDIA
+Nemotron
 OAuth
 URIs
 OTel

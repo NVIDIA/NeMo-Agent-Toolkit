@@ -23,7 +23,7 @@ from nat.data_models.gated_field_mixin import GatedFieldMixin
 
 class TemperatureMixin(
         BaseModel,
-        GatedFieldMixin[float],
+        GatedFieldMixin,
         field_name="temperature",
         default_if_supported=0.0,
         keys=("model_name", "model", "azure_deployment"),

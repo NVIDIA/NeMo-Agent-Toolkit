@@ -231,7 +231,7 @@ class Settings(HashableBaseModel):
             return True
 
         except Exception as e:
-            logger.exception("Unable to validate user settings configuration: %s", e, exc_info=True)
+            logger.exception("Unable to validate user settings configuration: %s", e)
             return False
 
     def print_channel_settings(self, channel_type: str | None = None) -> None:

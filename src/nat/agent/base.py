@@ -70,12 +70,14 @@ class BaseAgent(ABC):
                  llm: BaseChatModel,
                  tools: list[BaseTool],
                  callbacks: list[AsyncCallbackHandler] | None = None,
-                 detailed_logs: bool = False) -> None:
+                 detailed_logs: bool = False,
+                 log_response_max_chars: int = 1000) -> None:
         logger.debug("Initializing Agent Graph")
         self.llm = llm
         self.tools = tools
         self.callbacks = callbacks or []
         self.detailed_logs = detailed_logs
+        self.log_response_max_chars = log_response_max_chars
         self.graph = None
 
     async def _stream_llm(self,
@@ -158,6 +160,11 @@ class BaseAgent(ABC):
                                        tool_call_id=tool.name,
                                        content=f"The tool {tool.name} provided an empty response.")
 
+                # ToolMessage only accepts str or list[str | dict] as content.
+                # Convert into list if the response is a dict.
+                if isinstance(response, dict):
+                    response = [response]
+
                 return ToolMessage(name=tool.name, tool_call_id=tool.name, content=response)
 
             except Exception as e:
@@ -181,10 +188,10 @@ class BaseAgent(ABC):
 
         # All retries exhausted, return error message
         error_content = "Tool call failed after all retry attempts. Last error: %s" % str(last_exception)
-        logger.error("%s %s", AGENT_LOG_PREFIX, error_content)
+        logger.error("%s %s", AGENT_LOG_PREFIX, error_content, exc_info=True)
         return ToolMessage(name=tool.name, tool_call_id=tool.name, content=error_content, status="error")
 
-    def _log_tool_response(self, tool_name: str, tool_input: Any, tool_response: str, max_chars: int = 1000) -> None:
+    def _log_tool_response(self, tool_name: str, tool_input: Any, tool_response: str) -> None:
         """
         Log tool response with consistent formatting and length limits.
 
@@ -196,13 +203,11 @@ class BaseAgent(ABC):
             The input that was passed to the tool
         tool_response : str
             The response from the tool
-        max_chars : int
-            Maximum number of characters to log (default: 1000)
         """
         if self.detailed_logs:
             # Truncate tool response if too long
-            display_response = tool_response[:max_chars] + "...(rest of response truncated)" if len(
-                tool_response) > max_chars else tool_response
+            display_response = tool_response[:self.log_response_max_chars] + "...(rest of response truncated)" if len(
+                tool_response) > self.log_response_max_chars else tool_response
 
             # Format the tool input for display
             tool_input_str = str(tool_input)

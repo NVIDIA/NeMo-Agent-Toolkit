@@ -144,7 +144,7 @@ class AgnoProfilerHandler(BaseProfilerCallback):
                 return result
 
             except Exception as e:
-                logger.exception("Tool execution error: %s", e)
+                logger.error("Tool execution error: %s", e)
                 raise
 
         return wrapped_tool_execute

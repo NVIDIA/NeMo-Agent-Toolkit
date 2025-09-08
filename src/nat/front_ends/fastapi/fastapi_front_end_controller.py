@@ -47,11 +47,11 @@ class _FastApiFrontEndController:
             self._server_background_task = asyncio.create_task(self._server.serve())
         except asyncio.CancelledError as e:
             error_message = f"Task error occurred while starting API server: {str(e)}"
-            logger.error(error_message, exc_info=True)
+            logger.error(error_message)
             raise RuntimeError(error_message) from e
         except Exception as e:
             error_message = f"Unexpected error occurred while starting API server: {str(e)}"
-            logger.error(error_message, exc_info=True)
+            logger.exception(error_message)
             raise RuntimeError(error_message) from e
 
     async def stop_server(self) -> None:
@@ -63,6 +63,6 @@ class _FastApiFrontEndController:
             self._server.should_exit = True
             await self._server_background_task
         except asyncio.CancelledError as e:
-            logger.error("Server shutdown failed: %s", str(e), exc_info=True)
+            logger.exception("Server shutdown failed: %s", str(e))
         except Exception as e:
-            logger.error("Unexpected error occurred: %s", str(e), exc_info=True)
+            logger.exception("Unexpected error occurred: %s", str(e))

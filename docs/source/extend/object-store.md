@@ -78,6 +78,9 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
    > **Note**: The `name="my_custom_object_store"` ensures that NeMo Agent toolkit can recognize it when the user places `_type: my_custom_object_store` in the object store config.
 
 2. **Implement an {py:class}`~nat.object_store.interfaces.ObjectStore`** that uses your backend:
+
+   It is recommended to have this implementation in a separate file from the config class and registration code.
+
    ```python
    from nat.object_store.interfaces import ObjectStore
    from nat.object_store.models import ObjectStoreItem
@@ -85,11 +88,19 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
    from nat.utils.type_utils import override
 
    class MyCustomObjectStore(ObjectStore):
-       def __init__(self, config: MyCustomObjectStoreConfig):
-           self._api_key = config.api_key
-           self._conn_url = config.connection_url
-           self._bucket_name = config.bucket_name
-           # Set up connections to your backend here
+       def __init__(self, *, api_key: str, conn_url: str, bucket_name: str):
+           self._api_key = api_key
+           self._conn_url = conn_url
+           self._bucket_name = bucket_name
+           # if sync, set up connections to your backend here
+
+       async def __aenter__(self) -> "MyCustomObjectStore":
+           # if async, set up connections to your backend here
+           return self
+       
+       async def __aexit__(self, exc_type, exc_value, traceback):
+           # if async, clean up connections to your backend here
+           pass
 
        @override
        async def put_object(self, key: str, item: ObjectStoreItem) -> None:
@@ -143,8 +154,10 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
    from nat.cli.register_workflow import register_object_store
 
    @register_object_store(config_type=MyCustomObjectStoreConfig)
-   async def my_custom_object_store(config: MyCustomObjectStoreConfig, builder: Builder):
-       yield MyCustomObjectStore(config)
+   async def my_custom_object_store(config: MyCustomObjectStoreConfig, _builder: Builder):
+       from .my_custom_object_store import MyCustomObjectStore
+       async with MyCustomObjectStore(**config.model_dump(exclude={"type"})) as store:
+           yield store
    ```
 
 4. **Use in config**: In your NeMo Agent toolkit config, you can do something like:
@@ -187,10 +200,10 @@ from nat.object_store.models import ObjectStoreItem
 from nat.utils.type_utils import override
 
 class MyCustomObjectStore(ObjectStore):
-    def __init__(self, cfg: MyCustomObjectStoreConfig):
-        self._url = cfg.url
-        self._token = cfg.token
-        self._bucket_name = cfg.bucket_name
+    def __init__(self, *, url: str, token: str, bucket_name: str):
+        self._url = url
+        self._token = token
+        self._bucket_name = bucket_name
 
     @override
     async def put_object(self, key: str, item: ObjectStoreItem) -> None:
@@ -225,10 +238,10 @@ class MyCustomObjectStoreConfig(ObjectStoreBaseConfig, name="my_custom_object_st
 
 
 @register_object_store(config_type=MyCustomObjectStoreConfig)
-async def my_custom_object_store(config: MyCustomObjectStoreConfig, builder: Builder):
+async def my_custom_object_store(config: MyCustomObjectStoreConfig, _builder: Builder):
 
     from .my_custom_object_store import MyCustomObjectStore
-    yield MyCustomObjectStore(config)
+    yield MyCustomObjectStore(**config.model_dump(exclude={"type"}))
 ```
 
 

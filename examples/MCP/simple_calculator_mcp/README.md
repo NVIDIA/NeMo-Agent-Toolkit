@@ -82,15 +82,14 @@ You can run the simple calculator workflow using Remote MCP tools. In this case,
 You can publish the simple calculator tools via MCP using the `nat mcp` command. Details are provided in the [MCP Server Guide](../../../docs/source/workflows/mcp/mcp-server.md).
 
 ## Configuration Examples
-
-| Configuration File | MCP Server Type | Available Tools |
-|-------------------|-----------------|-----------------|
-| `config-mcp-date.yml` | Date Server | Current time, date formatting |
-| `config-mcp-math.yml` | Math Server | Advanced mathematical operations |
-| `config-combined.yml` | Multiple Servers | Combined demonstration |
+| Configuration File | MCP Server Type | Transport | Available Tools |
+|--------------------|-----------------|-----------------|-----------------|
+| `config-mcp-date.yml` | Date Server | `sse` | Current time, date formatting |
+| `config-mcp-math.yml` | Math Server | `streamable-http` | Advanced mathematical operations |
+| `config-combined.yml` | Multiple Servers | `sse` and `streamable-http` | Combined demonstration |
+| `config-mcp-date-stdio.yml` | Multiple Servers | `stdio` and `streamable-http` | Combined demonstration |
 
 ### Running the Workflows
-
 **Date Server Example:**
 1. **Start the MCP server**: Follow the setup instructions in [README](./deploy_external_mcp/README.md) to start the containerized time server on port 8080
 2. **Run the workflow**:
@@ -112,4 +111,20 @@ You can publish the simple calculator tools via MCP using the `nat mcp` command.
 2. **Run the workflow**:
    ```bash
    nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-combined.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+   ```
+
+**Combined Example with STDIO:**
+1. **Install the `mcp_server_time` package**:
+   ```bash
+   uv pip install mcp-server-time
+   ```
+   `mcp-server-time` is used as a local MCP server via stdio transport.
+2. **Start the MCP math server**:
+   ```bash
+   nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
+   ```
+   This starts the MCP server on port 9901 with endpoint `/mcp`.
+3. **Run the workflow**:
+   ```bash
+   nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
    ```

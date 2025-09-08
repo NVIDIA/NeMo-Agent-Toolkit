@@ -193,14 +193,14 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
                                 await self._done_callback(batch)
                                 logger.debug("Scheduled flush routed batch of %d items through pipeline", len(batch))
                             except Exception as e:
-                                logger.error("Error routing scheduled batch through pipeline: %s", e, exc_info=True)
+                                logger.exception("Error routing scheduled batch through pipeline: %s", e)
                         else:
                             logger.warning("Scheduled flush created batch of %d items but no pipeline callback set",
                                            len(batch))
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            logger.error("Error in scheduled flush: %s", e, exc_info=True)
+            logger.exception("Error in scheduled flush: %s", e)
 
     async def _create_batch(self) -> list[T]:
         """Create a batch from the current queue."""
@@ -271,9 +271,7 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
                                 "Successfully flushed final batch of %d items through pipeline during shutdown",
                                 len(final_batch))
                         except Exception as e:
-                            logger.error("Error routing final batch through pipeline during shutdown: %s",
-                                         e,
-                                         exc_info=True)
+                            logger.exception("Error routing final batch through pipeline during shutdown: %s", e)
                     else:
                         logger.warning("Final batch of %d items created during shutdown but no pipeline callback set",
                                        len(final_batch))
@@ -285,7 +283,7 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
             logger.debug("BatchingProcessor shutdown completed successfully")
 
         except Exception as e:
-            logger.error("Error during BatchingProcessor shutdown: %s", e, exc_info=True)
+            logger.exception("Error during BatchingProcessor shutdown: %s", e)
             self._shutdown_complete = True
             self._shutdown_complete_event.set()
 
