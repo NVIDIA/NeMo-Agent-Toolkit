@@ -23,18 +23,18 @@ from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any
 
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic import create_model
+
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 from mcp.client.stdio import StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import create_model
-
-from nat.tool.mcp.exceptions import MCPToolNotFoundError
-from nat.utils.exception_handlers.mcp import mcp_exception_handler
+from nat.plugins.mcp.exception_handler import mcp_exception_handler
+from nat.plugins.mcp.exceptions import MCPToolNotFoundError
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
@@ -211,7 +211,9 @@ class MCPBaseClient(ABC):
 
         tool = self._tools.get(tool_name)
         if not tool:
-            raise MCPToolNotFoundError(tool_name, self.url)
+            # Get URL from the specific client implementation
+            url = getattr(self, 'url', 'unknown')
+            raise MCPToolNotFoundError(tool_name, url)
         return tool
 
     @mcp_exception_handler
