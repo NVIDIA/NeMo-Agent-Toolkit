@@ -13,18 +13,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=import-outside-toplevel
+# pylint: disable=import-outside-toplevel,redefined-outer-name
 
 from __future__ import annotations
 
+import importlib
+
 import pytest
 
-# Ensure registration of provider/clients from nat.test.llm
-import nat.test.llm as _test_llm  # noqa: F401
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.runtime.loader import load_workflow
-from nat.test.llm import TestLLMConfig
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _register_test_llm():
+    """Ensure `nat.test.llm` is imported so its provider/clients are registered."""
+    try:
+        importlib.import_module("nat.test.llm")
+    except ImportError:
+        pytest.skip("nat.test.llm not available; skip test_llm tests")
+
+
+@pytest.fixture(scope="module")
+def test_llm_config_cls():
+    """Return TestLLMConfig class from nat.test.llm."""
+    mod = importlib.import_module("nat.test.llm")
+    return getattr(mod, "TestLLMConfig")
+
 
 RESP_SEQ = ["alpha", "beta", "gamma"]
 
@@ -58,9 +74,8 @@ workflow:
     async with load_workflow(config_file) as workflow:
         async with workflow.run("What is 1+2?") as runner:
             result = await runner.result()
-    from langchain_core.messages import AIMessage
-    assert isinstance(result, AIMessage)
-    assert result.content == expected
+    assert isinstance(result, str)
+    assert result == expected
 
 
 @pytest.mark.asyncio
@@ -94,7 +109,6 @@ workflow:
     config_file.write_text(yaml_workflow if workflow_first else yaml_llms_first)
 
     async with load_workflow(config_file) as workflow:
-        from langchain_core.messages import AIMessage
         async with workflow.run("a") as r1:
             out1 = await r1.result()
         async with workflow.run("b") as r2:
@@ -102,8 +116,7 @@ workflow:
         async with workflow.run("c") as r3:
             out3 = await r3.result()
 
-        assert isinstance(out1, AIMessage) and isinstance(out2, AIMessage) and isinstance(out3, AIMessage)
-        assert [out1.content, out2.content, out3.content] == RESP_SEQ
+    assert [out1, out2, out3] == RESP_SEQ
 
 
 @pytest.mark.asyncio
@@ -126,9 +139,8 @@ workflow:
     async with load_workflow(config_file) as workflow:
         async with workflow.run("x") as runner:
             result = await runner.result()
-    from langchain_core.messages import AIMessage
-    assert isinstance(result, AIMessage)
-    assert result.content == RESP_SEQ[0]
+    assert isinstance(result, str)
+    assert result == RESP_SEQ[0]
 
 
 @pytest.mark.asyncio
@@ -170,19 +182,17 @@ workflow:
     file_a.write_text(yaml_a)
     file_b.write_text(yaml_b)
 
-    from langchain_core.messages import AIMessage
-
     async with load_workflow(file_a) as wf_a:
         async with wf_a.run("p") as ra:
             out_a1 = await ra.result()
-        assert isinstance(out_a1, AIMessage)
-        assert out_a1.content == exp_a
+        assert isinstance(out_a1, str)
+        assert out_a1 == exp_a
 
     async with load_workflow(file_b) as wf_b:
         async with wf_b.run("p") as rb:
             out_b1 = await rb.result()
-        assert isinstance(out_b1, AIMessage)
-        assert out_b1.content == exp_b
+        assert isinstance(out_b1, str)
+        assert out_b1 == exp_b
 
 
 @pytest.mark.asyncio
@@ -212,15 +222,13 @@ workflow:
     config_file = tmp_path / "chat_completion_varlen.yml"
     config_file.write_text(yaml_content)
 
-    from langchain_core.messages import AIMessage
-
     async with load_workflow(config_file) as workflow:
         outs = []
         for prompt in ("p1", "p2", "p3"):
             async with workflow.run(prompt) as runner:
                 res = await runner.result()
-            assert isinstance(res, AIMessage)
-            outs.append(res.content)
+            assert isinstance(res, str)
+            outs.append(res)
 
     assert outs == expected
 
@@ -260,15 +268,13 @@ workflow:
     config_file = tmp_path / "chat_completion_special.yml"
     config_file.write_text(yaml_content)
 
-    from langchain_core.messages import AIMessage
-
     async with load_workflow(config_file) as workflow:
         outs = []
         for prompt in ("p1", "p2", "p3"):
             async with workflow.run(prompt) as runner:
                 res = await runner.result()
-            assert isinstance(res, AIMessage)
-            outs.append(res.content)
+            assert isinstance(res, str)
+            outs.append(res)
 
     # Only compare up to len(seq)
     assert outs[:len(seq)] == seq
@@ -299,15 +305,13 @@ workflow:
     config_file = tmp_path / "chat_completion_many.yml"
     config_file.write_text(yaml_content)
 
-    from langchain_core.messages import AIMessage
-
     async with load_workflow(config_file) as workflow:
         outs = []
         for i in range(num_runs):
             async with workflow.run(f"p{i}") as runner:
                 res = await runner.result()
-            assert isinstance(res, AIMessage)
-            outs.append(res.content)
+            assert isinstance(res, str)
+            outs.append(res)
 
     assert outs == expected
 
@@ -323,21 +327,22 @@ workflow:
         (LLMFrameworkEnum.AGNO.value, ["m", "n", "o"]),
     ],
 )
-async def test_builder_framework_cycle(wrapper: str, seq: list[str]):
+async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_config_cls):
     """Build workflows programmatically and validate per-framework cycle order."""
 
     if wrapper == LLMFrameworkEnum.SEMANTIC_KERNEL.value:
         pytest.importorskip("semantic_kernel")
+    if wrapper == LLMFrameworkEnum.LLAMA_INDEX.value:
+        pytest.importorskip("llama_index")
 
     async with WorkflowBuilder() as builder:
-        cfg = TestLLMConfig(response_seq=list(seq), delay_ms=0)
+        cfg = test_llm_config_cls(response_seq=list(seq), delay_ms=0)
         await builder.add_llm("main", cfg)
         client = await builder.get_llm("main", wrapper_type=wrapper)
 
         outs: list[str] = []
 
         if wrapper == LLMFrameworkEnum.LANGCHAIN.value:
-            from langchain_core.messages import AIMessage
 
             for i in range(len(seq)):
                 res = await client.ainvoke([
@@ -345,14 +350,18 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str]):
                         "role": "user", "content": f"p{i}"
                     },
                 ])
-                assert isinstance(res, AIMessage)
-                outs.append(str(res.content))
+                assert isinstance(res, str)
+                outs.append(res)
 
         elif wrapper == LLMFrameworkEnum.LLAMA_INDEX.value:
             for _ in range(len(seq)):
                 r = await client.achat([])
-                assert hasattr(r, "text"), f"Response {r} missing 'text' attribute"
-                outs.append(r.text)
+                # Prefer message.content if available; fallback to .text
+                content = getattr(getattr(r, "message", None), "content", None)
+                if content is None:
+                    content = getattr(r, "text", None)
+                assert isinstance(content, str), f"Unexpected LlamaIndex response: {r}"
+                outs.append(content)
         elif wrapper == LLMFrameworkEnum.CREWAI.value:
             for i in range(len(seq)):
                 r = client.call([

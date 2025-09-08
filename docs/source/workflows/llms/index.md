@@ -124,6 +124,10 @@ The Azure OpenAI LLM provider is defined by the {py:class}`~nat.llm.azure_openai
 * `seed` - The seed to use for the model
 * `max_retries` - The maximum number of retries for the request
 
+:::{note}
+`temperature` is model-gated and may not be supported by all models. See [Gated Fields](../../extend/gated-fields.md) for details.
+:::
+
 ## Testing Provider
 ### `nat_test_llm`
 `nat_test_llm` is a development and testing provider intended for examples and CI. It is not intended for production use.
@@ -150,11 +154,6 @@ workflow:
 <!-- vale off -->
 * See a short tutorial using YAML and `nat_test_llm`: [Testing with nat_test_llm](../../tutorials/testing-with-nat-test-llm.md)
 <!-- vale on -->
-
-:::{note}
-`temperature` is model-gated and may not be supported by all models. See [Gated Fields](../../extend/gated-fields.md) for details.
-:::
-
 
 ```{toctree}
 :caption: LLMs

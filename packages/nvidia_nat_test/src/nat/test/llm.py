@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-argument,missing-class-docstring,missing-function-docstring,import-outside-toplevel,too-few-public-methods
+# pylint: disable=unused-argument,missing-class-docstring,missing-function-docstring,import-outside-toplevel
+# pylint: disable=too-few-public-methods
 
 import asyncio
 import time
@@ -37,15 +38,15 @@ class TestLLMConfig(LLMBaseConfig, name="nat_test_llm"):
     __test__ = False
     response_seq: list[str] = Field(
         default=[],
-        description=("returns the next element in order (wraps)"),
+        description="Returns the next element in order (wraps)",
     )
     delay_ms: int = Field(default=0, ge=0, description="Artificial per-call delay in milliseconds to mimic latency")
 
 
 class _ResponseChooser:
     """
-    Helper class to choose the next response according to config using itertools.cycle and provide synchronous
-    and asynchronous sleep functions.
+    Helper class to choose the next response according to config using itertools.cycle and provide synchronous and
+    asynchronous sleep functions.
     """
 
     def __init__(self, response_seq: list[str], delay_ms: int):
@@ -67,83 +68,76 @@ class _ResponseChooser:
 
 @register_llm_provider(config_type=TestLLMConfig)
 async def test_llm_provider(config: TestLLMConfig, builder: Builder):
-    del builder  # suppress linting error
+    """Register the `nat_test_llm` provider for the NAT registry."""
     yield LLMProviderInfo(config=config, description="Test LLM provider")
 
 
 @register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def test_llm_langchain(config: TestLLMConfig, builder: Builder):
-    """LLM client for LangChain"""
-    from langchain_core.messages import AIMessage
+    """LLM client for LangChain."""
 
-    del builder  # suppress linting error
     chooser = _ResponseChooser(response_seq=config.response_seq, delay_ms=config.delay_ms)
 
     class LangChainTestLLM:
 
-        def invoke(self, messages: Any, **_kwargs: Any) -> AIMessage:
+        def invoke(self, messages: Any, **_kwargs: Any) -> str:
             chooser.sync_sleep()
-            return AIMessage(content=chooser.next_response())
+            return chooser.next_response()
 
-        async def ainvoke(self, messages: Any, **_kwargs: Any) -> AIMessage:
+        async def ainvoke(self, messages: Any, **_kwargs: Any) -> str:
             await chooser.async_sleep()
-            return AIMessage(content=chooser.next_response())
+            return chooser.next_response()
 
-        def stream(self, messages: Any, **_kwargs: Any) -> Iterator[AIMessage]:
+        def stream(self, messages: Any, **_kwargs: Any) -> Iterator[str]:
             chooser.sync_sleep()
-            yield AIMessage(content=chooser.next_response())
+            yield chooser.next_response()
 
-        async def astream(self, messages: Any, **_kwargs: Any) -> AsyncGenerator[AIMessage, None]:
+        async def astream(self, messages: Any, **_kwargs: Any) -> AsyncGenerator[str]:
             await chooser.async_sleep()
-            yield AIMessage(content=chooser.next_response())
+            yield chooser.next_response()
 
     yield LangChainTestLLM()
 
 
 @register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
 async def test_llm_llama_index(config: TestLLMConfig, builder: Builder):
-    """LLM client for LlamaIndex"""
-    del builder  # suppress linting error
+
+    try:
+        from llama_index.core.base.llms.types import ChatMessage
+        from llama_index.core.base.llms.types import ChatResponse
+    except ImportError as exc:
+        raise ImportError("llama_index is required for using the test_llm with llama_index. "
+                          "Please install the `nvidia-nat-llama-index` package. ") from exc
+
     chooser = _ResponseChooser(response_seq=config.response_seq, delay_ms=config.delay_ms)
-
-    class LIChatMessage:
-
-        def __init__(self, content: str) -> None:
-            self.content = content
-
-    class LIChatResponse:
-
-        def __init__(self, text: str) -> None:
-            self.message = LIChatMessage(text)
-            self.text = text
 
     class LITestLLM:
 
-        def chat(self, messages: list[Any] | None = None, **_kwargs: Any) -> LIChatResponse:
+        def chat(self, messages: list[Any] | None = None, **_kwargs: Any) -> ChatResponse:
             chooser.sync_sleep()
-            return LIChatResponse(chooser.next_response())
+            return ChatResponse(message=ChatMessage(chooser.next_response()))
 
-        async def achat(self, messages: list[Any] | None = None, **_kwargs: Any) -> LIChatResponse:
+        async def achat(self, messages: list[Any] | None = None, **_kwargs: Any) -> ChatResponse:
             await chooser.async_sleep()
-            return LIChatResponse(chooser.next_response())
+            return ChatResponse(message=ChatMessage(chooser.next_response()))
 
-        def stream_chat(self, messages: list[Any] | None = None, **_kwargs: Any) -> Iterator[LIChatResponse]:
+        def stream_chat(self, messages: list[Any] | None = None, **_kwargs: Any) -> Iterator[ChatResponse]:
             chooser.sync_sleep()
-            yield LIChatResponse(chooser.next_response())
+            yield ChatResponse(message=ChatMessage(chooser.next_response()))
 
         async def astream_chat(self,
                                messages: list[Any] | None = None,
-                               **_kwargs: Any) -> AsyncGenerator[LIChatResponse, None]:
+                               **_kwargs: Any) -> AsyncGenerator[ChatResponse, None]:
             await chooser.async_sleep()
-            yield LIChatResponse(chooser.next_response())
+            yield ChatResponse(message=ChatMessage(chooser.next_response()))
 
     yield LITestLLM()
 
 
 @register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
 async def test_llm_crewai(config: TestLLMConfig, builder: Builder):
-    """LLM client for CrewAI"""
-    del builder  # suppress linting error
+    """LLM client for CrewAI."""
+
     chooser = _ResponseChooser(response_seq=config.response_seq, delay_ms=config.delay_ms)
 
     class CrewAITestLLM:
@@ -157,11 +151,15 @@ async def test_llm_crewai(config: TestLLMConfig, builder: Builder):
 
 @register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
 async def test_llm_semantic_kernel(config: TestLLMConfig, builder: Builder):
-    """LLM client for SemanticKernel"""
-    from semantic_kernel.contents.chat_message_content import ChatMessageContent
-    from semantic_kernel.contents.utils.author_role import AuthorRole
+    """LLM client for SemanticKernel."""
 
-    del builder  # suppress linting error
+    try:
+        from semantic_kernel.contents.chat_message_content import ChatMessageContent
+        from semantic_kernel.contents.utils.author_role import AuthorRole
+    except ImportError as exc:
+        raise ImportError("Semantic Kernel is required for using the test_llm with semantic_kernel. "
+                          "Please install the `nvidia-nat-semantic-kernel` package. ") from exc
+
     chooser = _ResponseChooser(response_seq=config.response_seq, delay_ms=config.delay_ms)
 
     class SKTestLLM:
@@ -182,8 +180,8 @@ async def test_llm_semantic_kernel(config: TestLLMConfig, builder: Builder):
 
 @register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.AGNO)
 async def test_llm_agno(config: TestLLMConfig, builder: Builder):
-    """LLM client for agno"""
-    del builder  # suppress linting error
+    """LLM client for agno."""
+
     chooser = _ResponseChooser(response_seq=config.response_seq, delay_ms=config.delay_ms)
 
     class AgnoTestLLM:
