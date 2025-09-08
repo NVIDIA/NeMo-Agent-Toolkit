@@ -23,6 +23,20 @@ limitations under the License.
 
 NeMo Agent toolkit provides a set of evaluators to run and evaluate workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
 
+## Prerequisites
+
+In addition to the base `nvidia-nat` package, you need to install the `profiling` sub-package to use the `nat eval` command.
+
+If you are installing from source, you can install the sub-package by running the following command from the root directory of the NeMo Agent toolkit repository:
+```bash
+uv pip install -e '.[profiling]'
+```
+
+If you are installing from a package, you can install the sub-package by running the following command:
+```bash
+uv pip install nvidia-nat[profiling]
+```
+
 ## Evaluating a Workflow
 To evaluate a workflow, you can use the `nat eval` command. The `nat eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
 
