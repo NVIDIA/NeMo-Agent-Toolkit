@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.11, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and sys_platform == 'win32'",
@@ -22,6 +23,7 @@ members = [
     "nvidia-nat-ingestion",
     "nvidia-nat-langchain",
     "nvidia-nat-llama-index",
+    "nvidia-nat-mcp",
     "nvidia-nat-mem0ai",
     "nvidia-nat-mysql",
     "nvidia-nat-opentelemetry",
@@ -4322,7 +4324,7 @@ name = "milvus-lite"
 version = "2.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "tqdm" },
+    { name = "tqdm", marker = "sys_platform != 'win32'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a9/b2/acc5024c8e8b6a0b034670b8e8af306ebd633ede777dcbf557eac4785937/milvus_lite-2.5.1-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:6b014453200ba977be37ba660cb2d021030375fa6a35bc53c2e1d92980a0c512", size = 27934713 },
@@ -4900,13 +4902,14 @@ name = "nat-simple-calculator-mcp"
 source = { editable = "examples/MCP/simple_calculator_mcp" }
 dependencies = [
     { name = "nat-simple-calculator" },
-    { name = "nvidia-nat", extra = ["langchain"] },
+    { name = "nvidia-nat", extra = ["langchain", "mcp"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["mcp"], editable = "." },
 ]
 
 [[package]]
@@ -5355,6 +5358,9 @@ langchain = [
 llama-index = [
     { name = "nvidia-nat-llama-index" },
 ]
+mcp = [
+    { name = "nvidia-nat-mcp" },
+]
 mem0ai = [
     { name = "nvidia-nat-mem0ai" },
 ]
@@ -5473,6 +5479,7 @@ requires-dist = [
     { name = "nvidia-nat-ingestion", marker = "extra == 'ingestion'", editable = "packages/nvidia_nat_ingestion" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-llama-index", marker = "extra == 'llama-index'", editable = "packages/nvidia_nat_llama_index" },
+    { name = "nvidia-nat-mcp", marker = "extra == 'mcp'", editable = "packages/nvidia_nat_mcp" },
     { name = "nvidia-nat-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/nvidia_nat_mem0ai" },
     { name = "nvidia-nat-mysql", marker = "extra == 'mysql'", editable = "packages/nvidia_nat_mysql" },
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'opentelemetry'", editable = "packages/nvidia_nat_opentelemetry" },
@@ -5502,6 +5509,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
+provides-extras = ["all", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "gunicorn"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -5562,6 +5570,7 @@ dependencies = [
     { name = "nvidia-nat-ingestion" },
     { name = "nvidia-nat-langchain" },
     { name = "nvidia-nat-llama-index" },
+    { name = "nvidia-nat-mcp" },
     { name = "nvidia-nat-mem0ai" },
     { name = "nvidia-nat-mysql" },
     { name = "nvidia-nat-opentelemetry" },
@@ -5584,6 +5593,7 @@ requires-dist = [
     { name = "nvidia-nat-ingestion", editable = "packages/nvidia_nat_ingestion" },
     { name = "nvidia-nat-langchain", editable = "packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-llama-index", editable = "packages/nvidia_nat_llama_index" },
+    { name = "nvidia-nat-mcp", editable = "packages/nvidia_nat_mcp" },
     { name = "nvidia-nat-mem0ai", editable = "packages/nvidia_nat_mem0ai" },
     { name = "nvidia-nat-mysql", editable = "packages/nvidia_nat_mysql" },
     { name = "nvidia-nat-opentelemetry", editable = "packages/nvidia_nat_opentelemetry" },
@@ -5692,6 +5702,20 @@ requires-dist = [
     { name = "llama-index-llms-nvidia", specifier = "~=0.3.1" },
     { name = "llama-index-llms-openai", specifier = "~=0.3.42" },
     { name = "llama-index-readers-file", specifier = "~=0.4.4" },
+    { name = "nvidia-nat", editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-mcp"
+source = { editable = "packages/nvidia_nat_mcp" }
+dependencies = [
+    { name = "mcp" },
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "mcp", specifier = "~=1.13" },
     { name = "nvidia-nat", editable = "." },
 ]
 
