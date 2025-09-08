@@ -158,8 +158,9 @@ async def list_tools_and_schemas(command, url, tool_name=None, transport='sse', 
         from nat.plugins.mcp.client import MCPStdioClient
         from nat.plugins.mcp.client import MCPStreamableHTTPClient
     except ImportError:
-        click.echo("MCP client functionality requires nvidia-nat-mcp package. Install with: pip install nvidia-nat-mcp",
-                   err=True)
+        click.echo(
+            "MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp",
+            err=True)
         return []
 
     if args is None:
