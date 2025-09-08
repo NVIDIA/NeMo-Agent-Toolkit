@@ -35,6 +35,7 @@ To install these first-party plugin libraries, you can use the full distribution
 
 - `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/)
+- `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
 - `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/)
 - `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
 - `nvidia-nat[mem0ai]` or `nvidia-nat-mem0ai` - [Mem0](https://mem0.ai/)
@@ -108,7 +109,7 @@ NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run 
     Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
     :::
 
-    In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
+    In addition to plugins, there are optional dependencies needed for profiling. Installing the `profiling` sub-package is required for evaluation and profiling workflows using `nat eval`. To install these dependencies, run the following:
     ```bash
     uv pip install -e '.[profiling]'
     ```
