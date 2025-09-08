@@ -437,12 +437,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         # If the function group exposes functions, add them to the global function registry
         # If the function group exposes functions, record and add them to the registry
-        for k in build_result.instance.get_exposed_functions():
+        for k in build_result.instance.get_included_functions():
             if k in self._functions:
                 raise ValueError(f"Exposed function `{k}` from group `{name}` conflicts with an existing function")
         self._functions.update({
             k: ConfiguredFunction(config=v.config, instance=v)
-            for k, v in build_result.instance.get_exposed_functions().items()
+            for k, v in build_result.instance.get_included_functions().items()
         })
 
         return build_result.instance
@@ -536,6 +536,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 raise ValueError(f"Function or Function Group `{n}` already seen")
             seen.add(n)
             if n not in self._function_groups:
+                # the passed tool name is probably a function
                 if is_function_group_ref:
                     raise ValueError(f"Function group `{n}` not found in the list of function groups")
                 tools.append(self.get_tool(n, wrapper_type))
@@ -545,15 +546,15 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
 
             current_function_group = self._function_groups[n]
-            # walk through all functions in the function group -- guaranteed to not be fallible
 
+            # walk through all functions in the function group -- guaranteed to not be fallible
             for fn_name, fn_instance in current_function_group.instance.get_accessible_functions().items():
                 try:
                     # Wrap in the correct wrapper and add to tools list
                     tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
-                except Exception as e:
+                except Exception:
                     logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
-                    raise e
+                    raise
 
         return tools
 

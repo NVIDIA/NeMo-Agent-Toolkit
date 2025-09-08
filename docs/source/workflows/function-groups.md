@@ -19,7 +19,7 @@ limitations under the License.
 
 Function groups let you package multiple related functions together so they can share configuration, context, and resources within the NeMo Agent toolkit.
 
-In a function group, you define several callable operations (functions) and optionally choose which ones to expose globally. Exposed functions become addressable by fully qualified names like `group_name.function_name` and can be wrapped as tools for agent frameworks.
+In a function group, you define several callable operations (functions) and optionally choose which ones to include or exclude. Explicitly included functions become addressable by fully qualified names like `group_name.function_name` and can be wrapped as tools for agent frameworks. Excluded functions are still accessible programmatically, but are not addressable by fully qualified names or wrapped as tools by default.
 
 ## Key Concepts
 
@@ -33,11 +33,11 @@ Functions inside a group are automatically grouped by the group instance name. I
 
 ### Exposing Functions
 
-Use the `expose` list on the group configuration to control which functions are added to the global function registry. If `expose` is empty, the group is still usable as a group, and you can access its functions programmatically. Only exposed functions become globally addressable as functions.
+Use the `include` list to control which functions are added to the global registry. If `include` is empty, the group remains usable as a group, but individual functions are not globally addressable. If `exclude` is provided, matching functions are filtered out and are not wrapped as tools, but they remain accessible programmatically.
 
 ### Tool Wrapping
 
-You can request tools for an entire function group. The builder will wrap all accessible functions (honoring `expose`) into the requested tool wrapper for a given agent framework.
+You can request tools for an entire function group. The builder will wrap all accessible functions (honoring `include` and `exclude`) into the requested tool wrapper for a given agent framework.
 
 ## Using Function Groups
 
@@ -54,13 +54,18 @@ from nat.builder.function import FunctionGroup
 
 
 class MathGroupConfig(FunctionGroupBaseConfig, name="math_group"):
-    # If you want to provide a default expose list, you can do so here.
-    # Otherwise, you can specify the expose list in the workflow configuration.
-    # If you do not provide an expose list, then you cannot reference individual functions in the tool_names list.
+    # If you want to provide a default include list, you can do so here.
+    # Otherwise, you can specify the include list in the workflow configuration.
+    # If you do not provide an include list, then you cannot reference individual functions in the tool_names list.
     # You can still reference the entire group.
 
-    # expose: list[str] = Field(default_factory=lambda: ["add"],
-    #                          description="Functions to expose globally")
+    # include: list[str] = Field(default_factory=lambda: ["add"],
+    #                          description="Functions to include globally")
+
+    # OR
+
+    # exclude: list[str] = Field(default_factory=lambda: ["mul"],
+    #                          description="Functions to exclude globally")
     pass
 
 
@@ -94,7 +99,7 @@ async def build_math_group(config: MathGroupConfig, _builder: Builder):
 
 The `function_groups` section of a workflow configuration declares groups by instance name and type, and the `workflow.tool_names` field can reference either the entire group or individual functions.
 
-If you do not provide an `expose` list, then you cannot reference individual functions in the `tool_names` list. You can still reference the entire group.
+If you do not provide an `include` list, then you cannot reference individual functions in the `tool_names` list. You can still reference the entire group.
 
 ```yaml
 general:
@@ -103,19 +108,23 @@ general:
 function_groups:
   math:
     _type: math_group
-    # Option A: expose no functions globally, but still usable as a group
-    # expose: []
+    # Option A: include and exclude no functions globally, but still usable as a group
+    # # omit include and exclude lists
 
-    # Option B: expose selected functions globally (accessible as a function named math.add, math.mul)
-    expose: [add, mul]
+    # Option B: exclude selected functions globally
+    exclude: [mul]
+
+    # Option C: include selected functions globally (accessible as a function named math.add, math.mul)
+    include: [add, mul]
 
 workflow:
   _type: react_agent
-  # Option A: reference the whole group (all group's functions are accessible)
-  # tool_names: [math]
+  # Option A: reference the group (only non-excluded functions are accessible)
+  # tool_names: [math]  # note that this is the group name, not the function name
 
-  # Option B: reference specific functions
-  tool_names: [math.add, math.mul]
+  # Option B: reference specific functions (can only be used if include list is provided)
+  tool_names: [math.add]
+
   llm_name: my_llm
   verbose: true
 ```
@@ -123,17 +132,17 @@ workflow:
 
 #### Adding a Function Group to a Workflow Programmatically
 
-Use {py:meth}`~nat.builder.workflow_builder.WorkflowBuilder.add_function_group` to add a group to your workflow. Exposed functions are automatically added to the global function registry with names like `math.add`.
+Use {py:meth}`~nat.builder.workflow_builder.WorkflowBuilder.add_function_group` to add a group to your workflow. Included functions are automatically added to the global function registry with names like `math.add`. Excluded functions are not added to the global function registry and are not accessible by fully qualified names or wrapped as tools by default. However, they are still accessible programmatically.
 
 ```python
 from nat.builder.workflow_builder import WorkflowBuilder
 
 
 async with WorkflowBuilder() as builder:
-    # Add the function group; only exposed functions become globally available
-    await builder.add_function_group("math", MathGroupConfig(expose=["add"]))
+    # Add the function group; only included functions become globally available
+    await builder.add_function_group("math", MathGroupConfig(include=["add"]))
 
-    # Call an exposed function directly by its fully-qualified name
+    # Call an included function directly by its fully-qualified name
     add = builder.get_function("math.add")
     result = await add.ainvoke([1, 2, 3])  # 6
 ```
@@ -148,6 +157,9 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 
 
 tools = builder.get_tools([FunctionGroupRef("math")], wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+# or the following:
+# tools = builder.get_tools(["math"], wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 ```
 
 ## Writing Function Groups

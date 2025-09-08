@@ -151,7 +151,7 @@ class MockBuilder(Builder):
     def get_function_group(self, name: str) -> FunctionGroup:
         """Return a mock function group if one is configured."""
         if name in self._mocks:
-            mock_fn_group = MagicMock()
+            mock_fn_group = MagicMock(spec=FunctionGroup)
             mock_fn_group.ainvoke = AsyncMock(return_value=self._mocks[name])
             return mock_fn_group
         raise ValueError(f"Function group '{name}' not mocked. Use mock_function_group() to add it.")

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import re
 import typing
 from abc import ABC
 from abc import abstractmethod
@@ -393,41 +394,21 @@ class FunctionGroup:
         Raises
         ------
         ValueError
-            When the function name is empty or contains whitespace.
+            When the function name is empty or blank.
+            When the function name contains invalid characters.
             When the function already exists in the function group.
         """
-        if not name:
-            raise ValueError("Function name cannot be empty")
-        if any(c.isspace() for c in name):
-            raise ValueError(f"Function name cannot contain whitespace: {name}")
+        if not name.strip():
+            raise ValueError("Function name cannot be empty or blank")
+        if not re.match(r"^[a-zA-Z0-9_-]+$", name):
+            raise ValueError(f"Function name can only contain letters, numbers, underscores, and hyphens: {name}")
         if name in self._functions:
             raise ValueError(f"Function {name} already exists in function group {self._instance_name}")
 
         info = FunctionInfo.from_fn(fn, input_schema=input_schema, description=description, converters=converters)
-        full_name = f"{self._instance_name}.{name}"
+        full_name = self._get_fn_name(name)
         lambda_fn = LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name=full_name)
         self._functions[name] = lambda_fn
-
-    def get_accessible_functions(self) -> dict[str, Function]:
-        """
-        Returns a dictionary of all accessible functions in the function group.
-        If the function group is configured to not expose any function, this will return all functions in the group.
-        If the function group is configured to expose some functions, this will return only the exposed functions.
-
-        Returns
-        -------
-        dict[str, Function]
-            A dictionary of all accessible functions in the function group.
-
-        Raises
-        ------
-        ValueError
-            When the function group is configured to expose functions that are not found in the group.
-        """
-        if self._config.expose:
-            return self.get_exposed_functions()
-        else:
-            return {f"{self._instance_name}.{name}": func for name, func in self._functions.items()}
 
     def get_config(self) -> FunctionGroupBaseConfig:
         """
@@ -440,25 +421,106 @@ class FunctionGroup:
         """
         return self._config
 
-    def get_exposed_functions(self) -> dict[str, Function]:
+    def _get_fn_name(self, name: str) -> str:
+        return f"{self._instance_name}.{name}"
+
+    def _get_all_but_excluded_functions(self) -> dict[str, Function]:
         """
-        Returns a dictionary of all exposed functions in the function group.
-        If the function group is configured to not expose any functions, this will return an empty dictionary.
+        Returns a dictionary of all functions in the function group except the excluded functions.
+        """
+        if set(self._config.exclude) - set(self._functions.keys()):
+            raise ValueError(f"Function group {self._instance_name} excludes functions that are not found in the group."
+                             f" Available functions: {list(self._functions.keys())}")
+        result: dict[str, Function] = {}
+        excluded = set(self._config.exclude)
+        for name in self._functions:
+            if name not in excluded:
+                result[self._get_fn_name(name)] = self._functions[name]
+        return result
+
+    def get_accessible_functions(self) -> dict[str, Function]:
+        """
+        Returns a dictionary of all accessible functions in the function group.
+        If the function group is configured to:
+        - include some functions, this will return only the included functions.
+        - not include or exclude any function, this will return all functions in the group.
+        - exclude some functions, this will return all functions in the group except the excluded functions.
 
         Returns
         -------
         dict[str, Function]
-            A dictionary of all exposed functions in the function group.
+            A dictionary of all accessible functions in the function group.
+
+        Raises
+        ------
+        ValueError
+            When the function group is configured to include functions that are not found in the group.
+        """
+        if self._config.include:
+            return self.get_included_functions()
+        if self._config.exclude:
+            return self._get_all_but_excluded_functions()
+        return self.get_all_functions()
+
+    def get_excluded_functions(self) -> dict[str, Function]:
+        """
+        Returns a dictionary of all functions in the function group which are configured to be excluded.
+        If the function group is configured to not exclude any functions, this will return an empty dictionary.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all excluded functions in the function group.
+
+        Raises
+        ------
+        ValueError
+            When the function group is configured to exclude functions that are not found in the group.
+        """
+        if set(self._config.exclude) - set(self._functions.keys()):
+            raise ValueError(f"Function group {self._instance_name} excludes functions that are not found in the group."
+                             f" Available functions: {list(self._functions.keys())}")
+        excluded: dict[str, Function] = {}
+        for name in self._config.exclude:
+            excluded[self._get_fn_name(name)] = self._functions[name]
+        return excluded
+
+    def get_included_functions(self) -> dict[str, Function]:
+        """
+        Returns a dictionary of all functions in the function group which are:
+        - configured to be included and added to the global function registry
+        - not configured to be excluded.
+        If the function group is configured to not include any functions, this will return an empty dictionary.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all included functions in the function group.
 
         Raises
         ------
         ValueError
             When the function group is configured to expose functions that are not found in the group.
         """
-        if set(self._config.expose) - set(self._functions.keys()):
-            raise ValueError(f"Function group {self._instance_name} exposes functions that are not found in the group. "
-                             f"Available functions: {list(self._functions.keys())}")
-        return {
-            f"{self._instance_name}.{name}": func
-            for name, func in self._functions.items() if name in self._config.expose
-        }
+        if set(self._config.include) - set(self._functions.keys()):
+            raise ValueError(
+                f"Function group {self._instance_name} includes functions that are not found in the group. "
+                f"Available functions: {list(self._functions.keys())}")
+        included: dict[str, Function] = {}
+        for name in self._config.include:
+            included[self._get_fn_name(name)] = self._functions[name]
+        return included
+
+    def get_all_functions(self) -> dict[str, Function]:
+        """
+        Returns a dictionary of all functions in the function group, regardless if they are included or excluded.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all functions in the function group.
+        """
+        result: dict[str, Function] = {}
+        for name in self._functions:
+            result[self._get_fn_name(name)] = self._functions[name]
+        return result

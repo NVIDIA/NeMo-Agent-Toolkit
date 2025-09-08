@@ -17,6 +17,7 @@ import typing
 
 from pydantic import Field
 from pydantic import field_validator
+from pydantic import model_validator
 
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
@@ -31,17 +32,27 @@ class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 
     Function groups enable sharing of configurations and resources across multiple functions.
     """
-    expose: list[str] = Field(
+    include: list[str] = Field(
         default_factory=list,
-        description="The list of exposed function names which should be added to the global Function registry",
+        description="The list of function names which should be added to the global Function registry",
+    )
+    exclude: list[str] = Field(
+        default_factory=list,
+        description="The list of function names which should be excluded from default access to the group",
     )
 
-    @field_validator("expose")
+    @field_validator("include", "exclude")
     @classmethod
-    def validate_expose(cls, value: list[str]):
+    def validate_fields_include_exclude(cls, value: list[str]) -> list[str]:
         if len(set(value)) != len(value):
-            raise ValueError("Exposed function names must be unique")
+            raise ValueError("Function names must be unique")
         return value
+
+    @model_validator(mode="after")
+    def validate_include_exclude(self):
+        if self.include and self.exclude:
+            raise ValueError("include and exclude cannot be used together")
+        return self
 
 
 class EmptyFunctionConfig(FunctionBaseConfig, name="EmptyFunctionConfig"):

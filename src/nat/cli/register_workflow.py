@@ -180,9 +180,8 @@ def register_function(config_type: type[FunctionConfigT],
 def register_function_group(config_type: type[FunctionGroupConfigT],
                             framework_wrappers: list[LLMFrameworkEnum | str] | None = None):
     """
-    Register a function group with the NeMo Agent Toolkit.
-
-    Function groups enable sharing of configurations and resources across multiple functions.
+    Register a function group with optional framework_wrappers for automatic profiler hooking.
+    Function groups share configuration/resources across multiple functions.
     """
 
     def register_function_group_inner(

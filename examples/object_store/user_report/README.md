@@ -244,7 +244,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: get_user_report
+Calling tools: user_report.get
 Tool's input: {"user_id": "67890", "date": null}
 
 <snipped for brevity>
@@ -288,7 +288,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 Calling tools: user_report.put
 Tool's input: {"report": "{\n    \"recommendations\": [\n        \"Update graphics driver\",\n        \"Check for overheating hardware\",\n        \"Enable automatic crash reporting\"\n    ]\n}", "user_id": "6789", "date": null}
 Tool's response:
-User report for 678901 with date latest added successfully
+User report for 6789 with date latest added successfully
 
 <snipped for brevity>
 
