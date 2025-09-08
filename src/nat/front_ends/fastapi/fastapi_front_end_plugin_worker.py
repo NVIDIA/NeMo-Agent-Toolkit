@@ -63,9 +63,7 @@ from nat.front_ends.fastapi.response_helpers import generate_single_response
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
-from nat.front_ends.fastapi.utils import get_class_name
 from nat.front_ends.fastapi.utils import get_config_file_path
-from nat.front_ends.fastapi.utils import import_class_from_string
 from nat.object_store.models import ObjectStoreItem
 from nat.runtime.loader import load_workflow
 from nat.runtime.session import SessionManager
@@ -294,9 +292,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 await job_store.update_status(job_id, "running")
                 eval_runner = EvaluationRun(eval_config)
 
-                async with load_workflow(workflow_config_file_path) as session_manager:
-                    output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=session_manager,
-                                                                                     job_id=job_id)
+                async with load_workflow(workflow_config_file_path) as local_session_manager:
+                    output: EvaluationRunOutput = await eval_runner.run_and_evaluate(
+                        session_manager=local_session_manager, job_id=job_id)
 
                 if output.workflow_interrupted:
                     await job_store.update_status(job_id, "interrupted")
@@ -773,10 +771,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             assert JobStore is not None, "JobStore should be initialized when Dask is available"
             job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
             try:
-                async with load_workflow(config_file_path) as session_manager:
-                    result = await generate_single_response(payload,
-                                                            session_manager,
-                                                            result_type=session_manager.workflow.single_output_schema)
+                async with load_workflow(config_file_path) as local_session_manager:
+                    result = await generate_single_response(
+                        payload, local_session_manager, result_type=local_session_manager.workflow.single_output_schema)
 
                 await job_store.update_status(job_id, "success", output=result)
             except Exception as e:
