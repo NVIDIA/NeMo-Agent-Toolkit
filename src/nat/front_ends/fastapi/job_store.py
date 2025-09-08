@@ -203,8 +203,6 @@ class JobStore:
             future_var = Variable(name=job_id, client=client)
             await future_var.set(future)
 
-            fire_and_forget(future)
-
             if sync_timeout > 0:
                 try:
                     _ = await future.result(timeout=sync_timeout)
@@ -213,6 +211,8 @@ class JobStore:
                     return (job_id, job)
                 except TimeoutError:
                     pass
+
+            fire_and_forget(future)
 
         return (job_id, None)
 
