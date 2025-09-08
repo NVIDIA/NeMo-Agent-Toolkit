@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import shutil
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -24,6 +23,7 @@ import pytest_asyncio
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from _utils.dask_utils import await_job
 from nat.data_models.config import Config
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -95,25 +95,6 @@ def create_job(test_client: TestClient, config_file: str, job_id: str | None = N
         payload["job_id"] = job_id
 
     return test_client.post("/evaluate", json=payload)
-
-
-async def await_job(job_id: str):
-    """Helper to await a job completion."""
-    from dask.distributed import Client as DaskClient
-    from dask.distributed import Variable
-
-    client = await DaskClient(address=os.environ["NAT_DASK_SCHEDULER_ADDRESS"], asynchronous=True)
-    results = None
-
-    try:
-        var = Variable(name=job_id, client=client)
-        future = await var.get(timeout=5)
-        results = await future.result(timeout=30)
-
-    finally:
-        await client.close()
-
-    return results
 
 
 @pytest.mark.asyncio

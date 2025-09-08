@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import io
 import time
 from contextlib import asynccontextmanager
@@ -25,6 +24,7 @@ from httpx import ASGITransport
 from httpx import AsyncClient
 from httpx_sse import aconnect_sse
 
+from _utils.dask_utils import await_job
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -253,7 +253,7 @@ async def test_generate_async(fn_use_openai_api: bool):
             assert status in expected_status_values
             assert time.time() < deadline, "Job did not complete in time"
             if status != "success":
-                await asyncio.sleep(0.1)
+                await await_job("1")
 
 
 async def test_async_job_status_not_found():
