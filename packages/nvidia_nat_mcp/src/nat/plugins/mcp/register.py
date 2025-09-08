@@ -18,4 +18,5 @@
 
 # Import any providers which need to be automatically registered here
 
-from . import functions
+from . import client_impl
+from . import tool

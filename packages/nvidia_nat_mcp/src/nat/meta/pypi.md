@@ -28,3 +28,5 @@ This package provides MCP (Model Context Protocol) client functionality, allowin
 - Connect to MCP servers via streamable-http, SSE, or stdio transports
 - Wrap individual MCP tools as NeMo Agent toolkit functions
 - Connect to MCP servers and dynamically discover available tools
+
+For more information about the NVIDIA NeMo Agent toolkit, please visit the [NeMo Agent toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).

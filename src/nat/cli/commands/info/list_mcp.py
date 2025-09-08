@@ -154,9 +154,9 @@ async def list_tools_and_schemas(command, url, tool_name=None, transport='sse', 
         MCPError: Caught internally and logged, returns empty list instead
     """
     try:
-        from nat.plugins.mcp.client import MCPSSEClient
-        from nat.plugins.mcp.client import MCPStdioClient
-        from nat.plugins.mcp.client import MCPStreamableHTTPClient
+        from nat.plugins.mcp.client_base import MCPSSEClient
+        from nat.plugins.mcp.client_base import MCPStdioClient
+        from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
     except ImportError:
         click.echo(
             "MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp",

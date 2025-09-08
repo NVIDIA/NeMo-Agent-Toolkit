@@ -21,10 +21,10 @@ import uvicorn
 from mcp.server.fastmcp.server import FastMCP
 from mcp.types import TextContent
 
-from nat.plugins.mcp.client import MCPBaseClient
-from nat.plugins.mcp.client import MCPSSEClient
-from nat.plugins.mcp.client import MCPStdioClient
-from nat.plugins.mcp.client import MCPStreamableHTTPClient
+from nat.plugins.mcp.client_base import MCPBaseClient
+from nat.plugins.mcp.client_base import MCPSSEClient
+from nat.plugins.mcp.client_base import MCPStdioClient
+from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
 
 
 def _create_test_mcp_server(port: int) -> FastMCP:
