@@ -187,9 +187,10 @@ class JobStore:
                          job_id: str | None = None,
                          config_file: str | None = None,
                          expiry_seconds: int = DEFAULT_EXPIRY,
+                         sync_timeout: int = 0,
                          job_fn: Callable[..., typing.Any],
                          job_args: list[typing.Any],
-                         **job_kwargs) -> tuple[str, Future]:
+                         **job_kwargs) -> tuple[str, JobInfo | None]:
         job_id = await self._create_job(job_id=job_id, config_file=config_file, expiry_seconds=expiry_seconds)
 
         # We are intentionally not using job_id as the key, since Dask will clear the associated metadata once
@@ -204,7 +205,16 @@ class JobStore:
 
             fire_and_forget(future)
 
-        return (job_id, future)
+            if sync_timeout > 0:
+                try:
+                    _ = await future.result(timeout=sync_timeout)
+                    job = await self.get_job(job_id)
+                    assert job is not None, "Job should exist after future result"
+                    return (job_id, job)
+                except TimeoutError:
+                    pass
+
+        return (job_id, None)
 
     async def update_status(self,
                             job_id: str,

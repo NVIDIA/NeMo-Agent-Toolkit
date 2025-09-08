@@ -800,26 +800,21 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             return AsyncGenerateResponse(job_id=job.job_id, status=job.status)
 
                     job_id = self._job_store.ensure_job_id(request.job_id)
-                    (_, future) = await self._job_store.submit_job(job_id=job_id,
-                                                                   expiry_seconds=request.expiry_seconds,
-                                                                   job_fn=run_generation,
-                                                                   job_args=[
-                                                                       self._scheduler_address,
-                                                                       self._db_url,
-                                                                       self._config_file_path,
-                                                                       job_id,
-                                                                       request.model_dump(mode="json")
-                                                                   ])
+                    (_, job) = await self._job_store.submit_job(job_id=job_id,
+                                                                expiry_seconds=request.expiry_seconds,
+                                                                job_fn=run_generation,
+                                                                sync_timeout=request.sync_timeout,
+                                                                job_args=[
+                                                                    self._scheduler_address,
+                                                                    self._db_url,
+                                                                    self._config_file_path,
+                                                                    job_id,
+                                                                    request.model_dump(mode="json")
+                                                                ])
 
-                    if request.sync_timeout > 0:
-                        try:
-                            _ = await future.result(timeout=request.sync_timeout)
-                            job = await self._job_store.get_job(job_id)
-                            assert job is not None, "Job should exist after future result"
-                            response.status_code = 200
-                            return _job_status_to_response(job)
-                        except TimeoutError:
-                            pass
+                    if job is not None:
+                        response.status_code = 200
+                        return _job_status_to_response(job)
 
                     response.status_code = 202
                     return AsyncGenerateResponse(job_id=job_id, status="submitted")
