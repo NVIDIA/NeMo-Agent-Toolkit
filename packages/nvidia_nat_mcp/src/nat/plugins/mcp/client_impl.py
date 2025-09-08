@@ -107,6 +107,38 @@ def _get_server_name_safe(client: MCPBaseClient) -> str:
     return safe_server
 
 
+@register_function(config_type=MCPSingleToolConfig)
+async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
+    """
+    Wrap a single tool from an MCP server as a NeMo Agent toolkit function.
+    """
+    tool = await config.client.get_tool(config.tool_name)
+    if config.tool_description:
+        tool.set_description(description=config.tool_description)
+    input_schema = tool.input_schema
+
+    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, _get_server_name_safe(config.client))
+
+    def _convert_from_str(input_str: str) -> BaseModel:
+        return input_schema.model_validate_json(input_str)
+
+    @experimental(feature_name="mcp_client")
+    async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
+        try:
+            if tool_input:
+                return await tool.acall(tool_input.model_dump())
+            _ = input_schema.model_validate(kwargs)
+            return await tool.acall(kwargs)
+        except Exception as e:
+            return str(e)
+
+    fn = FunctionInfo.create(single_fn=_response_fn,
+                             description=tool.description,
+                             input_schema=input_schema,
+                             converters=[_convert_from_str])
+    yield fn
+
+
 @register_function(MCPClientConfig)
 async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder):
     """
@@ -154,38 +186,6 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
             return f"MCP client connected: {text}"
 
         yield FunctionInfo.create(single_fn=idle_fn, description="MCP client")
-
-
-@register_function(config_type=MCPSingleToolConfig)
-async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
-    """
-    Wrap a single tool from an MCP server as a NeMo Agent toolkit function.
-    """
-    tool = await config.client.get_tool(config.tool_name)
-    if config.tool_description:
-        tool.set_description(description=config.tool_description)
-    input_schema = tool.input_schema
-
-    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, _get_server_name_safe(config.client))
-
-    def _convert_from_str(input_str: str) -> BaseModel:
-        return input_schema.model_validate_json(input_str)
-
-    @experimental(feature_name="mcp_client")
-    async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
-        try:
-            if tool_input:
-                return await tool.acall(tool_input.model_dump())
-            _ = input_schema.model_validate(kwargs)
-            return await tool.acall(kwargs)
-        except Exception as e:
-            return str(e)
-
-    fn = FunctionInfo.create(single_fn=_response_fn,
-                             description=tool.description,
-                             input_schema=input_schema,
-                             converters=[_convert_from_str])
-    yield fn
 
 
 def _filter_and_configure_tools(all_tools: dict, tool_filter) -> dict[str, dict]:
