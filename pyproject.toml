@@ -72,6 +72,7 @@ data-flywheel = ["nvidia-nat-data-flywheel"]
 ingestion = ["nvidia-nat-ingestion"] # meta-package
 langchain = ["nvidia-nat-langchain"]
 llama-index = ["nvidia-nat-llama-index"]
+mcp = ["nvidia-nat-mcp"]
 mem0ai = ["nvidia-nat-mem0ai"]
 opentelemetry = ["nvidia-nat-opentelemetry"]
 phoenix = ["nvidia-nat-phoenix"]
@@ -137,6 +138,7 @@ nvidia-nat-data-flywheel = { workspace = true }
 nvidia-nat-ingestion = { workspace = true }
 nvidia-nat-langchain = { workspace = true }
 nvidia-nat-llama-index = { workspace = true }
+nvidia-nat-mcp = { workspace = true }
 nvidia-nat-mem0ai = { workspace = true }
 nvidia-nat-mysql = { workspace = true }
 nvidia-nat-opentelemetry = { workspace = true }
