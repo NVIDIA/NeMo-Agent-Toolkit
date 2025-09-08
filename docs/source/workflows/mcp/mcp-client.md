@@ -98,7 +98,7 @@ class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
     Configuration for connecting to an MCP server as a client and exposing selected tools.
     """
     server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
-    tool_filter: dict[str, ToolOverrideConfig] | list[str] | None = Field(
+    tool_filter: dict[str, MCPToolOverrideConfig] | list[str] | None = Field(
         default=None,
         description="""Filter or map tools to expose from the server (list or dict).
         Can be:

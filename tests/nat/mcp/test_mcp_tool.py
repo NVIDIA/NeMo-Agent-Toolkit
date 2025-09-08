@@ -23,8 +23,8 @@ from pydantic import BaseModel
 from pydantic.networks import HttpUrl
 
 from nat.plugins.mcp.client_base import MCPBaseClient
-from nat.plugins.mcp.functions import MCPToolConfig
-from nat.plugins.mcp.functions import mcp_tool
+from nat.plugins.mcp.tool import MCPToolConfig
+from nat.plugins.mcp.tool import mcp_tool
 
 
 class _InputSchema(BaseModel):

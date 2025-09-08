@@ -23,11 +23,12 @@ from pydantic import BaseModel
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.mcp.client_base import MCPBaseClient
-from nat.plugins.mcp.functions import MCPClientConfig
-from nat.plugins.mcp.functions import MCPServerConfig
-from nat.plugins.mcp.functions import MCPSingleToolConfig
-from nat.plugins.mcp.functions import ToolOverrideConfig
-from nat.plugins.mcp.functions import mcp_client_function_handler
+from nat.plugins.mcp.client_impl import MCPClientConfig
+from nat.plugins.mcp.client_impl import MCPServerConfig
+from nat.plugins.mcp.client_impl import MCPSingleToolConfig
+from nat.plugins.mcp.client_impl import MCPToolOverrideConfig
+from nat.plugins.mcp.client_impl import mcp_client_function_handler
+from nat.plugins.mcp.client_impl import mcp_filter_tools
 
 
 class _InputSchema(BaseModel):
@@ -83,9 +84,8 @@ class _FakeMCPClient(MCPBaseClient):
 
 def test_filter_and_configure_tools_none_filter_returns_all():
     """Test that None filter returns all tools."""
-    from nat.plugins.mcp.functions import _filter_and_configure_tools
     tools = {"a": _FakeTool("a", "da"), "b": _FakeTool("b", "db")}
-    out = _filter_and_configure_tools(tools, tool_filter=None)
+    out = mcp_filter_tools(tools, tool_filter=None)
     assert out == {
         "a": {
             "function_name": "a", "description": "da"
@@ -98,9 +98,8 @@ def test_filter_and_configure_tools_none_filter_returns_all():
 
 def test_filter_and_configure_tools_list_filter_subsets():
     """Test that list filter returns subset of tools."""
-    from nat.plugins.mcp.functions import _filter_and_configure_tools
     tools = {"a": _FakeTool("a", "da"), "b": _FakeTool("b", "db")}
-    out = _filter_and_configure_tools(tools, tool_filter=["b"])  # type: ignore[arg-type]
+    out = mcp_filter_tools(tools, tool_filter=["b"])  # type: ignore[arg-type]
     assert out == {
         "b": {
             "function_name": "b", "description": "db"
@@ -111,9 +110,8 @@ def test_filter_and_configure_tools_list_filter_subsets():
 def test_filter_and_configure_tools_dict_overrides_alias_and_description(caplog):
     """Test that dict filter with overrides works correctly."""
     tools = {"raw": _FakeTool("raw", "original")}
-    overrides = {"raw": ToolOverrideConfig(alias="alias", description="new desc")}
-    from nat.plugins.mcp.functions import _filter_and_configure_tools
-    out = _filter_and_configure_tools(tools, tool_filter=overrides)  # type: ignore[arg-type]
+    overrides = {"raw": MCPToolOverrideConfig(alias="alias", description="new desc")}
+    out = mcp_filter_tools(tools, tool_filter=overrides)  # type: ignore[arg-type]
     assert out == {"raw": {"function_name": "alias", "description": "new desc"}}
 
 

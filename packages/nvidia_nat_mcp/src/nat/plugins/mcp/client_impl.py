@@ -31,7 +31,7 @@ from nat.plugins.mcp.client_base import MCPBaseClient
 logger = logging.getLogger(__name__)
 
 
-class ToolOverrideConfig(BaseModel):
+class MCPToolOverrideConfig(BaseModel):
     """
     Configuration for overriding tool properties when exposing from MCP server.
     """
@@ -75,7 +75,7 @@ class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
     Configuration for connecting to an MCP server as a client and exposing selected tools.
     """
     server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
-    tool_filter: dict[str, ToolOverrideConfig] | list[str] | None = Field(
+    tool_filter: dict[str, MCPToolOverrideConfig] | list[str] | None = Field(
         default=None,
         description="""Filter or map tools to expose from the server (list or dict).
         Can be:
@@ -169,7 +169,7 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
     # so it's cleaned up when the workflow is done
     async with client:
         all_tools = await client.get_tools()
-        tool_configs = _filter_and_configure_tools(all_tools, config.tool_filter)
+        tool_configs = mcp_filter_tools(all_tools, config.tool_filter)
 
         for tool_name, tool_cfg in tool_configs.items():
             await builder.add_function(
@@ -188,7 +188,7 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
         yield FunctionInfo.create(single_fn=idle_fn, description="MCP client")
 
 
-def _filter_and_configure_tools(all_tools: dict, tool_filter) -> dict[str, dict]:
+def mcp_filter_tools(all_tools: dict, tool_filter) -> dict[str, dict]:
     """
     Apply tool filtering and optional aliasing/description overrides.
 
@@ -216,7 +216,7 @@ def _filter_and_configure_tools(all_tools: dict, tool_filter) -> dict[str, dict]
                 logger.warning("Tool '%s' specified in tool_filter not found in MCP server", name)
                 continue
 
-            if isinstance(override, ToolOverrideConfig):
+            if isinstance(override, MCPToolOverrideConfig):
                 result[name] = {
                     "function_name": override.alias or name, "description": override.description or tool.description
                 }
