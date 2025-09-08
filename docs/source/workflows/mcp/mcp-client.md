@@ -28,16 +28,8 @@ This guide will cover how to use NeMo Agent toolkit as an MCP Client. For more i
 MCP client functionality requires the `nvidia-nat-mcp` package. Install it with:
 
 ```bash
-uv pip install nvidia-nat-mcp
+uv pip install nvidia-nat[mcp]
 ```
-
-Alternatively, if you're using the full NeMo Agent toolkit installation:
-
-```bash
-uv pip install nvidia-nat-all
-```
-
-The `nvidia-nat-all` package includes all optional dependencies, including MCP client functionality.
 
 ## MCP Client Configuration
 

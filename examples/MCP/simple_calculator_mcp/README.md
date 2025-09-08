@@ -59,15 +59,7 @@ Model Context Protocol (MCP) is a standard protocol that enables AI applications
 ## Prerequisites
 
 1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
-2. **MCP Client Package**: This example requires MCP client functionality. Install it with:
-   ```bash
-   uv pip install nvidia-nat-mcp
-   ```
-   Or use the full installation that includes all optional dependencies:
-   ```bash
-   uv pip install nvidia-nat-all
-   ```
-3. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
+2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
 
 ## Installation and Setup
 
