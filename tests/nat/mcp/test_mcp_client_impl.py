@@ -119,7 +119,7 @@ def test_filter_and_configure_tools_dict_overrides_alias_and_description(caplog)
 
 async def test_mcp_client_function_handler():
     """Test MCP client function handler."""
-    with patch("nat.tool.mcp.mcp_client_base.MCPStdioClient") as mock_client:
+    with patch("nat.plugins.mcp.client.MCPStdioClient") as mock_client:
         fake_tools = {
             "fake_tool_1": _FakeTool("fake_tool_1", "A fake tool for testing"),
             "fake_tool_2": _FakeTool("fake_tool_2", "Another fake tool for testing")
