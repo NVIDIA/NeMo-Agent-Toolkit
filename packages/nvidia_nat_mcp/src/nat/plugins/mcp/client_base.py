@@ -211,9 +211,7 @@ class MCPBaseClient(ABC):
 
         tool = self._tools.get(tool_name)
         if not tool:
-            # Get URL from the specific client implementation
-            url = getattr(self, 'url', 'unknown')
-            raise MCPToolNotFoundError(tool_name, url)
+            raise MCPToolNotFoundError(tool_name, self.server_name)
         return tool
 
     @mcp_exception_handler
