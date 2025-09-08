@@ -107,7 +107,7 @@ async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, _builder: Bui
 
     from langchain_aws import ChatBedrockConverse
 
-    client = ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))
+    client = ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size", "thinking"}, by_alias=True))
 
     yield _patch_llm_based_on_config(client, llm_config)
 
