@@ -29,14 +29,6 @@ from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfi
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
 
-@pytest_asyncio.fixture(name="auto_set_env_vars", autouse=True)
-async def fixture_auto_set_env_vars(setup_db,
-                                    set_nat_config_file_env_var,
-                                    set_nat_dask_scheduler_env_var,
-                                    set_nat_job_store_db_url_env_var):
-    return
-
-
 @pytest.fixture(name="test_config")
 def test_config_fixture() -> Config:
     config = Config()
