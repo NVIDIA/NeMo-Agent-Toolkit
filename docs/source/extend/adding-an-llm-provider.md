@@ -179,7 +179,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
-    yield ChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+    yield ChatOpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True))
 ```
 
 Similar to the registration function for the provider, the client registration function can perform any necessary setup actions before yielding the client, along with cleanup actions after the `yield` statement.

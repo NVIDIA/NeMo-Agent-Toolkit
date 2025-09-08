@@ -74,7 +74,7 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
     from llama_index.llms.bedrock import Bedrock
 
     # LlamaIndex uses context_size instead of max_tokens
-    llm = Bedrock(**llm_config.model_dump(exclude={"type", "top_p"}, by_alias=True), )
+    llm = Bedrock(**llm_config.model_dump(exclude={"type", "top_p", "thinking"}, by_alias=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -84,7 +84,7 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
 
     from llama_index.llms.azure_openai import AzureOpenAI
 
-    llm = AzureOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+    llm = AzureOpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -94,7 +94,7 @@ async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
 
     from llama_index.llms.nvidia import NVIDIA
 
-    llm = NVIDIA(**llm_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
+    llm = NVIDIA(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -104,6 +104,6 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from llama_index.llms.openai import OpenAI
 
-    llm = OpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
+    llm = OpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
