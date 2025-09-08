@@ -226,5 +226,4 @@ def mcp_filter_tools(all_tools: dict, tool_filter) -> dict[str, dict]:
         return result
 
     # Fallback for unsupported tool_filter types
-    logger.warning("Unsupported tool_filter type: %s", type(tool_filter))
-    return {}
+    raise ValueError(f"Unsupported tool_filter type: {type(tool_filter)}")
