@@ -811,14 +811,15 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                                        request.model_dump(mode="json")
                                                                    ])
 
-                    try:
-                        _ = await future.result(timeout=request.sync_timeout)
-                        job = await self._job_store.get_job(job_id)
-                        assert job is not None, "Job should exist after future result"
-                        response.status_code = 200
-                        return _job_status_to_response(job)
-                    except TimeoutError:
-                        pass
+                    if request.sync_timeout > 0:
+                        try:
+                            _ = await future.result(timeout=request.sync_timeout)
+                            job = await self._job_store.get_job(job_id)
+                            assert job is not None, "Job should exist after future result"
+                            response.status_code = 200
+                            return _job_status_to_response(job)
+                        except TimeoutError:
+                            pass
 
                     response.status_code = 202
                     return AsyncGenerateResponse(job_id=job_id, status="submitted")
