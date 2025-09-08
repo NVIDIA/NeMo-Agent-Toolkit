@@ -18,7 +18,7 @@ from typing import get_args
 import pytest
 from pydantic import ValidationError
 
-from nat.tool.mcp.mcp_client_base import model_from_mcp_schema
+from nat.plugins.mcp.client import model_from_mcp_schema
 
 
 @pytest.fixture(name="sample_schema")

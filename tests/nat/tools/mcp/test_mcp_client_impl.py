@@ -22,12 +22,12 @@ from unittest.mock import patch
 from pydantic import BaseModel
 
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.tool.mcp.mcp_client_base import MCPBaseClient
-from nat.tool.mcp.mcp_client_impl import MCPClientConfig
-from nat.tool.mcp.mcp_client_impl import MCPServerConfig
-from nat.tool.mcp.mcp_client_impl import MCPSingleToolConfig
-from nat.tool.mcp.mcp_client_impl import ToolOverrideConfig
-from nat.tool.mcp.mcp_client_impl import mcp_client_function_handler
+from nat.plugins.mcp.client import MCPBaseClient
+from nat.plugins.mcp.functions import MCPClientConfig
+from nat.plugins.mcp.functions import MCPServerConfig
+from nat.plugins.mcp.functions import MCPSingleToolConfig
+from nat.plugins.mcp.functions import ToolOverrideConfig
+from nat.plugins.mcp.functions import mcp_client_function_handler
 
 
 class _InputSchema(BaseModel):
@@ -83,7 +83,7 @@ class _FakeMCPClient(MCPBaseClient):
 
 def test_filter_and_configure_tools_none_filter_returns_all():
     """Test that None filter returns all tools."""
-    from nat.tool.mcp.mcp_client_impl import _filter_and_configure_tools
+    from nat.plugins.mcp.functions import _filter_and_configure_tools
     tools = {"a": _FakeTool("a", "da"), "b": _FakeTool("b", "db")}
     out = _filter_and_configure_tools(tools, tool_filter=None)
     assert out == {
@@ -98,7 +98,7 @@ def test_filter_and_configure_tools_none_filter_returns_all():
 
 def test_filter_and_configure_tools_list_filter_subsets():
     """Test that list filter returns subset of tools."""
-    from nat.tool.mcp.mcp_client_impl import _filter_and_configure_tools
+    from nat.plugins.mcp.functions import _filter_and_configure_tools
     tools = {"a": _FakeTool("a", "da"), "b": _FakeTool("b", "db")}
     out = _filter_and_configure_tools(tools, tool_filter=["b"])  # type: ignore[arg-type]
     assert out == {
@@ -112,7 +112,7 @@ def test_filter_and_configure_tools_dict_overrides_alias_and_description(caplog)
     """Test that dict filter with overrides works correctly."""
     tools = {"raw": _FakeTool("raw", "original")}
     overrides = {"raw": ToolOverrideConfig(alias="alias", description="new desc")}
-    from nat.tool.mcp.mcp_client_impl import _filter_and_configure_tools
+    from nat.plugins.mcp.functions import _filter_and_configure_tools
     out = _filter_and_configure_tools(tools, tool_filter=overrides)  # type: ignore[arg-type]
     assert out == {"raw": {"function_name": "alias", "description": "new desc"}}
 

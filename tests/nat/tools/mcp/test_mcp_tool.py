@@ -22,9 +22,9 @@ import pytest
 from pydantic import BaseModel
 from pydantic.networks import HttpUrl
 
-from nat.tool.mcp.mcp_client_base import MCPBaseClient
-from nat.tool.mcp.mcp_tool import MCPToolConfig
-from nat.tool.mcp.mcp_tool import mcp_tool
+from nat.plugins.mcp.client import MCPBaseClient
+from nat.plugins.mcp.functions import MCPToolConfig
+from nat.plugins.mcp.functions import mcp_tool
 
 
 class _InputSchema(BaseModel):
