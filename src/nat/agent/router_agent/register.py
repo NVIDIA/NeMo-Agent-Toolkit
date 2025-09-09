@@ -36,12 +36,13 @@ class RouterAgentWorkflowConfig(FunctionBaseConfig, name="router_agent"):
     branches: list[FunctionRef] = Field(default_factory=list,
                                         description="The list of branches to provide to the router agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the routing agent.")
+    description: str = Field(default="Router Agent Workflow", description="Description of this functions use.")
     system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
     user_prompt: str | None = Field(default=None, description="Provides the prompt to use with the agent.")
+    routing_request: str | None = Field(default=None, description="Provides the routing request to use with the agent.")
     detailed_logs: bool = Field(default=False, description="Set the verbosity of the router agent's logging.")
     log_response_max_chars: PositiveInt = Field(
         default=1000, description="Maximum number of characters to display in logs when logging branch responses.")
-    description: str = Field(default="Router Agent Workflow", description="Description of this functions use.")
 
 
 @register_function(config_type=RouterAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -68,21 +69,22 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
         log_response_max_chars=config.log_response_max_chars,
     ).build_graph()
 
-    async def _response_fn(input_message: str) -> str:
+    async def _response_fn(relay_message: str | list[str | dict]) -> str:
         try:
-            input_message = HumanMessage(content=input_message)
-            state = RouterAgentGraphState(messages=[input_message])
-            state = await graph.ainvoke(state)
-            state = RouterAgentGraphState(**state)
-            output_message = state.messages[-1]
+            message = HumanMessage(content=relay_message)
+            state = RouterAgentGraphState(relay_message=message)
 
-            return output_message.content
+            result_dict = await graph.ainvoke(state)
+            result_state = RouterAgentGraphState(**result_dict)
+
+            output_message = result_state.messages[-1]
+            return str(output_message.content)
 
         except Exception as ex:
             logger.exception("%s Router Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
             if config.detailed_logs:
                 return str(ex)
-            return "I seem to be having a problem."
+            return "Router agent failed with exception: %s" % ex
 
     try:
         yield FunctionInfo.from_fn(_response_fn, description=config.description)
