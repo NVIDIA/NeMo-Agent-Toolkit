@@ -60,7 +60,7 @@ def set_framework_profiler_handler(
                 callback_handler_var.set(handler)
                 register_configure_hook(callback_handler_var, inheritable=True)
                 _library_instrumented["langchain"] = True
-                logger.debug("Langchain callback handler registered")
+                logger.debug("LangChain/LangGraph callback handler registered")
 
             if LLMFrameworkEnum.LLAMA_INDEX in frameworks:
                 from llama_index.core import Settings
