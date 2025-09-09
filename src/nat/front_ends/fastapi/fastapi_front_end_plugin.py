@@ -192,7 +192,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                 logger.info("Cancelling periodic cleanup task.")
                 # Use the scheduler address, because self._cluster is None if an external cluster is used
                 async with self.client(self._scheduler_address) as client:
-                    await client.cancel([self._cleanup_future], force=True, reason="Shutting down")
+                    await client.cancel([self._cleanup_future], asynchronous=True, force=True)
 
             if self._cluster is not None:
                 # Only shut down the cluster if we created it

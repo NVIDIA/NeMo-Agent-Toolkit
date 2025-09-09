@@ -544,7 +544,7 @@ class JobStore(DaskClientMixin):
                         try:
                             future = await var.get(timeout=0)
                             if isinstance(future, Future):
-                                await client.cancel([future], force=True, reason="Expired job cleanup")
+                                await client.cancel([future], asynchronous=True, force=True)
 
                         except TimeoutError:
                             pass
