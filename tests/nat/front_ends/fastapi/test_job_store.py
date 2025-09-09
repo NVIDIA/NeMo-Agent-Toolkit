@@ -103,7 +103,8 @@ def test_ensure_job_id_generates_new_id(db_engine: "AsyncEngine", dask_scheduler
 @pytest.mark.asyncio
 async def test_create_job_default_params(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test job creation with default parameters."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -170,7 +171,8 @@ async def test_create_job_clamps_expiry(db_engine: "AsyncEngine", dask_scheduler
 @pytest.mark.asyncio
 async def test_submit_job_success(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test successful job submission."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -229,7 +231,8 @@ async def test_submit_job_with_kwargs(db_engine: "AsyncEngine", dask_scheduler_a
 @pytest.mark.asyncio
 async def test_update_status_basic(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test basic status update."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -254,7 +257,8 @@ async def test_update_status_basic(db_engine: "AsyncEngine", dask_scheduler_addr
 @pytest.mark.asyncio
 async def test_update_status_with_error(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test status update with error message."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -273,7 +277,8 @@ async def test_update_status_with_error(db_engine: "AsyncEngine", dask_scheduler
 @pytest.mark.asyncio
 async def test_update_status_with_pydantic_output(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test status update with Pydantic model output."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -296,7 +301,8 @@ async def test_update_status_with_pydantic_output(db_engine: "AsyncEngine", dask
 @pytest.mark.asyncio
 async def test_update_status_with_dict_output(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test status update with dictionary output."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -319,7 +325,8 @@ async def test_update_status_with_dict_output(db_engine: "AsyncEngine", dask_sch
 @pytest.mark.asyncio
 async def test_update_status_nonexistent_job(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test updating status of non-existent job raises error."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -331,7 +338,8 @@ async def test_update_status_nonexistent_job(db_engine: "AsyncEngine", dask_sche
 @pytest.mark.asyncio
 async def test_get_job_existing(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test getting an existing job."""
-    from nat.front_ends.fastapi.job_store import JobInfo, JobStore
+    from nat.front_ends.fastapi.job_store import JobInfo
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -359,7 +367,8 @@ async def test_get_job_nonexistent(db_engine: "AsyncEngine", dask_scheduler_addr
 @pytest.mark.asyncio
 async def test_get_status_existing(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test getting status of an existing job."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -373,7 +382,8 @@ async def test_get_status_existing(db_engine: "AsyncEngine", dask_scheduler_addr
 @pytest.mark.asyncio
 async def test_get_status_nonexistent(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test getting status of non-existent job returns NOT_FOUND."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -449,7 +459,8 @@ async def test_get_last_job_multiple(db_engine: "AsyncEngine", dask_scheduler_ad
 @pytest.mark.asyncio
 async def test_get_jobs_by_status(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test filtering jobs by status."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -483,7 +494,8 @@ async def test_get_jobs_by_status(db_engine: "AsyncEngine", dask_scheduler_addre
 @pytest.mark.asyncio
 async def test_get_expires_at_active_job(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test get_expires_at for active jobs returns None."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -508,7 +520,8 @@ async def test_get_expires_at_active_job(db_engine: "AsyncEngine", dask_schedule
 @pytest.mark.asyncio
 async def test_get_expires_at_finished_job(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test get_expires_at for finished jobs returns correct expiry time."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -536,7 +549,8 @@ async def test_get_expires_at_finished_job(db_engine: "AsyncEngine", dask_schedu
 @pytest.mark.asyncio
 async def test_cleanup_expired_jobs_no_expired(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test cleanup when no jobs are expired."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -564,7 +578,8 @@ async def test_cleanup_expired_jobs_no_expired(db_engine: "AsyncEngine", dask_sc
 @pytest.mark.asyncio
 async def test_cleanup_expired_jobs_with_expired(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test cleanup marks expired jobs correctly."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -604,7 +619,8 @@ async def test_cleanup_expired_jobs_with_expired(db_engine: "AsyncEngine", dask_
 @pytest.mark.asyncio
 async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test cleanup removes output files for expired jobs."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -663,7 +679,8 @@ async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine", 
 @pytest.mark.asyncio
 async def test_cleanup_expired_jobs_keeps_active(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test cleanup never expires active (running/submitted) jobs."""
-    from nat.front_ends.fastapi.job_store import JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
