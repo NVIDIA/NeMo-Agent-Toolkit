@@ -138,13 +138,6 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
                 yield
 
-                # If a cleanup task is running, cancel it
-                if self._job_store is not None:
-                    try:
-                        await self._job_store.close()
-                    except Exception as e:
-                        logger.exception("Error closing Dask client: %s", e)
-
             logger.debug("Closing NAT server from process %s", os.getpid())
 
         nat_app = FastAPI(lifespan=lifespan)
