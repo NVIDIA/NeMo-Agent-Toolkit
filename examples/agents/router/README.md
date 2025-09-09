@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# ReWOO Agent Example
+# Router Agent Example
 
-This example demonstrates how to use A configurable [ReWOO](https://arxiv.org/abs/2305.18323) (Reasoning WithOut Observation) Agent with the NeMo Agent toolkit. For this purpose NeMo Agent toolkit provides a [`rewoo_agent`](../../../docs/source/workflows/about/rewoo-agent.md) workflow type.
+This example demonstrates how to use a configurable Router Agent with the NeMo Agent toolkit. The Router Agent analyzes incoming requests and intelligently routes them to the most appropriate branch (tool or function) based on the request content. For this purpose, NeMo Agent toolkit provides a [`router_agent`](../../../docs/source/workflows/about/router-agent.md) workflow type.
 
 ## Table of Contents
 
@@ -29,32 +29,54 @@ This example demonstrates how to use A configurable [ReWOO](https://arxiv.org/ab
 - [Run the Workflow](#run-the-workflow)
   - [Starting the NeMo Agent Toolkit Server](#starting-the-nemo-agent-toolkit-server)
   - [Making Requests to the NeMo Agent Toolkit Server](#making-requests-to-the-nemo-agent-toolkit-server)
-  - [Evaluating the ReWOO Agent Workflow](#evaluating-the-rewoo-agent-workflow)
+  - [Evaluating the Router Agent Workflow](#evaluating-the-router-agent-workflow)
 
 ## Key Features
 
-- **ReWOO Agent Architecture:** Demonstrates the unique `rewoo_agent` workflow type that implements Reasoning Without Observation, separating planning, execution, and solving into distinct phases.
-- **Three-Node Graph Structure:** Uses a distinctive architecture with Planner Node (creates complete execution plan), Executor Node (executes tools systematically), and Solver Node (synthesizes final results).
-- **Systematic Tool Execution:** Shows how ReWOO first plans all necessary steps upfront, then executes them systematically without dynamic re-planning, leading to more predictable tool usage patterns.
-- **Calculator and Internet Search Integration:** Includes `calculator_inequality` and `internet_search` tools to demonstrate multi-step reasoning that requires both mathematical computation and web research.
-- **Plan-Execute-Solve Pattern:** Demonstrates the ReWOO approach of complete upfront planning followed by systematic execution and final result synthesis.
+- **Router Agent Architecture:** Demonstrates the `router_agent` workflow type that intelligently analyzes incoming requests and routes them to the most appropriate branch (tool or function).
+- **Dual-Node Graph Structure:** Uses a streamlined two-node architecture with Agent Node (analyzes request and selects branch) and Tool Node (executes the selected branch).
+- **Intelligent Request Routing:** Shows how the Router Agent analyzes user input and selects exactly one branch that best handles the request, making it ideal for scenarios where different types of requests need different specialized tools.
+- **Calculator Function Integration:** Includes multiple calculator functions (`calculator_multiply`, `calculator_inequality`, `calculator_divide`, `calculator_subtract`) to demonstrate routing mathematical operations to appropriate specialized tools.
+- **Single Branch Execution:** Demonstrates the Router Agent approach of analyzing the request, selecting one optimal branch, executing it, and returning the result without additional iterations.
 
 ## Graph Structure
 
-The ReWOO agent uses a unique three-node graph architecture that separates planning, execution, and solving into distinct phases. The following diagram illustrates the agent's workflow:
-
-<div align="center">
-<img src="../../../docs/source/_static/rewoo_agent.png" alt="ReWOO Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
-</div>
+The Router Agent uses a streamlined dual-node graph architecture that efficiently analyzes requests and routes them to appropriate branches. The following describes the agent's workflow:
 
 **Workflow Overview:**
 - **Start**: The agent begins processing with user input
-- **Planner Node**: Creates a complete execution plan with all necessary steps upfront
-- **Executor Node**: Executes tools according to the plan, looping until all steps are completed
-- **Solver Node**: Takes all execution results and generates the final answer
-- **End**: Process completes with the final response
+- **Agent Node**: Analyzes the incoming request and selects the most appropriate branch from the available options
+- **Conditional Edge**: Determines whether to proceed to tool execution or end the process
+- **Tool Node**: Executes the selected branch (tool/function) with the original user input
+- **End**: Process completes with the result from the executed branch
 
-This architecture differs from other agents by separating reasoning (planning) from execution, allowing for more systematic and predictable tool usage patterns. The ReWOO approach first plans all steps, then executes them systematically, and finally synthesizes the results.
+**Key Architecture Benefits:**
+- **Efficient Routing**: Single-pass analysis and routing without iterative planning
+- **Specialized Tool Selection**: Each branch can be a specialized tool optimized for specific types of requests
+- **Deterministic Execution**: Once a branch is selected, it executes exactly once and returns the result
+- **Scalable Branch Management**: Easy to add new branches without modifying the core routing logic
+
+This architecture is ideal for scenarios where different types of user requests require different specialized tools or functions, such as routing mathematical operations to specific calculator functions, or directing different query types to appropriate search or processing tools.
+
+## Configuration
+
+The Router Agent is configured through the `config.yml` file. Key configuration elements include:
+
+- **workflow._type**: Set to `router_agent` to use the Router Agent workflow type
+- **workflow.branches**: List of available tools/functions that the agent can route requests to
+- **workflow.llm_name**: The language model used for request analysis and routing decisions
+- **workflow.verbose**: Enable detailed logging to see the routing decisions
+
+**Example Configuration:**
+```yaml
+workflow:
+  _type: router_agent
+  branches: [calculator_multiply, calculator_inequality, calculator_divide, calculator_subtract]
+  llm_name: nim_llm
+  verbose: true
+```
+
+The agent will automatically analyze incoming requests and route them to the most appropriate branch based on the request content and the descriptions of available branches.
 
 ## Installation and Setup
 
@@ -76,105 +98,59 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-Prior to using the `tavily_internet_search` tool, create an account at [`tavily.com``](https://tavily.com/) and obtain an API key. Once obtained, set the `TAVILY_API_KEY` environment variable to the API key:
-```bash
-export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
-```
-
 ## Run the Workflow
 
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
+nat run --config_file=examples/agents/router/configs/config.yml --input "What is 48 multiplied by 37?"
+```
+
+**Additional Example Commands:**
+```bash
+# Test inequality comparison
+nat run --config_file=examples/agents/router/configs/config.yml --input "Is 2004 greater than 1996?"
+
+# Test division
+nat run --config_file=examples/agents/router/configs/config.yml --input "What is 6054 divided by 3?"
+
+# Test subtraction
+nat run --config_file=examples/agents/router/configs/config.yml --input "What is 1900 minus 21?"
 ```
 
 **Expected Workflow Output**
 ```console
 <snipped for brevity>
 
-- ReWOO agent planner output:
-------------------------------
-[AGENT]
-Agent input: Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?
-Agent's thoughts:
-[
-  {
-    "plan": "Compare the numbers 1996 and 2004 to determine the bigger number.",
-    "evidence": {
-      "placeholder": "#E1",
-      "tool": "calculator_inequality",
-      "tool_input": {"text": "2004 > 1996"}
-    }
-  },
-  {
-    "plan": "Since 2004 is indeed bigger, search for the city that held the Olympic Games in 2004.",
-    "evidence": {
-      "placeholder": "#E2",
-      "tool": "internet_search",
-      "tool_input": {"question": "Which city held the Olympic Games in 2004?"}
-    }
-  }
-]
-------------------------------
-2025-04-23 15:02:11,047 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
-------------------------------
-[AGENT]
-Calling tools: calculator_inequality
-Tool's input: {'text': '2004 > 1996'}
+2025-01-15 10:30:45,123 - nat.agent.router_agent.agent - INFO - Router Agent has chosen branch: calculator_multiply
+2025-01-15 10:30:45,124 - nat.agent.router_agent.agent - INFO - Router Agent Tool Node - Calling tools: calculator_multiply
+Tool's input: What is 48 multiplied by 37?
 Tool's response:
-First number 2004 is greater than the second number 1996
-------------------------------
-2025-04-23 15:02:13,096 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
-------------------------------
-[AGENT]
-Calling tools: internet_search
-Tool's input: {'question': 'Which city held the Olympic Games in 2004?'}
-Tool's response:
-<Document href="https://en.wikipedia.org/wiki/2004_Summer_Olympics"/>
-The 2004 Summer Olympics (Greek: Θερινοί Ολυμπιακοί Αγώνες 2004, romanized: Theriní Olympiakí Agónes 2004),[b] officially the Games of the XXVIII Olympiad (Αγώνες της 28ης Ολυμπιάδας, Agónes tis 28is Olympiádas), and officially branded as Athens 2004 (Αθήνα 2004), were an international multi-sport event held from 13 to 29 August 2004 in Athens, Greece. [...] Emblem of the 2004 Summer Olympics[a]
-Location    Athens, Greece
-Motto   Welcome Home
-(Greek: Καλώς ήρθατε σπίτι, romanized: Kalós írthate spíti)
-Nations 201
-Athletes    10,557 (6,257 men, 4,300 women)
-Events  301 in 28 sports (40 disciplines)
-Opening 13 August 2004
-Closing 29 August 2004
-Opened by   President Konstantinos Stephanopoulos[1]
-Closed by   IOC President Jacques Rogge
-Cauldron    Nikolaos Kaklamanakis[1]
-Stadium Olympic Stadium
-Summer
-← Sydney 2000
-Beijing 2008 →
-Winter [...] See also[edit]
-    Olympic Games portal
-2004 Summer Paralympics
-Olympic Game...
-------------------------------
-2025-04-23 15:02:13,382 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent solver output:
-------------------------------
-[AGENT]
-Agent input: Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?
-Agent's thoughts:
-Athens
-------------------------------
-2025-04-23 15:02:13,385 - nat.front_ends.console.console_front_end_plugin - INFO -
+48 * 37 = 1776
+
+2025-01-15 10:30:45,456 - nat.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
-['Athens']
+48 * 37 = 1776
 --------------------------------------------------
 ```
+
+**How the Router Agent Works:**
+1. **Request Analysis**: The agent analyzes the input "What is 48 multiplied by 37?" and identifies it as a multiplication operation
+2. **Branch Selection**: Based on the analysis, it selects the `calculator_multiply` branch from the available options
+3. **Tool Execution**: The selected branch (calculator function) processes the request and returns the mathematical result
+4. **Result Return**: The agent returns the result without additional processing or iterations
+
+This demonstrates the Router Agent's efficient single-pass routing and execution pattern, making it ideal for scenarios where different types of requests need to be directed to specialized tools or functions.
 
 ### Starting the NeMo Agent Toolkit Server
 
 You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
 
-**Starting the ReWOO Agent Example Workflow**
+**Starting the Router Agent Example Workflow**
 
 ```bash
-nat serve --config_file=examples/agents/rewoo/configs/config.yml
+nat serve --config_file=examples/agents/router/configs/config.yml
 ```
 
 ### Making Requests to the NeMo Agent Toolkit Server
@@ -183,30 +159,30 @@ Once the server is running, you can make HTTP requests to interact with the work
 
 #### Non-Streaming Requests
 
-**Non-Streaming Request to the ReWOO Agent Example Workflow**
+**Non-Streaming Request to the Router Agent Example Workflow**
 
 ```bash
 curl --request POST \
   --url http://localhost:8000/generate \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"}'
+  --data '{"input_message": "What is 48 multiplied by 37?"}'
 ```
 
 #### Streaming Requests
 
-**Streaming Request to the ReWOO Agent Example Workflow**
+**Streaming Request to the Router Agent Example Workflow**
 
 ```bash
 curl --request POST \
   --url http://localhost:8000/generate/stream \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"}'
+  --data '{"input_message": "What is 48 multiplied by 37?"}'
 ```
 ---
 
-### Evaluating the ReWOO Agent Workflow
-**Run and evaluate the `rewoo_agent` example Workflow**
+### Evaluating the Router Agent Workflow
+**Run and evaluate the `router_agent` example Workflow**
 
 ```bash
-nat eval --config_file=examples/agents/rewoo/configs/config.yml
+nat eval --config_file=examples/agents/router/configs/config.yml
 ```

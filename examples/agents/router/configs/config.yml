@@ -27,40 +27,15 @@ llms:
 functions:
   calculator_multiply:
     _type: calculator_multiply
-    description: "Multiply two numbers"
   calculator_inequality:
     _type: calculator_inequality
-    description: "Compare two numbers"
   calculator_divide:
     _type: calculator_divide
-    description: "Divide two numbers"
   calculator_subtract:
     _type: calculator_subtract
-    description: "Subtract two numbers"
 
 workflow:
   _type: router_agent
   branches: [calculator_multiply, calculator_inequality, calculator_divide, calculator_subtract]
   llm_name: nim_llm
   verbose: true
-  routing_request: "Which tool should be used to answer the question?"
-
-# eval:
-#   general:
-#     output_dir: .tmp/nat/examples/rewoo_agent/
-#     dataset:
-#       _type: json
-#       file_path: examples/agents/data/rewoo.json
-#   evaluators:
-#     rag_accuracy:
-#       _type: ragas
-#       metric: AnswerAccuracy
-#       llm_name: nim_llm
-#     rag_groundedness:
-#       _type: ragas
-#       metric: ContextRelevance
-#       llm_name: nim_llm
-#     rag_relevance:
-#       _type: ragas
-#       metric: ResponseGroundedness
-#       llm_name: nim_llm
