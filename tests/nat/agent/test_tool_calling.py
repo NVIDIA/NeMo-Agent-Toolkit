@@ -98,10 +98,36 @@ def test_tool_calling_agent_init_w_prompt(mock_config_tool_calling_agent, mock_l
     assert output_messages[0].content == prompt
 
 
+def test_tool_calling_agent_init_w_return_direct(mock_config_tool_calling_agent, mock_llm, mock_tool):
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    return_direct_tools = ['Tool A']
+    agent = ToolCallAgentGraph(llm=mock_llm,
+                               tools=tools,
+                               detailed_logs=mock_config_tool_calling_agent.verbose,
+                               return_direct=return_direct_tools)
+    assert isinstance(agent, ToolCallAgentGraph)
+    assert agent.llm == mock_llm
+    assert agent.tools == tools
+    assert agent.detailed_logs == mock_config_tool_calling_agent.verbose
+    assert isinstance(agent.tool_caller, ToolNode)
+    assert list(agent.tool_caller.tools_by_name.keys()) == ['Tool A', 'Tool B']
+    assert agent.return_direct == return_direct_tools
+
+
 @pytest.fixture(name='mock_tool_agent', scope="module")
 def mock_agent(mock_config_tool_calling_agent, mock_tool, mock_llm):
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
     agent = ToolCallAgentGraph(llm=mock_llm, tools=tools, detailed_logs=mock_config_tool_calling_agent.verbose)
+    return agent
+
+
+@pytest.fixture(name='mock_tool_agent_with_return_direct', scope="module")
+def mock_agent_with_return_direct(mock_config_tool_calling_agent, mock_tool, mock_llm):
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    agent = ToolCallAgentGraph(llm=mock_llm,
+                               tools=tools,
+                               detailed_logs=mock_config_tool_calling_agent.verbose,
+                               return_direct=['Tool A'])
     return agent
 
 
@@ -113,6 +139,20 @@ async def test_build_graph(mock_tool_agent):
     assert set(graph.builder.branches.get('agent').get('conditional_edge').ends.keys()) == {
         AgentDecision.TOOL, AgentDecision.END
     }
+
+
+async def test_build_graph_with_return_direct(mock_tool_agent_with_return_direct):
+    graph = await mock_tool_agent_with_return_direct.build_graph()
+    assert isinstance(graph, CompiledGraph)
+    assert list(graph.nodes.keys()) == ['__start__', 'agent', 'tool']
+    assert graph.builder.edges == {('__start__', 'agent')}
+    assert set(graph.builder.branches.get('agent').get('conditional_edge').ends.keys()) == {
+        AgentDecision.TOOL, AgentDecision.END
+    }
+    tool_branches = graph.builder.branches.get('tool')
+    assert tool_branches is not None
+    assert 'tool_conditional_edge' in tool_branches
+    assert set(tool_branches.get('tool_conditional_edge').ends.keys()) == {AgentDecision.END, AgentDecision.TOOL}
 
 
 async def test_agent_node_no_input(mock_tool_agent):
@@ -146,6 +186,40 @@ async def test_conditional_edge_tool_call(mock_tool_agent):
     assert tool == AgentDecision.TOOL
 
 
+async def test_tool_conditional_edge_no_return_direct(mock_tool_agent):
+    message = ToolMessage(content='mock tool response', name='Tool A', tool_call_id='Tool A')
+    mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='test'), message])
+    decision = await mock_tool_agent.tool_conditional_edge(mock_state)
+    assert decision == AgentDecision.TOOL
+
+
+async def test_tool_conditional_edge_return_direct_match(mock_tool_agent_with_return_direct):
+    message = ToolMessage(content='mock tool response', name='Tool A', tool_call_id='Tool A')
+    mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='test'), message])
+    decision = await mock_tool_agent_with_return_direct.tool_conditional_edge(mock_state)
+    assert decision == AgentDecision.END
+
+
+async def test_tool_conditional_edge_return_direct_no_match(mock_tool_agent_with_return_direct):
+    message = ToolMessage(content='mock tool response', name='Tool B', tool_call_id='Tool B')
+    mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='test'), message])
+    decision = await mock_tool_agent_with_return_direct.tool_conditional_edge(mock_state)
+    assert decision == AgentDecision.TOOL
+
+
+async def test_tool_conditional_edge_no_name_attribute(mock_tool_agent_with_return_direct):
+    message = AIMessage(content='mock response')
+    mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='test'), message])
+    decision = await mock_tool_agent_with_return_direct.tool_conditional_edge(mock_state)
+    assert decision == AgentDecision.TOOL
+
+
+async def test_tool_conditional_edge_empty_messages(mock_tool_agent_with_return_direct):
+    mock_state = ToolCallAgentGraphState(messages=[])
+    decision = await mock_tool_agent_with_return_direct.tool_conditional_edge(mock_state)
+    assert decision == AgentDecision.TOOL
+
+
 async def test_tool_node_no_input(mock_tool_agent):
     with pytest.raises(IndexError) as ex:
         await mock_tool_agent.tool_node(ToolCallAgentGraphState())
@@ -177,6 +251,11 @@ async def mock_graph(mock_tool_agent):
     return await mock_tool_agent.build_graph()
 
 
+@pytest.fixture(name="mock_tool_graph_with_return_direct", scope="module")
+async def mock_graph_with_return_direct(mock_tool_agent_with_return_direct):
+    return await mock_tool_agent_with_return_direct.build_graph()
+
+
 async def test_graph(mock_tool_graph):
     mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='please, mock tool call!')])
     response = await mock_tool_graph.ainvoke(mock_state)
@@ -184,3 +263,12 @@ async def test_graph(mock_tool_graph):
     response = response.messages[-1]
     assert isinstance(response, AIMessage)
     assert response.content == 'mock query'
+
+
+async def test_graph_with_return_direct(mock_tool_graph_with_return_direct):
+    mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='please, mock tool call!')])
+    response = await mock_tool_graph_with_return_direct.ainvoke(mock_state)
+    response = ToolCallAgentGraphState(**response)
+    last_message = response.messages[-1]
+    assert isinstance(last_message, ToolMessage)
+    assert last_message.name == 'Tool A'
