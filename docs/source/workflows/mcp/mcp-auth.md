@@ -20,10 +20,10 @@ This is currently a scratch pad for planning MCP auth. It will be removed when M
 
 ## MCP Client Configuration Options
 
-The NeMo Agent toolkit supports four different authentication approaches for MCP clients, providing flexibility for various deployment scenarios and security requirements.
+The NeMo Agent toolkit supports four different authentication approaches for MCP clients, providing flexibility for various deployment scenarios and security requirements. Authentication is configured using NAT's authentication provider system with `AuthenticationRef` references.
 
 ### Option 1: No Authentication (Default)
-For public MCP servers that don't require authentication. Simply omit the `auth` section.
+For public MCP servers that don't require authentication. Simply omit the `auth_provider` field.
 
 ```yaml
 functions:
@@ -32,86 +32,105 @@ functions:
     server:
       transport: streamable-http
       url: https://public-mcp-server.com/mcp
-    # No auth section = no authentication
+    # No auth_provider = no authentication
 ```
 
 ### Option 2: Manual Registration + Explicit Auth Server
-Complete manual configuration similar to NAT's existing OAuth2 pattern.
+Use NAT's existing `oauth2_auth_code_flow` provider for standard OAuth2 authentication.
 
 ```yaml
 functions:
   my_mcp_client:
     _type: mcp_client
-    auth:
-      # Explicit auth server configuration (similar to NAT's oauth2_auth_code_flow)
-      authorization_url: https://auth.example.com/oauth/authorize
-      token_url: https://auth.example.com/oauth/token
-      client_id: ${MCP_CLIENT_ID}
-      client_secret: ${MCP_CLIENT_SECRET}
-      redirect_uri: http://localhost:8080/oauth/callback
-      scopes: ["mcp:read", "mcp:write"]
-      use_pkce: true
     server:
       transport: streamable-http
       url: https://protected-mcp-server.com/mcp
+      auth_provider: standard_oauth2
+
+authentication:
+  standard_oauth2:
+    _type: oauth2_auth_code_flow
+    authorization_url: https://auth.example.com/oauth/authorize
+    token_url: https://auth.example.com/oauth/token
+    client_id: ${MCP_CLIENT_ID}
+    client_secret: ${MCP_CLIENT_SECRET}
+    redirect_uri: http://localhost:8080/oauth/callback
+    scopes: ["mcp:read", "mcp:write"]
+    use_pkce: true
 ```
 
 ### Option 3: Dynamic Registration + MCP Server Discovery
-Fully automated approach using MCP specification discovery and dynamic client registration.
+Use the new `mcp_oauth2` provider for fully automated discovery and dynamic client registration.
 
 ```yaml
 functions:
   my_mcp_client:
     _type: mcp_client
-    auth:
-      # All auth details discovered from MCP server
-      # Client credentials obtained via dynamic registration
-      enable_dynamic_registration: true
-      redirect_uri: http://localhost:8080/oauth/callback
-      use_pkce: true
     server:
       transport: streamable-http
       url: https://protected-mcp-server.com/mcp
+      auth_provider: mcp_oauth2_dynamic
+
+authentication:
+  mcp_oauth2_dynamic:
+    _type: mcp_oauth2
+    enable_dynamic_registration: true
+    redirect_uri: http://localhost:3030/oauth/callback
+    client_name: "NAT MCP Client"
+    # All auth details discovered from MCP server
+    # Client credentials obtained via dynamic registration
 ```
 
 ### Option 4: Manual Registration + MCP Server Discovery (Hybrid)
-Pre-registered client credentials with MCP-compliant discovery of auth server details.
+Use the new `mcp_oauth2` provider with pre-registered client credentials and MCP server discovery.
 
 ```yaml
 functions:
   my_mcp_client:
     _type: mcp_client
-    auth:
-      # Pre-registered client credentials
-      client_id: ${MCP_CLIENT_ID}
-      client_secret: ${MCP_CLIENT_SECRET}
-      # Auth server URLs and scopes discovered from MCP server
-      # authorization_url: <-- discovered via RFC 9728 + RFC 8414
-      # token_url: <-- discovered via RFC 9728 + RFC 8414
-      # scopes: <-- discovered from MCP server metadata
-      redirect_uri: http://localhost:8080/oauth/callback
-      use_pkce: true
     server:
       transport: streamable-http
       url: https://protected-mcp-server.com/mcp
+      auth_provider: mcp_oauth2_hybrid
+
+authentication:
+  mcp_oauth2_hybrid:
+    _type: mcp_oauth2
+    client_id: ${MCP_CLIENT_ID}
+    client_secret: ${MCP_CLIENT_SECRET}
+    redirect_uri: http://localhost:3030/oauth/callback
+    client_name: "NAT MCP Client"
+    # Auth server URLs and scopes discovered from MCP server
+    # authorization_url: <-- discovered via RFC 9728 + RFC 8414
+    # token_url: <-- discovered via RFC 9728 + RFC 8414
+    # scopes: <-- discovered from MCP server metadata
 ```
 
 ## Configuration Details
 
 ### Required Fields by Option
 
+#### **Option 1 (No Authentication)**
+- No `auth_provider` field in MCP client configuration
+
 #### **Option 2 (Manual + Explicit)**
-- `authorization_url`: OAuth2 authorization endpoint URL
-- `token_url`: OAuth2 token endpoint URL
-- `client_id`: OAuth2 client identifier
-- `client_secret`: OAuth2 client secret
+- `auth_provider`: Reference to `oauth2_auth_code_flow` provider
+- Provider must include:
+  - `authorization_url`: OAuth2 authorization endpoint URL
+  - `token_url`: OAuth2 token endpoint URL
+  - `client_id`: OAuth2 client identifier
+  - `client_secret`: OAuth2 client secret
 
 #### **Option 3 (Dynamic + Discovery)**
-- `enable_dynamic_registration`: Set to `true` to enable automatic client registration
+- `auth_provider`: Reference to `mcp_oauth2` provider
+- Provider must include:
+  - `enable_dynamic_registration`: Set to `true` to enable automatic client registration
 
 #### **Option 4 (Hybrid)**
-- `client_id`: OAuth2 client identifier (pre-registered)
-- `client_secret`: OAuth2 client secret (pre-registered)
+- `auth_provider`: Reference to `mcp_oauth2` provider
+- Provider must include:
+  - `client_id`: OAuth2 client identifier (pre-registered)
+  - `client_secret`: OAuth2 client secret (pre-registered)
 
 ### Optional Fields (All Options)
 - `redirect_uri`: OAuth2 callback URL (defaults to localhost with random port)
