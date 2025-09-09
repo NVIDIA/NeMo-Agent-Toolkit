@@ -17,7 +17,6 @@ import asyncio
 import json
 import logging
 import os
-import traceback
 import typing
 from abc import ABC
 from abc import abstractmethod
@@ -740,7 +739,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         def _job_status_to_response(job: "JobInfo") -> AsyncGenerationStatusResponse:
             job_output = job.output
             if job_output is not None:
-                job_output = json.loads(job_output)
+                try:
+                    job_output = json.loads(job_output)
+                except json.JSONDecodeError:
+                    msg = f"Failed to parse job output as JSON: {job_output}"
+                    logger.error(msg)
+                    job_output = msg
+
             return AsyncGenerationStatusResponse(job_id=job.job_id,
                                                  status=job.status,
                                                  error=job.error,
@@ -763,7 +768,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 await job_store.update_status(job_id, "success", output=result)
             except Exception as e:
-                logger.exception("Error in async job %s: %s", job_id, traceback.format_exc())
+                logger.exception("Error in async job %s", job_id)
                 await job_store.update_status(job_id, "failure", error=str(e))
 
         def post_async_generation(request_type: type):
