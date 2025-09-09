@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION &
+# AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,6 +55,24 @@ logger = logging.getLogger(__name__)
 
 
 class JobStatus(str, Enum):
+    """
+    Enumeration of possible job statuses in the job store.
+
+    Attributes
+    ----------
+    SUBMITTED : str
+        Job has been submitted to the scheduler but not yet started.
+    RUNNING : str
+        Job is currently being executed.
+    SUCCESS : str
+        Job completed successfully.
+    FAILURE : str
+        Job failed during execution.
+    INTERRUPTED : str
+        Job was interrupted or cancelled before completion.
+    NOT_FOUND : str
+        Job ID does not exist in the job store.
+    """
     SUBMITTED = "submitted"
     RUNNING = "running"
     SUCCESS = "success"
@@ -66,8 +85,36 @@ class Base(DeclarativeBase):
     pass
 
 
-# pydantic model for the job status
 class JobInfo(Base):
+    """
+    SQLAlchemy model representing job metadata and status information.
+
+    This model stores comprehensive information about jobs submitted to the Dask scheduler, including their current
+    status, configuration, outputs, and lifecycle metadata.
+
+    Attributes
+    ----------
+    job_id : str
+        Unique identifier for the job (primary key).
+    status : JobStatus
+        Current status of the job.
+    config_file : str, optional
+        Path to the configuration file used for the job.
+    error : str, optional
+        Error message if the job failed.
+    output_path : str, optional
+        Path where job outputs are stored.
+    created_at : datetime
+        Timestamp when the job was created.
+    updated_at : datetime
+        Timestamp when the job was last updated.
+    expiry_seconds : int
+        Number of seconds after which the job is eligible for cleanup.
+    output : str, optional
+        Serialized job output data (JSON format).
+    is_expired : bool
+        Flag indicating if the job has been marked as expired.
+    """
     __tablename__ = "job_info"
 
     job_id: Mapped[str] = mapped_column(primary_key=True)
@@ -75,7 +122,9 @@ class JobInfo(Base):
     config_file: Mapped[str] = mapped_column(nullable=True)
     error: Mapped[str] = mapped_column(nullable=True)
     output_path: Mapped[str] = mapped_column(nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.now(UTC)
+    )
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
                                                  default=datetime.now(UTC),
                                                  onupdate=datetime.now(UTC))
@@ -89,15 +138,18 @@ class JobInfo(Base):
 
 class JobStore:
     """
-    Tracks and manages jobs submitted to the Dask scheduler, along with persisting job metadata (JobInfo objects) into
-    a database.
+    Tracks and manages jobs submitted to the Dask scheduler, along with persisting job metadata (JobInfo objects) in a
+    database.
 
     Parameters
     ----------
     scheduler_address: str
         The address of the Dask scheduler.
-    db_engine: AsyncEngine
+    db_engine: AsyncEngine | None, optional
         The database engine for the job store.
+    db_url: str | None, optional
+        The database URL to connect to, used when db_engine is not
+        provided. Refer to https://docs.sqlalchemy.org/en/20
     """
 
     MIN_EXPIRY = 600  # 10 minutes
@@ -107,7 +159,12 @@ class JobStore:
     # active jobs are exempt from expiry
     ACTIVE_STATUS = {"running", "submitted"}
 
-    def __init__(self, scheduler_address: str, db_engine: "AsyncEngine | None" = None, db_url: str | None = None):
+    def __init__(
+        self,
+        scheduler_address: str,
+        db_engine: "AsyncEngine | None" = None,
+        db_url: str | None = None,
+    ):
         self._scheduler_address = scheduler_address
 
         if db_engine is None:
@@ -116,37 +173,68 @@ class JobStore:
 
             db_engine = get_db_engine(db_url, use_async=True)
 
-        # Disabling expire_on_commit allows us to detach (expunge) job instances from the session
+        # Disabling expire_on_commit allows us to detach (expunge) job
+        # instances from the session
         session_maker = async_sessionmaker(db_engine, expire_on_commit=False)
 
-        # The async_scoped_session ensures that the same session is used within the same task, and that no two tasks
-        # share the same session.
-        self._session = async_scoped_session(session_maker, scopefunc=current_task)
+        # The async_scoped_session ensures that the same session is used
+        # within the same task, and that no two tasks share the same session.
+        self._session = async_scoped_session(
+            session_maker, scopefunc=current_task
+        )
 
     @asynccontextmanager
     async def client(self) -> AsyncGenerator[DaskClient]:
         """
-        Get the Dask client.
+        Async context manager for obtaining a Dask client connection.
+
+        Yields
+        ------
+        DaskClient
+            An active Dask client connected to the scheduler. The client is automatically closed when exiting the
+            context manager.
         """
-        client = await DaskClient(address=self._scheduler_address, asynchronous=True)
+        client = await DaskClient(
+            address=self._scheduler_address, asynchronous=True
+        )
 
         yield client
+
         await client.close()
 
     @asynccontextmanager
     async def session(self) -> AsyncGenerator["AsyncSession"]:
         """
-        Async context manager for a SQLAlchemy session which explicitly begins a transaction.
+        Async context manager for a SQLAlchemy session with automatic transaction management.
+
+        Creates a new database session scoped to the current async task and begins a transaction. The transaction is
+        committed on successful exit and rolled back on exception. The session is automatically removed from the
+        registry after use.
+
+        Yields
+        ------
+        AsyncSession
+            An active SQLAlchemy async session with an open transaction.
         """
         async with self._session() as session:
             async with session.begin():
                 yield session
 
-        # Removes the current task key from the session registry, preventing potential memory leaks
+        # Removes the current task key from the session registry, preventing
+        # potential memory leaks
         await self._session.remove()
 
     def ensure_job_id(self, job_id: str | None) -> str:
-        """Ensure a job ID is provided, generating a new one if necessary."""
+        """
+        Ensure a job ID is provided, generating a new one if necessary.
+
+        If a job ID is provided, it is returned as-is.
+
+        Parameters
+        ----------
+        job_id: str | None
+            The job ID to ensure, or None to generate a new one.
+        """
         if job_id is None:
             job_id = str(uuid4())
             logger.info("Generated new job ID: %s", job_id)
@@ -163,9 +251,16 @@ class JobStore:
         """
         job_id = self.ensure_job_id(job_id)
 
-        clamped_expiry = max(self.MIN_EXPIRY, min(expiry_seconds, self.MAX_EXPIRY))
+        clamped_expiry = max(
+            self.MIN_EXPIRY, min(expiry_seconds, self.MAX_EXPIRY)
+        )
         if expiry_seconds != clamped_expiry:
-            logger.info("Clamped expiry_seconds from %d to %d for job %s", expiry_seconds, clamped_expiry, job_id)
+            logger.info(
+                "Clamped expiry_seconds from %d to %d for job %s",
+                expiry_seconds,
+                clamped_expiry,
+                job_id,
+            )
 
         job = JobInfo(job_id=job_id,
                       status=JobStatus.SUBMITTED,
@@ -191,6 +286,29 @@ class JobStore:
                          job_fn: Callable[..., typing.Any],
                          job_args: list[typing.Any],
                          **job_kwargs) -> tuple[str, JobInfo | None]:
+        """
+        Submit a job to the Dask scheduler, and store job metadata in the database.
+
+        Parameters
+        ----------
+        job_id: str | None
+            The job ID to use, or None to generate a new one.
+        config_file: str | None
+            The config file used to run the job, if any.
+        expiry_seconds: int
+            The number of seconds after which the job should be considered expired. Expired jobs are eligible for
+            cleanup, but are not deleted immediately.
+        sync_timeout: int
+            If greater than 0, wait for the job to complete for up to this many seconds. If the job does not complete
+            in this time, return immediately with the job ID and no job info. If the job completes in this time,
+            return the job ID and the job info. If 0, return immediately with the job ID and no job info.
+        job_fn: Callable[..., typing.Any]
+            The function to run as the job. This function must be serializable by Dask.
+        job_args: list[typing.Any]
+            The arguments to pass to the job function. These must be serializable by Dask.
+        job_kwargs: dict[str, typing.Any]
+            The keyword arguments to pass to the job function. These must be serializable by Dask
+        """
         job_id = await self._create_job(job_id=job_id, config_file=config_file, expiry_seconds=expiry_seconds)
 
         # We are intentionally not using job_id as the key, since Dask will clear the associated metadata once
@@ -222,6 +340,28 @@ class JobStore:
                             error: str | None = None,
                             output_path: str | None = None,
                             output: BaseModel | None = None):
+        """
+        Update the status and metadata of an existing job.
+
+        Parameters
+        ----------
+        job_id : str
+            The unique identifier of the job to update.
+        status : str
+            The new status to set for the job (should be a valid JobStatus value).
+        error : str, optional
+            Error message to store if the job failed.
+        output_path : str, optional
+            Path where job outputs are stored.
+        output : BaseModel, optional
+            Job output data. Can be a Pydantic BaseModel, dict, list, or string. BaseModel and dict/list objects are
+            serialized to JSON for storage.
+
+        Raises
+        ------
+        ValueError
+            If the specified job_id does not exist in the job store.
+        """
 
         async with self.session() as session:
             job: JobInfo = await session.get(JobInfo, job_id)
@@ -245,17 +385,53 @@ class JobStore:
 
     async def get_all_jobs(self) -> list[JobInfo]:
         """
-        Get all jobs, potentially costly if there are many jobs.
+        Retrieve all jobs from the job store.
+
+        Returns
+        -------
+        list[JobInfo]
+            A list of all JobInfo objects in the database. This operation can be expensive if there are many jobs
+            stored.
+
+        Warning
+        -------
+        This method loads all jobs into memory and should be used with caution in production environments with large
+        job stores.
         """
         async with self.session() as session:
             return (await session.scalars(select(JobInfo))).all()
 
     async def get_job(self, job_id: str) -> JobInfo | None:
-        """Get a job by its ID."""
+        """
+        Retrieve a specific job by its unique identifier.
+
+        Parameters
+        ----------
+        job_id : str
+            The unique identifier of the job to retrieve.
+
+        Returns
+        -------
+        JobInfo or None
+            The JobInfo object if found, None if the job_id does not exist.
+        """
         async with self.session() as session:
             return await session.get(JobInfo, job_id)
 
     async def get_status(self, job_id: str) -> JobStatus:
+        """
+        Get the current status of a specific job.
+
+        Parameters
+        ----------
+        job_id : str
+            The unique identifier of the job.
+
+        Returns
+        -------
+        JobStatus
+            The current status of the job, or JobStatus.NOT_FOUND if the job does not exist in the store.
+        """
         job = await self.get_job(job_id)
         if job is not None:
             return JobStatus(job.status)
@@ -263,7 +439,15 @@ class JobStore:
             return JobStatus.NOT_FOUND
 
     async def get_last_job(self) -> JobInfo | None:
-        """Get the last created job."""
+        """
+        Retrieve the most recently created job.
+
+        Returns
+        -------
+        JobInfo or None
+            The JobInfo object for the most recently created job based on the created_at timestamp, or None if no jobs
+            exist in the store.
+        """
         stmt = select(JobInfo).order_by(JobInfo.created_at.desc())
         async with self.session() as session:
             last_job = (await session.scalars(stmt)).first()
@@ -276,13 +460,42 @@ class JobStore:
         return last_job
 
     async def get_jobs_by_status(self, status: JobStatus) -> list[JobInfo]:
-        """Get all jobs with the specified status."""
+        """
+        Retrieve all jobs that have a specific status.
+
+        Parameters
+        ----------
+        status : JobStatus
+            The status to filter jobs by.
+
+        Returns
+        -------
+        list[JobInfo]
+            A list of JobInfo objects that have the specified status. Returns an empty list if no jobs match the
+            status.
+        """
         stmt = select(JobInfo).where(JobInfo.status == status)
         async with self.session() as session:
             return (await session.scalars(stmt)).all()
 
     def get_expires_at(self, job: JobInfo) -> datetime | None:
-        """Get the time for a job to expire."""
+        """
+        Calculate the expiration time for a given job.
+
+        Active jobs (with status in `self.ACTIVE_STATUS`) do not expire and return `None`. For non-active jobs, the
+        expiration time is calculated as updated_at + expiry_seconds.
+
+        Parameters
+        ----------
+        job : JobInfo
+            The job object to calculate expiration time for.
+
+        Returns
+        -------
+        datetime or None
+            The UTC datetime when the job will expire, or None if the job is active and therefore exempt from
+            expiration.
+        """
         if job.status in self.ACTIVE_STATUS:
             return None
 
@@ -296,8 +509,9 @@ class JobStore:
     async def cleanup_expired_jobs(self):
         """
         Cleanup expired jobs, keeping the most recent one.
-        Updated_at is used instead of created_at to determine the most recent job.
-        This is because jobs may not be processed in the order they are created.
+
+        Updated_at is used instead of created_at to determine the most recent job. This is because jobs may not be
+        processed in the order they are created.
         """
         now = datetime.now(UTC)
 
@@ -359,8 +573,8 @@ def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool
     echo: bool
         If True, SQLAlchemy will log all SQL statements. Useful for debugging.
     use_async: bool
-        If True, use the async database engine.
-        The JobStore class requires an async database engine, setting `use_async` to False is only usefull for testing.
+        If True, use the async database engine. The JobStore class requires an async database engine, setting
+        `use_async` to False is only useful for testing.
     """
     if db_url is None:
         db_url = os.environ.get("NAT_JOB_STORE_DB_URL")

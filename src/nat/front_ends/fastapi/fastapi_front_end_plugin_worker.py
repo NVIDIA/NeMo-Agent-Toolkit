@@ -1099,3 +1099,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
     async def _remove_flow(self, state: str):
         async with self._outstanding_flows_lock:
             del self._outstanding_flows[state]
+
+
+# Prevent Sphinx from documenting items not a part of the public API
+__all__ = ["FastApiFrontEndPluginWorkerBase", "FastApiFrontEndPluginWorker", "RouterInfo"]
