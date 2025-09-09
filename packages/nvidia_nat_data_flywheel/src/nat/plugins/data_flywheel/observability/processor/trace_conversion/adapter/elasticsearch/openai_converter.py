@@ -282,7 +282,7 @@ def convert_chat_response(chat_response: dict, span_name: str = "", index: int =
 
 @register_adapter(trace_source_model=OpenAITraceSource)
 def convert_langchain_openai(trace_source: TraceContainer) -> DFWESRecord:
-    """Convert a LangChain OpenAI trace source to a DFWESRecord.
+    """Convert a LangChain/LangGraph OpenAI trace source to a DFWESRecord.
 
     Args:
         trace_source (TraceContainer): The trace source to convert

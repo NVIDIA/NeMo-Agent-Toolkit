@@ -48,7 +48,7 @@ llms:
 * `temperature`: Controls randomness in the output (0.0 to 1.0, default: 0.0)
 * `max_tokens`: Maximum number of tokens to generate (must be > 0, default: 1024)
 * `top_p`: The top-p value to use for the model. This field is ignored for LlamaIndex. (0.0 to 1.0, default: 1.0)
-* `context_size`: The maximum number of tokens available for input. This is only required for LlamaIndex. This field is ignored for LangChain. (must be > 0, default: 1024)
+* `context_size`: The maximum number of tokens available for input. This is only required for LlamaIndex. This field is ignored for LangChain/LangGraph. (must be > 0, default: 1024)
 * `region_name`: AWS region where your Bedrock service is hosted (default: "None")
 * `base_url`: Custom Bedrock endpoint URL (default: None, needed if you don't want to use the default us-east-1 endpoint)
 * `credentials_profile_name`: AWS credentials profile name from ~/.aws/credentials or ~/.aws/config files (default: None)

@@ -331,7 +331,7 @@ def agno_tool_wrapper(name: str, fn: Function, builder: Builder):
     if description:
         description = textwrap.dedent(description).strip()
 
-    # Input schema handling from LangChain-style
+    # Input schema handling from LangChain/LangGraph-style
     required_fields = []
     if fn.input_schema is not None:
         try:

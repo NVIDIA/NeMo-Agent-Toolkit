@@ -22,7 +22,7 @@ In NeMo Agent toolkit the set of configuration parameters needed to interact wit
 nat info components -t llm_provider
 ```
 
-In NeMo Agent toolkit there are LLM providers, like NIM and OpenAI, and there are frameworks which need to use those providers, such as LangChain LlamaIndex with a client defined for each. To add support, we need to cover the combinations of providers to clients.
+In NeMo Agent toolkit there are LLM providers, like NIM and OpenAI, and there are frameworks which need to use those providers, such as LangChain/LangGraph LlamaIndex with a client defined for each. To add support, we need to cover the combinations of providers to clients.
 
 As an example, NeMo Agent toolkit contains multiple clients for interacting with the OpenAI API with different frameworks, each sharing the same provider configuration {class}`nat.llm.openai_llm.OpenAIModelConfig`. To view the full list of clients registered for the OpenAI LLM provider, run the following command:
 
@@ -170,7 +170,7 @@ Registering an embedder or retriever client is similar. However, the function sh
 
 The wrapped function in turn receives two required positional arguments: an instance of the configuration class of the provider, and an instance of {class}`nat.builder.builder.Builder`. The function should then yield a client suitable for the given provider and framework. The exact type is dictated by the framework itself and not by NeMo Agent toolkit.
 
-Since many frameworks provide clients for many of the common LLM APIs, in NeMo Agent toolkit, the client registration functions are often simple factory methods. For example, the OpenAI client registration function for LangChain is as follows:
+Since many frameworks provide clients for many of the common LLM APIs, in NeMo Agent toolkit, the client registration functions are often simple factory methods. For example, the OpenAI client registration function for LangChain/LangGraph is as follows:
 
 `packages/nvidia_nat_langchain/src/nat/plugins/langchain/llm.py`:
 ```python
@@ -190,13 +190,13 @@ In the above example, the `ChatOpenAI` class is imported lazily, allowing for th
 
 ## Test the Combination of LLM Provider and Client
 
-After implementing a new LLM provider, it's important to verify that it works correctly with all existing LLM clients. This can be done by writing integration tests. Here's an example of how to test the integration between the NIM LLM provider and the LangChain framework:
+After implementing a new LLM provider, it's important to verify that it works correctly with all existing LLM clients. This can be done by writing integration tests. Here's an example of how to test the integration between the NIM LLM provider and the LangChain/LangGraph framework:
 
 ```python
 @pytest.mark.integration
 async def test_nim_langchain_agent():
     """
-    Test NIM LLM with LangChain agent. Requires NVIDIA_API_KEY to be set.
+    Test NIM LLM with LangChain/LangGraph agent. Requires NVIDIA_API_KEY to be set.
     """
 
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
