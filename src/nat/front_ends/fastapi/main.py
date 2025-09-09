@@ -15,16 +15,20 @@
 
 import logging
 import os
+import typing
 
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
 from nat.front_ends.fastapi.utils import get_config_file_path
 from nat.front_ends.fastapi.utils import import_class_from_string
 from nat.runtime.loader import load_config
 
+if typing.TYPE_CHECKING:
+    from fastapi import FastAPI
+
 logger = logging.getLogger(__name__)
 
 
-def get_app():
+def get_app() -> "FastAPI":
 
     config_file_path = get_config_file_path()
     front_end_worker_full_name = os.getenv("NAT_FRONT_END_WORKER")
