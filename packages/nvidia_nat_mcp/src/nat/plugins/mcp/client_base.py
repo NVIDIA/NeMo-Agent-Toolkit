@@ -33,6 +33,7 @@ from mcp.client.stdio import StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
+from nat.authentication.interfaces import AuthProviderBase
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
 from nat.plugins.mcp.exceptions import MCPToolNotFoundError
 from nat.utils.type_utils import override
@@ -229,11 +230,13 @@ class MCPSSEClient(MCPBaseClient):
 
     Args:
       url (str): The url of the MCP server
+      auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self, url: str):
+    def __init__(self, url: str, auth_provider: AuthProviderBase | None = None):
         super().__init__("sse")
         self._url = url
+        self._auth_provider = auth_provider
 
     @property
     def url(self) -> str:
@@ -243,13 +246,33 @@ class MCPSSEClient(MCPBaseClient):
     def server_name(self):
         return f"sse:{self._url}"
 
+    async def _get_auth_headers(self) -> dict[str, str]:
+        """Get authentication headers from the auth provider."""
+        if not self._auth_provider:
+            return {}
+
+        try:
+            auth_result = await self._auth_provider.authenticate()
+            # Check if we have BearerTokenCred
+            from nat.data_models.authentication import BearerTokenCred
+            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
+                token = auth_result.credentials[0].token.get_secret_value()
+                return {"Authorization": f"Bearer {token}"}
+            else:
+                logger.warning("Auth provider did not return BearerTokenCred")
+                return {}
+        except Exception as e:
+            logger.warning("Failed to get auth token: %s", e)
+            return {}
+
     @asynccontextmanager
     @override
     async def connect_to_server(self):
         """
         Establish a session with an MCP SSE server within an async context
         """
-        async with sse_client(url=self._url) as (read, write):
+        headers = await self._get_auth_headers()
+        async with sse_client(url=self._url, headers=headers) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
@@ -307,12 +330,13 @@ class MCPStreamableHTTPClient(MCPBaseClient):
 
     Args:
       url (str): The url of the MCP server
+      auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self, url: str):
+    def __init__(self, url: str, auth_provider: AuthProviderBase | None = None):
         super().__init__("streamable-http")
-
         self._url = url
+        self._auth_provider = auth_provider
 
     @property
     def url(self) -> str:
@@ -322,12 +346,32 @@ class MCPStreamableHTTPClient(MCPBaseClient):
     def server_name(self):
         return f"streamable-http:{self._url}"
 
+    async def _get_auth_headers(self) -> dict[str, str]:
+        """Get authentication headers from the auth provider."""
+        if not self._auth_provider:
+            return {}
+
+        try:
+            auth_result = await self._auth_provider.authenticate()
+            # Check if we have BearerTokenCred
+            from nat.data_models.authentication import BearerTokenCred
+            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
+                token = auth_result.credentials[0].token.get_secret_value()
+                return {"Authorization": f"Bearer {token}"}
+            else:
+                logger.warning("Auth provider did not return BearerTokenCred")
+                return {}
+        except Exception as e:
+            logger.warning("Failed to get auth token: %s", e)
+            return {}
+
     @asynccontextmanager
     async def connect_to_server(self):
         """
         Establish a session with an MCP server via streamable-http within an async context
         """
-        async with streamablehttp_client(url=self._url) as (read, write, get_session_id):
+        headers = await self._get_auth_headers()
+        async with streamablehttp_client(url=self._url, headers=headers) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session

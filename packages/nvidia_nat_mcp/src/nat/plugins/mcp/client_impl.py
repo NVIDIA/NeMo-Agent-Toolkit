@@ -25,6 +25,7 @@ from pydantic import model_validator
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.plugins.mcp.client_base import MCPBaseClient
@@ -38,69 +39,6 @@ class MCPToolOverrideConfig(BaseModel):
     """
     alias: str | None = Field(default=None, description="Override the tool name (function name in the workflow)")
     description: str | None = Field(default=None, description="Override the tool description")
-
-
-class MCPAuthConfig(BaseModel):
-    """MCP client authentication configuration supporting 4 options:
-
-    Option 1: No auth (omit auth section)
-    Option 2: Manual registration + explicit auth server (authorization_url + token_url + credentials)
-    Option 3: Dynamic registration + MCP discovery (enable_dynamic_registration=True)
-    Option 4: Manual registration + MCP discovery (credentials provided, URLs discovered)
-    """
-
-    # Option 2: Explicit auth server configuration (NAT's existing pattern)
-    authorization_url: str | None = Field(default=None, description="OAuth2 authorization endpoint URL")
-    token_url: str | None = Field(default=None, description="OAuth2 token endpoint URL")
-
-    # OAuth2 client credentials (Options 2 & 4)
-    client_id: str | None = Field(default=None, description="OAuth2 client ID")
-    client_secret: SecretStr | None = Field(default=None, description="OAuth2 client secret")
-
-    # OAuth2 flow configuration
-    scopes: list[str] | None = Field(default=None,
-                                     description="OAuth2 scopes (if not provided, will use server's default scopes)")
-    redirect_uri: str | None = Field(default=None,
-                                     description="OAuth2 redirect URI (defaults to localhost with random port)")
-
-    # Advanced options
-    enable_dynamic_registration: bool = Field(default=True,
-                                              description="Enable OAuth2 Dynamic Client Registration (RFC 7591)")
-    use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
-    client_name: str = Field(default="NAT MCP Client", description="OAuth2 client name for dynamic registration")
-
-    @model_validator(mode="after")
-    def validate_auth_config(self):
-        """Validate authentication configuration for all 4 options."""
-
-        # Check if explicit URLs are provided (Option 2)
-        explicit_urls = bool(self.authorization_url or self.token_url)
-
-        # Option 2: Manual registration + explicit auth server
-        if explicit_urls:
-            if not (self.authorization_url and self.token_url):
-                raise ValueError("Both authorization_url and token_url are required for explicit configuration")
-            if not self.client_id or not self.client_secret:
-                raise ValueError("client_id and client_secret are required for explicit configuration")
-
-        # Option 3: Dynamic registration + MCP discovery
-        elif self.enable_dynamic_registration and not self.client_id:
-            # Pure dynamic registration - no explicit credentials needed
-            pass
-
-        # Option 4: Manual registration + MCP discovery
-        elif self.client_id and self.client_secret:
-            # Has credentials but will discover URLs from MCP server
-            pass
-
-        # Invalid configuration
-        else:
-            raise ValueError("Must provide either: "
-                             "1) authorization_url + token_url + credentials (manual), "
-                             "2) enable_dynamic_registration=True (dynamic), or "
-                             "3) client_id + client_secret (hybrid)")
-
-        return self
 
 
 class MCPServerConfig(BaseModel):
@@ -119,7 +57,7 @@ class MCPServerConfig(BaseModel):
     env: dict[str, str] | None = Field(default=None, description="Environment variables for the stdio process")
 
     # Authentication configuration
-    auth: MCPAuthConfig | None = Field(default=None, description="OAuth2 authentication configuration")
+    auth_provider: AuthenticationRef | None = Field(default=None, description="Reference to authentication provider")
 
     @model_validator(mode="after")
     def validate_model(self):
@@ -130,7 +68,7 @@ class MCPServerConfig(BaseModel):
             if not self.command:
                 raise ValueError("command is required when using stdio transport")
             # Auth is not supported for stdio transport
-            if self.auth and self.auth.enabled:
+            if self.auth_provider is not None:
                 raise ValueError("Authentication is not supported for stdio transport")
         elif self.transport in ("sse", "streamable-http"):
             if self.command is not None or self.args is not None or self.env is not None:
@@ -168,16 +106,6 @@ class MCPSingleToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
     model_config = {"arbitrary_types_allowed": True}
 
 
-def _get_server_name_safe(client: MCPBaseClient) -> str:
-    # Avoid leaking env secrets from stdio client in logs.
-    if client.transport == "stdio":
-        safe_server = f"stdio: {client.command}"
-    else:
-        safe_server = f"{client.transport}: {client.url}"
-
-    return safe_server
-
-
 @register_function(config_type=MCPSingleToolConfig)
 async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
     """
@@ -188,7 +116,7 @@ async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
         tool.set_description(description=config.tool_description)
     input_schema = tool.input_schema
 
-    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, _get_server_name_safe(config.client))
+    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, config.client.server_name)
 
     def _convert_from_str(input_str: str) -> BaseModel:
         return input_schema.model_validate_json(input_str)
@@ -223,18 +151,24 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
     from nat.plugins.mcp.client_base import MCPStdioClient
     from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
 
-    # Build the appropriate client
-    client_cls = {
-        "stdio": lambda: MCPStdioClient(config.server.command, config.server.args, config.server.env),
-        "sse": lambda: MCPSSEClient(str(config.server.url)),
-        "streamable-http": lambda: MCPStreamableHTTPClient(str(config.server.url)),
-    }.get(config.server.transport)
+    # Resolve auth provider if specified
+    auth_provider = None
+    if config.server.auth_provider:
+        auth_provider = await builder.get_auth_provider(config.server.auth_provider)
 
-    if not client_cls:
+    # Build the appropriate client
+    if config.server.transport == "stdio":
+        if not config.server.command:
+            raise ValueError("command is required for stdio transport")
+        client = MCPStdioClient(config.server.command, config.server.args, config.server.env)
+    elif config.server.transport == "sse":
+        client = MCPSSEClient(str(config.server.url), auth_provider=auth_provider)
+    elif config.server.transport == "streamable-http":
+        client = MCPStreamableHTTPClient(str(config.server.url), auth_provider=auth_provider)
+    else:
         raise ValueError(f"Unsupported transport: {config.server.transport}")
 
-    client = client_cls()
-    logger.info("Configured to use MCP server at %s", _get_server_name_safe(client))
+    logger.info("Configured to use MCP server at %s", client.server_name)
 
     # client aenter connects to the server and stores the client in the exit stack
     # so it's cleaned up when the workflow is done
