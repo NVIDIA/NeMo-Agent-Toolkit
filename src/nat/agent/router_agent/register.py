@@ -68,9 +68,9 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
         log_response_max_chars=config.log_response_max_chars,
     ).build_graph()
 
-    async def _response_fn(relay_message: str) -> str:
+    async def _response_fn(input_message: str) -> str:
         try:
-            message = HumanMessage(content=relay_message)
+            message = HumanMessage(content=input_message)
             state = RouterAgentGraphState(relay_message=message)
 
             result_dict = await graph.ainvoke(state)

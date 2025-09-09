@@ -17,7 +17,7 @@ limitations under the License.
 
 # Router Agent Example
 
-This example demonstrates how to use a configurable Router Agent with the NeMo Agent toolkit. The Router Agent analyzes incoming requests and intelligently routes them to the most appropriate branch (tool or function) based on the request content. For this purpose, NeMo Agent toolkit provides a [`router_agent`](../../../docs/source/workflows/about/router-agent.md) workflow type.
+This example demonstrates how to use a configurable Router Agent with the NeMo Agent toolkit. The Router Agent analyzes incoming requests and intelligently routes them to the most appropriate branch (agent, function or tool) based on the request content. For this purpose, NeMo Agent toolkit provides a [`router_agent`](../../../docs/source/workflows/about/router-agent.md) workflow type.
 
 ## Table of Contents
 
@@ -33,47 +33,58 @@ This example demonstrates how to use a configurable Router Agent with the NeMo A
 
 ## Key Features
 
-- **Router Agent Architecture:** Demonstrates the `router_agent` workflow type that intelligently analyzes incoming requests and routes them to the most appropriate branch (tool or function).
 - **Dual-Node Graph Structure:** Uses a streamlined two-node architecture with Agent Node (analyzes request and selects branch) and Tool Node (executes the selected branch).
-- **Intelligent Request Routing:** Shows how the Router Agent analyzes user input and selects exactly one branch that best handles the request, making it ideal for scenarios where different types of requests need different specialized tools.
-- **Calculator Function Integration:** Includes multiple calculator functions (`calculator_multiply`, `calculator_inequality`, `calculator_divide`, `calculator_subtract`) to demonstrate routing mathematical operations to appropriate specialized tools.
-- **Single Branch Execution:** Demonstrates the Router Agent approach of analyzing the request, selecting one optimal branch, executing it, and returning the result without additional iterations.
+- **Intelligent Request Routing:** Shows how the Router Agent analyzes user input and selects exactly one branch that best handles the request, making it ideal for scenarios when a graph of agents and tools is needed to handle different types of requests.
+- **Easy Fine-tuning:** The single pass approach of the Router Agent makes it easy to fine-tune the routing logic by customizing the prompt and the branches.
 
 ## Graph Structure
 
 The Router Agent uses a streamlined dual-node graph architecture that efficiently analyzes requests and routes them to appropriate branches. The following describes the agent's workflow:
 
-**Workflow Overview:**
-- **Start**: The agent begins processing with user input
-- **Agent Node**: Analyzes the incoming request and selects the most appropriate branch from the available options
-- **Conditional Edge**: Determines whether to proceed to tool execution or end the process
-- **Tool Node**: Executes the selected branch (tool/function) with the original user input
-- **End**: Process completes with the result from the executed branch
-
-**Key Architecture Benefits:**
-- **Efficient Routing**: Single-pass analysis and routing without iterative planning
-- **Specialized Tool Selection**: Each branch can be a specialized tool optimized for specific types of requests
-- **Deterministic Execution**: Once a branch is selected, it executes exactly once and returns the result
-- **Scalable Branch Management**: Easy to add new branches without modifying the core routing logic
-
-This architecture is ideal for scenarios where different types of user requests require different specialized tools or functions, such as routing mathematical operations to specific calculator functions, or directing different query types to appropriate search or processing tools.
+<div align="center">
+<img src="../../../docs/source/_static/dual_node_agent.png" alt="ReAct Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+</div>
 
 ## Configuration
 
-The Router Agent is configured through the `config.yml` file. Key configuration elements include:
+The Router Agent is configured through the `config.yml` file. The following configuration options are available:
+
+### Required Configuration Options
 
 - **workflow._type**: Set to `router_agent` to use the Router Agent workflow type
 - **workflow.branches**: List of available tools/functions that the agent can route requests to
 - **workflow.llm_name**: The language model used for request analysis and routing decisions
-- **workflow.verbose**: Enable detailed logging to see the routing decisions
 
-**Example Configuration:**
+### Optional Configuration Options
+
+- **workflow.description**: Description of the workflow (default: "Router Agent Workflow")
+- **workflow.system_prompt**: Custom system prompt to use with the agent (default: uses built-in prompt)
+- **workflow.user_prompt**: Custom user prompt to use with the agent (default: uses built-in prompt)
+- **workflow.detailed_logs**: Enable detailed logging to see the routing decisions and responses (default: false)
+- **workflow.log_response_max_chars**: Maximum number of characters to display in logs when logging branch responses (default: 1000)
+
+### Example Configuration
+
+**Basic Configuration:**
 ```yaml
 workflow:
   _type: router_agent
-  branches: [calculator_multiply, calculator_inequality, calculator_divide, calculator_subtract]
+  branches: [fruit_advisor, city_advisor, literature_advisor]
   llm_name: nim_llm
-  verbose: true
+  detailed_logs: true
+```
+
+**Advanced Configuration with Custom Options:**
+```yaml
+workflow:
+  _type: router_agent
+  branches: [fruit_advisor, city_advisor, literature_advisor]
+  llm_name: nim_llm
+  description: "Multi-domain Advisor Router"
+  detailed_logs: true
+  log_response_max_chars: 2000
+  system_prompt: "You are an intelligent routing agent that analyzes user requests and selects the most appropriate advisor."
+  user_prompt: "Based on the user's request: {input}, select the best branch from the available options."
 ```
 
 The agent will automatically analyze incoming requests and route them to the most appropriate branch based on the request content and the descriptions of available branches.
@@ -87,8 +98,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
-uv sync --all-groups --all-extras
-uv pip install -e .
+uv pip install -e examples/agents/router
 ```
 
 ### Set Up API Keys
@@ -100,48 +110,66 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ## Run the Workflow
 
+This workflow showcases the Router Agent's ability to route requests to the most appropriate branch based on the request content. To simplify the example, we use mock advisor functions that return a static response based on the input, but you can imagine these advisors as real agents that would intelligently analyze the request and return a response.
+
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-nat run --config_file=examples/agents/router/configs/config.yml --input "What is 48 multiplied by 37?"
+nat run --config_file=examples/agents/router/configs/config.yml --input "I want a yellow fruit"
 ```
 
 **Additional Example Commands:**
 ```bash
-# Test inequality comparison
-nat run --config_file=examples/agents/router/configs/config.yml --input "Is 2004 greater than 1996?"
+# Test fruit advisor
+nat run --config_file=examples/agents/router/configs/config.yml --input "What red fruit would you recommend?"
 
-# Test division
-nat run --config_file=examples/agents/router/configs/config.yml --input "What is 6054 divided by 3?"
+# Test city advisor
+nat run --config_file=examples/agents/router/configs/config.yml --input "What city should I visit in the US?"
 
-# Test subtraction
-nat run --config_file=examples/agents/router/configs/config.yml --input "What is 1900 minus 21?"
+# Test literature advisor
+nat run --config_file=examples/agents/router/configs/config.yml --input "Can you recommend something by Shakespeare?"
 ```
 
 **Expected Workflow Output**
 ```console
-<snipped for brevity>
+nemo-agent-toolkit % nat run --config_file=examples/agents/router/configs/config.yml --input "I want a yellow fruit"
+2025-09-09 16:46:48,108 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/agents/router/configs/config.yml'
 
-2025-01-15 10:30:45,123 - nat.agent.router_agent.agent - INFO - Router Agent has chosen branch: calculator_multiply
-2025-01-15 10:30:45,124 - nat.agent.router_agent.agent - INFO - Router Agent Tool Node - Calling tools: calculator_multiply
-Tool's input: What is 48 multiplied by 37?
+Configuration Summary:
+--------------------
+Workflow Type: router_agent
+Number of Functions: 3
+Number of LLMs: 1
+Number of Embedders: 0
+Number of Memory: 0
+Number of Object Stores: 0
+Number of Retrievers: 0
+Number of TTC Strategies: 0
+Number of Authentication Providers: 0
+
+2025-09-09 16:46:50,985 - nat.agent.router_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input:
+Agent's thoughts:
+content='fruit_advisor' additional_kwargs={} response_metadata={}
+------------------------------
+2025-09-09 16:46:50,990 - nat.agent.base - INFO -
+------------------------------
+[AGENT]
+Calling tools: fruit_advisor
+Tool's input: banana
 Tool's response:
-48 * 37 = 1776
-
-2025-01-15 10:30:45,456 - nat.front_ends.console.console_front_end_plugin - INFO -
+banana
+------------------------------
+2025-09-09 16:46:50,994 - nat.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
-48 * 37 = 1776
+['banana']
 --------------------------------------------------
 ```
 
-**How the Router Agent Works:**
-1. **Request Analysis**: The agent analyzes the input "What is 48 multiplied by 37?" and identifies it as a multiplication operation
-2. **Branch Selection**: Based on the analysis, it selects the `calculator_multiply` branch from the available options
-3. **Tool Execution**: The selected branch (calculator function) processes the request and returns the mathematical result
-4. **Result Return**: The agent returns the result without additional processing or iterations
-
-This demonstrates the Router Agent's efficient single-pass routing and execution pattern, making it ideal for scenarios where different types of requests need to be directed to specialized tools or functions.
+This demonstrates the Router Agent's efficient single-pass routing and execution pattern, making it ideal for scenarios where different types of requests need to be directed to specialized advisor functions or tools.
 
 ### Starting the NeMo Agent Toolkit Server
 
@@ -165,7 +193,7 @@ Once the server is running, you can make HTTP requests to interact with the work
 curl --request POST \
   --url http://localhost:8000/generate \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "What is 48 multiplied by 37?"}'
+  --data '{"input_message": "I want a yellow fruit"}'
 ```
 
 #### Streaming Requests
@@ -176,13 +204,6 @@ curl --request POST \
 curl --request POST \
   --url http://localhost:8000/generate/stream \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "What is 48 multiplied by 37?"}'
+  --data '{"input_message": "I want a yellow fruit"}'
 ```
 ---
-
-### Evaluating the Router Agent Workflow
-**Run and evaluate the `router_agent` example Workflow**
-
-```bash
-nat eval --config_file=examples/agents/router/configs/config.yml
-```

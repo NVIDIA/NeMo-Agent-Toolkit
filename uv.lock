@@ -4831,6 +4831,10 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-router-agent"
+source = { editable = "examples/agents/router" }
+
+[[package]]
 name = "nat-semantic-kernel-demo"
 source = { editable = "examples/frameworks/semantic_kernel_demo" }
 dependencies = [
@@ -5349,6 +5353,7 @@ examples = [
     { name = "nat-profiler-agent" },
     { name = "nat-redact-pii" },
     { name = "nat-retail-sales-agent" },
+    { name = "nat-router-agent" },
     { name = "nat-semantic-kernel-demo" },
     { name = "nat-simple-auth" },
     { name = "nat-simple-calculator" },
@@ -5473,6 +5478,7 @@ requires-dist = [
     { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
     { name = "nat-redact-pii", marker = "extra == 'examples'", editable = "examples/observability/redact_pii" },
     { name = "nat-retail-sales-agent", marker = "extra == 'examples'", editable = "examples/notebooks/retail_sales_agent" },
+    { name = "nat-router-agent", marker = "extra == 'examples'", editable = "examples/agents/router" },
     { name = "nat-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
     { name = "nat-simple-auth", marker = "extra == 'examples'", editable = "examples/front_ends/simple_auth" },
     { name = "nat-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_calculator" },
