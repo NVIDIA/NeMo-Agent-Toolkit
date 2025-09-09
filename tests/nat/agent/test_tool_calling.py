@@ -143,7 +143,7 @@ async def test_build_graph(mock_tool_agent):
 
 async def test_build_graph_with_return_direct(mock_tool_agent_with_return_direct):
     graph = await mock_tool_agent_with_return_direct.build_graph()
-    assert isinstance(graph, CompiledGraph)
+    assert isinstance(graph, CompiledStateGraph)
     assert list(graph.nodes.keys()) == ['__start__', 'agent', 'tool']
     assert graph.builder.edges == {('__start__', 'agent')}
     assert set(graph.builder.branches.get('agent').get('conditional_edge').ends.keys()) == {

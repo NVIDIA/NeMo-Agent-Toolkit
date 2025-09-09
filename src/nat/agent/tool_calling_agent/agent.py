@@ -24,6 +24,7 @@ from langchain_core.runnables import RunnableLambda
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 from pydantic import BaseModel
 from pydantic import Field
@@ -167,7 +168,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             logger.warning("%s Continuing to agent for processing", AGENT_LOG_PREFIX)
             return AgentDecision.TOOL
 
-    async def _build_graph(self, state_schema):
+    async def _build_graph(self, state_schema) -> CompiledStateGraph:
         try:
             logger.debug("%s Building and compiling the Tool Calling Agent Graph", AGENT_LOG_PREFIX)
 
@@ -194,7 +195,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             logger.error("%s Failed to build Tool Calling Agent Graph: %s", AGENT_LOG_PREFIX, ex)
             raise
 
-    async def build_graph(self):
+    async def build_graph(self) -> CompiledStateGraph:
         try:
             await self._build_graph(state_schema=ToolCallAgentGraphState)
             logger.debug("%s Tool Calling Agent Graph built and compiled successfully", AGENT_LOG_PREFIX)
