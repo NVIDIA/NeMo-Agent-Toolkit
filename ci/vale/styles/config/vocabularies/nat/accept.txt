@@ -71,6 +71,7 @@ Jira
 jsonlines
 Langfuse
 LangChain
+LangChain/LangGraph
 LangGraph
 LangSmith
 [Ll]aunchable(s?)
