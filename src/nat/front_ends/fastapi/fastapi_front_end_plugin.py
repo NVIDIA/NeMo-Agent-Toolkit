@@ -71,7 +71,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             try:
                 await job_store.cleanup_expired_jobs()
                 logger.debug("Expired jobs cleaned up")
-            except:
+            except:  # noqa: E722
                 logger.exception("Error during job cleanup")
 
     async def _submit_cleanup_task(self, scheduler_address: str, db_url: str):
