@@ -109,7 +109,7 @@ class ContextualRedactionProcessor(RedactionProcessor[RedactionInputT, Redaction
         within the request context to avoid redundant callback executions.
 
         Args:
-            item (RedactionItemT): The item to check
+            item (RedactionInputT): The item to check
 
         Returns:
             bool: True if the span should be redacted, False otherwise

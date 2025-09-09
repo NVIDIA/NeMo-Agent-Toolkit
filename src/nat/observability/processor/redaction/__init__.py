@@ -13,17 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .contextual_redaction_processor import ContextualRedactionProcessor
-from .contextual_span_redaction_processor import ContextualSpanRedactionProcessor
 from .redaction_processor import RedactionContext
 from .redaction_processor import RedactionContextState
-from .redaction_processor import RedactionProcessor
 from .span_header_redaction_processor import SpanHeaderRedactionProcessor
 
 __all__ = [
-    "ContextualRedactionProcessor",
-    "ContextualSpanRedactionProcessor",
-    "RedactionProcessor",
     "SpanHeaderRedactionProcessor",
     "RedactionContext",
     "RedactionContextState",

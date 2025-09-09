@@ -55,7 +55,7 @@ class RedactionProcessor(Processor[RedactionInputT, RedactionInputT], Generic[Re
         """Redact the item.
 
         Args:
-            item (RedactionItemT): The item to redact.
+            item (RedactionInputT): The item to redact.
 
         Returns:
             RedactionInputT: The redacted item.
@@ -67,10 +67,10 @@ class RedactionProcessor(Processor[RedactionInputT, RedactionInputT], Generic[Re
         """Perform redaction on the item if it should be redacted.
 
         Args:
-            item (RedactionItemT): The item to process.
+            item (RedactionInputT): The item to process.
 
         Returns:
-            RedactionItemT: The processed item.
+            RedactionInputT: The processed item.
         """
         if await self.should_redact(item):
             return await self.redact_item(item)

@@ -20,7 +20,7 @@ from typing import Any
 from starlette.datastructures import Headers
 
 from nat.builder.context import Context
-from nat.observability.processor.redaction import ContextualSpanRedactionProcessor
+from nat.observability.processor.redaction.contextual_span_redaction_processor import ContextualSpanRedactionProcessor
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)

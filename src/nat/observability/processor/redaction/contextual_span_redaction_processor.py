@@ -17,7 +17,7 @@ from collections.abc import Callable
 from typing import Any
 
 from nat.data_models.span import Span
-from nat.observability.processor.redaction import ContextualRedactionProcessor
+from nat.observability.processor.redaction.contextual_redaction_processor import ContextualRedactionProcessor
 from nat.observability.processor.redaction.redaction_processor import RedactionDataT
 from nat.utils.type_utils import override
 
