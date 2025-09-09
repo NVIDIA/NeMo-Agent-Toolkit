@@ -22,7 +22,7 @@ general:
         level: WARN
       file:
         _type: file
-        path: /tmp/email_phishing_analyzer.log
+        path: ./.tmp/email_phishing_analyzer.log
         level: DEBUG
 
 functions:

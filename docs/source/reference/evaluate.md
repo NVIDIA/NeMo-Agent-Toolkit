@@ -17,6 +17,10 @@ limitations under the License.
 
 # Evaluating NVIDIA NeMo Agent Toolkit Workflows Details
 
+:::{warning}
+**Experimental Feature**: The Evaluation API is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
+:::
+
 :::{note}
 We recommend reading the [Evaluating NeMo Agent Toolkit Workflows](../workflows/evaluate.md) guide before proceeding with this detailed documentation.
 :::
@@ -25,7 +29,7 @@ NeMo Agent toolkit provides a set of evaluators to run and evaluate the workflow
 
 Example:
 ```bash
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
 ## Using Datasets
@@ -43,7 +47,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_web_query/data/langsmith.json
+      file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
 ```
 
 ### Dataset Format
@@ -134,6 +138,91 @@ eval:
               - sympy__sympy-21055
 ```
 
+### Custom Dataset Format
+You can use a dataset with a custom format by providing a custom dataset parser function.
+
+**Example:**
+`examples/evaluation_and_profiling/simple_calculator_eval/configs/config-custom-dataset-format.yml`:
+```yaml
+eval:
+  general:
+    dataset:
+      _type: custom
+      file_path: examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_nested.json
+      function: nat_simple_calculator_eval.scripts.custom_dataset_parser.extract_nested_questions
+      kwargs:
+        difficulty: "medium"
+        max_rows: 5
+```
+This example configuration uses a custom dataset parser function to:
+- extract the nested questions from the example dataset
+- filter them by difficulty
+- return only the first five questions
+
+The example dataset `simple_calculator_nested.json` is a nested JSON file with questions and answers. The custom dataset parser function is a Python function that takes the dataset `file_path`, optional `kwargs` and returns an `EvalInput` object. Signature of the sample custom dataset parser function is as follows:
+```python
+def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
+```
+
+{py:class}`~nat.eval.evaluator.evaluator_model.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
+{py:class}`~nat.eval.evaluator.evaluator_model.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
+The custom dataset parser function should fill the following fields in the `EvalInputItem` object:
+- `id`: The id of the item. Every item in the dataset must have a unique id of type `str` or `int`.
+- `input_obj`: This is the question.
+- `expected_output_obj`: This is the ground truth answer.
+- `full_dataset_entry`: This is the entire dataset entry and is passed as is to the evaluator.
+
+To run the evaluation using the custom dataset parser, run the following command:
+```bash
+nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-custom-dataset-format.yml
+```
+### Custom Pre-evaluation Process Function
+You can provide a custom function to process the eval input after the workflow runs but before evaluation begins. This allows you to modify, filter, or enrich the evaluation data.
+
+**Example:**
+`examples/evaluation_and_profiling/simple_calculator_eval/configs/config-with-custom-post-process.yml`:
+```yaml
+eval:
+  general:
+    output:
+      dir: .tmp/nat/examples/simple_calculator/eval-with-post-process
+      custom_pre_eval_process_function: nat_simple_calculator_eval.scripts.custom_post_process.normalize_calculator_outputs
+    dataset:
+      _type: json
+      file_path: examples/getting_started/simple_calculator/src/nat_simple_calculator/data/simple_calculator.json
+```
+This example configuration uses a custom pre-evaluation process function to normalize numerical outputs for consistent evaluation.
+
+The custom pre-evaluation process function is a Python function that takes an `EvalInputItem` object and returns a modified `EvalInputItem` object.
+**Helper Function**: You can use the `copy_with_updates()` method in the `EvalInputItem` object to easily update only specific fields while preserving all others:
+```python
+# Update only the output_obj field
+return item.copy_with_updates(output_obj="new output")
+
+# Update multiple fields
+return item.copy_with_updates(
+    output_obj="new output",
+    expected_output_obj="new expected"
+)
+```
+
+Signature of the sample custom pre-evaluation process function is as follows:
+```python
+def normalize_calculator_outputs(item: EvalInputItem) -> EvalInputItem:
+```
+
+Common use cases for custom pre-evaluation process functions include:
+- **Data normalization**: Standardize formats for consistent evaluation
+- **Quality filtering**: Remove incomplete or invalid workflow outputs
+- **Metadata enhancement**: Add processing information to dataset entries
+- **Output transformation**: Modify generated answers before evaluation
+
+To run the evaluation using the custom pre-evaluation process function, run the following command:
+```bash
+nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-with-custom-post-process.yml
+```
+
+
 ## NeMo Agent Toolkit Built-in Evaluators
 NeMo Agent toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate RAG-like workflows using the public RAGAS API.
@@ -206,7 +295,7 @@ eval:
   evaluators:
     swe_bench:
       _type: swe_bench
-      run_id: aiq_1
+      run_id: nat_1
 ```
 The swe-bench evaluator uses unstructured dataset entries. The entire row is provided as input to the workflow.
 
@@ -227,7 +316,7 @@ The default scoring can be overridden by setting the config boolean `default_sco
 Note: if you do choose to use the default scoring method, you are still able to tune the judge LLM prompt.
 
 **Example:**
-`example/simple_calculator/configs/config-tunable-rag-eval.yml`:
+`examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml`:
 ```yaml
 eval:
   evaluators:
@@ -259,7 +348,7 @@ eval:
 Note: In your evaluation dataset, make sure that the `answer` field is a description of the expected answer with details on what is expected from the generated answer.
 
 **Example:**
-`example/simple_calculator/configs/config-tunable-rag-eval.yml`:
+`examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml`:
 ```json
 {
   "id": 1,
@@ -270,7 +359,7 @@ Note: In your evaluation dataset, make sure that the `answer` field is a descrip
 
 **Sample Usage:**
 ```bash
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/config-tunable-rag-eval.yml
+nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
 ```
 
 ## Adding Custom Evaluators
@@ -280,7 +369,7 @@ You can add custom evaluators to evaluate the workflow output. To add a custom e
 ## Running multiple repetitions
 You can run multiple repetitions of the evaluation by running a command line option `--reps`. For example, to run the evaluation 5 times, run the following command:
 ```bash
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml --reps=5
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --reps=5
 ```
 This will allow you to get an average score across multiple runs and analyze the variation in the generated outputs.
 
@@ -299,33 +388,33 @@ You can then re-run evaluation on that output file along with `--skip_completed_
 
 Pass-1:
 ```
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 This pass results in workflow interrupted warning. You can then do another pass.
 
 Pass-2:
 ```bash
-cp .tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
+cp .tmp/nat/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
 ```
 
 ## Running evaluation offline
 You can evaluate a dataset with previously generated answers via the `--skip_workflow` option. In this case the dataset has both the expected `answer` and the `generated_answer`.
 ```bash
-cp .tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
+cp .tmp/nat/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
 ```
-This assumes that the workflow output was previously generated and stored in `.tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json`
+This assumes that the workflow output was previously generated and stored in `.tmp/nat/examples/getting_started/simple_web_query/workflow_output.json`
 
 ## Running the workflow over a dataset without evaluation
-You can do this by running `aiq eval` with a workflow configuration file that includes an `eval` section with no `evaluators`.
+You can do this by running `nat eval` with a workflow configuration file that includes an `eval` section with no `evaluators`.
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/getting_started/simple_web_query/
+    output_dir: ./.tmp/nat/examples/getting_started/simple_web_query/
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_web_query/data/langsmith.json
+      file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
 ```
 
 ## Evaluation output
@@ -333,7 +422,7 @@ The output of the workflow is stored as `workflow_output.json` in the `output_di
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/getting_started/simple_web_query/
+    output_dir: ./.tmp/nat/examples/getting_started/simple_web_query/
 ```
 Here is a sample workflow output snipped generated by running evaluation on the `simple` example workflow -
 ```
@@ -385,7 +474,7 @@ The output of the evaluators are stored in distinct files in the same `output_di
 The workflow_output.json file contains the intermediate steps for each entry in the dataset. The intermediate steps are filtered using the `eval.general.output.workflow_output_step_filter` parameter in the `config.yml` file. The default value for the filter is `[LLM_END, TOOL_END]`. You can customize the filter by providing a list of intermediate step types to include in the output file.
 
 **Example:**
-`examples/getting_started/simple_web_query/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
+`examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
 ```yaml
 eval:
   general:
@@ -405,10 +494,10 @@ The `kwargs` typically include the file or directory to operate on. To avoid ove
 eval:
   general:
     output:
-      dir: ./.tmp/aiq/examples/simple_output/
+      dir: ./.tmp/nat/examples/simple_output/
       custom_scripts:
         convert_workflow_to_csv:
-          script: examples/getting_started/simple_web_query/src/aiq_simple_web_query/scripts/workflow_to_csv.py
+          script: examples/evaluation_and_profiling/simple_web_query_eval/scripts/workflow_to_csv.py
           kwargs:
             # The input and output are relative to the output directory
             input: workflow_output.json
@@ -425,10 +514,10 @@ eval:
       _type: json
       # Download dataset from remote storage using S3 credentials
       remote_file_path: input/langsmith.json
-      file_path: ./.tmp/aiq/examples/simple_input/langsmith.json
+      file_path: ./.tmp/nat/examples/simple_input/langsmith.json
       s3:
         endpoint_url: http://10.185.X.X:9000
-        bucket: aiq-simple-bucket
+        bucket: nat-simple-bucket
         access_key: fake_access_key
         secret_key: fake_secret_key
 ```
@@ -441,14 +530,14 @@ By default, evaluation outputs are written to the same directory specified in `e
 eval:
   general:
     output:
-      dir: ./.tmp/aiq/examples/simple_output/
+      dir: ./.tmp/nat/examples/simple_output/
       job_management:
         append_job_id_to_output_dir: true
       cleanup: false
 ```
 
 When `append_job_id_to_output_dir` is set to `true`, a unique job ID (`job_{UUID}`) is automatically generated for each evaluation run and appended to the output directory path. This results in:
-- Local output path: `./.tmp/aiq/examples/getting_started/simple_web_query/jobs/job_{unique-job-id}/`
+- Local output path: `./.tmp/nat/examples/getting_started/simple_web_query/jobs/job_{unique-job-id}/`
 - Remote output path (if S3 is configured): `output/jobs/job_{unique-job-id}/`
 
 The `cleanup` option is used to control the cleanup of the output directory. If `cleanup` is set to `true`, the entire output directory and all job `sub-directories` are deleted at the beginning of the evaluation. Therefore, `cleanup` must be set to `false` if you want to preserve the output directory and job `sub-directories`.
@@ -465,7 +554,7 @@ eval:
       remote_dir: output
       s3:
         endpoint_url: http://10.185.X.X:9000
-        bucket: aiq-simple-bucket
+        bucket: nat-simple-bucket
         access_key: fake-access-key
         secret_key: fake-secret-key
 ```
@@ -479,7 +568,7 @@ eval:
       remote_dir: output
       s3:
         region_name: us-west-2
-        bucket: aiq-simple-bucket
+        bucket: nat-simple-bucket
         access_key: fake-access-key
         secret_key: fake-secret-key
 ```
@@ -490,7 +579,7 @@ The contents of the output directory can be deleted before running the evaluatio
 eval:
   general:
     output:
-      dir: ./.tmp/aiq/examples/simple_output/
+      dir: ./.tmp/nat/examples/simple_output/
       cleanup: true
 ```
 Output directory cleanup is disabled by default for easy troubleshooting.
@@ -502,7 +591,7 @@ Configure job eviction with the following options in the `config.yml` file:
 eval:
   general:
     output:
-      dir: ./.tmp/aiq/examples/simple_output/
+      dir: ./.tmp/nat/examples/simple_output/
       cleanup: false
       job_management:
         append_job_id_to_output_dir: true

@@ -1,1 +1,0 @@
-chainlit run python/app.py --watch --debug --root-path ${REPO_ROOT}

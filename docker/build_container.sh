@@ -29,10 +29,10 @@ if [ ${DOCKER_TARGET_ARCH} != ${HOST_ARCH} ]; then
     echo "details in ${REPO_ROOT}/docs/source/advanced/running-ci-locally.md"
 fi
 
-git describe --tags --abbrev=0 2>/dev/null || echo "no-tag"
+NAT_VERSION=${NAT_VERSION:-$(git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")}
 
-DOCKER_IMAGE_NAME=${DOCKER_IMAGE_NAME:-"aiqtoolkit"}
-DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG:-"$(git describe --tags --abbrev=0 2> /dev/null)"}
+DOCKER_IMAGE_NAME=${DOCKER_IMAGE_NAME:-"nvidia-nat"}
+DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG:-${NAT_VERSION}}
 
 DOCKER_EXTRA_ARGS=${DOCKER_EXTRA_ARGS:-""}
 
@@ -40,6 +40,7 @@ DOCKER_EXTRA_ARGS=${DOCKER_EXTRA_ARGS:-""}
 DOCKER_ARGS="-t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
 DOCKER_ARGS="${DOCKER_ARGS} --platform=linux/${DOCKER_TARGET_ARCH}"
 DOCKER_ARGS="${DOCKER_ARGS} --network=host"
+DOCKER_ARGS="${DOCKER_ARGS} --build-arg NAT_VERSION=${NAT_VERSION}"
 
 # Last add any extra args (duplicates override earlier ones)
 DOCKER_ARGS="${DOCKER_ARGS} ${DOCKER_EXTRA_ARGS}"

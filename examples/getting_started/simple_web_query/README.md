@@ -74,7 +74,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"
+nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"
 ```
 
 **Expected Workflow Output**
@@ -98,7 +98,7 @@ export NVIDIA_API_KEY="your_nvidia_api_key"
 From the git repository root, run the following command to build NeMo Agent toolkit and the simple agent into a Docker image.
 
 ```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -f examples/getting_started/simple_web_query/Dockerfile -t simple-web-query-agent .
+docker build --build-arg NAT_VERSION=$(python -m setuptools_scm) -f examples/getting_started/simple_web_query/Dockerfile -t simple-web-query-agent .
 ```
 
 Then, run the following command to run the simple agent.

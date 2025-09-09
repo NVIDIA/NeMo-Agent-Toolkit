@@ -72,6 +72,7 @@ To run the CI pipeline on a different architecture other than your own, QEMU can
 > Note: This assumes you have an amd64 system and want to run the CI pipeline on arm64. If you are using an arm64 and want to emulate amd64, you will need to adjust the commands accordingly.
 
 On an apt based system, this can be done with the following commands:
+<!-- path-check-skip-begin -->
 ```bash
 sudo apt install qemu-utils qemu-system-arm qemu-user-static
 ```
@@ -85,6 +86,7 @@ Verify that the registration was successful:
 ```bash
 docker run --platform=linux/arm64 --rm -t ubuntu:noble uname -m
 ```
+<!-- path-check-skip-end -->
 
 ### Run CI on arm64
 The `CI_ARCH` environment variable can be set to the desired architecture to run CI, for example to run the CI pipeline on arm64, you can use the following command:

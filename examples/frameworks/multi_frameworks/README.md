@@ -54,7 +54,6 @@ Then, using LangChain and LangGraph, we unify these frameworks into a single wor
 - **Interoperability** – Combine tools seamlessly without vendor lock-in.
 - **Scalability** – Build flexible AI pipelines that adapt to different use cases.
 
-
 ## Key Features
 
 - **Multi-Framework Integration:** Demonstrates seamless integration of LangChain, LlamaIndex, and Haystack frameworks within a single NeMo Agent toolkit workflow.
@@ -63,8 +62,8 @@ Then, using LangChain and LangGraph, we unify these frameworks into a single wor
 - **Specialized Agent Workers:** Includes three distinct agents - a `rag_agent` using LlamaIndex for document Q&A, a `research_agent` using LangChain for arXiv research, and a chitchat agent using Haystack pipelines.
 - **Dynamic Framework Selection:** Shows how different AI frameworks can be selected automatically based on query type, leveraging each framework's specific strengths without vendor lock-in.
 
-There is a supervisor agent that will assign/route incoming user query to one of the worker agents.
-the 3 worker agents are :
+There is a supervisor agent that will assign and route incoming user queries to one of the worker agents.
+The 3 worker agents are:
 
 - (1) a `rag_agent` made out of `llama_index` via a custom `llama-index-rag` tool
 - (2) a `research_agent` made out of a LangChain runnable chain with tool calling capability, able to call arXiv as a tool and return summarized found research papers
@@ -72,7 +71,7 @@ the 3 worker agents are :
 
 the multi-agents architecture looks like the below
 
-![LangGraph multi-agents workflow](../../../docs/source/_static/aiq_multi_frameworks_agentic_schema.png)
+![LangGraph multi-agents workflow](../../../docs/source/_static/multi_frameworks_agentic_schema.png)
 
 ## Installation and Setup
 
@@ -104,18 +103,18 @@ export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 note: the below is an example command to use and query this and trigger `rag_agent`
 
 ```bash
-aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "tell me about this workflow"
+nat run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "tell me about this workflow"
 ```
 
 **Expected Workflow Output**
 ```console
-This workflow is a multi-frameworks example that can be installed locally and run using specific commands. To install the workflow, you need to run `uv pip install -e examples/frameworks/multi_frameworks`. After installation, you can run the workflow using the command `aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "your query here"`. You can replace "your query here" with any input you want to query the workflow with.
+This workflow is a multi-frameworks example that can be installed locally and run using specific commands. To install the workflow, you need to run `uv pip install -e examples/frameworks/multi_frameworks`. After installation, you can run the workflow using the command `nat run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "your query here"`. You can replace "your query here" with any input you want to query the workflow with.
 ```
 
 Note: the below is an example command to use and query this and trigger `research_agent`
 
 ```bash
-aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "what is RAG?"
+nat run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "what is RAG?"
 ```
 **Expected Workflow Output**
 ```console

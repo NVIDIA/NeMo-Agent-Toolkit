@@ -3,21 +3,22 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
-name = "aiq_user_report"
+name = "nat_user_report"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[s3]", "aiqtoolkit[mysql]"
+    "nvidia-nat[mysql,redis,s3]~=1.3",
 ]
-requires-python = ">=3.12"
-description = "AIQ toolkit example that uses an Object Store"
+requires-python = ">=3.11,<3.14"
+description = "NeMo Agent toolkit example that uses an Object Store"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_user_report = "aiq_user_report.register"
+[project.entry-points.'nat.components']
+nat_user_report = "nat_user_report.register"

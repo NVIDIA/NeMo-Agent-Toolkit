@@ -28,8 +28,10 @@ import os
 import sys
 import typing
 import uuid
+import warnings
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
+from collections.abc import Sequence
 from unittest import mock
 
 import pytest
@@ -44,6 +46,7 @@ from langchain_core.outputs import ChatGeneration
 from langchain_core.outputs import ChatResult
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
+from pydantic.warnings import PydanticDeprecatedSince20
 
 TESTS_DIR = os.path.dirname(__file__)
 PROJECT_DIR = os.path.dirname(TESTS_DIR)
@@ -52,8 +55,13 @@ EXAMPLES_DIR = os.path.join(PROJECT_DIR, "examples")
 sys.path.append(SRC_DIR)
 
 if typing.TYPE_CHECKING:
-    from aiq.data_models.intermediate_step import IntermediateStep
-    from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+    from nat.data_models.intermediate_step import IntermediateStep
+    from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+
+
+@pytest.fixture(name="project_dir")
+def project_dir_fixture():
+    return PROJECT_DIR
 
 
 @pytest.fixture(name="test_data_dir")
@@ -87,23 +95,8 @@ def mock_aiohttp_session_fixture():
         yield mock_aiohttp_session
 
 
-@pytest.fixture(name="restore_environ")
-def restore_environ_fixture():
-    orig_vars = os.environ.copy()
-    yield os.environ
-
-    # Iterating over a copy of the keys as we will potentially be deleting keys in the loop
-    for key in list(os.environ.keys()):
-        orig_val = orig_vars.get(key)
-        if orig_val is not None:
-            os.environ[key] = orig_val
-        else:
-            del (os.environ[key])
-
-
 @pytest.fixture(name="set_test_api_keys")
 def set_test_api_keys_fixture(restore_environ):
-    # restore_environ fixture is used implicitly, do not remove
     for key in ("NGC_API_KEY", "NVD_API_KEY", "NVIDIA_API_KEY", "OPENAI_API_KEY", "SERPAPI_API_KEY"):
         os.environ[key] = "test_key"
 
@@ -155,7 +148,7 @@ class SingleOutputModel(BaseModel):
 @pytest.fixture(name="test_workflow_fn")
 def test_workflow_fn_fixture():
 
-    async def workflow_fn(param: BaseModel) -> SingleOutputModel:
+    async def workflow_fn(_param: BaseModel) -> SingleOutputModel:
         return SingleOutputModel(summary="This is a coroutine function")
 
     return workflow_fn
@@ -164,7 +157,7 @@ def test_workflow_fn_fixture():
 @pytest.fixture(name="test_streaming_fn")
 def test_streaming_fn_fixture():
 
-    async def streaming_fn(param: BaseModel) -> typing.Annotated[AsyncGenerator[StreamingOutputModel], ...]:
+    async def streaming_fn(_param: BaseModel) -> typing.Annotated[AsyncGenerator[StreamingOutputModel], ...]:
         yield StreamingOutputModel(result="this is an async generator")
 
     return streaming_fn
@@ -175,8 +168,8 @@ def register_test_workflow_fixture(test_workflow_fn) -> Callable[[], Callable]:
 
     def register_test_workflow():
         from _utils.configs import WorkflowTestConfig
-        from aiq.builder.builder import Builder
-        from aiq.cli.register_workflow import register_function
+        from nat.builder.builder import Builder
+        from nat.cli.register_workflow import register_function
 
         @register_function(config_type=WorkflowTestConfig)
         async def build_fn(_: WorkflowTestConfig, __: Builder):
@@ -193,21 +186,21 @@ def reactive_stream_fixture():
     A fixture that sets up a fresh usage_stats queue in the context var
     for each test, then resets it afterward.
     """
-    from aiq.builder.context import AIQContextState
-    from aiq.utils.reactive.subject import Subject
+    from nat.builder.context import ContextState
+    from nat.utils.reactive.subject import Subject
 
     token = None
-    original_queue = AIQContextState.get().event_stream.get()
+    original_queue = ContextState.get().event_stream.get()
 
     try:
         new_queue = Subject()
-        token = AIQContextState.get().event_stream.set(new_queue)
+        token = ContextState.get().event_stream.set(new_queue)
         yield new_queue
     finally:
         if token is not None:
             # Reset to the original queue after the test
-            AIQContextState.get().event_stream.reset(token)
-            AIQContextState.get().event_stream.set(original_queue)
+            ContextState.get().event_stream.reset(token)
+            ContextState.get().event_stream.set(original_queue)
 
 
 @pytest.fixture(name="global_settings", scope="function", autouse=False)
@@ -218,7 +211,7 @@ def function_settings_fixture():
     This gets automatically used at the function level to ensure no state is leaked between functions.
     """
 
-    from aiq.settings.global_settings import GlobalSettings
+    from nat.settings.global_settings import GlobalSettings
 
     with GlobalSettings.push() as settings:
         yield settings
@@ -326,6 +319,12 @@ async def mock_llm():
             generation = ChatGeneration(message=message)
             return ChatResult(generations=[generation], llm_output={'mock_llm_response': True})
 
+        def bind_tools(
+                self,
+                tools: Sequence[dict[str, typing.Any] | type | Callable | BaseTool],  # noqa: UP006
+                **kwargs: typing.Any) -> BaseChatModel:
+            return self
+
         @property
         def _llm_type(self) -> str:
             return 'mock-llm'
@@ -344,16 +343,14 @@ def mock_tool():
 
             async def _arun(self,
                             query: str | dict = 'test',
-                            *args,
                             run_manager: AsyncCallbackManagerForToolRun | None = None,
-                            **kwargs):  # noqa: E501  # pylint: disable=arguments-differ
+                            **kwargs):  # noqa: E501
                 return query
 
             def _run(self,
                      query: str | dict = 'test',
-                     *args,
                      run_manager: CallbackManagerForToolRun | None = None,
-                     **kwargs):  # noqa: E501  # pylint: disable=arguments-differ
+                     **kwargs):  # noqa: E501
                 return query
 
         return MockTool()
@@ -363,8 +360,14 @@ def mock_tool():
 
 @pytest.fixture(scope="function", autouse=True)
 def patched_async_memory_client(monkeypatch):
-
-    from mem0.client.main import MemoryClient
+    # Suppress Pydantic's class-based Config deprecation only during mem0 import
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            category=PydanticDeprecatedSince20,
+            module=r"^pydantic\._internal\._config$",
+        )
+        from mem0.client.main import MemoryClient
 
     mock_method = mock.MagicMock(return_value=None)
     monkeypatch.setattr(MemoryClient, "_validate_api_key", mock_method)
@@ -395,12 +398,12 @@ def rag_intermediate_steps_fixture(rag_user_inputs, rag_generated_outputs) -> li
     Returns:
         (list for user_input_1, list for user_input_2)
     """
-    from aiq.builder.framework_enum import LLMFrameworkEnum
-    from aiq.data_models.intermediate_step import IntermediateStep
-    from aiq.data_models.intermediate_step import IntermediateStepPayload
-    from aiq.data_models.intermediate_step import IntermediateStepType
-    from aiq.data_models.intermediate_step import StreamEventData
-    from aiq.data_models.invocation_node import InvocationNode
+    from nat.builder.framework_enum import LLMFrameworkEnum
+    from nat.data_models.intermediate_step import IntermediateStep
+    from nat.data_models.intermediate_step import IntermediateStepPayload
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.data_models.intermediate_step import StreamEventData
+    from nat.data_models.invocation_node import InvocationNode
 
     framework = LLMFrameworkEnum.LANGCHAIN
     token_cnt = 10
@@ -413,9 +416,9 @@ def rag_intermediate_steps_fixture(rag_user_inputs, rag_generated_outputs) -> li
                     output_data=None,
                     chunk=None,
                     step_uuid: str | None = None):
+        """Helper to create an `IntermediateStep`."""
         if step_uuid is None:
             step_uuid = str(uuid.uuid4())
-        """Helper to create an `IntermediateStep`."""
         return IntermediateStep(parent_id="root",
                                 function_ancestry=InvocationNode(function_name=name,
                                                                  function_id=f"test-{name}-{step_uuid}"),
@@ -468,7 +471,7 @@ def rag_intermediate_property_adaptor_fixture(rag_intermediate_steps) -> list[li
     """
     Fixture to transform the rag_intermediate_steps fixture data into IntermediatePropertyAdaptor objects.
     """
-    from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+    from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
     return [[IntermediatePropertyAdaptor.from_intermediate_step(step) for step in steps]
             for steps in rag_intermediate_steps]

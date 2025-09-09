@@ -78,25 +78,25 @@ llms:
 
 To override the `temperature` parameter for the `nim_llm`, the following command can be used:
 ```bash
-aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"  \
+nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"  \
   --override llms.nim_llm.temperature 0.7
 ```
 
 When successful, the output contains the following line:
 ```
-aiq.cli.cli_utils.config_override - INFO - Successfully set override for llms.nim_llm.temperature with value: 0.7
+nat.cli.cli_utils.config_override - INFO - Successfully set override for llms.nim_llm.temperature with value: 0.7
 ```
 
 The `--override` flag can be specified multiple times, allowing the ability to override multiple parameters. For example, the `llama-3.1-70b-instruct` model can be replaced with the `llama-3.3-70b-instruct` using:
 ```bash
-aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"  \
+nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"  \
   --override llms.nim_llm.temperature 0.7 \
   --override llms.nim_llm.model_name meta/llama-3.3-70b-instruct
 ```
 
 :::{note}
-Not all parameters are specified in the workflow YAML. For each tool, there are potentially multiple optional parameters with default values that can be overridden. The `aiq info components` command can be used to list all available parameters. In this case, to list all available parameters for the LLM `nim` type run:
+Not all parameters are specified in the workflow YAML. For each tool, there are potentially multiple optional parameters with default values that can be overridden. The `nat info components` command can be used to list all available parameters. In this case, to list all available parameters for the LLM `nim` type run:
 ```bash
-aiq info components -t llm_provider -q nim
+nat info components -t llm_provider -q nim
 ```
 :::

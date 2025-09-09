@@ -28,14 +28,14 @@ This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with Mo
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
 - [Run the Workflow](#run-the-workflow)
-  - [AIQ Toolkit as an MCP Client](#aiq-toolkit-as-an-mcp-client)
-  - [AIQ Toolkit as an MCP Server](#aiq-toolkit-as-an-mcp-server)
+  - [NeMo Agent toolkit as an MCP Client](#nemo-agent-toolkit-as-an-mcp-client)
+  - [NeMo Agent toolkit as an MCP Server](#nemo-agent-toolkit-as-an-mcp-server)
 - [Configuration Examples](#configuration-examples)
 
 ## Key Features
 
-- **MCP Client Integration:** Demonstrates how to use NeMo Agent toolkit as an MCP client to connect to remote MCP servers and access distributed tools like date/time services and advanced mathematical operations.
-- **MCP Server Publishing:** Shows how to publish NeMo Agent toolkit functions as MCP services using the `aiq mcp` command, making calculator tools available to other AI systems through the standardized MCP protocol.
+- **MCP Client Integration:** Demonstrates how to use NeMo Agent toolkit as an MCP client to connect to remote MCP servers and access distributed tools like advanced mathematical operations as well as date and time services.
+- **MCP Server Publishing:** Shows how to publish NeMo Agent toolkit functions as MCP services using the `nat mcp` command, making calculator tools available to other AI systems through the standardized MCP protocol.
 - **Distributed AI Tool Networks:** Enables building networks of interconnected AI tools where different capabilities can be hosted on separate systems and accessed remotely through MCP.
 - **Cross-System Interoperability:** Demonstrates integration with the broader MCP ecosystem, allowing NeMo Agent toolkit workflows to both consume and provide tools in a standardized manner.
 - **Remote Tool Access:** Shows how to securely connect to external data sources and tools through the MCP protocol while maintaining security and access control.
@@ -75,22 +75,56 @@ uv pip install -e examples/MCP/simple_calculator_mcp
 
 ## Run the Workflow
 
-### AIQ Toolkit as an MCP Client
+### NeMo Agent toolkit as an MCP Client
 You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../../docs/source/workflows/mcp/mcp-client.md).
 
-### AIQ Toolkit as an MCP Server
-You can publish the simple calculator tools via MCP using the `aiq mcp` command. Details are provided in the [MCP Server Guide](../../../docs/source/workflows/mcp/mcp-server.md).
+### NeMo Agent toolkit as an MCP Server
+You can publish the simple calculator tools via MCP using the `nat mcp` command. Details are provided in the [MCP Server Guide](../../../docs/source/workflows/mcp/mcp-server.md).
 
 ## Configuration Examples
+| Configuration File | MCP Server Type | Transport | Available Tools |
+|--------------------|-----------------|-----------------|-----------------|
+| `config-mcp-date.yml` | Date Server | `sse` | Current time, date formatting |
+| `config-mcp-math.yml` | Math Server | `streamable-http` | Advanced mathematical operations |
+| `config-combined.yml` | Multiple Servers | `sse` and `streamable-http` | Combined demonstration |
+| `config-mcp-date-stdio.yml` | Multiple Servers | `stdio` and `streamable-http` | Combined demonstration |
 
-| Configuration File | MCP Server Type | Available Tools |
-|-------------------|-----------------|-----------------|
-| `config-mcp-date.yml` | Date Server | Current time, date formatting |
-| `config-mcp-math.yml` | Math Server | Advanced mathematical operations |
-| `config-combined.yml` | Multiple Servers | Combined demonstration |
+### Running the Workflows
+**Date Server Example:**
+1. **Start the MCP server**: Follow the setup instructions in [README](./deploy_external_mcp/README.md) to start the containerized time server on port 8080
+2. **Run the workflow**:
+   ```bash
+   nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date.yml --input "What is the current hour of the day?"
+   ```
 
-**Note**: To run the `config-combined.yml` example successfully, you need to keep both MCP servers running:
-- **Docker container MCP server**: Follow the setup instructions in `deploy_external_mcp/README.md` to start the containerized time server on port 8080
-- **NeMo Agent Toolkit MCP server**: Use `aiq mcp --config_file examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
+**Math Server Example:**
+1. **Start the MCP server**: Use `nat mcp --config_file ./examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
+2. **Run the workflow**:
+   ```bash
+   nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "What is the product of 2 * 4?"
+   ```
 
-Both servers must be active simultaneously for the combined workflow to access all the required tools.
+**Combined Example:**
+1. **Start both MCP servers**: Keep both servers running simultaneously:
+   - **Docker container MCP server**: Follow the setup instructions in [README](./deploy_external_mcp/README.md) to start the containerized time server on port 8080
+   - **NeMo Agent Toolkit MCP server**: Use `nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
+2. **Run the workflow**:
+   ```bash
+   nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-combined.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+   ```
+
+**Combined Example with STDIO:**
+1. **Install the `mcp_server_time` package**:
+   ```bash
+   uv pip install mcp-server-time
+   ```
+   `mcp-server-time` is used as a local MCP server via stdio transport.
+2. **Start the MCP math server**:
+   ```bash
+   nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
+   ```
+   This starts the MCP server on port 9901 with endpoint `/mcp`.
+3. **Run the workflow**:
+   ```bash
+   nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+   ```

@@ -13,9 +13,6 @@
             "pattern": "^https://code\\.visualstudio\\.com$"
         },
         {
-            "pattern": "^#custom-opentelemetry-protocols$"
-        },
-        {
             "pattern": "^https://www\\.mysql\\.com"
         }
     ]

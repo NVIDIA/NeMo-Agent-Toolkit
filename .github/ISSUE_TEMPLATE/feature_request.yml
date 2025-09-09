@@ -15,8 +15,8 @@
 
 name: Feature Request Form
 description: Request new or improved functionality or changes to existing functionality
-title: "[FEA]: "
-labels: ["feature request"]
+type: "Enhancement"
+labels: ["feature request", "Needs Triage"]
 
 body:
   - type: markdown
@@ -52,7 +52,7 @@ body:
     attributes:
       label: Please provide a clear description of problem this feature solves
       description: Real usage examples are especially helpful, non-code.
-      placeholder: I want AIQ toolkit to do _____, because I need to _____.
+      placeholder: I want NeMo Agent toolkit to do _____, because I need to _____.
     validations:
       required: true
 

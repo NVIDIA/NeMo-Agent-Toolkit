@@ -116,7 +116,6 @@ class GitWrapper:
     @staticmethod
     def get_repo_owner_name():
 
-        # pylint: disable=anomalous-backslash-in-string
         return "NVIDIA/" + _run_cmd("git remote -v | grep -oP '/\\K\\w*(?=\\.git \\(fetch\\))' | head -1")
 
     @functools.lru_cache
@@ -272,8 +271,8 @@ class GithubWrapper:
     @functools.lru_cache
     @staticmethod
     def has_cli():
-        if os.environ.get("AIQ_AVOID_GH_CLI") is not None:
-            logger.debug("AIQ_AVOID_GH_CLI is set. Skipping Github CLI check")
+        if os.environ.get("NAT_AVOID_GH_CLI") is not None:
+            logger.debug("NAT_AVOID_GH_CLI is set. Skipping Github CLI check")
             return False
         try:
             _gh("--version")
@@ -363,7 +362,7 @@ class GithubWrapper:
         return remote_name
 
 
-def _is_repo_relative(f: str, git_root: str = None):
+def _is_repo_relative(f: str, git_root: str | None = None):
     if (git_root is None):
         git_root = GitWrapper.get_repo_dir()
 
@@ -390,7 +389,6 @@ def get_merge_target():
     str
         Ref name of the target branch
     """
-    #
 
     remote_branch = GithubWrapper.get_pr_target_remote_branch()
 
@@ -405,7 +403,7 @@ def get_merge_target():
     return remote_branch
 
 
-def determine_merge_commit(current_branch="HEAD"):
+def determine_merge_commit(current_branch: str = "HEAD"):
     """
     When running outside of CI, this will estimate the target merge commit hash of `current_branch` by finding a common
     ancester with the remote branch 'branch-{major}.{minor}' where {major} and {minor} are determined from the repo
@@ -431,7 +429,7 @@ def determine_merge_commit(current_branch="HEAD"):
     return common_commit
 
 
-def filter_files(files: str | list[str], path_filter: Callable[[str], bool] = None) -> list[str]:
+def filter_files(files: str | list[str], path_filter: Callable[[str], bool] | None = None) -> list[str]:
     """
     Filters out the input files according to a predicate
 
@@ -466,12 +464,12 @@ def filter_files(files: str | list[str], path_filter: Callable[[str], bool] = No
     return ret_files
 
 
-def changed_files(target_ref: str = None,
-                  base_ref="HEAD",
+def changed_files(target_ref: str | None = None,
+                  base_ref: str = "HEAD",
                   *,
                   merge_base: bool = True,
-                  staged=False,
-                  path_filter: Callable[[str], bool] = None):
+                  staged: bool = False,
+                  path_filter: Callable[[str], bool] | None = None):
     """
     Comparison between 2 commits in the repo. Returns a list of files that have been filtered by `path_filter`
 
@@ -508,11 +506,11 @@ def changed_files(target_ref: str = None,
     return filter_files(diffs, path_filter=path_filter)
 
 
-def modified_files(target_ref: str = None,
+def modified_files(target_ref: str | None = None,
                    *,
                    merge_base: bool = True,
-                   staged=False,
-                   path_filter: Callable[[str], bool] = None):
+                   staged: bool = False,
+                   path_filter: Callable[[str], bool] | None = None):
     """
     Comparison between the working tree and a target branch. Returns a list of files that have been filtered by
     `path_filter`
@@ -548,7 +546,7 @@ def modified_files(target_ref: str = None,
     return filter_files(diffs, path_filter=path_filter)
 
 
-def staged_files(base_ref="HEAD", *, path_filter: Callable[[str], bool] = None):
+def staged_files(base_ref: str = "HEAD", *, path_filter: Callable[[str], bool] | None = None):
     """
     Calculates the different between the working tree and the index including staged files. Returns a list of files that
     have been filtered by `path_filter`.
@@ -571,7 +569,7 @@ def staged_files(base_ref="HEAD", *, path_filter: Callable[[str], bool] = None):
     return modified_files(target_ref=base_ref, merge_base=False, staged=True, path_filter=path_filter)
 
 
-def all_files(*paths, base_ref="HEAD", path_filter: Callable[[str], bool] = None):
+def all_files(*paths, base_ref: str = "HEAD", path_filter: Callable[[str], bool] | None = None):
     """
     Returns a list of all files in the repo that have been filtered by `path_filter`.
 
@@ -636,7 +634,7 @@ def _parse_args():
 
 
 def _main():
-    log_level = logging.getLevelName(os.environ.get("AIQ_LOG_LEVEL", "INFO"))
+    log_level = logging.getLevelName(os.environ.get("NAT_LOG_LEVEL", "INFO"))
     logging.basicConfig(format="%(levelname)s:%(message)s", level=log_level)
 
     args = _parse_args()

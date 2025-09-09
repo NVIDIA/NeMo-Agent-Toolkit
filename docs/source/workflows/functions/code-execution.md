@@ -25,7 +25,7 @@ To start the `local_sandbox`you must have docker installed. If docker is not ins
 
 ```bash
 # from the root of the repository
-$ cd src/aiq/tool/code_execution/local_sandbox
+$ cd src/nat/tool/code_execution/local_sandbox
 $ source start_local_sandbox.sh
 ```
 It will take a bit of time for the container to build and initialize, but once you see the following, the server is ready:

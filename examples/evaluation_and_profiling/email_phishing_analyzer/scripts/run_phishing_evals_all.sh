@@ -59,7 +59,7 @@ for config in "${CONFIGS[@]}"; do
   # Run in background
   (
     echo "Running $CONFIG_NAME..."
-    aiq eval --config_file="$config"
+    nat eval --config_file="$config"
     echo $? > "$EXIT_FILE"
   ) &
 

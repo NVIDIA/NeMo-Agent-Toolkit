@@ -1,0 +1,239 @@
+---
+description: Follow these rules when the user's request involves installing, setting up, or configuring NeMo Agent Toolkit or its plugins
+globs:
+alwaysApply: false
+---
+# NeMo Agent Toolkit Installation Guide
+
+This rule provides comprehensive instructions for installing NeMo Agent Toolkit from source, including prerequisites, installation options, and verification steps.
+
+## Prerequisites Check
+
+Before installing NeMo Agent Toolkit, verify all prerequisites are installed:
+
+1. **Check Git installation:**
+   ```bash
+   git --version
+   ```
+
+2. **Check Git LFS installation:**
+   ```bash
+   git lfs version
+   ```
+
+3. **Check uv installation:**
+   ```bash
+   uv --version
+   ```
+
+If any prerequisite is missing, install them:
+- [Git](mdc:https:/git-scm.com)
+- [Git Large File Storage (LFS)](mdc:https:/git-lfs.github.com)
+- [uv](mdc:https:/docs.astral.sh/uv/getting-started/installation)
+
+## Installation Steps
+
+### 1. Clone Repository and Setup
+
+```bash
+# Assuming the repository is cloned in the current directory. If not, ask user to input the path to the repository.
+cd nemo-agent-toolkit
+
+# Initialize, fetch, and update submodules
+git submodule update --init --recursive
+
+# Fetch LFS files
+git lfs install
+git lfs fetch
+git lfs pull
+```
+
+### 2. Create Python Environment
+
+```bash
+# Create virtual environment with seed packages
+uv venv --seed .venv
+
+# For specific Python version (if multiple versions available):
+uv venv --seed .venv --python 3.11
+# or
+uv venv --seed .venv --python 3.12
+# or
+uv venv --seed .venv --python 3.13
+
+# Activate the environment
+source .venv/bin/activate
+```
+
+### 3. Installation Options
+
+Choose the appropriate installation option based on requirements:
+
+#### Option A: Full Installation (Recommended for Development)
+Install with all plugins and developer tools:
+```bash
+uv sync --all-groups --all-extras
+```
+
+#### Option B: Core Only Installation
+Install just the core NeMo Agent Toolkit without plugins:
+```bash
+uv sync
+```
+
+#### Option C: Core + Specific Plugins
+Install core plus individual plugins as needed:
+```bash
+# First install core
+uv sync
+
+# Then install specific plugins (examples):
+uv pip install -e '.[langchain]'
+uv pip install -e '.[llama-index]'
+uv pip install -e '.[crewai]'
+uv pip install -e '.[mem0ai]'
+```
+
+#### Option D: Core + Profiling Tools
+Install core with profiling dependencies:
+```bash
+uv sync
+uv pip install -e '.[profiling]'
+```
+
+## Available Plugin Options
+
+When installing specific plugins, these are the available options:
+- `agno` - Agno integration
+- `crewai` - CrewAI integration
+- `langchain` - LangChain integration
+- `llama_index` - LlamaIndex integration
+- `mem0ai` - Mem0 integration
+- `mysql` - MySQL database integration
+- `opentelemetry` - OpenTelemetry observability integration
+- `phoenix` - Phoenix observability integration
+- `ragaai` - RAGA AI evaluation integration
+- `redis` - Redis memory integration
+- `s3` - AWS S3 object storage integration
+- `semantic_kernel` - Microsoft Semantic Kernel integration
+- `weave` - Weights & Biases Weave integration
+- `zep_cloud` - Zep Cloud integration
+
+## Dependency Groups
+When installing dependencies, you can use the following groups:
+- `test` - Testing utilities
+- `profiling` - Profiling tools
+
+## Verification Steps
+
+After installation, verify NeMo Agent Toolkit is properly installed:
+
+```bash
+# Check version
+nat --version
+
+# Check help
+nat --help
+```
+
+Expected output should show version information and help text without errors.
+
+## API Key Setup
+
+For most workflows, set up the NVIDIA API key:
+
+```bash
+# Set NVIDIA API key (obtain from build.nvidia.com)
+export NVIDIA_API_KEY=<your_api_key>
+
+# Optionally add to shell profile for persistence:
+echo 'export NVIDIA_API_KEY=<your_api_key>' >> ~/.bashrc
+# or for zsh:
+echo 'export NVIDIA_API_KEY=<your_api_key>' >> ~/.zshrc
+```
+
+## Quick Test - Hello World Example
+
+Create a test workflow to verify installation:
+
+```bash
+# Create workflow.yaml
+cat << 'EOF' > workflow.yaml
+functions:
+   wikipedia_search:
+      _type: wiki_search
+      max_results: 2
+
+llms:
+   nim_llm:
+      _type: nim
+      model_name: meta/llama-3.1-70b-instruct
+      temperature: 0.0
+
+workflow:
+   _type: react_agent
+   tool_names: [wikipedia_search]
+   llm_name: nim_llm
+   verbose: true
+   parse_agent_response_max_retries: 3
+EOF
+
+# Test the workflow
+nat run --config_file workflow.yaml --input "List five subspecies of Aardvarks"
+```
+
+## Ready State Checklist
+
+NeMo Agent Toolkit is ready for development when:
+
+- [ ] `nat --version` returns version information
+- [ ] `nat --help` shows command options
+- [ ] NVIDIA_API_KEY environment variable is set
+- [ ] Virtual environment is activated
+- [ ] Required plugins are installed for your use case
+- [ ] Hello world example runs successfully (optional but recommended)
+
+## Common Installation Issues
+
+1. **Python version mismatch**: Ensure Python 3.11 or 3.12 or 3.13 is used
+2. **Git LFS not installed**: Large files won't download properly
+3. **Submodules not initialized**: Some dependencies will be missing
+4. **Virtual environment not activated**: Commands may not work
+5. **Missing API key**: Most workflows require NVIDIA_API_KEY
+
+## Example Installation Commands for Different Use Cases
+
+### For LangChain Development:
+```bash
+git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit && cd nemo-agent-toolkit
+git submodule update --init --recursive
+git lfs install && git lfs fetch && git lfs pull
+uv venv --seed .venv && source .venv/bin/activate
+uv sync
+uv pip install -e '.[langchain]'
+export NVIDIA_API_KEY=<your_key>
+nat --version
+```
+
+### For Full Development Environment:
+```bash
+git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit && cd nemo-agent-toolkit
+git submodule update --init --recursive
+git lfs install && git lfs fetch && git lfs pull
+uv venv --seed .venv && source .venv/bin/activate
+uv sync --all-groups --all-extras
+export NVIDIA_API_KEY=<your_key>
+nat --version
+```
+
+### For Testing Existing Workflows:
+```bash
+git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit && cd nemo-agent-toolkit
+git submodule update --init --recursive
+git lfs install && git lfs fetch && git lfs pull
+uv venv --seed .venv && source .venv/bin/activate
+uv sync
+uv pip install -e examples/simple
+export NVIDIA_API_KEY=<your_key>
+nat run --config_file=examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith"
+```

@@ -62,12 +62,12 @@ retrievers:
 ```
 In this example the `uri`, `collection_name`, and `top_k` are specified, while the default values for `output_fields` and `timeout` are used, and the `nvidia_api_key` will be pulled from the `NVIDIA_API_KEY` environment variable.
 
-This configured retriever can then be used as an argument for a function which uses a retriever (such as the `aiq_retriever` function). The `aiq_retriever` function is a simple function to provide the configured retriever as an LLM tool. Its config is shown below
+This configured retriever can then be used as an argument for a function which uses a retriever (such as the `retriever_tool` function). The `retriever_tool` function is a simple function to provide the configured retriever as an LLM tool. Its config is shown below
 
 ```python
-class AIQRetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
+class RetrieverConfig(FunctionBaseConfig, name="nat_retriever"):
     """
-    AIQRetriever tool which provides a common interface for different vectorstores. Its
+    Retriever tool which provides a common interface for different vectorstores. Its
     configuration uses clients, which are the vectorstore-specific implementaiton of the retriever interface.
     """
     retriever: RetrieverRef = Field(description="The retriever instance name from the workflow configuration object.")
@@ -79,7 +79,7 @@ class AIQRetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
     description: str = Field(default=None, description="If present it will be used as the tool description")
 ```
 
-Here is an example configuration of an `aiq_retriever` function that uses a `nemo_retriever`:
+Here is an example configuration of an `retriever_tool` function that uses a `nemo_retriever`:
 ```yaml
 retrievers:
     my_retriever:
@@ -89,21 +89,21 @@ retrievers:
         top_k: 10
 
 functions:
-    aiq_retriever_tool:
-        _type: aiq_retriever
+    retriever_tool:
+        _type: retriever_tool
         retriever: my_retriever
-        topic: "AIQ documentation"
+        topic: "NeMo Agent toolkit documentation"
 ```
 
 ### Developing with Retrievers
-Alternatively, you can use a retriever as a component in your own function, such as a custom built RAG workflow. When building a function that uses a retriever you can instantiate the retriever using the builder. Like other components, you can reference the retriever by name and specify the framework you want to use. Unlike other components, you can also omit the framework to get an instance of an `AIQRetriever`.
+Alternatively, you can use a retriever as a component in your own function, such as a custom built RAG workflow. When building a function that uses a retriever you can instantiate the retriever using the builder. Like other components, you can reference the retriever by name and specify the framework you want to use. Unlike other components, you can also omit the framework to get an instance of a `Retriever`.
 
 ```python
 @register_function(config_type=MyFunctionConfig)
 async def my_function(config: MyFunctionConfig, builder: Builder):
 
-    # Build an AIQRetriever
-    aiq_retriever = await builder.get_retriever(config.retriever)
+    # Build a Retriever
+    retriever_tool = await builder.get_retriever(config.retriever)
 
     # Build a langchain Retriever
     langchain_retriever = await builder.get_retriever(config.retriever, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

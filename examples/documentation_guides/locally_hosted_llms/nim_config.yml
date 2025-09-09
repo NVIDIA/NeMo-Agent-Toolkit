@@ -27,7 +27,7 @@ llms:
   nim_llm:
     _type: nim
     base_url: "http://localhost:8000/v1"
-    model_name: microsoft/phi-3-mini-4k-instruct
+    model_name: nvidia/llama3.1-nemotron-nano-4b-v1.1
 
 embedders:
   nv-embedqa-e5-v5:

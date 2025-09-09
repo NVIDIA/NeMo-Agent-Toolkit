@@ -18,7 +18,7 @@ import os
 
 import pytest
 
-from aiq.runtime.loader import load_workflow
+from nat.runtime.loader import load_workflow
 
 logger = logging.getLogger(__name__)
 

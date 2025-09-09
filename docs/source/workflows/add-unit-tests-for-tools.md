@@ -19,7 +19,7 @@ limitations under the License.
 
 ## Overview
 
-Use `aiq.test.ToolTestRunner` to test tools in complete isolation without requiring spinning up entire workflows, agents, and external services. This allows you to validate tool functionality quickly and reliably during development.
+Use `nat.test.ToolTestRunner` to test tools in complete isolation without requiring spinning up entire workflows, agents, and external services. This allows you to validate tool functionality quickly and reliably during development. See `tests/nat/tools/test_tool_test_runner.py` for a full example.
 
 ## Basic Usage
 
@@ -28,7 +28,7 @@ Use `aiq.test.ToolTestRunner` to test tools in complete isolation without requir
 The following example demonstrates testing a basic multiplication tool:
 
 ```python
-from aiq.test import ToolTestRunner
+from nat.test import ToolTestRunner
 from my_calculator.register import MultiplyToolConfig
 
 async def test_multiply_tool():
@@ -68,7 +68,7 @@ async def test_tool_error_handling():
 For tools that depend on LLMs, memory, retrievers, or other components, use the mocked dependencies context:
 
 ```python
-from aiq.test import with_mocked_dependencies
+from nat.test import with_mocked_dependencies
 
 async def test_tool_with_llm_dependency():
     async with with_mocked_dependencies() as (runner, mock_builder):

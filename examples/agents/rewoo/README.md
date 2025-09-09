@@ -86,7 +86,7 @@ export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
+nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
 ```
 
 **Expected Workflow Output**
@@ -117,7 +117,7 @@ Agent's thoughts:
   }
 ]
 ------------------------------
-2025-04-23 15:02:11,047 - aiq.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
+2025-04-23 15:02:11,047 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
 ------------------------------
 [AGENT]
 Calling tools: calculator_inequality
@@ -125,7 +125,7 @@ Tool's input: {'text': '2004 > 1996'}
 Tool's response:
 First number 2004 is greater than the second number 1996
 ------------------------------
-2025-04-23 15:02:13,096 - aiq.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
+2025-04-23 15:02:13,096 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
 ------------------------------
 [AGENT]
 Calling tools: internet_search
@@ -153,14 +153,14 @@ Winter [...] See also[edit]
 2004 Summer Paralympics
 Olympic Game...
 ------------------------------
-2025-04-23 15:02:13,382 - aiq.agent.rewoo_agent.agent - INFO - ReWOO agent solver output:
+2025-04-23 15:02:13,382 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent solver output:
 ------------------------------
 [AGENT]
 Agent input: Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?
 Agent's thoughts:
 Athens
 ------------------------------
-2025-04-23 15:02:13,385 - aiq.front_ends.console.console_front_end_plugin - INFO -
+2025-04-23 15:02:13,385 - nat.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
 ['Athens']
@@ -169,12 +169,12 @@ Workflow Result:
 
 ### Starting the NeMo Agent Toolkit Server
 
-You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
 
 **Starting the ReWOO Agent Example Workflow**
 
 ```bash
-aiq serve --config_file=examples/agents/rewoo/configs/config.yml
+nat serve --config_file=examples/agents/rewoo/configs/config.yml
 ```
 
 ### Making Requests to the NeMo Agent Toolkit Server
@@ -208,5 +208,5 @@ curl --request POST \
 **Run and evaluate the `rewoo_agent` example Workflow**
 
 ```bash
-aiq eval --config_file=examples/agents/rewoo/configs/config.yml
+nat eval --config_file=examples/agents/rewoo/configs/config.yml
 ```

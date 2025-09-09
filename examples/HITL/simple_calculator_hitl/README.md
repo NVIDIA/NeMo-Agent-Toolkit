@@ -62,35 +62,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 ### Human in the Loop (HITL) Configuration
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
 The NeMo Agent toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
-into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enabled by leveraging a reusable plugin developed in the `examples/HITL/por_to_jiratickets` example. We can view the implementation in the
-`aiq_por_to_jiratickets.hitl_approval_tool.py` file. The implementation is shown below:
-
-```python
-@register_function(config_type=HITLApprovalFnConfig)
-async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder):
-
-    import re
-
-    prompt = f"{config.prompt} Please confirm if you would like to proceed. Respond with 'yes' or 'no'."
-
-    async def _arun(unused: str = "") -> bool:
-
-        aiq_context = AIQContext.get()
-        user_input_manager = aiq_context.user_interaction_manager
-
-        human_prompt_text = HumanPromptText(text=prompt, required=True, placeholder="<your response here>")
-        response: InteractionResponse = await user_input_manager.prompt_user_input(human_prompt_text)
-        response_str = response.content.text.lower()  # type: ignore
-        selected_option = re.search(r'\b(yes)\b', response_str)
-
-        if selected_option:
-            return True
-        return False
-        # Rest of the function
-```
-
-As we see above, requesting user input using NeMo Agent toolkit is straightforward. We can use the `user_input_manager` to prompt the user for input. The user's response is then processed to determine the next steps in the workflow.
-This can occur in any tool or function in the workflow, allowing for dynamic interaction with the user as needed.
+into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enabled by leveraging a reusable plugin developed in the `examples/HITL/por_to_jiratickets` example. Refer to the [README of the HITL POR to Jira Tickets example](../../../examples/HITL/por_to_jiratickets/README.md) for more details.
 
 ## Example Usage
 
@@ -99,7 +71,7 @@ This can occur in any tool or function in the workflow, allowing for dynamic int
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/HITL/simple_calculator_hitl/configs/config-hitl.yml  --input "Is 2 * 4 greater than 5?"
+nat run --config_file examples/HITL/simple_calculator_hitl/configs/config-hitl.yml  --input "Is 2 * 4 greater than 5?"
 ```
 
 **Expected Workflow Result When Giving Permission**
@@ -109,10 +81,10 @@ aiq run --config_file examples/HITL/simple_calculator_hitl/configs/config-hitl.y
 
 langgraph.errors.GraphRecursionError: Recursion limit of 4 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.
 For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/GRAPH_RECURSION_LIMIT
-2025-07-03 17:04:54,696 - aiq_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
+2025-07-03 17:04:54,696 - nat_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
 You have reached the maximum number of iterations.
  Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: yes
-2025-07-03 17:04:56,267 - aiq_simple_calculator_hitl.retry_react_agent - INFO - Attempt 2: Increasing max_iterations to 2
+2025-07-03 17:04:56,267 - nat_simple_calculator_hitl.retry_react_agent - INFO - Attempt 2: Increasing max_iterations to 2
 
 <snipped for brevity>
 
@@ -128,7 +100,7 @@ Workflow Result:
 
 langgraph.errors.GraphRecursionError: Recursion limit of 4 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.
 For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/GRAPH_RECURSION_LIMIT
-2025-07-03 17:07:04,105 - aiq_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
+2025-07-03 17:07:04,105 - nat_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
 You have reached the maximum number of iterations.
  Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: no
 

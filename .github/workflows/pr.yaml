@@ -21,6 +21,7 @@ on:
       - 'pull-request/**'
       - 'develop'
       - 'main'
+      - 'release/**'
 
 # This allows a subsequently queued workflow run to interrupt previous runs
 concurrency:
@@ -65,6 +66,7 @@ jobs:
       is_pr: ${{ startsWith(github.ref_name, 'pull-request/') }}
       is_main_branch: ${{ github.ref_name == 'main' }}
       is_dev_branch: ${{ startsWith(github.ref_name, 'develop') }}
+      is_release_branch: ${{ startsWith(github.ref_name, 'release/') }}
       has_skip_ci_label: ${{ steps.get-pr-info.outcome == 'success' && contains(fromJSON(steps.get-pr-info.outputs.pr-info).labels.*.name, 'skip-ci') || false }}
       pr_info: ${{ steps.get-pr-info.outcome == 'success' && steps.get-pr-info.outputs.pr-info || '' }}
       base_sha: ${{ steps.get-pr-info.outcome == 'success' && fromJSON(steps.get-pr-info.outputs.pr-info).base.sha || '' }}
@@ -77,9 +79,12 @@ jobs:
     if: ${{ ! fromJSON(needs.prepare.outputs.has_skip_ci_label) }}
     with:
       # CI container
-      container: ghcr.io/astral-sh/uv:python3.12-bookworm
+      container: ghcr.io/astral-sh/uv:python3.13-bookworm
       py_11_container: ghcr.io/astral-sh/uv:python3.11-bookworm
       py_12_container: ghcr.io/astral-sh/uv:python3.12-bookworm
+      py_13_container: ghcr.io/astral-sh/uv:python3.13-bookworm
       # Info about the PR. Empty for non PR branches. Useful for extracting PR number, title, etc.
       pr_info: ${{ needs.prepare.outputs.pr_info }}
       base_sha: ${{ needs.prepare.outputs.base_sha }}
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

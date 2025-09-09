@@ -29,7 +29,7 @@ functions:
   calculator_inequality:
     _type: calculator_inequality
   calculator_divide:
-    _type: aiq_simple_calculator/calculator_divide
+    _type: nat_simple_calculator/calculator_divide
   current_datetime:
     _type: current_datetime
   calculator_subtract:

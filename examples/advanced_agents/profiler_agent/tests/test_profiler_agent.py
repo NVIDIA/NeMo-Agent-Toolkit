@@ -19,14 +19,14 @@ from pathlib import Path
 import pytest
 
 try:
-    from aiq_profiler_agent.tool.flow_chart import FlowChartConfig
-    from aiq_profiler_agent.tool.token_usage import TokenUsageConfig
+    from nat_profiler_agent.tool.flow_chart import FlowChartConfig
+    from nat_profiler_agent.tool.token_usage import TokenUsageConfig
     PROFILER_AGENT_AVAILABLE = True
 except ImportError:
     PROFILER_AGENT_AVAILABLE = False
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.workflow_builder import WorkflowBuilder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.workflow_builder import WorkflowBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 # To run this test, a phoenix server must be running.
 # The phoenix server can be started by running the following command:
 # docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:latest
-@pytest.mark.skipif(not PROFILER_AGENT_AVAILABLE, reason="aiq_profiler_agent is not installed")
+@pytest.mark.skipif(not PROFILER_AGENT_AVAILABLE, reason="nat_profiler_agent is not installed")
 async def test_flow_chart_tool():
     async with WorkflowBuilder() as builder:
         await builder.add_function("flow_chart", FlowChartConfig())
@@ -46,7 +46,7 @@ async def test_flow_chart_tool():
         assert flow_info.flow_chart_path is not None and Path(flow_info.flow_chart_path).exists()
 
 
-@pytest.mark.skipif(not PROFILER_AGENT_AVAILABLE, reason="aiq_profiler_agent is not installed")
+@pytest.mark.skipif(not PROFILER_AGENT_AVAILABLE, reason="nat_profiler_agent is not installed")
 async def test_token_usage_tool():
     async with WorkflowBuilder() as builder:
         await builder.add_function("token_usage", TokenUsageConfig())

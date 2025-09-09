@@ -14,9 +14,9 @@
 # limitations under the License.
 
 name: Documentation - New Documentation Request
-description: Request additions to AIQ toolkit documentation
-title: "[DOC]: "
-labels: ["doc"]
+description: Request additions to NeMo Agent toolkit documentation
+type: "Documentation"
+labels: ["doc", "Needs Triage"]
 
 body:
   - type: markdown
