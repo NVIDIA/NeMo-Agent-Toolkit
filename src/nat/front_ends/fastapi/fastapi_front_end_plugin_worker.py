@@ -71,6 +71,7 @@ from nat.runtime.session import SessionManager
 logger = logging.getLogger(__name__)
 
 _DASK_AVAILABLE = False
+
 try:
     from nat.front_ends.fastapi.job_store import JobInfo
     from nat.front_ends.fastapi.job_store import JobStatus
@@ -82,7 +83,6 @@ except ImportError:
     JobStore = None
 
 
-# TODO: Prior to merging remove all/most of the job store related asserts and remove commented out code
 class FastApiFrontEndPluginWorkerBase(ABC):
 
     def __init__(self, config: Config):
@@ -104,7 +104,6 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                 raise RuntimeError("Dask is not available, please install it to use the FastAPI front end with Dask.")
 
             try:
-                assert JobStore is not None, "JobStore should be imported when Dask is available"
                 assert self._db_url is not None, "NAT_JOB_STORE_DB_URL environment variable must be set when using Dask"
                 self._job_store = JobStore(scheduler_address=self._scheduler_address, db_url=self._db_url)
                 self._dask_available = True
@@ -280,7 +279,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                  eval_config_file: str,
                                  reps: int):
             """Background task to run the evaluation."""
-            assert JobStore is not None, "JobStore should be imported when Dask is available"
             job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
 
             try:
@@ -310,8 +308,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             """Handle evaluation requests."""
 
             async with session_manager.session(http_connection=http_request):
-                assert self._job_store is not None and JobStatus is not None, \
-                    "JobStore should be initialized when Dask is available"
 
                 # if job_id is present and already exists return the job info
                 # There is a race condition between this check and the actual job submission, however if the client is
@@ -552,7 +548,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         if self._dask_available:
             # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
             # Consider prefixing these with "nat_" to avoid conflicts
-            assert JobStore is not None, "JobStore should be initialized when Dask is available"
 
             class AsyncGenerateRequest(GenerateBodyType):
                 job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
@@ -768,7 +763,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                  job_id: str,
                                  payload: typing.Any):
             """Background task to run the workflow."""
-            assert JobStore is not None, "JobStore should be initialized when Dask is available"
             job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
             try:
                 async with load_workflow(config_file_path) as local_session_manager:
@@ -788,7 +782,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 """Handle async generation requests."""
 
                 async with session_manager.session(http_connection=http_request):
-                    assert self._job_store is not None, "JobStore should be initialized when Dask is available"
 
                     # if job_id is present and already exists return the job info
                     if request.job_id:
