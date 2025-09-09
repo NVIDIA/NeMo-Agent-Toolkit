@@ -46,6 +46,8 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.sql import expression as sa_expr
 
+from nat.front_ends.fastapi.dask_client_mixin import DaskClientMangerMixin
+
 if typing.TYPE_CHECKING:
     from sqlalchemy.engine import Engine
     from sqlalchemy.ext.asyncio import AsyncEngine
@@ -134,7 +136,7 @@ class JobInfo(Base):
         return f"JobInfo(job_id={self.job_id}, status={self.status})"
 
 
-class JobStore:
+class JobStore(DaskClientMangerMixin):
     """
     Tracks and manages jobs submitted to the Dask scheduler, along with persisting job metadata (JobInfo objects) in a
     database.
@@ -190,11 +192,8 @@ class JobStore:
             An active Dask client connected to the scheduler. The client is automatically closed when exiting the
             context manager.
         """
-        client = await DaskClient(address=self._scheduler_address, asynchronous=True)
-
-        yield client
-
-        await client.close()
+        async with super().client(self._scheduler_address) as client:
+            yield client
 
     @asynccontextmanager
     async def session(self) -> AsyncGenerator["AsyncSession"]:

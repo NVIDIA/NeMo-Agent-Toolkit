@@ -21,6 +21,7 @@ import traceback
 import typing
 
 from nat.builder.front_end import FrontEndBase
+from nat.front_ends.fastapi.dask_client_mixin import DaskClientMangerMixin
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
 from nat.front_ends.fastapi.main import get_app
@@ -33,7 +34,7 @@ if (typing.TYPE_CHECKING):
 logger = logging.getLogger(__name__)
 
 
-class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
+class FastApiFrontEndPlugin(DaskClientMangerMixin, FrontEndBase[FastApiFrontEndConfig]):
 
     def __init__(self, full_config: "Config"):
         super().__init__(full_config)
@@ -76,12 +77,13 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
     async def _submit_cleanup_task(self, scheduler_address: str, db_url: str):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
-        from dask.distributed import Client
         from dask.distributed import fire_and_forget
 
-        client = await Client(self._cluster, asynchronous=True)
-        self._cleanup_future = client.submit(self._periodic_cleanup, scheduler_address=scheduler_address, db_url=db_url)
-        fire_and_forget(self._cleanup_future)
+        async with self.client(self._cluster) as client:
+            self._cleanup_future = client.submit(self._periodic_cleanup,
+                                                 scheduler_address=scheduler_address,
+                                                 db_url=db_url)
+            fire_and_forget(self._cleanup_future)
 
     async def run(self):
 
@@ -185,11 +187,13 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
         finally:
             logger.debug("Shuting down")
-            if self._cleanup_future is not None:
-                logger.info("Cancelling periodic cleanup task.")
-                self._cleanup_future.cancel()
-
             if self._cluster is not None:
+                if self._cleanup_future is not None:
+
+                    logger.info("Cancelling periodic cleanup task.")
+                    async with self.client(self._cluster) as client:
+                        await client.cancel([self._cleanup_future], force=True, reason="Shutting down")
+
                 logger.info("Closing Dask cluster.")
                 self._cluster.close()
             try:
