@@ -103,8 +103,11 @@ class FastApiFrontEndPluginWorkerBase(ABC):
             if not _DASK_AVAILABLE:
                 raise RuntimeError("Dask is not available, please install it to use the FastAPI front end with Dask.")
 
+            if self._db_url is None:
+                raise RuntimeError(
+                    "NAT_JOB_STORE_DB_URL must be set when using Dask (configure a persistent JobStore database).")
+
             try:
-                assert self._db_url is not None, "NAT_JOB_STORE_DB_URL environment variable must be set when using Dask"
                 self._job_store = JobStore(scheduler_address=self._scheduler_address, db_url=self._db_url)
                 self._dask_available = True
                 logger.debug("Connected to Dask scheduler at %s", self._scheduler_address)
