@@ -379,7 +379,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     jobs = await self._job_store.get_all_jobs()
                 else:
                     logger.info("Getting jobs with status %s", status)
-                    jobs = await self._job_store.get_jobs_by_status(status)
+                    jobs = await self._job_store.get_jobs_by_status(JobStatus(status))
 
                 logger.info("Found %d jobs", len(jobs))
                 return [translate_job_to_response(job) for job in jobs]
@@ -576,10 +576,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 }
             },
         }
-
-        # TODO: Add a way to limit the number of concurrent async jobs in dask
-        # Run up to max_running_async_jobs jobs at the same time
-        # async_job_concurrency = asyncio.Semaphore(self._front_end_config.max_running_async_jobs)
 
         def get_single_endpoint(result_type: type | None):
 
