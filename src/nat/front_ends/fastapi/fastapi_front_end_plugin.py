@@ -106,7 +106,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                 try:
                     from dask.distributed import LocalCluster
 
-                    self._cluster = LocalCluster(processes=True, threads_per_worker=1)
+                    self._cluster = LocalCluster()
 
                     self._scheduler_address = self._cluster.scheduler.address
                     logger.info("Created local Dask cluster with scheduler at %s", self._scheduler_address)
