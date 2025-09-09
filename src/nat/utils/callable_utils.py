@@ -26,8 +26,6 @@ async def ainvoke_any(func: Callable[..., Any], *args: Any, **kwargs: Any) -> An
 
     Args:
         func (Callable[..., Any]): The function to execute (sync/async function, generator, etc.)
-        *args (Any): Positional arguments to pass to the function
-        **kwargs (Any): Keyword arguments to pass to the function
 
     Returns:
         Any: The result of executing the callable
