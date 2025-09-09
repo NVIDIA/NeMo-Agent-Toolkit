@@ -551,7 +551,7 @@ class JobStore(DaskClientMixin):
 
                         var.delete()
                         successfully_expired.append(job_id)
-                    except Exception as e:
+                    except Exception:
                         logger.exception("Failed to expire %s", job_id)
 
                 await session.execute(
