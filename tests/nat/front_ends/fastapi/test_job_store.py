@@ -611,60 +611,60 @@ async def test_cleanup_expired_jobs_with_expired(db_engine: "AsyncEngine", dask_
 
 @pytest.mark.usefixtures("setup_db")
 @pytest.mark.asyncio
-async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine", dask_scheduler_address: str):
+async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine",
+                                                      dask_scheduler_address: str,
+                                                      tmp_path: Path):
     """Test cleanup removes output files for expired jobs."""
     from nat.front_ends.fastapi.job_store import JobStatus
     from nat.front_ends.fastapi.job_store import JobStore
 
+    JobStore.MIN_EXPIRY = 1  # Lower minimum expiry for testing
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    # Create temporary files/directories for testing
-    with tempfile.TemporaryDirectory() as temp_dir:
-        output_file = Path(temp_dir) / "output.txt"
-        output_file.write_text("test output")
+    output_file = tmp_path / "output.txt"
+    output_file.write_text("test output")
 
-        output_dir = Path(temp_dir) / "output_dir"
-        output_dir.mkdir()
-        (output_dir / "nested_file.txt").write_text("nested content")
+    output_dir = tmp_path / "output_dir"
+    output_dir.mkdir()
+    (output_dir / "nested_file.txt").write_text("nested content")
 
-        # Create jobs with very short expiry
-        job_id1 = await job_store._create_job(expiry_seconds=1)
-        job_id2 = await job_store._create_job(expiry_seconds=1)
+    # Create jobs with very short expiry
+    job_id1 = await job_store._create_job(expiry_seconds=1)
+    job_id2 = await job_store._create_job(expiry_seconds=1)
 
-        # Update to finished status with output paths and small delay
-        await job_store.update_status(job_id1, JobStatus.SUCCESS.value, output_path=str(output_file))
-        await asyncio.sleep(0.1)  # Small delay between status updates
-        await job_store.update_status(job_id2, JobStatus.SUCCESS.value, output_path=str(output_dir))
+    # Update to finished status with output paths
+    await job_store.update_status(job_id1, JobStatus.SUCCESS, output_path=str(output_file))
+    await job_store.update_status(job_id2, JobStatus.SUCCESS, output_path=str(output_dir))
 
-        # Verify files exist before cleanup
-        assert output_file.exists()
-        assert output_dir.exists()
+    # Verify files exist before cleanup
+    assert output_file.exists()
+    assert output_dir.exists()
 
-        # Wait for jobs to expire (longer wait to be more robust)
-        await asyncio.sleep(3)
+    # Wait for jobs to expire
+    await asyncio.sleep(3)
 
-        # Run cleanup
-        await job_store.cleanup_expired_jobs()
+    # Run cleanup
+    await job_store.cleanup_expired_jobs()
 
-        # Check that cleanup attempted to process the jobs
-        job1 = await job_store.get_job(job_id1)
-        job2 = await job_store.get_job(job_id2)
+    # Check that cleanup attempted to process the jobs
+    job1 = await job_store.get_job(job_id1)
+    job2 = await job_store.get_job(job_id2)
 
-        assert job1 is not None
-        assert job2 is not None
+    assert job1 is not None
+    assert job2 is not None
 
-        # Files should be removed for expired jobs
-        # The most recent job is always kept, so its output might remain
-        removed_count = 0
-        if not output_file.exists():
-            removed_count += 1
-        if not output_dir.exists():
-            removed_count += 1
+    # Files should be removed for expired jobs
+    # The most recent job is always kept, so its output might remain
+    removed_count = 0
+    if not output_file.exists():
+        removed_count += 1
+    if not output_dir.exists():
+        removed_count += 1
 
-        # If jobs were expired, files should be removed
-        # If no jobs were expired (due to timing), files may remain
-        # This test mainly verifies the cleanup runs without error
-        assert removed_count >= 0  # Files may or may not be removed depending on cleanup behavior
+    # If jobs were expired, files should be removed
+    # If no jobs were expired (due to timing), files may remain
+    # This test mainly verifies the cleanup runs without error
+    assert removed_count == 1  # Files may or may not be removed depending on cleanup behavior
 
 
 @pytest.mark.usefixtures("setup_db")
