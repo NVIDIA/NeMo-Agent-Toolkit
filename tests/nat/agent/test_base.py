@@ -23,7 +23,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph.graph import CompiledGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from nat.agent.base import BaseAgent
 
@@ -41,9 +41,9 @@ class MockBaseAgent(BaseAgent):
         self.detailed_logs = detailed_logs
         self.log_response_max_chars = log_response_max_chars
 
-    async def _build_graph(self, state_schema: type) -> CompiledGraph:
+    async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
         """Mock implementation."""
-        return Mock(spec=CompiledGraph)
+        return Mock(spec=CompiledStateGraph)
 
 
 @pytest.fixture
@@ -324,8 +324,8 @@ class TestLogToolResponse:
         # Create a concrete implementation of BaseAgent for testing
         class TestAgent(BaseAgent):
 
-            async def _build_graph(self, state_schema: type) -> CompiledGraph:
-                return Mock(spec=CompiledGraph)
+            async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
+                return Mock(spec=CompiledStateGraph)
 
         # Create a TestAgent instance with custom log_response_max_chars
         mock_llm = Mock()
