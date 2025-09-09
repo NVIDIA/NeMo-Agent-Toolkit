@@ -326,7 +326,7 @@ class JobStore(DaskClientMangerMixin):
 
     async def update_status(self,
                             job_id: str,
-                            status: str,
+                            status: str | JobStatus,
                             error: str | None = None,
                             output_path: str | None = None,
                             output: BaseModel | None = None):
@@ -337,7 +337,7 @@ class JobStore(DaskClientMangerMixin):
         ----------
         job_id : str
             The unique identifier of the job to update.
-        status : str
+        status : str | JobStatus
             The new status to set for the job (should be a valid JobStatus value).
         error : str, optional
             Error message to store if the job failed.
@@ -358,7 +358,10 @@ class JobStore(DaskClientMangerMixin):
             if job is None:
                 raise ValueError(f"Job {job_id} not found in job store")
 
-            job.status = status
+            if not isinstance(status, JobStatus):
+                status = JobStatus(status)
+
+            job.status = status.value
             job.error = error
             job.output_path = output_path
             job.updated_at = datetime.now(UTC)
@@ -449,13 +452,13 @@ class JobStore(DaskClientMangerMixin):
 
         return last_job
 
-    async def get_jobs_by_status(self, status: JobStatus) -> list[JobInfo]:
+    async def get_jobs_by_status(self, status: str | JobStatus) -> list[JobInfo]:
         """
         Retrieve all jobs that have a specific status.
 
         Parameters
         ----------
-        status : JobStatus
+        status : str | JobStatus
             The status to filter jobs by.
 
         Returns
@@ -464,6 +467,9 @@ class JobStore(DaskClientMangerMixin):
             A list of JobInfo objects that have the specified status. Returns an empty list if no jobs match the
             status.
         """
+        if not isinstance(status, JobStatus):
+            status = JobStatus(status)
+
         stmt = select(JobInfo).where(JobInfo.status == status)
         async with self.session() as session:
             return (await session.scalars(stmt)).all()
@@ -546,7 +552,7 @@ class JobStore(DaskClientMangerMixin):
                         var.delete()
                         successfully_expired.append(job_id)
                     except Exception as e:
-                        logger.error("Failed to expire %s: %s", job_id, e)
+                        logger.exception("Failed to expire %s", job_id)
 
                 await session.execute(
                     (update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True)))
