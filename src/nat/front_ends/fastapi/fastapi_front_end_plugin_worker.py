@@ -283,7 +283,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 eval_config = EvaluationRunConfig(config_file=Path(eval_config_file), dataset=None, reps=reps)
 
                 # Create a new EvaluationRun with the evaluation-specific config
-                await job_store.update_status(job_id, "running")
+                await job_store.update_status(job_id, JobStatus.RUNNING)
                 eval_runner = EvaluationRun(eval_config)
 
                 async with load_workflow(workflow_config_file_path) as local_session_manager:
@@ -291,14 +291,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         session_manager=local_session_manager, job_id=job_id)
 
                 if output.workflow_interrupted:
-                    await job_store.update_status(job_id, "interrupted")
+                    await job_store.update_status(job_id, JobStatus.INTERRUPTED)
                 else:
                     parent_dir = os.path.dirname(output.workflow_output_file) if output.workflow_output_file else None
 
-                    await job_store.update_status(job_id, "success", output_path=str(parent_dir))
+                    await job_store.update_status(job_id, JobStatus.SUCCESS, output_path=str(parent_dir))
             except Exception as e:
-                logger.exception("Error in evaluation job %s: %s", job_id, str(e))
-                await job_store.update_status(job_id, "failure", error=str(e))
+                logger.exception("Error in evaluation job %s", job_id)
+                await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
 
         async def start_evaluation(request: EvaluateRequest, http_request: Request):
             """Handle evaluation requests."""
