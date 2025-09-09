@@ -4346,6 +4346,21 @@ wheels = [
 ]
 
 [[package]]
+name = "mcp-server-time"
+version = "2025.8.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mcp" },
+    { name = "pydantic" },
+    { name = "tzdata" },
+    { name = "tzlocal" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/04/1c/0593458e9bd1aba06fb981092e213ee668b739f58c58e87a0880d67c7e6f/mcp_server_time-2025.8.4.tar.gz", hash = "sha256:5605e5222b8d2814160c09c38947731cf816fa977a4158c344a95f6a363ca124", size = 30140, upload-time = "2025-08-04T14:52:29.944Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5e/f7/c961382d84df694682ebc76486b2a98cfce429c7d15b1eb3ce89e9cf7ff0/mcp_server_time-2025.8.4-py3-none-any.whl", hash = "sha256:8c7bf9ce770fc0df9268cb1ed29d1a6f0ba8e96dac68ee505d1533e58db3ae74", size = 6510, upload-time = "2025-08-04T14:52:28.891Z" },
+]
+
+[[package]]
 name = "mdit-py-plugins"
 version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4419,7 +4434,7 @@ name = "milvus-lite"
 version = "2.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "tqdm" },
+    { name = "tqdm", marker = "sys_platform != 'win32'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a9/b2/acc5024c8e8b6a0b034670b8e8af306ebd633ede777dcbf557eac4785937/milvus_lite-2.5.1-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:6b014453200ba977be37ba660cb2d021030375fa6a35bc53c2e1d92980a0c512", size = 27934713, upload-time = "2025-06-30T04:23:37.028Z" },
@@ -5035,12 +5050,14 @@ requires-dist = [
 name = "nat-simple-calculator-mcp"
 source = { editable = "examples/MCP/simple_calculator_mcp" }
 dependencies = [
+    { name = "mcp-server-time" },
     { name = "nat-simple-calculator" },
     { name = "nvidia-nat", extra = ["langchain", "mcp"] },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "mcp-server-time", specifier = "~=2025.8" },
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "nvidia-nat", extras = ["langchain"], editable = "." },
     { name = "nvidia-nat", extras = ["mcp"], editable = "." },
@@ -9717,6 +9734,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/95/32/1a225d6164441be760d75c2c42e2780dc0873fe382da3e98a2e1e48361e5/tzdata-2025.2.tar.gz", hash = "sha256:b60a638fcc0daffadf82fe0f57e53d06bdec2f36c4df66280ae79bce6bd6f2b9", size = 196380, upload-time = "2025-03-23T13:54:43.652Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/23/c7abc0ca0a1526a0774eca151daeb8de62ec457e77262b66b359c3c7679e/tzdata-2025.2-py2.py3-none-any.whl", hash = "sha256:1a403fada01ff9221ca8044d701868fa132215d84beb92242d9acd2147f667a8", size = 347839, upload-time = "2025-03-23T13:54:41.845Z" },
+]
+
+[[package]]
+name = "tzlocal"
+version = "5.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8b/2e/c14812d3d4d9cd1773c6be938f89e5735a1f11a9f184ac3639b93cef35d5/tzlocal-5.3.1.tar.gz", hash = "sha256:cceffc7edecefea1f595541dbd6e990cb1ea3d19bf01b2809f362a03dd7921fd", size = 30761, upload-time = "2025-03-05T21:17:41.549Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/14/e2a54fabd4f08cd7af1c07030603c3356b74da07f7cc056e600436edfa17/tzlocal-5.3.1-py3-none-any.whl", hash = "sha256:eb1a66c3ef5847adf7a834f1be0800581b683b5608e74f86ecbcef8ab91bb85d", size = 18026, upload-time = "2025-03-05T21:17:39.857Z" },
 ]
 
 [[package]]
