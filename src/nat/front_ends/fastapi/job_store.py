@@ -156,7 +156,7 @@ class JobStore(DaskClientMangerMixin):
     DEFAULT_EXPIRY = 3600  # 1 hour
 
     # active jobs are exempt from expiry
-    ACTIVE_STATUS = {"running", "submitted"}
+    ACTIVE_STATUS = {JobStatus.RUNNING, JobStatus.SUBMITTED}
 
     def __init__(
         self,
