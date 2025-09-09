@@ -103,10 +103,8 @@ class FastApiFrontEndPlugin(DaskClientMangerMixin, FrontEndBase[FastApiFrontEndC
 
                     self._cluster = await LocalCluster(asynchronous=True)
 
-                    if self._cluster.scheduler is not None:
-                        scheduler_address = self._cluster.scheduler.address
-                    else:
-                        raise RuntimeError("Dask LocalCluster did not start correctly, no scheduler address available.")
+                    scheduler_address = self._cluster.scheduler.address
+
                 except ImportError:
                     logger.warning("Dask is not installed, async execution and evaluation will not be available.")
 
