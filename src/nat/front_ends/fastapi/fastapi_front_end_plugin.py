@@ -197,7 +197,7 @@ class FastApiFrontEndPlugin(DaskClientMangerMixin, FrontEndBase[FastApiFrontEndC
 
             if self._cluster is not None:
                 # Only shut down the cluster if we created it
-                logger.info("Closing Dask cluster.")
+                logger.info("Closing Local Dask cluster.")
                 self._cluster.close()
             try:
                 os.remove(config_file_name)
