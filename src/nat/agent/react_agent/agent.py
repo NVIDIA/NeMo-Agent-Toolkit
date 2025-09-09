@@ -343,7 +343,7 @@ class ReActAgentGraph(DualNodeAgent):
         if errors:
             error_text = "\n".join(errors)
             logger.error("%s %s", AGENT_LOG_PREFIX, error_text)
-            raise ValueError(error_text)
+            return False
         return True
 
 
