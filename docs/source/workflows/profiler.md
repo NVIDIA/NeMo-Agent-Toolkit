@@ -49,7 +49,7 @@ The NeMo Agent toolkit Profiler can be broken into the following components:
 
 ### Profiler Decorators and Callbacks
 - `src/nat/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
-- `src/nat/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent toolkit usage stats queue. We currently support callback handlers for LangChain,
+- `src/nat/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent toolkit usage stats queue. We currently support callback handlers for LangChain/LangGraph,
 LLama Index, CrewAI, and Semantic Kernel.
 
 ### Profiler Runner

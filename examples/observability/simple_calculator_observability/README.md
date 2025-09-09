@@ -95,7 +95,7 @@ nat run --config_file examples/observability/simple_calculator_observability/con
 
 #### LangSmith Integration
 
-LangSmith offers comprehensive monitoring within the LangChain ecosystem.
+LangSmith offers comprehensive monitoring within the LangChain/LangGraph ecosystem.
 
 1. Set your LangSmith credentials:
 
@@ -192,7 +192,7 @@ The example includes multiple configuration files for different observability pl
 |-------------------|----------|----------|
 | `config-phoenix.yml` | Phoenix | Local development and testing |
 | `config-langfuse.yml` | Langfuse | Production monitoring and analytics |
-| `config-langsmith.yml` | LangSmith | LangChain ecosystem integration |
+| `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |
 | `config-weave.yml` | Weave | Workflow-focused tracking |
 | `config-patronus.yml` | Patronus | AI safety and compliance monitoring |
 | `config-catalyst.yml` | Catalyst | RagaAI Catalyst integration |

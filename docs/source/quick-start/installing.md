@@ -30,14 +30,14 @@ The following LLM API providers are supported:
 
 ## Framework Integrations
 
-To keep the library lightweight, many of the first-party plugins supported by NeMo Agent toolkit are located in separate distribution packages. For example, the `nvidia-nat-langchain` distribution contains all the LangChain-specific plugins and the `nvidia-nat-mem0ai` distribution contains the Mem0-specific plugins.
+To keep the library lightweight, many of the first-party plugins supported by NeMo Agent toolkit are located in separate distribution packages. For example, the `nvidia-nat-langchain` distribution contains all the LangChain-specific and LangGraph-specific plugins, and the `nvidia-nat-mem0ai` distribution contains the Mem0-specific plugins.
 
 To install these first-party plugin libraries, you can use the full distribution name (for example, `nvidia-nat-langchain`) or use the `nvidia-nat[langchain]` extra distribution. The following extras are supported:
 
 - `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/)
 - `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
-- `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/)
+- `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/), [LangGraph](https://www.langchain.com/langgraph)
 - `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
 - `nvidia-nat[mem0ai]` or `nvidia-nat-mem0ai` - [Mem0](https://mem0.ai/)
 - `nvidia-nat[mysql]` or `nvidia-nat-mysql` - [MySQL](https://www.mysql.com/)
@@ -88,10 +88,10 @@ To install the latest stable version of NeMo Agent toolkit, run the following co
 pip install nvidia-nat
 ```
 
-NeMo Agent toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain plugin, run the following:
+NeMo Agent toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain/LangGraph plugin, run the following:
 
 ```bash
-pip install nvidia-nat[langchain] # For LangChain
+pip install nvidia-nat[langchain] # For LangChain/LangGraph support
 ```
 
 Or for all optional dependencies:
@@ -145,7 +145,7 @@ Installing from source is required to run any examples provided in the repositor
     ```
 
     At this point individual plugins, which are located under the `packages` directory, can be installed with the following command `uv pip install -e '.[<plugin_name>]'`.
-    For example, to install the `langchain` plugin, run the following:
+    For example, to install the LangChain/LangGraph plugin, run the following:
     ```bash
     uv pip install -e '.[langchain]'
     ```
@@ -218,7 +218,7 @@ Once a NeMo Agent toolkit workflow is ready for deployment to production, the de
 
 For more information on the available plugins, refer to [Framework Integrations](#framework-integrations).
 
-Example dependency for NeMo Agent toolkit using the `langchain` plugin for projects using a `pyproject.toml` file:
+Example dependency for NeMo Agent toolkit using the LangChain/LangGraph plugin for projects using a `pyproject.toml` file:
 ```toml
 dependencies = [
 "nvidia-nat[langchain]~=1.0",
