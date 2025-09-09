@@ -34,8 +34,8 @@ class SpanTaggingProcessor(Processor[Span, Span]):
     the tag attributes.
 
         Args:
-            tags: Mapping of tag keys to their values. Values can be enums (converted to strings) or strings.
-            span_prefix: The prefix to use for tag attributes (default: from NAT_SPAN_PREFIX env var or "nat").
+            tags: Mapping of tag keys to their values. Values can be enums (converted to strings) or strings
+            span_prefix: The prefix to use for tag attributes (default: from NAT_SPAN_PREFIX env var or "nat")
     """
 
     def __init__(self, tags: Mapping[str, Enum | str] | None = None, span_prefix: str | None = None):
@@ -51,10 +51,10 @@ class SpanTaggingProcessor(Processor[Span, Span]):
         """Tag the span with all configured tags.
 
         Args:
-            item (Span): The span to tag.
+            item (Span): The span to tag
 
         Returns:
-            Span: The tagged span with all configured tags applied.
+            Span: The tagged span with all configured tags applied
         """
         for tag_key, tag_value in self.tags.items():
             key = str(tag_key).strip()

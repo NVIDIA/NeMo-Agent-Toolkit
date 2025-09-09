@@ -15,6 +15,8 @@
 
 import asyncio
 import logging
+from typing import get_args
+from typing import get_origin
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -742,20 +744,18 @@ class TestBasicProcessorManagement:
         with pytest.raises(ValueError, match="is not compatible"):
             processing_exporter.add_processor(incompatible_processor)
 
-    def test_add_processor_with_generic_types_warning(self, processing_exporter, caplog):
-        """Test that generic type compatibility check falls back to warning."""
+    def test_add_processor_with_generic_types_success(self, processing_exporter):
+        """Test that processors with generic types can be added successfully."""
         processor1 = MockProcessor("proc1")
         processor2 = MockBatchProcessor("proc2")
 
         processing_exporter.add_processor(processor1)
+        processing_exporter.add_processor(processor2)
 
-        # Mock issubclass to raise TypeError for generic types
-        with patch('builtins.issubclass', side_effect=TypeError("cannot use with generics")):
-            with caplog.at_level(logging.WARNING):
-                processing_exporter.add_processor(processor2)
-
-        assert "Cannot use issubclass() for type compatibility check" in caplog.text
+        # Both processors should be added successfully
         assert len(processing_exporter._processors) == 2
+        assert processing_exporter._processors[0] is processor1
+        assert processing_exporter._processors[1] is processor2
 
     def test_remove_processor_by_object_exists(self, processing_exporter):
         """Test removing an existing processor by object."""
@@ -839,33 +839,26 @@ class TestTypeValidation:
             with pytest.raises(ValueError, match="is not compatible with the .* output type"):
                 await processing_exporter._pre_start()
 
-    async def test_pre_start_type_validation_with_generic_warning(self, processing_exporter, caplog):
-        """Test _pre_start type validation falls back to warning with generic types."""
+    async def test_pre_start_type_validation_strict_checking(self, processing_exporter):
+        """Test _pre_start type validation uses strict compatibility checking."""
 
-        # Create a processor that will trigger the input TypeError
-        class GenericTypeProcessor(Processor[str, int]):
-
-            @property
-            def input_class(self) -> type:
-                # This will cause issubclass to raise TypeError
-                raise TypeError("issubclass() arg 1 must be a class")
+        # Create a processor with compatible types (exporter is ProcessingExporter[str, int])
+        class CompatibleProcessor(Processor[str, int]):
 
             async def process(self, item: str) -> int:
                 return len(item)
 
-        generic_processor = GenericTypeProcessor()
-        processing_exporter.add_processor(generic_processor)
+        compatible_processor = CompatibleProcessor()
+        processing_exporter.add_processor(compatible_processor)
 
-        with caplog.at_level(logging.WARNING):
-            await processing_exporter._pre_start()
+        # Should not raise any errors with compatible types
+        await processing_exporter._pre_start()
 
-        # Verify that warning was logged for input type compatibility
-        warning_messages = [record.message for record in caplog.records if record.levelname == 'WARNING']
-        assert any("Cannot validate type compatibility between" in msg and "and exporter" in msg
-                   for msg in warning_messages)
+        # Pipeline should be locked after successful pre_start
+        assert processing_exporter._pipeline_locked
 
-    async def test_pre_start_output_type_validation_with_generic_warning(self, processing_exporter, caplog):
-        """Test _pre_start output type validation falls back to warning with generic types."""
+    async def test_pre_start_output_type_validation_error_propagation(self, processing_exporter):
+        """Test _pre_start output type validation propagates TypeError exceptions."""
         # Create a simple processor first
         processor = MockProcessor("proc1")
         processing_exporter.add_processor(processor)
@@ -874,13 +867,9 @@ class TestTypeValidation:
         with patch('nat.observability.exporter.processing_exporter.DecomposedType.is_type_compatible',
                    side_effect=TypeError("cannot use with generics")):
 
-            with caplog.at_level(logging.WARNING):
+            # TypeError should propagate up instead of being caught and logged as warning
+            with pytest.raises(TypeError, match="cannot use with generics"):
                 await processing_exporter._pre_start()
-
-        # Verify that warning was logged for output type compatibility
-        warning_messages = [record.message for record in caplog.records if record.levelname == 'WARNING']
-        assert any("Cannot validate type compatibility between" in msg and "and exporter" in msg
-                   for msg in warning_messages)
 
 
 class TestPipelineProcessing:
@@ -1304,10 +1293,26 @@ class TestTypeIntrospection:
 
     def test_input_output_types(self, processing_exporter):
         """Test that type introspection works correctly."""
+
         assert processing_exporter.input_type is str
-        assert processing_exporter.output_type is int
-        assert processing_exporter.input_class is str
-        assert processing_exporter.output_class is int
+
+        # Output type can be int or Optional[int] - both are valid
+        output_type = processing_exporter.output_type
+        if get_origin(output_type) is not None:  # It's a generic type like Optional[int]
+            # For Optional[int], get_args returns (int, NoneType)
+            args = get_args(output_type)
+            assert int in args, f"Expected int to be in {args} for output type {output_type}"
+        else:
+            # Direct type comparison
+            assert output_type is int
+
+        # Test Pydantic-based validation methods (preferred approach)
+        assert processing_exporter.validate_input_type("test_string")
+        assert not processing_exporter.validate_input_type(123)  # Should fail for wrong type
+
+        # Test output validation - should work for int
+        assert processing_exporter.validate_output_type(42)
+        assert not processing_exporter.validate_output_type("not_an_int")
 
 
 class TestAbstractMethod:

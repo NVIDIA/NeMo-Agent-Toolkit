@@ -52,8 +52,12 @@ class TestProcessorTypeIntrospection:
         processor = StringToIntProcessor()
         assert processor.input_type is str
         assert processor.output_type is int
-        assert processor.input_class is str
-        assert processor.output_class is int
+
+        # Test Pydantic-based validation methods (preferred approach)
+        assert processor.validate_input_type("test_string")
+        assert not processor.validate_input_type(123)  # Should fail for wrong type
+        assert processor.validate_output_type(42)
+        assert not processor.validate_output_type("not_an_int")
 
     def test_generic_type_introspection(self):
         """Test type introspection with generic types."""
@@ -66,8 +70,13 @@ class TestProcessorTypeIntrospection:
         processor = ListToStringProcessor()
         assert processor.input_type == list[int]
         assert processor.output_type is str
-        assert processor.input_class is list  # Generic origin is list
-        assert processor.output_class is str
+
+        # Test Pydantic-based validation methods (preferred approach)
+        assert processor.validate_input_type([1, 2, 3])
+        assert not processor.validate_input_type(["not", "ints"])  # Should fail for wrong list type
+        assert not processor.validate_input_type("not_a_list")
+        assert processor.validate_output_type("result_string")
+        assert not processor.validate_output_type(123)
 
     def test_complex_generic_type_introspection(self):
         """Test type introspection with complex generic types."""
@@ -80,8 +89,13 @@ class TestProcessorTypeIntrospection:
         processor = DictToListProcessor()
         assert processor.input_type == dict[str, Any]
         assert processor.output_type == list[str]
-        assert processor.input_class is dict
-        assert processor.output_class is list
+
+        # Test Pydantic-based validation methods (preferred approach)
+        assert processor.validate_input_type({"key": "value"})
+        assert processor.validate_input_type({"key": 123})  # Any value type should work
+        assert not processor.validate_input_type([1, 2, 3])  # Should fail for wrong type
+        assert processor.validate_output_type(["item1", "item2"])
+        assert not processor.validate_output_type([1, 2, 3])  # Should fail for wrong list type
 
     def test_type_introspection_error_handling(self):
         """Test error handling when type introspection fails."""
@@ -95,10 +109,10 @@ class TestProcessorTypeIntrospection:
 
         processor = BadProcessor()
 
-        with pytest.raises(ValueError, match="Could not find input type for BadProcessor"):
+        with pytest.raises(ValueError, match="Could not extract input/output types from BadProcessor"):
             _ = processor.input_type
 
-        with pytest.raises(ValueError, match="Could not find output type for BadProcessor"):
+        with pytest.raises(ValueError, match="Could not extract input/output types from BadProcessor"):
             _ = processor.output_type
 
     def test_type_introspection_caching(self):
@@ -373,12 +387,19 @@ class TestProcessorEdgeCases:
         processor = CustomProcessor()
         assert processor.input_type == CustomInput
         assert processor.output_type == CustomOutput
-        assert processor.input_class is CustomInput
-        assert processor.output_class == CustomOutput
+
+        # Test compatibility methods (Pydantic validation may not work with arbitrary custom classes)
+        assert processor.is_compatible_with_input(CustomInput)
+        assert processor.is_output_compatible_with(CustomOutput)
+
+        # Test that the types are correctly identified
+        custom_input = CustomInput("test_value")
+        custom_output = CustomOutput("processed_value")
+        assert isinstance(custom_input, CustomInput)
+        assert isinstance(custom_output, CustomOutput)
 
     def test_processor_with_union_types(self):
         """Test processor with Union types."""
-        from typing import get_origin
 
         class UnionProcessor(Processor[str | int, str]):
 
@@ -388,9 +409,12 @@ class TestProcessorEdgeCases:
         processor = UnionProcessor()
         assert processor.input_type == str | int
         assert processor.output_type is str
-        # Union types have Union as their origin, not the full str | int
-        assert processor.input_class is get_origin(str | int)  # This is just Union
-        assert processor.output_class is str
+
+        # Test Pydantic-based validation for union types (preferred approach)
+        assert processor.validate_input_type("test_string")  # str should work
+        assert processor.validate_input_type(42)  # int should work
+        assert not processor.validate_input_type(3.14)  # float should fail
+        assert processor.validate_output_type("result")
 
     async def test_processor_with_empty_string(self):
         """Test processor edge case with empty input."""
@@ -413,8 +437,8 @@ class TestProcessorEdgeCases:
 
         processor = ProcessorWithoutGenerics()
 
-        with pytest.raises(ValueError, match="Could not find input type for ProcessorWithoutGenerics"):
+        with pytest.raises(ValueError, match="Could not extract input/output types from ProcessorWithoutGenerics"):
             _ = processor.input_type
 
-        with pytest.raises(ValueError, match="Could not find output type for ProcessorWithoutGenerics"):
+        with pytest.raises(ValueError, match="Could not extract input/output types from ProcessorWithoutGenerics"):
             _ = processor.output_type

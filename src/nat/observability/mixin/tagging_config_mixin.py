@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,14 +43,16 @@ class PrivacyLevel(str, Enum):
     HIGH = "high"
 
 
-class PrivacyTagSchema(TypedDict, total=False):
-    """Schema for the tags."""
+class PrivacyTagSchema(TypedDict, total=True):
+    """Schema for the privacy tags."""
     privacy_level: PrivacyLevel
 
 
 class PrivacyTaggingConfigMixin(BaseTaggingConfigMixin[PrivacyTagSchema]):
     """Mixin for privacy level tagging on spans."""
+    pass
 
 
 class CustomTaggingConfigMixin(BaseTaggingConfigMixin[dict[str, str]]):
     """Mixin for string key-value tagging on spans."""
+    pass

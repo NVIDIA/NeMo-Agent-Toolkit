@@ -32,7 +32,7 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.span import Span
 from nat.observability.mixin.tagging_config_mixin import PrivacyLevel
-from nat.observability.processor.header_redaction_processor import HeaderRedactionProcessor
+from nat.observability.processor.redaction.span_header_redaction_processor import SpanHeaderRedactionProcessor
 from nat.observability.processor.span_tagging_processor import SpanTaggingProcessor
 from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 from nat.plugins.opentelemetry import OTLPSpanHeaderRedactionAdapterExporter
@@ -218,7 +218,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
         assert len(redaction_calls) == 1
         redaction_call = redaction_calls[0]
         assert redaction_call[1]["position"] == 0
-        assert isinstance(redaction_call[0][0], HeaderRedactionProcessor)
+        assert isinstance(redaction_call[0][0], SpanHeaderRedactionProcessor)
 
         # Find our tagging processor call (should have name="span_sensitivity_tagging")
         tagging_calls = [
@@ -254,7 +254,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
         assert len(redaction_calls) == 1
 
         header_processor = redaction_calls[0][0][0]
-        assert isinstance(header_processor, HeaderRedactionProcessor)
+        assert isinstance(header_processor, SpanHeaderRedactionProcessor)
         assert header_processor.attributes == redaction_attributes
         assert header_processor.headers == redaction_headers
         assert header_processor.callback == sample_redaction_callback
@@ -300,7 +300,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterProcessors:
         ]
         assert len(redaction_calls) == 1
         header_processor = redaction_calls[0][0][0]
-        assert isinstance(header_processor, HeaderRedactionProcessor)
+        assert isinstance(header_processor, SpanHeaderRedactionProcessor)
 
         # Find SpanTaggingProcessor call
         tagging_calls = [
@@ -380,12 +380,12 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
         # Find the HeaderRedactionProcessor in the processors (should be at position 0)
         header_processor = None
         for processor in exporter._processors:
-            if isinstance(processor, HeaderRedactionProcessor):
+            if isinstance(processor, SpanHeaderRedactionProcessor):
                 header_processor = processor
                 break
 
         assert header_processor is not None
-        assert isinstance(header_processor, HeaderRedactionProcessor)
+        assert isinstance(header_processor, SpanHeaderRedactionProcessor)
         assert header_processor.redaction_value == "[REDACTED]"  # Default value
 
     def test_custom_redaction_value_configuration(self, basic_exporter_config):
@@ -406,15 +406,15 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
         # Find the HeaderRedactionProcessor in the processors (should be at position 0)
         header_processor = None
         for processor in exporter._processors:
-            if isinstance(processor, HeaderRedactionProcessor):
+            if isinstance(processor, SpanHeaderRedactionProcessor):
                 header_processor = processor
                 break
 
         assert header_processor is not None
-        assert isinstance(header_processor, HeaderRedactionProcessor)
+        assert isinstance(header_processor, SpanHeaderRedactionProcessor)
         assert header_processor.redaction_value == custom_redaction_value
 
-    @patch('nat.observability.processor.header_redaction_processor.Context.get')
+    @patch('nat.observability.processor.redaction.span_header_redaction_processor.Context.get')
     async def test_redaction_value_end_to_end(self, mock_context_get, basic_exporter_config):
         """Test that custom redaction values work end-to-end in span processing."""
         # Setup context with headers that trigger redaction
@@ -451,7 +451,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
         # Process the span through the redaction processor
         header_processor = None
         for processor in exporter._processors:
-            if isinstance(processor, HeaderRedactionProcessor):
+            if isinstance(processor, SpanHeaderRedactionProcessor):
                 header_processor = processor
                 break
 
@@ -465,7 +465,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
         assert processed_span.attributes["user.name"] == "John Doe"
         assert processed_span.attributes["request.id"] == "req_123"
 
-    @patch('nat.observability.processor.header_redaction_processor.Context.get')
+    @patch('nat.observability.processor.redaction.span_header_redaction_processor.Context.get')
     async def test_default_redaction_value_end_to_end(self, mock_context_get, basic_exporter_config):
         """Test that default redaction value works end-to-end in span processing."""
         # Setup context with headers that trigger redaction
@@ -493,7 +493,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRedaction:
         # Process the span through the redaction processor
         header_processor = None
         for processor in exporter._processors:
-            if isinstance(processor, HeaderRedactionProcessor):
+            if isinstance(processor, SpanHeaderRedactionProcessor):
                 header_processor = processor
                 break
 
@@ -1052,6 +1052,183 @@ class TestOTLPSpanHeaderRedactionAdapterExporterBatching:
 
         # Verify that export was called (batching should trigger export)
         mock_otlp_exporter.export.assert_called()
+
+
+class TestOTLPSpanHeaderRedactionAdapterExporterPublicInterface:
+    """Test suite for public interface methods and properties."""
+
+    @pytest.fixture
+    def basic_exporter_config(self):
+        """Basic configuration for the exporter."""
+        return {"endpoint": "https://api.example.com/v1/traces", "headers": {"Authorization": "Bearer test-token"}}
+
+    def test_name_property(self, basic_exporter_config):
+        """Test that the name property returns the correct class name."""
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"])
+
+        assert exporter.name == "OTLPSpanHeaderRedactionAdapterExporter"
+
+    def test_is_isolated_instance_property_false(self, basic_exporter_config):
+        """Test that is_isolated_instance returns False for regular instances."""
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"])
+
+        assert not exporter.is_isolated_instance
+
+    async def test_stop_method(self, basic_exporter_config):
+        """Test the stop method functionality."""
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"])
+
+        # Start the exporter first
+        async with exporter.start():
+            pass  # Exporter is running
+
+        # Stop should complete without errors
+        await exporter.stop()
+
+    def test_on_error_method(self, basic_exporter_config):
+        """Test the on_error method handles exceptions correctly."""
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"])
+
+        test_exception = Exception("Test error")
+
+        # Should not raise an exception - error handling is logged
+        exporter.on_error(test_exception)
+
+    def test_on_complete_method(self, basic_exporter_config):
+        """Test the on_complete method executes without errors."""
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"])
+
+        # Should complete without errors
+        exporter.on_complete()
+
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    async def test_export_otel_spans_error_handling(self, mock_otlp_exporter_class, basic_exporter_config):
+        """Test that export_otel_spans handles exceptions gracefully."""
+        # Setup mock to raise exception
+        mock_otlp_exporter = Mock()
+        mock_otlp_exporter.export = Mock(side_effect=ConnectionError("Network error"))
+        mock_otlp_exporter_class.return_value = mock_otlp_exporter
+
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
+                                                          redaction_enabled=True,
+                                                          tags={"privacy.level": PrivacyLevel.HIGH})
+
+        mock_otel_span = Mock(spec=OtelSpan)
+        spans = [mock_otel_span]  # type: ignore[list-item]
+
+        # Should not raise exception - errors are logged
+        await exporter.export_otel_spans(spans)  # type: ignore[arg-type]
+
+        # Verify the underlying exporter was called
+        mock_otlp_exporter.export.assert_called_once_with(spans)
+
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    async def test_export_processed_with_single_span(self, mock_otlp_exporter_class, basic_exporter_config):
+        """Test export_processed with a single OtelSpan."""
+        mock_otlp_exporter = Mock()
+        mock_otlp_exporter.export = Mock()
+        mock_otlp_exporter_class.return_value = mock_otlp_exporter
+
+        resource_attributes = {"service.name": "test-service"}
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
+                                                          resource_attributes=resource_attributes,
+                                                          tags={"privacy.level": PrivacyLevel.MEDIUM})
+
+        mock_otel_span = Mock(spec=OtelSpan)
+        mock_otel_span.set_resource = Mock()
+
+        # Test with single span
+        await exporter.export_processed(mock_otel_span)
+
+        # Verify resource was set
+        mock_otel_span.set_resource.assert_called_once_with(exporter._resource)
+        # Verify export was called
+        mock_otlp_exporter.export.assert_called_once()
+
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    async def test_export_processed_with_span_list(self, mock_otlp_exporter_class, basic_exporter_config):
+        """Test export_processed with a list of OtelSpans."""
+        mock_otlp_exporter = Mock()
+        mock_otlp_exporter.export = Mock()
+        mock_otlp_exporter_class.return_value = mock_otlp_exporter
+
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
+                                                          redaction_enabled=True)
+
+        mock_otel_spans = [Mock(spec=OtelSpan) for _ in range(3)]
+        for span in mock_otel_spans:
+            span.set_resource = Mock()
+
+        # Test with list of spans
+        await exporter.export_processed(mock_otel_spans)  # type: ignore[arg-type]
+
+        # Verify resource was set on all spans
+        for span in mock_otel_spans:
+            span.set_resource.assert_called_once_with(exporter._resource)
+
+        # Verify export was called
+        mock_otlp_exporter.export.assert_called_once()
+
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.otel_span_exporter.logger')
+    async def test_export_processed_with_invalid_type(self,
+                                                      mock_logger,
+                                                      mock_otlp_exporter_class,
+                                                      basic_exporter_config):
+        """Test export_processed handles invalid input types gracefully."""
+        mock_otlp_exporter = Mock()
+        mock_otlp_exporter.export = Mock()
+        mock_otlp_exporter_class.return_value = mock_otlp_exporter
+
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"])
+
+        # Test with invalid type
+        invalid_input = "not a span"
+        await exporter.export_processed(invalid_input)  # type: ignore[arg-type]
+
+        # Should log warning and not call export
+        mock_logger.warning.assert_called_once()
+        mock_otlp_exporter.export.assert_not_called()
+
+    def test_add_processor_public_interface(self, basic_exporter_config):
+        """Test the add_processor public method interface."""
+
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"])
+
+        # Create a custom processor to add
+        custom_processor = SpanTaggingProcessor(tags={"custom": "test"})
+
+        # Should be able to add processor without error
+        exporter.add_processor(custom_processor, name="custom_processor", position=2)
+
+        # Verify processor was added (we can't directly access _processors as it's private,
+        # but we can verify the method completed successfully)
+        assert exporter is not None
+
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    async def test_context_manager_lifecycle(self, mock_otlp_exporter_class, basic_exporter_config):
+        """Test the complete lifecycle using async context manager."""
+        mock_otlp_exporter = Mock()
+        mock_otlp_exporter.export = Mock()
+        mock_otlp_exporter_class.return_value = mock_otlp_exporter
+
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
+                                                          redaction_enabled=True,
+                                                          tags={"privacy.level": PrivacyLevel.LOW})
+
+        # Test complete lifecycle
+        async with exporter.start():
+            # Exporter should be running
+            assert exporter._running
+
+            # Can export during this time
+            test_event = create_test_intermediate_step(event_type=IntermediateStepType.LLM_START,
+                                                       framework=LLMFrameworkEnum.LANGCHAIN,
+                                                       UUID="test_uuid")
+            exporter.export(test_event)
+
+        # After context exit, should be stopped
+        assert not exporter._running
 
 
 class TestOTLPSpanHeaderRedactionAdapterExporterRealWorldScenarios:

@@ -482,8 +482,12 @@ class TestSpanTaggingProcessorTypeIntrospection:
         # Both input and output should be Span
         assert processor.input_type is Span
         assert processor.output_type is Span
-        assert processor.input_class is Span
-        assert processor.output_class is Span
+
+        # Test Pydantic-based validation methods (preferred approach)
+        test_span = Span(name="test", span_id="123", trace_id="456")
+        assert processor.validate_input_type(test_span)
+        assert not processor.validate_input_type("not_a_span")
+        assert processor.validate_output_type(test_span)
 
 
 class TestSpanTaggingProcessorIntegration:

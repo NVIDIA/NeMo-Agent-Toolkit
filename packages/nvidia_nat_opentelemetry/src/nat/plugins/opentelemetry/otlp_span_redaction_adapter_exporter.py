@@ -20,7 +20,7 @@ from enum import Enum
 from typing import Any
 
 from nat.builder.context import ContextState
-from nat.observability.processor.header_redaction_processor import HeaderRedactionProcessor
+from nat.observability.processor.redaction import SpanHeaderRedactionProcessor
 from nat.observability.processor.span_tagging_processor import SpanTaggingProcessor
 from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
@@ -86,10 +86,11 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
             # Redaction args
             redaction_attributes: list[str] | None = None,
             redaction_headers: list[str] | None = None,
-            redaction_callback: Callable[[dict[str, Any]], bool] | None = None,
+            redaction_callback: Callable[..., Any] | None = None,
             redaction_enabled: bool = False,
             force_redaction: bool = False,
             redaction_value: str = "[REDACTED]",
+            redaction_tag: str | None = None,
             tags: Mapping[str, Enum | str] | None = None,
             # OTLPSpanExporterMixin args
             endpoint: str,
@@ -128,12 +129,13 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
                          **otlp_kwargs)
 
         # Insert redaction and tagging processors to the front of the processing pipeline
-        self.add_processor(HeaderRedactionProcessor(attributes=redaction_attributes,
-                                                    headers=redaction_headers or [],
-                                                    callback=redaction_callback,
-                                                    enabled=redaction_enabled,
-                                                    force_redact=force_redaction,
-                                                    redaction_value=redaction_value),
+        self.add_processor(SpanHeaderRedactionProcessor(attributes=redaction_attributes or [],
+                                                        headers=redaction_headers or [],
+                                                        callback=redaction_callback,
+                                                        enabled=redaction_enabled,
+                                                        force_redact=force_redaction,
+                                                        redaction_value=redaction_value,
+                                                        redaction_tag=redaction_tag),
                            name="header_redaction",
                            position=0)
 
