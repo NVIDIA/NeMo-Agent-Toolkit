@@ -1102,4 +1102,4 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
 
 # Prevent Sphinx from documenting items not a part of the public API
-__all__ = ["FastApiFrontEndPluginWorkerBase", "FastApiFrontEndPluginWorker", "RouterInfo"]
+__all__ = ["FastApiFrontEndPluginWorkerBase", "FastApiFrontEndPluginWorker", "RouteInfo"]
