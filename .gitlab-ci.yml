@@ -42,7 +42,7 @@ variables:
   WORKSPACE_TMP: "${CI_PROJECT_DIR}/.tmp"
 
 default:
-  image: ghcr.io/astral-sh/uv:python3.12-bookworm
+  image: ghcr.io/astral-sh/uv:python3.13-bookworm
   cache:
     - key: $CI_COMMIT_REF_SLUG
       paths:

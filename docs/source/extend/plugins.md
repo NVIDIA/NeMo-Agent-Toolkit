@@ -79,7 +79,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
-    yield ChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+    yield ChatOpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True))
 ```
 
 The `wrapper_type` parameter in the decorator specifies the LLM framework that the plugin is compatible with. This instruments the plugin with the appropriate telemetry hooks to enable observability, evaluation, and profiling.

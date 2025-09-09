@@ -14,7 +14,7 @@ dependencies = [
   "matplotlib==3.9.*",
   "seaborn==0.13.*",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "Simple Plot Chart Agent example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]

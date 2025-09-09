@@ -22,14 +22,14 @@ from typing import Any
 
 import httpx
 
-from nat.tool.mcp.exceptions import MCPAuthenticationError
-from nat.tool.mcp.exceptions import MCPConnectionError
-from nat.tool.mcp.exceptions import MCPError
-from nat.tool.mcp.exceptions import MCPProtocolError
-from nat.tool.mcp.exceptions import MCPRequestError
-from nat.tool.mcp.exceptions import MCPSSLError
-from nat.tool.mcp.exceptions import MCPTimeoutError
-from nat.tool.mcp.exceptions import MCPToolNotFoundError
+from nat.plugins.mcp.exceptions import MCPAuthenticationError
+from nat.plugins.mcp.exceptions import MCPConnectionError
+from nat.plugins.mcp.exceptions import MCPError
+from nat.plugins.mcp.exceptions import MCPProtocolError
+from nat.plugins.mcp.exceptions import MCPRequestError
+from nat.plugins.mcp.exceptions import MCPSSLError
+from nat.plugins.mcp.exceptions import MCPTimeoutError
+from nat.plugins.mcp.exceptions import MCPToolNotFoundError
 
 logger = logging.getLogger(__name__)
 

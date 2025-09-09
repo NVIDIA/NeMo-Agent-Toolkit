@@ -108,7 +108,7 @@ Each exporter has its own detailed configuration guide with complete setup instr
 - **[Galileo](https://galileo.ai/)** - See [Observing with Galileo](./observe-workflow-with-galileo.md)
 - **[Langfuse](https://langfuse.com/)** - OTLP-compatible observability platform
 - **[LangSmith](https://www.langchain.com/langsmith)** - LangChain's observability platform
-- **[Patronus](https://patronus.ai/)** - AI evaluation and monitoring platform
+- **[Patronus](https://www.patronus.ai/)** - AI evaluation and monitoring platform
 - **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
 - **[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)** - See [Observing with OTel Collector](./observe-workflow-with-otel-collector.md)
 - **File Export** - Built-in file-based tracing for local development and debugging

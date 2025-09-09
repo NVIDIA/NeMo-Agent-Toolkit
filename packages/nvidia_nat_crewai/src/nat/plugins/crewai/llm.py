@@ -43,18 +43,18 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
             new_messages = [{"role": "system", "content": self.system_prompt}] + messages
             return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
         client = patch_with_thinking(
             client, CrewAIThinkingInjector(
                 system_prompt=llm_config.thinking_system_prompt,
                 function_names=["call"],
             ))
-
-    if isinstance(llm_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
 
     return client
 
@@ -65,15 +65,6 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
     from crewai import LLM
 
     # https://docs.crewai.com/en/concepts/llms#azure
-
-    config_obj = {
-        **llm_config.model_dump(exclude={
-            "type",
-            "api_key",
-            "azure_endpoint",
-            "azure_deployment",
-        }, by_alias=True),
-    }
 
     api_key = llm_config.api_key or os.environ.get("AZURE_OPENAI_API_KEY") or os.environ.get("AZURE_API_KEY")
     if api_key is None:
@@ -89,9 +80,20 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
     model = llm_config.azure_deployment or os.environ.get("AZURE_MODEL_DEPLOYMENT")
     if model is None:
         raise ValueError("Azure model deployment is not set")
-    config_obj["model"] = model
 
-    client = LLM(**config_obj)
+    client = LLM(
+        **llm_config.model_dump(
+            exclude={
+                "type",
+                "api_key",
+                "azure_endpoint",
+                "azure_deployment",
+                "thinking",
+            },
+            by_alias=True,
+        ),
+        model=model,
+    )
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -101,18 +103,16 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
 
     from crewai import LLM
 
-    config_obj = {
-        **llm_config.model_dump(exclude={"type"}, by_alias=True),
-        "model": f"nvidia_nim/{llm_config.model_name}",
-    }
-
     # Because CrewAI uses a different environment variable for the API key, we need to set it here manually
-    if config_obj.get("api_key") is None and "NVIDIA_NIM_API_KEY" not in os.environ:
+    if llm_config.api_key is None and "NVIDIA_NIM_API_KEY" not in os.environ:
         nvidia_api_key = os.getenv("NVIDIA_API_KEY")
         if nvidia_api_key is not None:
             os.environ["NVIDIA_NIM_API_KEY"] = nvidia_api_key
 
-    client = LLM(**config_obj)
+    client = LLM(
+        **llm_config.model_dump(exclude={"type", "model_name", "thinking"}, by_alias=True),
+        model=f"nvidia_nim/{llm_config.model_name}",
+    )
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -122,10 +122,6 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from crewai import LLM
 
-    config_obj = {
-        **llm_config.model_dump(exclude={"type"}, by_alias=True),
-    }
-
-    client = LLM(**config_obj)
+    client = LLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True))
 
     yield _patch_llm_based_on_config(client, llm_config)

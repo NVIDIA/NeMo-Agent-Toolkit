@@ -25,6 +25,7 @@ dependencies = [
   "nvidia-nat-crewai",
   "nvidia-nat-langchain",
   "nvidia-nat-llama-index",
+  "nvidia-nat-mcp",
   "nvidia-nat-mem0ai",
   "nvidia-nat-mysql",
   "nvidia-nat-opentelemetry",
@@ -39,11 +40,16 @@ dependencies = [
   "nvidia-nat-ingestion",
   "gunicorn~=23.0",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "Meta-package that installs the full NVIDIA NeMo Agent Toolkit plugin and optional dependency set"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
-classifiers = ["Programming Language :: Python"]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
 
 
 [tool.uv]
@@ -56,6 +62,7 @@ nvidia-nat-agno = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
 nvidia-nat-langchain = { workspace = true }
 nvidia-nat-llama-index = { workspace = true }
+nvidia-nat-mcp = { workspace = true }
 nvidia-nat-mem0ai = { workspace = true }
 nvidia-nat-mysql = { workspace = true }
 nvidia-nat-opentelemetry = { workspace = true }
