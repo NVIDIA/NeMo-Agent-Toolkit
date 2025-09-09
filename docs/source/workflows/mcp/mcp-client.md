@@ -187,34 +187,31 @@ Once configured, a Pydantic input schema will be generated based on the input sc
 
 
 ## Example
-The simple calculator workflow can be configured to use remote MCP tools. Sample configuration is provided in the `config-mcp-date.yml` file.
+The simple calculator workflow can be configured to use remote MCP tools. Sample configuration is provided in the `config-mcp-math.yml` file.
 
-`examples/MCP/simple_calculator_mcp/configs/config-mcp-date.yml`:
+`examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml`:
 ```yaml
 functions:
-  mcp_time_tool:
+  calculator_multiply:
     _type: mcp_tool_wrapper
-    url: "http://localhost:8080/sse"
-    mcp_tool_name: get_current_time
-    description: "Returns the current date and time from the MCP server"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
+    mcp_tool_name: calculator_multiply
+    description: "Returns the product of two numbers"
 ```
 
 To run the simple calculator workflow using remote MCP tools, follow these steps:
-1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/MCP/simple_calculator_mcp/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
-```bash
-docker ps --filter "name=mcp-proxy-nat-time"
+1. Start the example remote MCP server.
 ```
-Sample output:
+nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
-CONTAINER ID   IMAGE                      COMMAND                  CREATED      STATUS        PORTS                                       NAMES
-4279653533ec   time_service-time_server   "mcp-proxy --pass-en…"   9 days ago   Up 41 hours   0.0.0.0:8080->8080/tcp, :::8080->8080/tcp   mcp-proxy-nat-time
-```
+This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. This MCP server serves the calculator tools. See the [MCP Server](./mcp-server.md) documentation for more information.
 
 2. Run the workflow using the `nat run` command.
 ```bash
-nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
-This will use the `mcp_time_tool` function to get the current hour of the day from the MCP server.
+This uses the remote calculator tools served by the MCP server.
 
 ### 🧪 Using STDIO Mode (Experimental)
 Alternatively, you can run the same example using stdio mode with the `config-mcp-date-stdio.yml` configuration:
@@ -233,44 +230,47 @@ This configuration launches the MCP server directly as a `subprocess` instead of
 ```bash
 nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
-Ensure that MCP server time package is installed in your environment before running the workflow.
-```bash
-uv pip install mcp-server-time
-```
+`config-mcp-date-stdio.yml` is a complete MCP Client example that shows:
+- how to use a local MCP server to get the current date and time using stdio transport
+- how to access a remote MCP server using streamable-http transport for math operations
 
 ## Displaying MCP Tools
 The `nat info mcp` command can be used to list the tools served by an MCP server.
 ```bash
-nat info mcp --url http://localhost:8080/sse
+nat info mcp --url http://localhost:9901/mcp
 ```
 
 Sample output:
 ```
-get_current_time
-convert_time
+calculator_multiply
+calculator_inequality
+current_datetime
+calculator_divide
+calculator_subtract
+react_agent
 ```
 
 To get more detailed information about a specific tool, you can use the `--tool` flag.
 ```bash
-nat info mcp --url http://localhost:8080/sse --tool get_current_time
+nat info mcp --url http://localhost:9901/mcp --tool calculator_multiply
 ```
 Sample output:
 ```
-Tool: get_current_time
-Description: Get current time in a specific timezones
+Tool: calculator_multiply
+Description: This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.
 Input Schema:
 {
   "properties": {
-    "timezone": {
-      "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'UTC' as local timezone if no timezone provided by the user.",
-      "title": "Timezone",
+    "text": {
+      "description": "",
+      "title": "Text",
       "type": "string"
     }
   },
   "required": [
-    "timezone"
+    "text"
   ],
-  "title": "GetCurrentTimeInputSchema",
+  "title": "CalculatorMultiplyInputSchema",
   "type": "object"
 }
 ------------------------------------------------------------
