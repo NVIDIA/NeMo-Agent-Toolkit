@@ -202,7 +202,7 @@ functions:
 
 To run the simple calculator workflow using remote MCP tools, follow these steps:
 1. Start the example remote MCP server.
-```
+```bash
 nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. This MCP server serves the calculator tools. See the [MCP Server](./mcp-server.md) documentation for more information.
@@ -241,7 +241,7 @@ nat info mcp --url http://localhost:9901/mcp
 ```
 
 Sample output:
-```
+```text
 calculator_multiply
 calculator_inequality
 current_datetime
@@ -255,7 +255,7 @@ To get more detailed information about a specific tool, you can use the `--tool`
 nat info mcp --url http://localhost:9901/mcp --tool calculator_multiply
 ```
 Sample output:
-```
+```text
 Tool: calculator_multiply
 Description: This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.
 Input Schema:
