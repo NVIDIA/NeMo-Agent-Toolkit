@@ -623,33 +623,45 @@ async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine",
 
 @pytest.mark.usefixtures("setup_db")
 @pytest.mark.asyncio
-async def test_cleanup_expired_jobs_keeps_active(db_engine: "AsyncEngine", dask_scheduler_address: str):
+async def test_cleanup_expired_jobs_keeps_active(db_engine: "AsyncEngine",
+                                                 dask_scheduler_address: str,
+                                                 monkeypatch: pytest.MonkeyPatch):
     """Test cleanup never expires active (running/submitted) jobs."""
     from nat.front_ends.fastapi.job_store import JobStatus
     from nat.front_ends.fastapi.job_store import JobStore
 
-    job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
+    with monkeypatch.context() as monkey_context:
+        # Lower minimum expiry for testing
+        monkey_context.setattr(JobStore, "MIN_EXPIRY", 1, raising=True)
 
-    # Create jobs with very short expiry
-    job_id1 = await job_store._create_job(expiry_seconds=1)
-    job_id2 = await job_store._create_job(expiry_seconds=1)
+        job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    # Keep one as submitted (active), update other to finished
-    await job_store.update_status(job_id2, JobStatus.SUCCESS.value)
+        # Create jobs with very short expiry
+        job_id1 = await job_store._create_job(expiry_seconds=1)
+        job_id2 = await job_store._create_job(expiry_seconds=1)
+        job_id3 = await job_store._create_job(expiry_seconds=1)
 
-    # Wait for expiry time to pass
-    await asyncio.sleep(2)
+        # Keep one as submitted (active), update other to finished
+        await job_store.update_status(job_id2, JobStatus.SUCCESS)
+        await job_store.update_status(job_id3, JobStatus.SUCCESS)
 
-    # Run cleanup
-    await job_store.cleanup_expired_jobs()
+        # Wait for expiry time to pass
+        await asyncio.sleep(2)
 
-    # Active job should never be expired
-    job1 = await job_store.get_job(job_id1)
-    job2 = await job_store.get_job(job_id2)
+        # Run cleanup
+        await job_store.cleanup_expired_jobs()
 
-    assert job1 is not None
-    assert job2 is not None
-    assert job1.is_expired is False  # Active job should not be expired
+        # Active job should never be expired
+        job1 = await job_store.get_job(job_id1)
+        job2 = await job_store.get_job(job_id2)
+        job3 = await job_store.get_job(job_id3)
+
+        assert job1 is not None
+        assert job2 is not None
+        assert job3 is not None
+        assert job1.is_expired is False  # Active job should not be expired
+        assert job2.is_expired  # Completed job should be expired
+        assert job3.is_expired is False  # last job is not expired
 
 
 def test_get_db_engine_with_url():
