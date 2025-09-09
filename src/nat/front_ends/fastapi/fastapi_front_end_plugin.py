@@ -59,11 +59,15 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
         return get_class_name(worker_class)
 
     @staticmethod
-    async def _periodic_cleanup(scheduler_address: str, db_url: str, sleep_time_sec: int = 300):
+    async def _periodic_cleanup(scheduler_address: str,
+                                db_url: str,
+                                sleep_time_sec: int = 300,
+                                log_level: int = logging.INFO):
         from nat.front_ends.fastapi.job_store import JobStore
 
         job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
 
+        logging.basicConfig(level=log_level)
         logger.info("Starting periodic cleanup of expired jobs every %d seconds", sleep_time_sec)
         while True:
             await asyncio.sleep(sleep_time_sec)
@@ -76,13 +80,14 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
     async def _submit_cleanup_task(self, scheduler_address: str, db_url: str):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
-        from dask.distributed import fire_and_forget
-
+        logger.info("Submitting periodic cleanup task to Dask cluster at %s", scheduler_address)
         async with self.client(self._scheduler_address) as client:
             self._cleanup_future = client.submit(self._periodic_cleanup,
                                                  scheduler_address=self._scheduler_address,
-                                                 db_url=db_url)
-            fire_and_forget(self._cleanup_future)
+                                                 db_url=db_url,
+                                                 log_level=logger.getEffectiveLevel())
+
+        logger.info("Submitted periodic cleanup task to Dask cluster at %s", scheduler_address)
 
     async def run(self):
 
@@ -101,9 +106,10 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                 try:
                     from dask.distributed import LocalCluster
 
-                    self._cluster = await LocalCluster(asynchronous=True)
+                    self._cluster = LocalCluster(processes=True, threads_per_worker=1)
 
                     self._scheduler_address = self._cluster.scheduler.address
+                    logger.info("Created local Dask cluster with scheduler at %s", self._scheduler_address)
 
                 except ImportError:
                     logger.warning("Dask is not installed, async execution and evaluation will not be available.")
@@ -197,7 +203,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             if self._cluster is not None:
                 # Only shut down the cluster if we created it
                 logger.info("Closing Local Dask cluster.")
-                await self._cluster.close()
+                self._cluster.close()
             try:
                 os.remove(config_file_name)
             except OSError as e:
