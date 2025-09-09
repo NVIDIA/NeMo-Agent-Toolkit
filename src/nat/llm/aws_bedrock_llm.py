@@ -41,7 +41,7 @@ class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, TemperatureMixin, TopPMix
         default=1024,
         gt=0,
         description="The maximum number of tokens available for input. This is only required for LlamaIndex. "
-        "This field is ignored for Langchain.",
+        "This field is ignored for LangChain/LangGraph.",
     )
 
     # Client parameters

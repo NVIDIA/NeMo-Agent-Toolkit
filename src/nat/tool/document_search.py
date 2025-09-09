@@ -119,7 +119,7 @@ Return only the name of the predicted collection."""
             if len(results["chunks"]) == 0:
                 return DocumentSearchOutput(collection_name=llm_pred.collection_name, documents="")
 
-            # parse docs from Langchain Document object to string
+            # parse docs from LangChain/LangGraph Document object to string
             parsed_docs = []
 
             # iterate over results and store parsed content

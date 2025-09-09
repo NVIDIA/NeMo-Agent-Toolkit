@@ -78,10 +78,10 @@ To install the latest stable version of NeMo Agent Toolkit, run the following co
 pip install nvidia-nat
 ```
 
-NeMo Agent Toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain plugin, run the following:
+NeMo Agent Toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain/LangGraph plugin, run the following:
 
 ```bash
-pip install nvidia-nat[langchain] # For LangChain
+pip install nvidia-nat[langchain]
 ```
 
 Or for all optional dependencies:

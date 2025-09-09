@@ -44,7 +44,7 @@ async def register_chat_completion(config: ChatCompletionConfig, builder: Builde
     """Registers a chat completion function that can handle natural language queries."""
 
     # Get the LLM from the builder context using the configured LLM reference
-    # Use LangChain framework wrapper since we're using LangChain-based LLM
+    # Use LangChain/LangGraph framework wrapper since we're using LangChain/LangGraph-based LLM
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     async def _chat_completion(query: str) -> str:

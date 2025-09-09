@@ -76,7 +76,7 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 
 ### Frameworks
 - **[`agno_personal_finance`](frameworks/agno_personal_finance/README.md)**: Personal finance planning agent built with Agno framework that researches and creates tailored financial plans
-- **[`multi_frameworks`](frameworks/multi_frameworks/README.md)**: Supervisor agent coordinating LangChain, LlamaIndex, and Haystack agents for research, RAG, and chitchat tasks
+- **[`multi_frameworks`](frameworks/multi_frameworks/README.md)**: Supervisor agent coordinating LangChain/LangGraph, LlamaIndex, and Haystack agents for research, RAG, and chitchat tasks
 - **[`semantic_kernel_demo`](frameworks/semantic_kernel_demo/README.md)**: Multi-agent travel planning system using Microsoft Semantic Kernel with specialized agents for itinerary creation, budget management, and report formatting, including long-term memory for user preferences
 
 ### Front Ends
@@ -94,7 +94,7 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`simple_calculator_mcp`](MCP/simple_calculator_mcp/README.md)**: Demonstrates Model Context Protocol support using the basic simple calculator example
 
 ### Notebooks
-- **[`first_search_agent`](notebooks/first_search_agent/)**: Demonstrates how to bring an existing agent from a framework like LangChain into this toolkit
+- **[`first_search_agent`](notebooks/first_search_agent/)**: Demonstrates how to bring an existing agent from a framework like LangChain/LangGraph into this toolkit
 - **[`retail_sales_agent`](notebooks/retail_sales_agent/)**: A simple retail agent that showcases how to incrementally add tools and agents to build a multi-agent system
 
 ### Object Store
