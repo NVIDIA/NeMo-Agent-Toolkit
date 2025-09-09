@@ -65,15 +65,14 @@ class FastApiFrontEndPlugin(DaskClientMangerMixin, FrontEndBase[FastApiFrontEndC
         job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
 
         logger.info("Starting periodic cleanup of expired jobs every %d seconds", sleep_time_sec)
-        await asyncio.sleep(sleep_time_sec)
         while True:
+            await asyncio.sleep(sleep_time_sec)
+
             try:
                 await job_store.cleanup_expired_jobs()
                 logger.debug("Expired jobs cleaned up")
             except Exception:
                 logger.error("Error during job cleanup: %s", traceback.format_exc())
-
-            await asyncio.sleep(sleep_time_sec)
 
     async def _submit_cleanup_task(self, scheduler_address: str, db_url: str):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
