@@ -51,9 +51,8 @@ async def test_job_store_init_with_engine(db_engine: "AsyncEngine", dask_schedul
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    # noqa: SLF001
     assert job_store._scheduler_address == dask_scheduler_address
-    assert job_store._session is not None  # noqa: SLF001
+    assert job_store._session is not None
 
 
 @pytest.mark.asyncio
@@ -63,9 +62,8 @@ async def test_job_store_init_with_db_url(db_url: str, dask_scheduler_address: s
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_url=db_url)
 
-    # noqa: SLF001
     assert job_store._scheduler_address == dask_scheduler_address
-    assert job_store._session is not None  # noqa: SLF001
+    assert job_store._session is not None
 
 
 def test_job_store_init_missing_db_params(dask_scheduler_address: str):
@@ -108,7 +106,7 @@ async def test_create_job_default_params(db_engine: "AsyncEngine", dask_schedule
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    job_id = await job_store._create_job()  # noqa: SLF001
+    job_id = await job_store._create_job()
 
     job = await job_store.get_job(job_id)
     assert job is not None
@@ -133,8 +131,7 @@ async def test_create_job_with_params(db_engine: "AsyncEngine", dask_scheduler_a
     custom_job_id = "custom-job-id"
     custom_expiry = 7200  # 2 hours
 
-    job_id = await job_store._create_job(  # noqa: SLF001
-        config_file=config_file, job_id=custom_job_id, expiry_seconds=custom_expiry)
+    job_id = await job_store._create_job(config_file=config_file, job_id=custom_job_id, expiry_seconds=custom_expiry)
 
     assert job_id == custom_job_id
 
@@ -153,15 +150,13 @@ async def test_create_job_clamps_expiry(db_engine: "AsyncEngine", dask_scheduler
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
     # Test too small expiry gets clamped to minimum
-    job_id_small = await job_store._create_job(  # noqa: SLF001
-        expiry_seconds=100)
+    job_id_small = await job_store._create_job(expiry_seconds=100)
     job_small = await job_store.get_job(job_id_small)
     assert job_small is not None
     assert job_small.expiry_seconds == JobStore.MIN_EXPIRY
 
     # Test too large expiry gets clamped to maximum
-    job_id_large = await job_store._create_job(  # noqa: SLF001
-        expiry_seconds=100000)
+    job_id_large = await job_store._create_job(expiry_seconds=100000)
     job_large = await job_store.get_job(job_id_large)
     assert job_large is not None
     assert job_large.expiry_seconds == JobStore.MAX_EXPIRY
@@ -237,7 +232,7 @@ async def test_update_status_basic(db_engine: "AsyncEngine", dask_scheduler_addr
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
     # Create a job first
-    job_id = await job_store._create_job()  # noqa: SLF001
+    job_id = await job_store._create_job()
 
     # Update the status
     await job_store.update_status(job_id=job_id,
@@ -262,7 +257,7 @@ async def test_update_status_with_error(db_engine: "AsyncEngine", dask_scheduler
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    job_id = await job_store._create_job()  # noqa: SLF001
+    job_id = await job_store._create_job()
 
     error_msg = "Something went wrong"
     await job_store.update_status(job_id=job_id, status=JobStatus.FAILURE.value, error=error_msg)
@@ -282,7 +277,7 @@ async def test_update_status_with_pydantic_output(db_engine: "AsyncEngine", dask
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    job_id = await job_store._create_job()  # noqa: SLF001
+    job_id = await job_store._create_job()
 
     test_output = _TestModel(value="test result")
     await job_store.update_status(job_id=job_id, status=JobStatus.SUCCESS.value, output=test_output)
@@ -306,7 +301,7 @@ async def test_update_status_with_dict_output(db_engine: "AsyncEngine", dask_sch
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    job_id = await job_store._create_job()  # noqa: SLF001
+    job_id = await job_store._create_job()
 
     test_output = {"result": "success", "count": 42}
     await job_store.update_status(job_id=job_id, status=JobStatus.SUCCESS.value, output=test_output)
@@ -343,7 +338,7 @@ async def test_get_job_existing(db_engine: "AsyncEngine", dask_scheduler_address
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    job_id = await job_store._create_job()  # noqa: SLF001
+    job_id = await job_store._create_job()
 
     job = await job_store.get_job(job_id)
     assert job is not None
@@ -372,7 +367,7 @@ async def test_get_status_existing(db_engine: "AsyncEngine", dask_scheduler_addr
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    job_id = await job_store._create_job()  # noqa: SLF001
+    job_id = await job_store._create_job()
 
     status = await job_store.get_status(job_id)
     assert status == JobStatus.SUBMITTED
@@ -412,9 +407,9 @@ async def test_get_all_jobs_multiple(db_engine: "AsyncEngine", dask_scheduler_ad
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
     # Create multiple jobs
-    job_id1 = await job_store._create_job()  # noqa: SLF001
-    job_id2 = await job_store._create_job()  # noqa: SLF001
-    job_id3 = await job_store._create_job()  # noqa: SLF001
+    job_id1 = await job_store._create_job()
+    job_id2 = await job_store._create_job()
+    job_id3 = await job_store._create_job()
 
     jobs = await job_store.get_all_jobs()
     assert len(jobs) == 3
@@ -444,11 +439,11 @@ async def test_get_last_job_multiple(db_engine: "AsyncEngine", dask_scheduler_ad
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
     # Create jobs with small delay to ensure different timestamps
-    await job_store._create_job()  # noqa: SLF001
+    await job_store._create_job()
     await asyncio.sleep(0.01)
-    await job_store._create_job()  # noqa: SLF001
+    await job_store._create_job()
     await asyncio.sleep(0.01)
-    job_id3 = await job_store._create_job()  # noqa: SLF001
+    job_id3 = await job_store._create_job()
 
     last_job = await job_store.get_last_job()
     assert last_job is not None
@@ -465,9 +460,9 @@ async def test_get_jobs_by_status(db_engine: "AsyncEngine", dask_scheduler_addre
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
     # Create jobs with different statuses
-    job_id1 = await job_store._create_job()  # noqa: SLF001
-    job_id2 = await job_store._create_job()  # noqa: SLF001
-    job_id3 = await job_store._create_job()  # noqa: SLF001
+    job_id1 = await job_store._create_job()
+    job_id2 = await job_store._create_job()
+    job_id3 = await job_store._create_job()
 
     # Update some statuses
     await job_store.update_status(job_id2, JobStatus.RUNNING.value)
@@ -499,7 +494,7 @@ async def test_get_expires_at_active_job(db_engine: "AsyncEngine", dask_schedule
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    job_id = await job_store._create_job()  # noqa: SLF001
+    job_id = await job_store._create_job()
     job = await job_store.get_job(job_id)
 
     # Active jobs (submitted, running) should not expire
@@ -525,7 +520,7 @@ async def test_get_expires_at_finished_job(db_engine: "AsyncEngine", dask_schedu
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    job_id = await job_store._create_job(expiry_seconds=3600)  # noqa: SLF001
+    job_id = await job_store._create_job(expiry_seconds=3600)
 
     # Update to finished status
     await job_store.update_status(job_id, JobStatus.SUCCESS.value)
@@ -555,8 +550,8 @@ async def test_cleanup_expired_jobs_no_expired(db_engine: "AsyncEngine", dask_sc
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
     # Create some recent finished jobs
-    job_id1 = await job_store._create_job()  # noqa: SLF001
-    job_id2 = await job_store._create_job()  # noqa: SLF001
+    job_id1 = await job_store._create_job()
+    job_id2 = await job_store._create_job()
 
     await job_store.update_status(job_id1, JobStatus.SUCCESS.value)
     await job_store.update_status(job_id2, JobStatus.SUCCESS.value)
@@ -584,8 +579,8 @@ async def test_cleanup_expired_jobs_with_expired(db_engine: "AsyncEngine", dask_
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
     # Create jobs with very short expiry
-    job_id1 = await job_store._create_job(expiry_seconds=1)  # noqa: SLF001
-    job_id2 = await job_store._create_job(expiry_seconds=1)  # noqa: SLF001
+    job_id1 = await job_store._create_job(expiry_seconds=1)
+    job_id2 = await job_store._create_job(expiry_seconds=1)
 
     # Update to finished status with small delay to ensure different timestamps
     await job_store.update_status(job_id1, JobStatus.SUCCESS.value)
@@ -634,10 +629,8 @@ async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine", 
         (output_dir / "nested_file.txt").write_text("nested content")
 
         # Create jobs with very short expiry
-        job_id1 = await job_store._create_job(  # noqa: SLF001
-            expiry_seconds=1)
-        job_id2 = await job_store._create_job(  # noqa: SLF001
-            expiry_seconds=1)
+        job_id1 = await job_store._create_job(expiry_seconds=1)
+        job_id2 = await job_store._create_job(expiry_seconds=1)
 
         # Update to finished status with output paths and small delay
         await job_store.update_status(job_id1, JobStatus.SUCCESS.value, output_path=str(output_file))
@@ -685,8 +678,8 @@ async def test_cleanup_expired_jobs_keeps_active(db_engine: "AsyncEngine", dask_
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
     # Create jobs with very short expiry
-    job_id1 = await job_store._create_job(expiry_seconds=1)  # noqa: SLF001
-    job_id2 = await job_store._create_job(expiry_seconds=1)  # noqa: SLF001
+    job_id1 = await job_store._create_job(expiry_seconds=1)
+    job_id2 = await job_store._create_job(expiry_seconds=1)
 
     # Keep one as submitted (active), update other to finished
     await job_store.update_status(job_id2, JobStatus.SUCCESS.value)
@@ -729,8 +722,7 @@ def test_get_db_engine_async():
     assert hasattr(engine, 'begin')
 
 
-def test_get_db_engine_from_env_var(set_nat_job_store_db_url_env_var: str  # noqa: ARG001
-                                    ):
+def test_get_db_engine_from_env_var(set_nat_job_store_db_url_env_var: str):
     """Test get_db_engine uses environment variable when no URL provided."""
     from nat.front_ends.fastapi.job_store import get_db_engine
 
@@ -738,7 +730,7 @@ def test_get_db_engine_from_env_var(set_nat_job_store_db_url_env_var: str  # noq
 
     assert engine is not None
     # Should use the URL from environment variable
-    assert str(engine.url) == set_nat_job_store_db_url_env_var  # noqa: E501
+    assert str(engine.url) == set_nat_job_store_db_url_env_var
 
 
 def test_get_db_engine_creates_default_sqlite():
