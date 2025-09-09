@@ -17,7 +17,6 @@ import asyncio
 import logging
 import os
 import tempfile
-import traceback
 import typing
 
 from nat.builder.front_end import FrontEndBase
@@ -72,8 +71,8 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             try:
                 await job_store.cleanup_expired_jobs()
                 logger.debug("Expired jobs cleaned up")
-            except Exception:
-                logger.error("Error during job cleanup: %s", traceback.format_exc())
+            except:
+                logger.exception("Error during job cleanup")
 
     async def _submit_cleanup_task(self, scheduler_address: str, db_url: str):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
@@ -198,7 +197,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             if self._cluster is not None:
                 # Only shut down the cluster if we created it
                 logger.info("Closing Local Dask cluster.")
-                self._cluster.close()
+                await self._cluster.close()
             try:
                 os.remove(config_file_name)
             except OSError as e:
