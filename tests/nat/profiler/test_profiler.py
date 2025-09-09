@@ -238,7 +238,7 @@ async def test_average_workflow_runtime(minimal_eval_config):
 async def test_average_llm_latency(minimal_eval_config):
     """
     Test that ProfilerRunner correctly computes average LLM latency (LLM_END - LLM_START).
-    We'll put different frameworks in usage_stats (LangChain/LangGraph, llama_index).
+    We'll put different frameworks in usage_stats (langchain, llama_index).
     We'll simulate a distinct latency per request, confirm the result is correct.
     """
 
