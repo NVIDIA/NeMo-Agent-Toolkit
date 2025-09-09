@@ -19,6 +19,7 @@ import typing
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage
+from langchain_core.messages import ToolMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.runnables import RunnableLambda
 from langchain_core.runnables.config import RunnableConfig
@@ -150,12 +151,17 @@ class ToolCallAgentGraph(DualNodeAgent):
             logger.error("%s Failed to call tool_node: %s", AGENT_LOG_PREFIX, ex)
             raise
 
-    async def tool_conditional_edge(self, state: ToolCallAgentGraphState):
+    async def tool_conditional_edge(self, state: ToolCallAgentGraphState) -> AgentDecision:
         try:
             logger.debug("%s Starting the Tool Conditional Edge", AGENT_LOG_PREFIX)
-            last_message = state.messages[-1]
+            if not state.messages:
+                logger.debug("%s No messages in state; routing to agent", AGENT_LOG_PREFIX)
+                return AgentDecision.TOOL
 
-            if (self.return_direct and hasattr(last_message, 'name') and (last_message.name in self.return_direct)):
+            last_message = state.messages[-1]
+            # Return directly if this tool is in the return_direct set
+            if (self.return_direct and isinstance(last_message, ToolMessage) and last_message.name
+                    and last_message.name in self.return_direct):
                 # Return directly if this tool is in the return_direct list
                 logger.debug("%s Tool %s is set to return directly", AGENT_LOG_PREFIX, last_message.name)
                 return AgentDecision.END
