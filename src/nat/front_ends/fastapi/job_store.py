@@ -122,9 +122,7 @@ class JobInfo(Base):
     config_file: Mapped[str] = mapped_column(nullable=True)
     error: Mapped[str] = mapped_column(nullable=True)
     output_path: Mapped[str] = mapped_column(nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.now(UTC)
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
                                                  default=datetime.now(UTC),
                                                  onupdate=datetime.now(UTC))
@@ -179,9 +177,7 @@ class JobStore:
 
         # The async_scoped_session ensures that the same session is used
         # within the same task, and that no two tasks share the same session.
-        self._session = async_scoped_session(
-            session_maker, scopefunc=current_task
-        )
+        self._session = async_scoped_session(session_maker, scopefunc=current_task)
 
     @asynccontextmanager
     async def client(self) -> AsyncGenerator[DaskClient]:
@@ -194,9 +190,7 @@ class JobStore:
             An active Dask client connected to the scheduler. The client is automatically closed when exiting the
             context manager.
         """
-        client = await DaskClient(
-            address=self._scheduler_address, asynchronous=True
-        )
+        client = await DaskClient(address=self._scheduler_address, asynchronous=True)
 
         yield client
 
@@ -251,9 +245,7 @@ class JobStore:
         """
         job_id = self.ensure_job_id(job_id)
 
-        clamped_expiry = max(
-            self.MIN_EXPIRY, min(expiry_seconds, self.MAX_EXPIRY)
-        )
+        clamped_expiry = max(self.MIN_EXPIRY, min(expiry_seconds, self.MAX_EXPIRY))
         if expiry_seconds != clamped_expiry:
             logger.info(
                 "Clamped expiry_seconds from %d to %d for job %s",
@@ -600,3 +592,7 @@ def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool
         from sqlalchemy import create_engine as create_engine_fn
 
     return create_engine_fn(db_url, echo=echo)
+
+
+# Prevent Sphinx from attempting to document the Base class which produces warnings
+__all__ = ["get_db_engine", "JobInfo", "JobStatus", "JobStore"]
