@@ -21,7 +21,7 @@ This example demonstrates how to implement **observability and tracing capabilit
 
 ## Key Features
 
-- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Langfuse, LangSmith, Weave, Patronus, and RagAI Catalyst for comprehensive monitoring options.
+- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Langfuse, LangSmith, Weave, Patronus, and RagaAI Catalyst for comprehensive monitoring options.
 - **Distributed Tracing Implementation:** Shows how to track agent execution flow across components with detailed trace visualization including agent reasoning, tool calls, and LLM interactions.
 - **Performance Monitoring:** Demonstrates capturing latency metrics, token usage, resource consumption, and error tracking for production-ready AI system monitoring.
 - **Development and Production Patterns:** Provides examples for both local development tracing (Phoenix) and production monitoring setups with various enterprise observability platforms.
@@ -144,9 +144,9 @@ export PATRONUS_API_KEY=<your_api_key>
 nat run --config_file examples/observability/simple_calculator_observability/configs/config-patronus.yml --input "Divide 144 by 12"
 ```
 
-#### RagAI Catalyst Integration
+#### RagaAI Catalyst Integration
 
-Transmit traces to RagAI Catalyst.
+Transmit traces to RagaAI Catalyst.
 
 1. Set your Catalyst API key:
 
