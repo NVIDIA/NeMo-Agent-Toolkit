@@ -742,9 +742,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 try:
                     job_output = json.loads(job_output)
                 except json.JSONDecodeError:
-                    msg = f"Failed to parse job output as JSON: {job_output}"
-                    logger.error(msg)
-                    job_output = msg
+                    logger.error("Failed to parse job output as JSON: %s", job_output)
+                    job_output = {"error": "Output parsing failed"}
 
             return AsyncGenerationStatusResponse(job_id=job.job_id,
                                                  status=job.status,
