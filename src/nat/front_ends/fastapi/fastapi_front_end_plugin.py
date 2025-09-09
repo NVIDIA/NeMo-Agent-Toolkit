@@ -21,7 +21,7 @@ import traceback
 import typing
 
 from nat.builder.front_end import FrontEndBase
-from nat.front_ends.fastapi.dask_client_mixin import DaskClientMangerMixin
+from nat.front_ends.fastapi.dask_client_mixin import DaskClientMixin
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
 from nat.front_ends.fastapi.main import get_app
@@ -34,7 +34,7 @@ if (typing.TYPE_CHECKING):
 logger = logging.getLogger(__name__)
 
 
-class FastApiFrontEndPlugin(DaskClientMangerMixin, FrontEndBase[FastApiFrontEndConfig]):
+class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]):
 
     def __init__(self, full_config: "Config"):
         super().__init__(full_config)

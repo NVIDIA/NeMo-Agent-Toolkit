@@ -45,7 +45,7 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.sql import expression as sa_expr
 
-from nat.front_ends.fastapi.dask_client_mixin import DaskClientMangerMixin
+from nat.front_ends.fastapi.dask_client_mixin import DaskClientMixin
 
 if typing.TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -135,7 +135,7 @@ class JobInfo(Base):
         return f"JobInfo(job_id={self.job_id}, status={self.status})"
 
 
-class JobStore(DaskClientMangerMixin):
+class JobStore(DaskClientMixin):
     """
     Tracks and manages jobs submitted to the Dask scheduler, along with persisting job metadata (JobInfo objects) in a
     database.

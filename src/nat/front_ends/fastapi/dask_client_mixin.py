@@ -22,7 +22,7 @@ if typing.TYPE_CHECKING:
     from dask.distributed import Client
 
 
-class DaskClientMangerMixin(ABC):
+class DaskClientMixin(ABC):
 
     @asynccontextmanager
     async def client(self, address: str) -> AsyncGenerator["Client"]:
