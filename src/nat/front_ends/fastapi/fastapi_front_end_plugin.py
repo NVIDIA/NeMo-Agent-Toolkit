@@ -188,7 +188,7 @@ class FastApiFrontEndPlugin(DaskClientMangerMixin, FrontEndBase[FastApiFrontEndC
                 StandaloneApplication(app, options=options).run()
 
         finally:
-            logger.debug("Shuting down")
+            logger.debug("Shutting down")
             if self._cleanup_future is not None:
                 logger.info("Cancelling periodic cleanup task.")
                 # Use the scheduler address, because self._cluster is None if an external cluster is used
