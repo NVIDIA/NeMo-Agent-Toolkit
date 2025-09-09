@@ -571,50 +571,54 @@ async def test_cleanup_expired_jobs_no_expired(db_engine: "AsyncEngine", dask_sc
 @pytest.mark.asyncio
 async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine",
                                                       dask_scheduler_address: str,
-                                                      tmp_path: Path):
+                                                      tmp_path: Path,
+                                                      monkeypatch: pytest.MonkeyPatch):
     """Test cleanup removes output files for expired jobs."""
     from nat.front_ends.fastapi.job_store import JobStatus
     from nat.front_ends.fastapi.job_store import JobStore
 
-    JobStore.MIN_EXPIRY = 1  # Lower minimum expiry for testing
-    job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
+    with monkeypatch.context() as monkey_context:
+        # Lower minimum expiry for testing
+        monkey_context.setattr(JobStore, "MIN_EXPIRY", 1, raising=True)
 
-    output_dir1 = tmp_path / "output_dir1"
-    output_dir1.mkdir()
+        job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    output_dir2 = tmp_path / "output_dir2"
-    output_dir2.mkdir()
+        output_dir1 = tmp_path / "output_dir1"
+        output_dir1.mkdir()
 
-    # Create jobs with very short expiry
-    job_id1 = await job_store._create_job(expiry_seconds=1)
-    job_id2 = await job_store._create_job(expiry_seconds=1)
+        output_dir2 = tmp_path / "output_dir2"
+        output_dir2.mkdir()
 
-    # Update to finished status with output paths
-    await job_store.update_status(job_id1, JobStatus.SUCCESS, output_path=str(output_dir1))
-    await job_store.update_status(job_id2, JobStatus.SUCCESS, output_path=str(output_dir2))
+        # Create jobs with very short expiry
+        job_id1 = await job_store._create_job(expiry_seconds=1)
+        job_id2 = await job_store._create_job(expiry_seconds=1)
 
-    # Verify files exist before cleanup
-    assert output_dir1.exists()
-    assert output_dir2.exists()
+        # Update to finished status with output paths
+        await job_store.update_status(job_id1, JobStatus.SUCCESS, output_path=str(output_dir1))
+        await job_store.update_status(job_id2, JobStatus.SUCCESS, output_path=str(output_dir2))
 
-    # Wait for jobs to expire
-    await asyncio.sleep(3)
+        # Verify files exist before cleanup
+        assert output_dir1.exists()
+        assert output_dir2.exists()
 
-    # Run cleanup
-    await job_store.cleanup_expired_jobs()
+        # Wait for jobs to expire
+        await asyncio.sleep(3)
 
-    # Check that cleanup attempted to process the jobs
-    job1 = await job_store.get_job(job_id1)
-    job2 = await job_store.get_job(job_id2)
+        # Run cleanup
+        await job_store.cleanup_expired_jobs()
 
-    assert job1 is not None
-    assert job2 is not None
+        # Check that cleanup attempted to process the jobs
+        job1 = await job_store.get_job(job_id1)
+        job2 = await job_store.get_job(job_id2)
 
-    assert job1.is_expired is True
-    assert job2.is_expired is False  # Most recent job is kept
+        assert job1 is not None
+        assert job2 is not None
 
-    assert not output_dir1.exists()
-    assert output_dir2.exists()
+        assert job1.is_expired is True
+        assert job2.is_expired is False  # Most recent job is kept
+
+        assert not output_dir1.exists()
+        assert output_dir2.exists()
 
 
 @pytest.mark.usefixtures("setup_db")
