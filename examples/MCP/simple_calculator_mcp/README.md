@@ -114,17 +114,12 @@ You can publish the simple calculator tools via MCP using the `nat mcp` command.
    ```
 
 **Combined Example with STDIO:**
-1. **Install the `mcp_server_time` package**:
-   ```bash
-   uv pip install mcp-server-time
-   ```
-   `mcp-server-time` is used as a local MCP server via stdio transport.
-2. **Start the MCP math server**:
+1. **Start the MCP math server**:
    ```bash
    nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
    ```
    This starts the MCP server on port 9901 with endpoint `/mcp`.
-3. **Run the workflow**:
+2. **Run the workflow**:
    ```bash
    nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
    ```
