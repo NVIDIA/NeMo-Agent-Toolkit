@@ -20,13 +20,12 @@ from contextlib import asynccontextmanager
 
 if typing.TYPE_CHECKING:
     from dask.distributed import Client
-    from distributed.deploy.cluster import Cluster
 
 
 class DaskClientMangerMixin(ABC):
 
     @asynccontextmanager
-    async def client(self, address: "str | Cluster") -> AsyncGenerator["Client"]:
+    async def client(self, address: str) -> AsyncGenerator["Client"]:
         """
         Async context manager for obtaining a Dask client connection.
 
