@@ -765,10 +765,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     result = await generate_single_response(
                         payload, local_session_manager, result_type=local_session_manager.workflow.single_output_schema)
 
-                await job_store.update_status(job_id, "success", output=result)
+                await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
             except Exception as e:
                 logger.exception("Error in async job %s", job_id)
-                await job_store.update_status(job_id, "failure", error=str(e))
+                await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
 
         def post_async_generation(request_type: type):
 
@@ -803,7 +803,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         return _job_status_to_response(job)
 
                     response.status_code = 202
-                    return AsyncGenerateResponse(job_id=job_id, status="submitted")
+                    return AsyncGenerateResponse(job_id=job_id, status=JobStatus.SUBMITTED)
 
             return start_async_generation
 
