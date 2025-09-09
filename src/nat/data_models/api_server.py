@@ -251,6 +251,7 @@ class ChatResponse(ResponseBaseModelOutput):
     usage: Usage | None = None
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
+    trace_id: str | None = None
 
     @field_serializer('created')
     def serialize_created(self, created: datetime.datetime) -> int:
@@ -264,7 +265,8 @@ class ChatResponse(ResponseBaseModelOutput):
                     object_: str | None = None,
                     model: str | None = None,
                     created: datetime.datetime | None = None,
-                    usage: Usage | None = None) -> "ChatResponse":
+                    usage: Usage | None = None,
+                    trace_id: str | None = None) -> "ChatResponse":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -280,7 +282,8 @@ class ChatResponse(ResponseBaseModelOutput):
                             model=model,
                             created=created,
                             choices=[Choice(index=0, message=ChoiceMessage(content=data), finish_reason="stop")],
-                            usage=usage)
+                            usage=usage,
+                            trace_id=trace_id)
 
 
 class ChatResponseChunk(ResponseBaseModelOutput):
@@ -300,6 +303,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
     usage: Usage | None = None
+    trace_id: str | None = None
 
     @field_serializer('created')
     def serialize_created(self, created: datetime.datetime) -> int:
@@ -312,7 +316,8 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                     id_: str | None = None,
                     created: datetime.datetime | None = None,
                     model: str | None = None,
-                    object_: str | None = None) -> "ChatResponseChunk":
+                    object_: str | None = None,
+                    trace_id: str | None = None) -> "ChatResponseChunk":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -327,7 +332,8 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                                  choices=[Choice(index=0, message=ChoiceMessage(content=data), finish_reason="stop")],
                                  created=created,
                                  model=model,
-                                 object=object_)
+                                 object=object_,
+                                 trace_id=trace_id)
 
     @staticmethod
     def create_streaming_chunk(content: str,
@@ -338,7 +344,8 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                                role: str | None = None,
                                finish_reason: str | None = None,
                                usage: Usage | None = None,
-                               system_fingerprint: str | None = None) -> "ChatResponseChunk":
+                               system_fingerprint: str | None = None,
+                               trace_id: str | None = None) -> "ChatResponseChunk":
         """Create an OpenAI-compatible streaming chunk"""
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -358,7 +365,8 @@ class ChatResponseChunk(ResponseBaseModelOutput):
             model=model,
             object="chat.completion.chunk",
             usage=usage,
-            system_fingerprint=system_fingerprint)
+            system_fingerprint=system_fingerprint,
+            trace_id=trace_id)
 
 
 class ResponseIntermediateStep(ResponseBaseModelIntermediate):
@@ -631,7 +639,11 @@ GlobalTypeConverter.register_converter(_string_to_nat_chat_request)
 # ======== ChatResponse Converters ========
 def _nat_chat_response_to_string(data: ChatResponse) -> str:
     if data.choices and data.choices[0].message:
-        return data.choices[0].message.content or ""
+        content = data.choices[0].message.content or ""
+        # Include trace ID in the string if available, using a special format
+        if data.trace_id:
+            return f"{content}__TRACE_ID__:{data.trace_id}"
+        return content
     return ""
 
 
@@ -656,7 +668,11 @@ GlobalTypeConverter.register_converter(_string_to_nat_chat_response)
 
 def _chat_response_to_chat_response_chunk(data: ChatResponse) -> ChatResponseChunk:
     # Preserve original message structure for backward compatibility
-    return ChatResponseChunk(id=data.id, choices=data.choices, created=data.created, model=data.model)
+    return ChatResponseChunk(id=data.id,
+                             choices=data.choices,
+                             created=data.created,
+                             model=data.model,
+                             trace_id=data.trace_id)
 
 
 GlobalTypeConverter.register_converter(_chat_response_to_chat_response_chunk)
@@ -679,8 +695,18 @@ GlobalTypeConverter.register_converter(_chat_response_chunk_to_string)
 def _string_to_nat_chat_response_chunk(data: str) -> ChatResponseChunk:
     '''Converts a string to an ChatResponseChunk object'''
 
+    # Check if the string contains embedded trace ID
+    trace_id = None
+    content = data
+
+    if "__TRACE_ID__:" in data:
+        parts = data.split("__TRACE_ID__:")
+        if len(parts) == 2:
+            content = parts[0]
+            trace_id = parts[1]
+
     # Build and return the response
-    return ChatResponseChunk.from_string(data)
+    return ChatResponseChunk.from_string(content, trace_id=trace_id)
 
 
 GlobalTypeConverter.register_converter(_string_to_nat_chat_response_chunk)
