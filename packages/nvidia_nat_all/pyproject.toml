@@ -25,6 +25,7 @@ dependencies = [
   "nvidia-nat-crewai",
   "nvidia-nat-langchain",
   "nvidia-nat-llama-index",
+  "nvidia-nat-mcp",
   "nvidia-nat-mem0ai",
   "nvidia-nat-mysql",
   "nvidia-nat-opentelemetry",
@@ -61,6 +62,7 @@ nvidia-nat-agno = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
 nvidia-nat-langchain = { workspace = true }
 nvidia-nat-llama-index = { workspace = true }
+nvidia-nat-mcp = { workspace = true }
 nvidia-nat-mem0ai = { workspace = true }
 nvidia-nat-mysql = { workspace = true }
 nvidia-nat-opentelemetry = { workspace = true }

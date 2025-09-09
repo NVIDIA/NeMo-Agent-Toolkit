@@ -20,9 +20,9 @@ from pydantic import Field
 
 from nat.data_models.gated_field_mixin import GatedFieldMixin
 
-# The system prompt format for thinking is different for these, so we need to distinguish them here with two separate
-# regex patterns
+# Currently the control logic for thinking is only implemented for Nemotron models
 _NEMOTRON_REGEX = re.compile(r"^nvidia/(llama|nvidia).*nemotron", re.IGNORECASE)
+# The keys are the fields that are used to determine if the model supports thinking
 _MODEL_KEYS = ("model_name", "model", "azure_deployment")
 
 
@@ -43,7 +43,6 @@ class ThinkingMixin(
     thinking: bool | None = Field(
         default=None,
         description="Whether to enable thinking. Defaults to None when supported on the model.",
-        exclude=True,
     )
 
     @property

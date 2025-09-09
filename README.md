@@ -57,7 +57,18 @@ With NeMo Agent toolkit, you can move quickly, experiment freely, and ensure rel
 
 ## 🚀 Installation
 
-Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11 or 3.12 installed on your system.
+Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11, 3.12, or 3.13 installed on your system.
+
+### Supported Platforms
+
+| Operating System | Architecture | Python Version | Supported |
+|------------------|--------------|---------------|-----------|
+| Linux | x86_64 | 3.11, 3.12, 3.13 | ✅ Tested, Validated in CI |
+| Linux | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested, Validated in CI |
+| macOS | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
+| macOS | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested |
+| Windows | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
+| Windows | aarch64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
 
 ### Stable Version
 
@@ -156,7 +167,7 @@ The following diagram illustrates the key components of NeMo Agent toolkit and h
 
 ## 🛣️ Roadmap
 
-- [ ] Integrate with [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel) for continuous model improvement from production data.
+- [x] Integrate with [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel) for continuous model improvement from production data.
 - [ ] Add support for [Google ADK](https://google.github.io/adk-docs/) framework.
 - [ ] Add an agent optimizer to auto-tune hyperparameters and prompts to maximize performance.
 - [ ] MCP authorization and streamable HTTP support.

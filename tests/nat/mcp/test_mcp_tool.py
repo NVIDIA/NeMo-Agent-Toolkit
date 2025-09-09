@@ -22,9 +22,9 @@ import pytest
 from pydantic import BaseModel
 from pydantic.networks import HttpUrl
 
-from nat.tool.mcp.mcp_client_base import MCPBaseClient
-from nat.tool.mcp.mcp_tool import MCPToolConfig
-from nat.tool.mcp.mcp_tool import mcp_tool
+from nat.plugins.mcp.client_base import MCPBaseClient
+from nat.plugins.mcp.tool import MCPToolConfig
+from nat.plugins.mcp.tool import mcp_tool
 
 
 class _InputSchema(BaseModel):
@@ -131,7 +131,7 @@ def test_mcp_tool_invalid_transport_raises_error():
 
 async def test_mcp_tool_streamable_http_client_initialization():
     """Test that streamable-http client is properly initialized with URL."""
-    with patch("nat.tool.mcp.mcp_client_base.MCPStreamableHTTPClient") as mock_client:
+    with patch("nat.plugins.mcp.client_base.MCPStreamableHTTPClient") as mock_client:
         fake_tool = _FakeTool("test_tool", "test description")
         fake_tools = {"test_tool": fake_tool}
 
