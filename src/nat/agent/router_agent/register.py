@@ -39,7 +39,6 @@ class RouterAgentWorkflowConfig(FunctionBaseConfig, name="router_agent"):
     description: str = Field(default="Router Agent Workflow", description="Description of this functions use.")
     system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
     user_prompt: str | None = Field(default=None, description="Provides the prompt to use with the agent.")
-    routing_request: str | None = Field(default=None, description="Provides the routing request to use with the agent.")
     detailed_logs: bool = Field(default=False, description="Set the verbosity of the router agent's logging.")
     log_response_max_chars: PositiveInt = Field(
         default=1000, description="Maximum number of characters to display in logs when logging branch responses.")
@@ -69,7 +68,7 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
         log_response_max_chars=config.log_response_max_chars,
     ).build_graph()
 
-    async def _response_fn(relay_message: str | list[str | dict]) -> str:
+    async def _response_fn(relay_message: str) -> str:
         try:
             message = HumanMessage(content=relay_message)
             state = RouterAgentGraphState(relay_message=message)

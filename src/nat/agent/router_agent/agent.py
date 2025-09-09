@@ -40,6 +40,7 @@ class RouterAgentGraphState(BaseModel):
     messages: list[BaseMessage] = Field(default_factory=list)
     relay_message: BaseMessage = Field(default_factory=lambda: BaseMessage(content=""))
     chosen_branch: str = Field(default="")
+    branch_executed: bool = Field(default=False)
 
 
 class RouterAgentGraph(DualNodeAgent):
@@ -74,36 +75,44 @@ class RouterAgentGraph(DualNodeAgent):
 
     async def agent_node(self, state: RouterAgentGraphState):
         logger.debug("%s Starting the Router Agent Node", AGENT_LOG_PREFIX)
-        try:
-            chat_history = self._get_chat_history(state.messages)
-            agent_response = await self._call_llm(self.agent, {"chat_history": chat_history})
-            if self.detailed_logs:
-                agent_input = "\n".join(str(message.content) for message in state.messages)
-                logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, agent_response)
+        if not state.branch_executed:
+            try:
+                chat_history = self._get_chat_history(state.messages)
+                agent_response = await self._call_llm(
+                    self.agent, {
+                        "routing_request": state.relay_message, "chat_history": chat_history
+                    })
+                if self.detailed_logs:
+                    agent_input = "\n".join(str(message.content) for message in state.messages)
+                    logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, agent_response)
 
-            state.messages.append(agent_response)
-            return state
+                state.messages += [agent_response]
 
-        except Exception as ex:
-            logger.error("%s Router Agent failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
-            raise
+                # Determine chosen branch based on agent response
+                if state.chosen_branch == "":
+                    for branch in self._branches:
+                        if branch.name.lower() in str(agent_response.content).lower():
+                            state.chosen_branch = branch.name
+                            if self.detailed_logs:
+                                logger.debug("%s Router Agent has chosen branch: %s", AGENT_LOG_PREFIX, branch.name)
+                            break
+            except Exception as ex:
+                logger.error("%s Router Agent failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
+                raise
+
+        return state
 
     async def conditional_edge(self, state: RouterAgentGraphState):
         logger.debug("%s Starting the Router Agent Conditional Edge", AGENT_LOG_PREFIX)
         try:
-            agent_response = state.messages[-1]
             if state.chosen_branch == "":
-                for branch in self._branches:
-                    if branch.name.lower() in str(agent_response.content).lower():
-                        state.chosen_branch = branch.name
-                        if self.detailed_logs:
-                            logger.debug("%s Router Agent has chosen branch: %s", AGENT_LOG_PREFIX, branch.name)
-                        return AgentDecision.TOOL
                 # Router Agent does not choose a valid branch
-                raise ValueError("No chosen branch found")
+                logger.error("%s No chosen branch found in state", AGENT_LOG_PREFIX)
+                raise ValueError("No chosen branch found in state")
+            if state.branch_executed:
+                return AgentDecision.END
+            return AgentDecision.TOOL
 
-            # If there is already a chosen branch, it means the agent has finished.
-            return AgentDecision.END
         except Exception as ex:
             logger.exception("%s Router Agent failed to determine which branch to call: %s", AGENT_LOG_PREFIX, ex)
             return AgentDecision.END
@@ -122,12 +131,11 @@ class RouterAgentGraph(DualNodeAgent):
                 raise ValueError("Tool not found in config file")
 
             branch_input = state.relay_message.content
-            if isinstance(branch_input, list):
-                branch_input = branch_input[0]
             branch_response = await self._call_tool(requested_branch, branch_input)
-            state.messages.append(branch_response)
+            state.messages += [branch_response]
             if self.detailed_logs:
                 self._log_tool_response(requested_branch.name, state.messages[-1].content, branch_response.content)
+            state.branch_executed = True
             return state
 
         except Exception as ex:
@@ -204,14 +212,6 @@ def create_router_agent_prompt(config: "RouterAgentWorkflowConfig") -> ChatPromp
         user_prompt = config.user_prompt
     else:
         user_prompt = USER_PROMPT
-
-    if config.routing_request:
-        if "{routing_request}" not in user_prompt:
-            logger.error("%s Configuration includes routing_request but it is not in user_prompt", AGENT_LOG_PREFIX)
-            raise ValueError("Configuration includes routing_request but it is not in user_prompt")
-        user_prompt = user_prompt.replace("{routing_request}", config.routing_request)
-    else:
-        user_prompt = user_prompt.replace("{routing_request}", "")
 
     if not RouterAgentGraph.validate_system_prompt(system_prompt):
         logger.error("%s Invalid system_prompt", AGENT_LOG_PREFIX)
