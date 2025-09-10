@@ -22,7 +22,9 @@ from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any
+from typing import AsyncGenerator
 
+import httpx
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import create_model
@@ -39,6 +41,44 @@ from nat.plugins.mcp.exceptions import MCPToolNotFoundError
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
+
+
+class NATAuthAdapter(httpx.Auth):
+    """
+    httpx.Auth adapter for NAT authentication providers.
+    Converts AuthProviderBase to httpx.Auth interface for dynamic token management.
+    """
+
+    def __init__(self, auth_provider: AuthProviderBase):
+        self.auth_provider = auth_provider
+
+    async def async_auth_flow(self, request: httpx.Request) -> AsyncGenerator[httpx.Request, httpx.Response]:
+        """Add authentication headers to the request using NAT auth provider."""
+        try:
+            # Get fresh auth headers from the NAT auth provider
+            auth_headers = await self._get_auth_headers()
+            request.headers.update(auth_headers)
+        except Exception as e:
+            logger.warning("Failed to get auth headers: %s", e)
+            # Continue without auth headers if auth fails
+
+        yield request
+
+    async def _get_auth_headers(self) -> dict[str, str]:
+        """Get authentication headers from the NAT auth provider."""
+        try:
+            auth_result = await self.auth_provider.authenticate()
+            # Check if we have BearerTokenCred
+            from nat.data_models.authentication import BearerTokenCred
+            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
+                token = auth_result.credentials[0].token.get_secret_value()
+                return {"Authorization": f"Bearer {token}"}
+            else:
+                logger.warning("Auth provider did not return BearerTokenCred")
+                return {}
+        except Exception as e:
+            logger.warning("Failed to get auth token: %s", e)
+            return {}
 
 
 def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
@@ -124,7 +164,10 @@ class MCPBaseClient(ABC):
         auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self, transport: str = 'streamable-http', auth_provider: AuthProviderBase | None = None):
+    def __init__(self,
+                 transport: str = 'streamable-http',
+                 auth_provider: AuthProviderBase | httpx.Auth | None = None,
+                 use_separate_sessions: bool = False):
         self._tools = None
         self._transport = transport.lower()
         if self._transport not in ['sse', 'stdio', 'streamable-http']:
@@ -132,12 +175,23 @@ class MCPBaseClient(ABC):
 
         self._exit_stack: AsyncExitStack | None = None
         self._auth_connection = None  # Store the connection context for authenticated session
-        self._session: ClientSession | None = None  # Unauthenticated session for discovery
-        self._auth_session: ClientSession | None = None  # Authenticated session for tool calls
-        self._auth_provider = auth_provider
+        self._session: ClientSession | None = None  # Main session
+        self._auth_session: ClientSession | None = None  # Authenticated session for tool calls (legacy mode)
+        self._use_separate_sessions = use_separate_sessions
         self._connection_established = False
         self._initial_connection = False
         self._authenticated = False
+
+        # Handle both auth types
+        if isinstance(auth_provider, httpx.Auth):
+            self._httpx_auth = auth_provider
+            self._nat_auth = None
+        else:
+            self._httpx_auth = None
+            self._nat_auth = auth_provider
+            # Convert NAT auth to httpx.Auth if not using separate sessions
+            if not use_separate_sessions and auth_provider:
+                self._httpx_auth = NATAuthAdapter(auth_provider)
 
     @property
     def transport(self) -> str:
@@ -149,8 +203,14 @@ class MCPBaseClient(ABC):
 
         self._exit_stack = AsyncExitStack()
 
-        # Establish unauthenticated connection for discovery
-        self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
+        # Establish connection with appropriate auth method
+        if self._use_separate_sessions:
+            # Legacy mode: unauthenticated connection for discovery
+            self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
+        else:
+            # New mode: single session with httpx.Auth
+            self._session = await self._exit_stack.enter_async_context(self.connect_to_server_with_auth())
+
         self._initial_connection = True
         self._connection_established = True
 
@@ -186,7 +246,7 @@ class MCPBaseClient(ABC):
             return
 
         # If no auth provider, no authentication needed
-        if self._auth_provider:
+        if self._auth_provider and self._use_separate_sessions:
             if not self._initial_connection:
                 raise RuntimeError("Must establish initial connection first")
             # Create authenticated session
@@ -222,6 +282,14 @@ class MCPBaseClient(ABC):
     async def connect_to_server(self):
         """
         Establish a session with an MCP server within an async context
+        """
+        yield
+
+    @abstractmethod
+    @asynccontextmanager
+    async def connect_to_server_with_auth(self):
+        """
+        Establish a session with an MCP server with httpx.Auth within an async context
         """
         yield
 
@@ -277,8 +345,14 @@ class MCPBaseClient(ABC):
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
 
         # Determine which session to use for tool calls
-        await self.ensure_authenticated()
-        session = self._auth_session if self._auth_session else self._session
+        if self._use_separate_sessions:
+            # Legacy mode: use separate authenticated session
+            await self.ensure_authenticated()
+            session = self._auth_session if self._auth_session else self._session
+        else:
+            # New mode: use single session with httpx.Auth
+            session = self._session
+
         if session is None:
             raise RuntimeError("No session available for tool call")
         result = await session.call_tool(tool_name, tool_args)
@@ -294,10 +368,12 @@ class MCPSSEClient(MCPBaseClient):
       auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self, url: str, auth_provider: AuthProviderBase | None = None):
-        super().__init__("sse")
+    def __init__(self,
+                 url: str,
+                 auth_provider: AuthProviderBase | httpx.Auth | None = None,
+                 use_separate_sessions: bool = False):
+        super().__init__("sse", auth_provider, use_separate_sessions)
         self._url = url
-        self._auth_provider = auth_provider
 
     @property
     def url(self) -> str:
@@ -333,6 +409,22 @@ class MCPSSEClient(MCPBaseClient):
         Establish a session with an MCP SSE server within an async context
         """
         async with sse_client(url=self._url) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                yield session
+
+    @asynccontextmanager
+    @override
+    async def connect_to_server_with_auth(self):
+        """
+        Establish a session with an MCP SSE server with httpx.Auth within an async context
+        """
+        # SSE doesn't support httpx.Auth, fall back to header-based auth
+        headers = {}
+        if self._nat_auth:
+            headers = await self._get_auth_headers()
+
+        async with sse_client(url=self._url, headers=headers) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
@@ -410,10 +502,12 @@ class MCPStreamableHTTPClient(MCPBaseClient):
       auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self, url: str, auth_provider: AuthProviderBase | None = None):
-        super().__init__("streamable-http")
+    def __init__(self,
+                 url: str,
+                 auth_provider: AuthProviderBase | httpx.Auth | None = None,
+                 use_separate_sessions: bool = False):
+        super().__init__("streamable-http", auth_provider, use_separate_sessions)
         self._url = url
-        self._auth_provider = auth_provider
 
     @property
     def url(self) -> str:
@@ -432,6 +526,28 @@ class MCPStreamableHTTPClient(MCPBaseClient):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
+
+    @asynccontextmanager
+    @override
+    async def connect_to_server_with_auth(self):
+        """
+        Establish a session with an MCP server via streamable-http with httpx.Auth within an async context
+        """
+        # Use httpx.Auth if available, otherwise fall back to headers
+        if self._httpx_auth:
+            async with streamablehttp_client(url=self._url, auth=self._httpx_auth) as (read, write, _):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    yield session
+        else:
+            # Fall back to header-based auth
+            headers = {}
+            if self._nat_auth:
+                headers = await self._get_auth_headers()
+            async with streamablehttp_client(url=self._url, headers=headers) as (read, write, _):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    yield session
 
     @override
     async def _create_authenticated_session(self):
