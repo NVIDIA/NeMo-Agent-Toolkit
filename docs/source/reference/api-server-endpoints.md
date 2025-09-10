@@ -67,7 +67,7 @@ This endpoint is only available when the `async_endpoints` optional dependency e
 - **Optional Fields:**
   - `job_id`: A unique identifier for the job. If not provided, a UUID will be generated. It can be any string value, however it is the caller's responsibility to ensure uniqueness. If `job_id` already exists, the server will return the latest status for that job.
   - `sync_timeout`: The maximum time in seconds to wait for the job to complete before returning a response. If the job completes in less than `sync_timeout` seconds then the response will include the job result, otherwise the `job_id` and `status` is returned. Default is `0` which causes the request to return immediately, and maximum value for this field is `300`.
-  - `expiry_seconds`: The amount of time in seconds after the job completes (either successfully or unsuccessfully) which any output files will be preserved before being deleted. Default is `3600` (1 hours), minumum is `600` (10 minutes) and maximum value for this field is `86400` (24 hours). The text output in the response is not affected by this field.
+  - `expiry_seconds`: The amount of time in seconds after the job completes (either successfully or unsuccessfully) which any output files will be preserved before being deleted. Default is `3600` (1 hours), minimum is `600` (10 minutes) and maximum value for this field is `86400` (24 hours). The text output in the response is not affected by this field.
 
 ### Example Request and Response
 - HTTP Request Example:
