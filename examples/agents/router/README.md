@@ -50,18 +50,22 @@ The Router Agent is configured through the `config.yml` file. The following conf
 
 ### Required Configuration Options
 
+<!-- vale off (due to option names) -->
 - **_type**: Set to `router_agent` to use the Router Agent workflow type
 - **branches**: List of available branches that the agent can route requests to
 - **llm_name**: The language model used for request analysis and routing decisions
+<!-- vale on -->
 
 ### Optional Configuration Options
 
+<!-- vale off (due to option names) -->
 - **description**: Description of the workflow (default: "Router Agent Workflow")
 - **system_prompt**: Custom system prompt to use with the agent (default: uses built-in prompt)
 - **user_prompt**: Custom user prompt to use with the agent (default: uses built-in prompt)
 - **max_router_retries**: Maximum number of retries if the router agent fails to choose a branch (default: 3)
 - **detailed_logs**: Enable detailed logging to see the routing decisions and responses (default: false)
 - **log_response_max_chars**: Maximum number of characters to display in logs when logging branch responses (default: 1000)
+<!-- vale on -->
 
 Note on custom prompts:
   - `{branches}` and `{branch_names}` must be included in your customized `system_prompt`.
