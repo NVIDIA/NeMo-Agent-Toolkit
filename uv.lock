@@ -5620,7 +5620,7 @@ requires-dist = [
     { name = "aioboto3", specifier = ">=11.0.0" },
     { name = "aiosqlite", marker = "extra == 'async-endpoints'", specifier = "~=0.21" },
     { name = "authlib", specifier = "~=1.3.1" },
-    { name = "click", specifier = "~=8.1" },
+    { name = "click", specifier = "~=8.2" },
     { name = "colorama", specifier = "~=0.4.6" },
     { name = "dask", marker = "extra == 'async-endpoints'", specifier = "==2023.6" },
     { name = "datasets", specifier = "~=4.0" },

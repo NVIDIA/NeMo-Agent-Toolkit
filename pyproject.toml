@@ -20,7 +20,7 @@ dependencies = [
   # Keep sorted!!!
   "aioboto3>=11.0.0",
   "authlib~=1.3.1",
-  "click~=8.1",
+  "click~=8.2",
   "colorama~=0.4.6",
   "datasets~=4.0", # workaround for uv's solver choosing different versions of datasets based on sys_platform
   "expandvars~=1.0",
