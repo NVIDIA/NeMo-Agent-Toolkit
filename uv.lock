@@ -5724,8 +5724,7 @@ requires-dist = [
 name = "nvidia-nat-all"
 source = { editable = "packages/nvidia_nat_all" }
 dependencies = [
-    { name = "gunicorn" },
-    { name = "nvidia-nat" },
+    { name = "nvidia-nat", extra = ["async-endpoints", "gunicorn"] },
     { name = "nvidia-nat-agno" },
     { name = "nvidia-nat-crewai" },
     { name = "nvidia-nat-ingestion" },
@@ -5747,8 +5746,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "gunicorn", specifier = "~=23.0" },
-    { name = "nvidia-nat", editable = "." },
+    { name = "nvidia-nat", extras = ["async-endpoints", "gunicorn"], editable = "." },
     { name = "nvidia-nat-agno", editable = "packages/nvidia_nat_agno" },
     { name = "nvidia-nat-crewai", editable = "packages/nvidia_nat_crewai" },
     { name = "nvidia-nat-ingestion", editable = "packages/nvidia_nat_ingestion" },
