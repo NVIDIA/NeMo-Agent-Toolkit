@@ -24,8 +24,12 @@ from nat.builder.context import Context
 from nat.data_models.span import Span
 from nat.data_models.span import SpanContext
 from nat.observability.processor.redaction import SpanHeaderRedactionProcessor
-from nat.observability.processor.redaction.contextual_redaction_processor import default_callback
 from nat.runtime.user_metadata import RequestAttributes
+
+
+def default_callback(_data: dict[str, Any]) -> bool:
+    """Default callback that always returns False."""
+    return False
 
 
 @pytest.fixture
@@ -73,8 +77,8 @@ class TestSpanHeaderRedactionProcessorInitialization:
     """Test SpanHeaderRedactionProcessor initialization."""
 
     def test_default_initialization(self):
-        """Test default initialization parameters."""
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[])
+        """Test initialization parameters with mandatory callback."""
+        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[], callback=default_callback)
 
         assert processor.attributes == []
         assert processor.headers == []
@@ -86,7 +90,7 @@ class TestSpanHeaderRedactionProcessorInitialization:
     def test_initialization_with_attributes(self):
         """Test initialization with custom attributes."""
         attributes = ["user_id", "session_token"]
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=attributes)
+        processor = SpanHeaderRedactionProcessor(headers=[], attributes=attributes, callback=default_callback)
 
         assert processor.attributes == attributes
         assert processor.headers == []
@@ -97,7 +101,7 @@ class TestSpanHeaderRedactionProcessorInitialization:
 
     def test_initialization_with_single_header(self):
         """Test initialization with single header."""
-        processor = SpanHeaderRedactionProcessor(headers=["authorization"], attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=["authorization"], attributes=[], callback=default_callback)
 
         assert processor.attributes == []
         assert processor.headers == ["authorization"]
@@ -108,7 +112,7 @@ class TestSpanHeaderRedactionProcessorInitialization:
     def test_initialization_with_multiple_headers(self):
         """Test initialization with multiple headers."""
         headers = ["authorization", "x-api-key", "x-user-id"]
-        processor = SpanHeaderRedactionProcessor(headers=headers, attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=headers, attributes=[], callback=default_callback)
 
         assert processor.attributes == []
         assert processor.headers == headers
@@ -134,7 +138,10 @@ class TestSpanHeaderRedactionProcessorInitialization:
 
     def test_initialization_with_redaction_tag(self):
         """Test initialization with redaction_tag parameter."""
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[], redaction_tag="redacted")
+        processor = SpanHeaderRedactionProcessor(headers=[],
+                                                 attributes=[],
+                                                 callback=default_callback,
+                                                 redaction_tag="redacted")
 
         assert processor.redaction_tag == "redacted"
 
@@ -177,7 +184,9 @@ class TestSpanHeaderRedactionProcessorExtractDataFromContext:
         context.metadata = metadata
         mock_context_get.return_value = context
 
-        processor = SpanHeaderRedactionProcessor(headers=["authorization", "x-api-key"], attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=["authorization", "x-api-key"],
+                                                 attributes=[],
+                                                 callback=default_callback)
 
         result = processor.extract_data_from_context()
 
@@ -194,7 +203,9 @@ class TestSpanHeaderRedactionProcessorExtractDataFromContext:
         context.metadata = metadata
         mock_context_get.return_value = context
 
-        processor = SpanHeaderRedactionProcessor(headers=["authorization", "missing-header"], attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=["authorization", "missing-header"],
+                                                 attributes=[],
+                                                 callback=default_callback)
 
         result = processor.extract_data_from_context()
 
@@ -210,7 +221,7 @@ class TestSpanHeaderRedactionProcessorExtractDataFromContext:
         context.metadata = metadata
         mock_context_get.return_value = context
 
-        processor = SpanHeaderRedactionProcessor(headers=["authorization"], attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=["authorization"], attributes=[], callback=default_callback)
 
         result = processor.extract_data_from_context()
 
@@ -226,7 +237,7 @@ class TestSpanHeaderRedactionProcessorExtractDataFromContext:
         context.metadata = metadata
         mock_context_get.return_value = context
 
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[], callback=default_callback)
 
         result = processor.extract_data_from_context()
 
@@ -238,7 +249,7 @@ class TestSpanHeaderRedactionProcessorValidateData:
 
     def test_validate_data_with_valid_headers(self):
         """Test validation with valid header data."""
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[], callback=default_callback)
 
         data = {"authorization": "Bearer token123", "x-api-key": "key456"}
 
@@ -247,7 +258,7 @@ class TestSpanHeaderRedactionProcessorValidateData:
 
     def test_validate_data_with_some_none_values(self):
         """Test validation when some headers are None but not all."""
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[], callback=default_callback)
 
         data = {"authorization": "Bearer token123", "missing-header": None}
 
@@ -256,7 +267,7 @@ class TestSpanHeaderRedactionProcessorValidateData:
 
     def test_validate_data_with_all_none_values(self):
         """Test validation when all headers are None."""
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[], callback=default_callback)
 
         data = {"authorization": None, "x-api-key": None}
 
@@ -265,7 +276,7 @@ class TestSpanHeaderRedactionProcessorValidateData:
 
     def test_validate_data_with_empty_dict(self):
         """Test validation with empty data dictionary."""
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[], callback=default_callback)
 
         data = {}
 
@@ -274,7 +285,7 @@ class TestSpanHeaderRedactionProcessorValidateData:
 
     def test_validate_data_with_empty_string_values(self):
         """Test validation with empty string values (should be valid)."""
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[], callback=default_callback)
 
         data = {"authorization": "", "x-api-key": "key456"}
 
@@ -287,7 +298,7 @@ class TestSpanHeaderRedactionProcessorRedactItem:
 
     async def test_redact_item_with_single_attribute(self, sample_span):
         """Test redacting a single attribute."""
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=["user_id"])
+        processor = SpanHeaderRedactionProcessor(headers=[], attributes=["user_id"], callback=default_callback)
 
         # Create a copy to avoid mutating the fixture
         test_span = Span(name=sample_span.name,
@@ -307,7 +318,9 @@ class TestSpanHeaderRedactionProcessorRedactItem:
 
     async def test_redact_item_with_multiple_attributes(self, sample_span):
         """Test redacting multiple attributes."""
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=["user_id", "session_token", "api_key"])
+        processor = SpanHeaderRedactionProcessor(headers=[],
+                                                 attributes=["user_id", "session_token", "api_key"],
+                                                 callback=default_callback)
 
         # Create a copy to avoid mutating the fixture
         test_span = Span(name=sample_span.name,
@@ -327,7 +340,10 @@ class TestSpanHeaderRedactionProcessorRedactItem:
 
     async def test_redact_item_with_redaction_tag(self, sample_span):
         """Test redacting with redaction_tag set."""
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=["user_id"], redaction_tag="was_redacted")
+        processor = SpanHeaderRedactionProcessor(headers=[],
+                                                 attributes=["user_id"],
+                                                 callback=default_callback,
+                                                 redaction_tag="was_redacted")
 
         # Create a copy to avoid mutating the fixture
         test_span = Span(name=sample_span.name,
@@ -347,6 +363,7 @@ class TestSpanHeaderRedactionProcessorRedactItem:
         """Test redacting with custom redaction value."""
         processor = SpanHeaderRedactionProcessor(headers=[],
                                                  attributes=["user_id"],
+                                                 callback=default_callback,
                                                  redaction_value="[CUSTOM_REDACTED]")
 
         # Create a copy to avoid mutating the fixture
@@ -482,13 +499,14 @@ class TestSpanHeaderRedactionProcessorTypeIntrospection:
 
     def test_span_header_redaction_processor_types(self):
         """Test type introspection for span header redaction processor."""
-        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[])
+        processor = SpanHeaderRedactionProcessor(headers=[], attributes=[], callback=default_callback)
 
         assert processor.input_type is Span
         assert processor.output_type is Span
 
         # Test Pydantic-based validation methods (preferred approach)
-        test_span = Span(name="test", span_id="123", trace_id="456")
+        span_context = SpanContext(span_id=123, trace_id=456)
+        test_span = Span(name="test", context=span_context)
         assert processor.validate_input_type(test_span)
         assert not processor.validate_input_type("not_a_span")
         assert processor.validate_output_type(test_span)

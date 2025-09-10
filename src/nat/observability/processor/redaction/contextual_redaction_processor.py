@@ -31,18 +31,6 @@ logger = logging.getLogger(__name__)
 RedactionDataT = TypeVar('RedactionDataT')
 
 
-def default_callback(_data: Any) -> bool:
-    """Default callback that always returns False, indicating no redaction should occur.
-
-    Args:
-        _data (Any): The data to check (unused)
-
-    Returns:
-        bool: Always False, indicating the item should not be redacted
-    """
-    return False
-
-
 class ContextualRedactionProcessor(RedactionProcessor[RedactionInputT, RedactionDataT]):
     """Generic processor with context-aware caching for any data type.
 
@@ -67,9 +55,9 @@ class ContextualRedactionProcessor(RedactionProcessor[RedactionInputT, Redaction
         enabled: bool,
         force_redact: bool,
         redaction_value: str,
-        callback: Callable[..., Any] = default_callback,
+        callback: Callable[..., Any],
     ):
-        self.callback = callback or default_callback
+        self.callback = callback
         self.enabled = enabled
         self.force_redact = force_redact
         self.redaction_value = redaction_value

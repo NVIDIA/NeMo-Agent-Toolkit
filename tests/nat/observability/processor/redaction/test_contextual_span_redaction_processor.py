@@ -19,8 +19,12 @@ import pytest
 
 from nat.data_models.span import Span
 from nat.data_models.span import SpanContext
-from nat.observability.processor.redaction.contextual_redaction_processor import default_callback
 from nat.observability.processor.redaction.contextual_span_redaction_processor import ContextualSpanRedactionProcessor
+
+
+def default_callback(_data: dict[str, Any]) -> bool:
+    """Default callback that always returns False."""
+    return False
 
 
 class ConcreteContextualSpanRedactionProcessor(ContextualSpanRedactionProcessor):

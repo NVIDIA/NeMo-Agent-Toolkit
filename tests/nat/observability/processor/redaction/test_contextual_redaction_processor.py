@@ -15,16 +15,21 @@
 
 import asyncio
 import logging
+from collections.abc import Callable
 from typing import Any
 
 import pytest
 
 from nat.observability.processor.redaction.contextual_redaction_processor import ContextualRedactionProcessor
-from nat.observability.processor.redaction.contextual_redaction_processor import default_callback
 from nat.observability.processor.redaction.redaction_processor import RedactionContext
 from nat.observability.processor.redaction.redaction_processor import RedactionContextState
 
 logger = logging.getLogger(__name__)
+
+
+def default_callback(_data: Any) -> bool:
+    """Default callback that always returns False."""
+    return False
 
 
 class ConcreteContextualRedactionProcessor(ContextualRedactionProcessor[str, dict]):
@@ -36,8 +41,15 @@ class ConcreteContextualRedactionProcessor(ContextualRedactionProcessor[str, dic
                  enabled: bool = True,
                  force_redact: bool = False,
                  redaction_value: str = "[REDACTED]",
+                 callback: Callable[..., Any] | None = None,
                  **kwargs):
-        super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
+        if callback is None:
+            callback = default_callback
+        super().__init__(enabled=enabled,
+                         force_redact=force_redact,
+                         redaction_value=redaction_value,
+                         callback=callback,
+                         **kwargs)
         self.extracted_data = extracted_data
         self.data_validation_result = data_validation_result
         self.extract_data_calls = []
@@ -69,8 +81,15 @@ class ErroringContextualRedactionProcessor(ContextualRedactionProcessor[str, dic
                  enabled: bool = True,
                  force_redact: bool = False,
                  redaction_value: str = "[REDACTED]",
+                 callback: Callable[..., Any] | None = None,
                  **kwargs):
-        super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
+        if callback is None:
+            callback = default_callback
+        super().__init__(enabled=enabled,
+                         force_redact=force_redact,
+                         redaction_value=redaction_value,
+                         callback=callback,
+                         **kwargs)
         self.extract_error = extract_error
         self.validate_error = validate_error
 
@@ -598,8 +617,15 @@ class TestContextualRedactionProcessorEdgeCases:
                          enabled: bool = True,
                          force_redact: bool = False,
                          redaction_value: str = "[REDACTED]",
+                         callback: Callable[..., Any] | None = None,
                          **kwargs):
-                super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
+                if callback is None:
+                    callback = default_callback
+                super().__init__(enabled=enabled,
+                                 force_redact=force_redact,
+                                 redaction_value=redaction_value,
+                                 callback=callback,
+                                 **kwargs)
                 self.extracted_data = extracted_data
                 self.validation_calls = []
 
@@ -741,8 +767,15 @@ class TestContextualRedactionProcessorLogging:
                          enabled: bool = True,
                          force_redact: bool = False,
                          redaction_value: str = "[REDACTED]",
+                         callback: Callable[..., Any] | None = None,
                          **kwargs):
-                super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
+                if callback is None:
+                    callback = default_callback
+                super().__init__(enabled=enabled,
+                                 force_redact=force_redact,
+                                 redaction_value=redaction_value,
+                                 callback=callback,
+                                 **kwargs)
 
             def extract_data_from_context(self) -> dict | None:
                 logger.info("Extracting data from context")
@@ -777,8 +810,15 @@ class TestContextualRedactionProcessorPerformance:
                          enabled: bool = True,
                          force_redact: bool = False,
                          redaction_value: str = "[REDACTED]",
+                         callback: Callable[..., Any] | None = None,
                          **kwargs):
-                super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
+                if callback is None:
+                    callback = default_callback
+                super().__init__(enabled=enabled,
+                                 force_redact=force_redact,
+                                 redaction_value=redaction_value,
+                                 callback=callback,
+                                 **kwargs)
                 self.extract_calls = 0
                 self.validate_calls = 0
 
@@ -813,8 +853,15 @@ class TestContextualRedactionProcessorPerformance:
                          enabled: bool = True,
                          force_redact: bool = False,
                          redaction_value: str = "[REDACTED]",
+                         callback: Callable[..., Any] | None = None,
                          **kwargs):
-                super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
+                if callback is None:
+                    callback = default_callback
+                super().__init__(enabled=enabled,
+                                 force_redact=force_redact,
+                                 redaction_value=redaction_value,
+                                 callback=callback,
+                                 **kwargs)
                 self.extract_calls = 0
                 self.validate_calls = 0
 
