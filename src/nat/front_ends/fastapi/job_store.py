@@ -144,9 +144,9 @@ class JobStore(DaskClientMixin):
     ----------
     scheduler_address: str
         The address of the Dask scheduler.
-    db_engine: AsyncEngine | None, optional
+    db_engine: AsyncEngine | None, optional, default=None
         The database engine for the job store.
-    db_url: str | None, optional
+    db_url: str | None, optional, default=None
         The database URL to connect to, used when db_engine is not
         provided. Refer to https://docs.sqlalchemy.org/en/20
     """
@@ -281,14 +281,14 @@ class JobStore(DaskClientMixin):
 
         Parameters
         ----------
-        job_id: str | None
+        job_id: str | None, optional, default=None
             The job ID to use, or None to generate a new one.
-        config_file: str | None
+        config_file: str | None, optional, default=None
             The config file used to run the job, if any.
-        expiry_seconds: int
+        expiry_seconds: int, optional, default=3600
             The number of seconds after which the job should be considered expired. Expired jobs are eligible for
             cleanup, but are not deleted immediately.
-        sync_timeout: int
+        sync_timeout: int, optional, default=0
             If greater than 0, wait for the job to complete for up to this many seconds. If the job does not complete
             in this time, return immediately with the job ID and no job info. If the job completes in this time,
             return the job ID and the job info. If 0, return immediately with the job ID and no job info.
@@ -339,11 +339,11 @@ class JobStore(DaskClientMixin):
             The unique identifier of the job to update.
         status : str | JobStatus
             The new status to set for the job (should be a valid JobStatus value).
-        error : str, optional
+        error : str, optional, default=None
             Error message to store if the job failed.
-        output_path : str, optional
+        output_path : str, optional, default=None
             Path where job outputs are stored.
-        output : BaseModel, optional
+        output : BaseModel, optional, default=None
             Job output data. Can be a Pydantic BaseModel, dict, list, or string. BaseModel and dict/list objects are
             serialized to JSON for storage.
 
@@ -564,11 +564,11 @@ def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool
 
     Parameters
     ----------
-    db_url: str | None
+    db_url: str | None, optional, default=None
         The database URL to connect to. Refer to https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls
-    echo: bool
+    echo: bool, optional, default=False
         If True, SQLAlchemy will log all SQL statements. Useful for debugging.
-    use_async: bool
+    use_async: bool, optional, default=True
         If True, use the async database engine. The JobStore class requires an async database engine, setting
         `use_async` to False is only useful for testing.
     """
