@@ -1,5 +1,5 @@
 # Default Approval rule
-* @nvidia/aiqtoolkit-developers
+* @nvidia/nat-developers
 
 # Dependency changes
 uv.lock @nvidia/nat-dep-approvers
