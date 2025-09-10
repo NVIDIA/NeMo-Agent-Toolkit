@@ -30,13 +30,11 @@ general:
   use_uvloop: true
 
 functions:
-  current_datetime:
-    _type: current_datetime
   mcp_math:
     _type: mcp_client
-    auth_provider: static_oauth2
     server:
       transport: streamable-http
+      auth_provider: static_oauth2
       url: "http://localhost:9901/mcp"
 
 
