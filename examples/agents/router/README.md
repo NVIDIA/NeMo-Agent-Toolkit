@@ -141,7 +141,7 @@ nat run --config_file=examples/agents/router/configs/config.yml --input "Can you
 **Expected Workflow Output**
 ```console
 nemo-agent-toolkit % nat run --config_file=examples/agents/router/configs/config.yml --input "I want a yellow fruit"
-2025-09-10 10:50:51,873 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/agents/router/configs/config.yml'
+2025-09-10 10:52:59,058 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/agents/router/configs/config.yml'
 
 Configuration Summary:
 --------------------
@@ -155,14 +155,14 @@ Number of Retrievers: 0
 Number of TTC Strategies: 0
 Number of Authentication Providers: 0
 
-2025-09-10 10:50:52,992 - nat.agent.router_agent.agent - INFO -
+2025-09-10 10:52:59,927 - nat.agent.router_agent.agent - INFO -
 ------------------------------
 [AGENT]
-Agent input:
+Agent input: I want a yellow fruit
 Agent's thoughts:
 content='fruit_advisor' additional_kwargs={} response_metadata={}
 ------------------------------
-2025-09-10 10:50:52,994 - nat.agent.base - INFO -
+2025-09-10 10:52:59,929 - nat.agent.base - INFO -
 ------------------------------
 [AGENT]
 Calling tools: fruit_advisor
@@ -170,7 +170,7 @@ Tool's input: I want a yellow fruit
 Tool's response:
 banana
 ------------------------------
-2025-09-10 10:50:52,994 - nat.front_ends.console.console_front_end_plugin - INFO -
+2025-09-10 10:52:59,931 - nat.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
 ['banana']
