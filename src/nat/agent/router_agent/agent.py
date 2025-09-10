@@ -21,13 +21,14 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages.base import BaseMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.tools import BaseTool
+from langgraph.graph import StateGraph
 from pydantic import BaseModel
 from pydantic import Field
 
 from nat.agent.base import AGENT_CALL_LOG_MESSAGE
 from nat.agent.base import AGENT_LOG_PREFIX
 from nat.agent.base import AgentDecision
-from nat.agent.dual_node import DualNodeAgent
+from nat.agent.base import BaseAgent
 
 if typing.TYPE_CHECKING:
     from nat.agent.router_agent.register import RouterAgentWorkflowConfig
@@ -40,10 +41,9 @@ class RouterAgentGraphState(BaseModel):
     messages: list[BaseMessage] = Field(default_factory=list)
     relay_message: BaseMessage = Field(default_factory=lambda: BaseMessage(content=""))
     chosen_branch: str = Field(default="")
-    branch_executed: bool = Field(default=False)
 
 
-class RouterAgentGraph(DualNodeAgent):
+class RouterAgentGraph(BaseAgent):
     """Configurable Router Agent.
     A Router Agent relays the original input to one of the branches. It only calls one branch and then returns."""
 
@@ -75,54 +75,37 @@ class RouterAgentGraph(DualNodeAgent):
 
     async def agent_node(self, state: RouterAgentGraphState):
         logger.debug("%s Starting the Router Agent Node", AGENT_LOG_PREFIX)
-        if not state.branch_executed:
-            try:
-                chat_history = self._get_chat_history(state.messages)
-                agent_response = await self._call_llm(
-                    self.agent, {
-                        "routing_request": state.relay_message, "chat_history": chat_history
-                    })
-                if self.detailed_logs:
-                    agent_input = "\n".join(str(message.content) for message in state.messages)
-                    logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, agent_response)
+        try:
+            chat_history = self._get_chat_history(state.messages)
+            agent_response = await self._call_llm(self.agent, {
+                "routing_request": state.relay_message, "chat_history": chat_history
+            })
+            if self.detailed_logs:
+                agent_input = "\n".join(str(message.content) for message in state.messages)
+                logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, agent_response)
 
-                state.messages += [agent_response]
+            state.messages += [agent_response]
 
-                # Determine chosen branch based on agent response
-                if state.chosen_branch == "":
-                    for branch in self._branches:
-                        if branch.name.lower() in str(agent_response.content).lower():
-                            state.chosen_branch = branch.name
-                            if self.detailed_logs:
-                                logger.debug("%s Router Agent has chosen branch: %s", AGENT_LOG_PREFIX, branch.name)
-                            break
-            except Exception as ex:
-                logger.error("%s Router Agent failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
-                raise
+            # Determine chosen branch based on agent response
+            if state.chosen_branch == "":
+                for branch in self._branches:
+                    if branch.name.lower() in str(agent_response.content).lower():
+                        state.chosen_branch = branch.name
+                        if self.detailed_logs:
+                            logger.debug("%s Router Agent has chosen branch: %s", AGENT_LOG_PREFIX, branch.name)
+                        break
+        except Exception as ex:
+            logger.error("%s Router Agent failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
+            raise
 
         return state
 
-    async def conditional_edge(self, state: RouterAgentGraphState):
-        logger.debug("%s Starting the Router Agent Conditional Edge", AGENT_LOG_PREFIX)
-        try:
-            if state.chosen_branch == "":
-                # Router Agent does not choose a valid branch
-                logger.error("%s No chosen branch found in state", AGENT_LOG_PREFIX)
-                raise ValueError("No chosen branch found in state")
-            if state.branch_executed:
-                return AgentDecision.END
-            return AgentDecision.TOOL
-
-        except Exception as ex:
-            logger.exception("%s Router Agent failed to determine which branch to call: %s", AGENT_LOG_PREFIX, ex)
-            return AgentDecision.END
-
-    async def tool_node(self, state: RouterAgentGraphState):
+    async def branch_node(self, state: RouterAgentGraphState):
         logger.debug("%s Starting Router Agent Tool Node", AGENT_LOG_PREFIX)
         try:
             if state.chosen_branch == "":
                 logger.exception("%s Router Agent has empty chosen branch", AGENT_LOG_PREFIX)
-                raise ValueError("Router Agent has empty chosen branch")
+                raise ValueError("Router Agent failed to choose a branch")
             requested_branch = self._get_branch(state.chosen_branch)
             if not requested_branch:
                 logger.error("%s Router Agent wants to call tool %s but it is not in the config file",
@@ -135,20 +118,30 @@ class RouterAgentGraph(DualNodeAgent):
             state.messages += [branch_response]
             if self.detailed_logs:
                 self._log_tool_response(requested_branch.name, state.messages[-1].content, branch_response.content)
-            state.branch_executed = True
+
             return state
 
         except Exception as ex:
             logger.error("%s Router Agent throws exception during tool node execution: %s", AGENT_LOG_PREFIX, ex)
             raise
 
+    async def _build_graph(self, state_schema):
+        logger.debug("%s Building and compiling the Router Agent Graph", AGENT_LOG_PREFIX)
+
+        graph = StateGraph(state_schema)
+        graph.add_node("agent", self.agent_node)
+        graph.add_node("branch", self.branch_node)
+        graph.add_edge("agent", "branch")
+        graph.set_entry_point("agent")
+
+        self.graph = graph.compile()
+        logger.debug("%s Router Agent Graph built and compiled successfully", AGENT_LOG_PREFIX)
+
+        return self.graph
+
     async def build_graph(self):
         try:
-            await super()._build_graph(state_schema=RouterAgentGraphState)
-            logger.debug(
-                "%s Router Agent Graph built and compiled successfully",
-                AGENT_LOG_PREFIX,
-            )
+            await self._build_graph(state_schema=RouterAgentGraphState)
             return self.graph
         except Exception as ex:
             logger.error("%s Router Agent failed to build graph: %s", AGENT_LOG_PREFIX, ex)

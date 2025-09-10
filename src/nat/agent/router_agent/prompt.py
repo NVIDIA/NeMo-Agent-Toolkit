@@ -23,7 +23,8 @@ CRITICAL INSTRUCTIONS:
 - Analyze the user's request carefully
 - Select exactly ONE branch that best handles the request from: [{branch_names}]
 - Respond with ONLY the exact branch name, nothing else
-- Be decisive - choose the single best match, if the request could fit multiple branches, choose the most specific/specialized one
+- Be decisive - choose the single best match, if the request could fit multiple branches,
+  choose the most specific/specialized one
 - If no branch perfectly fits, choose the closest match
 
 Your response MUST contain ONLY the branch name. Do not include any explanations, reasoning, or additional text.

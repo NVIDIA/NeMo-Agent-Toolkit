@@ -29,20 +29,19 @@ This example demonstrates how to use a configurable Router Agent with the NeMo A
 - [Run the Workflow](#run-the-workflow)
   - [Starting the NeMo Agent Toolkit Server](#starting-the-nemo-agent-toolkit-server)
   - [Making Requests to the NeMo Agent Toolkit Server](#making-requests-to-the-nemo-agent-toolkit-server)
-  - [Evaluating the Router Agent Workflow](#evaluating-the-router-agent-workflow)
 
 ## Key Features
 
-- **Dual-Node Graph Structure:** Uses a streamlined two-node architecture with Agent Node (analyzes request and selects branch) and Tool Node (executes the selected branch).
+- **Single-Pass Graph Structure:** Uses a single-pass architecture with Router Agent Node (analyzes request and selects branch) and Branch Node (executes the selected branch).
 - **Intelligent Request Routing:** Shows how the Router Agent analyzes user input and selects exactly one branch that best handles the request, making it ideal for scenarios when a graph of agents and tools is needed to handle different types of requests.
 - **Easy Fine-tuning:** The single pass approach of the Router Agent makes it easy to fine-tune the routing logic by customizing the prompt and the branches.
 
 ## Graph Structure
 
-The Router Agent uses a streamlined dual-node graph architecture that efficiently analyzes requests and routes them to appropriate branches. The following describes the agent's workflow:
+The Router Agent uses a single-pass graph architecture that efficiently analyzes requests and routes them to appropriate branches. The following describes the agent's workflow:
 
 <div align="center">
-<img src="../../../docs/source/_static/dual_node_agent.png" alt="ReAct Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+<img src="../../../docs/source/_static/router_agent.png" alt="Router Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
 </div>
 
 ## Configuration
