@@ -121,15 +121,12 @@ class RouterAgentGraph(BaseAgent):
         """
         logger.debug("%s Starting the Router Agent Node", AGENT_LOG_PREFIX)
         chat_history = self._get_chat_history(state.messages)
+        request = state.forward_message.content
         for attempt in range(1, self.max_router_retries + 1):
             try:
-                agent_response = await self._call_llm(
-                    self.agent, {
-                        "request": state.forward_message.content, "chat_history": chat_history
-                    })
+                agent_response = await self._call_llm(self.agent, {"request": request, "chat_history": chat_history})
                 if self.detailed_logs:
-                    agent_input = "\n".join(str(message.content) for message in state.messages)
-                    logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, agent_response)
+                    logger.info(AGENT_CALL_LOG_MESSAGE, request, agent_response)
 
                 state.messages += [agent_response]
 
@@ -190,7 +187,7 @@ class RouterAgentGraph(BaseAgent):
             branch_response = await self._call_tool(requested_branch, branch_input)
             state.messages += [branch_response]
             if self.detailed_logs:
-                self._log_tool_response(requested_branch.name, state.messages[-1].content, branch_response.content)
+                self._log_tool_response(requested_branch.name, branch_input, branch_response.content)
 
             return state
 

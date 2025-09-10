@@ -50,22 +50,18 @@ The Router Agent is configured through the `config.yml` file. The following conf
 
 ### Required Configuration Options
 
-<!-- vale off (due to option names) -->
-- **_type**: Set to `router_agent` to use the Router Agent workflow type
-- **branches**: List of available branches that the agent can route requests to
-- **llm_name**: The language model used for request analysis and routing decisions
-<!-- vale on -->
+- **`_type`**: Set to `router_agent` to use the Router Agent workflow type
+- **`branches`**: List of available branches that the agent can route requests to
+- **`llm_name`**: The language model used for request analysis and routing decisions
 
 ### Optional Configuration Options
 
-<!-- vale off (due to option names) -->
-- **description**: Description of the workflow (default: "Router Agent Workflow")
-- **system_prompt**: Custom system prompt to use with the agent (default: uses built-in prompt)
-- **user_prompt**: Custom user prompt to use with the agent (default: uses built-in prompt)
-- **max_router_retries**: Maximum number of retries if the router agent fails to choose a branch (default: 3)
-- **detailed_logs**: Enable detailed logging to see the routing decisions and responses (default: false)
-- **log_response_max_chars**: Maximum number of characters to display in logs when logging branch responses (default: 1000)
-<!-- vale on -->
+- **`description`**: Description of the workflow (default: "Router Agent Workflow")
+- **`system_prompt`**: Custom system prompt to use with the agent (default: uses built-in prompt)
+- **`user_prompt`**: Custom user prompt to use with the agent (default: uses built-in prompt)
+- **`max_router_retries`**: Maximum number of retries if the router agent fails to choose a branch (default: 3)
+- **`detailed_logs`**: Enable detailed logging to see the routing decisions and responses (default: false)
+- **`log_response_max_chars`**: Maximum number of characters to display in logs when logging branch responses (default: 1000)
 
 Note on custom prompts:
   - `{branches}` and `{branch_names}` must be included in your customized `system_prompt`.
@@ -93,8 +89,10 @@ workflow:
   max_router_retries: 5
   detailed_logs: true
   log_response_max_chars: 2000
-  system_prompt: "You are an intelligent routing agent that analyzes user requests and selects the most appropriate advisor from {branch_names}."
-  user_prompt: "Considering the conversation so far: {chat_history} Routing request: {request} Choose exactly one branch from {branch_names} and return only its name."
+  system_prompt: "You are an intelligent routing agent that analyzes user requests and selects the most appropriate
+  advisor from {branches}.
+  You MUST choose exactly one branch and return only its name which is one of the following: {branch_names}."
+  user_prompt: "Considering the conversation so far: {chat_history} Routing request: {request}"
 ```
 
 The agent will automatically analyze incoming requests and route them to the most appropriate branch based on the request content and the descriptions of available branches.
@@ -143,7 +141,7 @@ nat run --config_file=examples/agents/router/configs/config.yml --input "Can you
 **Expected Workflow Output**
 ```console
 nemo-agent-toolkit % nat run --config_file=examples/agents/router/configs/config.yml --input "I want a yellow fruit"
-2025-09-09 16:46:48,108 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/agents/router/configs/config.yml'
+2025-09-10 10:50:51,873 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/agents/router/configs/config.yml'
 
 Configuration Summary:
 --------------------
@@ -157,22 +155,22 @@ Number of Retrievers: 0
 Number of TTC Strategies: 0
 Number of Authentication Providers: 0
 
-2025-09-09 16:46:50,985 - nat.agent.router_agent.agent - INFO -
+2025-09-10 10:50:52,992 - nat.agent.router_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input:
 Agent's thoughts:
 content='fruit_advisor' additional_kwargs={} response_metadata={}
 ------------------------------
-2025-09-09 16:46:50,990 - nat.agent.base - INFO -
+2025-09-10 10:50:52,994 - nat.agent.base - INFO -
 ------------------------------
 [AGENT]
 Calling tools: fruit_advisor
-Tool's input: banana
+Tool's input: I want a yellow fruit
 Tool's response:
 banana
 ------------------------------
-2025-09-09 16:46:50,994 - nat.front_ends.console.console_front_end_plugin - INFO -
+2025-09-10 10:50:52,994 - nat.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
 ['banana']
