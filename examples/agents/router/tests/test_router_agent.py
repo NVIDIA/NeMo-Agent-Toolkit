@@ -40,32 +40,29 @@ async def test_full_workflow():
 
     config_file = os.path.join(current_dir, "../configs", "config.yml")
 
-    test_cases = [
-        {
-            "question":
-                "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?",
-            "answer":
-                "athens"
-        },
-        {
-            "question": "Which U.S. historical event occurred in the year obtained by multiplying 48 and 37?",
-            "answer": "declaration of independence"
-        },
-        {
-            "question": "Which country hosted the FIFA World Cup in the year obtained by dividing 6054 by 3?",
-            "answer": "russia"
-        },
-        {
-            "question": "Which renowned physicist was born in the year resulting from subtracting 21 from 1900?",
-            "answer": "albert einstein"
-        },
-        {
-            "question":
-                "Which city hosted the Summer Olympics in the year obtained by subtracting 4 from the larger number"
-                "between 2008 and 2012?",
-            "answer": "beijing"
-        }
-    ]
+    test_cases = [{
+        "question": "What yellow fruit would you recommend?", "answer": "banana"
+    }, {
+        "question": "I want a red fruit, what do you suggest?", "answer": "apple"
+    }, {
+        "question": "Can you recommend a green fruit?", "answer": "pear"
+    }, {
+        "question": "What city would you recommend in the United States?", "answer": "new york"
+    }, {
+        "question": "Which city should I visit in the United Kingdom?", "answer": "london"
+    }, {
+        "question": "What's a good city to visit in Canada?", "answer": "toronto"
+    }, {
+        "question": "Recommend a city in Australia", "answer": "sydney"
+    }, {
+        "question": "What city should I visit in India?", "answer": "mumbai"
+    }, {
+        "question": "What literature work by Shakespeare would you recommend?", "answer": "hamlet"
+    }, {
+        "question": "Can you suggest a work by Dante?", "answer": "the divine comedy"
+    }, {
+        "question": "What's a good literature piece by Milton?", "answer": "paradise lost"
+    }]
 
     for test_case in test_cases:
         await _test_workflow(config_file, test_case["question"], test_case["answer"])

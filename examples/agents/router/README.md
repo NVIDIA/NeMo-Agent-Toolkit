@@ -125,7 +125,7 @@ nat run --config_file=examples/agents/router/configs/config.yml --input "I want 
 nat run --config_file=examples/agents/router/configs/config.yml --input "What red fruit would you recommend?"
 
 # Test city advisor
-nat run --config_file=examples/agents/router/configs/config.yml --input "What city should I visit in the US?"
+nat run --config_file=examples/agents/router/configs/config.yml --input "What city should I visit in the United States?"
 
 # Test literature advisor
 nat run --config_file=examples/agents/router/configs/config.yml --input "Can you recommend something by Shakespeare?"

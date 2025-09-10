@@ -80,9 +80,9 @@ async def mock_city_advisor_function(config: MockCityAdvisorFunctionConfig, buil
     """
 
     async def city_advisor(input: str) -> str:
-        if "us" in input.lower():
+        if "united states" in input.lower():
             return "New York"
-        elif "uk" in input.lower():
+        elif "united kingdom" in input.lower():
             return "London"
         elif "canada" in input.lower():
             return "Toronto"
