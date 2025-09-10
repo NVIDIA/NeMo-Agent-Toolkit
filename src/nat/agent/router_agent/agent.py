@@ -19,6 +19,7 @@ import typing
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages.base import BaseMessage
+from langchain_core.messages.human import HumanMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
@@ -39,7 +40,7 @@ logger = logging.getLogger(__name__)
 class RouterAgentGraphState(BaseModel):
     """State schema for the Router Agent Graph"""
     messages: list[BaseMessage] = Field(default_factory=list)
-    relay_message: BaseMessage = Field(default_factory=lambda: BaseMessage(content=""))
+    forward_message: BaseMessage = Field(default_factory=lambda: HumanMessage(content=""))
     chosen_branch: str = Field(default="")
 
 
@@ -83,7 +84,7 @@ class RouterAgentGraph(BaseAgent):
             try:
                 agent_response = await self._call_llm(
                     self.agent, {
-                        "routing_request": state.relay_message, "chat_history": chat_history
+                        "routing_request": state.forward_message, "chat_history": chat_history
                     })
                 if self.detailed_logs:
                     agent_input = "\n".join(str(message.content) for message in state.messages)
@@ -129,7 +130,7 @@ class RouterAgentGraph(BaseAgent):
                              state.chosen_branch)
                 raise ValueError("Tool not found in config file")
 
-            branch_input = state.relay_message.content
+            branch_input = state.forward_message.content
             branch_response = await self._call_tool(requested_branch, branch_input)
             state.messages += [branch_response]
             if self.detailed_logs:
@@ -184,13 +185,14 @@ class RouterAgentGraph(BaseAgent):
         errors = []
         if not user_prompt:
             errors.append("The user prompt cannot be empty.")
-        required_prompt_variables = {
-            "{chat_history}":
-                "The user prompt must contain {chat_history} so the agent knows about the conversation history."
-        }
-        for variable_name, error_message in required_prompt_variables.items():
-            if variable_name not in user_prompt:
-                errors.append(error_message)
+        else:
+            required_prompt_variables = {
+                "{chat_history}":
+                    "The user prompt must contain {chat_history} so the agent knows about the conversation history."
+            }
+            for variable_name, error_message in required_prompt_variables.items():
+                if variable_name not in user_prompt:
+                    errors.append(error_message)
         if errors:
             error_text = "\n".join(errors)
             logger.error("%s %s", AGENT_LOG_PREFIX, error_text)

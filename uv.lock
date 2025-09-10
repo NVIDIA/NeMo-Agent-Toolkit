@@ -4833,6 +4833,12 @@ requires-dist = [
 [[package]]
 name = "nat-router-agent"
 source = { editable = "examples/agents/router" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
 
 [[package]]
 name = "nat-semantic-kernel-demo"

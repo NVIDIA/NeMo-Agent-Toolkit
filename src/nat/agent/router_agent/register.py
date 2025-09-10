@@ -75,7 +75,7 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
     async def _response_fn(input_message: str) -> str:
         try:
             message = HumanMessage(content=input_message)
-            state = RouterAgentGraphState(relay_message=message)
+            state = RouterAgentGraphState(forward_message=message)
 
             result_dict = await graph.ainvoke(state)
             result_state = RouterAgentGraphState(**result_dict)
