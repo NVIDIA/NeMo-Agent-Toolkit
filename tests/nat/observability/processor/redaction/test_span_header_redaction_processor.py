@@ -32,7 +32,7 @@ def default_callback(_data: dict[str, Any]) -> bool:
     return False
 
 
-@pytest.fixture
+@pytest.fixture(name="sample_span")
 def sample_span():
     """Create a sample span for testing."""
     span_context = SpanContext(span_id=123, trace_id=456)
@@ -50,7 +50,7 @@ def sample_span():
                 events=[])
 
 
-@pytest.fixture
+@pytest.fixture(name="mock_context_with_headers")
 def mock_context_with_headers():
     """Create a mock context with headers."""
     headers = Headers({"authorization": "Bearer token123", "x-api-key": "key456"})
@@ -62,7 +62,7 @@ def mock_context_with_headers():
     return context
 
 
-@pytest.fixture
+@pytest.fixture(name="mock_context_no_headers")
 def mock_context_no_headers():
     """Create a mock context without headers."""
     metadata = Mock(spec=RequestAttributes)
