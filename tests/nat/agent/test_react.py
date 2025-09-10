@@ -300,23 +300,20 @@ async def test_no_input(mock_react_graph):
 
 def test_validate_system_prompt_no_input():
     mock_prompt = ''
-    with pytest.raises(ValueError) as ex:
-        ReActAgentGraph.validate_system_prompt(mock_prompt)
-    assert isinstance(ex.value, ValueError)
+    result = ReActAgentGraph.validate_system_prompt(mock_prompt)
+    assert result is False
 
 
 def test_validate_system_prompt_no_tools():
     mock_prompt = '{tools}'
-    with pytest.raises(ValueError) as ex:
-        ReActAgentGraph.validate_system_prompt(mock_prompt)
-    assert isinstance(ex.value, ValueError)
+    result = ReActAgentGraph.validate_system_prompt(mock_prompt)
+    assert result is False
 
 
 def test_validate_system_prompt_no_tool_names():
     mock_prompt = '{tool_names}'
-    with pytest.raises(ValueError) as ex:
-        ReActAgentGraph.validate_system_prompt(mock_prompt)
-    assert isinstance(ex.value, ValueError)
+    result = ReActAgentGraph.validate_system_prompt(mock_prompt)
+    assert result is False
 
 
 def test_validate_system_prompt():
