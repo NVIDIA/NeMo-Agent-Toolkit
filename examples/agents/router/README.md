@@ -51,7 +51,7 @@ The Router Agent is configured through the `config.yml` file. The following conf
 ### Required Configuration Options
 
 - **workflow._type**: Set to `router_agent` to use the Router Agent workflow type
-- **workflow.branches**: List of available tools/functions that the agent can route requests to
+- **workflow.branches**: List of available branches that the agent can route requests to
 - **workflow.llm_name**: The language model used for request analysis and routing decisions
 
 ### Optional Configuration Options
