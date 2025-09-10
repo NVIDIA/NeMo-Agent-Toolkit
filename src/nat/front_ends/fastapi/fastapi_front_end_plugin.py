@@ -40,7 +40,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
         # This attribute is set if dask is installed, and an external cluster is not used (scheduler_address is None)
         self._cluster = None
-        self._cleanup_future = None
+        self._periodic_cleanup_future = None
         self._scheduler_address = None
 
     def get_worker_class(self) -> type[FastApiFrontEndPluginWorkerBase]:
@@ -82,10 +82,10 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
         """Submit a cleanup task to the cluster to remove the job after expiry."""
         logger.info("Submitting periodic cleanup task to Dask cluster at %s", scheduler_address)
         async with self.client(self._scheduler_address) as client:
-            self._cleanup_future = client.submit(self._periodic_cleanup,
-                                                 scheduler_address=self._scheduler_address,
-                                                 db_url=db_url,
-                                                 log_level=logger.getEffectiveLevel())
+            self._periodic_cleanup_future = client.submit(self._periodic_cleanup,
+                                                          scheduler_address=self._scheduler_address,
+                                                          db_url=db_url,
+                                                          log_level=logger.getEffectiveLevel())
 
         logger.info("Submitted periodic cleanup task to Dask cluster at %s", scheduler_address)
 
@@ -194,11 +194,11 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
         finally:
             logger.debug("Shutting down")
-            if self._cleanup_future is not None:
+            if self._periodic_cleanup_future is not None:
                 logger.info("Cancelling periodic cleanup task.")
                 # Use the scheduler address, because self._cluster is None if an external cluster is used
                 async with self.client(self._scheduler_address) as client:
-                    await client.cancel([self._cleanup_future], asynchronous=True, force=True)
+                    await client.cancel([self._periodic_cleanup_future], asynchronous=True, force=True)
 
             if self._cluster is not None:
                 # Only shut down the cluster if we created it
