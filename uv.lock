@@ -3473,15 +3473,15 @@ wheels = [
 
 [[package]]
 name = "langchain-milvus"
-version = "0.1.10"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "pymilvus" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7c/08/c73564155235fca493b023b7bac12c03d57eadfb97193beb00344669d1dc/langchain_milvus-0.1.10.tar.gz", hash = "sha256:86a1a6557cbb41a0877300abf4be77ad6970617e3f3233ec1902b885d6147333", size = 26302, upload-time = "2025-04-25T09:49:56.826Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/dd/5e8b7f6f17da0e54205956feab3f7856cb7dc821dbe817f2990aa028e4cc/langchain_milvus-0.2.1.tar.gz", hash = "sha256:6e60e43959464ae2be9dadceb4fab6b3ddcec5bb1f2d29e898924f1c2651baf1", size = 32639, upload-time = "2025-06-28T09:59:53.826Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/ab/d321c9099ba395093b94d4cba6ba033f0d5e3e768ec096fe2f18dceab85d/langchain_milvus-0.1.10-py3-none-any.whl", hash = "sha256:452e212d9e26c31d4eaec6c2c169b99c92c22735d39eafa55694a05ca0c3d538", size = 29048, upload-time = "2025-04-25T09:49:55.05Z" },
+    { url = "https://files.pythonhosted.org/packages/60/b1/54e176cc8ac80df9a2c4ee9f726d6383fcf9818317c68532cfc90fa91b6c/langchain_milvus-0.2.1-py3-none-any.whl", hash = "sha256:faabf4685c15ef9651605172427073d6ffc52c0f36f3b88842977db883062c99", size = 36110, upload-time = "2025-06-28T09:59:52.965Z" },
 ]
 
 [[package]]
@@ -3538,16 +3538,19 @@ wheels = [
 
 [[package]]
 name = "langgraph"
-version = "0.2.76"
+version = "0.6.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "langgraph-checkpoint" },
+    { name = "langgraph-prebuilt" },
     { name = "langgraph-sdk" },
+    { name = "pydantic" },
+    { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ee/62/8d484e498ec95d5a8c71e78f5a2d09ff280db0c99737b7aef0524cd67076/langgraph-0.2.76.tar.gz", hash = "sha256:688f8dcd9b6797ba78384599e0de944773000c75156ad1e186490e99e89fa5c0", size = 133005, upload-time = "2025-02-26T21:57:39.108Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/56/85/36feb25062da40ca395f6c44d0232a672842e5421885101f6faf4670b670/langgraph-0.6.7.tar.gz", hash = "sha256:ba7fd17b8220142d6a4269b6038f2b3dcbcef42cd5ecf4a4c8d9b60b010830a6", size = 465534, upload-time = "2025-09-07T16:49:42.895Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c5/52/a9a84d94353ebcc565b2246849d59d71023b4c33109f46e1ef799ab40bd1/langgraph-0.2.76-py3-none-any.whl", hash = "sha256:076b8b5d2fc5a9761c46a7618430cfa5c978a8012257c43cbc127b27e0fd7872", size = 153684, upload-time = "2025-02-26T21:57:37.223Z" },
+    { url = "https://files.pythonhosted.org/packages/67/06/f440922a58204dbfd10f7fdda0de0325529a159e9dc3d1038afe4b431a49/langgraph-0.6.7-py3-none-any.whl", hash = "sha256:c724dd8c24806b70faf4903e8e20c0234f8c0a356e0e96a88035cbecca9df2cf", size = 153329, upload-time = "2025-09-07T16:49:40.45Z" },
 ]
 
 [[package]]
@@ -3564,16 +3567,29 @@ wheels = [
 ]
 
 [[package]]
+name = "langgraph-prebuilt"
+version = "0.6.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "langgraph-checkpoint" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d6/21/9b198d11732101ee8cdf30af98d0b4f11254c768de15173e57f5260fd14b/langgraph_prebuilt-0.6.4.tar.gz", hash = "sha256:e9e53b906ee5df46541d1dc5303239e815d3ec551e52bb03dd6463acc79ec28f", size = 125695, upload-time = "2025-08-07T18:17:57.333Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/7f/973b0d9729d9693d6e5b4bc5f3ae41138d194cb7b16b0ed230020beeb13a/langgraph_prebuilt-0.6.4-py3-none-any.whl", hash = "sha256:819f31d88b84cb2729ff1b79db2d51e9506b8fb7aaacfc0d359d4fe16e717344", size = 28025, upload-time = "2025-08-07T18:17:56.493Z" },
+]
+
+[[package]]
 name = "langgraph-sdk"
-version = "0.1.74"
+version = "0.2.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "orjson" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6d/f7/3807b72988f7eef5e0eb41e7e695eca50f3ed31f7cab5602db3b651c85ff/langgraph_sdk-0.1.74.tar.gz", hash = "sha256:7450e0db5b226cc2e5328ca22c5968725873630ef47c4206a30707cb25dc3ad6", size = 72190, upload-time = "2025-07-21T16:36:50.032Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/55/35/a1caf4fdb725adec30f1e9562f218524a92d8b675deb97be653687f086ee/langgraph_sdk-0.2.6.tar.gz", hash = "sha256:7db27cd86d1231fa614823ff416fcd2541b5565ad78ae950f31ae96d7af7c519", size = 80346, upload-time = "2025-09-04T01:51:11.262Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1f/1a/3eacc4df8127781ee4b0b1e5cad7dbaf12510f58c42cbcb9d1e2dba2a164/langgraph_sdk-0.1.74-py3-none-any.whl", hash = "sha256:3a265c3757fe0048adad4391d10486db63ef7aa5a2cbd22da22d4503554cb890", size = 50254, upload-time = "2025-07-21T16:36:49.134Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/d2/c5fac919601b27a0af5df0bde46e7f1361d5e04505e404b75bed45d21fc8/langgraph_sdk-0.2.6-py3-none-any.whl", hash = "sha256:477216b573b8177bbd849f4c754782a81279fbbd88bfadfeda44422d14b18b08", size = 54565, upload-time = "2025-09-04T01:51:10.044Z" },
 ]
 
 [[package]]
@@ -5823,12 +5839,12 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langchain-aws", specifier = "~=0.2.1" },
-    { name = "langchain-core", specifier = "~=0.3.7" },
-    { name = "langchain-milvus", specifier = "~=0.1.8" },
-    { name = "langchain-nvidia-ai-endpoints", specifier = "~=0.3.5" },
-    { name = "langchain-openai", specifier = "~=0.3.23" },
-    { name = "langgraph", specifier = "~=0.2.50" },
+    { name = "langchain-aws", specifier = "~=0.2.31" },
+    { name = "langchain-core", specifier = "~=0.3.75" },
+    { name = "langchain-milvus", specifier = "~=0.2.1" },
+    { name = "langchain-nvidia-ai-endpoints", specifier = "~=0.3.17" },
+    { name = "langchain-openai", specifier = "~=0.3.32" },
+    { name = "langgraph", specifier = "~=0.6.7" },
     { name = "nvidia-nat", editable = "." },
 ]
 

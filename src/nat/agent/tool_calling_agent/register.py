@@ -52,7 +52,7 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, builder: Builder):
     from langchain_core.messages.human import HumanMessage
-    from langgraph.graph.graph import CompiledGraph
+    from langgraph.graph.state import CompiledStateGraph
 
     from nat.agent.base import AGENT_LOG_PREFIX
     from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph
@@ -69,12 +69,12 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
         raise ValueError(f"No tools specified for Tool Calling Agent '{config.llm_name}'")
 
     # construct the Tool Calling Agent Graph from the configured llm, and tools
-    graph: CompiledGraph = await ToolCallAgentGraph(llm=llm,
-                                                    tools=tools,
-                                                    prompt=prompt,
-                                                    detailed_logs=config.verbose,
-                                                    log_response_max_chars=config.log_response_max_chars,
-                                                    handle_tool_errors=config.handle_tool_errors).build_graph()
+    graph: CompiledStateGraph = await ToolCallAgentGraph(llm=llm,
+                                                         tools=tools,
+                                                         prompt=prompt,
+                                                         detailed_logs=config.verbose,
+                                                         log_response_max_chars=config.log_response_max_chars,
+                                                         handle_tool_errors=config.handle_tool_errors).build_graph()
 
     async def _response_fn(input_message: str) -> str:
         try:
