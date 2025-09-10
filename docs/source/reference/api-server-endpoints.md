@@ -17,7 +17,7 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit API Server Endpoints
 
-There are currently four workflow transactions that can be initiated using HTTP or WebSocket when the NeMo Agent toolkit server is running: `generate non-streaming`, `generate async`, `generate streaming`, `chat non-streaming`, and `chat streaming`. The following are types of interfaces you can use to interact with your running workflows.
+There are currently five workflow transactions that can be initiated using HTTP or WebSocket when the NeMo Agent toolkit server is running: `generate non-streaming`, `generate async`, `generate streaming`, `chat non-streaming`, and `chat streaming`. The following are types of interfaces you can use to interact with your running workflows.
   - **Generate Interface:** Uses the transaction schema defined by your workflow. The interface documentation is accessible
     using Swagger while the server is running [`http://localhost:8000/docs`](http://localhost:8000/docs).
   - **Chat Interface:** [OpenAI API Documentation](https://platform.openai.com/docs/guides/text?api-mode=chat) provides
