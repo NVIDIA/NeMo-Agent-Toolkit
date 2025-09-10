@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 
-# LangChain message models for validation
+# LangChain/LangGraph message models for validation
 class OpenAIMessage(BaseModel):
     content: str | None = Field(default=None, description="The content of the message.")
     additional_kwargs: dict[str, Any] = Field(default_factory=dict, description="Additional kwargs for the message.")

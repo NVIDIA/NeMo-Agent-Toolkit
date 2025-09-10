@@ -37,7 +37,7 @@ def _get_nat_dependency(versioned: bool = True) -> str:
     Returns:
         str: The dependency string to use in pyproject.toml
     """
-    # Assume the default dependency is langchain
+    # Assume the default dependency is LangChain/LangGraph
     dependency = "nvidia-nat[langchain]"
 
     if not versioned:

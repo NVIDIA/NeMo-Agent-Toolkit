@@ -688,7 +688,7 @@ GlobalTypeConverter.register_converter(_string_to_nat_chat_response_chunk)
 
 # ======== AINodeMessageChunk Converters ========
 def _ai_message_chunk_to_nat_chat_response_chunk(data) -> ChatResponseChunk:
-    '''Converts LangChain AINodeMessageChunk to ChatResponseChunk'''
+    '''Converts LangChain/LangGraph AINodeMessageChunk to ChatResponseChunk'''
     content = ""
     if hasattr(data, 'content') and data.content is not None:
         content = str(data.content)

@@ -30,6 +30,7 @@ functions:
     _type: nat_simple_calculator/calculator_divide
   mcp_time_tool:
     _type: mcp_tool_wrapper
+    transport: sse
     url: "http://localhost:8080/sse"
     mcp_tool_name: get_current_time
     description: "Returns the current date and time from the MCP server"

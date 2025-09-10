@@ -18,7 +18,7 @@ from langchain_core.agents import AgentAction
 from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.tool import ToolMessage
-from langgraph.graph.graph import CompiledGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from nat.agent.base import AgentDecision
 from nat.agent.react_agent.agent import NO_INPUT_ERROR_MESSAGE
@@ -77,7 +77,7 @@ def fixture_mock_agent(mock_config_react_agent, mock_llm, mock_tool):
 
 async def test_build_graph(mock_react_agent):
     graph = await mock_react_agent.build_graph()
-    assert isinstance(graph, CompiledGraph)
+    assert isinstance(graph, CompiledStateGraph)
     assert list(graph.nodes.keys()) == ['__start__', 'agent', 'tool']
     assert graph.builder.edges == {('__start__', 'agent'), ('tool', 'agent')}
     assert set(graph.builder.branches.get('agent').get('conditional_edge').ends.keys()) == {
@@ -603,7 +603,7 @@ async def test_tool_node_json_input_with_double_quotes(mock_react_agent):
 
     assert isinstance(response, ToolMessage)
     assert response.name == "Tool A"
-    # When JSON is successfully parsed, the mock tool receives a dict and LangChain extracts the "query" value
+    # When JSON is successfully parsed, the mock tool receives a dict and LangChain/LangGraph extracts the "query" value
     assert response.content == "search term"  # The mock tool extracts the query field value
 
 
@@ -622,7 +622,7 @@ async def test_tool_node_json_input_with_single_quotes_normalization_enabled(moc
     assert isinstance(response, ToolMessage)
     assert response.name == "Tool A"
     # With quote normalization enabled, single quotes get normalized and JSON is parsed successfully
-    # The mock tool then receives a dict and LangChain extracts the "query" value
+    # The mock tool then receives a dict and LangChain/LangGraph extracts the "query" value
     assert response.content == "search term"
 
 
@@ -712,7 +712,7 @@ async def test_tool_node_nested_json_with_single_quotes(mock_react_agent):
     assert isinstance(response, ToolMessage)
     assert response.name == "Tool A"
     # Since this JSON doesn't have a "query" field, the mock tool receives the full dict
-    # and LangChain can't extract a "query" parameter, so it falls back to default behavior
+    # and LangChain/LangGraph can't extract a "query" parameter, so it falls back to default behavior
     assert "John" in str(response.content) or isinstance(response.content, dict)
 
 
