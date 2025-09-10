@@ -189,7 +189,6 @@ class MCPBaseClient(ABC):
     def __init__(self,
                  transport: str = 'streamable-http',
                  auth_provider: AuthProviderBase | httpx.Auth | None = None,
-                 use_separate_sessions: bool = False,
                  auth_for_tool_calls_only: bool = True):
         self._tools = None
         self._transport = transport.lower()
@@ -197,14 +196,10 @@ class MCPBaseClient(ABC):
             raise ValueError("transport must be either 'sse', 'stdio' or 'streamable-http'")
 
         self._exit_stack: AsyncExitStack | None = None
-        self._auth_connection = None  # Store the connection context for authenticated session
         self._session: ClientSession | None = None  # Main session
-        self._auth_session: ClientSession | None = None  # Authenticated session for tool calls (legacy mode)
-        self._use_separate_sessions = use_separate_sessions
         self._auth_for_tool_calls_only = auth_for_tool_calls_only
         self._connection_established = False
         self._initial_connection = False
-        self._authenticated = False
 
         # Handle both auth types
         if isinstance(auth_provider, httpx.Auth):
@@ -213,8 +208,8 @@ class MCPBaseClient(ABC):
         else:
             self._httpx_auth = None
             self._nat_auth = auth_provider
-            # Convert NAT auth to httpx.Auth if not using separate sessions
-            if not use_separate_sessions and auth_provider:
+            # Convert NAT auth to httpx.Auth
+            if auth_provider:
                 self._httpx_auth = NATAuthAdapter(auth_provider, auth_for_tool_calls_only)
 
     @property
@@ -227,13 +222,8 @@ class MCPBaseClient(ABC):
 
         self._exit_stack = AsyncExitStack()
 
-        # Establish connection with appropriate auth method
-        if self._use_separate_sessions:
-            # Legacy mode: unauthenticated connection for discovery
-            self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
-        else:
-            # New mode: single session with httpx.Auth
-            self._session = await self._exit_stack.enter_async_context(self.connect_to_server_with_auth())
+        # Establish connection with httpx.Auth
+        self._session = await self._exit_stack.enter_async_context(self.connect_to_server_with_auth())
 
         self._initial_connection = True
         self._connection_established = True
@@ -241,21 +231,13 @@ class MCPBaseClient(ABC):
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-
         if not self._exit_stack:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
 
-        # Close unauthenticated session
+        # Close session
         await self._exit_stack.aclose()
         self._session = None
         self._exit_stack = None
-
-        # Close authenticated session if it exists
-        if self._auth_connection:
-            # Close the connection context which will clean up the session
-            await self._auth_connection.__aexit__(None, None, None)
-            self._auth_connection = None
-            self._auth_session = None
 
     @property
     def server_name(self):
@@ -263,43 +245,6 @@ class MCPBaseClient(ABC):
         Provide server name for logging
         """
         return self._transport
-
-    async def ensure_authenticated(self):
-        """Ensure authenticated session exists for tool calls."""
-        if self._authenticated:
-            return
-
-        # If no auth provider, no authentication needed
-        if self._auth_provider and self._use_separate_sessions:
-            if not self._initial_connection:
-                raise RuntimeError("Must establish initial connection first")
-            # Create authenticated session
-            await self._create_authenticated_session()
-        self._authenticated = True
-
-    @abstractmethod
-    async def _create_authenticated_session(self):
-        """Create authenticated session with auth headers."""
-        raise NotImplementedError
-
-    async def _get_auth_headers(self) -> dict[str, str]:
-        """Get authentication headers from the auth provider."""
-        if not self._auth_provider:
-            return {}
-
-        try:
-            auth_result = await self._auth_provider.authenticate()
-            # Check if we have BearerTokenCred
-            from nat.data_models.authentication import BearerTokenCred
-            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
-                token = auth_result.credentials[0].token.get_secret_value()
-                return {"Authorization": f"Bearer {token}"}
-            else:
-                logger.warning("Auth provider did not return BearerTokenCred")
-                return {}
-        except Exception as e:
-            logger.warning("Failed to get auth token: %s", e)
-            return {}
 
     @abstractmethod
     @asynccontextmanager
@@ -368,18 +313,7 @@ class MCPBaseClient(ABC):
         if not self._session:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
 
-        # Determine which session to use for tool calls
-        if self._use_separate_sessions:
-            # Legacy mode: use separate authenticated session
-            await self.ensure_authenticated()
-            session = self._auth_session if self._auth_session else self._session
-        else:
-            # New mode: use single session with httpx.Auth
-            session = self._session
-
-        if session is None:
-            raise RuntimeError("No session available for tool call")
-        result = await session.call_tool(tool_name, tool_args)
+        result = await self._session.call_tool(tool_name, tool_args)
         return result
 
 
@@ -395,9 +329,8 @@ class MCPSSEClient(MCPBaseClient):
     def __init__(self,
                  url: str,
                  auth_provider: AuthProviderBase | httpx.Auth | None = None,
-                 use_separate_sessions: bool = False,
                  auth_for_tool_calls_only: bool = True):
-        super().__init__("sse", auth_provider, use_separate_sessions, auth_for_tool_calls_only)
+        super().__init__("sse", auth_provider, auth_for_tool_calls_only)
         self._url = url
 
     @property
@@ -407,25 +340,6 @@ class MCPSSEClient(MCPBaseClient):
     @property
     def server_name(self):
         return f"sse:{self._url}"
-
-    async def _get_auth_headers(self) -> dict[str, str]:
-        """Get authentication headers from the auth provider."""
-        if not self._auth_provider:
-            return {}
-
-        try:
-            auth_result = await self._auth_provider.authenticate()
-            # Check if we have BearerTokenCred
-            from nat.data_models.authentication import BearerTokenCred
-            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
-                token = auth_result.credentials[0].token.get_secret_value()
-                return {"Authorization": f"Bearer {token}"}
-            else:
-                logger.warning("Auth provider did not return BearerTokenCred")
-                return {}
-        except Exception as e:
-            logger.warning("Failed to get auth token: %s", e)
-            return {}
 
     @asynccontextmanager
     @override
@@ -447,23 +361,19 @@ class MCPSSEClient(MCPBaseClient):
         # SSE doesn't support httpx.Auth, fall back to header-based auth
         headers = {}
         if self._nat_auth:
-            headers = await self._get_auth_headers()
+            try:
+                auth_result = await self._nat_auth.authenticate()
+                from nat.data_models.authentication import BearerTokenCred
+                if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
+                    token = auth_result.credentials[0].token.get_secret_value()
+                    headers = {"Authorization": f"Bearer {token}"}
+            except Exception as e:
+                logger.warning("Failed to get auth token for SSE: %s", e)
 
         async with sse_client(url=self._url, headers=headers) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
-
-    @override
-    async def _create_authenticated_session(self):
-        """Create authenticated SSE session with auth headers."""
-        headers = await self._get_auth_headers()
-
-        # Create the connection context and keep it alive
-        self._auth_connection = sse_client(url=self._url, headers=headers)
-        read, write = await self._auth_connection.__aenter__()
-        self._auth_session = ClientSession(read, write)
-        await self._auth_session.initialize()
 
 
 class MCPStdioClient(MCPBaseClient):
@@ -511,12 +421,6 @@ class MCPStdioClient(MCPBaseClient):
                 await session.initialize()
                 yield session
 
-    @override
-    async def _create_authenticated_session(self):
-        """Stdio transport doesn't support authentication, so this is a no-op."""
-        # Stdio transport doesn't support authentication
-        # The unauthenticated session will be used for both discovery and tool calls
-
 
 class MCPStreamableHTTPClient(MCPBaseClient):
     """
@@ -530,9 +434,8 @@ class MCPStreamableHTTPClient(MCPBaseClient):
     def __init__(self,
                  url: str,
                  auth_provider: AuthProviderBase | httpx.Auth | None = None,
-                 use_separate_sessions: bool = False,
                  auth_for_tool_calls_only: bool = True):
-        super().__init__("streamable-http", auth_provider, use_separate_sessions, auth_for_tool_calls_only)
+        super().__init__("streamable-http", auth_provider, auth_for_tool_calls_only)
         self._url = url
 
     @property
@@ -569,28 +472,18 @@ class MCPStreamableHTTPClient(MCPBaseClient):
             # Fall back to header-based auth
             headers = {}
             if self._nat_auth:
-                headers = await self._get_auth_headers()
+                try:
+                    auth_result = await self._nat_auth.authenticate()
+                    from nat.data_models.authentication import BearerTokenCred
+                    if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
+                        token = auth_result.credentials[0].token.get_secret_value()
+                        headers = {"Authorization": f"Bearer {token}"}
+                except Exception as e:
+                    logger.warning("Failed to get auth token for StreamableHTTP: %s", e)
             async with streamablehttp_client(url=self._url, headers=headers) as (read, write, _):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     yield session
-
-    @override
-    async def _create_authenticated_session(self):
-        """Create authenticated streamable-http session with auth headers."""
-        if self._auth_session:
-            return RuntimeError("Authenticated session already exists")
-
-        headers = await self._get_auth_headers()
-        logger.info("Creating authenticated session")
-
-        # Create the connection context and keep it alive
-        self._auth_connection = streamablehttp_client(url=self._url, headers=headers)
-        read, write, _ = await self._auth_connection.__aenter__()
-        self._auth_session = ClientSession(read, write)
-        await self._auth_session.initialize()
-
-        logger.info("Created Authenticated session")
 
 
 class MCPToolClient:
@@ -616,7 +509,6 @@ class MCPToolClient:
         self._tool_description = tool_description
         self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
         self._parent_client = parent_client
-        self._authenticated = False
 
     @property
     def name(self):
@@ -645,24 +537,6 @@ class MCPToolClient:
         """
         self._tool_description = description
 
-    async def _ensure_session_authenticated(self):
-        """Ensure the session is authenticated, refresh if needed."""
-        if self._authenticated:
-            return
-        # Switch to authenticated session
-        await self._switch_to_authenticated_session()
-        self._authenticated = True
-
-    async def _switch_to_authenticated_session(self):
-        """Switch to the authenticated session for tool calls."""
-        if not self._parent_client:
-            return
-
-        # Trigger parent client's auth session creation
-        await self._parent_client.ensure_authenticated()
-        # Update our session reference to use the authenticated session
-        self._session = self._parent_client._auth_session
-
     async def acall(self, tool_args: dict) -> str:
         """
         Call the MCP tool with the provided arguments.
@@ -670,9 +544,6 @@ class MCPToolClient:
         Args:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
         """
-        # Ensure session is authenticated before tool call
-        # await self._ensure_session_authenticated()
-
         if self._session is None:
             raise RuntimeError("No session available for tool call")
         logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
