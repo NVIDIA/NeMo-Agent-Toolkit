@@ -53,6 +53,8 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
     - Configurable None filtering: processors returning None can drop items from pipeline
     - Automatic type validation before export
     """
+    # All ProcessingExporter instances automatically use this for signature checking
+    _signature_method = '_process_pipeline'
 
     def __init__(self, context_state: ContextState | None = None, drop_nones: bool = True):
         """Initialize the processing exporter.
@@ -294,8 +296,6 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             self._check_processor_compatibility(predecessor,
                                                 processor,
                                                 "predecessor",
-                                                predecessor.output_class,
-                                                processor.input_class,
                                                 str(predecessor.output_type),
                                                 str(processor.input_type))
 
@@ -304,8 +304,6 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             self._check_processor_compatibility(processor,
                                                 successor,
                                                 "successor",
-                                                processor.output_class,
-                                                successor.input_class,
                                                 str(processor.output_type),
                                                 str(successor.input_type))
 
@@ -313,34 +311,22 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
                                        source_processor: Processor,
                                        target_processor: Processor,
                                        relationship: str,
-                                       source_class: type,
-                                       target_class: type,
                                        source_type: str,
                                        target_type: str) -> None:
-        """Check type compatibility between two processors.
+        """Check type compatibility between two processors using Pydantic validation.
 
         Args:
             source_processor (Processor): The processor providing output
             target_processor (Processor): The processor receiving input
             relationship (str): Description of relationship ("predecessor" or "successor")
-            source_class (type): The output class of source processor
-            target_class (type): The input class of target processor
             source_type (str): String representation of source type
             target_type (str): String representation of target type
         """
-        try:
-            if not issubclass(source_class, target_class):
-                raise ValueError(f"Processor {target_processor.__class__.__name__} input type {target_type} "
-                                 f"is not compatible with {relationship} {source_processor.__class__.__name__} "
-                                 f"output type {source_type}")
-        except TypeError:
-            logger.warning(
-                "Cannot use issubclass() for type compatibility check between "
-                "%s (%s) and %s (%s). Skipping compatibility check.",
-                source_processor.__class__.__name__,
-                source_type,
-                target_processor.__class__.__name__,
-                target_type)
+        # Use Pydantic-based type compatibility checking
+        if not source_processor.is_output_compatible_with(target_processor.input_type):
+            raise ValueError(f"Processor {target_processor.__class__.__name__} input type {target_type} "
+                             f"is not compatible with {relationship} {source_processor.__class__.__name__} "
+                             f"output type {source_type}")
 
     async def _pre_start(self) -> None:
 
@@ -350,36 +336,21 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             last_processor = self._processors[-1]
 
             # validate that the first processor's input type is compatible with the exporter's input type
-            try:
-                if not issubclass(self.input_class, first_processor.input_class):
-                    raise ValueError(f"Processor {first_processor.__class__.__name__} input type "
-                                     f"{first_processor.input_type} is not compatible with the "
-                                     f"{self.input_type} input type")
-            except TypeError as e:
-                # Handle cases where classes are generic types that can't be used with issubclass
-                logger.warning(
-                    "Cannot validate type compatibility between %s (%s) "
-                    "and exporter (%s): %s. Skipping validation.",
-                    first_processor.__class__.__name__,
-                    first_processor.input_type,
-                    self.input_type,
-                    e)
-
+            if not first_processor.is_compatible_with_input(self.input_type):
+                logger.error("First processor %s input=%s incompatible with exporter input=%s",
+                             first_processor.__class__.__name__,
+                             first_processor.input_type,
+                             self.input_type)
+                raise ValueError("First processor incompatible with exporter input")
             # Validate that the last processor's output type is compatible with the exporter's output type
-            try:
-                if not DecomposedType.is_type_compatible(last_processor.output_type, self.output_type):
-                    raise ValueError(f"Processor {last_processor.__class__.__name__} output type "
-                                     f"{last_processor.output_type} is not compatible with the "
-                                     f"{self.output_type} output type")
-            except TypeError as e:
-                # Handle cases where classes are generic types that can't be used with issubclass
-                logger.warning(
-                    "Cannot validate type compatibility between %s (%s) "
-                    "and exporter (%s): %s. Skipping validation.",
-                    last_processor.__class__.__name__,
-                    last_processor.output_type,
-                    self.output_type,
-                    e)
+            # Use DecomposedType.is_type_compatible for the final export stage to allow batch compatibility
+            # This enables BatchingProcessor[T] -> Exporter[T] patterns where the exporter handles both T and list[T]
+            if not DecomposedType.is_type_compatible(last_processor.output_type, self.output_type):
+                logger.error("Last processor %s output=%s incompatible with exporter output=%s",
+                             last_processor.__class__.__name__,
+                             last_processor.output_type,
+                             self.output_type)
+                raise ValueError("Last processor incompatible with exporter output")
 
         # Lock the pipeline to prevent further modifications
         self._pipeline_locked = True
@@ -432,12 +403,15 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
                 await self.export_processed(processed_item)
             else:
                 logger.debug("Skipping export of empty batch")
-        elif isinstance(processed_item, self.output_class):
+        elif self.validate_output_type(processed_item):
             await self.export_processed(processed_item)
         else:
             if raise_on_invalid:
-                raise ValueError(f"Processed item {processed_item} is not a valid output type. "
-                                 f"Expected {self.output_class} or list[{self.output_class}]")
+                logger.error("Invalid processed item type for export: %s (expected %s or list[%s])",
+                             type(processed_item),
+                             self.output_type,
+                             self.output_type)
+                raise ValueError("Invalid processed item type for export")
             logger.warning("Processed item %s is not a valid output type for export", processed_item)
 
     async def _continue_pipeline_after(self, source_processor: Processor, item: Any) -> None:
@@ -512,7 +486,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             event (IntermediateStep): The event to be exported.
         """
         # Convert IntermediateStep to PipelineInputT and create export task
-        if isinstance(event, self.input_class):
+        if self.validate_input_type(event):
             input_item: PipelineInputT = event  # type: ignore
             coro = self._export_with_processing(input_item)
             self._create_export_task(coro)
