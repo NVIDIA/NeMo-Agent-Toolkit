@@ -65,7 +65,7 @@ class ConcreteContextualSpanRedactionProcessor(ContextualSpanRedactionProcessor)
         return self.data_validation_result
 
 
-@pytest.fixture
+@pytest.fixture(name="sample_span")
 def sample_span():
     """Create a sample span for testing."""
     span_context = SpanContext(span_id=123, trace_id=456)
@@ -442,7 +442,6 @@ class TestContextualSpanRedactionProcessorShouldRedact:
             extracted_data={"test": "data"},
             data_validation_result=True,
             callback=always_true_callback,
-            force_redact=True  # Use force_redact to avoid mocking private implementation
         )
 
         result = await processor.should_redact(sample_span)
@@ -454,31 +453,29 @@ class TestContextualSpanRedactionProcessorShouldRedact:
         def role_based_callback(data):
             return data.get("role") == "admin"
 
-        # Test with admin role - should redact
+        # Test with admin role - should redact via callback
         processor_admin = ConcreteContextualSpanRedactionProcessor(
             extracted_data={
                 "user": "test_user", "role": "admin"
             },
             data_validation_result=True,
             callback=role_based_callback,
-            force_redact=True  # Use force_redact to avoid mocking private implementation
         )
 
         result = await processor_admin.should_redact(sample_span)
         assert result is True
 
-        # Test with non-admin role - would not redact (but force_redact overrides)
+        # Test with non-admin role - should not redact via callback
         processor_user = ConcreteContextualSpanRedactionProcessor(
             extracted_data={
                 "user": "test_user", "role": "user"
             },
             data_validation_result=True,
             callback=role_based_callback,
-            force_redact=True  # Use force_redact to avoid mocking private implementation
         )
 
         result = await processor_user.should_redact(sample_span)
-        assert result is True  # force_redact=True always returns True
+        assert result is False
 
     async def test_should_redact_different_span_types(self, minimal_span):
         """Test should_redact works with different span configurations."""
