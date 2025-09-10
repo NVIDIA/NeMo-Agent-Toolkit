@@ -311,12 +311,12 @@ class TestPromptValidation:
 
     def test_validate_user_prompt_valid(self):
         """Test validate_user_prompt with valid prompt."""
-        valid_prompt = "User prompt with {chat_history} and {routing_request}"
+        valid_prompt = "User prompt with {chat_history} and {request}"
         assert RouterAgentGraph.validate_user_prompt(valid_prompt) is True
 
     def test_validate_user_prompt_missing_chat_history(self):
         """Test validate_user_prompt with missing {chat_history}."""
-        invalid_prompt = "User prompt with {routing_request} only"
+        invalid_prompt = "User prompt with {request} only"
         assert RouterAgentGraph.validate_user_prompt(invalid_prompt) is False
 
     def test_validate_user_prompt_empty(self):
@@ -346,7 +346,7 @@ class TestCreateRouterAgentPrompt:
     def test_create_prompt_custom_prompts(self, mock_config):
         """Test create_router_agent_prompt with custom prompts."""
         custom_system = "Custom system with {branches} and {branch_names}"
-        custom_user = "Custom user with {chat_history} and {routing_request}"
+        custom_user = "Custom user with {chat_history} and {request}"
 
         mock_config.system_prompt = custom_system
         mock_config.user_prompt = custom_user

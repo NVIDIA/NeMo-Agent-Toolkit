@@ -125,7 +125,7 @@ class RouterAgentGraph(BaseAgent):
             try:
                 agent_response = await self._call_llm(
                     self.agent, {
-                        "routing_request": state.forward_message.content, "chat_history": chat_history
+                        "request": state.forward_message.content, "chat_history": chat_history
                     })
                 if self.detailed_logs:
                     agent_input = "\n".join(str(message.content) for message in state.messages)
@@ -278,8 +278,8 @@ class RouterAgentGraph(BaseAgent):
             required_prompt_variables = {
                 "{chat_history}":
                     "The user prompt must contain {chat_history} so the agent knows about the conversation history.",
-                "{routing_request}":
-                    "The user prompt must contain {routing_request} so the agent sees the current request.",
+                "{request}":
+                    "The user prompt must contain {request} so the agent sees the current request.",
             }
             for variable_name, error_message in required_prompt_variables.items():
                 if variable_name not in user_prompt:

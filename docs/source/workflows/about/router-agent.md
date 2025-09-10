@@ -17,14 +17,14 @@ limitations under the License.
 
 # Router Agent
 
-The Router Agent is an intelligent routing system that analyzes incoming requests and directs them to the most appropriate branch (agent, function, or tool) based on the request content. Unlike other agents that may use multiple tools in sequence, the Router Agent uses a single-pass architecture to select exactly one branch that best handles the request, making it ideal for scenarios where different types of requests need specialized handling.
+The Router Agent analyzes incoming requests and directs them to the most appropriate branch (other agents or tools) based on the request content. It uses a single-pass architecture to select exactly one branch that best handles the request, making it ideal for scenarios where different types of requests need specialized handling.
 
 The Router Agent's implementation uses a two-node graph structure: a Router Node that analyzes the request and selects the appropriate branch, and a Branch Node that executes the selected branch and returns the result.
 
 ---
 
 ## Features
-- **Single-Pass Architecture**: Uses an efficient two-node graph structure with Router Node (analyzes request and selects branch) and Branch Node (executes the selected branch)
+- **Single-Pass Architecture**: Uses a two-node graph structure with Router Node (analyzes request and selects branch) and Branch Node (executes the selected branch)
 - **Intelligent Request Routing**: Analyzes user input and selects exactly one branch that best handles the request
 - **Pre-built Tools**: Leverages core library agents and tools
 - **Custom Plugin System**: Developers can bring in new tools using plugins
@@ -101,6 +101,11 @@ functions:
 ---
 
 ## Step-by-Step Breakdown of a Router Agent
+The Router Agent uses a single-pass graph architecture that efficiently analyzes requests and routes them to appropriate branches:
+
+<div align="center">
+<img src="../../_static/router_agent.png" alt="Router Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+</div>
 
 The Router Agent follows a streamlined two-phase process:
 
@@ -130,27 +135,6 @@ Since the Router Agent uses a single-pass architecture, it efficiently routes re
 
 ---
 
-## Graph Structure
-
-The Router Agent uses a single-pass graph architecture that efficiently analyzes requests and routes them to appropriate branches:
-
-<div align="center">
-<img src="../../_static/router_agent.png" alt="Router Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
-</div>
-
-The graph consists of two main components:
-
-1. **Router Node**: Analyzes the incoming request and selects the most appropriate branch based on:
-   - Request content analysis
-   - Branch descriptions and capabilities
-   - Configured routing logic
-
-2. **Branch Node**: Executes the selected branch with the original input and returns the result
-
-This architecture ensures efficient routing with minimal overhead while maintaining flexibility in branch selection.
-
----
-
 ## Use Cases
 
 The Router Agent is particularly well-suited for:
@@ -159,7 +143,6 @@ The Router Agent is particularly well-suited for:
 * **Workflow Orchestration**: Direct different types of tasks to appropriate processing pipelines
 * **API Gateway Pattern**: Route API requests to different backend services based on request characteristics
 * **Content Classification**: Automatically categorize and route content to appropriate handlers
-* **Customer Service**: Direct customer inquiries to specialized support agents based on issue type
 
 ---
 
@@ -171,8 +154,4 @@ The following are the limitations of Router Agents:
 
 * **No Inter-branch Communication**: Branches operate independently and cannot communicate with each other within a single request.
 
-* **Static Branch Configuration**: Available branches must be predefined in the configuration and cannot be dynamically added during runtime.
-
 * **Routing Accuracy Dependency**: The effectiveness of routing depends on the quality of branch descriptions and the LLM's ability to understand request intent.
-
-* **No Fallback Chaining**: If the selected branch fails or returns an unsatisfactory result, the Router Agent does not automatically try alternative branches.

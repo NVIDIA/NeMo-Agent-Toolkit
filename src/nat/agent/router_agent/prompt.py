@@ -43,6 +43,6 @@ USER_PROMPT = """
 Previous conversation history:
 {chat_history}
 
-To respond to the request {routing_request}, which branch should be chosen?
+To respond to the request: {request}, which branch should be chosen?
 
 Respond with only the branch name."""
