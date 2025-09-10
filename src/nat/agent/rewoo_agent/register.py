@@ -119,7 +119,8 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
         tools=tools,
         use_tool_schema=config.include_tool_input_schema_in_tool_description,
         detailed_logs=config.verbose,
-        log_response_max_chars=config.log_response_max_chars).build_graph()
+        log_response_max_chars=config.log_response_max_chars,
+        tool_call_max_retries=config.tool_call_max_retries).build_graph()
 
     async def _response_fn(input_message: ChatRequest) -> ChatResponse:
         try:
