@@ -131,7 +131,9 @@ class MCPBaseClient(ABC):
             raise ValueError("transport must be either 'sse', 'stdio' or 'streamable-http'")
 
         self._exit_stack: AsyncExitStack | None = None
-        self._session: ClientSession | None = None
+        self._auth_connection = None  # Store the connection context for authenticated session
+        self._session: ClientSession | None = None  # Unauthenticated session for discovery
+        self._auth_session: ClientSession | None = None  # Authenticated session for tool calls
         self._auth_provider = auth_provider
         self._connection_established = False
         self._initial_connection = False
@@ -147,7 +149,7 @@ class MCPBaseClient(ABC):
 
         self._exit_stack = AsyncExitStack()
 
-        # Establish initial connection without auth headers
+        # Establish unauthenticated connection for discovery
         self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
         self._initial_connection = True
         self._connection_established = True
@@ -159,9 +161,17 @@ class MCPBaseClient(ABC):
         if not self._exit_stack:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
 
+        # Close unauthenticated session
         await self._exit_stack.aclose()
         self._session = None
         self._exit_stack = None
+
+        # Close authenticated session if it exists
+        if self._auth_connection:
+            # Close the connection context which will clean up the session
+            await self._auth_connection.__aexit__(None, None, None)
+            self._auth_connection = None
+            self._auth_session = None
 
     @property
     def server_name(self):
@@ -170,32 +180,23 @@ class MCPBaseClient(ABC):
         """
         return self._transport
 
-    async def _ensure_authenticated(self):
-        """Ensure connection is authenticated, reconnect if needed."""
+    async def ensure_authenticated(self):
+        """Ensure authenticated session exists for tool calls."""
         if self._authenticated:
             return
 
         # If no auth provider, no authentication needed
-        if not self._auth_provider:
-            return
-
-        if not self._initial_connection:
-            raise RuntimeError("Must establish initial connection first")
-
-        # Close current connection
-        if self._exit_stack:
-            await self._exit_stack.aclose()
-            self._exit_stack = None
-            self._session = None
-
-        # Reconnect with auth headers
-        await self._reconnect_with_auth()
+        if self._auth_provider:
+            if not self._initial_connection:
+                raise RuntimeError("Must establish initial connection first")
+            # Create authenticated session
+            await self._create_authenticated_session()
         self._authenticated = True
 
     @abstractmethod
-    async def _reconnect_with_auth(self):
-        """Reconnect to server with authentication headers."""
-        pass
+    async def _create_authenticated_session(self):
+        """Create authenticated session with auth headers."""
+        raise NotImplementedError
 
     async def _get_auth_headers(self) -> dict[str, str]:
         """Get authentication headers from the auth provider."""
@@ -222,11 +223,12 @@ class MCPBaseClient(ABC):
         """
         Establish a session with an MCP server within an async context
         """
-        pass
+        yield
 
     async def get_tools(self):
         """
         Retrieve a dictionary of all tools served by the MCP server.
+        Uses unauthenticated session for discovery.
         """
 
         if not self._session:
@@ -239,7 +241,8 @@ class MCPBaseClient(ABC):
                 MCPToolClient(session=self._session,
                               tool_name=tool.name,
                               tool_description=tool.description,
-                              tool_input_schema=tool.inputSchema)
+                              tool_input_schema=tool.inputSchema,
+                              parent_client=self)
             for tool in response.tools
         }
 
@@ -273,10 +276,12 @@ class MCPBaseClient(ABC):
         if not self._session:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
 
-        # Ensure connection is authenticated before making tool calls
-        await self._ensure_authenticated()
-
-        result = await self._session.call_tool(tool_name, tool_args)
+        # Determine which session to use for tool calls
+        await self.ensure_authenticated()
+        session = self._auth_session if self._auth_session else self._session
+        if session is None:
+            raise RuntimeError("No session available for tool call")
+        result = await session.call_tool(tool_name, tool_args)
         return result
 
 
@@ -333,14 +338,15 @@ class MCPSSEClient(MCPBaseClient):
                 yield session
 
     @override
-    async def _reconnect_with_auth(self):
-        """Reconnect to SSE server with authentication headers."""
-        self._exit_stack = AsyncExitStack()
+    async def _create_authenticated_session(self):
+        """Create authenticated SSE session with auth headers."""
         headers = await self._get_auth_headers()
 
-        async with sse_client(url=self._url, headers=headers) as (read, write):
-            self._session = await self._exit_stack.enter_async_context(ClientSession(read, write))
-            await self._session.initialize()
+        # Create the connection context and keep it alive
+        self._auth_connection = sse_client(url=self._url, headers=headers)
+        read, write = await self._auth_connection.__aenter__()
+        self._auth_session = ClientSession(read, write)
+        await self._auth_session.initialize()
 
 
 class MCPStdioClient(MCPBaseClient):
@@ -388,6 +394,12 @@ class MCPStdioClient(MCPBaseClient):
                 await session.initialize()
                 yield session
 
+    @override
+    async def _create_authenticated_session(self):
+        """Stdio transport doesn't support authentication, so this is a no-op."""
+        # Stdio transport doesn't support authentication
+        # The unauthenticated session will be used for both discovery and tool calls
+
 
 class MCPStreamableHTTPClient(MCPBaseClient):
     """
@@ -422,14 +434,21 @@ class MCPStreamableHTTPClient(MCPBaseClient):
                 yield session
 
     @override
-    async def _reconnect_with_auth(self):
-        """Reconnect to streamable-http server with authentication headers."""
-        self._exit_stack = AsyncExitStack()
-        headers = await self._get_auth_headers()
+    async def _create_authenticated_session(self):
+        """Create authenticated streamable-http session with auth headers."""
+        if self._auth_session:
+            return RuntimeError("Authenticated session already exists")
 
-        async with streamablehttp_client(url=self._url, headers=headers) as (read, write, _):
-            self._session = await self._exit_stack.enter_async_context(ClientSession(read, write))
-            await self._session.initialize()
+        headers = await self._get_auth_headers()
+        logger.info("Creating authenticated session")
+
+        # Create the connection context and keep it alive
+        self._auth_connection = streamablehttp_client(url=self._url, headers=headers)
+        read, write, _ = await self._auth_connection.__aenter__()
+        self._auth_session = ClientSession(read, write)
+        await self._auth_session.initialize()
+
+        logger.info("Created Authenticated session")
 
 
 class MCPToolClient:
@@ -437,21 +456,25 @@ class MCPToolClient:
     Client wrapper used to call an MCP tool.
 
     Args:
-        connect_fn (callable): Function that returns an async context manager for connecting to the server
+        session (ClientSession): The MCP client session
         tool_name (str): The name of the tool to wrap
         tool_description (str): The description of the tool provided by the MCP server.
         tool_input_schema (dict): The input schema for the tool.
+        parent_client (MCPBaseClient): The parent MCP client for auth management.
     """
 
     def __init__(self,
                  session: ClientSession,
                  tool_name: str,
                  tool_description: str | None,
-                 tool_input_schema: dict | None = None):
+                 tool_input_schema: dict | None = None,
+                 parent_client: "MCPBaseClient | None" = None):
         self._session = session
         self._tool_name = tool_name
         self._tool_description = tool_description
         self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
+        self._parent_client = parent_client
+        self._authenticated = False
 
     @property
     def name(self):
@@ -480,6 +503,24 @@ class MCPToolClient:
         """
         self._tool_description = description
 
+    async def _ensure_session_authenticated(self):
+        """Ensure the session is authenticated, refresh if needed."""
+        if self._authenticated:
+            return
+        # Switch to authenticated session
+        await self._switch_to_authenticated_session()
+        self._authenticated = True
+
+    async def _switch_to_authenticated_session(self):
+        """Switch to the authenticated session for tool calls."""
+        if not self._parent_client:
+            return
+
+        # Trigger parent client's auth session creation
+        await self._parent_client.ensure_authenticated()
+        # Update our session reference to use the authenticated session
+        self._session = self._parent_client._auth_session
+
     async def acall(self, tool_args: dict) -> str:
         """
         Call the MCP tool with the provided arguments.
@@ -487,6 +528,12 @@ class MCPToolClient:
         Args:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
         """
+        # Ensure session is authenticated before tool call
+        await self._ensure_session_authenticated()
+
+        if self._session is None:
+            raise RuntimeError("No session available for tool call")
+        logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
         result = await self._session.call_tool(self._tool_name, tool_args)
 
         output = []
