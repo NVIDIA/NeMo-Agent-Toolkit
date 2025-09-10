@@ -30,25 +30,15 @@ general:
   use_uvloop: true
 
 functions:
-  mcp_time:
-    _type: mcp_client
-    server:
-      transport: stdio
-      command: "python"
-      args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
-    # load 1 of 2 tools and override tool attributes
-    tool_filter:
-      get_current_time:
-        alias: get_current_time_mcp_tool
-        description: "Returns the current date and time from the MCP server"
-
+  current_datetime:
+    _type: current_datetime
   mcp_math:
     _type: mcp_client
     auth_provider: static_oauth2
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
-    # load all tools and use the names and descriptions from the server
+
 
 authentication:
   static_oauth2:
@@ -56,9 +46,13 @@ authentication:
     redirect_uri: http://localhost:8000/auth/redirect
     authorization_url: http://localhost:5001/oauth/authorize
     token_url: http://localhost:5001/oauth/token
+    token_endpoint_auth_method: client_secret_post
     client_id: ${MCP_CLIENT_ID}
     client_secret: ${MCP_CLIENT_SECRET}
-    scopes: ["mcp:read", "mcp:write"]
+    scopes:
+      - openid
+      - profile
+      - email
     use_pkce: false
 
 llms:
@@ -82,7 +76,7 @@ workflow:
     - calculator_inequality
     - calculator_divide
     - calculator_subtract
-    - get_current_time_mcp_tool
+    - current_datetime
   llm_name: nim_llm
   verbose: true
   retry_parsing_errors: true
