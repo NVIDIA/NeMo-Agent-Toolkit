@@ -184,7 +184,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             logger.warning("%s Continuing to agent for processing", AGENT_LOG_PREFIX)
             return AgentDecision.TOOL
 
-    async def _build_graph(self, state_schema) -> CompiledStateGraph:
+    async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
         try:
             logger.debug("%s Building and compiling the Tool Calling Agent Graph", AGENT_LOG_PREFIX)
 
