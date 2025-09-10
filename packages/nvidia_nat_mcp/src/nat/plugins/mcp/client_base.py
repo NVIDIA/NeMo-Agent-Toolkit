@@ -49,11 +49,18 @@ class NATAuthAdapter(httpx.Auth):
     Converts AuthProviderBase to httpx.Auth interface for dynamic token management.
     """
 
-    def __init__(self, auth_provider: AuthProviderBase):
+    def __init__(self, auth_provider: AuthProviderBase, auth_for_tool_calls_only):
         self.auth_provider = auth_provider
+        self.auth_for_tool_calls_only = auth_for_tool_calls_only
 
     async def async_auth_flow(self, request: httpx.Request) -> AsyncGenerator[httpx.Request, httpx.Response]:
         """Add authentication headers to the request using NAT auth provider."""
+        # Check if we should only auth tool calls
+        if self.auth_for_tool_calls_only and not self._is_tool_call_request(request):
+            # Skip auth for non-tool calls
+            yield request
+            return
+
         try:
             # Get fresh auth headers from the NAT auth provider
             auth_headers = await self._get_auth_headers()
@@ -63,6 +70,21 @@ class NATAuthAdapter(httpx.Auth):
             # Continue without auth headers if auth fails
 
         yield request
+
+    def _is_tool_call_request(self, request: httpx.Request) -> bool:
+        """Check if this is a tool call request based on the request body."""
+        try:
+            # Check if the request body contains a tool call
+            if request.content:
+                import json
+                body = json.loads(request.content.decode('utf-8'))
+                # Check if it's a JSON-RPC request with method "tools/call"
+                if (isinstance(body, dict) and body.get("method") == "tools/call"):
+                    return True
+        except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
+            # If we can't parse the body, assume it's not a tool call
+            pass
+        return False
 
     async def _get_auth_headers(self) -> dict[str, str]:
         """Get authentication headers from the NAT auth provider."""
@@ -167,7 +189,8 @@ class MCPBaseClient(ABC):
     def __init__(self,
                  transport: str = 'streamable-http',
                  auth_provider: AuthProviderBase | httpx.Auth | None = None,
-                 use_separate_sessions: bool = False):
+                 use_separate_sessions: bool = False,
+                 auth_for_tool_calls_only: bool = True):
         self._tools = None
         self._transport = transport.lower()
         if self._transport not in ['sse', 'stdio', 'streamable-http']:
@@ -178,6 +201,7 @@ class MCPBaseClient(ABC):
         self._session: ClientSession | None = None  # Main session
         self._auth_session: ClientSession | None = None  # Authenticated session for tool calls (legacy mode)
         self._use_separate_sessions = use_separate_sessions
+        self._auth_for_tool_calls_only = auth_for_tool_calls_only
         self._connection_established = False
         self._initial_connection = False
         self._authenticated = False
@@ -191,7 +215,7 @@ class MCPBaseClient(ABC):
             self._nat_auth = auth_provider
             # Convert NAT auth to httpx.Auth if not using separate sessions
             if not use_separate_sessions and auth_provider:
-                self._httpx_auth = NATAuthAdapter(auth_provider)
+                self._httpx_auth = NATAuthAdapter(auth_provider, auth_for_tool_calls_only)
 
     @property
     def transport(self) -> str:
@@ -371,8 +395,9 @@ class MCPSSEClient(MCPBaseClient):
     def __init__(self,
                  url: str,
                  auth_provider: AuthProviderBase | httpx.Auth | None = None,
-                 use_separate_sessions: bool = False):
-        super().__init__("sse", auth_provider, use_separate_sessions)
+                 use_separate_sessions: bool = False,
+                 auth_for_tool_calls_only: bool = True):
+        super().__init__("sse", auth_provider, use_separate_sessions, auth_for_tool_calls_only)
         self._url = url
 
     @property
@@ -505,8 +530,9 @@ class MCPStreamableHTTPClient(MCPBaseClient):
     def __init__(self,
                  url: str,
                  auth_provider: AuthProviderBase | httpx.Auth | None = None,
-                 use_separate_sessions: bool = False):
-        super().__init__("streamable-http", auth_provider, use_separate_sessions)
+                 use_separate_sessions: bool = False,
+                 auth_for_tool_calls_only: bool = True):
+        super().__init__("streamable-http", auth_provider, use_separate_sessions, auth_for_tool_calls_only)
         self._url = url
 
     @property
@@ -645,7 +671,7 @@ class MCPToolClient:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
         """
         # Ensure session is authenticated before tool call
-        await self._ensure_session_authenticated()
+        # await self._ensure_session_authenticated()
 
         if self._session is None:
             raise RuntimeError("No session available for tool call")
