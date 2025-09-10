@@ -24,7 +24,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.tools import BaseTool
-from langgraph.graph.graph import CompiledGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from nat.agent.router_agent.agent import RouterAgentGraph
 from nat.agent.router_agent.agent import RouterAgentGraphState
@@ -261,7 +261,7 @@ class TestRouterAgentGraph:
         """Test graph building and compilation."""
         with patch('nat.agent.router_agent.agent.StateGraph') as mock_state_graph:
             mock_graph_instance = Mock()
-            mock_compiled_graph = Mock(spec=CompiledGraph)
+            mock_compiled_graph = Mock(spec=CompiledStateGraph)
             mock_graph_instance.compile.return_value = mock_compiled_graph
             mock_state_graph.return_value = mock_graph_instance
 
