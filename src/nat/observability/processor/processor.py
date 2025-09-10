@@ -58,6 +58,9 @@ class Processor(Generic[InputT, OutputT], TypeIntrospectionMixin, ABC):
         chained processors.
     """
 
+    # All processors automatically use this for signature checking
+    _signature_method = 'process'
+
     @abstractmethod
     async def process(self, item: InputT) -> OutputT:
         """Process an item and return a potentially different type.

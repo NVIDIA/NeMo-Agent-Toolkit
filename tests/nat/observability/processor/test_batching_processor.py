@@ -56,11 +56,13 @@ class TestBatchingProcessorInitialization:
 
         # Type introspection works with TypeVars in generics
         # The actual types are preserved through the generic system
-        assert str(processor.input_type) in ['str', '~T']  # Could be TypeVar
-        assert str(processor.output_type) in ['list[str]', 'list[~T]']  # Could be TypeVar
-        # Classes might also be TypeVars depending on implementation
-        assert str(processor.input_class) in ['str', '~T', '<class \'str\'>']
-        assert str(processor.output_class) in ['list', '<class \'list\'>', '~T']
+        assert str(processor.input_type) in ['str', '~T', "<class 'str'>"]  # Could be TypeVar or concrete type
+        assert str(processor.output_type) in ['list[str]', 'list[~T]', "list[str]"]  # Could be TypeVar or concrete type
+
+        # Test Pydantic-based validation methods (preferred approach)
+        assert processor.validate_input_type("test_string")
+        assert processor.validate_output_type(["item1", "item2"])
+        assert not processor.validate_input_type(123)  # Should fail for wrong type
 
     def test_initial_statistics(self):
         """Test initial statistics are correct."""
