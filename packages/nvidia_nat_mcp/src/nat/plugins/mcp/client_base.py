@@ -204,13 +204,12 @@ class MCPBaseClient(ABC):
         # Handle both auth types
         if isinstance(auth_provider, httpx.Auth):
             self._httpx_auth = auth_provider
-            self._nat_auth = None
         else:
-            self._httpx_auth = None
-            self._nat_auth = auth_provider
             # Convert NAT auth to httpx.Auth
             if auth_provider:
                 self._httpx_auth = NATAuthAdapter(auth_provider, auth_for_tool_calls_only)
+            else:
+                self._httpx_auth = None
 
     @property
     def transport(self) -> str:
@@ -223,7 +222,7 @@ class MCPBaseClient(ABC):
         self._exit_stack = AsyncExitStack()
 
         # Establish connection with httpx.Auth
-        self._session = await self._exit_stack.enter_async_context(self.connect_to_server_with_auth())
+        self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
 
         self._initial_connection = True
         self._connection_established = True
@@ -251,14 +250,6 @@ class MCPBaseClient(ABC):
     async def connect_to_server(self):
         """
         Establish a session with an MCP server within an async context
-        """
-        yield
-
-    @abstractmethod
-    @asynccontextmanager
-    async def connect_to_server_with_auth(self):
-        """
-        Establish a session with an MCP server with httpx.Auth within an async context
         """
         yield
 
@@ -323,14 +314,10 @@ class MCPSSEClient(MCPBaseClient):
 
     Args:
       url (str): The url of the MCP server
-      auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self,
-                 url: str,
-                 auth_provider: AuthProviderBase | httpx.Auth | None = None,
-                 auth_for_tool_calls_only: bool = True):
-        super().__init__("sse", auth_provider, auth_for_tool_calls_only)
+    def __init__(self, url: str):
+        super().__init__("sse", None, False)
         self._url = url
 
     @property
@@ -348,29 +335,6 @@ class MCPSSEClient(MCPBaseClient):
         Establish a session with an MCP SSE server within an async context
         """
         async with sse_client(url=self._url) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                yield session
-
-    @asynccontextmanager
-    @override
-    async def connect_to_server_with_auth(self):
-        """
-        Establish a session with an MCP SSE server with httpx.Auth within an async context
-        """
-        # SSE doesn't support httpx.Auth, fall back to header-based auth
-        headers = {}
-        if self._nat_auth:
-            try:
-                auth_result = await self._nat_auth.authenticate()
-                from nat.data_models.authentication import BearerTokenCred
-                if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
-                    token = auth_result.credentials[0].token.get_secret_value()
-                    headers = {"Authorization": f"Bearer {token}"}
-            except Exception as e:
-                logger.warning("Failed to get auth token for SSE: %s", e)
-
-        async with sse_client(url=self._url, headers=headers) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
@@ -447,43 +411,16 @@ class MCPStreamableHTTPClient(MCPBaseClient):
         return f"streamable-http:{self._url}"
 
     @asynccontextmanager
+    @override
     async def connect_to_server(self):
         """
         Establish a session with an MCP server via streamable-http within an async context
         """
-        async with streamablehttp_client(url=self._url) as (read, write, _):
+        # Use httpx.Auth for authentication
+        async with streamablehttp_client(url=self._url, auth=self._httpx_auth) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
-
-    @asynccontextmanager
-    @override
-    async def connect_to_server_with_auth(self):
-        """
-        Establish a session with an MCP server via streamable-http with httpx.Auth within an async context
-        """
-        # Use httpx.Auth if available, otherwise fall back to headers
-        if self._httpx_auth:
-            async with streamablehttp_client(url=self._url, auth=self._httpx_auth) as (read, write, _):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    yield session
-        else:
-            # Fall back to header-based auth
-            headers = {}
-            if self._nat_auth:
-                try:
-                    auth_result = await self._nat_auth.authenticate()
-                    from nat.data_models.authentication import BearerTokenCred
-                    if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
-                        token = auth_result.credentials[0].token.get_secret_value()
-                        headers = {"Authorization": f"Bearer {token}"}
-                except Exception as e:
-                    logger.warning("Failed to get auth token for StreamableHTTP: %s", e)
-            async with streamablehttp_client(url=self._url, headers=headers) as (read, write, _):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    yield session
 
 
 class MCPToolClient:
