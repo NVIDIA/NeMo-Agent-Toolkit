@@ -60,7 +60,7 @@ class ToolCallAgentGraph(DualNodeAgent):
         detailed_logs: bool = False,
         log_response_max_chars: int = 1000,
         handle_tool_errors: bool = True,
-        return_direct: list[str] | None = None,
+        return_direct: list[BaseTool] | None = None,
     ):
         super().__init__(llm=llm,
                          tools=tools,
@@ -152,6 +152,16 @@ class ToolCallAgentGraph(DualNodeAgent):
             raise
 
     async def tool_conditional_edge(self, state: ToolCallAgentGraphState) -> AgentDecision:
+        """
+        Determines whether to continue to the agent or end graph execution after a tool call.
+
+        Args:
+            state: The current state of the Tool Calling Agent graph containing messages and tool responses.
+
+        Returns:
+            AgentDecision: TOOL to continue to agent for processing, or END to terminate graph execution.
+            Returns END if the tool is in return_direct list, otherwise returns TOOL to continue processing.
+        """
         try:
             logger.debug("%s Starting the Tool Conditional Edge", AGENT_LOG_PREFIX)
             if not state.messages:

@@ -47,7 +47,7 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
     system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
     additional_instructions: str | None = Field(default=None,
                                                 description="Additional instructions appended to the system prompt.")
-    return_direct: list[str] | None = Field(
+    return_direct: list[FunctionRef] | None = Field(
         default=None, description="List of tool names that should return responses directly without LLM processing.")
 
 
