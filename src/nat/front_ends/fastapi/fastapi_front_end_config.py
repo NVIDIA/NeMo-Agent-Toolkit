@@ -205,9 +205,12 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         default=None,
         description=
         "SQLAlchemy database URL for storing async job metadata, if unset a temporary SQLite database is used.")
-    max_running_async_jobs: int = Field(default=10,
-                                        description="Maximum number of async jobs to run concurrently",
-                                        ge=1)
+    max_running_async_jobs: int = Field(
+        default=10,
+        description=(
+            "Maximum number of async jobs to run concurrently, this controls the number of dask workers created. "
+            "This parameter is only used when scheduler_address is `None` and a Dask local cluster is created."),
+        ge=1)
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
