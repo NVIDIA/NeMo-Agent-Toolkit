@@ -31,7 +31,8 @@ logger = logging.getLogger(__name__)
 
 class RouterAgentWorkflowConfig(FunctionBaseConfig, name="router_agent"):
     """
-    A router agent takes in the incoming message, combines it with a prompt and the list of branches, and ask a LLM about which branch to take.
+    A router agent takes in the incoming message, combines it with a prompt and the list of branches,
+    and ask a LLM about which branch to take.
     """
     branches: list[FunctionRef] = Field(default_factory=list,
                                         description="The list of branches to provide to the router agent.")
@@ -39,6 +40,8 @@ class RouterAgentWorkflowConfig(FunctionBaseConfig, name="router_agent"):
     description: str = Field(default="Router Agent Workflow", description="Description of this functions use.")
     system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
     user_prompt: str | None = Field(default=None, description="Provides the prompt to use with the agent.")
+    max_router_retries: int = Field(
+        default=3, description="Maximum number of retries if the router agent fails to choose a branch.")
     detailed_logs: bool = Field(default=False, description="Set the verbosity of the router agent's logging.")
     log_response_max_chars: PositiveInt = Field(
         default=1000, description="Maximum number of characters to display in logs when logging branch responses.")
@@ -64,6 +67,7 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
         llm=llm,
         branches=branches,
         prompt=prompt,
+        max_router_retries=config.max_router_retries,
         detailed_logs=config.detailed_logs,
         log_response_max_chars=config.log_response_max_chars,
     ).build_graph()

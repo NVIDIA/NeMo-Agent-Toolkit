@@ -52,6 +52,7 @@ class RouterAgentGraph(BaseAgent):
         llm: BaseChatModel,
         branches: list[BaseTool],
         prompt: ChatPromptTemplate,
+        max_router_retries: int = 3,
         callbacks: list[AsyncCallbackHandler] | None = None,
         detailed_logs: bool = False,
         log_response_max_chars: int = 1000,
@@ -66,37 +67,52 @@ class RouterAgentGraph(BaseAgent):
         self._branches_dict = {branch.name: branch for branch in branches}
         branch_names = ",".join([branch.name for branch in branches])
         branch_names_and_descriptions = "\n".join([f"{branch.name}: {branch.description}" for branch in branches])
-        prompt = prompt.partial(branches=branch_names_and_descriptions, branch_names=branch_names)
 
+        prompt = prompt.partial(branches=branch_names_and_descriptions, branch_names=branch_names)
         self.agent = prompt | self.llm
+
+        self.max_router_retries = max_router_retries
 
     def _get_branch(self, branch_name: str) -> BaseTool | None:
         return self._branches_dict.get(branch_name, None)
 
     async def agent_node(self, state: RouterAgentGraphState):
         logger.debug("%s Starting the Router Agent Node", AGENT_LOG_PREFIX)
-        try:
-            chat_history = self._get_chat_history(state.messages)
-            agent_response = await self._call_llm(self.agent, {
-                "routing_request": state.relay_message, "chat_history": chat_history
-            })
-            if self.detailed_logs:
-                agent_input = "\n".join(str(message.content) for message in state.messages)
-                logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, agent_response)
+        chat_history = self._get_chat_history(state.messages)
+        for attempt in range(1, self.max_router_retries + 1):
+            try:
+                agent_response = await self._call_llm(
+                    self.agent, {
+                        "routing_request": state.relay_message, "chat_history": chat_history
+                    })
+                if self.detailed_logs:
+                    agent_input = "\n".join(str(message.content) for message in state.messages)
+                    logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, agent_response)
 
-            state.messages += [agent_response]
+                state.messages += [agent_response]
 
-            # Determine chosen branch based on agent response
-            if state.chosen_branch == "":
-                for branch in self._branches:
-                    if branch.name.lower() in str(agent_response.content).lower():
-                        state.chosen_branch = branch.name
-                        if self.detailed_logs:
-                            logger.debug("%s Router Agent has chosen branch: %s", AGENT_LOG_PREFIX, branch.name)
-                        break
-        except Exception as ex:
-            logger.error("%s Router Agent failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
-            raise
+                # Determine chosen branch based on agent response
+                if state.chosen_branch == "":
+                    for branch in self._branches:
+                        if branch.name.lower() in str(agent_response.content).lower():
+                            state.chosen_branch = branch.name
+                            if self.detailed_logs:
+                                logger.debug("%s Router Agent has chosen branch: %s", AGENT_LOG_PREFIX, branch.name)
+                            return state
+
+                # The agent failed to choose a branch
+                if state.chosen_branch == "":
+                    if attempt == self.max_router_retries:
+                        logger.exception("%s Router Agent has empty chosen branch", AGENT_LOG_PREFIX)
+                        raise RuntimeError("Router Agent failed to choose a branch")
+                    logger.warning("%s Router Agent failed to choose a branch, retrying %d out of %d",
+                                   AGENT_LOG_PREFIX,
+                                   attempt,
+                                   self.max_router_retries)
+
+            except Exception as ex:
+                logger.error("%s Router Agent failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
+                raise
 
         return state
 
@@ -105,7 +121,7 @@ class RouterAgentGraph(BaseAgent):
         try:
             if state.chosen_branch == "":
                 logger.exception("%s Router Agent has empty chosen branch", AGENT_LOG_PREFIX)
-                raise ValueError("Router Agent failed to choose a branch")
+                raise RuntimeError("Router Agent failed to choose a branch")
             requested_branch = self._get_branch(state.chosen_branch)
             if not requested_branch:
                 logger.error("%s Router Agent wants to call tool %s but it is not in the config file",
@@ -122,7 +138,7 @@ class RouterAgentGraph(BaseAgent):
             return state
 
         except Exception as ex:
-            logger.error("%s Router Agent throws exception during tool node execution: %s", AGENT_LOG_PREFIX, ex)
+            logger.error("%s Router Agent throws exception during branch node execution: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     async def _build_graph(self, state_schema):

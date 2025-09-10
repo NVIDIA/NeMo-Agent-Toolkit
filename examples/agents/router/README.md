@@ -59,6 +59,7 @@ The Router Agent is configured through the `config.yml` file. The following conf
 - **workflow.description**: Description of the workflow (default: "Router Agent Workflow")
 - **workflow.system_prompt**: Custom system prompt to use with the agent (default: uses built-in prompt)
 - **workflow.user_prompt**: Custom user prompt to use with the agent (default: uses built-in prompt)
+- **workflow.max_router_retries**: Maximum number of retries if the router agent fails to choose a branch (default: 3)
 - **workflow.detailed_logs**: Enable detailed logging to see the routing decisions and responses (default: false)
 - **workflow.log_response_max_chars**: Maximum number of characters to display in logs when logging branch responses (default: 1000)
 
@@ -73,13 +74,14 @@ workflow:
   detailed_logs: true
 ```
 
-**Advanced Configuration with Custom Options:**
+**Configuration with Custom Options:**
 ```yaml
 workflow:
   _type: router_agent
   branches: [fruit_advisor, city_advisor, literature_advisor]
   llm_name: nim_llm
   description: "Multi-domain Advisor Router"
+  max_router_retries: 5
   detailed_logs: true
   log_response_max_chars: 2000
   system_prompt: "You are an intelligent routing agent that analyzes user requests and selects the most appropriate advisor."
