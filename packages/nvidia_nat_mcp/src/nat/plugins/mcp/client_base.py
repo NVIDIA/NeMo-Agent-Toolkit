@@ -121,17 +121,21 @@ class MCPBaseClient(ABC):
 
     Args:
         transport (str): The type of client to use ('sse', 'stdio', or 'streamable-http')
+        auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self, transport: str = 'streamable-http'):
+    def __init__(self, transport: str = 'streamable-http', auth_provider: AuthProviderBase | None = None):
         self._tools = None
         self._transport = transport.lower()
         if self._transport not in ['sse', 'stdio', 'streamable-http']:
             raise ValueError("transport must be either 'sse', 'stdio' or 'streamable-http'")
 
         self._exit_stack: AsyncExitStack | None = None
-
         self._session: ClientSession | None = None
+        self._auth_provider = auth_provider
+        self._connection_established = False
+        self._initial_connection = False
+        self._authenticated = False
 
     @property
     def transport(self) -> str:
@@ -143,7 +147,10 @@ class MCPBaseClient(ABC):
 
         self._exit_stack = AsyncExitStack()
 
+        # Establish initial connection without auth headers
         self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
+        self._initial_connection = True
+        self._connection_established = True
 
         return self
 
@@ -162,6 +169,52 @@ class MCPBaseClient(ABC):
         Provide server name for logging
         """
         return self._transport
+
+    async def _ensure_authenticated(self):
+        """Ensure connection is authenticated, reconnect if needed."""
+        if self._authenticated:
+            return
+
+        # If no auth provider, no authentication needed
+        if not self._auth_provider:
+            return
+
+        if not self._initial_connection:
+            raise RuntimeError("Must establish initial connection first")
+
+        # Close current connection
+        if self._exit_stack:
+            await self._exit_stack.aclose()
+            self._exit_stack = None
+            self._session = None
+
+        # Reconnect with auth headers
+        await self._reconnect_with_auth()
+        self._authenticated = True
+
+    @abstractmethod
+    async def _reconnect_with_auth(self):
+        """Reconnect to server with authentication headers."""
+        pass
+
+    async def _get_auth_headers(self) -> dict[str, str]:
+        """Get authentication headers from the auth provider."""
+        if not self._auth_provider:
+            return {}
+
+        try:
+            auth_result = await self._auth_provider.authenticate()
+            # Check if we have BearerTokenCred
+            from nat.data_models.authentication import BearerTokenCred
+            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
+                token = auth_result.credentials[0].token.get_secret_value()
+                return {"Authorization": f"Bearer {token}"}
+            else:
+                logger.warning("Auth provider did not return BearerTokenCred")
+                return {}
+        except Exception as e:
+            logger.warning("Failed to get auth token: %s", e)
+            return {}
 
     @abstractmethod
     @asynccontextmanager
@@ -220,6 +273,9 @@ class MCPBaseClient(ABC):
         if not self._session:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
 
+        # Ensure connection is authenticated before making tool calls
+        await self._ensure_authenticated()
+
         result = await self._session.call_tool(tool_name, tool_args)
         return result
 
@@ -271,11 +327,20 @@ class MCPSSEClient(MCPBaseClient):
         """
         Establish a session with an MCP SSE server within an async context
         """
-        headers = await self._get_auth_headers()
-        async with sse_client(url=self._url, headers=headers) as (read, write):
+        async with sse_client(url=self._url) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
+
+    @override
+    async def _reconnect_with_auth(self):
+        """Reconnect to SSE server with authentication headers."""
+        self._exit_stack = AsyncExitStack()
+        headers = await self._get_auth_headers()
+
+        async with sse_client(url=self._url, headers=headers) as (read, write):
+            self._session = await self._exit_stack.enter_async_context(ClientSession(read, write))
+            await self._session.initialize()
 
 
 class MCPStdioClient(MCPBaseClient):
@@ -346,35 +411,25 @@ class MCPStreamableHTTPClient(MCPBaseClient):
     def server_name(self):
         return f"streamable-http:{self._url}"
 
-    async def _get_auth_headers(self) -> dict[str, str]:
-        """Get authentication headers from the auth provider."""
-        if not self._auth_provider:
-            return {}
-
-        try:
-            auth_result = await self._auth_provider.authenticate()
-            # Check if we have BearerTokenCred
-            from nat.data_models.authentication import BearerTokenCred
-            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
-                token = auth_result.credentials[0].token.get_secret_value()
-                return {"Authorization": f"Bearer {token}"}
-            else:
-                logger.warning("Auth provider did not return BearerTokenCred")
-                return {}
-        except Exception as e:
-            logger.warning("Failed to get auth token: %s", e)
-            return {}
-
     @asynccontextmanager
     async def connect_to_server(self):
         """
         Establish a session with an MCP server via streamable-http within an async context
         """
-        headers = await self._get_auth_headers()
-        async with streamablehttp_client(url=self._url, headers=headers) as (read, write, _):
+        async with streamablehttp_client(url=self._url) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
+
+    @override
+    async def _reconnect_with_auth(self):
+        """Reconnect to streamable-http server with authentication headers."""
+        self._exit_stack = AsyncExitStack()
+        headers = await self._get_auth_headers()
+
+        async with streamablehttp_client(url=self._url, headers=headers) as (read, write, _):
+            self._session = await self._exit_stack.enter_async_context(ClientSession(read, write))
+            await self._session.initialize()
 
 
 class MCPToolClient:
