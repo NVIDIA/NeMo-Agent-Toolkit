@@ -135,7 +135,7 @@ Since the Router Agent uses a single-pass architecture, it efficiently routes re
 The Router Agent uses a single-pass graph architecture that efficiently analyzes requests and routes them to appropriate branches:
 
 <div align="center">
-<img src="../_static/router_agent.png" alt="Router Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+<img src="../../_static/router_agent.png" alt="Router Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
 </div>
 
 The graph consists of two main components:

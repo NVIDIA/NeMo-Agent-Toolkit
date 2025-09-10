@@ -38,15 +38,31 @@ logger = logging.getLogger(__name__)
 
 
 class RouterAgentGraphState(BaseModel):
-    """State schema for the Router Agent Graph"""
+    """State schema for the Router Agent Graph.
+
+    This class defines the state structure used throughout the Router Agent's
+    execution graph, containing messages, routing information, and branch selection.
+
+    Attributes:
+        messages: A list of messages representing the conversation history.
+        forward_message: The message to be forwarded to the chosen branch.
+        chosen_branch: The name of the branch selected by the router agent.
+    """
     messages: list[BaseMessage] = Field(default_factory=list)
     forward_message: BaseMessage = Field(default_factory=lambda: HumanMessage(content=""))
     chosen_branch: str = Field(default="")
 
 
 class RouterAgentGraph(BaseAgent):
-    """Configurable Router Agent.
-    A Router Agent relays the original input to one of the branches. It only calls one branch and then returns."""
+    """Configurable Router Agent for routing requests to different branches.
+
+    A Router Agent analyzes incoming requests and routes them to one of the
+    configured branches based on the content and context. It makes a single
+    routing decision and executes only the selected branch before returning.
+
+    This agent is useful for creating multi-path workflows where different
+    types of requests need to be handled by specialized sub-agents or tools.
+    """
 
     def __init__(
         self,
@@ -58,6 +74,17 @@ class RouterAgentGraph(BaseAgent):
         detailed_logs: bool = False,
         log_response_max_chars: int = 1000,
     ):
+        """Initialize the Router Agent.
+
+        Args:
+            llm: The language model to use for routing decisions.
+            branches: List of tools/branches that the agent can route to.
+            prompt: The chat prompt template for the routing agent.
+            max_router_retries: Maximum number of retries if branch selection fails.
+            callbacks: Optional list of async callback handlers.
+            detailed_logs: Whether to enable detailed logging.
+            log_response_max_chars: Maximum characters to log in responses.
+        """
         super().__init__(llm=llm,
                          tools=branches,
                          callbacks=callbacks,
@@ -78,13 +105,28 @@ class RouterAgentGraph(BaseAgent):
         return self._branches_dict.get(branch_name, None)
 
     async def agent_node(self, state: RouterAgentGraphState):
+        """Execute the agent node to select a branch for routing.
+
+        This method processes the incoming request and determines which branch
+        should handle it. It uses the configured LLM to analyze the request
+        and select the most appropriate branch.
+
+        Args:
+            state: The current state of the router agent graph.
+
+        Returns:
+            RouterAgentGraphState: Updated state with the chosen branch.
+
+        Raises:
+            RuntimeError: If the agent fails to choose a branch after max retries.
+        """
         logger.debug("%s Starting the Router Agent Node", AGENT_LOG_PREFIX)
         chat_history = self._get_chat_history(state.messages)
         for attempt in range(1, self.max_router_retries + 1):
             try:
                 agent_response = await self._call_llm(
                     self.agent, {
-                        "routing_request": state.forward_message, "chat_history": chat_history
+                        "routing_request": state.forward_message.content, "chat_history": chat_history
                     })
                 if self.detailed_logs:
                     agent_input = "\n".join(str(message.content) for message in state.messages)
@@ -104,7 +146,7 @@ class RouterAgentGraph(BaseAgent):
                 # The agent failed to choose a branch
                 if state.chosen_branch == "":
                     if attempt == self.max_router_retries:
-                        logger.exception("%s Router Agent has empty chosen branch", AGENT_LOG_PREFIX)
+                        logger.error("%s Router Agent has empty chosen branch", AGENT_LOG_PREFIX)
                         raise RuntimeError("Router Agent failed to choose a branch")
                     logger.warning("%s Router Agent failed to choose a branch, retrying %d out of %d",
                                    AGENT_LOG_PREFIX,
@@ -118,10 +160,25 @@ class RouterAgentGraph(BaseAgent):
         return state
 
     async def branch_node(self, state: RouterAgentGraphState):
+        """Execute the selected branch with the forwarded message.
+
+        This method calls the tool/branch that was selected by the agent node
+        and processes the response.
+
+        Args:
+            state: The current state containing the chosen branch and message.
+
+        Returns:
+            RouterAgentGraphState: Updated state with the branch response.
+
+        Raises:
+            RuntimeError: If no branch was chosen or branch execution fails.
+            ValueError: If the requested tool is not found in the configuration.
+        """
         logger.debug("%s Starting Router Agent Tool Node", AGENT_LOG_PREFIX)
         try:
             if state.chosen_branch == "":
-                logger.exception("%s Router Agent has empty chosen branch", AGENT_LOG_PREFIX)
+                logger.error("%s Router Agent has empty chosen branch", AGENT_LOG_PREFIX)
                 raise RuntimeError("Router Agent failed to choose a branch")
             requested_branch = self._get_branch(state.chosen_branch)
             if not requested_branch:
@@ -157,6 +214,17 @@ class RouterAgentGraph(BaseAgent):
         return self.graph
 
     async def build_graph(self):
+        """Build and compile the router agent execution graph.
+
+        Creates a state graph with agent and branch nodes, configures the
+        execution flow, and compiles the graph for execution.
+
+        Returns:
+            The compiled execution graph.
+
+        Raises:
+            Exception: If graph building or compilation fails.
+        """
         try:
             await self._build_graph(state_schema=RouterAgentGraphState)
             return self.graph
@@ -166,6 +234,17 @@ class RouterAgentGraph(BaseAgent):
 
     @staticmethod
     def validate_system_prompt(system_prompt: str) -> bool:
+        """Validate that the system prompt contains required variables.
+
+        Checks that the system prompt includes necessary template variables
+        for branch information that the router agent needs.
+
+        Args:
+            system_prompt: The system prompt string to validate.
+
+        Returns:
+            True if the prompt is valid, False otherwise.
+        """
         errors = []
         required_prompt_variables = {
             "{branches}": "The system prompt must contain {branches} so the agent knows about configured branches.",
@@ -182,13 +261,26 @@ class RouterAgentGraph(BaseAgent):
 
     @staticmethod
     def validate_user_prompt(user_prompt: str) -> bool:
+        """Validate that the user prompt contains required variables.
+
+        Checks that the user prompt includes necessary template variables
+        for chat history and other required information.
+
+        Args:
+            user_prompt: The user prompt string to validate.
+
+        Returns:
+            True if the prompt is valid, False otherwise.
+        """
         errors = []
         if not user_prompt:
             errors.append("The user prompt cannot be empty.")
         else:
             required_prompt_variables = {
                 "{chat_history}":
-                    "The user prompt must contain {chat_history} so the agent knows about the conversation history."
+                    "The user prompt must contain {chat_history} so the agent knows about the conversation history.",
+                "{routing_request}":
+                    "The user prompt must contain {routing_request} so the agent sees the current request.",
             }
             for variable_name, error_message in required_prompt_variables.items():
                 if variable_name not in user_prompt:
@@ -201,17 +293,23 @@ class RouterAgentGraph(BaseAgent):
 
 
 def create_router_agent_prompt(config: "RouterAgentWorkflowConfig") -> ChatPromptTemplate:
-    from nat.agent.router_agent.prompt import SYSTEM_PROMPT
-    from nat.agent.router_agent.prompt import USER_PROMPT
-    """
-    Create a Router Agent prompt from the config.
+    """Create a Router Agent prompt from the configuration.
+
+    Builds a ChatPromptTemplate using either custom prompts from the config
+    or default system and user prompts. Validates the prompts to ensure they
+    contain required template variables.
 
     Args:
-        config (RouterAgentWorkflowConfig): The config to use for the prompt.
+        config: The router agent workflow configuration containing prompt settings.
 
     Returns:
-        ChatPromptTemplate: The Router Agent prompt.
+        A configured ChatPromptTemplate for the router agent.
+
+    Raises:
+        ValueError: If the system_prompt or user_prompt validation fails.
     """
+    from nat.agent.router_agent.prompt import SYSTEM_PROMPT
+    from nat.agent.router_agent.prompt import USER_PROMPT
     # the Router Agent prompt can be customized via config option system_prompt and user_prompt.
 
     if config.system_prompt:

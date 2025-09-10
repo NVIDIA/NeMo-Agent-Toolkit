@@ -63,6 +63,11 @@ The Router Agent is configured through the `config.yml` file. The following conf
 - **workflow.detailed_logs**: Enable detailed logging to see the routing decisions and responses (default: false)
 - **workflow.log_response_max_chars**: Maximum number of characters to display in logs when logging branch responses (default: 1000)
 
+Note on custom prompts:
+  - Include `{chat_history}` and `{routing_request}` in your `user_prompt`.
+  - Reference `{branch_names}` so the model sees the available choices.
+  - Instruct the model to choose exactly one branch and return only its name.
+
 ### Example Configuration
 
 **Basic Configuration:**
@@ -84,8 +89,8 @@ workflow:
   max_router_retries: 5
   detailed_logs: true
   log_response_max_chars: 2000
-  system_prompt: "You are an intelligent routing agent that analyzes user requests and selects the most appropriate advisor."
-  user_prompt: "Based on the user's request: {input}, select the best branch from the available options."
+  system_prompt: "You are an intelligent routing agent that analyzes user requests and selects the most appropriate advisor from {branch_names}."
+  user_prompt: "Considering the conversation so far: {chat_history} Routing request: {routing_request} Choose exactly one branch from {branch_names} and return only its name."
 ```
 
 The agent will automatically analyze incoming requests and route them to the most appropriate branch based on the request content and the descriptions of available branches.

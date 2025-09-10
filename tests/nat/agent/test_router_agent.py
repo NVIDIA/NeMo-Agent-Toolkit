@@ -13,16 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage
+from langchain_core.messages import BaseMessage
+from langchain_core.messages import HumanMessage
+from langchain_core.messages import ToolMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.tools import BaseTool
 from langgraph.graph.graph import CompiledGraph
 
-from nat.agent.router_agent.agent import (RouterAgentGraph, RouterAgentGraphState, create_router_agent_prompt)
+from nat.agent.router_agent.agent import RouterAgentGraph
+from nat.agent.router_agent.agent import RouterAgentGraphState
+from nat.agent.router_agent.agent import create_router_agent_prompt
+from nat.agent.router_agent.prompt import SYSTEM_PROMPT
+from nat.agent.router_agent.prompt import USER_PROMPT
 from nat.agent.router_agent.register import RouterAgentWorkflowConfig
-from nat.agent.router_agent.prompt import SYSTEM_PROMPT, USER_PROMPT
 
 
 class MockTool(BaseTool):
@@ -422,6 +431,30 @@ class TestRouterAgentIntegration:
         for response_content, expected_branch in test_cases:
             state = RouterAgentGraphState()
             state.messages = [AIMessage(content=response_content)]
+
+            # Simulate the branch selection logic from agent_node
+            for branch in router_agent._branches:
+                if branch.name.lower() in response_content.lower():
+                    state.chosen_branch = branch.name
+                    break
+
+            assert state.chosen_branch == expected_branch
+
+            # Simulate the branch selection logic from agent_node
+            for branch in router_agent._branches:
+                if branch.name.lower() in response_content.lower():
+                    state.chosen_branch = branch.name
+                    break
+
+            assert state.chosen_branch == expected_branch
+
+            # Simulate the branch selection logic from agent_node
+            for branch in router_agent._branches:
+                if branch.name.lower() in response_content.lower():
+                    state.chosen_branch = branch.name
+                    break
+
+            assert state.chosen_branch == expected_branch
 
             # Simulate the branch selection logic from agent_node
             for branch in router_agent._branches:

@@ -233,7 +233,7 @@ class FunctionDescriptor:
 
             is_input_typed = all([a != sig.empty for a in annotations])
 
-            input_type = tuple[*annotations] if is_input_typed else None  # noqa: syntax-error
+            input_type = tuple[*annotations] if is_input_typed else None
 
         # Get the base type here removing all annotations and async generators
         output_annotation_decomp = DecomposedType(sig.return_annotation).get_base_type()
