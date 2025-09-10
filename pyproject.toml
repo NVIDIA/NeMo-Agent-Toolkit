@@ -118,12 +118,22 @@ examples = [
   "nat_user_report",
 ]
 
-
 # Optional dependency needed when use_gunicorn is set to true
 gunicorn = [
   "gunicorn~=23.0",
 ]
 
+# Optional dependency needed when async endpoints are needed
+async_endpoints = [
+  "aiosqlite~=0.21",
+  # Newer versions of Dask make use of the asyncio loop_factory https://github.com/dask/distributed/pull/7969
+  # which was added in Python 3.12, the problem is that several of our other dependencies pull in a deprecated
+  # project `nest_asyncio` which patched asyncio.run in an incompatible way.
+  # https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/770
+  "dask==2023.6",
+  "distributed==2023.6",
+  "sqlalchemy[asyncio]~=2.0",
+]
 
 [tool.uv]
 config-settings = { editable_mode = "compat" }
