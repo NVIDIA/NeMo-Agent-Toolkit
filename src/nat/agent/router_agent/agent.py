@@ -28,7 +28,6 @@ from pydantic import Field
 
 from nat.agent.base import AGENT_CALL_LOG_MESSAGE
 from nat.agent.base import AGENT_LOG_PREFIX
-from nat.agent.base import AgentDecision
 from nat.agent.base import BaseAgent
 
 if typing.TYPE_CHECKING:
@@ -57,7 +56,7 @@ class RouterAgentGraph(BaseAgent):
     """Configurable Router Agent for routing requests to different branches.
 
     A Router Agent analyzes incoming requests and routes them to one of the
-    configured branches based on the content and context. It makes a single
+    configured branches based on the conte nt and context. It makes a single
     routing decision and executes only the selected branch before returning.
 
     This agent is useful for creating multi-path workflows where different

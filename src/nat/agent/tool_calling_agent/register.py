@@ -52,7 +52,7 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, builder: Builder):
     from langchain_core.messages.human import HumanMessage
-    from langgraph.graph.graph import CompiledGraph
+    from langgraph.graph.state import CompiledStateGraph
 
     from nat.agent.base import AGENT_LOG_PREFIX
     from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph

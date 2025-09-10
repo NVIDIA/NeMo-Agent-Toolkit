@@ -50,7 +50,7 @@ class RouterAgentWorkflowConfig(FunctionBaseConfig, name="router_agent"):
 @register_function(config_type=RouterAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Builder):
     from langchain_core.messages.human import HumanMessage
-    from langgraph.graph.graph import CompiledGraph
+    from langgraph.graph.state import CompiledStateGraph
 
     from nat.agent.base import AGENT_LOG_PREFIX
     from nat.agent.router_agent.agent import RouterAgentGraph
@@ -63,7 +63,7 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
     if not branches:
         raise ValueError(f"No branches specified for Router Agent '{config.llm_name}'")
 
-    graph: CompiledGraph = await RouterAgentGraph(
+    graph: CompiledStateGraph = await RouterAgentGraph(
         llm=llm,
         branches=branches,
         prompt=prompt,
