@@ -76,6 +76,16 @@ class TestOptimizableField:
         assert extras["optimizable"] is True
         assert extras["search_space"] is space
 
+    def test_space_optional(self):
+
+        class M(BaseModel):
+            x: int = OptimizableField(5)
+
+        m = M()
+        extras = dict(m.model_fields)["x"].json_schema_extra
+        assert extras["optimizable"] is True
+        assert "search_space" not in extras
+
     def test_preserves_user_extras_and_merges(self):
         space = SearchSpace(low=["red", "blue"], high=None)
 
@@ -183,9 +193,11 @@ class TestOptimizableMixin:
 
         m = MyModel()
         assert m.optimizable_params == []
+        assert m.search_space == {}
 
-        m2 = MyModel(optimizable_params=["a"])
+        m2 = MyModel(optimizable_params=["a"], search_space={"a": SearchSpace(low=0, high=1)})
         assert m2.optimizable_params == ["a"]
+        assert "a" in m2.search_space and m2.search_space["a"].low == 0
 
     def test_schema_contains_description(self):
 

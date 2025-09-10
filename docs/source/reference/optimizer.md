@@ -176,11 +176,11 @@ This model defines a single metric to be used in the optimization.
 
 ## Optimizable Fields
 
-To make a parameter in your workflow optimizable, you need to use the `OptimizableField` function instead of Pydantic's standard `Field`. This allows you to attach search space metadata to the field.
+To make a parameter in your workflow optimizable, you need to use the `OptimizableField` function instead of Pydantic's standard `Field`. This allows you to attach search space metadata to the field. You may omit the `space` argument to mark a field as optimizable and supply its search space later in the configuration file.
 
 ### `SearchSpace`
 
-The `SearchSpace` dataclass is used to define the range or set of possible values for a hyperparameter.
+The `SearchSpace` Pydantic model is used to define the range or set of possible values for a hyperparameter.
 
 -   `low: T | Sequence[T] | None`: The lower bound for a numerical parameter, or a sequence of categorical values.
 -   `high: T | None`: The upper bound for a numerical parameter. If `high` is `None`, the parameter is treated as categorical.
@@ -192,7 +192,7 @@ The `SearchSpace` dataclass is used to define the range or set of possible value
 
 ### `OptimizableField`
 
-This function is a drop-in replacement for `pydantic.Field` that takes an additional `space` argument.
+This function is a drop-in replacement for `pydantic.Field` that optionally takes a `space` argument.
 
 Here's how you can define optimizable fields in your workflow's data models:
 
@@ -237,6 +237,9 @@ class SomeImageAgentConfig(FunctionBaseConfig, OptimizableMixin, name="some_imag
         ),
         description="The system prompt for the LLM."
     )
+
+    # Option C: Mark as optimizable but provide search space in config
+    temperature: float = OptimizableField(0.0)
 ```
 
 In this example:
@@ -244,10 +247,12 @@ In this example:
 - `model_name` is a categorical parameter, and the optimizer will choose from the provided list of models.
 - `system_prompt_a` demonstrates setting a different starting prompt in the `SearchSpace`.
 - `system_prompt_b` demonstrates omitting `SearchSpace.prompt`, which uses the field's default as the base prompt.
+    - `temperature` shows how to mark a field as optimizable without specifying a search space in code; the search space must then be provided in the workflow configuration.
 
 Behavior for prompt-optimized fields:
 - If `space.is_prompt` is `true` and `space.prompt` is `None`, the optimizer will use the `OptimizableField`'s `default` as the base prompt.
 - If both `space.prompt` and the field `default` are `None`, an error is raised. Provide at least one.
+- If `space` is omitted entirely, a corresponding search space **must** be supplied in the configuration's `search_space` mapping; otherwise a runtime error is raised when walking optimizable fields.
 
 ## Enabling Optimization of Fields in the Config File
 Once `OptimizableField`s have been created in your workflow's data models, you need to enable optimization for these fields in your workflow configuration file.
@@ -268,6 +273,31 @@ llms:
 ```
 
 **NOTE:** Ensure your configuration object inherits from `OptimizableMixin` to enable the `optimizable_params` field.
+
+### Overriding Search Spaces in Configuration Files
+
+You can override the search space for any optimizable parameter directly in your workflow configuration by adding a `search_space` mapping alongside `optimizable_params`:
+
+```yaml
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    optimizable_params: [temperature, top_p]
+    search_space:
+      temperature:
+        low: 0.2
+        high: 0.8
+        step: 0.2
+      top_p:
+        low: 0.5
+        high: 1.0
+        step: 0.1
+```
+
+The `search_space` entries are parsed into `SearchSpace` objects and override any defaults defined in the data models.
+If a field is marked as optimizable but lacks a `search_space` in both the data model and this mapping, the optimizer will raise an error when collecting optimizable fields.
 
 ## Default Optimizable LLM Parameters
 

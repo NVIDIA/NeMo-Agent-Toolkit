@@ -38,22 +38,30 @@ def walk_optimizables(obj: BaseModel, path: str = "") -> dict[str, SearchSpace]:
 
     allowed_params_raw = getattr(obj, "optimizable_params", None)
     allowed_params = set(allowed_params_raw) if allowed_params_raw is not None else None
+    overrides = getattr(obj, "search_space", {}) or {}
     has_optimizable_flag = False
 
     for name, fld in obj.model_fields.items():
         full = f"{path}.{name}" if path else name
         extra = fld.json_schema_extra or {}
 
-        is_field_optimizable = extra.get("optimizable", False)
+        is_field_optimizable = extra.get("optimizable", False) or name in overrides
         has_optimizable_flag = has_optimizable_flag or is_field_optimizable
 
         # honour allow-list
         if allowed_params is not None and name not in allowed_params:
             continue
 
-        # 1. plain optimizable field
+        # 1. plain optimizable field or override from config
         if is_field_optimizable:
-            spaces[full] = extra["search_space"]
+            space = overrides.get(name, extra.get("search_space"))
+            if space is None:
+                logger.error(
+                    "Field %s is marked optimizable but no search space was provided.",
+                    full,
+                )
+                raise ValueError(f"Field {full} is marked optimizable but no search space was provided")
+            spaces[full] = space
 
         value = getattr(obj, name, None)
 

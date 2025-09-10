@@ -14,11 +14,11 @@
 # limitations under the License.
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from typing import Any
 from typing import Generic
 from typing import TypeVar
 
+from optuna import Trial
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -28,17 +28,18 @@ T = TypeVar("T", int, float, bool, str)
 # --------------------------------------------------------------------- #
 # 1.  Hyper‑parameter metadata container                                #
 # --------------------------------------------------------------------- #
-@dataclass(slots=True)
-class SearchSpace(Generic[T]):
-    from optuna import Trial
-
+class SearchSpace(BaseModel, Generic[T]):
     low: T | Sequence[T] | None = None
     high: T | None = None
     log: bool = False  # log scale
-    step: float = None
+    step: float | None = None
     is_prompt: bool = False
-    prompt: str = None  # prompt to optimize
-    prompt_purpose: str = None  # purpose of the prompt
+    prompt: str | None = None  # prompt to optimize
+    prompt_purpose: str | None = None  # purpose of the prompt
+
+    model_config = {
+        "extra": "forbid",
+    }
 
     # Helper for Optuna Trials
     def suggest(self, trial: Trial, name: str):
@@ -55,20 +56,23 @@ class SearchSpace(Generic[T]):
 def OptimizableField(
     default: Any,
     *,
-    space: SearchSpace,
+    space: SearchSpace | None = None,
     merge_conflict: str = "overwrite",
     **fld_kw,
 ):
     """
     Drop‑in replacement for `pydantic.Field` that stores optimisation
-    metadata while respecting any user‑supplied `json_schema_extra`.
+    metadata while respecting any user‑supplied `json_schema_extra`. A
+    ``SearchSpace`` can be omitted if it will be supplied later in the
+    workflow configuration.
 
     Parameters
     ----------
     default : Any
         Usual first positional argument for Field(...).
-    space : SearchSpace
-        The optimiser range / distribution.
+    space : SearchSpace | None, optional
+        The optimiser range / distribution. If omitted, the search space
+        must be supplied via the configuration's ``search_space`` mapping.
     merge_conflict : {'overwrite', 'error', 'keep'}
         Behaviour when the user's `json_schema_extra` already contains
         'optimizable' or 'search_space':
@@ -89,7 +93,7 @@ def OptimizableField(
         raise TypeError("`json_schema_extra` must be a mapping.")
 
     # 2. If the space is a prompt, ensure a concrete base prompt exists
-    if getattr(space, "is_prompt", False):
+    if space is not None and getattr(space, "is_prompt", False):
         if getattr(space, "prompt", None) is None:
             if default is None:
                 raise ValueError("Prompt-optimized fields require a base prompt: provide a non-None field default "
@@ -98,7 +102,9 @@ def OptimizableField(
             space.prompt = default
 
     # 3. Prepare our own metadata
-    ours = {"optimizable": True, "search_space": space}
+    ours = {"optimizable": True}
+    if space is not None:
+        ours["search_space"] = space
 
     # 4. Merge with user extras according to merge_conflict policy
     intersect = ours.keys() & user_extra.keys()
@@ -121,3 +127,7 @@ class OptimizableMixin(BaseModel):
     Mixin for models that can be optimized.
     """
     optimizable_params: list[str] = Field(default_factory=list, description="List of parameters that can be optimized.")
+    search_space: dict[str, SearchSpace] = Field(
+        default_factory=dict,
+        description="Optional search space overrides for optimizable parameters.",
+    )
