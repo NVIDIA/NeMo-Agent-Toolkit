@@ -28,20 +28,20 @@ class ContextualSpanRedactionProcessor(ContextualRedactionProcessor[Span, Redact
     Args:
         attributes: List of span attribute keys to redact
         callback: Callable that determines if redaction should occur
-        enabled: Whether the processor is enabled (default: True)
-        force_redact: If True, always redact regardless of callback (default: False)
-        redaction_value: The value to replace redacted attributes with (default: "[REDACTED]")
+        enabled: Whether the processor is enabled
+        force_redact: If True, always redact regardless of callback
+        redaction_value: The value to replace redacted attributes with
     """
 
     def __init__(self,
-                 attributes: list[str] | None = None,
-                 callback: Callable[..., Any] | None = None,
-                 enabled: bool = True,
-                 force_redact: bool = False,
-                 redaction_value: str = "[REDACTED]",
+                 attributes: list[str],
+                 callback: Callable[..., Any],
+                 enabled: bool,
+                 force_redact: bool,
+                 redaction_value: str,
                  redaction_tag: str | None = None):
         super().__init__(callback=callback, enabled=enabled, force_redact=force_redact, redaction_value=redaction_value)
-        self.attributes = attributes or []
+        self.attributes = attributes
         self.redaction_tag = redaction_tag
 
     @override

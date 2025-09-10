@@ -100,19 +100,20 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
 
         Args:
             context_state: The context state for the exporter.
-            batch_size: Number of spans to batch before exporting.
-            flush_interval: Time in seconds between automatic batch flushes.
-            max_queue_size: Maximum number of spans to queue.
-            drop_on_overflow: Whether to drop spans when queue is full.
-            shutdown_timeout: Maximum time to wait for export completion during shutdown.
+            batch_size: Number of spans to batch before exporting, default is 100.
+            flush_interval: Time in seconds between automatic batch flushes, default is 5.0.
+            max_queue_size: Maximum number of spans to queue, default is 1000.
+            drop_on_overflow: Whether to drop spans when queue is full, default is False.
+            shutdown_timeout: Maximum time to wait for export completion during shutdown, default is 10.0.
             resource_attributes: Additional resource attributes for spans.
             redaction_attributes: List of span attribute keys to redact when conditions are met.
             redaction_headers: List of header keys to check for authentication/user identification.
-            redaction_callback: Function to determine if spans should be redacted based on header value.
-            redaction_enabled: Whether the redaction processor is enabled.
-            force_redaction: If True, always redact regardless of header checks.
-            redaction_value: Value to replace redacted attributes with.
+            redaction_callback: Function that returns true to redact spans based on header value, false otherwise.
+            redaction_enabled: Whether the redaction processor is enabled, default is False.
+            force_redaction: If True, always redact regardless of header checks, default is False.
+            redaction_value: Value to replace redacted attributes with, default is "[REDACTED]".
             tags: Mapping of tag keys to their values (enums or strings) to add to spans.
+            redaction_tag: Tag to add to spans when redaction occurs.
             endpoint: The endpoint for the OTLP service.
             headers: The headers for the OTLP service.
             **otlp_kwargs: Additional keyword arguments for the OTLP service.
@@ -131,7 +132,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
         # Insert redaction and tagging processors to the front of the processing pipeline
         self.add_processor(SpanHeaderRedactionProcessor(attributes=redaction_attributes or [],
                                                         headers=redaction_headers or [],
-                                                        callback=redaction_callback,
+                                                        callback=redaction_callback or (lambda _: False),
                                                         enabled=redaction_enabled,
                                                         force_redact=force_redaction,
                                                         redaction_value=redaction_value,

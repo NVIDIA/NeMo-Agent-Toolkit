@@ -26,8 +26,29 @@ from nat.observability.processor.redaction.contextual_span_redaction_processor i
 class ConcreteContextualSpanRedactionProcessor(ContextualSpanRedactionProcessor):
     """Concrete implementation for testing ContextualSpanRedactionProcessor."""
 
-    def __init__(self, extracted_data: dict | None = None, data_validation_result: bool = True, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self,
+                 extracted_data: dict | None = None,
+                 data_validation_result: bool = True,
+                 attributes: list[str] | None = None,
+                 callback: Any | None = None,
+                 enabled: bool = True,
+                 force_redact: bool = False,
+                 redaction_value: str = "[REDACTED]",
+                 redaction_tag: str | None = None,
+                 **kwargs):
+        # Set defaults for required parameters
+        if attributes is None:
+            attributes = []
+        if callback is None:
+            callback = default_callback
+
+        super().__init__(attributes=attributes,
+                         callback=callback,
+                         enabled=enabled,
+                         force_redact=force_redact,
+                         redaction_value=redaction_value,
+                         redaction_tag=redaction_tag,
+                         **kwargs)
         self.extracted_data = extracted_data
         self.data_validation_result = data_validation_result
 

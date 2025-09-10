@@ -56,17 +56,19 @@ class ContextualRedactionProcessor(RedactionProcessor[RedactionInputT, Redaction
     execution logic. Subclasses only need to implement data extraction and validation.
 
     Args:
+        enabled: Whether the processor is enabled
+        force_redact: If True, always redact regardless of data checks
+        redaction_value: The value to replace redacted attributes with
         callback: Callable that determines if redaction should occur based on extracted data
-        enabled: Whether the processor is enabled (default: True)
-        force_redact: If True, always redact regardless of data checks (default: False)
-        redaction_value: The value to replace redacted attributes with (default: "[REDACTED]")
     """
 
-    def __init__(self,
-                 callback: Callable[..., Any] | None = None,
-                 enabled: bool = True,
-                 force_redact: bool = False,
-                 redaction_value: str = "[REDACTED]"):
+    def __init__(
+        self,
+        enabled: bool,
+        force_redact: bool,
+        redaction_value: str,
+        callback: Callable[..., Any] | None = None,
+    ):
         self.callback = callback or default_callback
         self.enabled = enabled
         self.force_redact = force_redact

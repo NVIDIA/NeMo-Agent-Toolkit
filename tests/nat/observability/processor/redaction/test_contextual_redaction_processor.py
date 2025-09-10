@@ -30,8 +30,14 @@ logger = logging.getLogger(__name__)
 class ConcreteContextualRedactionProcessor(ContextualRedactionProcessor[str, dict]):
     """Concrete implementation for testing ContextualRedactionProcessor."""
 
-    def __init__(self, extracted_data: dict | None = None, data_validation_result: bool = True, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self,
+                 extracted_data: dict | None = None,
+                 data_validation_result: bool = True,
+                 enabled: bool = True,
+                 force_redact: bool = False,
+                 redaction_value: str = "[REDACTED]",
+                 **kwargs):
+        super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
         self.extracted_data = extracted_data
         self.data_validation_result = data_validation_result
         self.extract_data_calls = []
@@ -57,8 +63,14 @@ class ConcreteContextualRedactionProcessor(ContextualRedactionProcessor[str, dic
 class ErroringContextualRedactionProcessor(ContextualRedactionProcessor[str, dict]):
     """Implementation that raises errors for testing error handling."""
 
-    def __init__(self, extract_error: bool = False, validate_error: bool = False, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self,
+                 extract_error: bool = False,
+                 validate_error: bool = False,
+                 enabled: bool = True,
+                 force_redact: bool = False,
+                 redaction_value: str = "[REDACTED]",
+                 **kwargs):
+        super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
         self.extract_error = extract_error
         self.validate_error = validate_error
 
@@ -581,8 +593,13 @@ class TestContextualRedactionProcessorEdgeCases:
 
         class TypeValidatingProcessor(ContextualRedactionProcessor[str, Any]):
 
-            def __init__(self, extracted_data: Any = None, **kwargs):
-                super().__init__(**kwargs)
+            def __init__(self,
+                         extracted_data: Any = None,
+                         enabled: bool = True,
+                         force_redact: bool = False,
+                         redaction_value: str = "[REDACTED]",
+                         **kwargs):
+                super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
                 self.extracted_data = extracted_data
                 self.validation_calls = []
 
@@ -720,6 +737,13 @@ class TestContextualRedactionProcessorLogging:
 
         class LoggingContextualProcessor(ContextualRedactionProcessor[str, dict]):
 
+            def __init__(self,
+                         enabled: bool = True,
+                         force_redact: bool = False,
+                         redaction_value: str = "[REDACTED]",
+                         **kwargs):
+                super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
+
             def extract_data_from_context(self) -> dict | None:
                 logger.info("Extracting data from context")
                 return {"logged": "data"}
@@ -749,8 +773,12 @@ class TestContextualRedactionProcessorPerformance:
 
         class ExpensiveProcessor(ContextualRedactionProcessor[str, dict]):
 
-            def __init__(self, **kwargs):
-                super().__init__(**kwargs)
+            def __init__(self,
+                         enabled: bool = True,
+                         force_redact: bool = False,
+                         redaction_value: str = "[REDACTED]",
+                         **kwargs):
+                super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
                 self.extract_calls = 0
                 self.validate_calls = 0
 
@@ -781,8 +809,12 @@ class TestContextualRedactionProcessorPerformance:
 
         class ExpensiveProcessor(ContextualRedactionProcessor[str, dict]):
 
-            def __init__(self, **kwargs):
-                super().__init__(**kwargs)
+            def __init__(self,
+                         enabled: bool = True,
+                         force_redact: bool = False,
+                         redaction_value: str = "[REDACTED]",
+                         **kwargs):
+                super().__init__(enabled=enabled, force_redact=force_redact, redaction_value=redaction_value, **kwargs)
                 self.extract_calls = 0
                 self.validate_calls = 0
 

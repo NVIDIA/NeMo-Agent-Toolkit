@@ -276,6 +276,7 @@ class TypeIntrospectionMixin:
 
         return None
 
+    @lru_cache
     def _extract_input_output_types(self) -> tuple[type[Any], type[Any]]:
         """Extract both input and output types using available approaches.
 
@@ -300,7 +301,6 @@ class TypeIntrospectionMixin:
                          f"or has a signature method with type annotations")
 
     @property
-    @lru_cache
     def input_type(self) -> type[Any]:
         """Get the input type of the instance.
 
@@ -310,7 +310,6 @@ class TypeIntrospectionMixin:
         return self._extract_input_output_types()[0]
 
     @property
-    @lru_cache
     def output_type(self) -> type[Any]:
         """Get the output type of the instance.
 
@@ -319,6 +318,7 @@ class TypeIntrospectionMixin:
         """
         return self._extract_input_output_types()[1]
 
+    @lru_cache
     def _get_union_info(self, type_obj: type[Any]) -> tuple[bool, tuple[type, ...] | None]:
         """Get union information for a type.
 
@@ -332,7 +332,6 @@ class TypeIntrospectionMixin:
         return decomposed.is_union, decomposed.args if decomposed.is_union else None
 
     @property
-    @lru_cache
     def has_union_input(self) -> bool:
         """Check if the input type is a union type.
 
@@ -342,7 +341,6 @@ class TypeIntrospectionMixin:
         return self._get_union_info(self.input_type)[0]
 
     @property
-    @lru_cache
     def has_union_output(self) -> bool:
         """Check if the output type is a union type.
 
@@ -352,7 +350,6 @@ class TypeIntrospectionMixin:
         return self._get_union_info(self.output_type)[0]
 
     @property
-    @lru_cache
     def input_union_types(self) -> tuple[type, ...] | None:
         """Get the individual types in an input union.
 
@@ -362,7 +359,6 @@ class TypeIntrospectionMixin:
         return self._get_union_info(self.input_type)[1]
 
     @property
-    @lru_cache
     def output_union_types(self) -> tuple[type, ...] | None:
         """Get the individual types in an output union.
 
