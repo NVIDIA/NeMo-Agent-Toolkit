@@ -542,7 +542,7 @@ class JobStore(DaskClientMixin):
                     try:
                         var = Variable(name=job_id, client=client)
                         try:
-                            future = await var.get(timeout=0)
+                            future = await var.get(timeout=5)
                             if isinstance(future, Future):
                                 await client.cancel([future], asynchronous=True, force=True)
 
