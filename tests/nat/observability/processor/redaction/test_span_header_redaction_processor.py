@@ -444,7 +444,7 @@ class TestSpanHeaderRedactionProcessorIntegration:
     async def test_force_redact_overrides_everything(self, mock_context_get, sample_span):
         """Test that force_redact=True overrides all other conditions."""
 
-        def never_redact_callback(data: dict[str, Any]) -> bool:
+        def never_redact_callback(_data: dict[str, Any]) -> bool:
             return False
 
         processor = SpanHeaderRedactionProcessor(

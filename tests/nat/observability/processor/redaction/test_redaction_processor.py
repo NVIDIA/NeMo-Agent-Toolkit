@@ -721,7 +721,7 @@ class TestRedactionManager:
         """Test that redaction_check caches results within the same context."""
         call_count = 0
 
-        def counting_callback(data):
+        def counting_callback(_data):
             nonlocal call_count
             call_count += 1
             return True
@@ -801,7 +801,7 @@ class TestRedactionManager:
     async def test_redaction_check_error_propagation(self, manager):
         """Test that errors in callbacks are properly propagated."""
 
-        def error_callback(data):
+        def error_callback(_data):
             raise ValueError("Test error")
 
         with pytest.raises(ValueError, match="Test error"):
@@ -964,7 +964,7 @@ class TestRedactionComponentsIntegration:
             # Test callback caching across managers
             call_count = 0
 
-            def counting_callback(data):
+            def counting_callback(_data):
                 nonlocal call_count
                 call_count += 1
                 return False
@@ -988,7 +988,7 @@ class TestRedactionComponentsIntegration:
             assert context.redaction_result is True
 
             # Test callback with cached result
-            def never_called_callback(data):
+            def never_called_callback(_data):
                 raise AssertionError("Should not be called due to caching")
 
             result = await manager.redaction_check(never_called_callback, "any_data")

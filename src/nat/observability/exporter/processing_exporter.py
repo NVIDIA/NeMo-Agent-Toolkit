@@ -337,17 +337,20 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
 
             # validate that the first processor's input type is compatible with the exporter's input type
             if not first_processor.is_compatible_with_input(self.input_type):
-                raise ValueError(f"Processor {first_processor.__class__.__name__} input type "
-                                 f"{first_processor.input_type} is not compatible with the "
-                                 f"{self.input_type} input type")
-
+                logger.error("First processor %s input=%s incompatible with exporter input=%s",
+                             first_processor.__class__.__name__,
+                             first_processor.input_type,
+                             self.input_type)
+                raise ValueError("First processor incompatible with exporter input")
             # Validate that the last processor's output type is compatible with the exporter's output type
             # Use DecomposedType.is_type_compatible for the final export stage to allow batch compatibility
             # This enables BatchingProcessor[T] -> Exporter[T] patterns where the exporter handles both T and list[T]
             if not DecomposedType.is_type_compatible(last_processor.output_type, self.output_type):
-                raise ValueError(f"Processor {last_processor.__class__.__name__} output type "
-                                 f"{last_processor.output_type} is not compatible with the "
-                                 f"{self.output_type} output type")
+                logger.error("Last processor %s output=%s incompatible with exporter output=%s",
+                             last_processor.__class__.__name__,
+                             last_processor.output_type,
+                             self.output_type)
+                raise ValueError("Last processor incompatible with exporter output")
 
         # Lock the pipeline to prevent further modifications
         self._pipeline_locked = True
@@ -404,8 +407,11 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             await self.export_processed(processed_item)
         else:
             if raise_on_invalid:
-                raise ValueError(f"Processed item {processed_item} is not a valid output type. "
-                                 f"Expected {self.output_type} or list[{self.output_type}]")
+                logger.error("Invalid processed item type for export: %s (expected %s or list[%s])",
+                             type(processed_item),
+                             self.output_type,
+                             self.output_type)
+                raise ValueError("Invalid processed item type for export")
             logger.warning("Processed item %s is not a valid output type for export", processed_item)
 
     async def _continue_pipeline_after(self, source_processor: Processor, item: Any) -> None:

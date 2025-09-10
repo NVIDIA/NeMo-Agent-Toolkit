@@ -43,9 +43,13 @@ class PrivacyLevel(str, Enum):
     HIGH = "high"
 
 
-class PrivacyTagSchema(TypedDict, total=True):
-    """Schema for the privacy tags."""
-    privacy_level: PrivacyLevel
+PrivacyTagSchema = TypedDict(
+    "PrivacyTagSchema",
+    {
+        "privacy.level": PrivacyLevel,
+    },
+    total=True,
+)
 
 
 class PrivacyTaggingConfigMixin(BaseTaggingConfigMixin[PrivacyTagSchema]):

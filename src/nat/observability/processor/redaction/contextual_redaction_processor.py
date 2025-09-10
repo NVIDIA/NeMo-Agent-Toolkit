@@ -67,7 +67,7 @@ class ContextualRedactionProcessor(RedactionProcessor[RedactionInputT, Redaction
         enabled: bool,
         force_redact: bool,
         redaction_value: str,
-        callback: Callable[..., Any] | None = None,
+        callback: Callable[..., Any] = default_callback,
     ):
         self.callback = callback or default_callback
         self.enabled = enabled

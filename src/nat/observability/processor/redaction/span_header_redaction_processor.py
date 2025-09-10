@@ -20,6 +20,7 @@ from typing import Any
 from starlette.datastructures import Headers
 
 from nat.builder.context import Context
+from nat.observability.processor.redaction.contextual_redaction_processor import default_callback
 from nat.observability.processor.redaction.contextual_span_redaction_processor import ContextualSpanRedactionProcessor
 from nat.utils.type_utils import override
 
@@ -36,7 +37,7 @@ class SpanHeaderRedactionProcessor(ContextualSpanRedactionProcessor[dict[str, An
     Args:
         headers: List of header keys to extract and pass to the callback
         attributes: List of Span attribute keys to redact
-        callback: Callable that determines if redaction should occur
+        callback: Callable that determines if redaction should occur (default: default_callback)
         enabled: Whether the processor is enabled (default: True)
         force_redact: If True, always redact regardless of header checks (default: False)
         redaction_value: The value to replace redacted attributes with (default: "[REDACTED]")
@@ -45,7 +46,7 @@ class SpanHeaderRedactionProcessor(ContextualSpanRedactionProcessor[dict[str, An
     def __init__(self,
                  headers: list[str],
                  attributes: list[str],
-                 callback: Callable[..., Any] | None = None,
+                 callback: Callable[..., Any] = default_callback,
                  enabled: bool = True,
                  force_redact: bool = False,
                  redaction_value: str = "[REDACTED]",

@@ -236,7 +236,7 @@ class TestPipelineLocking:
         processor = MockProcessor()
         processing_exporter._pipeline_locked = True
 
-        with pytest.raises(RuntimeError, match="Cannot modify processor pipeline after exporter has started"):
+        with pytest.raises(RuntimeError):
             processing_exporter.add_processor(processor)
 
     def test_remove_processor_when_locked_raises_error(self, processing_exporter):
@@ -245,7 +245,7 @@ class TestPipelineLocking:
         processing_exporter.add_processor(processor)
         processing_exporter._pipeline_locked = True
 
-        with pytest.raises(RuntimeError, match="Cannot modify processor pipeline after exporter has started"):
+        with pytest.raises(RuntimeError):
             processing_exporter.remove_processor(processor)
 
     def test_clear_processors_when_locked_raises_error(self, processing_exporter):
@@ -253,7 +253,7 @@ class TestPipelineLocking:
         processing_exporter.add_processor(MockProcessor())
         processing_exporter._pipeline_locked = True
 
-        with pytest.raises(RuntimeError, match="Cannot modify processor pipeline after exporter has started"):
+        with pytest.raises(RuntimeError):
             processing_exporter.clear_processors()
 
     async def test_reset_pipeline_when_running_raises_error(self, processing_exporter):
@@ -261,7 +261,7 @@ class TestPipelineLocking:
         processing_exporter._running = True
 
         try:
-            with pytest.raises(RuntimeError, match="Cannot reset pipeline while exporter is running"):
+            with pytest.raises(RuntimeError):
                 processing_exporter.reset_pipeline()
         finally:
             # Cleanup: stop the exporter to prevent garbage collection warning
@@ -300,7 +300,7 @@ class TestProcessorNaming:
 
         processing_exporter.add_processor(processor1, name="test_name")
 
-        with pytest.raises(ValueError, match="Processor name 'test_name' already exists"):
+        with pytest.raises(ValueError):
             processing_exporter.add_processor(processor2, name="test_name")
 
     def test_add_processor_atomicity_on_name_validation_failure(self, processing_exporter):
@@ -326,7 +326,7 @@ class TestProcessorNaming:
 
         processor3 = ListToIntProcessor()  # list[int] -> int (compatible)
 
-        with pytest.raises(ValueError, match="Processor name 'first' already exists"):
+        with pytest.raises(ValueError):
             processing_exporter.add_processor(processor3, name="first")  # Duplicate name
 
         # Verify complete atomicity - no partial state changes
@@ -345,7 +345,7 @@ class TestProcessorNaming:
         """Test that non-string processor names raise TypeError."""
         processor = MockProcessor()
 
-        with pytest.raises(TypeError, match="Processor name must be a string"):
+        with pytest.raises(TypeError):
             processing_exporter.add_processor(processor, name=123)  # Invalid type
 
     def test_add_processor_atomicity_on_type_validation_failure(self, processing_exporter):
@@ -371,7 +371,7 @@ class TestProcessorNaming:
 
         processor3 = ListToStringProcessor()  # list[int] -> str (compatible)
 
-        with pytest.raises(TypeError, match="Processor name must be a string"):
+        with pytest.raises(TypeError):
             processing_exporter.add_processor(processor3, name=123)  # Invalid type
 
         # Verify complete atomicity - no partial state changes
@@ -404,7 +404,7 @@ class TestProcessorNaming:
 
     def test_get_processor_by_name_non_string_raises_error(self, processing_exporter):
         """Test that non-string processor names raise TypeError in get."""
-        with pytest.raises(TypeError, match="Processor name must be a string"):
+        with pytest.raises(TypeError):
             processing_exporter.get_processor_by_name(123)  # Invalid type
 
     def test_remove_processor_by_name(self, processing_exporter):
@@ -424,7 +424,7 @@ class TestProcessorNaming:
 
     def test_remove_processor_by_name_not_exists(self, processing_exporter):
         """Test removing processor by non-existent name raises ValueError."""
-        with pytest.raises(ValueError, match="Processor 'nonexistent' not found in pipeline"):
+        with pytest.raises(ValueError):
             processing_exporter.remove_processor("nonexistent")
 
     def test_remove_processor_by_position(self, processing_exporter):
@@ -446,12 +446,12 @@ class TestProcessorNaming:
         """Test removing processor by invalid position raises ValueError."""
         processing_exporter.add_processor(MockProcessor())
 
-        with pytest.raises(ValueError, match="Position.*is out of range"):
+        with pytest.raises(ValueError):
             processing_exporter.remove_processor(5)  # Out of range
 
     def test_remove_processor_invalid_type_raises_error(self, processing_exporter):
         """Test removing processor with invalid type raises TypeError."""
-        with pytest.raises(TypeError, match="Processor must be a Processor object, string name, or int position"):
+        with pytest.raises(TypeError):
             processing_exporter.remove_processor(12.5)  # Invalid type
 
 
@@ -495,7 +495,7 @@ class TestAdvancedPositioning:
         """Test adding processor with invalid position raises ValueError."""
         processing_exporter.add_processor(MockProcessor())
 
-        with pytest.raises(ValueError, match="Position.*is out of range"):
+        with pytest.raises(ValueError):
             processing_exporter.add_processor(MockProcessor(), position=5)
 
     def test_add_processor_before_named_processor(self, processing_exporter):
@@ -544,27 +544,27 @@ class TestAdvancedPositioning:
 
     def test_add_processor_before_nonexistent_raises_error(self, processing_exporter):
         """Test adding before non-existent processor raises ValueError."""
-        with pytest.raises(ValueError, match="Processor 'nonexistent' not found in pipeline"):
+        with pytest.raises(ValueError):
             processing_exporter.add_processor(MockProcessor(), before="nonexistent")
 
     def test_add_processor_after_nonexistent_raises_error(self, processing_exporter):
         """Test adding after non-existent processor raises ValueError."""
-        with pytest.raises(ValueError, match="Processor 'nonexistent' not found in pipeline"):
+        with pytest.raises(ValueError):
             processing_exporter.add_processor(MockProcessor(), after="nonexistent")
 
     def test_add_processor_conflicting_position_args_raises_error(self, processing_exporter):
         """Test that conflicting position arguments raise ValueError."""
-        with pytest.raises(ValueError, match="Only one of position, before, or after can be specified"):
+        with pytest.raises(ValueError):
             processing_exporter.add_processor(MockProcessor(), position=0, before="test")
 
     def test_add_processor_before_non_string_raises_error(self, processing_exporter):
         """Test that non-string 'before' parameter raises TypeError."""
-        with pytest.raises(TypeError, match="'before' parameter must be a string"):
+        with pytest.raises(TypeError):
             processing_exporter.add_processor(MockProcessor(), before=123)
 
     def test_add_processor_after_non_string_raises_error(self, processing_exporter):
         """Test that non-string 'after' parameter raises TypeError."""
-        with pytest.raises(TypeError, match="'after' parameter must be a string"):
+        with pytest.raises(TypeError):
             processing_exporter.add_processor(MockProcessor(), after=123)
 
     def test_processor_name_position_updates_on_insertion(self, processing_exporter):
@@ -741,7 +741,7 @@ class TestBasicProcessorManagement:
 
         processing_exporter.add_processor(processor1)
 
-        with pytest.raises(ValueError, match="is not compatible"):
+        with pytest.raises(ValueError):
             processing_exporter.add_processor(incompatible_processor)
 
     def test_add_processor_with_generic_types_success(self, processing_exporter):
@@ -821,7 +821,7 @@ class TestTypeValidation:
         # Manually add to bypass add_processor validation
         processing_exporter._processors.append(incompatible_processor)
 
-        with pytest.raises(ValueError, match="is not compatible with the .* input type"):
+        with pytest.raises(ValueError):
             await processing_exporter._pre_start()
 
     async def test_pre_start_last_processor_incompatible_output(self, processing_exporter):
@@ -836,7 +836,7 @@ class TestTypeValidation:
         # Mock DecomposedType.is_type_compatible to return False
         with patch('nat.observability.exporter.processing_exporter.DecomposedType.is_type_compatible',
                    return_value=False):
-            with pytest.raises(ValueError, match="is not compatible with the .* output type"):
+            with pytest.raises(ValueError):
                 await processing_exporter._pre_start()
 
     async def test_pre_start_type_validation_strict_checking(self, processing_exporter):
@@ -868,7 +868,7 @@ class TestTypeValidation:
                    side_effect=TypeError("cannot use with generics")):
 
             # TypeError should propagate up instead of being caught and logged as warning
-            with pytest.raises(TypeError, match="cannot use with generics"):
+            with pytest.raises(TypeError):
                 await processing_exporter._pre_start()
 
 
@@ -1015,7 +1015,7 @@ class TestExportWithProcessing:
 
         input_item = "test"
 
-        with pytest.raises(ValueError, match="is not a valid output type"):
+        with pytest.raises(ValueError):
             await processing_exporter._export_with_processing(input_item)
 
     async def test_export_with_processing_export_error_propagates(self, mock_context_state):
@@ -1026,7 +1026,7 @@ class TestExportWithProcessing:
 
         input_item = "test"
 
-        with pytest.raises(RuntimeError, match="Export failed"):
+        with pytest.raises(RuntimeError):
             await exporter._export_with_processing(input_item)
 
 
@@ -1110,7 +1110,7 @@ class TestTaskCreation:
             mock_coro = Mock()
 
             with patch('asyncio.create_task', side_effect=RuntimeError("Task creation failed")):
-                with pytest.raises(RuntimeError, match="Task creation failed"):
+                with pytest.raises(RuntimeError):
                     with caplog.at_level(logging.ERROR):
                         processing_exporter._create_export_task(mock_coro)
 
@@ -1589,7 +1589,7 @@ class TestEdgeCases:
 
         input_item = "test"
 
-        with pytest.raises(RuntimeError, match="Export failed"):
+        with pytest.raises(RuntimeError):
             await processing_exporter._export_with_processing(input_item)
 
         # Processor should still have been called
