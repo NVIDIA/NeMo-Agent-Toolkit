@@ -62,6 +62,9 @@ The asynchronous generate endpoint allows clients to submit a workflow to run in
 
 This endpoint is only available when the `async_endpoints` optional dependency extra is installed. For users installing from source, this can be done by running `uv pip install -e .[async_endpoints]` from the root directory of the NeMo Agent toolkit library. Similarly, for users installing from PyPI, this can be done by running `pip install nvidia-nat[async_endpoints]`.
 
+Asynchronous jobs are managed using [Dask](https://docs.dask.org/en/stable/) by default a local Dask cluster is created at start time, however you can also configure the server to connect to an existing Dask scheduler by setting the `scheduler_address` configuration parameter. The Dask scheduler is used to manage the execution of asynchronous jobs, and can be configured to run on a single machine or across a cluster of machines. Job history and metadata is stored in a SQL database using [SQLAlchemy](https://www.sqlalchemy.org/) by default a temporary SQLite database is created at start time, however you can also configure the server to use a persistent database by setting the `database_url` configuration parameter. Any database supported by [SQLAlchemy's Asynchronous I/O extension](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html) can be used, refer to [SQLAlchemy'sDialects](https://docs.sqlalchemy.org/en/20/dialects/index.html) for a complete list (many but not all of these support Asynchronous I/O).
+
+
 - **Route:** `/generate/async`
 - **Description:** A non-streaming transaction that submits a workflow to run in the background.
 - **Optional Fields:**
