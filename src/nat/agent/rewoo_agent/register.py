@@ -52,6 +52,7 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
     solver_prompt: str | None = Field(
         default=None,
         description="Provides the SOLVER_PROMPT to use with the agent")  # defaults to SOLVER_PROMPT in prompt.py
+    tool_call_max_retries: int = Field(default=3, description="The number of retries before raising a tool call error.")
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
     log_response_max_chars: PositiveInt = Field(
         default=1000, description="Maximum number of characters to display in logs when logging tool responses.")
