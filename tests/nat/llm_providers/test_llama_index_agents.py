@@ -91,7 +91,7 @@ async def test_openai_minimal_agent():
 @pytest.mark.usefixtures("aws_keys")
 async def test_aws_bedrock_minimal_agent():
     """
-    Test AWS Bedrock LLM with LangChain agent.
+    Test AWS Bedrock LLM with LangChain/LangGraph agent.
     Requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to be set.
     See https://docs.aws.amazon.com/bedrock/latest/userguide/setting-up.html for more information.
     """

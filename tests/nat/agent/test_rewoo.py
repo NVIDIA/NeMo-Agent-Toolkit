@@ -20,7 +20,7 @@ from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langgraph.graph.graph import CompiledGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from nat.agent.base import AgentDecision
 from nat.agent.rewoo_agent.agent import NO_INPUT_ERROR_MESSAGE
@@ -86,7 +86,7 @@ def mock_agent(mock_config_rewoo_agent, mock_llm, mock_tool):
 
 async def test_build_graph(mock_rewoo_agent):
     graph = await mock_rewoo_agent.build_graph()
-    assert isinstance(graph, CompiledGraph)
+    assert isinstance(graph, CompiledStateGraph)
     assert list(graph.nodes.keys()) == ['__start__', 'planner', 'executor', 'solver']
     assert graph.builder.edges == {('planner', 'executor'), ('__start__', 'planner'), ('solver', '__end__')}
     assert set(graph.builder.branches.get('executor').get('conditional_edge').ends.keys()) == {

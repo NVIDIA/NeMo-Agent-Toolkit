@@ -30,7 +30,7 @@ from langchain_core.messages import ToolMessage
 from langchain_core.runnables import Runnable
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
-from langgraph.graph.graph import CompiledGraph
+from langgraph.graph.state import CompiledStateGraph
 
 logger = logging.getLogger(__name__)
 
@@ -261,5 +261,5 @@ class BaseAgent(ABC):
         return "\n".join([f"{message.type}: {message.content}" for message in messages[:-1]])
 
     @abstractmethod
-    async def _build_graph(self, state_schema: type) -> CompiledGraph:
+    async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
         pass

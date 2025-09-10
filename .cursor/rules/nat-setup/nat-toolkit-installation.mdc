@@ -106,7 +106,7 @@ uv pip install -e '.[profiling]'
 When installing specific plugins, these are the available options:
 - `agno` - Agno integration
 - `crewai` - CrewAI integration
-- `langchain` - LangChain integration
+- `langchain` - LangChain/LangGraph integration
 - `llama_index` - LlamaIndex integration
 - `mem0ai` - Mem0 integration
 - `mysql` - MySQL database integration
@@ -203,7 +203,7 @@ NeMo Agent Toolkit is ready for development when:
 
 ## Example Installation Commands for Different Use Cases
 
-### For LangChain Development:
+### For LangChain/LangGraph Development:
 ```bash
 git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit && cd nemo-agent-toolkit
 git submodule update --init --recursive

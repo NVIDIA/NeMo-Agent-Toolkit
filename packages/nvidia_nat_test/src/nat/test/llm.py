@@ -74,7 +74,7 @@ async def test_llm_provider(config: TestLLMConfig, builder: Builder):
 
 @register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def test_llm_langchain(config: TestLLMConfig, builder: Builder):
-    """LLM client for LangChain."""
+    """LLM client for LangChain/LangGraph."""
 
     chooser = _ResponseChooser(response_seq=config.response_seq, delay_ms=config.delay_ms)
 

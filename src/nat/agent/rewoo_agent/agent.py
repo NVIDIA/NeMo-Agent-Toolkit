@@ -27,6 +27,7 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -341,7 +342,7 @@ class ReWOOAgentGraph(BaseAgent):
             logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
             return AgentDecision.END
 
-    async def _build_graph(self, state_schema):
+    async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
         try:
             logger.debug("%s Building and compiling the ReWOO Graph", AGENT_LOG_PREFIX)
 
