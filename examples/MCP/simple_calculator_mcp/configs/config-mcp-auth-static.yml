@@ -30,13 +30,20 @@ general:
   use_uvloop: true
 
 functions:
+  current_datetime_local:
+    _type: current_datetime
   mcp_math:
     _type: mcp_client
     server:
       transport: streamable-http
       auth_provider: static_oauth2
       url: "http://localhost:9901/mcp"
-
+    tool_filter:
+      # skip react_agent and datetime tools from the math MCP server
+      - calculator_multiply
+      - calculator_inequality
+      - calculator_divide
+      - calculator_subtract
 
 authentication:
   static_oauth2:
@@ -66,15 +73,12 @@ llms:
 
 workflow:
   _type: react_agent
-  # List all tools that are needed for the workflow from the two MCP servers
-  # get_current_time_mcp_tool is from the local mcp_server_time server
-  # calculator_multiply, calculator_divide, calculator_subtract, calculator_inequality are from the remote mcp_server_math server
   tool_names:
     - calculator_multiply
     - calculator_inequality
     - calculator_divide
     - calculator_subtract
-    - current_datetime
+    - current_datetime_local
   llm_name: nim_llm
   verbose: true
   retry_parsing_errors: true
