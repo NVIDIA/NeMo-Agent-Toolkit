@@ -41,9 +41,9 @@ from nat.utils.type_utils import override
 logger = logging.getLogger(__name__)
 
 
-class NATAuthAdapter(httpx.Auth):
+class AuthAdapter(httpx.Auth):
     """
-    httpx.Auth adapter for NAT authentication providers.
+    httpx.Auth adapter for authentication providers.
     Converts AuthProviderBase to httpx.Auth interface for dynamic token management.
     """
 
@@ -129,9 +129,9 @@ class MCPBaseClient(ABC):
         if isinstance(auth_provider, httpx.Auth):
             self._httpx_auth = auth_provider
         else:
-            # Convert NAT auth to httpx.Auth
+            # Convert auth provider to httpx.Auth
             if auth_provider:
-                self._httpx_auth = NATAuthAdapter(auth_provider, auth_for_tool_calls_only)
+                self._httpx_auth = AuthAdapter(auth_provider, auth_for_tool_calls_only)
             else:
                 self._httpx_auth = None
 
