@@ -31,7 +31,7 @@ from nat.data_models.top_p_mixin import TopPMixin
 class NIMModelConfig(LLMBaseConfig, RetryMixin, TemperatureMixin, TopPMixin, ThinkingMixin, name="nim"):
     """An NVIDIA Inference Microservice (NIM) llm provider to be used with an LLM client."""
 
-    model_config = ConfigDict(protected_namespaces=())
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
     api_key: str | None = Field(default=None, description="NVIDIA API key to interact with hosted NIM.")
     base_url: str | None = Field(default=None, description="Base url to the hosted NIM.")
