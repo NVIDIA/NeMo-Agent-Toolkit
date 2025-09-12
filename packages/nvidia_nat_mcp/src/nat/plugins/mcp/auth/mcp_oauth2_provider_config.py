@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from pydantic import Field
+from pydantic import HttpUrl
 from pydantic import model_validator
 
 from nat.authentication.interfaces import AuthProviderBaseConfig
@@ -28,6 +29,10 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     Option 3: Dynamic registration + MCP discovery (enable_dynamic_registration=True)
     Option 4: Manual registration + MCP discovery (client_id + client_secret provided)
     """
+    server_url: HttpUrl | None = Field(
+        default=None,
+        description=
+        "URL of the MCP server (this is the MCP server that provides tools, NOT the OAuth2 authorization server)")
 
     # OAuth2 client credentials (Option 4 only)
     client_id: str | None = Field(default=None, description="OAuth2 client ID (for pre-registered clients)")

@@ -41,7 +41,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         """Authenticate using MCP OAuth2 flow via NAT framework."""
 
         # Get server URL from context or config
-        server_url = self._get_server_url()
+        server_url = self.config.server_url
 
         # Delegate to NAT framework's auth callback
         auth_callback = self._context.user_auth_callback
@@ -54,16 +54,6 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             return self._extract_auth_result(authenticated_context)
         except Exception as e:
             raise RuntimeError(f"MCP OAuth2 authentication failed: {e}") from e
-
-    def _get_server_url(self) -> str:
-        """Get MCP server URL from context or config."""
-        # This would need to be passed from the MCP client
-        # or stored in the context
-        # For now, we'll raise an error indicating this needs implementation
-        if not self._server_url:
-            raise RuntimeError(
-                "MCP server URL not set. This should be set by the MCP client when creating the auth provider.")
-        return self._server_url
 
     def _extract_auth_result(self, authenticated_context) -> AuthResult:
         """Extract AuthResult from authenticated context."""
