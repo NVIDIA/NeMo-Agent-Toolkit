@@ -54,7 +54,7 @@ authentication:
     token_url: https://auth.example.com/oauth/token
     client_id: ${MCP_CLIENT_ID}
     client_secret: ${MCP_CLIENT_SECRET}
-    redirect_uri: http://localhost:8080/oauth/callback
+    redirect_uri: http://localhost:8000/auth/redirect
     scopes: ["mcp:read", "mcp:write"]
     use_pkce: true
 ```
@@ -75,7 +75,7 @@ authentication:
   mcp_oauth2_dynamic:
     _type: mcp_oauth2
     enable_dynamic_registration: true
-    redirect_uri: http://localhost:3030/oauth/callback
+    redirect_uri: http://localhost:8000/auth/redirect
     client_name: "NAT MCP Client"
     # All auth details discovered from MCP server
     # Client credentials obtained via dynamic registration
@@ -98,7 +98,7 @@ authentication:
     _type: mcp_oauth2
     client_id: ${MCP_CLIENT_ID}
     client_secret: ${MCP_CLIENT_SECRET}
-    redirect_uri: http://localhost:3030/oauth/callback
+    redirect_uri: http://localhost:8000/auth/redirect
     client_name: "NAT MCP Client"
     # Auth server URLs and scopes discovered from MCP server
     # authorization_url: <-- discovered via RFC 9728 + RFC 8414

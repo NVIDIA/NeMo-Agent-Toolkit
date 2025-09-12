@@ -103,7 +103,7 @@ class AuthAdapter(httpx.Auth):
 
 class MCPBaseClient(ABC):
     """
-    Base client for creating a session and connecting to an MCP server
+    Base client for creating a MCP transport session and connecting to an MCP server
 
     Args:
         transport (str): The type of client to use ('sse', 'stdio', or 'streamable-http')
@@ -113,7 +113,8 @@ class MCPBaseClient(ABC):
     def __init__(self,
                  transport: str = 'streamable-http',
                  auth_provider: AuthProviderBase | httpx.Auth | None = None,
-                 auth_for_tool_calls_only: bool = True):
+                 auth_for_tool_calls_only: bool = True,
+                 server_url: str | None = None):
         self._tools = None
         self._transport = transport.lower()
         if self._transport not in ['sse', 'stdio', 'streamable-http']:
@@ -124,6 +125,7 @@ class MCPBaseClient(ABC):
         self._auth_for_tool_calls_only = auth_for_tool_calls_only
         self._connection_established = False
         self._initial_connection = False
+        self._server_url = server_url
 
         # Handle both auth types
         if isinstance(auth_provider, httpx.Auth):
@@ -131,6 +133,9 @@ class MCPBaseClient(ABC):
         else:
             # Convert auth provider to httpx.Auth
             if auth_provider:
+                # Store server URL in auth provider if it's an MCP OAuth2 provider
+                if hasattr(auth_provider, '_server_url'):
+                    auth_provider._server_url = server_url
                 self._httpx_auth = AuthAdapter(auth_provider, auth_for_tool_calls_only)
             else:
                 self._httpx_auth = None
@@ -266,7 +271,9 @@ class MCPSSEClient(MCPBaseClient):
 
 class MCPStdioClient(MCPBaseClient):
     """
-    Client for creating a session and connecting to an MCP server using stdio
+    Client for creating a session and connecting to an MCP server using stdio.
+    This is a local transport that spawns the MCP server process and communicates
+    with it over stdin/stdout.
 
     Args:
       command (str): The command to run
@@ -323,7 +330,7 @@ class MCPStreamableHTTPClient(MCPBaseClient):
                  url: str,
                  auth_provider: AuthProviderBase | httpx.Auth | None = None,
                  auth_for_tool_calls_only: bool = True):
-        super().__init__("streamable-http", auth_provider, auth_for_tool_calls_only)
+        super().__init__("streamable-http", auth_provider, auth_for_tool_calls_only, server_url=url)
         self._url = url
 
     @property
@@ -349,7 +356,8 @@ class MCPStreamableHTTPClient(MCPBaseClient):
 
 class MCPToolClient:
     """
-    Client wrapper used to call an MCP tool.
+    Client wrapper used to call an MCP tool. This assumes that the MCP transport session
+    has already been setup.
 
     Args:
         session (ClientSession): The MCP client session
