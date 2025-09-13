@@ -171,6 +171,10 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         workflow_dir (str): The directory to create the workflow package.
         description (str): Description to pre-popluate the workflow docstring.
     """
+    # Prevent empty or whitespace-only workflow names
+    if not workflow_name or not workflow_name.strip():
+        raise click.BadParameter("Workflow name cannot be empty.")
+
     try:
         # Get the repository root
         try:

@@ -30,6 +30,7 @@ import time
 import click
 import nest_asyncio
 
+from .commands.workflow import register_workflow_commands
 from .commands.configure.configure import configure_command
 from .commands.evaluate import eval_command
 from .commands.info.info import info_command
@@ -39,7 +40,6 @@ from .commands.sizing.sizing import sizing
 from .commands.start import start_command
 from .commands.uninstall import uninstall_command
 from .commands.validate import validate_command
-from .commands.workflow.workflow import workflow_command
 
 # Apply at the beginning of the file to avoid issues with asyncio
 nest_asyncio.apply()
@@ -53,19 +53,17 @@ LOG_LEVELS = {
     'CRITICAL': logging.CRITICAL
 }
 
-
 def setup_logging(log_level: str):
-    """Configure logging with the specified level"""
     numeric_level = LOG_LEVELS.get(log_level.upper(), logging.INFO)
-    logging.basicConfig(level=numeric_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=numeric_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     return numeric_level
 
-
 def get_version():
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version
+    from importlib.metadata import PackageNotFoundError, version
     try:
-        # Use the distro name to get the version
         return version("nvidia-nat")
     except PackageNotFoundError:
         return "unknown"
@@ -80,25 +78,24 @@ def get_version():
 @click.pass_context
 def cli(ctx: click.Context, log_level: str):
     """Main entrypoint for the NAT CLI"""
-
     ctx_dict = ctx.ensure_object(dict)
 
     # Setup logging
     numeric_level = setup_logging(log_level)
-
     nat_logger = logging.getLogger("nat")
     nat_logger.setLevel(numeric_level)
 
     logger = logging.getLogger(__package__)
-
-    # Set the parent logger for all of the llm examples to use morpheus so we can take advantage of configure_logging
     logger.parent = nat_logger
     logger.setLevel(numeric_level)
 
     ctx_dict["start_time"] = time.time()
     ctx_dict["log_level"] = log_level
 
+# Register workflow commands (new style)
+register_workflow_commands(cli)
 
+# Register other commands
 cli.add_command(configure_command, name="configure")
 cli.add_command(eval_command, name="eval")
 cli.add_command(info_command, name="info")
@@ -106,7 +103,6 @@ cli.add_command(registry_command, name="registry")
 cli.add_command(start_command, name="start")
 cli.add_command(uninstall_command, name="uninstall")
 cli.add_command(validate_command, name="validate")
-cli.add_command(workflow_command, name="workflow")
 cli.add_command(sizing, name="sizing")
 cli.add_command(object_store_command, name="object-store")
 
@@ -115,23 +111,18 @@ cli.add_command(start_command.get_command(None, "console"), name="run")  # type:
 cli.add_command(start_command.get_command(None, "fastapi"), name="serve")  # type: ignore
 cli.add_command(start_command.get_command(None, "mcp"), name="mcp")  # type: ignore
 
-
 @cli.result_callback()
 @click.pass_context
 def after_pipeline(ctx: click.Context, pipeline_start_time: float, *_, **__):
     logger = logging.getLogger(__name__)
-
     end_time = time.time()
-
     ctx_dict = ctx.ensure_object(dict)
-
     start_time = ctx_dict["start_time"]
 
-    # Reset the terminal colors, not using print to avoid an additional newline
+    # Reset terminal colors
     for stream in (sys.stdout, sys.stderr):
         stream.write("\x1b[0m")
 
     logger.debug("Total time: %.2f sec", end_time - start_time)
-
-    if (pipeline_start_time is not None):
+    if pipeline_start_time is not None:
         logger.debug("Pipeline runtime: %.2f sec", end_time - pipeline_start_time)

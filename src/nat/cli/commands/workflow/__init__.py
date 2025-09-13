@@ -12,3 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from .workflow_commands import create_command, reinstall_command, delete_command
+
+def register_workflow_commands(cli):
+    cli.add_command(create_command)
+    cli.add_command(reinstall_command)
+    cli.add_command(delete_command)
+
