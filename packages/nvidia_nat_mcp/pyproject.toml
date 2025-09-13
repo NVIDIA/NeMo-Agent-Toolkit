@@ -45,3 +45,4 @@ nvidia-nat = { workspace = true }
 
 [project.entry-points.'nat.components']
 nat_mcp = "nat.plugins.mcp.register"
+nat_mcp_auth = "nat.plugins.mcp.auth.register"

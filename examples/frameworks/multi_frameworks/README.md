@@ -33,18 +33,18 @@ NeMo Agent toolkit is framework-agnostic, allowing usage of custom and pre-built
 
 ## Overview
 
-LangChain is incredibly flexible, LlamaIndex is incredibly powerful for building RAG pipelines;
+LangChain/LangGraph is incredibly flexible, LlamaIndex is incredibly powerful for building RAG pipelines;
 different AI frameworks excel at different tasks.
 Instead of committing to just one, this example shows how they can work together via NeMo Agent toolkit.
 
 In this example, we combine:
 - **Haystack Agent** – with a configurable LLM.
-- **LangChain Research Tool** – web search.
+- **LangChain/LangGraph Research Tool** – web search.
 - **LlamaIndex RAG Tool** – document Q&A (pre-configured to use this README)
 
 This example workflow leverages the NeMo Agent toolkit plugin system and `Builder` object to demonstrate how the `Builder` object can dynamically wrap any Python function—regardless of its underlying AI framework or implementation—and convert it into another AI framework of our choice.
 
-In this example, we wrap all three of the above tools as LangChain Tools.
+In this example, we wrap all three of the above tools as LangChain/LangGraph Tools.
 Then, using LangChain and LangGraph, we unify these frameworks into a single workflow, demonstrating interoperability and flexibility. The goal is not to favor one tool over another but to showcase how different AI stacks can complement each other.
 
 
@@ -56,17 +56,17 @@ Then, using LangChain and LangGraph, we unify these frameworks into a single wor
 
 ## Key Features
 
-- **Multi-Framework Integration:** Demonstrates seamless integration of LangChain, LlamaIndex, and Haystack frameworks within a single NeMo Agent toolkit workflow.
+- **Multi-Framework Integration:** Demonstrates seamless integration of LangChain/LangGraph, LlamaIndex, and Haystack frameworks within a single NeMo Agent toolkit workflow.
 - **Framework-Agnostic Agent Architecture:** Shows a supervisor agent that routes queries to specialized worker agents built with different underlying frameworks (LlamaIndex RAG, LangChain research, Haystack chitchat).
-- **Cross-Framework Tool Wrapping:** Demonstrates how the NeMo Agent toolkit Builder can dynamically wrap any Python function from any framework and convert it into LangChain tools for unified orchestration.
-- **Specialized Agent Workers:** Includes three distinct agents - a `rag_agent` using LlamaIndex for document Q&A, a `research_agent` using LangChain for arXiv research, and a chitchat agent using Haystack pipelines.
+- **Cross-Framework Tool Wrapping:** Demonstrates how the NeMo Agent toolkit Builder can dynamically wrap any Python function from any framework and convert it into LangChain/LangGraph tools for unified orchestration.
+- **Specialized Agent Workers:** Includes three distinct agents - a `rag_agent` using LlamaIndex for document Q&A, a `research_agent` using LangChain/LangGraph for arXiv research, and a chitchat agent using Haystack pipelines.
 - **Dynamic Framework Selection:** Shows how different AI frameworks can be selected automatically based on query type, leveraging each framework's specific strengths without vendor lock-in.
 
 There is a supervisor agent that will assign and route incoming user queries to one of the worker agents.
 The 3 worker agents are:
 
 - (1) a `rag_agent` made out of `llama_index` via a custom `llama-index-rag` tool
-- (2) a `research_agent` made out of a LangChain runnable chain with tool calling capability, able to call arXiv as a tool and return summarized found research papers
+- (2) a `research_agent` made out of a LangChain/LangGraph runnable chain with tool calling capability, able to call arXiv as a tool and return summarized found research papers
 - (3) a chitchat agent that is able to handle general chitchat query from user, constructed via haystack's pipeline
 
 the multi-agents architecture looks like the below

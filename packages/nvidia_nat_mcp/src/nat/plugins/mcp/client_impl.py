@@ -70,11 +70,21 @@ class MCPServerConfig(BaseModel):
             # Auth is not supported for stdio transport
             if self.auth_provider is not None:
                 raise ValueError("Authentication is not supported for stdio transport")
-        elif self.transport in ("sse", "streamable-http"):
+        elif self.transport == "sse":
             if self.command is not None or self.args is not None or self.env is not None:
-                raise ValueError("command, args, and env should not be set when using sse or streamable-http transport")
+                raise ValueError("command, args, and env should not be set when using sse transport")
             if not self.url:
-                raise ValueError("url is required when using sse or streamable-http transport")
+                raise ValueError("url is required when using sse transport")
+            # Auth is not supported for SSE transport
+            if self.auth_provider is not None:
+                raise ValueError(
+                    "Authentication is not supported for SSE transport. Use streamable-http transport for authenticated connections."
+                )
+        elif self.transport == "streamable-http":
+            if self.command is not None or self.args is not None or self.env is not None:
+                raise ValueError("command, args, and env should not be set when using streamable-http transport")
+            if not self.url:
+                raise ValueError("url is required when using streamable-http transport")
 
         return self
 
@@ -162,7 +172,7 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
             raise ValueError("command is required for stdio transport")
         client = MCPStdioClient(config.server.command, config.server.args, config.server.env)
     elif config.server.transport == "sse":
-        client = MCPSSEClient(str(config.server.url), auth_provider=auth_provider)
+        client = MCPSSEClient(str(config.server.url))
     elif config.server.transport == "streamable-http":
         client = MCPStreamableHTTPClient(str(config.server.url), auth_provider=auth_provider)
     else:

@@ -18,24 +18,41 @@
 # on the specified URL. streamable-http is the recommended transport for HTTP-based
 # connections, but sse is also supported for backwards compatibility.
 
+# This config file shows -
+# 1. how to use a local MCP server to get the current date and time using stdio transport.
+# 2. how to access a remote MCP server using streamable-http transport for math operations.
+#
+# As the mcp_server_time is running locally ensure that the package "mcp_server_time" is installed
+# on your local machine. For example, if you are using pip, you can install it with:
+# uv pip install mcp-server-time
+
 general:
   use_uvloop: true
 
 functions:
-  calculator_multiply:
-    _type: calculator_multiply
-  calculator_inequality:
-    _type: calculator_inequality
-  calculator_divide:
-    _type: nat_simple_calculator/calculator_divide
-  mcp_time_tool:
-    _type: mcp_tool_wrapper
-    transport: sse
-    url: "http://localhost:8080/sse"
-    mcp_tool_name: get_current_time
-    description: "Returns the current date and time from the MCP server"
-  calculator_subtract:
-    _type: calculator_subtract
+  current_datetime_local:
+    _type: current_datetime
+  mcp_math:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      auth_provider: mcp_oauth2_dynamic
+      url: "http://localhost:9901/mcp"
+    tool_filter:
+      # skip react_agent and datetime tools from the math MCP server
+      - calculator_multiply
+      - calculator_inequality
+      - calculator_divide
+      - calculator_subtract
+
+authentication:
+  mcp_oauth2_dynamic:
+    _type: mcp_oauth2
+    redirect_uri: http://localhost:8000/auth/redirect
+    client_name: "NAT MCP Client"
+    # Client credentials obtained via dynamic registration
+    enable_dynamic_registration: true
+    # Auth server URLs and scopes discovered from MCP server
 
 llms:
   nim_llm:
@@ -43,19 +60,16 @@ llms:
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
     max_tokens: 1024
-  openai_llm:
-    _type: openai
-    model_name: gpt-3.5-turbo
-    max_tokens: 2000
 
 workflow:
   _type: react_agent
   tool_names:
     - calculator_multiply
     - calculator_inequality
-    - mcp_time_tool
     - calculator_divide
     - calculator_subtract
+    - current_datetime_local
   llm_name: nim_llm
   verbose: true
-  parse_agent_response_max_retries: 3
+  retry_parsing_errors: true
+  max_retries: 3

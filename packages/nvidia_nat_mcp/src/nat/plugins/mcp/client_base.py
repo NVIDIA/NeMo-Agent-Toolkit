@@ -20,12 +20,11 @@ from abc import ABC
 from abc import abstractmethod
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
-from enum import Enum
 from typing import Any
+from typing import AsyncGenerator
 
+import httpx
 from pydantic import BaseModel
-from pydantic import Field
-from pydantic import create_model
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -36,102 +35,110 @@ from mcp.types import TextContent
 from nat.authentication.interfaces import AuthProviderBase
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
 from nat.plugins.mcp.exceptions import MCPToolNotFoundError
+from nat.plugins.mcp.utils import model_from_mcp_schema
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 
 
-def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
+class AuthAdapter(httpx.Auth):
     """
-    Create a pydantic model from the input schema of the MCP tool
+    httpx.Auth adapter for authentication providers.
+    Converts AuthProviderBase to httpx.Auth interface for dynamic token management.
     """
-    _type_map = {
-        "string": str,
-        "number": float,
-        "integer": int,
-        "boolean": bool,
-        "array": list,
-        "null": None,
-        "object": dict,
-    }
 
-    properties = mcp_input_schema.get("properties", {})
-    required_fields = set(mcp_input_schema.get("required", []))
-    schema_dict = {}
+    def __init__(self, auth_provider: AuthProviderBase, auth_for_tool_calls_only):
+        self.auth_provider = auth_provider
+        self.auth_for_tool_calls_only = auth_for_tool_calls_only
 
-    def _generate_valid_classname(class_name: str):
-        return class_name.replace('_', ' ').replace('-', ' ').title().replace(' ', '')
+    async def async_auth_flow(self, request: httpx.Request) -> AsyncGenerator[httpx.Request, httpx.Response]:
+        """Add authentication headers to the request using NAT auth provider."""
+        # Check if we should only auth tool calls
+        if self.auth_for_tool_calls_only and not self._is_tool_call_request(request):
+            # Skip auth for non-tool calls
+            yield request
+            return
 
-    def _generate_field(field_name: str, field_properties: dict[str, Any]) -> tuple:
-        json_type = field_properties.get("type", "string")
-        enum_vals = field_properties.get("enum")
+        try:
+            # Get fresh auth headers from the NAT auth provider
+            auth_headers = await self._get_auth_headers()
+            request.headers.update(auth_headers)
+        except Exception as e:
+            logger.warning("Failed to get auth headers: %s", e)
+            # Continue without auth headers if auth fails
 
-        if enum_vals:
-            enum_name = f"{field_name.capitalize()}Enum"
-            field_type = Enum(enum_name, {item: item for item in enum_vals})
+        yield request
 
-        elif json_type == "object" and "properties" in field_properties:
-            field_type = model_from_mcp_schema(name=field_name, mcp_input_schema=field_properties)
-        elif json_type == "array" and "items" in field_properties:
-            item_properties = field_properties.get("items", {})
-            if item_properties.get("type") == "object":
-                item_type = model_from_mcp_schema(name=field_name, mcp_input_schema=item_properties)
+    def _is_tool_call_request(self, request: httpx.Request) -> bool:
+        """Check if this is a tool call request based on the request body."""
+        try:
+            # Check if the request body contains a tool call
+            if request.content:
+                import json
+                body = json.loads(request.content.decode('utf-8'))
+                # Check if it's a JSON-RPC request with method "tools/call"
+                if (isinstance(body, dict) and body.get("method") == "tools/call"):
+                    return True
+        except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
+            # If we can't parse the body, assume it's not a tool call
+            pass
+        return False
+
+    async def _get_auth_headers(self) -> dict[str, str]:
+        """Get authentication headers from the NAT auth provider."""
+        try:
+            auth_result = await self.auth_provider.authenticate()
+            # Check if we have BearerTokenCred
+            from nat.data_models.authentication import BearerTokenCred
+            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
+                token = auth_result.credentials[0].token.get_secret_value()
+                return {"Authorization": f"Bearer {token}"}
             else:
-                item_type = _type_map.get(item_properties.get("type", "string"), Any)
-            field_type = list[item_type]
-        elif isinstance(json_type, list):
-            field_type = None
-            for t in json_type:
-                mapped = _type_map.get(t, Any)
-                field_type = mapped if field_type is None else field_type | mapped
-
-            return field_type, Field(
-                default=field_properties.get("default", None if "null" in json_type else ...),
-                description=field_properties.get("description", "")
-            )
-        else:
-            field_type = _type_map.get(json_type, Any)
-
-        # Determine the default value based on whether the field is required
-        if field_name in required_fields:
-            # Field is required - use explicit default if provided, otherwise make it required
-            default_value = field_properties.get("default", ...)
-        else:
-            # Field is optional - use explicit default if provided, otherwise None
-            default_value = field_properties.get("default", None)
-            # Make the type optional if no default was provided
-            if "default" not in field_properties:
-                field_type = field_type | None
-
-        nullable = field_properties.get("nullable", False)
-        description = field_properties.get("description", "")
-
-        field_type = field_type | None if nullable else field_type
-
-        return field_type, Field(default=default_value, description=description)
-
-    for field_name, field_props in properties.items():
-        schema_dict[field_name] = _generate_field(field_name=field_name, field_properties=field_props)
-    return create_model(f"{_generate_valid_classname(name)}InputSchema", **schema_dict)
+                logger.warning("Auth provider did not return BearerTokenCred")
+                return {}
+        except Exception as e:
+            logger.warning("Failed to get auth token: %s", e)
+            return {}
 
 
 class MCPBaseClient(ABC):
     """
-    Base client for creating a session and connecting to an MCP server
+    Base client for creating a MCP transport session and connecting to an MCP server
 
     Args:
         transport (str): The type of client to use ('sse', 'stdio', or 'streamable-http')
+        auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self, transport: str = 'streamable-http'):
+    def __init__(self,
+                 transport: str = 'streamable-http',
+                 auth_provider: AuthProviderBase | httpx.Auth | None = None,
+                 auth_for_tool_calls_only: bool = True,
+                 server_url: str | None = None):
         self._tools = None
         self._transport = transport.lower()
         if self._transport not in ['sse', 'stdio', 'streamable-http']:
             raise ValueError("transport must be either 'sse', 'stdio' or 'streamable-http'")
 
         self._exit_stack: AsyncExitStack | None = None
+        self._session: ClientSession | None = None  # Main session
+        self._auth_for_tool_calls_only = auth_for_tool_calls_only
+        self._connection_established = False
+        self._initial_connection = False
+        self._server_url = server_url
 
-        self._session: ClientSession | None = None
+        # Handle both auth types
+        if isinstance(auth_provider, httpx.Auth):
+            self._httpx_auth = auth_provider
+        else:
+            # Convert auth provider to httpx.Auth
+            if auth_provider:
+                # Store server URL in auth provider if it's an MCP OAuth2 provider
+                if hasattr(auth_provider, '_server_url'):
+                    auth_provider._server_url = server_url
+                self._httpx_auth = AuthAdapter(auth_provider, auth_for_tool_calls_only)
+            else:
+                self._httpx_auth = None
 
     @property
     def transport(self) -> str:
@@ -143,15 +150,19 @@ class MCPBaseClient(ABC):
 
         self._exit_stack = AsyncExitStack()
 
+        # Establish connection with httpx.Auth
         self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
+
+        self._initial_connection = True
+        self._connection_established = True
 
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-
         if not self._exit_stack:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
 
+        # Close session
         await self._exit_stack.aclose()
         self._session = None
         self._exit_stack = None
@@ -169,11 +180,12 @@ class MCPBaseClient(ABC):
         """
         Establish a session with an MCP server within an async context
         """
-        pass
+        yield
 
     async def get_tools(self):
         """
         Retrieve a dictionary of all tools served by the MCP server.
+        Uses unauthenticated session for discovery.
         """
 
         if not self._session:
@@ -186,7 +198,8 @@ class MCPBaseClient(ABC):
                 MCPToolClient(session=self._session,
                               tool_name=tool.name,
                               tool_description=tool.description,
-                              tool_input_schema=tool.inputSchema)
+                              tool_input_schema=tool.inputSchema,
+                              parent_client=self)
             for tool in response.tools
         }
 
@@ -230,13 +243,11 @@ class MCPSSEClient(MCPBaseClient):
 
     Args:
       url (str): The url of the MCP server
-      auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self, url: str, auth_provider: AuthProviderBase | None = None):
-        super().__init__("sse")
+    def __init__(self, url: str):
+        super().__init__("sse", None, False)
         self._url = url
-        self._auth_provider = auth_provider
 
     @property
     def url(self) -> str:
@@ -246,33 +257,13 @@ class MCPSSEClient(MCPBaseClient):
     def server_name(self):
         return f"sse:{self._url}"
 
-    async def _get_auth_headers(self) -> dict[str, str]:
-        """Get authentication headers from the auth provider."""
-        if not self._auth_provider:
-            return {}
-
-        try:
-            auth_result = await self._auth_provider.authenticate()
-            # Check if we have BearerTokenCred
-            from nat.data_models.authentication import BearerTokenCred
-            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
-                token = auth_result.credentials[0].token.get_secret_value()
-                return {"Authorization": f"Bearer {token}"}
-            else:
-                logger.warning("Auth provider did not return BearerTokenCred")
-                return {}
-        except Exception as e:
-            logger.warning("Failed to get auth token: %s", e)
-            return {}
-
     @asynccontextmanager
     @override
     async def connect_to_server(self):
         """
         Establish a session with an MCP SSE server within an async context
         """
-        headers = await self._get_auth_headers()
-        async with sse_client(url=self._url, headers=headers) as (read, write):
+        async with sse_client(url=self._url) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
@@ -280,7 +271,9 @@ class MCPSSEClient(MCPBaseClient):
 
 class MCPStdioClient(MCPBaseClient):
     """
-    Client for creating a session and connecting to an MCP server using stdio
+    Client for creating a session and connecting to an MCP server using stdio.
+    This is a local transport that spawns the MCP server process and communicates
+    with it over stdin/stdout.
 
     Args:
       command (str): The command to run
@@ -333,10 +326,12 @@ class MCPStreamableHTTPClient(MCPBaseClient):
       auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self, url: str, auth_provider: AuthProviderBase | None = None):
-        super().__init__("streamable-http")
+    def __init__(self,
+                 url: str,
+                 auth_provider: AuthProviderBase | httpx.Auth | None = None,
+                 auth_for_tool_calls_only: bool = True):
+        super().__init__("streamable-http", auth_provider, auth_for_tool_calls_only, server_url=url)
         self._url = url
-        self._auth_provider = auth_provider
 
     @property
     def url(self) -> str:
@@ -346,32 +341,14 @@ class MCPStreamableHTTPClient(MCPBaseClient):
     def server_name(self):
         return f"streamable-http:{self._url}"
 
-    async def _get_auth_headers(self) -> dict[str, str]:
-        """Get authentication headers from the auth provider."""
-        if not self._auth_provider:
-            return {}
-
-        try:
-            auth_result = await self._auth_provider.authenticate()
-            # Check if we have BearerTokenCred
-            from nat.data_models.authentication import BearerTokenCred
-            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
-                token = auth_result.credentials[0].token.get_secret_value()
-                return {"Authorization": f"Bearer {token}"}
-            else:
-                logger.warning("Auth provider did not return BearerTokenCred")
-                return {}
-        except Exception as e:
-            logger.warning("Failed to get auth token: %s", e)
-            return {}
-
     @asynccontextmanager
+    @override
     async def connect_to_server(self):
         """
         Establish a session with an MCP server via streamable-http within an async context
         """
-        headers = await self._get_auth_headers()
-        async with streamablehttp_client(url=self._url, headers=headers) as (read, write, _):
+        # Use httpx.Auth for authentication
+        async with streamablehttp_client(url=self._url, auth=self._httpx_auth) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
@@ -379,24 +356,28 @@ class MCPStreamableHTTPClient(MCPBaseClient):
 
 class MCPToolClient:
     """
-    Client wrapper used to call an MCP tool.
+    Client wrapper used to call an MCP tool. This assumes that the MCP transport session
+    has already been setup.
 
     Args:
-        connect_fn (callable): Function that returns an async context manager for connecting to the server
+        session (ClientSession): The MCP client session
         tool_name (str): The name of the tool to wrap
         tool_description (str): The description of the tool provided by the MCP server.
         tool_input_schema (dict): The input schema for the tool.
+        parent_client (MCPBaseClient): The parent MCP client for auth management.
     """
 
     def __init__(self,
                  session: ClientSession,
                  tool_name: str,
                  tool_description: str | None,
-                 tool_input_schema: dict | None = None):
+                 tool_input_schema: dict | None = None,
+                 parent_client: "MCPBaseClient | None" = None):
         self._session = session
         self._tool_name = tool_name
         self._tool_description = tool_description
         self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
+        self._parent_client = parent_client
 
     @property
     def name(self):
@@ -432,6 +413,9 @@ class MCPToolClient:
         Args:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
         """
+        if self._session is None:
+            raise RuntimeError("No session available for tool call")
+        logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
         result = await self._session.call_tool(self._tool_name, tool_args)
 
         output = []
