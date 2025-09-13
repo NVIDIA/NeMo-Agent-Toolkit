@@ -273,7 +273,7 @@ The authorization server (`https://auth.example.com`) must support both client-f
    - **Example introspection request**:
      ```json
      POST /introspect
-     Authorization: Basic <mcp_server_credentials>
+     Authorization: Bearer <mcp_server_access_token>
      Content-Type: application/x-www-form-urlencoded
 
      token=ACCESS_TOKEN_456&token_type_hint=access_token

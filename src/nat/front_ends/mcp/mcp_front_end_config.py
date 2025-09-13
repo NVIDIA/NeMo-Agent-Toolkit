@@ -17,6 +17,7 @@ from typing import Literal
 
 from pydantic import Field
 
+from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.front_end import FrontEndBaseConfig
 
 
@@ -41,6 +42,5 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
         default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")
 
     # Auth configuration
-    require_auth: bool = Field(default=False, description="Require OAuth2.1 authorization for MCP server access")
-    auth_server_url: str | None = Field(default=None, description="Authorization server URL for token validation")
-    required_scopes: list[str] = Field(default_factory=list, description="Required OAuth2 scopes for MCP access")
+    auth_provider: AuthenticationRef = Field(description=("Reference to the authentication provider to use for "
+                                                          "authentication."))
