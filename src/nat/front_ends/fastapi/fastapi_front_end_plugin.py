@@ -155,14 +155,14 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                 reload_excludes = ["./.*"]
 
                 # By default, Uvicorn uses "auto" event loop policy, which prefers `uvloop` if installed. However,
-                # uvloop’s event loop policy for MacOS with Python 3.12 doesn’t provide a child watcher (which is needed
-                # for MCP server), so setting loop="asyncio" forces Uvicorn to use the standard event loop, which
-                # includes child-watcher support.
+                # uvloop’s event loop policy for macOS doesn’t provide a child watcher (which is needed for MCP server),
+                # so setting loop="asyncio" forces Uvicorn to use the standard event loop, which includes child-watcher
+                # support.
                 if sys.platform == "darwin":
-                    # For MacOS
+                    # For macOS
                     event_loop_policy = "asyncio"
                 else:
-                    # For non-MacOS platforms
+                    # For non-macOS platforms
                     event_loop_policy = "auto"
 
                 uvicorn.run("nat.front_ends.fastapi.main:get_app",
