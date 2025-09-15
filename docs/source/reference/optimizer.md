@@ -113,7 +113,7 @@ Now, let's dive into how to configure the optimizer.
 
 ## Optimizer Configuration
 
-The optimizer is configured through an `optimizer` section in your workflow's YAML/JSON configuration file. This configuration is mapped to the `OptimizerConfig` and `OptimizerMetric` Pydantic models.
+The optimizer is configured through an `optimizer` section in your workflow's YAML configuration file. This configuration is mapped to the `OptimizerConfig` and `OptimizerMetric` Pydantic models.
 
 Here is an example of an `optimizer` section in a YAML configuration file:
 
@@ -382,8 +382,8 @@ nat optimize --config_file <path_to_config>
 
 ### Options
 
--   `--config_file`: (Required) Path to the JSON or YAML configuration file for your workflow, for example, `my_workflow/config.yaml`. This file should contain the `optimizer` section as described above.
--   `--dataset`: (Optional) Path to a JSON file containing the dataset for evaluation, such as `my_workflow/eval_dataset.json`. This will override any dataset path specified in the config file. The dataset should be a list of dictionaries, where each dictionary represents a data point and includes the necessary inputs for your workflow and the ground truth for evaluation.
+-   `--config_file`: (Required) Path to the JSON or YAML configuration file for your workflow, for example, `config.yaml`. This file should contain the `optimizer` section as described above.
+-   `--dataset`: (Optional) Path to a JSON file containing the dataset for evaluation, such as `eval_dataset.json`. This will override any dataset path specified in the config file. The dataset should be a list of dictionaries, where each dictionary represents a data point and includes the necessary inputs for your workflow and the ground truth for evaluation.
 -   `--result_json_path`: A JSONPath expression to extract the result from the workflow's output. Defaults to `$`.
 -   `--endpoint`: If you are running your workflow as a service, you can provide the endpoint URL. For example, `http://localhost:8000/generate`.
 -   `--endpoint_timeout`: The timeout in seconds for requests to the endpoint. Defaults to `300`.
@@ -401,8 +401,8 @@ When the optimizer finishes, it will save the results in the directory specified
 
 -   `optimized_config.yml`: Tuned configuration derived from the selected trial.
 -   `trials_dataframe_params.csv`: Full Optuna trials dataframe (values, params, timings, rep_scores).
--   `plots/pareto_front_2d.png`: 2D Pareto front (when 2 metrics).
--   `plots/pareto_parallel_coordinates.png`: Parallel coordinates plot.
--   `plots/pareto_pairwise_matrix.png`: Pairwise metric matrix.
+-   `pareto_front_2d.png`: 2D Pareto front (when 2 metrics).
+-   `pareto_parallel_coordinates.png`: Parallel coordinates plot.
+-   `pareto_pairwise_matrix.png`: Pairwise metric matrix.
 
 By examining these output files, you can understand the results of the optimization, choose the best parameters for your needs (for example, picking a point on the Pareto front that represents your desired trade-off), and gain insights into your workflow's behavior.
