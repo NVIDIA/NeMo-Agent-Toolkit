@@ -31,7 +31,13 @@ from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.data_models.top_p_mixin import TopPMixin
 
 
-class NIMModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, TemperatureMixin, TopPMixin, ThinkingMixin, name="nim"):
+class NIMModelConfig(LLMBaseConfig,
+                     RetryMixin,
+                     OptimizableMixin,
+                     TemperatureMixin,
+                     TopPMixin,
+                     ThinkingMixin,
+                     name="nim"):
     """An NVIDIA Inference Microservice (NIM) llm provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")

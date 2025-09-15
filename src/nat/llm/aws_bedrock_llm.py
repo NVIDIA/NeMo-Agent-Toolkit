@@ -30,7 +30,13 @@ from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.data_models.top_p_mixin import TopPMixin
 
 
-class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, TemperatureMixin, TopPMixin, ThinkingMixin, name="aws_bedrock"):
+class AWSBedrockModelConfig(LLMBaseConfig,
+                            RetryMixin,
+                            OptimizableMixin,
+                            TemperatureMixin,
+                            TopPMixin,
+                            ThinkingMixin,
+                            name="aws_bedrock"):
     """An AWS Bedrock llm provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")

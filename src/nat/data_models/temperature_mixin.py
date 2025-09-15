@@ -41,5 +41,4 @@ class TemperatureMixin(
         ge=0.0,
         le=1.0,
         description="Sampling temperature in [0, 1]. Defaults to 0.0 when supported on the model.",
-        space=SearchSpace(high=0.9, low=0.1, step=0.2)
-    )
+        space=SearchSpace(high=0.9, low=0.1, step=0.2))

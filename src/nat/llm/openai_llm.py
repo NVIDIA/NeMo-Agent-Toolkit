@@ -28,7 +28,13 @@ from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.data_models.top_p_mixin import TopPMixin
 
 
-class OpenAIModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, TemperatureMixin, TopPMixin, ThinkingMixin, name="openai"):
+class OpenAIModelConfig(LLMBaseConfig,
+                        RetryMixin,
+                        OptimizableMixin,
+                        TemperatureMixin,
+                        TopPMixin,
+                        ThinkingMixin,
+                        name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")

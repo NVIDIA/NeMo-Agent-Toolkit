@@ -41,5 +41,4 @@ class TopPMixin(
         ge=0.0,
         le=1.0,
         description="Top-p for distribution sampling. Defaults to 1.0 when supported on the model.",
-        space=SearchSpace(high=1.0, low=0.5, step=0.1)
-    )
+        space=SearchSpace(high=1.0, low=0.5, step=0.1))
