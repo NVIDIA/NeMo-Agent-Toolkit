@@ -12,8 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import subprocess
+from pathlib import Path
+from unittest.mock import patch
+import shutil
+
+import pytest
 from click.testing import CliRunner
-from nat.cli.commands.workflow.workflow_commands import create_command
+
+from nat.cli.commands.workflow.workflow_commands import (
+    create_command,
+    _get_nat_dependency,
+    get_repo_root,
+)
+
 
 def test_create_workflow_with_valid_name(tmp_path):
     """Ensure CLI succeeds with a valid workflow name."""
@@ -25,25 +37,12 @@ def test_create_workflow_with_valid_name(tmp_path):
     assert result.exit_code == 0
     assert "Workflow 'my-workflow' created successfully in" in result.output
 
-
     # Verify the workflow directory was actually created
     workflow_dir = tmp_path / "my-workflow"
     assert workflow_dir.is_dir()
 
-    # Cleanup created workflow
-    if workflow_dir.exists():
-        for child in workflow_dir.iterdir():
-            child.unlink()
-        workflow_dir.rmdir()
-
-import subprocess
-from pathlib import Path
-from unittest.mock import patch
-
-import pytest
-
-from nat.cli.commands.workflow.workflow_commands import _get_nat_dependency
-from nat.cli.commands.workflow.workflow_commands import get_repo_root
+    # Cleanup created workflow (robust)
+    shutil.rmtree(workflow_dir, ignore_errors=True)
 
 
 def test_get_repo_root(project_dir: str):
@@ -68,7 +67,8 @@ def test_nat_workflow_create(tmp_path):
         ["nat", "workflow", "create", "--no-install", "--workflow-dir", str(tmp_path), "test_workflow"],
         capture_output=True,
         text=True,
-        check=True)
+        check=True
+    )
 
     # Verify the command succeeded
     assert result.returncode == 0
