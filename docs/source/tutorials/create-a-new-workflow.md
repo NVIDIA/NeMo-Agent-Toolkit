@@ -38,7 +38,6 @@ nat workflow delete text_file_ingest
 ```
 :::
 
-<!-- This section needs to be updated once #559 is completed -->
 Each workflow created in this way also creates a Python project, and by default, this will also install the project into the environment. If you want to avoid installing it into the environment you can use the `--no-install` flag.
 
 <!-- path-check-skip-next-line -->
