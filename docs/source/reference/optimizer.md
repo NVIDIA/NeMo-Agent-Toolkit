@@ -2,7 +2,7 @@
 SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.
 SPDX-License-Identifier: Apache-2.0
 -->
-# NeMo Agent Toolkit Optimizer Guide
+# NVIDIA NeMo Agent toolkit Optimizer Guide
 
 Welcome to the NeMo Agent toolkit Optimizer guide. This document provides a comprehensive overview of how to use the NeMo Agent toolkit Optimizer to tune your NeMo Agent toolkit workflows.
 
