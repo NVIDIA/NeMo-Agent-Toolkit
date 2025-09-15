@@ -327,7 +327,7 @@ Here is a matrix of the `default.optimizable` parameters for some of the built-i
 |               | `nim`    | `1.0`         | `low=0.5`, `high=1.0`, `step=0.1`  |
 | `max_tokens`  | `nim`    | `300`         | `low=128`, `high=2176`, `step=512` |
 
-To use these defaults, you just need to enable numeric optimization in your `config.yaml`. The optimizer will automatically find these `OptimizableField`s in the LLM configuration and start tuning them. You can always override these defaults by defining your own `OptimizableField` on the LLM configuration in your workflow.
+To use these defaults, you just need to enable numeric optimization in your `config.yml`. The optimizer will automatically find these `OptimizableField`s in the LLM configuration and start tuning them. You can always override these defaults by defining your own `OptimizableField` on the LLM configuration in your workflow.
 
 ## Prompt Optimization with Genetic Algorithm (GA)
 
