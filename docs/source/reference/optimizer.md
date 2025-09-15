@@ -35,57 +35,7 @@ The NeMo Agent toolkit Optimizer uses a combination of techniques to find the be
 - Numerical hyperparameter optimization uses [Optuna](https://optuna.org/).
 - Prompt optimization uses a genetic algorithm (GA) that evolves a population of prompt candidates over multiple generations using LLM-powered mutation and optional recombination.
 
-```
-┌─────────────────┐
-│ Start           │
-│ Optimization    │
-└─────────┬───────┘
-          │
-          ▼
-┌─────────────────┐
-│ Read Config     │
-└─────────┬───────┘
-          │
-          ▼
-┌─────────────────┐
-│ Initialize      │
-│ Optimizers      │
-└─────────┬───────┘
-          │
-          ▼
-┌──────────────────────────┐     ┌─────────────────┐
-│ Loop Numeric N Trials    │────▶│ Suggest         │
-│ (Optuna)                 │     │ Parameters      │
-└─────────┬────────────────┘     └─────────┬───────┘
-          ▲                       │
-          │                       ▼
-┌─────────┴──────────────┐     ┌─────────────────┐
-│ Record Numeric Trial   │◀────│ Run Workflow    │
-│                        │     │ with Parameters │
-└─────────┬──────────────┘     └─────────┬───────┘
-          │                       │
-          │                       ▼
-          │             ┌─────────────────┐
-          └─────────────│ Evaluate        │
-                        │ Results         │
-                        └─────────────────┘
-          │
-          ▼ (All trials done)
-┌─────────────────┐
-│ Analyze         │
-│ Results         │
-└─────────┬───────┘
-          │
-          ▼
-┌─────────────────┐
-│ Save Outputs    │
-└─────────┬───────┘
-          │
-          ▼
-┌─────────────────┐
-│ End             │
-└─────────────────┘
-```
+![Optimizer Flow Chart](../_static/optimizer_flow_chart.png)
 
 The optimization process follows the steps outlined in the diagram above:
 
