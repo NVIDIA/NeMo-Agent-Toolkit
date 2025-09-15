@@ -48,8 +48,7 @@ class SearchSpace(BaseModel, Generic[T]):
         if self.values is not None:
             # If values is provided, we don't need high/low
             if self.high is not None or self.low is not None:
-                raise ValueError("Either 'values' must be provided, or both 'high' and 'low' "
-                                 "must be provided")
+                raise ValueError("SearchSpace 'values' is mutually exclusive with 'high' and 'low'")
             return self
 
         return self
