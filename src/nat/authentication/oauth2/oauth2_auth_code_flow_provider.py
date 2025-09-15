@@ -23,6 +23,7 @@ from nat.authentication.interfaces import AuthProviderBase
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from nat.builder.context import Context
 from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import AuthRequest
 from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BearerTokenCred
 
@@ -62,14 +63,8 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
 
         return new_auth_result
 
-    async def authenticate(self, user_id: str | None = None) -> AuthResult:
-        if user_id is None and hasattr(Context.get(), "metadata") and hasattr(
-                Context.get().metadata, "cookies") and Context.get().metadata.cookies is not None:
-            session_id = Context.get().metadata.cookies.get("nat-session", None)
-            if not session_id:
-                raise RuntimeError("Authentication failed. No session ID found. Cannot identify user.")
-
-            user_id = session_id
+    async def authenticate(self, user_id: str | None = None, auth_request: AuthRequest | None = None) -> AuthResult:
+        user_id = self._resolve_user_id(user_id, auth_request)
 
         if user_id and user_id in self._authenticated_tokens:
             auth_result = self._authenticated_tokens[user_id]

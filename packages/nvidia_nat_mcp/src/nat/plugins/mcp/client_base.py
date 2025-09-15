@@ -33,6 +33,8 @@ from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
 from nat.authentication.interfaces import AuthProviderBase
+from nat.data_models.authentication import AuthReason
+from nat.data_models.authentication import AuthRequest
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
 from nat.plugins.mcp.exceptions import MCPToolNotFoundError
 from nat.plugins.mcp.utils import model_from_mcp_schema
@@ -67,7 +69,19 @@ class AuthAdapter(httpx.Auth):
             logger.warning("Failed to get auth headers: %s", e)
             # Continue without auth headers if auth fails
 
-        yield request
+        response = yield request
+
+        # Handle 401 responses by retrying with fresh auth
+        if response.status_code == 401:
+            try:
+                # Get fresh auth headers with 401 context
+                auth_headers = await self._get_auth_headers(reason=AuthReason.RETRY_AFTER_401, response=response)
+                request.headers.update(auth_headers)
+                response = yield request  # Retry the request
+            except Exception as e:
+                logger.warning("Failed to refresh auth after 401: %s", e)
+
+        yield response
 
     def _is_tool_call_request(self, request: httpx.Request) -> bool:
         """Check if this is a tool call request based on the request body."""
@@ -84,10 +98,15 @@ class AuthAdapter(httpx.Auth):
             pass
         return False
 
-    async def _get_auth_headers(self) -> dict[str, str]:
+    async def _get_auth_headers(self, reason: AuthReason | None = None, response: httpx.Response | None = None) -> dict[str, str]:
         """Get authentication headers from the NAT auth provider."""
+        # Build auth request
+        auth_request = AuthRequest(
+            reason= AuthReason.NORMAL if reason is None else reason,
+            www_authenticate=response.headers.get("WWW-Authenticate", None) if response else None,
+        )
         try:
-            auth_result = await self.auth_provider.authenticate()
+            auth_result = await self.auth_provider.authenticate(auth_request=auth_request)
             # Check if we have BearerTokenCred
             from nat.data_models.authentication import BearerTokenCred
             if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):

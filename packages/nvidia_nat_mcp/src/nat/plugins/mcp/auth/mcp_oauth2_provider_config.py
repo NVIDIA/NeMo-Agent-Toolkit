@@ -21,45 +21,50 @@ from nat.authentication.interfaces import AuthProviderBaseConfig
 
 
 class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
-    """MCP OAuth2 authentication provider configuration for MCP-specific auth flows.
-
-    This provider handles MCP server discovery and dynamic registration, which are not
-    supported by the standard oauth2_auth_code_flow provider.
-
-    Option 3: Dynamic registration + MCP discovery (enable_dynamic_registration=True)
-    Option 4: Manual registration + MCP discovery (client_id + client_secret provided)
     """
-    server_url: HttpUrl | None = Field(
-        default=None,
+    MCP OAuth2 provider (discovery + optional DCR), composing the OAuth2AuthCodeFlow provider.
+
+    Supported modes:
+      - Dynamic Client Registration + discovery (enable_dynamic_registration=True, no client_id)
+      - Manual Client Registration + discovery (client_id + client_secret provided)
+    """
+    server_url: HttpUrl = Field(
+        ...,
         description=
         "URL of the MCP server (this is the MCP server that provides tools, NOT the OAuth2 authorization server)")
 
-    # OAuth2 client credentials (Option 4 only)
+    # Client registration (manual registration vs DCR)
     client_id: str | None = Field(default=None, description="OAuth2 client ID (for pre-registered clients)")
     client_secret: str | None = Field(default=None, description="OAuth2 client secret (for pre-registered clients)")
-
-    # OAuth2 flow configuration
-    scopes: list[str] | None = Field(default=None,
-                                     description="OAuth2 scopes (discovered from MCP server if not provided)")
-    redirect_uri: str | None = Field(default=None,
-                                     description="OAuth2 redirect URI (defaults to localhost with random port)")
-
-    # Advanced options
     enable_dynamic_registration: bool = Field(default=True,
                                               description="Enable OAuth2 Dynamic Client Registration (RFC 7591)")
-    use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
     client_name: str = Field(default="NAT MCP Client", description="OAuth2 client name for dynamic registration")
+
+
+    # OAuth2 flow configuration
+    redirect_uri: HttpUrl | None = Field(default=None,
+                                         description="OAuth2 redirect URI (defaults to localhost with random port)")
+    token_endpoint_auth_method: str = Field(
+        default="client_secret_post",
+        description=("The authentication method for the token endpoint. "
+                     "Usually one of `client_secret_post` or `client_secret_basic`."),
+        )
+    scopes: list[str] = Field(default_factory=list,
+                              description="OAuth2 scopes (discovered from MCP server if not provided)")
+    # Advanced options
+    use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
+
 
     @model_validator(mode="after")
     def validate_auth_config(self):
         """Validate authentication configuration for MCP-specific options."""
 
-        # Option 3: Dynamic registration + MCP discovery
+        # Dynamic registration + MCP discovery
         if self.enable_dynamic_registration and not self.client_id:
             # Pure dynamic registration - no explicit credentials needed
             pass
 
-        # Option 4: Manual registration + MCP discovery
+        # Manual registration + MCP discovery
         elif self.client_id and self.client_secret:
             # Has credentials but will discover URLs from MCP server
             pass
