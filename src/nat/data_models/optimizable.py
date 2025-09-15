@@ -60,33 +60,6 @@ def OptimizableField(
     merge_conflict: str = "overwrite",
     **fld_kw,
 ):
-    """
-    Drop‑in replacement for `pydantic.Field` that stores optimisation
-    metadata while respecting any user‑supplied `json_schema_extra`. A
-    ``SearchSpace`` can be omitted if it will be supplied later in the
-    workflow configuration.
-
-    Parameters
-    ----------
-    default : Any
-        Usual first positional argument for Field(...).
-    space : SearchSpace | None, optional
-        The optimiser range / distribution. If omitted, the search space
-        must be supplied via the configuration's ``search_space`` mapping.
-    merge_conflict : {'overwrite', 'error', 'keep'}
-        Behaviour when the user's `json_schema_extra` already contains
-        'optimizable' or 'search_space':
-            • 'overwrite'  – replace with our values (default).
-            • 'keep'       – leave user values untouched.
-            • 'error'      – raise ValueError.
-    **fld_kw
-        The usual keyword arguments for `pydantic.Field`.
-
-    Returns
-    -------
-    FieldInfo
-        A Pydantic `Field` instance with merged metadata.
-    """
     # 1. Pull out any user‑supplied extras (must be a dict)
     user_extra = fld_kw.pop("json_schema_extra", None) or {}
     if not isinstance(user_extra, dict):
@@ -123,9 +96,6 @@ def OptimizableField(
 
 
 class OptimizableMixin(BaseModel):
-    """
-    Mixin for models that can be optimized.
-    """
     optimizable_params: list[str] = Field(default_factory=list, description="List of parameters that can be optimized.")
     search_space: dict[str, SearchSpace] = Field(
         default_factory=dict,

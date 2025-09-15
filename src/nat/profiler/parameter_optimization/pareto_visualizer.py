@@ -13,21 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # flake8: noqa: W293
-"""
-Pareto Front Visualization Utilities
-
-This module provides utilities for visualizing Pareto optimal solutions from
-multi-objective optimization experiments conducted by both prompt and parameter
-optimizers.
-
-Key Features:
-- 2D scatter plots for bi-objective optimization
-- Multi-dimensional visualization using parallel coordinates
-- Pairwise plot matrices for multi-objective cases
-- Support for both minimize and maximize objectives
-- Loading from Optuna study objects or CSV files
-- Highlighting of Pareto optimal solutions
-"""
 
 import logging
 from pathlib import Path
@@ -41,20 +26,8 @@ logger = logging.getLogger(__name__)
 
 
 class ParetoVisualizer:
-    """
-    Visualizer for Pareto optimal solutions from multi-objective optimization.
-    This class can create various types of plots to visualize the trade-offs
-    between different objectives in multi-objective optimization problems.
-    """
 
     def __init__(self, metric_names: list[str], directions: list[str], title_prefix: str = "Optimization Results"):
-        """
-        Initialize the Pareto visualizer.
-        Args:
-            metric_names: Names of the optimization metrics
-            directions: Optimization directions ("minimize" or "maximize") for each metric
-            title_prefix: Prefix for plot titles
-        """
         self.metric_names = metric_names
         self.directions = directions
         self.title_prefix = title_prefix
@@ -68,22 +41,6 @@ class ParetoVisualizer:
                              save_path: Path | None = None,
                              figsize: tuple[int, int] = (10, 8),
                              show_plot: bool = True) -> plt.Figure:
-        """
-        Create a 2D scatter plot showing the Pareto front for bi-objective optimization.
-        
-        Args:
-            trials_df: DataFrame containing all trial results
-            pareto_trials_df: DataFrame containing only Pareto optimal trials
-            save_path: Optional path to save the plot
-            figsize: Figure size as (width, height)
-            show_plot: Whether to display the plot
-            
-        Returns:
-            matplotlib Figure object
-            
-        Raises:
-            ValueError: If not exactly 2 metrics are provided
-        """
         if len(self.metric_names) != 2:
             raise ValueError("2D Pareto front visualization requires exactly 2 metrics")
 
@@ -180,19 +137,6 @@ class ParetoVisualizer:
                                          save_path: Path | None = None,
                                          figsize: tuple[int, int] = (12, 8),
                                          show_plot: bool = True) -> plt.Figure:
-        """
-        Create a parallel coordinates plot for multi-dimensional Pareto analysis.
-        
-        Args:
-            trials_df: DataFrame containing all trial results
-            pareto_trials_df: DataFrame containing only Pareto optimal trials
-            save_path: Optional path to save the plot
-            figsize: Figure size as (width, height)
-            show_plot: Whether to display the plot
-            
-        Returns:
-            matplotlib Figure object
-        """
         fig, ax = plt.subplots(figsize=figsize)
 
         n_metrics = len(self.metric_names)
@@ -264,19 +208,6 @@ class ParetoVisualizer:
                              save_path: Path | None = None,
                              figsize: tuple[int, int] | None = None,
                              show_plot: bool = True) -> plt.Figure:
-        """
-        Create a matrix of pairwise scatter plots for multi-objective optimization.
-        
-        Args:
-            trials_df: DataFrame containing all trial results
-            pareto_trials_df: DataFrame containing only Pareto optimal trials
-            save_path: Optional path to save the plot
-            figsize: Figure size as (width, height), auto-sized if None
-            show_plot: Whether to display the plot
-            
-        Returns:
-            matplotlib Figure object
-        """
         n_metrics = len(self.metric_names)
         if figsize is None:
             figsize = (4 * n_metrics, 4 * n_metrics)
@@ -334,15 +265,6 @@ class ParetoVisualizer:
 
 
 def load_trials_from_study(study: optuna.Study) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Load trial data from an Optuna study object.
-    
-    Args:
-        study: Optuna study object
-        
-    Returns:
-        tuple of (all_trials_df, pareto_trials_df)
-    """
     # Get all trials
     trials_df = study.trials_dataframe()
 
@@ -356,17 +278,6 @@ def load_trials_from_study(study: optuna.Study) -> tuple[pd.DataFrame, pd.DataFr
 
 def load_trials_from_csv(csv_path: Path, metric_names: list[str],
                          directions: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Load trial data from a CSV file and compute Pareto optimal solutions.
-    
-    Args:
-        csv_path: Path to the CSV file containing trial data
-        metric_names: Names of the metrics
-        directions: Optimization directions for each metric
-        
-    Returns:
-        tuple of (all_trials_df, pareto_trials_df)
-    """
     trials_df = pd.read_csv(csv_path)
 
     # Extract values columns
@@ -382,17 +293,6 @@ def load_trials_from_csv(csv_path: Path, metric_names: list[str],
 
 
 def compute_pareto_optimal_mask(df: pd.DataFrame, value_cols: list[str], directions: list[str]) -> np.ndarray:
-    """
-    Compute a boolean mask indicating which trials are Pareto optimal.
-    
-    Args:
-        df: DataFrame containing trial data
-        value_cols: Column names containing objective values
-        directions: Optimization directions ("minimize" or "maximize")
-        
-    Returns:
-        Boolean array indicating Pareto optimal trials
-    """
     values = df[value_cols].values
     n_trials = len(values)
 
@@ -420,20 +320,6 @@ def create_pareto_visualization(data_source: optuna.Study | Path | pd.DataFrame,
                                 output_dir: Path | None = None,
                                 title_prefix: str = "Optimization Results",
                                 show_plots: bool = True) -> dict[str, plt.Figure]:
-    """
-    Create comprehensive Pareto front visualizations from optimization results.
-    
-    Args:
-        data_source: Optuna study, CSV file path, or DataFrame with trial data
-        metric_names: Names of the optimization metrics
-        directions: Optimization directions ("minimize" or "maximize") for each metric
-        output_dir: Directory to save plots (optional)
-        title_prefix: Prefix for plot titles
-        show_plots: Whether to display plots
-        
-    Returns:
-        Dictionary mapping plot names to matplotlib Figure objects
-    """
     # Load data based on source type
     if hasattr(data_source, 'trials_dataframe'):
         # Optuna study object

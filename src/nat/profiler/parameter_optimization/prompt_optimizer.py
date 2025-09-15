@@ -12,24 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Genetic Algorithm based Prompt Optimization
-
-It evolves a population of prompt configurations
-over multiple generations. Fitness is computed solely from the evaluation
-metrics.
-
-Highlights:
-- Initial population seeded using the configured `prompt_optimizer` function
-  (LLM edits) applied to the original prompts to create diverse variants.
-- Reproduction via tournament/roulette selection, optional LLM-powered
-  recombination, and LLM-powered mutation (again via `prompt_optimizer`).
-- Multi-objective support via scalarization (harmonic/sum/chebyshev) over
-  per-generation normalized metric scores. Higher scalar score is better.
-- Concurrent evaluations per generation with bounded parallelism.
-- Optional diversity penalty to discourage duplicate prompts.
-- Checkpoints per generation and a final optimized prompt set on completion.
-"""
 
 import asyncio
 import json
@@ -55,14 +37,6 @@ logger = logging.getLogger(__name__)
 
 
 class PromptOptimizerInputSchema(BaseModel):
-    """
-    Input schema for the prompt optimization function.
-
-    Attributes:
-        original_prompt: The base prompt text to be optimized
-        objective: The purpose or goal of the prompt (used for optimization guidance)
-        oracle_feedback: Optional feedback from previous evaluations to guide improvements
-    """
     original_prompt: str
     objective: str
     oracle_feedback: str | None = None
@@ -76,15 +50,6 @@ async def optimize_prompts(
     optimizer_config: OptimizerConfig,
     opt_run_config: OptimizerRunConfig,
 ) -> None:
-    """
-    Optimize prompt-type search spaces using a genetic algorithm.
-
-    Steps:
-      1) Discover prompt parameters and their purposes
-      2) Build initial population via LLM edits of the original prompts
-      3) Repeatedly evaluate, select, recombine, and mutate over generations
-      4) Save per-generation checkpoints and final best prompts
-    """
 
     # ------------- helpers ------------- #
     @dataclass
