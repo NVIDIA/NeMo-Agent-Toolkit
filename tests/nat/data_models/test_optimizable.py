@@ -87,7 +87,7 @@ class TestOptimizableField:
         assert "search_space" not in extras
 
     def test_preserves_user_extras_and_merges(self):
-        space = SearchSpace(low=["red", "blue"], high=None)
+        space = SearchSpace(values=["red", "blue"])
 
         class M(BaseModel):
             x: str = OptimizableField(
