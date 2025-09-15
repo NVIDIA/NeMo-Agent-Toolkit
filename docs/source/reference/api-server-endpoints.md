@@ -25,13 +25,14 @@ There are currently five workflow transactions that can be initiated using HTTP 
 
 
 ## Start the NeMo Agent Toolkit Server
+This section describes how to start the NeMo Agent toolkit server.
 ### Set Up API Keys
 If you have not already done so, follow the [Obtaining API Keys](../quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-The following examples assume that the simple calculator workflow has been installed and is running on http://localhost:8000 to do so run the following commands:
+Before you use the following examples, ensure that the simple calculator workflow has been installed and is running on http://localhost:8000 by running the following commands:
 ```bash
 uv pip install -e examples/getting_started/simple_calculator
 nat serve --config_file examples/getting_started/simple_calculator/configs/config.yml
@@ -58,11 +59,11 @@ result back to the client. The transaction schema is defined by the workflow.
   ```
 
 ## Asynchronous Generate
-The asynchronous generate endpoint allows clients to submit a workflow to run in the background and return a response immediately with a unique identifier for the workflow, which can be used to query the status and results of the workflow at a later time. This is useful for long-running workflows which would otherwise cause the client to time out.
+The asynchronous generate endpoint allows clients to submit a workflow to run in the background and return a response immediately with a unique identifier for the workflow. This can be used to query the status and results of the workflow at a later time. This is useful for long-running workflows, which would otherwise cause the client to time out.
 
-This endpoint is only available when the `async_endpoints` optional dependency extra is installed. For users installing from source, this can be done by running `uv pip install -e .[async_endpoints]` from the root directory of the NeMo Agent toolkit library. Similarly, for users installing from PyPI, this can be done by running `pip install nvidia-nat[async_endpoints]`.
+This endpoint is only available when the `async_endpoints` optional dependency extra is installed. For users installing from source, this can be done by running `uv pip install -e '.[async_endpoints]'` from the root directory of the NeMo Agent toolkit library. Similarly, for users installing from PyPI, this can be done by running `pip install nvidia-nat[async_endpoints]`.
 
-Asynchronous jobs are managed using [Dask](https://docs.dask.org/en/stable/) by default a local Dask cluster is created at start time, however you can also configure the server to connect to an existing Dask scheduler by setting the `scheduler_address` configuration parameter. The Dask scheduler is used to manage the execution of asynchronous jobs, and can be configured to run on a single machine or across a cluster of machines. Job history and metadata is stored in a SQL database using [SQLAlchemy](https://www.sqlalchemy.org/) by default a temporary SQLite database is created at start time, however you can also configure the server to use a persistent database by setting the `db_url` configuration parameter. Refer to the [SQLAlchemy documentation](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) for the format of the `db_url` parameter. Any database supported by [SQLAlchemy's Asynchronous I/O extension](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html) can be used, refer to [SQLAlchemy's Dialects](https://docs.sqlalchemy.org/en/20/dialects/index.html) for a complete list (many but not all of these support Asynchronous I/O).
+Asynchronous jobs are managed using [Dask](https://docs.dask.org/en/stable/). By default, a local Dask cluster is created at start time, however you can also configure the server to connect to an existing Dask scheduler by setting the `scheduler_address` configuration parameter. The Dask scheduler is used to manage the execution of asynchronous jobs, and can be configured to run on a single machine or across a cluster of machines. Job history and metadata is stored in a SQL database using [SQLAlchemy](https://www.sqlalchemy.org/). By default, a temporary SQLite database is created at start time, however you can also configure the server to use a persistent database by setting the `db_url` configuration parameter. Refer to the [SQLAlchemy documentation](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) for the format of the `db_url` parameter. Any database supported by [SQLAlchemy's Asynchronous I/O extension](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html) can be used. Refer to [SQLAlchemy's Dialects](https://docs.sqlalchemy.org/en/20/dialects/index.html) for a complete list (many but not all of these support Asynchronous I/O).
 
 
 - **Route:** `/generate/async`
