@@ -42,10 +42,13 @@ CI_ARCH=${CI_ARCH:-$(dpkg --print-architecture)}
 NAT_ROOT=${NAT_ROOT:-$(git rev-parse --show-toplevel)}
 
 GIT_URL=$(git remote get-url origin)
-GIT_URL=$(git_ssh_to_https ${GIT_URL})
-
 GIT_UPSTREAM_URL=$(git remote get-url upstream)
-GIT_UPSTREAM_URL=$(git_ssh_to_https ${GIT_UPSTREAM_URL})
+
+if [[ -z "${SSH_AUTH_SOCK}" ]]; then
+    echo "Warning: SSH_AUTH_SOCK not set, using HTTPS for git operations, git-lfs operations may fail if authentication is required"
+    GIT_URL=$(git_ssh_to_https ${GIT_URL})
+    GIT_UPSTREAM_URL=$(git_ssh_to_https ${GIT_UPSTREAM_URL})
+fi
 
 GIT_BRANCH=$(git branch --show-current)
 GIT_COMMIT=$(git log -n 1 --pretty=format:%H)
@@ -79,6 +82,11 @@ for STAGE in "${STAGES[@]}"; do
     if [[ "${USE_HOST_GIT}" == "1" ]]; then
         DOCKER_RUN_ARGS="${DOCKER_RUN_ARGS} -v ${NAT_ROOT}:/nat"
     fi
+
+    if [[ -n "${SSH_AUTH_SOCK}" ]]; then
+        DOCKER_RUN_ARGS="${DOCKER_RUN_ARGS} -v $(readlink -f $SSH_AUTH_SOCK):/ssh-agent:ro --env SSH_AUTH_SOCK=/ssh-agent"
+    fi
+
 
     if [[ "${STAGE}" == "bash" ]]; then
         DOCKER_RUN_CMD="bash --init-file /ci_tmp/bootstrap_local_ci.sh"
