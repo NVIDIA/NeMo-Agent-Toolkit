@@ -29,7 +29,8 @@ T = TypeVar("T", int, float, bool, str)
 # 1.  Hyper‑parameter metadata container                                #
 # --------------------------------------------------------------------- #
 class SearchSpace(BaseModel, Generic[T]):
-    low: T | Sequence[T] | None = None
+    values: Sequence[T] | None = None
+    low: T | None = None
     high: T | None = None
     log: bool = False  # log scale
     step: float | None = None
