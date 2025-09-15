@@ -12,6 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from click.testing import CliRunner
+from nat.cli.commands.workflow.workflow_commands import create_command
+
 def test_create_workflow_with_valid_name(tmp_path):
     """Ensure CLI succeeds with a valid workflow name."""
     runner = CliRunner()
