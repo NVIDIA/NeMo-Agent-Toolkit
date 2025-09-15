@@ -157,7 +157,7 @@ Next, update the retrieval tool definition changing the `name` parameter to `tex
     )
 ```
 
-The rest of the code largely remains the same resulting in the following code, the full code of this example is located at `examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/register.py` in the NeMo Agent toolkit repository:
+The rest of the code largely remains the same resulting in the following code, the full code of this example is located at `examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/text_file_ingest_function.py` in the NeMo Agent toolkit repository:
 ```python
 @register_function(config_type=TextFileIngestFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builder: Builder):
