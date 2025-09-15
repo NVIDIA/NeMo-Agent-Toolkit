@@ -16,9 +16,6 @@
 import logging
 from datetime import datetime
 
-from nat_profiler_agent import tool  # noqa: F401 # pylint: disable=unused-import
-from nat_profiler_agent.prompts import RETRY_PROMPT
-from nat_profiler_agent.prompts import SYSTEM_PROMPT
 from pydantic import Field
 
 from nat.builder.builder import Builder
@@ -27,6 +24,9 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
+from nat_profiler_agent import tool  # noqa: F401
+from nat_profiler_agent.prompts import RETRY_PROMPT
+from nat_profiler_agent.prompts import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -67,18 +67,19 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     from langchain_core.messages import SystemMessage
     from langchain_core.output_parsers import PydanticOutputParser
     from langchain_core.prompts import PromptTemplate
-    from langgraph.graph.graph import CompiledGraph
+    from langgraph.graph.state import CompiledStateGraph
+
     from nat_profiler_agent.agent import ProfilerAgent
     from nat_profiler_agent.agent import ProfilerAgentState
     from nat_profiler_agent.data_models import ExecPlan
-    from nat_profiler_agent.tool import flow_chart  # noqa: F401 # pylint: disable=unused-import
+    from nat_profiler_agent.tool import flow_chart  # noqa: F401
 
     # Create the agent executor
     tools = builder.get_tools(tool_names=config.tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     output_parser = PydanticOutputParser(pydantic_object=ExecPlan)
     tools_dict = {t.name: t for t in tools}
-    graph: CompiledGraph = await ProfilerAgent(
+    graph: CompiledStateGraph = await ProfilerAgent(
         llm=llm,
         tools=tools_dict,
         response_composer_tool=builder.get_tool("response_composer", wrapper_type=LLMFrameworkEnum.LANGCHAIN),
@@ -108,8 +109,8 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
 
     try:
         yield FunctionInfo.create(single_fn=_profiler_agent)
-    except Exception as e:
-        logger.error("Error in profiler agent, exit early", exc_info=True)
-        raise e
+    except Exception:
+        logger.error("Error in profiler agent, exit early")
+        raise
     finally:
         logger.info("Profiler agent finished")

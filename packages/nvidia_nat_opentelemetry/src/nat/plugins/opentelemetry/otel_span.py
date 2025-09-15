@@ -46,7 +46,7 @@ class MimeTypes(Enum):
     JSON = "application/json"
 
 
-class OtelSpan(Span):  # pylint: disable=too-many-public-methods
+class OtelSpan(Span):
     """A manually created OpenTelemetry span.
 
     This class is a wrapper around the OpenTelemetry Span class.

@@ -24,6 +24,8 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 import yaml
+
+from nat.builder.framework_enum import LLMFrameworkEnum
 from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 from nat_alert_triage_agent.utils import _DATA_CACHE
 from nat_alert_triage_agent.utils import _LLM_CACHE
@@ -31,8 +33,6 @@ from nat_alert_triage_agent.utils import _get_llm
 from nat_alert_triage_agent.utils import load_column_or_static
 from nat_alert_triage_agent.utils import preload_offline_data
 from nat_alert_triage_agent.utils import run_ansible_playbook
-
-from nat.builder.framework_enum import LLMFrameworkEnum
 
 
 async def test_get_llm():
@@ -100,10 +100,10 @@ def test_preload_offline_data():
         config = yaml.safe_load(file)
         offline_data_path = config["workflow"]["offline_data_path"]
         benign_fallback_data_path = config["workflow"]["benign_fallback_data_path"]
-    offline_data_path_abs = importlib.resources.files(package_name).joinpath("../../../../",
+    offline_data_path_abs = importlib.resources.files(package_name).joinpath("../../../../../",
                                                                              offline_data_path).absolute()
     benign_fallback_data_path_abs = importlib.resources.files(package_name).joinpath(
-        "../../../../", benign_fallback_data_path).absolute()
+        "../../../../../", benign_fallback_data_path).absolute()
 
     # Test successful loading with actual test files
     preload_offline_data(offline_data_path_abs, benign_fallback_data_path_abs)

@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-argument
-
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_embedder_client
@@ -30,7 +28,7 @@ async def azure_openai_langchain(embedder_config: AzureOpenAIEmbedderModelConfig
 
     from langchain_openai import AzureOpenAIEmbeddings
 
-    client = AzureOpenAIEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
+    client = AzureOpenAIEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,
@@ -46,7 +44,7 @@ async def nim_langchain(embedder_config: NIMEmbedderModelConfig, builder: Builde
 
     from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
 
-    client = NVIDIAEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
+    client = NVIDIAEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,
@@ -62,7 +60,7 @@ async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: 
 
     from langchain_openai import OpenAIEmbeddings
 
-    client = OpenAIEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
+    client = OpenAIEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,

@@ -44,7 +44,7 @@ async def uninstall_packages(packages: list[dict[str, str]]) -> None:
     try:
         package_name_list = PackageNameVersionList(**{"packages": packages})
     except Exception as e:
-        logger.exception("Error validating package format: %s", e, exc_info=True)
+        logger.exception("Error validating package format: %s", e)
         return
 
     async with AsyncExitStack() as stack:

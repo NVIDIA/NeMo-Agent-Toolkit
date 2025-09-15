@@ -25,9 +25,12 @@ from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.temperature_mixin import TemperatureMixin
+from nat.data_models.thinking_mixin import ThinkingMixin
+from nat.data_models.top_p_mixin import TopPMixin
 
 
-class OpenAIModelConfig(LLMBaseConfig, OptimizableMixin, RetryMixin, name="openai"):
+class OpenAIModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, TemperatureMixin, TopPMixin, ThinkingMixin, name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
@@ -37,19 +40,11 @@ class OpenAIModelConfig(LLMBaseConfig, OptimizableMixin, RetryMixin, name="opena
     model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
                             serialization_alias="model",
                             description="The OpenAI hosted model name.")
-
-    temperature: float = OptimizableField(default=0.0,
-                                          description="Sampling temperature in [0, 1].",
-                                          space=SearchSpace(high=0.9, low=0.1, step=0.2))
-    top_p: float = OptimizableField(default=1.0,
-                                    description="Top-p for distribution sampling.",
-                                    space=SearchSpace(high=1.0, low=0.5, step=0.1))
-
     seed: int | None = Field(default=None, description="Random seed to set for generation.")
     max_retries: int = Field(default=10, description="The max number of retries for the request.")
 
 
 @register_llm_provider(config_type=OpenAIModelConfig)
-async def openai_llm(config: OpenAIModelConfig, builder: Builder):
+async def openai_llm(config: OpenAIModelConfig, _builder: Builder):
 
     yield LLMProviderInfo(config=config, description="An OpenAI model for use with an LLM client.")

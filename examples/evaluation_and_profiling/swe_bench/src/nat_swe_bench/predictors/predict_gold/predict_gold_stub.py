@@ -15,10 +15,9 @@
 
 import logging
 
+from nat.data_models.swe_bench_model import SWEBenchInput
 from nat_swe_bench.predictors.predict_abc import SweBenchPredictorBase
 from nat_swe_bench.predictors.predictor_registry import register_predictor
-
-from nat.data_models.swe_bench_model import SWEBenchInput
 
 logger = logging.getLogger(__name__)
 

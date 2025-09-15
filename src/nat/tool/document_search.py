@@ -53,7 +53,7 @@ async def document_search(config: MilvusDocumentSearchToolConfig, builder: Build
     from langchain_core.messages import HumanMessage
     from langchain_core.messages import SystemMessage
     from langchain_core.pydantic_v1 import BaseModel
-    from langchain_core.pydantic_v1 import Field  # pylint: disable=redefined-outer-name, reimported
+    from langchain_core.pydantic_v1 import Field
 
     # define collection store
     # create a list of tuples using enumerate()
@@ -119,7 +119,7 @@ Return only the name of the predicted collection."""
             if len(results["chunks"]) == 0:
                 return DocumentSearchOutput(collection_name=llm_pred.collection_name, documents="")
 
-            # parse docs from Langchain Document object to string
+            # parse docs from LangChain/LangGraph Document object to string
             parsed_docs = []
 
             # iterate over results and store parsed content

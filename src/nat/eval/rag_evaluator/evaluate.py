@@ -102,7 +102,7 @@ class RAGEvaluator:
         """Converts the ragas EvaluationResult to nat EvalOutput"""
 
         if not results_dataset:
-            logger.error("Ragas evaluation failed with no results")
+            logger.error("Ragas evaluation failed with no results", exc_info=True)
             return EvalOutput(average_score=0.0, eval_output_items=[])
 
         scores: list[dict[str, float]] = results_dataset.scores
@@ -169,7 +169,7 @@ class RAGEvaluator:
                                              _pbar=pbar)
         except Exception as e:
             # On exception we still continue with other evaluators. Log and return an avg_score of 0.0
-            logger.exception("Error evaluating ragas metric, Error: %s", e, exc_info=True)
+            logger.exception("Error evaluating ragas metric, Error: %s", e)
             results_dataset = None
         finally:
             pbar.close()

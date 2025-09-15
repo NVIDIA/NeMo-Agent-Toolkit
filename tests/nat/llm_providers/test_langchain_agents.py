@@ -27,9 +27,10 @@ from nat.llm.openai_llm import OpenAIModelConfig
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_nim_langchain_agent():
     """
-    Test NIM LLM with LangChain agent. Requires NVIDIA_API_KEY to be set.
+    Test NIM LLM with LangChain/LangGraph agent. Requires NVIDIA_API_KEY to be set.
     """
 
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
@@ -50,9 +51,10 @@ async def test_nim_langchain_agent():
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("openai_api_key")
 async def test_openai_langchain_agent():
     """
-    Test OpenAI LLM with LangChain agent. Requires OPENAI_API_KEY to be set.
+    Test OpenAI LLM with LangChain/LangGraph agent. Requires OPENAI_API_KEY to be set.
     """
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
 
@@ -72,9 +74,10 @@ async def test_openai_langchain_agent():
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("aws_keys")
 async def test_aws_bedrock_langchain_agent():
     """
-    Test AWS Bedrock LLM with LangChain agent.
+    Test AWS Bedrock LLM with LangChain/LangGraph agent.
     Requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to be set.
     See https://docs.aws.amazon.com/bedrock/latest/userguide/setting-up.html for more information.
     """
@@ -99,9 +102,10 @@ async def test_aws_bedrock_langchain_agent():
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("azure_openai_keys")
 async def test_azure_openai_langchain_agent():
     """
-    Test Azure OpenAI LLM with LangChain agent.
+    Test Azure OpenAI LLM with LangChain/LangGraph agent.
     Requires AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT to be set.
     The model can be changed by setting AZURE_OPENAI_DEPLOYMENT.
     See https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart for more information.

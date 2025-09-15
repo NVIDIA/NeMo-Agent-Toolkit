@@ -124,7 +124,6 @@ class Settings(HashableBaseModel):
                 if (short_names[key.local_name] == 1):
                     type_list.append((key.local_name, key.config_type))
 
-            # pylint: disable=consider-alternative-union-syntax
             return typing.Union[tuple(typing.Annotated[x_type, Tag(x_id)] for x_id, x_type in type_list)]
 
         RegistryHandlerAnnotation = dict[
@@ -232,7 +231,7 @@ class Settings(HashableBaseModel):
             return True
 
         except Exception as e:
-            logger.exception("Unable to validate user settings configuration: %s", e, exc_info=True)
+            logger.exception("Unable to validate user settings configuration: %s", e)
             return False
 
     def print_channel_settings(self, channel_type: str | None = None) -> None:

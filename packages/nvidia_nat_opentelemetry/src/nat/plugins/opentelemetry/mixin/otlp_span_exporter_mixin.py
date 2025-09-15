@@ -15,9 +15,8 @@
 
 import logging
 
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
 from nat.plugins.opentelemetry.otel_span import OtelSpan
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
 logger = logging.getLogger(__name__)
 

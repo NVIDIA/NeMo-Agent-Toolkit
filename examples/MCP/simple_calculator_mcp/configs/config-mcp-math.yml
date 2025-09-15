@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This config file shows how to use the mcp_tool_wrapper to access the `math` tools.
+# This config file shows how to use the MCP server to access the `math` tools.
 # Here the workflow acts as a MCP client and connects to the MCP server running
-# on the specified URL (defaults to `http://localhost:9901/sse`).
+# on the specified URL. streamable-http is the recommended transport for HTTP-based
+# connections, but sse is also supported for backwards compatibility.
 
 general:
   use_uvloop: true
@@ -23,24 +24,28 @@ general:
 functions:
   calculator_multiply:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_multiply
     description: "Returns the product of two numbers"
   calculator_inequality:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_inequality
     description: "Returns the inequality of two numbers"
   calculator_divide:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_divide
     description: "Returns the quotient of two numbers"
   current_datetime:
     _type: current_datetime
   calculator_subtract:
     _type: mcp_tool_wrapper
-    url: "http://localhost:9901/sse"
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
     mcp_tool_name: calculator_subtract
     description: "Returns the difference of two numbers"
 

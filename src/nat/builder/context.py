@@ -31,6 +31,7 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
 from nat.runtime.user_metadata import RequestAttributes
 from nat.utils.reactive.subject import Subject
@@ -38,7 +39,7 @@ from nat.utils.reactive.subject import Subject
 
 class Singleton(type):
 
-    def __init__(cls, name, bases, dict):  # pylint: disable=W0622
+    def __init__(cls, name, bases, dict):
         super(Singleton, cls).__init__(name, bases, dict)
         cls.instance = None
 
@@ -65,6 +66,7 @@ class ContextState(metaclass=Singleton):
 
     def __init__(self):
         self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
+        self.user_message_id: ContextVar[str | None] = ContextVar("user_message_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
         self.metadata: ContextVar[RequestAttributes] = ContextVar("request_attributes", default=RequestAttributes())
@@ -165,8 +167,18 @@ class Context:
         """
         return self._context_state.conversation_id.get()
 
+    @property
+    def user_message_id(self) -> str | None:
+        """
+        This property retrieves the user message ID which is the unique identifier for the current user message.
+        """
+        return self._context_state.user_message_id.get()
+
     @contextmanager
-    def push_active_function(self, function_name: str, input_data: typing.Any | None):
+    def push_active_function(self,
+                             function_name: str,
+                             input_data: typing.Any | None,
+                             metadata: dict[str, typing.Any] | TraceMetadata | None = None):
         """
         Set the 'active_function' in context, push an invocation node,
         AND create an OTel child span for that function call.
@@ -187,7 +199,8 @@ class Context:
             IntermediateStepPayload(UUID=current_function_id,
                                     event_type=IntermediateStepType.FUNCTION_START,
                                     name=function_name,
-                                    data=StreamEventData(input=input_data)))
+                                    data=StreamEventData(input=input_data),
+                                    metadata=metadata))
 
         manager = ActiveFunctionContextManager()
 

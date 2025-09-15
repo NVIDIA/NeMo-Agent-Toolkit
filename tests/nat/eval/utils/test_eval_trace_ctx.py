@@ -21,8 +21,6 @@ import pytest
 from nat.eval.utils.eval_trace_ctx import EvalTraceContext
 from nat.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
 
-# pylint: disable=redefined-outer-name
-
 
 @pytest.fixture
 def mock_eval_call():

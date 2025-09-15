@@ -39,7 +39,7 @@ def create_schema(embedding_dim: int = DEFAULT_DIM):
     Returns:
         tuple: Schema definition for Redis search
     """
-    logger.info(f"Creating schema with embedding dimension: {embedding_dim}")
+    logger.info("Creating schema with embedding dimension: %d", embedding_dim)
 
     embedding_field = VectorField("$.embedding",
                                   "HNSW",
@@ -53,7 +53,7 @@ def create_schema(embedding_dim: int = DEFAULT_DIM):
                                       "EF_RUNTIME": 10
                                   },
                                   as_name="embedding")
-    logger.info(f"Created embedding field with dimension {embedding_dim}")
+    logger.info("Created embedding field with dimension %d", embedding_dim)
 
     schema = (
         TextField("$.user_id", as_name="user_id"),
@@ -65,7 +65,7 @@ def create_schema(embedding_dim: int = DEFAULT_DIM):
     # Log the schema details
     logger.info("Schema fields:")
     for field in schema:
-        logger.info(f"  - {field.name}: {type(field).__name__}")
+        logger.info("  - %s: %s", field.name, type(field).__name__)
 
     return schema
 
@@ -81,55 +81,55 @@ async def ensure_index_exists(client: redis.Redis, key_prefix: str, embedding_di
     """
     try:
         # Check if index exists
-        logger.info(f"Checking if index '{INDEX_NAME}' exists...")
+        logger.info("Checking if index '%s' exists...", INDEX_NAME)
         info = await client.ft(INDEX_NAME).info()
-        logger.info(f"Redis search index '{INDEX_NAME}' exists.")
+        logger.info("Redis search index '%s' exists.", INDEX_NAME)
 
         # Verify the schema
         schema = info.get('attributes', [])
 
         return
-    except redis_exceptions.ResponseError as e:
-        error_msg = str(e)
+    except redis_exceptions.ResponseError as ex:
+        error_msg = str(ex)
         if "no such index" not in error_msg.lower() and "Index needs recreation" not in error_msg:
-            logger.error(f"Unexpected Redis error: {error_msg}")
+            logger.error("Unexpected Redis error: %s", error_msg)
             raise
 
         # Index doesn't exist or needs recreation
-        logger.info(f"Creating Redis search index '{INDEX_NAME}' with prefix '{key_prefix}'")
+        logger.info("Creating Redis search index '%s' with prefix '%s'", INDEX_NAME, key_prefix)
 
         # Drop any existing index
         try:
-            logger.info(f"Attempting to drop existing index '{INDEX_NAME}' if it exists")
+            logger.info("Attempting to drop existing index '%s' if it exists", INDEX_NAME)
             await client.ft(INDEX_NAME).dropindex()
-            logger.info(f"Successfully dropped existing index '{INDEX_NAME}'")
+            logger.info("Successfully dropped existing index '%s'", INDEX_NAME)
         except redis_exceptions.ResponseError as e:
             if "no such index" not in str(e).lower():
-                logger.warning(f"Error while dropping index: {str(e)}")
+                logger.warning("Error while dropping index: %s", str(e))
 
         # Create new schema and index
         schema = create_schema(embedding_dim or DEFAULT_DIM)
-        logger.info(f"Created schema with embedding dimension: {embedding_dim or DEFAULT_DIM}")
+        logger.info("Created schema with embedding dimension: %d", embedding_dim or DEFAULT_DIM)
 
         try:
             # Create the index
-            logger.info(f"Creating new index '{INDEX_NAME}' with schema")
+            logger.info("Creating new index '%s' with schema", INDEX_NAME)
             await client.ft(INDEX_NAME).create_index(schema,
                                                      definition=IndexDefinition(prefix=[f"{key_prefix}:"],
                                                                                 index_type=IndexType.JSON))
 
             # Verify index was created
             info = await client.ft(INDEX_NAME).info()
-            logger.info(f"Successfully created Redis search index '{INDEX_NAME}'")
-            logger.debug(f"Redis search index info: {info}")
+            logger.info("Successfully created Redis search index '%s'", INDEX_NAME)
+            logger.debug("Redis search index info: %s", info)
 
             # Verify the schema
             schema = info.get('attributes', [])
-            logger.debug(f"New index schema: {schema}")
+            logger.debug("New index schema: %s", schema)
 
         except redis_exceptions.ResponseError as e:
-            logger.error(f"Failed to create index: {str(e)}")
+            logger.error("Failed to create index: %s", str(e))
             raise
         except redis_exceptions.ConnectionError as e:
-            logger.error(f"Redis connection error while creating index: {str(e)}")
+            logger.error("Redis connection error while creating index: %s", str(e))
             raise

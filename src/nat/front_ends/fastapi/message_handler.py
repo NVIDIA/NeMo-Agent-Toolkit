@@ -86,7 +86,7 @@ class WebSocketMessageHandler:
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
 
-        # TODO: Handle the exit  # pylint: disable=fixme
+        # TODO: Handle the exit
         pass
 
     async def run(self) -> None:
@@ -105,12 +105,10 @@ class WebSocketMessageHandler:
                 if (isinstance(validated_message, WebSocketUserMessage)):
                     await self.process_workflow_request(validated_message)
 
-                elif isinstance(
-                        validated_message,
-                    (  # noqa: E131
-                        WebSocketSystemResponseTokenMessage,
-                        WebSocketSystemIntermediateStepMessage,
-                        WebSocketSystemInteractionMessage)):
+                elif isinstance(validated_message,
+                                (WebSocketSystemResponseTokenMessage,
+                                 WebSocketSystemIntermediateStepMessage,
+                                 WebSocketSystemInteractionMessage)):
                     # These messages are already handled by self.create_websocket_message(data_model=value, …)
                     # No further processing is needed here.
                     pass
@@ -119,10 +117,8 @@ class WebSocketMessageHandler:
                     user_content = await self.process_user_message_content(validated_message)
                     self._user_interaction_response.set_result(user_content)
             except (asyncio.CancelledError, WebSocketDisconnect):
-                # TODO: Handle the disconnect  # pylint: disable=fixme
+                # TODO: Handle the disconnect
                 break
-
-        return None
 
     async def process_user_message_content(
             self, user_content: WebSocketUserMessage | WebSocketUserInteractionResponseMessage) -> BaseModel | None:
@@ -162,18 +158,19 @@ class WebSocketMessageHandler:
 
             if isinstance(content, TextContent) and (self._running_workflow_task is None):
 
-                def _done_callback(task: asyncio.Task):  # pylint: disable=unused-argument
+                def _done_callback(task: asyncio.Task):
                     self._running_workflow_task = None
 
                 self._running_workflow_task = asyncio.create_task(
-                    self._run_workflow(content.text,
-                                       self._conversation_id,
+                    self._run_workflow(payload=content.text,
+                                       user_message_id=self._message_parent_id,
+                                       conversation_id=self._conversation_id,
                                        result_type=self._schema_output_mapping[self._workflow_schema_type],
                                        output_type=self._schema_output_mapping[
                                            self._workflow_schema_type])).add_done_callback(_done_callback)
 
         except ValueError as e:
-            logger.error("User message content not found: %s", str(e), exc_info=True)
+            logger.exception("User message content not found: %s", str(e))
             await self.create_websocket_message(data_model=Error(code=ErrorTypes.INVALID_USER_MESSAGE_CONTENT,
                                                                  message="User message content could not be found",
                                                                  details=str(e)),
@@ -241,7 +238,7 @@ class WebSocketMessageHandler:
                     f"Message type could not be resolved by input data model: {data_model.model_dump_json()}")
 
         except (ValidationError, TypeError, ValueError) as e:
-            logger.error("A data vaidation error ocurred creating websocket message: %s", str(e), exc_info=True)
+            logger.exception("A data vaidation error ocurred creating websocket message: %s", str(e))
             message = await self._message_validator.create_system_response_token_message(
                 message_type=WebSocketMessageType.ERROR_MESSAGE,
                 conversation_id=self._conversation_id,
@@ -290,14 +287,16 @@ class WebSocketMessageHandler:
 
     async def _run_workflow(self,
                             payload: typing.Any,
+                            user_message_id: str | None = None,
                             conversation_id: str | None = None,
                             result_type: type | None = None,
                             output_type: type | None = None) -> None:
 
         try:
             async with self._session_manager.session(
+                    user_message_id=user_message_id,
                     conversation_id=conversation_id,
-                    request=self._socket,
+                    http_connection=self._socket,
                     user_input_callback=self.human_interaction_callback,
                     user_authentication_callback=(self._flow_handler.authenticate
                                                   if self._flow_handler else None)) as session:

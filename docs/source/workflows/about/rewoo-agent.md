@@ -87,7 +87,11 @@ functions:
 
 * `solver_prompt`: Optional. Allows us to override the solver prompt for the ReWOO agent. The prompt must have variables for plan and task.
 
+* `tool_call_max_retries`: Defaults to 3. The number of retries before raising a tool call error.
+
 * `max_history`:  Defaults to 15. Maximum number of messages to keep in the conversation history.
+
+* `log_response_max_chars`: Defaults to 1000. Maximum number of characters to display in logs when logging tool responses.
 
 * `use_openai_api`: Defaults to False. If set to True, the ReWOO agent will output in OpenAI API spec. If set to False, strings will be used.
 

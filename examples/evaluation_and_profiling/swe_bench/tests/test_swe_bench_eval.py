@@ -20,10 +20,10 @@ import logging
 from pathlib import Path
 
 import pytest
-from nat_swe_bench.register import SweBenchWorkflowConfig
 
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
+from nat_swe_bench.register import SweBenchWorkflowConfig
 
 logger = logging.getLogger(__name__)
 

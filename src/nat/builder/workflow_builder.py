@@ -127,7 +127,6 @@ class ConfiguredTTCStrategy:
     instance: StrategyBase
 
 
-# pylint: disable=too-many-public-methods
 class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     def __init__(self, *, general_config: GeneralConfig | None = None, registry: TypeRegistry | None = None):
@@ -421,8 +420,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Wrap in the correct wrapper
             return tool_wrapper_reg.build_fn(fn_name, fn.instance, self)
         except Exception as e:
-            logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
-            raise e
+            logger.error("Error fetching tool `%s`: %s", fn_name, e)
+            raise
 
     @override
     async def add_llm(self, name: str | LLMRef, config: LLMBaseConfig):
@@ -437,8 +436,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             self._llms[name] = ConfiguredLLM(config=config, instance=info_obj)
         except Exception as e:
-            logger.error("Error adding llm `%s` with config `%s`", name, config, exc_info=True)
-            raise e
+            logger.error("Error adding llm `%s` with config `%s`: %s", name, config, e)
+            raise
 
     @override
     async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str):
@@ -458,8 +457,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Return a frameworks specific client
             return client
         except Exception as e:
-            logger.error("Error getting llm `%s` with wrapper `%s`", llm_name, wrapper_type, exc_info=True)
-            raise e
+            logger.error("Error getting llm `%s` with wrapper `%s`: %s", llm_name, wrapper_type, e)
+            raise
 
     @override
     def get_llm_config(self, llm_name: str | LLMRef) -> LLMBaseConfig:
@@ -509,8 +508,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             return info_obj
         except Exception as e:
-            logger.error("Error adding authentication `%s` with config `%s`", name, config, exc_info=True)
-            raise e
+            logger.error("Error adding authentication `%s` with config `%s`: %s", name, config, e)
+            raise
 
     @override
     async def get_auth_provider(self, auth_provider_name: str) -> AuthProviderBase:
@@ -553,9 +552,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             self._embedders[name] = ConfiguredEmbedder(config=config, instance=info_obj)
         except Exception as e:
-            logger.error("Error adding embedder `%s` with config `%s`", name, config, exc_info=True)
-
-            raise e
+            logger.error("Error adding embedder `%s` with config `%s`: %s", name, config, e)
+            raise
 
     @override
     async def get_embedder(self, embedder_name: str | EmbedderRef, wrapper_type: LLMFrameworkEnum | str):
@@ -575,8 +573,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Return a frameworks specific client
             return client
         except Exception as e:
-            logger.error("Error getting embedder `%s` with wrapper `%s`", embedder_name, wrapper_type, exc_info=True)
-            raise e
+            logger.error("Error getting embedder `%s` with wrapper `%s`: %s", embedder_name, wrapper_type, e)
+            raise
 
     @override
     def get_embedder_config(self, embedder_name: str | EmbedderRef) -> EmbedderBaseConfig:
@@ -661,9 +659,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             self._retrievers[name] = ConfiguredRetriever(config=config, instance=info_obj)
 
         except Exception as e:
-            logger.error("Error adding retriever `%s` with config `%s`", name, config, exc_info=True)
-
-            raise e
+            logger.error("Error adding retriever `%s` with config `%s`: %s", name, config, e)
+            raise
 
         # return info_obj
 
@@ -688,8 +685,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Return a frameworks specific client
             return client
         except Exception as e:
-            logger.error("Error getting retriever `%s` with wrapper `%s`", retriever_name, wrapper_type, exc_info=True)
-            raise e
+            logger.error("Error getting retriever `%s` with wrapper `%s`: %s", retriever_name, wrapper_type, e)
+            raise
 
     @override
     async def get_retriever_config(self, retriever_name: str | RetrieverRef) -> RetrieverBaseConfig:
@@ -713,9 +710,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             self._ttc_strategies[name] = ConfiguredTTCStrategy(config=config, instance=info_obj)
 
         except Exception as e:
-            logger.error("Error adding TTC strategy `%s` with config `%s`", name, config, exc_info=True)
-
-            raise e
+            logger.error("Error adding TTC strategy `%s` with config `%s`: %s", name, config, e)
+            raise
 
     @override
     async def get_ttc_strategy(self,
@@ -743,8 +739,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             return instance
         except Exception as e:
-            logger.error("Error getting TTC strategy `%s`", strategy_name, exc_info=True)
-            raise e
+            logger.error("Error getting TTC strategy `%s`: %s", strategy_name, e)
+            raise
 
     @override
     async def get_ttc_strategy_config(self,
@@ -821,7 +817,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         else:
             logger.error("No remaining components to build")
 
-        logger.error("Original error:", exc_info=original_error)
+        logger.error("Original error: %s", original_error, exc_info=True)
 
     def _log_build_failure_component(self,
                                      failing_component: ComponentInstanceData,

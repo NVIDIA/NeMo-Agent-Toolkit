@@ -29,7 +29,7 @@ A minimal example using Semantic Kernel showcasing a multi-agent travel planning
 
 ## Key Features
 
-- **Semantic Kernel Framework Integration:** Demonstrates NeMo Agent toolkit support for Microsoft's Semantic Kernel framework alongside other frameworks like LangChain.
+- **Semantic Kernel Framework Integration:** Demonstrates NeMo Agent toolkit support for Microsoft's Semantic Kernel framework alongside other frameworks like LangChain/LangGraph.
 - **Multi-Agent Travel Planning:** Shows three specialized agents working together - an Itinerary Agent for schedule creation, a Budget Agent for cost management, and a Summarizer Agent for final formatting.
 - **Cross-Agent Coordination:** Demonstrates how different agents can collaborate on a complex task, with each agent contributing its specialized capabilities to the overall workflow.
 - **Long-Term Memory Integration:** Includes optional Mem0 platform integration for persistent memory, allowing agents to remember user preferences (like vegan dining or luxury hotel preferences) across sessions.

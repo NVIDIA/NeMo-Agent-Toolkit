@@ -20,9 +20,9 @@ import logging
 from pathlib import Path
 
 import pytest
-from nat_simple_web_query.register import WebQueryToolConfig
 
 from nat.runtime.loader import load_workflow
+from nat_simple_web_query.register import WebQueryToolConfig
 
 logger = logging.getLogger(__name__)
 

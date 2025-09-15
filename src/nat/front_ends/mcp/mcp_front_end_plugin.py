@@ -77,5 +77,11 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
             # Add routes through the worker (includes health endpoint and function registration)
             await worker.add_routes(mcp, builder)
 
-            # Start the MCP server
-            await mcp.run_sse_async()
+            # Start the MCP server with configurable transport
+            # streamable-http is the default, but users can choose sse if preferred
+            if self.front_end_config.transport == "sse":
+                logger.info("Starting MCP server with SSE endpoint at /sse")
+                await mcp.run_sse_async()
+            else:  # streamable-http
+                logger.info("Starting MCP server with streamable-http endpoint at /mcp/")
+                await mcp.run_streamable_http_async()

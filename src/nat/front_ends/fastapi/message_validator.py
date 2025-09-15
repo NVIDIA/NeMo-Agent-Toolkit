@@ -97,7 +97,7 @@ class MessageValidator:
             return validated_message
 
         except (ValidationError, TypeError, ValueError) as e:
-            logger.error("A data validation error %s occurred for message: %s", str(e), str(message), exc_info=True)
+            logger.exception("A data validation error %s occurred for message: %s", str(e), str(message))
             return await self.create_system_response_token_message(message_type=WebSocketMessageType.ERROR_MESSAGE,
                                                                    content=Error(code=ErrorTypes.INVALID_MESSAGE,
                                                                                  message="Error validating message.",
@@ -119,7 +119,7 @@ class MessageValidator:
             return schema
 
         except (TypeError, ValueError) as e:
-            logger.error("Error retrieving schema for message type '%s': %s", message_type, str(e), exc_info=True)
+            logger.exception("Error retrieving schema for message type '%s': %s", message_type, str(e))
             return Error
 
     async def convert_data_to_message_content(self, data_model: BaseModel) -> BaseModel:
@@ -156,7 +156,7 @@ class MessageValidator:
             return validated_message_content
 
         except ValueError as e:
-            logger.error("Input data could not be converted to validated message content: %s", str(e), exc_info=True)
+            logger.exception("Input data could not be converted to validated message content: %s", str(e))
             return Error(code=ErrorTypes.INVALID_DATA_CONTENT, message="Input data not supported.", details=str(e))
 
     async def convert_text_content_to_human_response(self, text_content: TextContent,
@@ -191,7 +191,7 @@ class MessageValidator:
             return human_response
 
         except ValueError as e:
-            logger.error("Error human response content not found: %s", str(e), exc_info=True)
+            logger.exception("Error human response content not found: %s", str(e))
             return HumanResponseText(text=str(e))
 
     async def resolve_message_type_by_data(self, data_model: BaseModel) -> str:
@@ -218,9 +218,7 @@ class MessageValidator:
             return validated_message_type
 
         except ValueError as e:
-            logger.error("Error type not found converting data to validated websocket message content: %s",
-                         str(e),
-                         exc_info=True)
+            logger.exception("Error type not found converting data to validated websocket message content: %s", str(e))
             return WebSocketMessageType.ERROR_MESSAGE
 
     async def get_intermediate_step_parent_id(self, data_model: ResponseIntermediateStep) -> str:
@@ -232,7 +230,7 @@ class MessageValidator:
         """
         return data_model.parent_id or "root"
 
-    async def create_system_response_token_message(  # pylint: disable=R0917:too-many-positional-arguments
+    async def create_system_response_token_message(
         self,
         message_type: Literal[WebSocketMessageType.RESPONSE_MESSAGE,
                               WebSocketMessageType.ERROR_MESSAGE] = WebSocketMessageType.RESPONSE_MESSAGE,
@@ -269,10 +267,10 @@ class MessageValidator:
                                                        timestamp=timestamp)
 
         except Exception as e:
-            logger.error("Error creating system response token message: %s", str(e), exc_info=True)
+            logger.exception("Error creating system response token message: %s", str(e))
             return None
 
-    async def create_system_intermediate_step_message(  # pylint: disable=R0917:too-many-positional-arguments
+    async def create_system_intermediate_step_message(
         self,
         message_type: Literal[WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE] = (
             WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE),
@@ -308,10 +306,10 @@ class MessageValidator:
                                                           timestamp=timestamp)
 
         except Exception as e:
-            logger.error("Error creating system intermediate step message: %s", str(e), exc_info=True)
+            logger.exception("Error creating system intermediate step message: %s", str(e))
             return None
 
-    async def create_system_interaction_message(  # pylint: disable=R0917:too-many-positional-arguments
+    async def create_system_interaction_message(
         self,
         *,
         message_type: Literal[WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE] = (
@@ -323,7 +321,7 @@ class MessageValidator:
         content: HumanPrompt,
         status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
         timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
-    ) -> WebSocketSystemInteractionMessage | None:  # noqa: E125 continuation line with same indent as next logical line
+    ) -> WebSocketSystemInteractionMessage | None:
         """
         Creates a system interaction message with default values.
 
@@ -348,5 +346,5 @@ class MessageValidator:
                                                      timestamp=timestamp)
 
         except Exception as e:
-            logger.error("Error creating system interaction message: %s", str(e), exc_info=True)
+            logger.exception("Error creating system interaction message: %s", str(e))
             return None

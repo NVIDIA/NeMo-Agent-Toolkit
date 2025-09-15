@@ -29,6 +29,19 @@ class EvalInputItem(BaseModel):
     trajectory: list[IntermediateStep] = []  # populated by the workflow
     full_dataset_entry: typing.Any
 
+    def copy_with_updates(self, **updates) -> "EvalInputItem":
+        """
+        Copy EvalInputItem with optional field updates.
+        """
+        # Get all current fields
+        item_data = self.model_dump()
+
+        # Apply any updates
+        item_data.update(updates)
+
+        # Create new item with all fields
+        return EvalInputItem(**item_data)
+
 
 class EvalInput(BaseModel):
     eval_input_items: list[EvalInputItem]

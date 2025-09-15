@@ -177,7 +177,7 @@ class DiscoveryMetadata(BaseModel):
                 logger.warning("Package metadata not found for %s", distro_name)
                 version = ""
         except Exception as e:
-            logger.exception("Encountered issue extracting module metadata for %s: %s", config_type, e, exc_info=True)
+            logger.exception("Encountered issue extracting module metadata for %s: %s", config_type, e)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
 
         description = generate_config_type_docs(config_type=config_type)
@@ -217,7 +217,7 @@ class DiscoveryMetadata(BaseModel):
                 logger.warning("Package metadata not found for %s", distro_name)
                 version = ""
         except Exception as e:
-            logger.exception("Encountered issue extracting module metadata for %s: %s", fn, e, exc_info=True)
+            logger.exception("Encountered issue extracting module metadata for %s: %s", fn, e)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
 
         if isinstance(wrapper_type, LLMFrameworkEnum):
@@ -252,7 +252,7 @@ class DiscoveryMetadata(BaseModel):
                 description = ""
                 package_version = package_version or ""
         except Exception as e:
-            logger.exception("Encountered issue extracting module metadata for %s: %s", package_name, e, exc_info=True)
+            logger.exception("Encountered issue extracting module metadata for %s: %s", package_name, e)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
 
         return DiscoveryMetadata(package=package_name,
@@ -290,7 +290,7 @@ class DiscoveryMetadata(BaseModel):
                 logger.warning("Package metadata not found for %s", distro_name)
                 version = ""
         except Exception as e:
-            logger.exception("Encountered issue extracting module metadata for %s: %s", config_type, e, exc_info=True)
+            logger.exception("Encountered issue extracting module metadata for %s: %s", config_type, e)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
 
         wrapper_type = wrapper_type.value if isinstance(wrapper_type, LLMFrameworkEnum) else wrapper_type

@@ -54,7 +54,7 @@ class RedisEditor(MemoryEditor):
         Insert Multiple MemoryItems into Redis.
         Each MemoryItem is stored with its metadata and tags.
         """
-        logger.debug(f"Attempting to add {len(items)} items to Redis")
+        logger.debug("Attempting to add %d items to Redis", len(items))
 
         for memory_item in items:
             item_meta = memory_item.metadata
@@ -65,7 +65,7 @@ class RedisEditor(MemoryEditor):
 
             # Create a unique key for this memory item
             memory_key = f"{self._key_prefix}:memory:{memory_id}"
-            logger.debug(f"Generated memory key: {memory_key}")
+            logger.debug("Generated memory key: %s", memory_key)
 
             # Prepare memory data
             memory_data = {
@@ -75,30 +75,30 @@ class RedisEditor(MemoryEditor):
                 "metadata": item_meta,
                 "memory": memory_item.memory or ""
             }
-            logger.debug(f"Prepared memory data for key {memory_key}")
+            logger.debug("Prepared memory data for key %s", memory_key)
 
             # If we have memory, compute and store the embedding
             if memory_item.memory:
                 logger.debug("Computing embedding for memory text")
                 search_vector = await self._embedder.aembed_query(memory_item.memory)
-                logger.debug(f"Generated embedding vector of length: {len(search_vector)}")
+                logger.debug("Generated embedding vector of length: %d", len(search_vector))
                 memory_data["embedding"] = search_vector
 
             try:
                 # Store as JSON in Redis
-                logger.debug(f"Attempting to store memory data in Redis for key: {memory_key}")
+                logger.debug("Attempting to store memory data in Redis for key: %s", memory_key)
                 await self._client.json().set(memory_key, "$", memory_data)
-                logger.debug(f"Successfully stored memory data for key: {memory_key}")
+                logger.debug("Successfully stored memory data for key: %s", memory_key)
 
                 # Verify the data was stored
                 stored_data = await self._client.json().get(memory_key)
-                logger.debug(f"Verified data storage for key {memory_key}: {bool(stored_data)}")
+                logger.debug("Verified data storage for key %s: %s", memory_key, bool(stored_data))
 
             except redis_exceptions.ResponseError as e:
-                logger.error(f"Failed to store memory item: {str(e)}")
+                logger.error("Failed to store memory item: %s", e)
                 raise
             except redis_exceptions.ConnectionError as e:
-                logger.error(f"Redis connection error while storing memory item: {str(e)}")
+                logger.error("Redis connection error while storing memory item: %s", e)
                 raise
 
     async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:
@@ -113,64 +113,64 @@ class RedisEditor(MemoryEditor):
         Returns:
             list[MemoryItem]: The most relevant MemoryItems for the given query.
         """
-        logger.debug(f"Search called with query: {query}, top_k: {top_k}, kwargs: {kwargs}")
+        logger.debug("Search called with query: %s, top_k: %d, kwargs: %s", query, top_k, kwargs)
 
         user_id = kwargs.get("user_id", "redis")  # TODO: remove this fallback username
-        logger.debug(f"Using user_id: {user_id}")
+        logger.debug("Using user_id: %s", user_id)
 
         # Perform vector search using Redis search
         logger.debug("Using embedder for vector search")
         try:
-            logger.debug(f"Generating embedding for query: '{query}'")
+            logger.debug("Generating embedding for query: '%s'", query)
             query_vector = await self._embedder.aembed_query(query)
-            logger.debug(f"Generated embedding vector of length: {len(query_vector)}")
+            logger.debug("Generated embedding vector of length: %d", len(query_vector))
         except Exception as e:
-            logger.error(f"Failed to generate embedding: {str(e)}")
+            logger.error("Failed to generate embedding: %s", e)
             raise
 
         # Create vector search query
         search_query = (
             Query(f"(@user_id:{user_id})=>[KNN {top_k} @embedding $vec AS score]").sort_by("score").return_fields(
                 "conversation", "user_id", "tags", "metadata", "memory", "score").dialect(2))
-        logger.debug(f"Created search query: {search_query}")
-        logger.debug(f"Query string: {search_query.query_string()}")
+        logger.debug("Created search query: %s", search_query)
+        logger.debug("Query string: %s", search_query.query_string())
 
         # Convert query vector to bytes
         try:
             logger.debug("Converting query vector to bytes")
             query_vector_bytes = np.array(query_vector, dtype=np.float32).tobytes()
-            logger.debug(f"Converted vector to bytes of length: {len(query_vector_bytes)}")
+            logger.debug("Converted vector to bytes of length: %d", len(query_vector_bytes))
         except Exception as e:
-            logger.error(f"Failed to convert vector to bytes: {str(e)}")
+            logger.error("Failed to convert vector to bytes: %s", e)
             raise
 
         try:
             # Execute search with vector parameters
             logger.debug("Executing Redis search with vector parameters")
-            logger.debug(f"Search query parameters: vec length={len(query_vector_bytes)}")
+            logger.debug("Search query parameters: vec length=%d", len(query_vector_bytes))
 
             # Log the actual query being executed
-            logger.debug(f"Full search query: {search_query.query_string()}")
+            logger.debug("Full search query: %s", search_query.query_string())
 
             # Check if there are any documents in the index
             try:
                 total_docs = await self._client.ft(INDEX_NAME).info()
-                logger.debug(f"Total documents in index: {total_docs.get('num_docs', 0)}")
+                logger.debug("Total documents in index: %d", total_docs.get('num_docs', 0))
             except Exception as e:
-                logger.error(f"Failed to get index info: {str(e)}")
+                logger.exception("Failed to get index info: %s", e)
 
             # Execute the search
             results = await self._client.ft(INDEX_NAME).search(search_query, query_params={"vec": query_vector_bytes})
 
             # Log detailed results information
-            logger.debug(f"Search returned {len(results.docs)} results")
-            logger.debug(f"Total results found: {results.total}")
+            logger.debug("Search returned %d results", len(results.docs))
+            logger.debug("Total results found: %d", results.total)
 
             # Convert results to MemoryItems
             memories = []
             for i, doc in enumerate(results.docs):
                 try:
-                    logger.debug(f"Processing result {i+1}/{len(results.docs)}")
+                    logger.debug("Processing result %d/%d", i + 1, len(results.docs))
                     # Get the document data from the correct attribute
                     memory_data = {
                         "conversation": getattr(doc, 'conversation', []),
@@ -179,25 +179,25 @@ class RedisEditor(MemoryEditor):
                         "metadata": getattr(doc, 'metadata', {}),
                         "memory": getattr(doc, 'memory', "")
                     }
-                    logger.debug(f"Similarity score: {getattr(doc, 'score', 0)}")
-                    logger.debug(f"Extracted data for result {i+1}: {memory_data}")
+                    logger.debug("Similarity score: %d", getattr(doc, 'score', 0))
+                    logger.debug("Extracted data for result %d: %s", i + 1, memory_data)
                     memory_item = self._create_memory_item(memory_data, user_id)
                     memories.append(memory_item)
-                    logger.debug(f"Successfully created MemoryItem for result {i+1}")
+                    logger.debug("Successfully created MemoryItem for result %d", i + 1)
                 except Exception as e:
-                    logger.error(f"Failed to process result {i+1}: {str(e)}")
+                    logger.error("Failed to process result %d: %s", i + 1, e)
                     raise
 
-            logger.debug(f"Successfully processed all {len(memories)} results")
+            logger.debug("Successfully processed all %d results", len(memories))
             return memories
         except redis_exceptions.ResponseError as e:
-            logger.error(f"Search failed with ResponseError: {str(e)}")
+            logger.error("Search failed with ResponseError: %s", e)
             raise
         except redis_exceptions.ConnectionError as e:
-            logger.error(f"Search failed with ConnectionError: {str(e)}")
+            logger.error("Search failed with ConnectionError: %s", e)
             raise
         except Exception as e:
-            logger.error(f"Unexpected error during search: {str(e)}")
+            logger.error("Unexpected error during search: %s", e)
             raise
 
     def _create_memory_item(self, memory_data: dict, user_id: str) -> MemoryItem:
@@ -226,8 +226,8 @@ class RedisEditor(MemoryEditor):
             if keys:
                 await self._client.delete(*keys)
         except redis_exceptions.ResponseError as e:
-            logger.error(f"Failed to remove items: {str(e)}")
+            logger.error("Failed to remove items: %s", e)
             raise
         except redis_exceptions.ConnectionError as e:
-            logger.error(f"Redis connection error while removing items: {str(e)}")
+            logger.error("Redis connection error while removing items: %s", e)
             raise

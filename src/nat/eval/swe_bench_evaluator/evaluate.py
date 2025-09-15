@@ -69,13 +69,13 @@ class SweBenchEvaluator:
         try:
             shutil.move(swe_bench_report_file, report_dir)
         except Exception as e:
-            logger.exception("Error moving report file: %s", e, exc_info=True)
+            logger.exception("Error moving report file: %s", e)
 
         try:
             dest_logs_dir = os.path.join(report_dir, 'logs')
             shutil.move(logs_dir, dest_logs_dir)
         except Exception as e:
-            logger.exception("Error moving logs directory: %s", e, exc_info=True)
+            logger.exception("Error moving logs directory: %s", e)
 
     def is_repo_supported(self, repo: str, version: str) -> bool:
         """Check if the repo is supported by swebench"""
@@ -106,7 +106,7 @@ class SweBenchEvaluator:
                     self._model_name_or_path = swebench_output.model_name_or_path
 
             except Exception as e:
-                logger.exception("Failed to parse EvalInputItem %s: %s", item.id, e, exc_info=True)
+                logger.exception("Failed to parse EvalInputItem %s: %s", item.id, e)
 
         # Filter out repos/version not supported by SWEBench
         supported_inputs = [
@@ -114,7 +114,7 @@ class SweBenchEvaluator:
         ]
 
         if not supported_inputs:
-            logger.error("No supported instances; nothing to evaluate")
+            logger.exception("No supported instances; nothing to evaluate")
             return None, None
 
         if len(supported_inputs) < len(swebench_inputs):
@@ -135,7 +135,7 @@ class SweBenchEvaluator:
         filtered_outputs = [output for output in swebench_outputs if output.instance_id in valid_instance_ids]
 
         if not filtered_outputs:
-            logger.error("No supported outputs; nothing to evaluate")
+            logger.error("No supported outputs; nothing to evaluate", exc_info=True)
             return None, None
 
         # Write SWEBenchOutput to file

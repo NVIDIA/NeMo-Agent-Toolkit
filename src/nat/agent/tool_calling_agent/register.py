@@ -16,6 +16,7 @@
 import logging
 
 from pydantic import Field
+from pydantic import PositiveInt
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -41,6 +42,8 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
     handle_tool_errors: bool = Field(default=True, description="Specify ability to handle tool calling errors.")
     description: str = Field(default="Tool Calling Agent Workflow", description="Description of this functions use.")
     max_iterations: int = Field(default=15, description="Number of tool calls before stoping the tool calling agent.")
+    log_response_max_chars: PositiveInt = Field(
+        default=1000, description="Maximum number of characters to display in logs when logging tool responses.")
     system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
     additional_instructions: str | None = Field(default=None,
                                                 description="Additional instructions appended to the system prompt.")
@@ -49,7 +52,7 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, builder: Builder):
     from langchain_core.messages.human import HumanMessage
-    from langgraph.graph.graph import CompiledGraph
+    from langgraph.graph.state import CompiledStateGraph
 
     from nat.agent.base import AGENT_LOG_PREFIX
     from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph
@@ -66,11 +69,12 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
         raise ValueError(f"No tools specified for Tool Calling Agent '{config.llm_name}'")
 
     # construct the Tool Calling Agent Graph from the configured llm, and tools
-    graph: CompiledGraph = await ToolCallAgentGraph(llm=llm,
-                                                    tools=tools,
-                                                    prompt=prompt,
-                                                    detailed_logs=config.verbose,
-                                                    handle_tool_errors=config.handle_tool_errors).build_graph()
+    graph: CompiledStateGraph = await ToolCallAgentGraph(llm=llm,
+                                                         tools=tools,
+                                                         prompt=prompt,
+                                                         detailed_logs=config.verbose,
+                                                         log_response_max_chars=config.log_response_max_chars,
+                                                         handle_tool_errors=config.handle_tool_errors).build_graph()
 
     async def _response_fn(input_message: str) -> str:
         try:
@@ -86,10 +90,10 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
 
             # get and return the output from the state
             state = ToolCallAgentGraphState(**state)
-            output_message = state.messages[-1]  # pylint: disable=E1136
+            output_message = state.messages[-1]
             return output_message.content
         except Exception as ex:
-            logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
+            logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
             if config.verbose:
                 return str(ex)
             return "I seem to be having a problem."
@@ -97,6 +101,6 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
     try:
         yield FunctionInfo.from_fn(_response_fn, description=config.description)
     except GeneratorExit:
-        logger.exception("%s Workflow exited early!", AGENT_LOG_PREFIX, exc_info=True)
+        logger.exception("%s Workflow exited early!", AGENT_LOG_PREFIX)
     finally:
         logger.debug("%s Cleaning up react_agent workflow.", AGENT_LOG_PREFIX)

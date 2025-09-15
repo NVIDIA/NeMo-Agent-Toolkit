@@ -80,13 +80,15 @@ def mock_server() -> MockOAuth2Server:
 # --------------------------------------------------------------------------- #
 # The integration test                                                        #
 # --------------------------------------------------------------------------- #
-async def test_websocket_oauth2_flow(monkeypatch, mock_server):
+@pytest.mark.usefixtures("set_nat_config_file_env_var")
+async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
     """
     The trick: instead of relying on the FastAPI redirect route (which would
     set the Future from a *different* loop when run through ASGITransport),
     we resolve the token **directly inside** the dummy WebSocket handler,
     using the same `FlowState` instance the auth‐handler created.
     """
+
     redirect_port = _free_port()
 
     # Register the correct redirect URI for this run
@@ -100,8 +102,8 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server):
     cfg_nat = Config(workflow=EchoFunctionConfig())
     worker = FastApiFrontEndPluginWorker(cfg_nat)
     # we need the add/remove‑flow callbacks but NOT the worker’s WS endpoint
-    add_flow = worker._add_flow  # pylint: disable=protected-access
-    remove_flow = worker._remove_flow  # pylint: disable=protected-access
+    add_flow = worker._add_flow
+    remove_flow = worker._remove_flow
 
     # ----------------- dummy WebSocket “UI” handler --------------------- #
     opened: list[str] = []
@@ -131,7 +133,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server):
             state = qs["state"][0]
 
             # 3) ── Fetch token directly & resolve the Future in‑loop ── #
-            flow_state = worker._outstanding_flows[state]  # pylint: disable=protected-access
+            flow_state = worker._outstanding_flows[state]
             token = await flow_state.client.fetch_token(
                 url=flow_state.config.token_url,
                 code=code,
@@ -169,4 +171,4 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server):
     token_val = ctx.headers["Authorization"].split()[1]
     assert token_val in mock_server.tokens, "token not issued by mock server"
     # all flow‑state cleaned up
-    assert worker._outstanding_flows == {}  # pylint: disable=protected-access
+    assert worker._outstanding_flows == {}

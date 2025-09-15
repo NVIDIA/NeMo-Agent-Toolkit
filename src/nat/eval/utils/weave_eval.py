@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
+class WeaveEvaluationIntegration:
     """
     Class to handle all Weave integration functionality.
     """
@@ -44,11 +44,9 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         self.eval_trace_context = eval_trace_context
 
         try:
-            from weave.flow.eval_imperative import EvaluationLogger
-            from weave.flow.eval_imperative import ScoreLogger
+            from weave import EvaluationLogger
             from weave.trace.context import weave_client_context
-            self.evaluation_logger_cls = EvaluationLogger  # pylint: disable=invalid-name
-            self.score_logger_cls = ScoreLogger  # pylint: disable=invalid-name
+            self.evaluation_logger_cls = EvaluationLogger
             self.weave_client_context = weave_client_context
             self.available = True
         except ImportError:
@@ -94,7 +92,10 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             weave_dataset = self._get_weave_dataset(eval_input)
             config_dict = config.model_dump(mode="json")
             config_dict["name"] = workflow_alias
-            self.eval_logger = self.evaluation_logger_cls(model=config_dict, dataset=weave_dataset)
+            self.eval_logger = self.evaluation_logger_cls(model=config_dict,
+                                                          dataset=weave_dataset,
+                                                          name=workflow_alias,
+                                                          eval_attributes={})
             self.pred_loggers = {}
 
             # Capture the current evaluation call for context propagation
@@ -189,3 +190,4 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         # Log the summary to finish the evaluation, disable auto-summarize
         # as we will be adding profiler metrics to the summary
         self.eval_logger.log_summary(summary, auto_summarize=False)
+        logger.info("Logged Evaluation Summary to Weave")

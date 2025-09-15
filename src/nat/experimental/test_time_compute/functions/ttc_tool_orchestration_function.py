@@ -148,13 +148,13 @@ async def register_ttc_tool_orchestration_function(
                 result = await fn.acall_invoke(item.output)
                 return item, result, None
             except Exception as e:
-                logger.error(f"Error invoking function '{item.name}': {e}")
+                logger.exception(f"Error invoking function '{item.name}': {e}")
                 return item, None, str(e)
 
         tasks = []
         for item in ttc_items:
             if item.name not in function_map:
-                logger.error(f"Function '{item.name}' not found in function map.")
+                logger.error(f"Function '{item.name}' not found in function map.", exc_info=True)
                 item.output = f"Error: Function '{item.name}' not found in function map. Check your input"
             else:
                 fn = function_map[item.name]

@@ -50,7 +50,7 @@ class NIMEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="nim"):
                                        description=("The truncation strategy if the input on the "
                                                     "server side if it's too large."))
 
-    model_config = ConfigDict(protected_namespaces=())
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
 
 @register_embedder_provider(config_type=NIMEmbedderModelConfig)

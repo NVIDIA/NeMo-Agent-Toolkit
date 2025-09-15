@@ -61,7 +61,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
             # Store the evaluator
             self._evaluators[name] = ConfiguredEvaluator(config=config, instance=info_obj)
         except Exception as e:
-            logger.error("Error %s adding evaluator `%s` with config `%s`", e, name, config, exc_info=True)
+            logger.error("Error %s adding evaluator `%s` with config `%s`", e, name, config)
             raise
 
     @override
@@ -98,7 +98,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
             try:
                 tools.append(tool_wrapper_reg.build_fn(fn_name, fn, self))
             except Exception:
-                logger.exception("Error fetching tool `%s`", fn_name, exc_info=True)
+                logger.exception("Error fetching tool `%s`", fn_name)
 
         return tools
 

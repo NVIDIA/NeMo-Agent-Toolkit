@@ -54,19 +54,19 @@ class FunctionDependencies(BaseModel):
         return list(v)
 
     def add_function(self, function: str):
-        self.functions.add(function)  # pylint: disable=no-member
+        self.functions.add(function)
 
     def add_llm(self, llm: str):
-        self.llms.add(llm)  # pylint: disable=no-member
+        self.llms.add(llm)
 
     def add_embedder(self, embedder: str):
-        self.embedders.add(embedder)  # pylint: disable=no-member
+        self.embedders.add(embedder)
 
     def add_memory_client(self, memory_client: str):
-        self.memory_clients.add(memory_client)  # pylint: disable=no-member
+        self.memory_clients.add(memory_client)
 
     def add_object_store(self, object_store: str):
-        self.object_stores.add(object_store)  # pylint: disable=no-member
+        self.object_stores.add(object_store)
 
     def add_retriever(self, retriever: str):
-        self.retrievers.add(retriever)  # pylint: disable=no-member
+        self.retrievers.add(retriever)

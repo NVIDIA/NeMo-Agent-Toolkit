@@ -37,7 +37,7 @@ def _get_nat_dependency(versioned: bool = True) -> str:
     Returns:
         str: The dependency string to use in pyproject.toml
     """
-    # Assume the default dependency is langchain
+    # Assume the default dependency is LangChain/LangGraph
     dependency = "nvidia-nat[langchain]"
 
     if not versioned:
@@ -97,7 +97,7 @@ def find_package_root(package_name: str) -> Path | None:
         try:
             info = json.loads(direct_url)
         except json.JSONDecodeError:
-            logger.error("Malformed direct_url.json for package: %s", package_name)
+            logger.exception("Malformed direct_url.json for package: %s", package_name)
             return None
 
         if not info.get("dir_info", {}).get("editable"):
@@ -161,7 +161,6 @@ def get_workflow_path_from_name(workflow_name: str):
     default="NAT function template. Please update the description.",
     help="""A description of the component being created. Will be used to populate the docstring and will describe the
          component when inspecting installed components using 'nat info component'""")
-# pylint: disable=missing-param-doc
 def create_command(workflow_name: str, install: bool, workflow_dir: str, description: str):
     """
     Create a new NAT workflow using templates.
@@ -272,7 +271,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
 
         click.echo(f"Workflow '{workflow_name}' created successfully in '{new_workflow_dir}'.")
     except Exception as e:
-        logger.exception("An error occurred while creating the workflow: %s", e, exc_info=True)
+        logger.exception("An error occurred while creating the workflow: %s", e)
         click.echo(f"An error occurred while creating the workflow: {e}")
 
 
@@ -308,7 +307,7 @@ def reinstall_command(workflow_name):
 
         click.echo(f"Workflow '{workflow_name}' reinstalled successfully.")
     except Exception as e:
-        logger.exception("An error occurred while reinstalling the workflow: %s", e, exc_info=True)
+        logger.exception("An error occurred while reinstalling the workflow: %s", e)
         click.echo(f"An error occurred while reinstalling the workflow: {e}")
 
 
@@ -355,7 +354,7 @@ def delete_command(workflow_name: str):
 
         click.echo(f"Workflow '{workflow_name}' deleted successfully.")
     except Exception as e:
-        logger.exception("An error occurred while deleting the workflow: %s", e, exc_info=True)
+        logger.exception("An error occurred while deleting the workflow: %s", e)
         click.echo(f"An error occurred while deleting the workflow: {e}")
 
 

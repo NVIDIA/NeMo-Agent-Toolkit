@@ -137,7 +137,7 @@ class SweBenchPredictor(SweBenchPredictorBase):
             return symbols, imports, source_code
 
         except Exception as e:
-            logger.exception("Error parsing AST for %s: %s", file_path, e, exc_info=True)
+            logger.error("Error parsing AST for %s: %s", file_path, e)
             raise
 
     def _truncate_context(self, prompt: str, max_tokens: int = 2000) -> str:
@@ -213,7 +213,7 @@ class SweBenchPredictor(SweBenchPredictorBase):
                             _process_file(str(potential_paths[0]), depth + 1)
 
             except Exception as e:
-                logger.exception("Error processing dependency %s: %s", file_path, e, exc_info=True)
+                logger.exception("Error processing dependency %s: %s", file_path, e)
 
         _process_file(target_file, 0)
         logger.info("Found %d dependencies", len(dependencies))
@@ -293,7 +293,7 @@ Output only the complete fixed version of the code without any explanations or m
             logger.warning("Could not find file path in patch")
             return None
         except Exception as e:
-            logger.exception("Error extracting file from patch: %s", e, exc_info=True)
+            logger.exception("Error extracting file from patch: %s", e)
             return None
 
     async def _generate_fix(self, prompt: str) -> str:
@@ -374,5 +374,5 @@ Output only the complete fixed version of the code without any explanations or m
             return generate_patch(file_content, fixed_code, target_file)
 
         except Exception as e:
-            logger.exception("Error processing %s: %s", swebench_input.instance_id, e, exc_info=True)
+            logger.exception("Error processing %s: %s", swebench_input.instance_id, e)
             return f"Error: {str(e)}"

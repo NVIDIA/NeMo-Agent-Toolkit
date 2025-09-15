@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 @register_tool_wrapper(wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-def langchain_tool_wrapper(name: str, fn: Function, builder: Builder):  # pylint: disable=unused-argument
+def langchain_tool_wrapper(name: str, fn: Function, builder: Builder):
 
     import asyncio
 

@@ -24,8 +24,6 @@ from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from nat.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
 from nat.test.functions import EchoFunctionConfig
 
-# pylint: disable=redefined-outer-name
-
 
 @pytest.fixture
 def echo_function_config():

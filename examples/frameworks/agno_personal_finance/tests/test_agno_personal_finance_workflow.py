@@ -20,9 +20,9 @@ import logging
 from pathlib import Path
 
 import pytest
-from nat_agno_personal_finance.agno_personal_finance_function import AgnoPersonalFinanceFunctionConfig
 
 from nat.runtime.loader import load_workflow
+from nat_agno_personal_finance.agno_personal_finance_function import AgnoPersonalFinanceFunctionConfig
 
 logger = logging.getLogger(__name__)
 

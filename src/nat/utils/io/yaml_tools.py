@@ -85,7 +85,7 @@ def yaml_loads(config: str) -> dict:
     try:
         config_data = yaml.safe_load(stream)
     except yaml.YAMLError as e:
-        logger.error("Error loading YAML: %s", interpolated_config_str, exc_info=True)
+        logger.error("Error loading YAML: %s", interpolated_config_str)
         raise ValueError(f"Error loading YAML: {e}") from e
 
     assert isinstance(config_data, dict)

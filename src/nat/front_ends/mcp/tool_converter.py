@@ -17,13 +17,17 @@ import json
 import logging
 from inspect import Parameter
 from inspect import Signature
+from typing import TYPE_CHECKING
 
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 
+from nat.builder.context import ContextState
 from nat.builder.function import Function
 from nat.builder.function_base import FunctionBase
-from nat.builder.workflow import Workflow
+
+if TYPE_CHECKING:
+    from nat.builder.workflow import Workflow
 
 logger = logging.getLogger(__name__)
 
@@ -33,14 +37,16 @@ def create_function_wrapper(
     function: FunctionBase,
     schema: type[BaseModel],
     is_workflow: bool = False,
+    workflow: 'Workflow | None' = None,
 ):
     """Create a wrapper function that exposes the actual parameters of a NAT Function as an MCP tool.
 
     Args:
-        function_name: The name of the function/tool
-        function: The NAT Function object
-        schema: The input schema of the function
-        is_workflow: Whether the function is a Workflow
+        function_name (str): The name of the function/tool
+        function (FunctionBase): The NAT Function object
+        schema (type[BaseModel]): The input schema of the function
+        is_workflow (bool): Whether the function is a Workflow
+        workflow (Workflow | None): The parent workflow for observability context
 
     Returns:
         A wrapper function suitable for registration with MCP
@@ -101,6 +107,19 @@ def create_function_wrapper(
                 await ctx.report_progress(0, 100)
 
             try:
+                # Helper function to wrap function calls with observability
+                async def call_with_observability(func_call):
+                    # Use workflow's observability context (workflow should always be available)
+                    if not workflow:
+                        logger.error("Missing workflow context for function %s - observability will not be available",
+                                     function_name)
+                        raise RuntimeError("Workflow context is required for observability")
+
+                    logger.debug("Starting observability context for function %s", function_name)
+                    context_state = ContextState.get()
+                    async with workflow.exporter_manager.start(context_state=context_state):
+                        return await func_call()
+
                 # Special handling for ChatRequest
                 if is_chat_request:
                     from nat.data_models.api_server import ChatRequest
@@ -118,7 +137,7 @@ def create_function_wrapper(
                             result = await runner.result(to_type=str)
                     else:
                         # Regular functions use ainvoke
-                        result = await function.ainvoke(chat_request, to_type=str)
+                        result = await call_with_observability(lambda: function.ainvoke(chat_request, to_type=str))
                 else:
                     # Regular handling
                     # Handle complex input schema - if we extracted fields from a nested schema,
@@ -129,7 +148,7 @@ def create_function_wrapper(
                         field_type = schema.model_fields[field_name].annotation
 
                         # If it's a pydantic model, we need to create an instance
-                        if hasattr(field_type, "model_validate"):
+                        if field_type and hasattr(field_type, "model_validate"):
                             # Create the nested object
                             nested_obj = field_type.model_validate(kwargs)
                             # Call with the nested object
@@ -147,7 +166,7 @@ def create_function_wrapper(
                             result = await runner.result(to_type=str)
                     else:
                         # Regular function call
-                        result = await function.acall_invoke(**kwargs)
+                        result = await call_with_observability(lambda: function.acall_invoke(**kwargs))
 
                 # Report completion
                 if ctx:
@@ -170,7 +189,7 @@ def create_function_wrapper(
     wrapper = create_wrapper()
 
     # Set the signature on the wrapper function (WITHOUT ctx)
-    wrapper.__signature__ = sig
+    wrapper.__signature__ = sig  # type: ignore
     wrapper.__name__ = function_name
 
     # Return the wrapper with proper signature
@@ -183,8 +202,8 @@ def get_function_description(function: FunctionBase) -> str:
 
     The description is determined using the following precedence:
        1. If the function is a Workflow and has a 'description' attribute, use it.
-       2. If the Workflow's config has a 'topic', use it.
-       3. If the Workflow's config has a 'description', use it.
+       2. If the Workflow's config has a 'description', use it.
+       3. If the Workflow's config has a 'topic', use it.
        4. If the function is a regular Function, use its 'description' attribute.
 
     Args:
@@ -194,6 +213,9 @@ def get_function_description(function: FunctionBase) -> str:
         The best available description string for the function.
     """
     function_description = ""
+
+    # Import here to avoid circular imports
+    from nat.builder.workflow import Workflow
 
     if isinstance(function, Workflow):
         config = function.config
@@ -214,13 +236,17 @@ def get_function_description(function: FunctionBase) -> str:
     return function_description
 
 
-def register_function_with_mcp(mcp: FastMCP, function_name: str, function: FunctionBase) -> None:
+def register_function_with_mcp(mcp: FastMCP,
+                               function_name: str,
+                               function: FunctionBase,
+                               workflow: 'Workflow | None' = None) -> None:
     """Register a NAT Function as an MCP tool.
 
     Args:
         mcp: The FastMCP instance
         function_name: The name to register the function under
         function: The NAT Function to register
+        workflow: The parent workflow for observability context (if available)
     """
     logger.info("Registering function %s with MCP", function_name)
 
@@ -229,6 +255,7 @@ def register_function_with_mcp(mcp: FastMCP, function_name: str, function: Funct
     logger.info("Function %s has input schema: %s", function_name, input_schema)
 
     # Check if we're dealing with a Workflow
+    from nat.builder.workflow import Workflow
     is_workflow = isinstance(function, Workflow)
     if is_workflow:
         logger.info("Function %s is a Workflow", function_name)
@@ -237,5 +264,5 @@ def register_function_with_mcp(mcp: FastMCP, function_name: str, function: Funct
     function_description = get_function_description(function)
 
     # Create and register the wrapper function with MCP
-    wrapper_func = create_function_wrapper(function_name, function, input_schema, is_workflow)
+    wrapper_func = create_function_wrapper(function_name, function, input_schema, is_workflow, workflow)
     mcp.tool(name=function_name, description=function_description)(wrapper_func)

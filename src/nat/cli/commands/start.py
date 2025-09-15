@@ -35,7 +35,6 @@ logger = logging.getLogger(__name__)
 
 class StartCommandGroup(click.Group):
 
-    # pylint: disable=too-many-positional-arguments
     def __init__(
         self,
         name: str | None = None,
@@ -103,12 +102,24 @@ class StartCommandGroup(click.Group):
                 raise ValueError(f"Invalid field '{name}'.Unions are only supported for optional parameters.")
 
             # Handle the types
-            if (issubclass(decomposed_type.root, Path)):
+            # Literal[...] -> map to click.Choice([...])
+            if (decomposed_type.origin is typing.Literal):
+                # typing.get_args returns the literal values; ensure they are strings for Click
+                literal_values = [str(v) for v in decomposed_type.args]
+                param_type = click.Choice(literal_values)
+
+            elif (issubclass(decomposed_type.root, Path)):
                 param_type = click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path)
 
             elif (issubclass(decomposed_type.root, (list, tuple, set))):
                 if (len(decomposed_type.args) == 1):
-                    param_type = decomposed_type.args[0]
+                    inner = DecomposedType(decomposed_type.args[0])
+                    # Support containers of Literal values -> multiple Choice
+                    if (inner.origin is typing.Literal):
+                        literal_values = [str(v) for v in inner.args]
+                        param_type = click.Choice(literal_values)
+                    else:
+                        param_type = inner.root
                 else:
                     param_type = None
 
@@ -225,7 +236,7 @@ class StartCommandGroup(click.Group):
             return asyncio.run(run_plugin())
 
         except Exception as e:
-            logger.error("Failed to initialize workflow", exc_info=True)
+            logger.error("Failed to initialize workflow")
             raise click.ClickException(str(e)) from e
 
     def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:

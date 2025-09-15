@@ -29,7 +29,6 @@ from nat.registry_handlers.schemas.publish import Artifact
 from nat.runtime.loader import PluginTypes
 from nat.runtime.loader import discover_entrypoints
 
-# pylint: disable=redefined-outer-name
 logger = logging.getLogger(__name__)
 
 
@@ -397,7 +396,7 @@ def get_transitive_dependencies(distribution_names: list[str]) -> dict[str, set[
                     except importlib.metadata.PackageNotFoundError:
                         pass
 
-                logger.error("Distribution %s not found (tried common variations)", dist_name)
+                logger.error("Distribution %s not found (tried common variations)", dist_name, exc_info=True)
                 result[dist_name] = set()
 
     return result

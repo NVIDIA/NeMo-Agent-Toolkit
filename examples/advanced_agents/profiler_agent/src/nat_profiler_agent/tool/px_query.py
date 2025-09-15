@@ -19,7 +19,6 @@ import tempfile
 import uuid
 from datetime import datetime
 
-from nat_profiler_agent.tool.utils import first_valid_query
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
@@ -28,6 +27,7 @@ from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
+from nat_profiler_agent.tool.utils import first_valid_query
 
 logger = logging.getLogger(__name__)
 

@@ -33,6 +33,7 @@ import nest_asyncio
 from .commands.configure.configure import configure_command
 from .commands.evaluate import eval_command
 from .commands.info.info import info_command
+from .commands.object_store.object_store import object_store_command
 from .commands.optimize import optimizer_command
 from .commands.registry.registry import registry_command
 from .commands.sizing.sizing import sizing
@@ -109,11 +110,12 @@ cli.add_command(validate_command, name="validate")
 cli.add_command(workflow_command, name="workflow")
 cli.add_command(sizing, name="sizing")
 cli.add_command(optimizer_command, name="optimize")
+cli.add_command(object_store_command, name="object-store")
 
 # Aliases
 cli.add_command(start_command.get_command(None, "console"), name="run")  # type: ignore
 cli.add_command(start_command.get_command(None, "fastapi"), name="serve")  # type: ignore
-cli.add_command(start_command.get_command(None, "mcp"), name="mcp")
+cli.add_command(start_command.get_command(None, "mcp"), name="mcp")  # type: ignore
 
 
 @cli.result_callback()

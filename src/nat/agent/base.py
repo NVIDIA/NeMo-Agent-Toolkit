@@ -27,9 +27,10 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import ToolMessage
+from langchain_core.runnables import Runnable
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
-from langgraph.graph.graph import CompiledGraph
+from langgraph.graph.state import CompiledStateGraph
 
 logger = logging.getLogger(__name__)
 
@@ -70,12 +71,14 @@ class BaseAgent(ABC):
                  llm: BaseChatModel,
                  tools: list[BaseTool],
                  callbacks: list[AsyncCallbackHandler] | None = None,
-                 detailed_logs: bool = False) -> None:
+                 detailed_logs: bool = False,
+                 log_response_max_chars: int = 1000) -> None:
         logger.debug("Initializing Agent Graph")
         self.llm = llm
         self.tools = tools
         self.callbacks = callbacks or []
         self.detailed_logs = detailed_logs
+        self.log_response_max_chars = log_response_max_chars
         self.graph = None
 
     async def _stream_llm(self,
@@ -105,21 +108,25 @@ class BaseAgent(ABC):
 
         return AIMessage(content=output_message)
 
-    async def _call_llm(self, messages: list[BaseMessage]) -> AIMessage:
+    async def _call_llm(self, llm: Runnable, inputs: dict[str, Any], config: RunnableConfig | None = None) -> AIMessage:
         """
         Call the LLM directly. Retry logic is handled automatically by the underlying LLM client.
 
         Parameters
         ----------
-        messages : list[BaseMessage]
-            The messages to send to the LLM
+        llm : Runnable
+            The LLM runnable (prompt | llm or similar)
+        inputs : dict[str, Any]
+            The inputs to pass to the runnable
+        config : RunnableConfig | None
+            The config to pass to the runnable (should include callbacks)
 
         Returns
         -------
         AIMessage
             The LLM response
         """
-        response = await self.llm.ainvoke(messages)
+        response = await llm.ainvoke(inputs, config=config)
         return AIMessage(content=str(response.content))
 
     async def _call_tool(self,
@@ -158,6 +165,11 @@ class BaseAgent(ABC):
                                        tool_call_id=tool.name,
                                        content=f"The tool {tool.name} provided an empty response.")
 
+                # ToolMessage only accepts str or list[str | dict] as content.
+                # Convert into list if the response is a dict.
+                if isinstance(response, dict):
+                    response = [response]
+
                 return ToolMessage(name=tool.name, tool_call_id=tool.name, content=response)
 
             except Exception as e:
@@ -179,13 +191,12 @@ class BaseAgent(ABC):
                 logger.debug("%s Retrying tool call for %s in %d seconds...", AGENT_LOG_PREFIX, tool.name, sleep_time)
                 await asyncio.sleep(sleep_time)
 
-        # pylint: disable=C0209
         # All retries exhausted, return error message
         error_content = "Tool call failed after all retry attempts. Last error: %s" % str(last_exception)
-        logger.error("%s %s", AGENT_LOG_PREFIX, error_content)
+        logger.error("%s %s", AGENT_LOG_PREFIX, error_content, exc_info=True)
         return ToolMessage(name=tool.name, tool_call_id=tool.name, content=error_content, status="error")
 
-    def _log_tool_response(self, tool_name: str, tool_input: Any, tool_response: str, max_chars: int = 1000) -> None:
+    def _log_tool_response(self, tool_name: str, tool_input: Any, tool_response: str) -> None:
         """
         Log tool response with consistent formatting and length limits.
 
@@ -197,13 +208,11 @@ class BaseAgent(ABC):
             The input that was passed to the tool
         tool_response : str
             The response from the tool
-        max_chars : int
-            Maximum number of characters to log (default: 1000)
         """
         if self.detailed_logs:
             # Truncate tool response if too long
-            display_response = tool_response[:max_chars] + "...(rest of response truncated)" if len(
-                tool_response) > max_chars else tool_response
+            display_response = tool_response[:self.log_response_max_chars] + "...(rest of response truncated)" if len(
+                tool_response) > self.log_response_max_chars else tool_response
 
             # Format the tool input for display
             tool_input_str = str(tool_input)
@@ -252,5 +261,5 @@ class BaseAgent(ABC):
         return "\n".join([f"{message.type}: {message.content}" for message in messages[:-1]])
 
     @abstractmethod
-    async def _build_graph(self, state_schema: type) -> CompiledGraph:
+    async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
         pass

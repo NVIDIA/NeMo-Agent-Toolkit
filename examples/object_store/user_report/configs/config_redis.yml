@@ -1,0 +1,86 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+general:
+  front_end:
+    _type: fastapi
+    object_store: report_object_store
+    cors:
+      allow_origins: ['*']
+
+object_stores:
+  report_object_store:
+    _type: redis
+    host: localhost
+    db: 0
+    port: 6379
+    bucket_name: my-bucket
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+
+functions:
+  get_user_report:
+    _type: get_user_report
+    object_store: report_object_store
+    description: >
+      Fetches user diagnostic report from the bucket given a user ID and date.
+      Args:
+        user_id: str: The user ID to fetch the report for.
+        date: str | null: The date to fetch the report for. Format: YYYY-MM-DD. If not provided, the latest report will be fetched.
+
+  put_user_report:
+    _type: put_user_report
+    object_store: report_object_store
+    description: >
+      Inserts a new user diagnostic report into the bucket given a user ID and date. If the report already exists, it will fail.
+      If it does fail, never delete the existing report to replace it. Just let the user know that the report already exists.
+      Args:
+        report: str: The report to put into the bucket.
+        user_id: str: The user ID to put the report for.
+        date: str | null: The date to put the report for. Format: YYYY-MM-DD. If not provided, the report will be named "latest".
+
+  update_user_report:
+    _type: update_user_report
+    object_store: report_object_store
+    description: >
+      Updates a user diagnostic report in the bucket given a user ID and date. If the report does not exist, it will behave as
+      if the report was created. Do not delete the existing report to replace it.
+      Args:
+        report: str: The report to update in the bucket.
+        user_id: str: The user ID to update the report for.
+        date: str | null: The date to update the report for. Format: YYYY-MM-DD. If not provided, the report will be named "latest".
+
+  delete_user_report:
+    _type: delete_user_report
+    object_store: report_object_store
+    description: >
+      Deletes user diagnostic report from the bucket given a user ID and date. If the report does not exist, it will fail.
+      Do not run `delete_user_report` without the explicit intention to delete an existing report, even in the case of an attempt
+      to insert a new report which already exists.
+      Args:
+        user_id: str: The user ID to delete the report for.
+        date: str | null: The date to delete the report for. Format: YYYY-MM-DD. If not provided, the report will be named "latest".
+
+workflow:
+  _type: react_agent
+  tool_names: [get_user_report, put_user_report, update_user_report, delete_user_report]
+  llm_name: nim_llm
+  verbose: true
+  handle_parsing_errors: true
+  max_retries: 2
