@@ -131,7 +131,7 @@ def test_optimize_parameters_happy_path(tmp_path: Path):
     # Define full search space including a prompt param which must be filtered out
     full_space = {
         "lr": SearchSpace(low=0.001, high=0.1, log=False, step=None),
-        "arch": SearchSpace(low=["A", "B"], high=None),
+        "arch": SearchSpace(values=["A", "B"], high=None),
         "prompt_text": SearchSpace(is_prompt=True),
     }
 
