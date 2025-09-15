@@ -24,7 +24,7 @@ The NeMo Agent toolkit Optimizer is a powerful tool for automated hyperparameter
 
 This guide will walk you through:
 - Configuring the optimizer.
-- Making your workflow parameters optimizable.
+- Making your workflow `parameters.optimizable`.
 - Running the optimizer from the command line.
 - Understanding the output of the optimizer.
 
@@ -105,7 +105,7 @@ The optimization process follows the steps outlined in the diagram above:
 
 7.  **Recording Results**:
     - Numeric trials: scores are combined per `multi_objective_combination_mode` and recorded in the Optuna study.
-    - Prompt GA: each individual's metrics are normalized per generation and scalarized per `multi_objective_combination_mode`; the best individuals are checkpointed each generation.
+    - Prompt GA: each individual's metrics are normalized per generation and `scalarized` per `multi_objective_combination_mode`; the best individuals are checkpointed each generation.
 
 8.  **Analysis and Output**: Once all trials are complete, the optimizer analyzes the study to find the best-performing trial. It then generates the output files, including `best_params.json` and the various plots, to help you understand the results.
 
@@ -190,7 +190,7 @@ This model defines a single metric to be used in the optimization.
 
 ## Optimizable Fields
 
-To make a parameter in your workflow optimizable, you need to use the `OptimizableField` function instead of Pydantic's standard `Field`. This allows you to attach search space metadata to the field. You may omit the `space` argument to mark a field as optimizable and supply its search space later in the configuration file.
+To make a parameter in your workflow.optimizable, you need to use the `OptimizableField` function instead of Pydantic's standard `Field`. This allows you to attach search space metadata to the field. You may omit the `space` argument to mark a field as.optimizable and supply its search space later in the configuration file.
 
 ### `SearchSpace`
 
@@ -208,7 +208,7 @@ The `SearchSpace` Pydantic model is used to define the range or set of possible 
 
 This function is a drop-in replacement for `pydantic.Field` that optionally takes a `space` argument.
 
-Here's how you can define optimizable fields in your workflow's data models:
+Here's how you can define.optimizable fields in your workflow's data models:
 
 ```python
 from pydantic import BaseModel
@@ -252,7 +252,7 @@ class SomeImageAgentConfig(FunctionBaseConfig, OptimizableMixin, name="some_imag
         description="The system prompt for the LLM."
     )
 
-    # Option C: Mark as optimizable but provide search space in config
+    # Option C: Mark as.optimizable but provide search space in config
     temperature: float = OptimizableField(0.0)
 ```
 
@@ -261,16 +261,16 @@ In this example:
 - `model_name` is a categorical parameter, and the optimizer will choose from the provided list of models.
 - `system_prompt_a` demonstrates setting a different starting prompt in the `SearchSpace`.
 - `system_prompt_b` demonstrates omitting `SearchSpace.prompt`, which uses the field's default as the base prompt.
-    - `temperature` shows how to mark a field as optimizable without specifying a search space in code; the search space must then be provided in the workflow configuration.
+    - `temperature` shows how to mark a field as.optimizable without specifying a search space in code; the search space must then be provided in the workflow configuration.
 
 Behavior for prompt-optimized fields:
 - If `space.is_prompt` is `true` and `space.prompt` is `None`, the optimizer will use the `OptimizableField`'s `default` as the base prompt.
 - If both `space.prompt` and the field `default` are `None`, an error is raised. Provide at least one.
-- If `space` is omitted entirely, a corresponding search space **must** be supplied in the configuration's `search_space` mapping; otherwise a runtime error is raised when walking optimizable fields.
+- If `space` is omitted entirely, a corresponding search space **must** be supplied in the configuration's `search_space` mapping; otherwise a runtime error is raised when walking.optimizable fields.
 
-## Enabling Optimization of Fields in the Config File
+## Enabling Optimization of Fields in the Configuration File
 Once `OptimizableField`s have been created in your workflow's data models, you need to enable optimization for these fields in your workflow configuration file.
-This can be enabled using the `optimizable_params` field of your configuration file.
+This can be enabled using the .optimizable_params` field of your configuration file.
     
 For example:
 ```yaml
@@ -280,17 +280,17 @@ llms:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
-    optimizable_params:
+   .optimizable_params:
       - temperature
       - top_p
       - max_tokens
 ```
 
-**NOTE:** Ensure your configuration object inherits from `OptimizableMixin` to enable the `optimizable_params` field.
+**NOTE:** Ensure your configuration object inherits from `OptimizableMixin` to enable the .optimizable_params` field.
 
 ### Overriding Search Spaces in Configuration Files
 
-You can override the search space for any optimizable parameter directly in your workflow configuration by adding a `search_space` mapping alongside `optimizable_params`:
+You can override the search space for any.optimizable parameter directly in your workflow configuration by adding a `search_space` mapping alongside .optimizable_params`:
 
 ```yaml
 llms:
@@ -298,7 +298,7 @@ llms:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
-    optimizable_params: [temperature, top_p]
+   .optimizable_params: [temperature, top_p]
     search_space:
       temperature:
         low: 0.2
@@ -311,13 +311,13 @@ llms:
 ```
 
 The `search_space` entries are parsed into `SearchSpace` objects and override any defaults defined in the data models.
-If a field is marked as optimizable but lacks a `search_space` in both the data model and this mapping, the optimizer will raise an error when collecting optimizable fields.
+If a field is marked as.optimizable but lacks a `search_space` in both the data model and this mapping, the optimizer will raise an error when collecting.optimizable fields.
 
 ## Default Optimizable LLM Parameters
 
-Many of the LLM providers in the NeMo Agent toolkit Toolkit come with pre-configured optimizable parameters. This means you can start tuning common hyperparameters like `temperature` and `top_p` without any extra configuration.
+Many of the LLM providers in the NeMo Agent Toolkit come with pre-configured.optimizable parameters. This means you can start tuning common hyperparameters like `temperature` and `top_p` without any extra configuration.
 
-Here is a matrix of the default optimizable parameters for some of the built-in LLM providers:
+Here is a matrix of the `default.optimizable` parameters for some of the built-in LLM providers:
 
 | Parameter     | Provider | Default Value | Search Space                       |
 |:--------------|:---------|:--------------|:-----------------------------------|
@@ -372,7 +372,7 @@ Numeric optimization outputs (Optuna) remain unchanged and can be used alongside
 
 ## Running the Optimizer
 
-Once you have your optimizer configuration and optimizable fields set up, you can run the optimizer from the command line using the `nat optimize` command.
+Once you have your optimizer configuration and.optimizable fields set up, you can run the optimizer from the command line using the `nat optimize` command.
 
 ### CLI Command
 
