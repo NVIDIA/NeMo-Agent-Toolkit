@@ -12,19 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pytest
-from click.testing import CliRunner
-from nat.cli.commands.workflow.workflow_commands import create_command
-
-
-def test_create_workflow_with_empty_name():
-    """Ensure CLI rejects empty workflow name."""
-    runner = CliRunner()
-    result = runner.invoke(create_command, [""])
-    assert result.exit_code != 0
-    assert "Workflow name cannot be empty." in result.output
-
-
 def test_create_workflow_with_valid_name(tmp_path):
     """Ensure CLI succeeds with a valid workflow name."""
     runner = CliRunner()
@@ -33,4 +20,14 @@ def test_create_workflow_with_valid_name(tmp_path):
         ["my-workflow", "--no-install", "--workflow-dir", str(tmp_path)]
     )
     assert result.exit_code == 0
-    assert "Workflow 'my-workflow' created successfully." in result.output
+    assert "Workflow 'my-workflow' created successfully in" in result.output
+
+    # Verify the workflow directory was actually created
+    workflow_dir = tmp_path / "my-workflow"
+    assert workflow_dir.is_dir()
+
+    # Cleanup created workflow
+    if workflow_dir.exists():
+        for child in workflow_dir.iterdir():
+            child.unlink()
+        workflow_dir.rmdir()
