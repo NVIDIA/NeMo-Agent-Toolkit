@@ -147,8 +147,8 @@ class JobStore(DaskClientMixin):
     db_engine: AsyncEngine | None, optional, default=None
         The database engine for the job store.
     db_url: str | None, optional, default=None
-        The database URL to connect to, used when db_engine is not
-        provided. Refer to https://docs.sqlalchemy.org/en/20
+        The database URL to connect to, used when db_engine is not provided. Refer to:
+        https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls
     """
 
     MIN_EXPIRY = 600  # 10 minutes
