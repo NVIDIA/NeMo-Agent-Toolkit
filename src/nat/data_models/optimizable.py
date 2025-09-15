@@ -20,7 +20,9 @@ from typing import TypeVar
 
 from optuna import Trial
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
+from pydantic import model_validator
 
 T = TypeVar("T", int, float, bool, str)
 
@@ -40,11 +42,23 @@ class SearchSpace(BaseModel, Generic[T]):
 
     model_config = ConfigDict(protected_namespaces=(), extra="forbid")
 
+    @model_validator(mode="after")
+    def validate_search_space_parameters(self):
+        """Validate that either values is provided, or both high and low."""
+        if self.values is not None:
+            # If values is provided, we don't need high/low
+            if self.high is not None or self.low is not None:
+                raise ValueError("Either 'values' must be provided, or both 'high' and 'low' "
+                                 "must be provided")
+            return self
+
+        return self
+
     # Helper for Optuna Trials
     def suggest(self, trial: Trial, name: str):
         if self.is_prompt:
-            raise ValueError("Prompt optimization not currently supported using Optuna."
-                             " Use the genetic algorithm implementation instead.")
+            raise ValueError("Prompt optimization not currently supported using Optuna. "
+                             "Use the genetic algorithm implementation instead.")
         if self.values is not None:
             return trial.suggest_categorical(name, self.values)
         if isinstance(self.low, int):
@@ -68,8 +82,8 @@ def OptimizableField(
     if space is not None and getattr(space, "is_prompt", False):
         if getattr(space, "prompt", None) is None:
             if default is None:
-                raise ValueError("Prompt-optimized fields require a base prompt: provide a non-None field default "
-                                 "or set space.prompt.")
+                raise ValueError("Prompt-optimized fields require a base prompt: provide a "
+                                 "non-None field default or set space.prompt.")
             # Default prompt not provided in space; fall back to the field's default
             space.prompt = default
 
