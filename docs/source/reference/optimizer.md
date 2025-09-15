@@ -359,10 +359,10 @@ This command will start the optimization process. You will see logs in your term
 
 When the optimizer finishes, it will save the results in the directory specified by the `output_path` in your `OptimizerConfig`. This directory will contain several files:
 
--   `best_params.json`: A JSON file containing the best set of parameters found during the optimization based on the combined score. While these are the "best" according to the weighted harmonic mean, you might choose other parameters based on the Pareto front.
--   `optimization_results.json`: A JSON file containing detailed results for each trial, including the parameters, the values of each objective, and the combined score.
--   `pareto_front.png`: This plot is one of the most important outputs for multi-objective optimization. It shows the set of "non-dominated" solutions. A solution is non-dominated if there is no other solution that is better in at least one objective and no worse in any other. Each point on this plot represents a different trade-off between your objectives (for example, high correctness with high latency vs. medium correctness with low latency). You can use this plot to select a parameter set that meets your specific needs, which may be different from the single "best" set in `best_params.json`.
--   `optimization_history.png`: This plot shows the evolution of the combined score over the course of the optimization. You can use it to see if the optimizer is converging on a good solution. If the score is still improving significantly at the end of the run, you might consider increasing the number of trials.
--   `param_importances.png`: This plot, generated using Optuna's feature importance analysis, shows which of your optimizable parameters had the most significant impact on the optimization objectives. This is useful for understanding your model better and can help you focus future tuning efforts on the most impactful parameters.
+-   `optimized_config.yml`: Tuned configuration derived from the selected trial.
+-   `trials_dataframe_params.csv`: Full Optuna trials dataframe (values, params, timings, rep_scores).
+-   `plots/pareto_front_2d.png`: 2D Pareto front (when 2 metrics).
+-   `plots/pareto_parallel_coordinates.png`: Parallel coordinates plot.
+-   `plots/pareto_pairwise_matrix.png`: Pairwise metric matrix.
 
 By examining these output files, you can understand the results of the optimization, choose the best parameters for your needs (for example, picking a point on the Pareto front that represents your desired trade-off), and gain insights into your workflow's behavior.
