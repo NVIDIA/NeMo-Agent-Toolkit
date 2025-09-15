@@ -370,6 +370,78 @@ def test_prompt_validation_with_additional_instructions():
     assert ReWOOAgentGraph.validate_solver_prompt(combined_solver_prompt)
 
 
+# Tests for tool_call_max_retries option
+
+
+def test_rewoo_agent_tool_call_max_retries_initialization(mock_llm, mock_tool):
+    """Test that ReWOO agent initializes with tool_call_max_retries parameter."""
+    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+
+    tools = [mock_tool('test_tool')]
+    planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
+    solver_prompt = ChatPromptTemplate([("system", SOLVER_SYSTEM_PROMPT), ("user", SOLVER_USER_PROMPT)])
+
+    # Test default value
+    agent = ReWOOAgentGraph(llm=mock_llm, planner_prompt=planner_prompt, solver_prompt=solver_prompt, tools=tools)
+    assert agent.tool_call_max_retries == 3
+
+    # Test custom value
+    agent_custom = ReWOOAgentGraph(llm=mock_llm,
+                                   planner_prompt=planner_prompt,
+                                   solver_prompt=solver_prompt,
+                                   tools=tools,
+                                   tool_call_max_retries=5)
+    assert agent_custom.tool_call_max_retries == 5
+
+
+async def test_executor_node_passes_max_retries_to_call_tool(mock_rewoo_agent):
+    """Test that executor_node passes the correct max_retries value to _call_tool."""
+    from unittest.mock import AsyncMock
+
+    # Mock the _call_tool method
+    original_call_tool = mock_rewoo_agent._call_tool
+    mock_rewoo_agent._call_tool = AsyncMock(return_value=ToolMessage(content="success", tool_call_id="mock_tool_A"))
+
+    # Create test state
+    mock_state = ReWOOGraphState(
+        task=HumanMessage(content="Test task"),
+        plan=AIMessage(content="Test plan"),
+        steps=AIMessage(content=[{
+            "plan": "test step", "evidence": {
+                "placeholder": "#E1", "tool": "mock_tool_A", "tool_input": "test input"
+            }
+        }]),
+        intermediate_results={})
+
+    # Execute the node
+    await mock_rewoo_agent.executor_node(mock_state)
+
+    # Verify _call_tool was called with correct max_retries parameter
+    mock_rewoo_agent._call_tool.assert_called_once()
+    call_kwargs = mock_rewoo_agent._call_tool.call_args.kwargs
+    assert 'max_retries' in call_kwargs
+    assert call_kwargs['max_retries'] == mock_rewoo_agent.tool_call_max_retries
+
+    # Restore original method
+    mock_rewoo_agent._call_tool = original_call_tool
+
+
+def test_rewoo_config_tool_call_max_retries():
+    """Test that ReWOOAgentWorkflowConfig includes tool_call_max_retries field."""
+
+    # Test default value
+    config = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm")
+    assert hasattr(config, 'tool_call_max_retries')
+    assert config.tool_call_max_retries == 3
+
+    # Test custom value
+    config_custom = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm", tool_call_max_retries=7)
+    assert config_custom.tool_call_max_retries == 7
+
+
 def test_json_output_parsing_valid_format():
     """Test that the planner can parse valid JSON output correctly."""
     import json

@@ -68,7 +68,8 @@ class ReWOOAgentGraph(BaseAgent):
                  use_tool_schema: bool = True,
                  callbacks: list[AsyncCallbackHandler] | None = None,
                  detailed_logs: bool = False,
-                 log_response_max_chars: int = 1000):
+                 log_response_max_chars: int = 1000,
+                 tool_call_max_retries: int = 3):
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
@@ -94,6 +95,7 @@ class ReWOOAgentGraph(BaseAgent):
         self.planner_prompt = planner_prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         self.solver_prompt = solver_prompt
         self.tools_dict = {tool.name: tool for tool in tools}
+        self.tool_call_max_retries = tool_call_max_retries
 
         logger.debug("%s Initialized ReWOO Agent Graph", AGENT_LOG_PREFIX)
 
@@ -269,7 +271,7 @@ class ReWOOAgentGraph(BaseAgent):
             tool_response = await self._call_tool(requested_tool,
                                                   tool_input_parsed,
                                                   RunnableConfig(callbacks=self.callbacks),
-                                                  max_retries=3)
+                                                  max_retries=self.tool_call_max_retries)
 
             if self.detailed_logs:
                 self._log_tool_response(requested_tool.name, tool_input_parsed, str(tool_response))
