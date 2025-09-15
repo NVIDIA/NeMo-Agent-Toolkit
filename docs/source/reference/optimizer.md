@@ -270,7 +270,7 @@ Behavior for prompt-optimized fields:
 
 ## Enabling Optimization of Fields in the Configuration File
 Once `OptimizableField`s have been created in your workflow's data models, you need to enable optimization for these fields in your workflow configuration file.
-This can be enabled using the .optimizable_params` field of your configuration file.
+This can be enabled using the `optimizable_params` field of your configuration file.
     
 For example:
 ```yaml
@@ -280,17 +280,17 @@ llms:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
-   .optimizable_params:
+   optimizable_params:
       - temperature
       - top_p
       - max_tokens
 ```
 
-**NOTE:** Ensure your configuration object inherits from `OptimizableMixin` to enable the .optimizable_params` field.
+**NOTE:** Ensure your configuration object inherits from `OptimizableMixin` to enable the `optimizable_params` field.
 
 ### Overriding Search Spaces in Configuration Files
 
-You can override the search space for any.optimizable parameter directly in your workflow configuration by adding a `search_space` mapping alongside .optimizable_params`:
+You can override the search space for any.optimizable parameter directly in your workflow configuration by adding a `search_space` mapping alongside `optimizable_params`:
 
 ```yaml
 llms:
@@ -298,7 +298,7 @@ llms:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
-   .optimizable_params: [temperature, top_p]
+    optimizable_params: [temperature, top_p]
     search_space:
       temperature:
         low: 0.2
@@ -390,7 +390,7 @@ nat optimize --config_file <path_to_config>
 
 Example:
 ```bash
-nat optimize --config_file my_workflow/config.yaml
+nat optimize --config_file <path to configuraiton file>
 ```
 
 This command will start the optimization process. You will see logs in your terminal showing the progress of the optimization, including the parameters being tested and the scores for each trial.

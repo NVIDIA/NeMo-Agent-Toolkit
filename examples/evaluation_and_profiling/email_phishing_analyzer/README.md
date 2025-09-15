@@ -28,7 +28,7 @@ limitations under the License.
   - [Run the Workflow](#run-the-workflow)
 - [Optimization](#optimization)
   - [What Is Being Optimized](#what-is-being-optimized)
-  - [Optimization Configuration](#optimization-config)
+  - [Optimization Configuration](#optimization-configuration)
   - [Run the Optimizer](#run-the-optimizer)
   - [Outputs](#outputs)
 - [Deployment-Oriented Setup](#deployment-oriented-setup)
@@ -139,7 +139,7 @@ This example includes an optimization configuration that uses the NeMo Agent too
 - **LLM hyperparameters**: For each LLM in `llms`, numeric hyperparameters are marked as optimizable:
   - **`temperature`**, **`top_p`**, **`max_tokens`**.
 
-Evaluation during optimization uses the dataset at `examples/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv` with `body` as the question/input and `label` as the ground truth.
+Evaluation during optimization uses the dataset at `examples/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv` with `body` as the question and `label` as the ground truth.
 
 ### Optimization Configuration
 The optimization-ready configuration is located at:
