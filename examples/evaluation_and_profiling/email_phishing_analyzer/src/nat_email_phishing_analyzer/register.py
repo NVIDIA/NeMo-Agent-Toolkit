@@ -37,7 +37,7 @@ class EmailPhishingAnalyzerConfig(FunctionBaseConfig, OptimizableMixin, name="em
     _type: str = "email_phishing_analyzer"
     llm: LLMRef = OptimizableField(description="The LLM to use for email phishing analysis.",
                                    default="llama_3_405",
-                                   space=SearchSpace(low=["llama_3_405", "llama_3_70"]))
+                                   space=SearchSpace(values=["llama_3_405", "llama_3_70"]))
     prompt: str = OptimizableField(
         description="The prompt template for analyzing email phishing. Use {body} to insert the email text.",
         default=phishing_prompt,
