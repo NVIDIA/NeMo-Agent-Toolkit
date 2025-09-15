@@ -25,6 +25,7 @@ There are currently five workflow transactions that can be initiated using HTTP 
 
 
 ## Start the NeMo Agent Toolkit Server
+This section describes how to start the NeMo Agent toolkit server.
 ### Set Up API Keys
 If you have not already done so, follow the [Obtaining API Keys](../quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 ```bash
