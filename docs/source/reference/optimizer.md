@@ -178,7 +178,7 @@ class SomeImageAgentConfig(FunctionBaseConfig, OptimizableMixin, name="some_imag
     )
     model_name: str = OptimizableField(
         default="gpt-3.5-turbo",
-        space=SearchSpace(low=["gpt-3.5-turbo", "gpt-4", "claude-2"]),
+        space=SearchSpace(values=["gpt-3.5-turbo", "gpt-4", "claude-2"]),
         description="The name of the model to use."
     )
     # Option A: Start from a prompt different from the default (set prompt in space)
