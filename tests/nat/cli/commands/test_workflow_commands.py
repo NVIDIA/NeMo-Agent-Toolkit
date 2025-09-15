@@ -41,10 +41,11 @@ def test_get_nat_dependency(mock_get_version, versioned, expected_dep):
 def test_nat_workflow_create(tmp_path):
     """Test that 'nat workflow create' command creates expected structure."""
     # Run the nat workflow create command
-    result = subprocess.run(["nat", "workflow", "create", "--workflow-dir", str(tmp_path), "test_workflow"],
-                            capture_output=True,
-                            text=True,
-                            check=True)
+    result = subprocess.run(
+        ["nat", "workflow", "create", "--no-install", "--workflow-dir", str(tmp_path), "test_workflow"],
+        capture_output=True,
+        text=True,
+        check=True)
 
     # Verify the command succeeded
     assert result.returncode == 0
