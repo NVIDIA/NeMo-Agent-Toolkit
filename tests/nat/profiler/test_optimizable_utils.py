@@ -85,6 +85,42 @@ def test_walk_optimizables_warns_when_no_allowlist(caplog: pytest.LogCaptureFixt
     assert isinstance(spaces["a"], SearchSpace)
 
 
+def test_walk_optimizables_uses_search_space_overrides():
+
+    class MyModel(OptimizableMixin):
+        a: float = 0.1
+
+    cfg = MyModel(optimizable_params=["a"], search_space={"a": SearchSpace(low=0, high=1)})
+
+    spaces = walk_optimizables(cfg)
+
+    assert "a" in spaces
+    assert spaces["a"].low == 0 and spaces["a"].high == 1
+
+
+def test_walk_optimizables_requires_search_space():
+
+    class MyModel(OptimizableMixin):
+        a: int = OptimizableField(0)
+
+    cfg = MyModel(optimizable_params=["a"])
+
+    with pytest.raises(ValueError, match="no search space"):
+        walk_optimizables(cfg)
+
+
+def test_walk_optimizables_can_mark_without_space_in_code():
+
+    class MyModel(OptimizableMixin):
+        a: int = OptimizableField(0)
+
+    cfg = MyModel(optimizable_params=["a"], search_space={"a": SearchSpace(low=0, high=1)})
+
+    spaces = walk_optimizables(cfg)
+
+    assert "a" in spaces and spaces["a"].low == 0
+
+
 def test_static_type_fallback_for_dict_of_models():
 
     class Item(BaseModel):
