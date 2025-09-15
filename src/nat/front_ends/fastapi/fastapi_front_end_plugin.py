@@ -159,7 +159,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                 # uvloop’s event loop policy for macOS doesn’t provide a child watcher (which is needed for MCP server),
                 # so setting loop="asyncio" forces Uvicorn to use the standard event loop, which includes child-watcher
                 # support.
-                if sys.platform == "darwin":
+                if sys.platform == "darwin" or sys.platform.startswith("linux"):
                     # For macOS
                     event_loop_policy = "asyncio"
                 else:
