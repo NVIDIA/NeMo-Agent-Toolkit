@@ -17,7 +17,7 @@
 # flake8: noqa
 
 # Import any workflows which need to be automatically registered here
-from .prompt_optimizer import regsiter as prompt_optimizer
+from .prompt_optimizer import register as prompt_optimizer
 from .react_agent import register as react_agent
 from .reasoning_agent import reasoning_agent
 from .rewoo_agent import register as rewoo_agent
