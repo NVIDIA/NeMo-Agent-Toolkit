@@ -19,8 +19,8 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.cli.commands.workflow.workflow_commands import (_get_nat_dependency,
-                                                         get_repo_root)
+from nat.cli.commands.workflow.workflow_commands import _get_nat_dependency
+from nat.cli.commands.workflow.workflow_commands import get_repo_root
 
 
 def test_get_repo_root(project_dir: str):
@@ -72,22 +72,12 @@ def test_nat_workflow_create(tmp_path):
         assert expected_output_path.exists()
 
     # Define expected symlinks
-    expected_symlinks = [
-        workflow_root / "configs",
-        workflow_root / "data",
+    expected_symlinks_and_targets = [
+        (workflow_root / "configs", test_workflow_src / "configs"),
+        (workflow_root / "data", test_workflow_src / "data"),
     ]
 
     # Verify symlinks exist and are symlinks
-    for expected_symlink in expected_symlinks:
+    for expected_symlink, target in expected_symlinks_and_targets:
         assert expected_symlink.is_symlink()
-
-    # Verify symlink targets
-    configs_symlink = workflow_root / "configs"
-    data_symlink = workflow_root / "data"
-    assert configs_symlink.resolve() == \
-        (test_workflow_src / "configs").resolve(), \
-        "configs symlink should point to src/test_workflow/configs"
-    assert data_symlink.resolve() == \
-        (test_workflow_src / "data").resolve(), \
-        "data symlink should point to src/test_workflow/data"
-        "data symlink should point to src/test_workflow/data"
+        assert expected_symlink.resolve() == target.resolve()
