@@ -33,7 +33,7 @@ class TestSearchSpaceSuggest:
             space.suggest(trial, name="x")
 
     def test_categorical_choice(self):
-        space = SearchSpace(low=["a", "b", "c"], high=None)
+        space = SearchSpace(values=["a", "b", "c"])
         trial = mock.MagicMock()
         trial.suggest_categorical.return_value = "b"
 
