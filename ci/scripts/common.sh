@@ -181,7 +181,7 @@ function get_lfs_files() {
         rapids-logger "Fetching LFS files"
         git lfs install
         rapids-logger "Calling git lfs fetch"
-        # git lfs fetch
+        git lfs fetch
         rapids-logger "Calling git lfs pull"
         git lfs pull
     fi
