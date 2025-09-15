@@ -221,15 +221,13 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         else:
             install_cmd = ['pip', 'install', '-e', str(new_workflow_dir)]
 
-        config_source = configs_dir / 'config.yml'
-
         # List of templates and their destinations
         files_to_render = {
             'pyproject.toml.j2': new_workflow_dir / 'pyproject.toml',
             'register.py.j2': base_dir / 'register.py',
             'workflow.py.j2': base_dir / f'{workflow_name}_function.py',
             '__init__.py.j2': base_dir / '__init__.py',
-            'config.yml.j2': config_source,
+            'config.yml.j2': configs_dir / 'config.yml',
         }
 
         # Render templates
@@ -249,10 +247,6 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
             content = template.render(context)
             with open(output_path, 'w', encoding="utf-8") as f:
                 f.write(content)
-
-        # Create symlink for config.yml
-        config_link = new_workflow_dir / 'configs' / 'config.yml'
-        os.symlink(config_source, config_link)
 
         # Create symlinks for config and data directories
         config_dir_source = configs_dir
