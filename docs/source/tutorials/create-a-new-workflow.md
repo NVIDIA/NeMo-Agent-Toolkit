@@ -40,7 +40,7 @@ nat workflow delete text_file_ingest
 
 Each workflow created in this way also creates a Python project, and by default, this will also install the project into the environment. If you want to avoid installing it into the environment you can use the `--no-install` flag.
 
-<!-- path-check-skip-next-line -->
+<!-- path-check-skip-begin -->
 This creates a new directory `examples/text_file_ingest` with the following layout:
 ```
 examples/
@@ -57,6 +57,7 @@ examples/
             ├── register.py
             └── text_file_ingest_function.py
 ```
+<!-- path-check-skip-end -->
 
 :::{note}
 The completed code for this example can be found in the `examples/documentation_guides/workflows/text_file_ingest` directory of the NeMo Agent toolkit repository.
@@ -67,6 +68,7 @@ By convention, tool implementations are defined within or imported into the `reg
 
 <!-- path-check-skip-begin -->
 Many of these tools contain an associated workflow configuration file stored in a `config` directory, along with example data stored in a `data` directory. Since these tools are installable Python packages and the workflow configuration file and data must be included in the package, they need to be located under the `examples/text_file_ingest/src/text_file_ingest` directory. For convenience, symlinks are created at the root of the project directory pointing to the actual directories. Lastly, a `README.md` file is often included in the root of the project.
+<!-- path-check-skip-end -->
 
 ## Customizing the Configuration Object
 Given that the purpose of this tool will be similar to that of the `webpage_query` tool, you can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/getting_started/simple_web_query/src/nat_simple_web_query/register.py`:
