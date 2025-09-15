@@ -45,8 +45,8 @@ class SearchSpace(BaseModel, Generic[T]):
         if self.is_prompt:
             raise ValueError("Prompt optimization not currently supported using Optuna."
                              " Use the genetic algorithm implementation instead.")
-        if self.high is None:
-            return trial.suggest_categorical(name, self.low)
+        if self.values is not None:
+            return trial.suggest_categorical(name, self.values)
         if isinstance(self.low, int):
             return trial.suggest_int(name, self.low, self.high, log=self.log, step=self.step)
         return trial.suggest_float(name, self.low, self.high, log=self.log, step=self.step)
