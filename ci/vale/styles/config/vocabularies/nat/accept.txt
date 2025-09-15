@@ -127,6 +127,7 @@ pytest
 [Ss]ubpackage(s?)
 [Ss]ubword(s?)
 [Ss]uperset(s?)
+SQLAlchemy
 Tavily
 [Tt]eardown
 [Tt]imestamp(s?)
