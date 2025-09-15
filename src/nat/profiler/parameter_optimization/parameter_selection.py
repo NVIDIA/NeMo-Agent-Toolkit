@@ -68,7 +68,7 @@ def pick_trial(
 
     # ---- 2. Convert & normalise objectives ----
     vals = _to_minimisation_matrix(front, study.directions)  # smaller is better
-    span = vals.ptp(axis=0)
+    span = np.ptp(vals, axis=0)
     norm = (vals - vals.min(axis=0)) / (span + eps)  # 0 = best, 1 = worst
 
     # ---- 3. Scalarise according to chosen mode ----
