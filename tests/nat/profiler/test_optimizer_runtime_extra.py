@@ -17,9 +17,7 @@ import pytest
 from pydantic import BaseModel
 
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.profiler.parameter_optimization.optimizer_runtime import (
-    optimize_config,
-)
+from nat.profiler.parameter_optimization.optimizer_runtime import optimize_config
 
 
 class _DummyInner(BaseModel):
@@ -46,13 +44,9 @@ async def test_optimize_config_returns_input_when_no_space(monkeypatch):
     # Force walk_optimizables to empty mapping
     from nat.profiler.parameter_optimization import optimizer_runtime as rt
 
-    monkeypatch.setattr(
-        rt, "walk_optimizables", lambda _cfg: {}, raising=True
-    )
+    monkeypatch.setattr(rt, "walk_optimizables", lambda _cfg: {}, raising=True)
     # Also bypass load_config by passing BaseModel directly
-    run = OptimizerRunConfig(
-        config_file=cfg, dataset=None, result_json_path="$", endpoint=None
-    )
+    run = OptimizerRunConfig(config_file=cfg, dataset=None, result_json_path="$", endpoint=None)
 
     out = await optimize_config(run)
     assert out is cfg
@@ -68,9 +62,7 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
     from nat.profiler.parameter_optimization import optimizer_runtime as rt
 
     # Provide a small non-empty space
-    monkeypatch.setattr(
-        rt, "walk_optimizables", lambda _cfg: {"x": object()}, raising=True
-    )
+    monkeypatch.setattr(rt, "walk_optimizables", lambda _cfg: {"x": object()}, raising=True)
 
     calls = {"numeric": 0, "prompt": 0}
 
@@ -83,18 +75,11 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
         del kwargs
         calls["prompt"] += 1
 
-    monkeypatch.setattr(
-        rt, "optimize_parameters", _fake_optimize_parameters, raising=True
-    )
-    monkeypatch.setattr(
-        rt, "optimize_prompts", _fake_optimize_prompts, raising=True
-    )
+    monkeypatch.setattr(rt, "optimize_parameters", _fake_optimize_parameters, raising=True)
+    monkeypatch.setattr(rt, "optimize_prompts", _fake_optimize_prompts, raising=True)
 
-    run = OptimizerRunConfig(
-        config_file=cfg, dataset=None, result_json_path="$", endpoint=None
-    )
+    run = OptimizerRunConfig(config_file=cfg, dataset=None, result_json_path="$", endpoint=None)
     out = await optimize_config(run)
     assert out is cfg
     assert calls["numeric"] == 1
     assert calls["prompt"] == 1
-

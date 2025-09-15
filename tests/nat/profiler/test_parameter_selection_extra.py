@@ -16,19 +16,13 @@
 import optuna
 from optuna.study import StudyDirection
 
-from nat.profiler.parameter_optimization.parameter_selection import (
-    pick_trial,
-)
+from nat.profiler.parameter_optimization.parameter_selection import pick_trial
 
 
 def _make_study_with_trials(values_list):  # noqa: ANN001
-    study = optuna.create_study(
-        directions=[StudyDirection.MINIMIZE, StudyDirection.MINIMIZE]
-    )
+    study = optuna.create_study(directions=[StudyDirection.MINIMIZE, StudyDirection.MINIMIZE])
     for vals in values_list:
-        t = optuna.trial.create_trial(
-            values=list(vals), params={}, distributions={}
-        )
+        t = optuna.trial.create_trial(values=list(vals), params={}, distributions={})
         study.add_trial(t)
     return study
 
@@ -70,12 +64,9 @@ def test_pick_trial_unknown_mode_raises():
 
 
 def test_pick_trial_empty_front_raises():
-    study = optuna.create_study(
-        directions=[StudyDirection.MINIMIZE, StudyDirection.MINIMIZE]
-    )
+    study = optuna.create_study(directions=[StudyDirection.MINIMIZE, StudyDirection.MINIMIZE])
     try:
         pick_trial(study, mode="sum")
         assert False, "Expected ValueError for empty Pareto front"
     except ValueError:
         pass
-

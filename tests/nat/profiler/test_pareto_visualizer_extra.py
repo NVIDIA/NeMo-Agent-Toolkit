@@ -18,22 +18,14 @@ from pathlib import Path
 import optuna
 import pandas as pd
 
-from nat.profiler.parameter_optimization.pareto_visualizer import (
-    create_pareto_visualization,
-)
+from nat.profiler.parameter_optimization.pareto_visualizer import create_pareto_visualization
 
 
 def _make_two_obj_study():
     study = optuna.create_study(directions=["minimize", "minimize"])
-    study.add_trial(optuna.trial.create_trial(
-        values=[0.1, 0.9], params={}, distributions={}
-    ))
-    study.add_trial(optuna.trial.create_trial(
-        values=[0.2, 0.2], params={}, distributions={}
-    ))
-    study.add_trial(optuna.trial.create_trial(
-        values=[0.9, 0.1], params={}, distributions={}
-    ))
+    study.add_trial(optuna.trial.create_trial(values=[0.1, 0.9], params={}, distributions={}))
+    study.add_trial(optuna.trial.create_trial(values=[0.2, 0.2], params={}, distributions={}))
+    study.add_trial(optuna.trial.create_trial(values=[0.9, 0.1], params={}, distributions={}))
     return study
 
 
@@ -66,4 +58,3 @@ def test_create_pareto_visualization_from_csv(tmp_path: Path):
         show_plots=False,
     )
     assert isinstance(figs, dict)
-
