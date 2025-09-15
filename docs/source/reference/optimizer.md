@@ -166,8 +166,6 @@ This is the main configuration object for the optimizer.
 -   `prompt.prompt_recombination_function: str | null`: Optional function name used to recombine two parent prompts into a child prompt.
 -   `reps_per_param_set: int`: The number of times to run the workflow for each set of parameters to get a more stable evaluation. This is important for noisy evaluations where the result might vary even with the same parameters. Defaults to `3`.
 -   `target: float | None`: If set, the optimization will stop when the combined score for a trial reaches this value. This is useful if you have a specific performance target and want to save time. The score is normalized between 0 and 1. Defaults to `None`.
--   `do_prompt_optimization: bool`: A flag to enable or disable prompt optimization. Use this when you want the optimizer to experiment with different phrasings of your prompts to improve performance. Defaults to `False`.
--   `do_numeric_optimization: bool`: A flag to enable or disable numeric parameter optimization. This is the standard hyperparameter tuning for values like `temperature` or other numerical settings. Defaults to `True`.
 -   `multi_objective_combination_mode: str`: How to combine multiple objective scores into a single scalar. Supported: `harmonic`, `sum`, `chebyshev`. Defaults to `harmonic`.
 
 ### `OptimizerMetric`
@@ -285,7 +283,7 @@ Here is a matrix of the default optimizable parameters for some of the built-in 
 |               | `nim`    | `0.0`         | `low=0.1`, `high=0.8`, `step=0.2`  |
 | `top_p`       | `openai` | `1.0`         | `low=0.5`, `high=1.0`, `step=0.1`  |
 |               | `nim`    | `1.0`         | `low=0.5`, `high=1.0`, `step=0.1`  |
-| `max_tokens`  | `nim`    | `300`         | `low=128`, `high=2048`, `step=512` |
+| `max_tokens`  | `nim`    | `300`         | `low=128`, `high=2176`, `step=512` |
 
 To use these defaults, you just need to enable numeric optimization in your `config.yaml`. The optimizer will automatically find these `OptimizableField`s in the LLM configuration and start tuning them. You can always override these defaults by defining your own `OptimizableField` on the LLM configuration in your workflow.
 

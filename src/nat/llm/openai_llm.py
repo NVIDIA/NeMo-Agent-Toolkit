@@ -21,9 +21,7 @@ from nat.builder.builder import Builder
 from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.llm import LLMBaseConfig
-from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
-from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.temperature_mixin import TemperatureMixin
 from nat.data_models.thinking_mixin import ThinkingMixin

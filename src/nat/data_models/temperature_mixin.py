@@ -16,9 +16,10 @@
 import re
 
 from pydantic import BaseModel
-from pydantic import Field
 
 from nat.data_models.gated_field_mixin import GatedFieldMixin
+from nat.data_models.optimizable import OptimizableField
+from nat.data_models.optimizable import SearchSpace
 
 
 class TemperatureMixin(
@@ -35,9 +36,10 @@ class TemperatureMixin(
     Attributes:
         temperature: Sampling temperature in [0, 1]. Defaults to 0.0 when supported on the model.
     """
-    temperature: float | None = Field(
+    temperature: float | None = OptimizableField(
         default=None,
         ge=0.0,
         le=1.0,
         description="Sampling temperature in [0, 1]. Defaults to 0.0 when supported on the model.",
+        space=SearchSpace(high=0.9, low=0.1, step=0.2)
     )
