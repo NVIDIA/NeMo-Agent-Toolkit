@@ -37,9 +37,7 @@ class SearchSpace(BaseModel, Generic[T]):
     prompt: str | None = None  # prompt to optimize
     prompt_purpose: str | None = None  # purpose of the prompt
 
-    model_config = {
-        "extra": "forbid",
-    }
+    model_config = ConfigDict(protected_namespaces=(), extra="forbid")
 
     # Helper for Optuna Trials
     def suggest(self, trial: Trial, name: str):
