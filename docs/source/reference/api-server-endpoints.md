@@ -59,7 +59,7 @@ result back to the client. The transaction schema is defined by the workflow.
   ```
 
 ## Asynchronous Generate
-The asynchronous generate endpoint allows clients to submit a workflow to run in the background and return a response immediately with a unique identifier for the workflow, which can be used to query the status and results of the workflow at a later time. This is useful for long-running workflows which would otherwise cause the client to time out.
+The asynchronous generate endpoint allows clients to submit a workflow to run in the background and return a response immediately with a unique identifier for the workflow. This can be used to query the status and results of the workflow at a later time. This is useful for long-running workflows, which would otherwise cause the client to time out.
 
 This endpoint is only available when the `async_endpoints` optional dependency extra is installed. For users installing from source, this can be done by running `uv pip install -e .[async_endpoints]` from the root directory of the NeMo Agent toolkit library. Similarly, for users installing from PyPI, this can be done by running `pip install nvidia-nat[async_endpoints]`.
 
