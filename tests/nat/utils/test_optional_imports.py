@@ -1,17 +1,29 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import pytest
 
-
-from nat.utils.optional_imports import (
-    DummyBatchSpanProcessor,
-    DummySpan,
-    DummySpanExporter,
-    DummyTrace,
-    DummyTracerProvider,
-    OptionalImportError,
-    TelemetryOptionalImportError,
-    optional_import,
-    telemetry_optional_import,
-)
+from nat.utils.optional_imports import DummyBatchSpanProcessor
+from nat.utils.optional_imports import DummySpan
+from nat.utils.optional_imports import DummySpanExporter
+from nat.utils.optional_imports import DummyTrace
+from nat.utils.optional_imports import DummyTracerProvider
+from nat.utils.optional_imports import OptionalImportError
+from nat.utils.optional_imports import TelemetryOptionalImportError
+from nat.utils.optional_imports import optional_import
+from nat.utils.optional_imports import telemetry_optional_import
 
 
 def test_optional_import_success():
