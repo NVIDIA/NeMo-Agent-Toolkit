@@ -124,6 +124,9 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
 Please ensure that all new contributions adhere to the latest version notes within the [Migration Guide](./migration-guide.md).
 
+### Example Workflow Contributions
+We welcome contributions of new example workflows in this repository and in the [NeMo-Agent-Toolkit-Examples](https://github.com/NVIDIA/NeMo-Agent-Toolkit-Examples) repository. The difference is that examples in this repository are maintained, tested and updated with each release of the NeMo Agent toolkit. These examples have high quality standards and demonstrate a capability of the NeMo Agent toolkit, while examples in the NeMo-Agent-Toolkit-Examples repository are community contributed and are tied to a specific version of the NeMo Agent toolkit, and do not need to demonstrate a specific capability of the library.
+
 ### Your first issue
 
 1. Find an issue to work on. The best way is to search for issues with the [good first issue](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) label.
