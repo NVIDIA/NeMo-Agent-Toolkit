@@ -147,5 +147,5 @@ XGBoost
 zsh
 Zep
 Optuna
-optimizable
-checkpointed
+[Oo]ptimizable
+[Cc]heckpointed

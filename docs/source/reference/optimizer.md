@@ -340,7 +340,7 @@ This section explains how the GA evolves prompt parameters when `do_prompt_optim
    - The remaining `ga_population_size - 1` individuals are created by applying `prompt_population_init_function` to each prompt parameter with its `prompt_purpose`.
 2. Evaluate all individuals with your configured `eval_metrics` and `reps_per_param_set`. Metrics are averaged per evaluator.
 3. Normalize metrics per generation so that higher is always better, respecting each metric's `direction`.
-4. Scalarize normalized scores per `multi_objective_combination_mode` to compute a fitness value. Optionally subtract a diversity penalty if `ga_diversity_lambda > 0`.
+4. `Scalarize` normalized scores per `multi_objective_combination_mode` to compute a fitness value. Optionally subtract a diversity penalty if `ga_diversity_lambda > 0`.
 5. Create the next generation:
    - Elitism: carry over the top `ga_elitism` individuals.
    - Selection: choose parents using `ga_selection_method` (`tournament` with `ga_tournament_size`, or `roulette`).
@@ -372,7 +372,7 @@ Numeric optimization outputs (Optuna) remain unchanged and can be used alongside
 
 ## Running the Optimizer
 
-Once you have your optimizer configuration and.optimizable fields set up, you can run the optimizer from the command line using the `nat optimize` command.
+Once you have your optimizer configuration and optimizable fields set up, you can run the optimizer from the command line using the `nat optimize` command.
 
 ### CLI Command
 
@@ -384,7 +384,7 @@ nat optimize --config_file <path_to_config>
 
 -   `--config_file`: (Required) Path to the JSON or YAML configuration file for your workflow, for example, `config.yaml`. This file should contain the `optimizer` section as described above.
 -   `--dataset`: (Optional) Path to a JSON file containing the dataset for evaluation, such as `eval_dataset.json`. This will override any dataset path specified in the config file. The dataset should be a list of dictionaries, where each dictionary represents a data point and includes the necessary inputs for your workflow and the ground truth for evaluation.
--   `--result_json_path`: A JSONPath expression to extract the result from the workflow's output. Defaults to `$`.
+-   `--result_json_path`: A `JSONPath` expression to extract the result from the workflow's output. Defaults to `$`.
 -   `--endpoint`: If you are running your workflow as a service, you can provide the endpoint URL. For example, `http://localhost:8000/generate`.
 -   `--endpoint_timeout`: The timeout in seconds for requests to the endpoint. Defaults to `300`.
 
@@ -400,7 +400,7 @@ This command will start the optimization process. You will see logs in your term
 When the optimizer finishes, it will save the results in the directory specified by the `output_path` in your `OptimizerConfig`. This directory will contain several files:
 
 -   `optimized_config.yml`: Tuned configuration derived from the selected trial.
--   `trials_dataframe_params.csv`: Full Optuna trials dataframe (values, params, timings, rep_scores).
+-   `trials_dataframe_params.csv`: Full Optuna trials `dataframe` (`values`, `params`, `timings`, `rep_scores`).
 -   `pareto_front_2d.png`: 2D Pareto front (when 2 metrics).
 -   `pareto_parallel_coordinates.png`: Parallel coordinates plot.
 -   `pareto_pairwise_matrix.png`: Pairwise metric matrix.
