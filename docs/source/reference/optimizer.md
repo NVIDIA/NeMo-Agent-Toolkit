@@ -146,8 +146,8 @@ To make a parameter in your workflow.optimizable, you need to use the `Optimizab
 
 The `SearchSpace` Pydantic model is used to define the range or set of possible values for a hyperparameter.
 
--   `values: Sequence[T] | None`: Categorical values for a discreet search space. You can either set `values` or `low` and `high`. 
--   `low: T | None`: The lower bound for a numerical parameter, or a sequence of categorical values.
+-   `values: Sequence[T] | None`: Categorical values for a discrete search space. You can either set `values`. Mutually exclusive with `low` and `high`.
+-   `low: T | None`: The lower bound for a numerical parameter.
 -   `high: T | None`: The upper bound for a numerical parameter.
 -   `log: bool`: Whether to use a logarithmic scale for numerical parameters. Defaults to `False`.
 -   `step: float`: The step size for numerical parameters.
