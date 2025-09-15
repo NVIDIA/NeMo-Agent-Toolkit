@@ -32,7 +32,7 @@ If you have not already done so, follow the [Obtaining API Keys](../quick-start/
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-The following examples assume that the simple calculator workflow has been installed and is running on http://localhost:8000 to do so run the following commands:
+Before you use the following examples, ensure that the simple calculator workflow has been installed and is running on http://localhost:8000 by running the following commands:
 ```bash
 uv pip install -e examples/getting_started/simple_calculator
 nat serve --config_file examples/getting_started/simple_calculator/configs/config.yml
