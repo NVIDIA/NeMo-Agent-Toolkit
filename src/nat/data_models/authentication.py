@@ -22,7 +22,9 @@ import httpx
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
+from pydantic import HttpUrl
 from pydantic import SecretStr
+from pydantic import model_validator
 
 from nat.data_models.common import BaseModelRegistryTag
 from nat.data_models.common import TypedBaseModel
@@ -229,3 +231,22 @@ class AuthResult(BaseModel):
                 target_kwargs.setdefault(k, {}).update(v)
             else:
                 target_kwargs[k] = v
+
+class AuthReason(str, Enum):
+    """
+    Why the caller is asking for auth now.
+    """
+    NORMAL = "normal"
+    RETRY_AFTER_401 = "retry_after_401"
+    FORCE_REFRESH = "force_refresh"
+
+
+class AuthRequest(BaseModel):
+    """
+    Authentication request payload for provider.authenticate(...).
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: str | None = Field(default=None, description="User identity for per-user token cache.")
+    reason: AuthReason = Field(default=AuthReason.NORMAL, description="Purpose of this auth attempt.")
+    www_authenticate: str | None = Field(default=None, description="Raw WWW-Authenticate header from a 401 response.")
