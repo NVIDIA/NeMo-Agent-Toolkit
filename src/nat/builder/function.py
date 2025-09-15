@@ -428,15 +428,11 @@ class FunctionGroup:
         """
         Returns a dictionary of all functions in the function group except the excluded functions.
         """
-        if set(self._config.exclude) - set(self._functions.keys()):
-            raise ValueError(f"Function group {self._instance_name} excludes functions that are not found in the group."
-                             f" Available functions: {list(self._functions.keys())}")
-        result: dict[str, Function] = {}
+        missing = set(self._config.exclude) - set(self._functions.keys())
+        if missing:
+            raise ValueError(f"Unknown excluded functions: {sorted(missing)}")
         excluded = set(self._config.exclude)
-        for name in self._functions:
-            if name not in excluded:
-                result[self._get_fn_name(name)] = self._functions[name]
-        return result
+        return {self._get_fn_name(name): self._functions[name] for name in self._functions if name not in excluded}
 
     def get_accessible_functions(self) -> dict[str, Function]:
         """
@@ -477,13 +473,10 @@ class FunctionGroup:
         ValueError
             When the function group is configured to exclude functions that are not found in the group.
         """
-        if set(self._config.exclude) - set(self._functions.keys()):
-            raise ValueError(f"Function group {self._instance_name} excludes functions that are not found in the group."
-                             f" Available functions: {list(self._functions.keys())}")
-        excluded: dict[str, Function] = {}
-        for name in self._config.exclude:
-            excluded[self._get_fn_name(name)] = self._functions[name]
-        return excluded
+        missing = set(self._config.exclude) - set(self._functions.keys())
+        if missing:
+            raise ValueError(f"Unknown excluded functions: {sorted(missing)}")
+        return {self._get_fn_name(name): self._functions[name] for name in self._config.exclude}
 
     def get_included_functions(self) -> dict[str, Function]:
         """
@@ -500,16 +493,12 @@ class FunctionGroup:
         Raises
         ------
         ValueError
-            When the function group is configured to expose functions that are not found in the group.
+            When the function group is configured to include functions that are not found in the group.
         """
-        if set(self._config.include) - set(self._functions.keys()):
-            raise ValueError(
-                f"Function group {self._instance_name} includes functions that are not found in the group. "
-                f"Available functions: {list(self._functions.keys())}")
-        included: dict[str, Function] = {}
-        for name in self._config.include:
-            included[self._get_fn_name(name)] = self._functions[name]
-        return included
+        missing = set(self._config.include) - set(self._functions.keys())
+        if missing:
+            raise ValueError(f"Unknown included functions: {sorted(missing)}")
+        return {self._get_fn_name(name): self._functions[name] for name in self._config.include}
 
     def get_all_functions(self) -> dict[str, Function]:
         """
@@ -520,7 +509,4 @@ class FunctionGroup:
         dict[str, Function]
             A dictionary of all functions in the function group.
         """
-        result: dict[str, Function] = {}
-        for name in self._functions:
-            result[self._get_fn_name(name)] = self._functions[name]
-        return result
+        return {self._get_fn_name(name): self._functions[name] for name in self._functions}
