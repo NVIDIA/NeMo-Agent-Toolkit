@@ -187,14 +187,14 @@ class GeneralConfig(BaseModel):
 
     model_config = ConfigDict(protected_namespaces=())
 
-    use_uvloop: bool = Field(
+    use_uvloop: bool | None = Field(
+        default=None,
         deprecated=
         "`use_uvloop` field is deprecated and will be removed in a future release. The use of `uv_loop` is now " +
         "determined smartly by sys.platform's result.")
     """
-    This field is deprecated and use of it will have no effect. It was meant to give users control on whether to use
-    uvloop for the event loop which can hopefully provide a significant speedup in some cases, but now the use of
-    `uv_loop` will be smartly determined based on the system platform the user is using.
+    This field is deprecated and ignored. It previously controlled whether to use uvloop as the event loop. uvloop
+    usage is now determined automatically based on the operating system.
     """
 
     telemetry: TelemetryConfig = TelemetryConfig()
