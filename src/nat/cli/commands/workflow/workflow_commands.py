@@ -116,13 +116,19 @@ def get_workflow_path_from_name(workflow_name: str) -> Path | None:
 def create_command(workflow_name: str, install: bool, workflow_dir: str, description: str) -> None:
     """Create a new workflow project from templates."""
     if not workflow_name or not workflow_name.strip():
-        raise click.BadParameter("Workflow name cannot be empty.")
+        raise click.BadParameter("Workflow name cannot be empty.")  # noqa: TRY003
     if Path(workflow_name).is_absolute() or workflow_name in {".", ".."}:
-        raise click.BadParameter("Workflow name cannot be a path or special name.")
+        raise click.BadParameter("Workflow name cannot be a path or special name.")  # noqa: TRY003
     seps = tuple(s for s in (os.sep, os.altsep) if s)
     if any(sep in workflow_name for sep in seps):
-        raise click.BadParameter("Workflow name cannot contain path separators.")
+        raise click.BadParameter("Workflow name cannot contain path separators.")  # noqa: TRY003
 
+    # Enforce Python-friendly naming: start with letter/underscore; only [A-Za-z0-9_-].
+    import re  # local import OK; move to top-level if preferred
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", workflow_name):
+        raise click.BadParameter(
+            "Workflow name must start with a letter/underscore and contain only letters, digits, hyphens, or underscores."
+        )  # noqa: TRY003
     # Pre-validate workflow_dir and new_workflow_dir
     workflow_dir_path = Path(workflow_dir).resolve()
     if not workflow_dir_path.exists():
