@@ -49,13 +49,13 @@ class AuthAdapter(httpx.Auth):
     Converts AuthProviderBase to httpx.Auth interface for dynamic token management.
     """
 
-    def __init__(self, auth_provider: AuthProviderBase, auth_for_tool_calls_only):
+    def __init__(self, auth_provider: AuthProviderBase, auth_for_tool_calls_only: bool = True):
         self.auth_provider = auth_provider
         self.auth_for_tool_calls_only = auth_for_tool_calls_only
 
     async def async_auth_flow(self, request: httpx.Request) -> AsyncGenerator[httpx.Request, httpx.Response]:
         """Add authentication headers to the request using NAT auth provider."""
-        # Check if we should only auth tool calls
+        # Check if we should only auth tool calls, Is this needed?
         if self.auth_for_tool_calls_only and not self._is_tool_call_request(request):
             # Skip auth for non-tool calls
             yield request
@@ -63,7 +63,7 @@ class AuthAdapter(httpx.Auth):
 
         try:
             # Get fresh auth headers from the NAT auth provider
-            auth_headers = await self._get_auth_headers()
+            auth_headers = await self._get_auth_headers(reason=AuthReason.NORMAL)
             request.headers.update(auth_headers)
         except Exception as e:
             logger.warning("Failed to get auth headers: %s", e)
@@ -98,12 +98,11 @@ class AuthAdapter(httpx.Auth):
             pass
         return False
 
-    async def _get_auth_headers(self, reason: AuthReason | None = None, response: httpx.Response | None = None) -> dict[str, str]:
+    async def _get_auth_headers(self, reason: AuthReason, response: httpx.Response | None = None) -> dict[str, str]:
         """Get authentication headers from the NAT auth provider."""
         # Build auth request
-        auth_request = AuthRequest(
-            reason= AuthReason.NORMAL if reason is None else reason,
-            www_authenticate=response.headers.get("WWW-Authenticate", None) if response else None,
+        www_authenticate = response.headers.get("WWW-Authenticate", None) if response else None
+        auth_request = AuthRequest(reason=reason, www_authenticate=www_authenticate,
         )
         try:
             auth_result = await self.auth_provider.authenticate(auth_request=auth_request)
@@ -131,9 +130,7 @@ class MCPBaseClient(ABC):
 
     def __init__(self,
                  transport: str = 'streamable-http',
-                 auth_provider: AuthProviderBase | httpx.Auth | None = None,
-                 auth_for_tool_calls_only: bool = True,
-                 server_url: str | None = None):
+                 auth_provider: AuthProviderBase | None = None):
         self._tools = None
         self._transport = transport.lower()
         if self._transport not in ['sse', 'stdio', 'streamable-http']:
@@ -141,23 +138,12 @@ class MCPBaseClient(ABC):
 
         self._exit_stack: AsyncExitStack | None = None
         self._session: ClientSession | None = None  # Main session
-        self._auth_for_tool_calls_only = auth_for_tool_calls_only
         self._connection_established = False
         self._initial_connection = False
-        self._server_url = server_url
 
-        # Handle both auth types
-        if isinstance(auth_provider, httpx.Auth):
-            self._httpx_auth = auth_provider
-        else:
-            # Convert auth provider to httpx.Auth
-            if auth_provider:
-                # Store server URL in auth provider if it's an MCP OAuth2 provider
-                if hasattr(auth_provider, '_server_url'):
-                    auth_provider._server_url = server_url
-                self._httpx_auth = AuthAdapter(auth_provider, auth_for_tool_calls_only)
-            else:
-                self._httpx_auth = None
+        # Convert auth provider to AuthAdapter
+        if auth_provider:
+            self._httpx_auth = AuthAdapter(auth_provider)
 
     @property
     def transport(self) -> str:
@@ -265,7 +251,7 @@ class MCPSSEClient(MCPBaseClient):
     """
 
     def __init__(self, url: str):
-        super().__init__("sse", None, False)
+        super().__init__("sse")
         self._url = url
 
     @property
@@ -347,9 +333,9 @@ class MCPStreamableHTTPClient(MCPBaseClient):
 
     def __init__(self,
                  url: str,
-                 auth_provider: AuthProviderBase | httpx.Auth | None = None,
-                 auth_for_tool_calls_only: bool = True):
-        super().__init__("streamable-http", auth_provider, auth_for_tool_calls_only, server_url=url)
+                 auth_provider: AuthProviderBase | None = None):
+        super().__init__("streamable-http",
+                         auth_provider=auth_provider)
         self._url = url
 
     @property
