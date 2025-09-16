@@ -32,9 +32,11 @@ import warnings
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from collections.abc import Sequence
+from pathlib import Path
 from unittest import mock
 
 import pytest
+import pytest_asyncio
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
 from langchain_core.callbacks import AsyncCallbackManagerForToolRun
 from langchain_core.callbacks import CallbackManagerForLLMRun
@@ -55,6 +57,9 @@ EXAMPLES_DIR = os.path.join(PROJECT_DIR, "examples")
 sys.path.append(SRC_DIR)
 
 if typing.TYPE_CHECKING:
+    from dask.distributed import LocalCluster
+    from sqlalchemy.ext.asyncio import AsyncEngine
+
     from nat.data_models.intermediate_step import IntermediateStep
     from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
@@ -76,7 +81,17 @@ def config_file_fixture(test_data_dir: str):
 
 @pytest.fixture(name="eval_config_file")
 def eval_config_file_fixture() -> str:
-    return os.path.join(EXAMPLES_DIR, "evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml")
+    return os.path.join(EXAMPLES_DIR, "evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml")
+
+
+@pytest.fixture(name="simple_config_file")
+def simple_config_file_fixture() -> str:
+    return os.path.join(EXAMPLES_DIR, "getting_started/simple_calculator/configs/config.yml")
+
+
+@pytest.fixture(name="echo_config_file")
+def echo_config_file_fixture(test_data_dir: str) -> str:
+    return os.path.join(test_data_dir, "echo.yaml")
 
 
 @pytest.fixture(name="mock_aiohttp_session")
@@ -475,3 +490,95 @@ def rag_intermediate_property_adaptor_fixture(rag_intermediate_steps) -> list[li
 
     return [[IntermediatePropertyAdaptor.from_intermediate_step(step) for step in steps]
             for steps in rag_intermediate_steps]
+
+
+@pytest.fixture(name="dask_cluster", scope="session")
+def dask_cluster_fixture(fail_missing: bool) -> "LocalCluster":
+    """
+    Fixture to provide a Dask LocalCluster for tests.
+    """
+    try:
+        from dask.distributed import LocalCluster
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("Dask is not installed, skipping Dask cluster fixture.")
+
+    cluster = LocalCluster(asynchronous=False, n_workers=1, threads_per_worker=1)
+    yield cluster
+    cluster.close()
+
+
+@pytest.fixture(name="dask_scheduler_address", scope="session")
+def dask_scheduler_address_fixture(dask_cluster: "LocalCluster") -> str:
+    """
+    Fixture to provide the Dask scheduler address for tests.
+    """
+    return dask_cluster.scheduler.address
+
+
+@pytest.fixture(name="db_engine")
+def db_engine_fixture(fail_missing: bool, tmp_path: Path) -> "AsyncEngine":
+    """
+    Fixture to provide a SQLAlchemy AsyncEngine connected to a temporary SQLite database for tests.
+    """
+    try:
+        from sqlalchemy.ext.asyncio import create_async_engine
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("SQLAlchemy is not installed, skipping database engine fixture.")
+
+    db_path = tmp_path / "test_db.sqlite"
+    db_url = f"sqlite+aiosqlite:///{db_path}"
+    db_engine = create_async_engine(db_url, echo=False, future=True)
+    return db_engine
+
+
+@pytest_asyncio.fixture(name="setup_db")
+async def setup_db_fixture(db_engine: "AsyncEngine"):
+    """
+    Fixture to create database tables before tests and drop them afterward.
+    """
+    from nat.front_ends.fastapi.job_store import Base
+
+    async with db_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all, checkfirst=True)
+
+
+@pytest.fixture(name="db_url")
+def db_url_fixture(db_engine: "AsyncEngine") -> str:
+    """
+    Fixture to provide the database URL for the tests.
+    """
+    return str(db_engine.url)
+
+
+@pytest.fixture(name="set_nat_config_file_env_var")
+def fixture_set_nat_config_file_env_var(restore_environ, echo_config_file: str) -> str:
+    """
+    Fixture to set the NAT_CONFIG_FILE environment variable for tests.
+    This ensures that tests have a consistent configuration file path.
+    """
+    os.environ["NAT_CONFIG_FILE"] = echo_config_file
+    return echo_config_file
+
+
+@pytest.fixture(name="set_nat_dask_scheduler_env_var")
+def fixture_set_nat_dask_scheduler_env_var(restore_environ, dask_scheduler_address: str) -> str:
+    """
+    Fixture to set the NAT_DASK_SCHEDULER_ADDRESS environment variable for tests.
+    This ensures that tests have a consistent Dask scheduler address.
+    """
+    os.environ["NAT_DASK_SCHEDULER_ADDRESS"] = dask_scheduler_address
+    return dask_scheduler_address
+
+
+@pytest.fixture(name="set_nat_job_store_db_url_env_var")
+def fixture_set_nat_job_store_db_url_env_var(restore_environ, db_url: str) -> str:
+    """
+    Fixture to set the NAT_JOB_STORE_DB_URL environment variable for tests.
+    This ensures that tests have a consistent job store database URL.
+    """
+    os.environ["NAT_JOB_STORE_DB_URL"] = db_url
+    return db_url

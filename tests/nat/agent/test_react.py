@@ -18,7 +18,7 @@ from langchain_core.agents import AgentAction
 from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.tool import ToolMessage
-from langgraph.graph.graph import CompiledGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from nat.agent.base import AgentDecision
 from nat.agent.react_agent.agent import NO_INPUT_ERROR_MESSAGE
@@ -77,7 +77,7 @@ def fixture_mock_agent(mock_config_react_agent, mock_llm, mock_tool):
 
 async def test_build_graph(mock_react_agent):
     graph = await mock_react_agent.build_graph()
-    assert isinstance(graph, CompiledGraph)
+    assert isinstance(graph, CompiledStateGraph)
     assert list(graph.nodes.keys()) == ['__start__', 'agent', 'tool']
     assert graph.builder.edges == {('__start__', 'agent'), ('tool', 'agent')}
     assert set(graph.builder.branches.get('agent').get('conditional_edge').ends.keys()) == {
@@ -300,23 +300,20 @@ async def test_no_input(mock_react_graph):
 
 def test_validate_system_prompt_no_input():
     mock_prompt = ''
-    with pytest.raises(ValueError) as ex:
-        ReActAgentGraph.validate_system_prompt(mock_prompt)
-    assert isinstance(ex.value, ValueError)
+    result = ReActAgentGraph.validate_system_prompt(mock_prompt)
+    assert result is False
 
 
 def test_validate_system_prompt_no_tools():
     mock_prompt = '{tools}'
-    with pytest.raises(ValueError) as ex:
-        ReActAgentGraph.validate_system_prompt(mock_prompt)
-    assert isinstance(ex.value, ValueError)
+    result = ReActAgentGraph.validate_system_prompt(mock_prompt)
+    assert result is False
 
 
 def test_validate_system_prompt_no_tool_names():
     mock_prompt = '{tool_names}'
-    with pytest.raises(ValueError) as ex:
-        ReActAgentGraph.validate_system_prompt(mock_prompt)
-    assert isinstance(ex.value, ValueError)
+    result = ReActAgentGraph.validate_system_prompt(mock_prompt)
+    assert result is False
 
 
 def test_validate_system_prompt():

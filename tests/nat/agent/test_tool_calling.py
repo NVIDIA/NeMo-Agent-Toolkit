@@ -17,7 +17,7 @@ import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
-from langgraph.graph.graph import CompiledGraph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
 from nat.agent.base import AgentDecision
@@ -107,7 +107,7 @@ def mock_agent(mock_config_tool_calling_agent, mock_tool, mock_llm):
 
 async def test_build_graph(mock_tool_agent):
     graph = await mock_tool_agent.build_graph()
-    assert isinstance(graph, CompiledGraph)
+    assert isinstance(graph, CompiledStateGraph)
     assert list(graph.nodes.keys()) == ['__start__', 'agent', 'tool']
     assert graph.builder.edges == {('__start__', 'agent'), ('tool', 'agent')}
     assert set(graph.builder.branches.get('agent').get('conditional_edge').ends.keys()) == {

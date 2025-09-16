@@ -52,6 +52,9 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
     solver_prompt: str | None = Field(
         default=None,
         description="Provides the SOLVER_PROMPT to use with the agent")  # defaults to SOLVER_PROMPT in prompt.py
+    tool_call_max_retries: PositiveInt = Field(default=3,
+                                               description="The number of retries before raising a tool call error.",
+                                               ge=1)
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
     log_response_max_chars: PositiveInt = Field(
         default=1000, description="Maximum number of characters to display in logs when logging tool responses.")
@@ -73,7 +76,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     from langchain_core.messages import trim_messages
     from langchain_core.messages.human import HumanMessage
     from langchain_core.prompts import ChatPromptTemplate
-    from langgraph.graph.graph import CompiledGraph
+    from langgraph.graph.state import CompiledStateGraph
 
     from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
     from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
@@ -111,13 +114,15 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
         raise ValueError(f"No tools specified for ReWOO Agent '{config.llm_name}'")
 
     # construct the ReWOO Agent Graph from the configured llm, prompt, and tools
-    graph: CompiledGraph = await ReWOOAgentGraph(llm=llm,
-                                                 planner_prompt=planner_prompt,
-                                                 solver_prompt=solver_prompt,
-                                                 tools=tools,
-                                                 use_tool_schema=config.include_tool_input_schema_in_tool_description,
-                                                 detailed_logs=config.verbose,
-                                                 log_response_max_chars=config.log_response_max_chars).build_graph()
+    graph: CompiledStateGraph = await ReWOOAgentGraph(
+        llm=llm,
+        planner_prompt=planner_prompt,
+        solver_prompt=solver_prompt,
+        tools=tools,
+        use_tool_schema=config.include_tool_input_schema_in_tool_description,
+        detailed_logs=config.verbose,
+        log_response_max_chars=config.log_response_max_chars,
+        tool_call_max_retries=config.tool_call_max_retries).build_graph()
 
     async def _response_fn(input_message: ChatRequest) -> ChatResponse:
         try:

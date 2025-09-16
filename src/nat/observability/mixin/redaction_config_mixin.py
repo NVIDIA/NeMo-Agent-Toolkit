@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,9 +25,10 @@ class RedactionConfigMixin(BaseModel):
     """
     redaction_enabled: bool = Field(default=False, description="Whether to enable redaction processing.")
     redaction_value: str = Field(default="[REDACTED]", description="Value to replace redacted attributes with.")
-    redaction_attributes: list[str] = Field(default_factory=lambda: ["input.value", "output.value", "metadata"],
-                                            description="Span attributes to redact when redaction is triggered.")
+    redaction_attributes: list[str] = Field(default_factory=lambda: ["input.value", "output.value", "nat.metadata"],
+                                            description="Attributes to redact when redaction is triggered.")
     force_redaction: bool = Field(default=False, description="Always redact regardless of other conditions.")
+    redaction_tag: str | None = Field(default=None, description="Tag to add to spans when redaction is triggered.")
 
 
 class HeaderRedactionConfigMixin(RedactionConfigMixin):
@@ -38,4 +39,4 @@ class HeaderRedactionConfigMixin(RedactionConfigMixin):
 
     Note: The callback function must be provided directly to the processor at runtime.
     """
-    redaction_header: str = Field(default="x-redaction-key", description="Header to check for redaction decisions.")
+    redaction_headers: list[str] = Field(default_factory=list, description="Headers to check for redaction decisions.")

@@ -35,6 +35,7 @@ dependencies = [
   "numpy~=2.3; python_version >= '3.12'",
   "openinference-semantic-conventions~=0.1.14",
   "openpyxl~=3.1",
+  "optuna~=4.4.0",
   "pkce==1.0.3",
   "pkginfo~=1.12",
   "platformdirs~=4.3",
@@ -103,6 +104,7 @@ examples = [
   "nat_profiler_agent",
   "nat_redact_pii",
   "nat_retail_sales_agent",
+  "nat_router_agent",
   "nat_semantic_kernel_demo",
   "nat_simple_auth",
   "nat_simple_web_query",
@@ -118,12 +120,22 @@ examples = [
   "nat_user_report",
 ]
 
-
 # Optional dependency needed when use_gunicorn is set to true
 gunicorn = [
   "gunicorn~=23.0",
 ]
 
+# Optional dependency needed when async endpoints are needed
+async_endpoints = [
+  "aiosqlite~=0.21",
+  # Newer versions of Dask make use of the asyncio loop_factory https://github.com/dask/distributed/pull/7969
+  # which was added in Python 3.12, the problem is that several of our other dependencies pull in a deprecated
+  # project `nest_asyncio` which patched asyncio.run in an incompatible way.
+  # https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/770
+  "dask==2023.6",
+  "distributed==2023.6",
+  "sqlalchemy[asyncio]~=2.0",
+]
 
 [tool.uv]
 config-settings = { editable_mode = "compat" }
@@ -164,6 +176,7 @@ nat_por_to_jiratickets = { path = "examples/HITL/por_to_jiratickets", editable =
 nat_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editable = true }
 nat_redact_pii = { path = "examples/observability/redact_pii", editable = true }
 nat_retail_sales_agent = { path = "examples/notebooks/retail_sales_agent", editable = true }
+nat_router_agent = {  path = "examples/agents/router", editable = true }
 nat_semantic_kernel_demo = { path = "examples/frameworks/semantic_kernel_demo", editable = true }
 nat_simple_auth = { path = "examples/front_ends/simple_auth", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }

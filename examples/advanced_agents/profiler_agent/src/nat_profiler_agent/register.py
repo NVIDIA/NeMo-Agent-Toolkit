@@ -67,7 +67,7 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     from langchain_core.messages import SystemMessage
     from langchain_core.output_parsers import PydanticOutputParser
     from langchain_core.prompts import PromptTemplate
-    from langgraph.graph.graph import CompiledGraph
+    from langgraph.graph.state import CompiledStateGraph
 
     from nat_profiler_agent.agent import ProfilerAgent
     from nat_profiler_agent.agent import ProfilerAgentState
@@ -79,7 +79,7 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     output_parser = PydanticOutputParser(pydantic_object=ExecPlan)
     tools_dict = {t.name: t for t in tools}
-    graph: CompiledGraph = await ProfilerAgent(
+    graph: CompiledStateGraph = await ProfilerAgent(
         llm=llm,
         tools=tools_dict,
         response_composer_tool=builder.get_tool("response_composer", wrapper_type=LLMFrameworkEnum.LANGCHAIN),

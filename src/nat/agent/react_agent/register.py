@@ -28,12 +28,15 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.optimizable import OptimizableField
+from nat.data_models.optimizable import OptimizableMixin
+from nat.data_models.optimizable import SearchSpace
 from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
 
-class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
+class ReActAgentWorkflowConfig(FunctionBaseConfig, OptimizableMixin, name="react_agent"):
     """
     Defines a NAT function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the
     tool names and descriptions to select the optimal tool.
@@ -75,15 +78,21 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
     use_openai_api: bool = Field(default=False,
                                  description=("Use OpenAI API for the input/output types to the function. "
                                               "If False, strings will be used."))
-    additional_instructions: str | None = Field(
-        default=None, description="Additional instructions to provide to the agent in addition to the base prompt.")
+    additional_instructions: str | None = OptimizableField(
+        default=None,
+        description="Additional instructions to provide to the agent in addition to the base prompt.",
+        space=SearchSpace(
+            is_prompt=True,
+            prompt="No additional instructions.",
+            prompt_purpose="Additional instructions to provide to the agent in addition to the base prompt.",
+        ))
 
 
 @register_function(config_type=ReActAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builder):
     from langchain.schema import BaseMessage
     from langchain_core.messages import trim_messages
-    from langgraph.graph.graph import CompiledGraph
+    from langgraph.graph.state import CompiledStateGraph
 
     from nat.agent.base import AGENT_LOG_PREFIX
     from nat.agent.react_agent.agent import ReActAgentGraph
@@ -101,7 +110,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         raise ValueError(f"No tools specified for ReAct Agent '{config.llm_name}'")
     # configure callbacks, for sending intermediate steps
     # construct the ReAct Agent Graph from the configured llm, prompt, and tools
-    graph: CompiledGraph = await ReActAgentGraph(
+    graph: CompiledStateGraph = await ReActAgentGraph(
         llm=llm,
         prompt=prompt,
         tools=tools,

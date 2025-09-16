@@ -34,6 +34,7 @@ from .commands.configure.configure import configure_command
 from .commands.evaluate import eval_command
 from .commands.info.info import info_command
 from .commands.object_store.object_store import object_store_command
+from .commands.optimize import optimizer_command
 from .commands.registry.registry import registry_command
 from .commands.sizing.sizing import sizing
 from .commands.start import start_command
@@ -108,6 +109,7 @@ cli.add_command(uninstall_command, name="uninstall")
 cli.add_command(validate_command, name="validate")
 cli.add_command(workflow_command, name="workflow")
 cli.add_command(sizing, name="sizing")
+cli.add_command(optimizer_command, name="optimize")
 cli.add_command(object_store_command, name="object-store")
 
 # Aliases

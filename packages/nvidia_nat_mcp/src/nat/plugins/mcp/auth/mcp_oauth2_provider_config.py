@@ -42,8 +42,9 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
 
 
     # OAuth2 flow configuration
-    redirect_uri: HttpUrl | None = Field(default=None,
-                                         description="OAuth2 redirect URI (defaults to localhost with random port)")
+    redirect_uri: HttpUrl = Field(
+        ...,
+        description="OAuth2 redirect URI (defaults to localhost with random port)")
     token_endpoint_auth_method: str = Field(
         default="client_secret_post",
         description=("The authentication method for the token endpoint. "

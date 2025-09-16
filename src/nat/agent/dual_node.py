@@ -20,7 +20,7 @@ from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
-from langgraph.graph.graph import CompiledGraph
+from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
 
 from .base import AgentDecision
@@ -55,7 +55,7 @@ class DualNodeAgent(BaseAgent):
     async def conditional_edge(self, state: BaseModel) -> str:
         pass
 
-    async def _build_graph(self, state_schema) -> CompiledGraph:
+    async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
         log.debug("Building and compiling the Agent Graph")
 
         graph = StateGraph(state_schema)

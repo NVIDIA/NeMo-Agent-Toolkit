@@ -469,6 +469,10 @@ class DecomposedType:
             # Handle generic types that can't use issubclass
             pass
 
+        # Check direct equality (works for both regular and generic types)
+        if source_type == target_type:
+            return True
+
         # Check if source outputs list[T] and target expects T
         source_decomposed = DecomposedType(source_type)
         if source_decomposed.origin is list and source_decomposed.args:

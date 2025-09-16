@@ -259,7 +259,6 @@ class AuthReason(str, Enum):
     """
     NORMAL = "normal"
     RETRY_AFTER_401 = "retry_after_401"
-    FORCE_REFRESH = "force_refresh"
 
 
 class AuthRequest(BaseModel):
