@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+from collections.abc import Mapping
 from enum import Enum
 from typing import Generic
 from typing import TypeVar
@@ -20,7 +22,17 @@ from typing import TypeVar
 from pydantic import BaseModel
 from pydantic import Field
 
-TagValueT = TypeVar("TagValueT")
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
+
+TagMappingT = TypeVar("TagMappingT", bound=Mapping)
+
+
+class BaseTaggingConfigMixin(BaseModel, Generic[TagMappingT]):
+    """Base mixin for tagging spans."""
+    tags: TagMappingT | None = Field(default=None, description="Tags to add to the span.")
 
 
 class PrivacyLevel(str, Enum):
@@ -31,20 +43,20 @@ class PrivacyLevel(str, Enum):
     HIGH = "high"
 
 
-class TaggingConfigMixin(BaseModel, Generic[TagValueT]):
-    """Generic mixin for tagging spans with typed values.
+PrivacyTagSchema = TypedDict(
+    "PrivacyTagSchema",
+    {
+        "privacy.level": PrivacyLevel,
+    },
+    total=True,
+)
 
-    This mixin provides a flexible tagging system where both the tag key
-    and value type can be customized for different use cases.
-    """
-    tag_key: str | None = Field(default=None, description="Key to use when tagging traces.")
-    tag_value: TagValueT | None = Field(default=None, description="Value to tag the traces with.")
+
+class PrivacyTaggingConfigMixin(BaseTaggingConfigMixin[PrivacyTagSchema]):
+    """Mixin for privacy level tagging on spans."""
+    pass
 
 
-class PrivacyTaggingConfigMixin(TaggingConfigMixin[PrivacyLevel]):
-    """Mixin for privacy level tagging on spans.
-
-    Specializes TaggingConfigMixin to work with PrivacyLevel enum values,
-    providing a typed interface for privacy-related span tagging.
-    """
+class CustomTaggingConfigMixin(BaseTaggingConfigMixin[dict[str, str]]):
+    """Mixin for string key-value tagging on spans."""
     pass

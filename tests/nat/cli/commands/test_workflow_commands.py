@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
@@ -35,3 +36,49 @@ def test_get_nat_dependency(mock_get_version, versioned, expected_dep):
     mock_get_version.return_value = "1.2.3"
     result = _get_nat_dependency(versioned=versioned)
     assert result == expected_dep
+
+
+def test_nat_workflow_create(tmp_path):
+    """Test that 'nat workflow create' command creates expected structure."""
+    # Run the nat workflow create command
+    result = subprocess.run(
+        ["nat", "workflow", "create", "--no-install", "--workflow-dir", str(tmp_path), "test_workflow"],
+        capture_output=True,
+        text=True,
+        check=True)
+
+    # Verify the command succeeded
+    assert result.returncode == 0
+
+    # Define the expected paths
+    workflow_root = tmp_path / "test_workflow"
+    src_dir = workflow_root / "src"
+    test_workflow_src = src_dir / "test_workflow"
+
+    # Group all expected output paths
+    expected_output_paths = [
+        workflow_root,
+        workflow_root / "pyproject.toml",
+        src_dir,
+        test_workflow_src,
+        test_workflow_src / "__init__.py",
+        test_workflow_src / "register.py",
+        test_workflow_src / "configs",
+        test_workflow_src / "data",
+        test_workflow_src / "configs" / "config.yml",
+    ]
+
+    # Verify all expected paths exist
+    for expected_output_path in expected_output_paths:
+        assert expected_output_path.exists()
+
+    # Define expected symlinks
+    expected_symlinks_and_targets = [
+        (workflow_root / "configs", test_workflow_src / "configs"),
+        (workflow_root / "data", test_workflow_src / "data"),
+    ]
+
+    # Verify symlinks exist and are symlinks
+    for expected_symlink, target in expected_symlinks_and_targets:
+        assert expected_symlink.is_symlink()
+        assert expected_symlink.resolve() == target.resolve()
