@@ -21,13 +21,22 @@ from nat.builder.builder import Builder
 from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.optimizable import OptimizableField
+from nat.data_models.optimizable import OptimizableMixin
+from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.temperature_mixin import TemperatureMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.data_models.top_p_mixin import TopPMixin
 
 
-class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, TemperatureMixin, TopPMixin, ThinkingMixin, name="aws_bedrock"):
+class AWSBedrockModelConfig(LLMBaseConfig,
+                            RetryMixin,
+                            OptimizableMixin,
+                            TemperatureMixin,
+                            TopPMixin,
+                            ThinkingMixin,
+                            name="aws_bedrock"):
     """An AWS Bedrock llm provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
@@ -36,7 +45,9 @@ class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, TemperatureMixin, TopPMix
     model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
                             serialization_alias="model",
                             description="The model name for the hosted AWS Bedrock.")
-    max_tokens: int | None = Field(default=1024, gt=0, description="Maximum number of tokens to generate.")
+    max_tokens: int = OptimizableField(default=300,
+                                       description="Maximum number of tokens to generate.",
+                                       space=SearchSpace(high=2176, low=128, step=512))
     context_size: int | None = Field(
         default=1024,
         gt=0,
