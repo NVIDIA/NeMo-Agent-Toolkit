@@ -38,7 +38,8 @@ def test_nat_workflow_create(tmp_path):
         ["nat", "workflow", "create", "--no-install", "--workflow-dir", str(tmp_path), "test_workflow"],
         capture_output=True,
         text=True,
-        check=True)
+        check=True
+    )
 
     assert result.returncode == 0
 
@@ -69,3 +70,14 @@ def test_nat_workflow_create(tmp_path):
     for expected_symlink, target in expected_symlinks_and_targets:
         assert expected_symlink.is_symlink()
         assert expected_symlink.resolve() == target.resolve()
+
+def test_create_workflow_with_invalid_name(tmp_path):
+    """Ensure CLI fails with an invalid workflow name."""
+    result = subprocess.run(
+        ["nat", "workflow", "create", "--no-install", "--workflow-dir", str(tmp_path), " "],
+        capture_output=True,
+        text=True,
+        check=False  # Expect failure, so don't raise exception
+    )
+    assert result.returncode != 0
+    assert "Workflow name cannot be empty" in result.stdout
