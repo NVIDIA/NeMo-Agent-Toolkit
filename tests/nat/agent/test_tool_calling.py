@@ -100,7 +100,7 @@ def test_tool_calling_agent_init_w_prompt(mock_config_tool_calling_agent, mock_l
 
 def test_tool_calling_agent_init_w_return_direct(mock_config_tool_calling_agent, mock_llm, mock_tool):
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
-    return_direct_tools = ['Tool A']
+    return_direct_tools = [tools[0]]
     agent = ToolCallAgentGraph(llm=mock_llm,
                                tools=tools,
                                detailed_logs=mock_config_tool_calling_agent.verbose,
@@ -111,7 +111,7 @@ def test_tool_calling_agent_init_w_return_direct(mock_config_tool_calling_agent,
     assert agent.detailed_logs == mock_config_tool_calling_agent.verbose
     assert isinstance(agent.tool_caller, ToolNode)
     assert list(agent.tool_caller.tools_by_name.keys()) == ['Tool A', 'Tool B']
-    assert agent.return_direct == return_direct_tools
+    assert agent.return_direct == ['Tool A']
 
 
 @pytest.fixture(name='mock_tool_agent', scope="module")
@@ -127,7 +127,7 @@ def mock_agent_with_return_direct(mock_config_tool_calling_agent, mock_tool, moc
     agent = ToolCallAgentGraph(llm=mock_llm,
                                tools=tools,
                                detailed_logs=mock_config_tool_calling_agent.verbose,
-                               return_direct=['Tool A'])
+                               return_direct=[tools[0]])
     return agent
 
 

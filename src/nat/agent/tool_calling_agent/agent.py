@@ -91,7 +91,7 @@ class ToolCallAgentGraph(DualNodeAgent):
 
         self.agent = prompt_runnable | self.bound_llm
         self.tool_caller = ToolNode(tools, handle_tool_errors=handle_tool_errors)
-        self.return_direct = return_direct
+        self.return_direct = [tool.name for tool in return_direct] if return_direct else []
         logger.debug("%s Initialized Tool Calling Agent Graph", AGENT_LOG_PREFIX)
 
     async def agent_node(self, state: ToolCallAgentGraphState):
