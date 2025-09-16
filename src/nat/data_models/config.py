@@ -20,6 +20,7 @@ import typing
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Discriminator
+from pydantic import Field
 from pydantic import ValidationError
 from pydantic import ValidationInfo
 from pydantic import ValidatorFunctionWrapHandler
@@ -186,10 +187,14 @@ class GeneralConfig(BaseModel):
 
     model_config = ConfigDict(protected_namespaces=())
 
-    use_uvloop: bool = True
+    use_uvloop: bool | None = Field(
+        default=None,
+        deprecated=
+        "`use_uvloop` field is deprecated and will be removed in a future release. The use of `uv_loop` is now" +
+        "automatically determined based on platform")
     """
-    Whether to use uvloop for the event loop. This can provide a significant speedup in some cases. Disable to provide
-    better error messages when debugging.
+    This field is deprecated and ignored. It previously controlled whether to use uvloop as the event loop. uvloop
+    usage is now determined automatically based on the platform.
     """
 
     telemetry: TelemetryConfig = TelemetryConfig()

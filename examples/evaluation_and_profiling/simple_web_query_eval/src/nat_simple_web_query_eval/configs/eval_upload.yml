@@ -19,8 +19,6 @@
 # To activate it you need to change the config in eval.general.dataset.s3 and
 # eval.general.output.s3
 
-general:
-  use_uvloop: true
 
 functions:
   webpage_query:

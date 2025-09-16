@@ -28,9 +28,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-general:
-  use_uvloop: true
-
 functions:
   calculator_multiply:
     _type: calculator_multiply

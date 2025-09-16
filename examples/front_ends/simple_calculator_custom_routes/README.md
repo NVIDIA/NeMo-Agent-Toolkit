@@ -55,8 +55,6 @@ Add custom endpoints in your configuration file's `front_end` section:
 
 ```yaml
 general:
-  use_uvloop: true
-
   front_end:
     _type: fastapi
     endpoints:
