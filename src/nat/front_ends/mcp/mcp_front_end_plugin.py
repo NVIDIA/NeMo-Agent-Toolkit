@@ -16,9 +16,9 @@
 import logging
 import typing
 
+from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 from nat.builder.front_end import FrontEndBase
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorkerBase
 
@@ -56,33 +56,14 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
 
         return worker_class(self.full_config)
 
-    async def _create_token_verifier(self, auth_provider_config: AuthProviderBaseConfig):
+    async def _create_token_verifier(self, token_verifier_config: OAuth2ResourceServerConfig):
         """Create a token verifier based on configuration."""
         from nat.front_ends.mcp.introspection_token_verifier import IntrospectionTokenVerifier
 
-        if not self.front_end_config.auth_provider:
+        if not self.front_end_config.auth:
             return None
 
-        client_id = getattr(auth_provider_config, 'client_id')
-        client_secret = getattr(auth_provider_config, 'client_secret')
-        scopes = getattr(auth_provider_config, 'scopes')
-
-        auth_kwargs = getattr(auth_provider_config, 'authorization_kwargs', {}) or {}
-
-        issuer = auth_kwargs.get('issuer')
-        audience = auth_kwargs.get('audience')
-        jwks_uri = auth_kwargs.get('jwks_uri')
-        introspection_endpoint = auth_kwargs.get('introspection_endpoint')
-        discovery_url = auth_kwargs.get('discovery_url')
-
-        return IntrospectionTokenVerifier(introspection_endpoint=introspection_endpoint,
-                                          client_id=client_id,
-                                          client_secret=client_secret,
-                                          issuer=issuer,
-                                          audience=audience,
-                                          jwks_uri=jwks_uri,
-                                          scopes=scopes,
-                                          discovery_url=discovery_url)
+        return IntrospectionTokenVerifier(token_verifier_config)
 
     async def run(self) -> None:
         """Run the MCP server."""
@@ -96,20 +77,17 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
         # Build the workflow and add routes using the worker
         async with WorkflowBuilder.from_config(config=self.full_config) as builder:
 
-            if self.front_end_config.auth_provider:
+            if self.front_end_config.auth:
                 from mcp.server.auth.settings import AuthSettings
                 from pydantic import AnyHttpUrl
 
-                auth_provider = await builder.get_auth_provider(self.front_end_config.auth_provider)
-                auth_config = auth_provider.config
-
                 server_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}"
 
-                auth_settings = AuthSettings(issuer_url=AnyHttpUrl(auth_config.authorization_url),
-                                             required_scopes=auth_config.scopes,
+                auth_settings = AuthSettings(issuer_url=AnyHttpUrl(self.front_end_config.auth.issuer_url),
+                                             required_scopes=self.front_end_config.auth.scopes,
                                              resource_server_url=AnyHttpUrl(server_url))
 
-                token_verifier = await self._create_token_verifier(auth_config)
+                token_verifier = await self._create_token_verifier(self.front_end_config.auth)
 
             # Create an MCP server with the configured parameters
             mcp = FastMCP(name=self.front_end_config.name,

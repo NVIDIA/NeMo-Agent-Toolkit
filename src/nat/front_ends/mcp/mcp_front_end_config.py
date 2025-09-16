@@ -17,7 +17,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from nat.data_models.component_ref import AuthenticationRef
+from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 from nat.data_models.front_end import FrontEndBaseConfig
 
 
@@ -42,5 +42,5 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
         default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")
 
     # Auth configuration
-    auth_provider: AuthenticationRef = Field(description=("Reference to the authentication provider to use for "
-                                                          "authentication."))
+    auth: OAuth2ResourceServerConfig | None = Field(
+        description=("OAuth 2.0 Resource Server configuration for token verification."))
