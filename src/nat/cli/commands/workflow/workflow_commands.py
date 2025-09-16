@@ -254,6 +254,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         data_dir_link = new_workflow_dir / 'data'
         os.symlink(config_dir_source, config_dir_link)
         os.symlink(data_dir_source, data_dir_link)
+
         if install:
             # Install the new package without changing directories
             click.echo(f"Installing workflow '{workflow_name}'...")

@@ -93,4 +93,4 @@ def test_create_workflow_with_invalid_name(tmp_path):
         check=False  # Expect failure, so don't raise exception
     )
     assert result.returncode != 0
-    assert "Workflow name cannot be empty" in result.stdout
+    assert "Workflow name cannot be empty" in result.stderr
