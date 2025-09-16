@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
+phishing_prompt = """
 
-# Import any workflows which need to be automatically registered here
-from .prompt_optimizer import register as prompt_optimizer
-from .react_agent import register as react_agent
-from .reasoning_agent import reasoning_agent
-from .rewoo_agent import register as rewoo_agent
-from .router_agent import register as router_agent
-from .tool_calling_agent import register as tool_calling_agent
+Examine the following email content and determine if it exhibits signs of malicious intent. Look for any
+suspicious signals that may indicate phishing, such as requests for personal information or suspicious tone.
+
+Email content:
+{body}
+
+Return your findings as a JSON object with these fields:
+
+- is_likely_phishing: (boolean) true if phishing is suspected
+- explanation: (string) detailed explanation of your reasoning
+
+"""

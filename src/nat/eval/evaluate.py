@@ -449,10 +449,14 @@ class EvaluationRun:
         from nat.runtime.loader import load_config
 
         # Load and override the config
-        if self.config.override:
+        config = None
+        if isinstance(self.config.config_file, BaseModel):
+            config = self.config.config_file
+        elif self.config.override:
             config = self.apply_overrides()
         else:
             config = load_config(self.config.config_file)
+
         self.eval_config = config.eval
         workflow_alias = self._get_workflow_alias(config.workflow.type)
         logger.debug("Loaded %s evaluation configuration: %s", workflow_alias, self.eval_config)
