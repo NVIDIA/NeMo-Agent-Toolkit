@@ -280,7 +280,9 @@ def reinstall_command(workflow_name: str) -> None:
 
 @click.command()
 @click.argument("workflow_name")
+@click.argument("workflow_name")
 def delete_command(workflow_name: str) -> None:
+    """Uninstall and delete a workflow's package and local files after confirmation."""
     try:
         if not click.confirm(f"Are you sure you want to delete the workflow '{workflow_name}'?"):
             click.echo("Workflow deletion cancelled.")
