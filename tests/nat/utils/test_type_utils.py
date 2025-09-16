@@ -182,8 +182,14 @@ class TestIsTypeCompatible:
 
     def test_generic_type_edge_cases(self):
         """Test edge cases with generic types."""
-        # Generic types that can't use issubclass should fall back gracefully
-        assert DecomposedType.is_type_compatible(list[int], list[int]) is False  # Generic aliases
+        # Generic types that can't use issubclass should fall back to equality check
+        assert DecomposedType.is_type_compatible(list[int], list[int]) is True  # Same generic types
+        assert DecomposedType.is_type_compatible(list[str], list[str]) is True  # Same generic types
+        assert DecomposedType.is_type_compatible(dict[str, int], dict[str, int]) is True  # Same complex generic types
+
+        # Different generic types should still be incompatible
+        assert DecomposedType.is_type_compatible(list[int], list[str]) is False  # Different generic types
+        assert DecomposedType.is_type_compatible(list[int], dict[str, int]) is False  # Different container types
 
     def test_complex_batch_scenarios(self):
         """Test complex batch compatibility scenarios."""

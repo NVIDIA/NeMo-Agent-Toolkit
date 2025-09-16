@@ -80,13 +80,15 @@ def mock_server() -> MockOAuth2Server:
 # --------------------------------------------------------------------------- #
 # The integration test                                                        #
 # --------------------------------------------------------------------------- #
-async def test_websocket_oauth2_flow(monkeypatch, mock_server):
+@pytest.mark.usefixtures("set_nat_config_file_env_var")
+async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
     """
     The trick: instead of relying on the FastAPI redirect route (which would
     set the Future from a *different* loop when run through ASGITransport),
     we resolve the token **directly inside** the dummy WebSocket handler,
     using the same `FlowState` instance the auth‐handler created.
     """
+
     redirect_port = _free_port()
 
     # Register the correct redirect URI for this run

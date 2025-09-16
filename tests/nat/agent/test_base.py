@@ -23,7 +23,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph.graph import CompiledGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from nat.agent.base import BaseAgent
 
@@ -41,9 +41,9 @@ class MockBaseAgent(BaseAgent):
         self.detailed_logs = detailed_logs
         self.log_response_max_chars = log_response_max_chars
 
-    async def _build_graph(self, state_schema: type) -> CompiledGraph:
+    async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
         """Mock implementation."""
-        return Mock(spec=CompiledGraph)
+        return Mock(spec=CompiledStateGraph)
 
 
 @pytest.fixture
@@ -123,37 +123,37 @@ class TestCallLLM:
 
     async def test_successful_llm_call(self, base_agent):
         """Test successful LLM call."""
-        messages = [HumanMessage(content="test")]
+        inputs = {"messages": [HumanMessage(content="test")]}
         mock_response = AIMessage(content="Response content")
 
         base_agent.llm.ainvoke = AsyncMock(return_value=mock_response)
 
-        result = await base_agent._call_llm(messages)
+        result = await base_agent._call_llm(base_agent.llm, inputs)
 
         assert isinstance(result, AIMessage)
         assert result.content == "Response content"
-        base_agent.llm.ainvoke.assert_called_once_with(messages)
+        base_agent.llm.ainvoke.assert_called_once_with(inputs, config=None)
 
     async def test_llm_call_error_propagation(self, base_agent):
         """Test that LLM call errors are propagated to the automatic retry system."""
-        messages = [HumanMessage(content="test")]
+        inputs = {"messages": [HumanMessage(content="test")]}
 
         base_agent.llm.ainvoke = AsyncMock(side_effect=Exception("API error"))
 
         # Error should be propagated (retry is handled automatically by underlying client)
         with pytest.raises(Exception, match="API error"):
-            await base_agent._call_llm(messages)
+            await base_agent._call_llm(base_agent.llm, inputs)
 
     async def test_llm_call_content_conversion(self, base_agent):
         """Test that LLM response content is properly converted to string."""
-        messages = [HumanMessage(content="test")]
+        inputs = {"messages": [HumanMessage(content="test")]}
         # Mock response that simulates non-string content that gets converted
         mock_response = Mock()
         mock_response.content = 123
 
         base_agent.llm.ainvoke = AsyncMock(return_value=mock_response)
 
-        result = await base_agent._call_llm(messages)
+        result = await base_agent._call_llm(base_agent.llm, inputs)
 
         assert isinstance(result, AIMessage)
         assert result.content == "123"
@@ -324,8 +324,8 @@ class TestLogToolResponse:
         # Create a concrete implementation of BaseAgent for testing
         class TestAgent(BaseAgent):
 
-            async def _build_graph(self, state_schema: type) -> CompiledGraph:
-                return Mock(spec=CompiledGraph)
+            async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
+                return Mock(spec=CompiledStateGraph)
 
         # Create a TestAgent instance with custom log_response_max_chars
         mock_llm = Mock()
@@ -437,9 +437,9 @@ class TestBaseAgentIntegration:
 
     async def test_error_handling_integration(self, base_agent):
         """Test that errors are properly handled through the automatic retry system."""
-        messages = [HumanMessage(content="test")]
+        inputs = {"messages": [HumanMessage(content="test")]}
         base_agent.llm.ainvoke = AsyncMock(side_effect=Exception("Error"))
 
         # Errors should be propagated since retry is handled by the underlying client
         with pytest.raises(Exception, match="Error"):
-            await base_agent._call_llm(messages)
+            await base_agent._call_llm(base_agent.llm, inputs)
