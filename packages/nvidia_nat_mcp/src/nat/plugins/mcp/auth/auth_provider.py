@@ -31,7 +31,7 @@ from nat.authentication.interfaces import AuthProviderBase
 from nat.data_models.authentication import AuthReason
 from nat.data_models.authentication import AuthRequest
 from nat.data_models.authentication import AuthResult
-from nat.plugins.mcp.auth.mcp_oauth2_provider_config import MCPOAuth2ProviderConfig
+from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
 
 logger = logging.getLogger(__name__)
 

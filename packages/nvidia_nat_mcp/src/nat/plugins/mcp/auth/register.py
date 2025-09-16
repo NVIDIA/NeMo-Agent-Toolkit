@@ -15,8 +15,8 @@
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_auth_provider
-from nat.plugins.mcp.auth.mcp_oauth2_provider import MCPOAuth2Provider
-from nat.plugins.mcp.auth.mcp_oauth2_provider_config import MCPOAuth2ProviderConfig
+from nat.plugins.mcp.auth.auth_provider import MCPOAuth2Provider
+from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
 
 
 @register_auth_provider(config_type=MCPOAuth2ProviderConfig)
