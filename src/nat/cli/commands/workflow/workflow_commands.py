@@ -18,6 +18,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 from importlib.metadata import Distribution, PackageNotFoundError
 from pathlib import Path
 from urllib.parse import urlparse
@@ -52,12 +53,9 @@ class PackageError(Exception):
 
 
 def get_repo_root() -> Path | None:
-    """Return the repository root for package `nvidia-nat` if installed in editable mode.
-
-    Returns:
-        Path | None: Path to the repository root, or None if not installed/editable.
-    """
+    """Return the repository root for package `nvidia-nat` if installed in editable mode."""
     return find_package_root("nvidia-nat")
+
 
 def _get_module_name(workflow_name: str) -> str:
     return workflow_name.replace("-", "_")
@@ -112,46 +110,26 @@ def get_workflow_path_from_name(workflow_name: str) -> Path | None:
 
 @click.command()
 @click.argument("workflow_name")
-@click.option(
-    "--install/--no-install",
-    default=True,
-    help="Whether to install the workflow package immediately.",
-)
-@click.option(
-    "--workflow-dir",
-    default=".",
-    help=(
-        "Output directory for saving the created workflow. "
-        "A new folder with the workflow name will be created within. "
-        "Defaults to the present working directory."
-    ),
-)
-@click.option(
-    "--description",
-    default="NAT function template. Please update the description.",
-    help=(
-        "Description of the component being created. Used to populate the docstring "
-        "and describe the component when inspecting with 'nat info workflow'."
-    ),
-)
+@click.option("--install/--no-install", default=True, help="Install workflow after generation.")
+@click.option("--workflow-dir", default=".", help="Output directory for the workflow project.")
+@click.option("--description", default="NAT function template. Please update the description.")
 def create_command(workflow_name: str, install: bool, workflow_dir: str, description: str) -> None:
-    """Create a new workflow project from templates.
-
-    Args:
-        workflow_name: Human‑friendly workflow name (hyphens allowed; converted to a Python‑safe package).
-        install: If True, install the workflow package after generation.
-        workflow_dir: Output directory where the workflow folder will be created.
-        description: Description used in generated module docstrings and metadata.
-    """
+    """Create a new workflow project from templates."""
     if not workflow_name or not workflow_name.strip():
         raise click.BadParameter("Workflow name cannot be empty.")
-
-    # Block absolute paths, traversal, and separator characters
     if Path(workflow_name).is_absolute() or workflow_name in {".", ".."}:
         raise click.BadParameter("Workflow name cannot be a path or special name.")
     seps = tuple(s for s in (os.sep, os.altsep) if s)
     if any(sep in workflow_name for sep in seps):
         raise click.BadParameter("Workflow name cannot contain path separators.")
+
+    # Pre-validate workflow_dir and new_workflow_dir
+    workflow_dir_path = Path(workflow_dir).resolve()
+    if not workflow_dir_path.exists():
+        raise click.BadParameter(f"Invalid workflow directory: {workflow_dir_path}")  # noqa: TRY003
+    new_workflow_dir = (workflow_dir_path / workflow_name).resolve()
+    if not new_workflow_dir.is_relative_to(workflow_dir_path):
+        raise click.BadParameter("Workflow name resolves outside the output directory.")  # noqa: TRY003
 
     try:
         try:
@@ -159,15 +137,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         except PackageError:
             repo_root = None
 
-        workflow_dir = Path(workflow_dir).resolve()
-        if not workflow_dir.exists():
-            raise click.BadParameter(f"Invalid workflow directory: {workflow_dir}")
-
         template_dir = Path(__file__).parent / "templates"
-        new_workflow_dir = workflow_dir / workflow_name
-        if not new_workflow_dir.resolve().is_relative_to(workflow_dir):
-            raise click.BadParameter("Workflow name resolves outside the output directory.")
-
         package_name = _get_module_name(workflow_name)
         rel_path_to_repo_root = "" if not repo_root else os.path.relpath(repo_root, new_workflow_dir)
 
@@ -183,7 +153,6 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         configs_dir.mkdir(parents=True)
         data_dir.mkdir(parents=True)
 
-        # Jinja2 environment for non-HTML templates
         env = Environment(loader=FileSystemLoader(str(template_dir)), autoescape=False)
         editable = repo_root is not None
         uv_available = shutil.which("uv") is not None
@@ -192,7 +161,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         install_cmd = (
             ["uv", "pip", "install", "-e", str(new_workflow_dir)]
             if use_uv
-            else ["pip", "install", "-e", str(new_workflow_dir)]
+            else [sys.executable, "-m", "pip", "install", "-e", str(new_workflow_dir)]
         )
 
         files_to_render = {
@@ -216,11 +185,8 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
 
         for template_name, output_path in files_to_render.items():
             template = env.get_template(template_name)
-            content = template.render(context)
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(content)
+            output_path.write_text(template.render(context), encoding="utf-8")
 
-        # Symlink fallback for configs/data
         for src, name in ((configs_dir, "configs"), (data_dir, "data")):
             dest = new_workflow_dir / name
             try:
@@ -235,51 +201,53 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
 
         if install:
             click.echo(f"Installing workflow '{workflow_name}'...")
-            result = subprocess.run(install_cmd, capture_output=True, text=True, check=False)
+            result = subprocess.run(install_cmd, capture_output=True, text=True)
             if result.returncode != 0:
-                click.echo(f"An error occurred during installation:\n{result.stderr}")
-                return
+                raise click.ClickException(f"Installation failed:\n{result.stderr}")
             click.echo(f"Workflow '{workflow_name}' installed successfully.")
 
         click.echo(f"Workflow '{workflow_name}' created successfully in '{new_workflow_dir}'.")
 
-    except Exception:
+    except click.ClickException:
+        raise
+    except Exception as e:
         logger.exception("Error while creating workflow")
-        click.echo(f"An error occurred while creating the workflow: {workflow_name}")
+        raise click.ClickException(f"Unexpected error: {e}") from e
 
 
 @click.command()
 @click.argument("workflow_name")
 def reinstall_command(workflow_name: str) -> None:
+    """Reinstall an existing workflow package in editable mode."""
     try:
         editable = get_repo_root() is not None
         workflow_dir = get_workflow_path_from_name(workflow_name)
         if not workflow_dir or not workflow_dir.exists():
-            click.echo(f"Workflow '{workflow_name}' does not exist.")
-            return
+            raise click.ClickException(f"Workflow '{workflow_name}' does not exist.")
 
         uv_available = shutil.which("uv") is not None
         use_uv = editable and uv_available
         reinstall_cmd = (
             ["uv", "pip", "install", "-e", str(workflow_dir)]
             if use_uv
-            else ["pip", "install", "-e", str(workflow_dir)]
+            else [sys.executable, "-m", "pip", "install", "-e", str(workflow_dir)]
         )
 
         click.echo(f"Reinstalling workflow '{workflow_name}'...")
-        result = subprocess.run(reinstall_cmd, capture_output=True, text=True, check=False)
+        result = subprocess.run(reinstall_cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            click.echo(f"An error occurred during installation:\n{result.stderr}")
-            return
+            raise click.ClickException(f"Reinstallation failed:\n{result.stderr}")
 
         click.echo(f"Workflow '{workflow_name}' reinstalled successfully.")
-    except Exception:
+
+    except click.ClickException:
+        raise
+    except Exception as e:
         logger.exception("Error while reinstalling workflow")
-        click.echo(f"An error occurred while reinstalling the workflow: {workflow_name}")
+        raise click.ClickException(f"Unexpected error while reinstalling '{workflow_name}': {e}") from e
 
 
 @click.command()
-@click.argument("workflow_name")
 @click.argument("workflow_name")
 def delete_command(workflow_name: str) -> None:
     """Uninstall and delete a workflow's package and local files after confirmation."""
@@ -297,14 +265,13 @@ def delete_command(workflow_name: str) -> None:
         uninstall_cmd = (
             ["uv", "pip", "uninstall", "-y", package_name]
             if use_uv
-            else ["pip", "uninstall", "-y", package_name]
+            else [sys.executable, "-m", "pip", "uninstall", "-y", package_name]
         )
 
         click.echo(f"Uninstalling workflow '{workflow_name}' package...")
-        result = subprocess.run(uninstall_cmd, capture_output=True, text=True, check=False)
+        result = subprocess.run(uninstall_cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            click.echo(f"An error occurred during uninstallation:\n{result.stderr}")
-            return
+            raise click.ClickException(f"Uninstallation failed:\n{result.stderr}")
 
         click.echo(f"Workflow '{workflow_name}' (package '{package_name}') successfully uninstalled")
 
@@ -316,9 +283,11 @@ def delete_command(workflow_name: str) -> None:
         shutil.rmtree(workflow_dir)
         click.echo(f"Workflow '{workflow_name}' deleted successfully.")
 
-    except Exception:
+    except click.ClickException:
+        raise
+    except Exception as e:
         logger.exception("Error while deleting workflow")
-        click.echo(f"An error occurred while deleting the workflow: {workflow_name}")
+        raise click.ClickException(f"Unexpected error while deleting '{workflow_name}': {e}") from e
 
 
 # Compatibility alias
