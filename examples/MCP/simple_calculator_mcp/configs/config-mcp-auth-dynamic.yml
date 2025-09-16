@@ -26,8 +26,6 @@
 # on your local machine. For example, if you are using pip, you can install it with:
 # uv pip install mcp-server-time
 
-general:
-  use_uvloop: true
 
 functions:
   current_datetime_local:
@@ -48,11 +46,8 @@ functions:
 authentication:
   mcp_oauth2_dynamic:
     _type: mcp_oauth2
+    server_url: http://localhost:9901
     redirect_uri: http://localhost:8000/auth/redirect
-    client_name: "NAT MCP Client"
-    # Client credentials obtained via dynamic registration
-    enable_dynamic_registration: true
-    # Auth server URLs and scopes discovered from MCP server
 
 llms:
   nim_llm:

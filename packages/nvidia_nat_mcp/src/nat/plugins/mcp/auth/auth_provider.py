@@ -292,6 +292,11 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         if not auth_request:
             raise RuntimeError("Auth request is required")
 
+        if auth_request.reason != AuthReason.RETRY_AFTER_401:
+            # auth provider is expected to be setup via 401, till that time we return empty auth result
+            if not self._auth_code_provider:
+                return AuthResult(credentials=[], token_expires_at=None, raw={})
+
         await self._safe_discover_and_register(auth_request)
         # Use NAT's standard OAuth2 flow
         if auth_request.reason == AuthReason.RETRY_AFTER_401:

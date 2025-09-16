@@ -15,7 +15,6 @@
 
 from __future__ import annotations
 
-
 import logging
 from abc import ABC
 from abc import abstractmethod
@@ -50,7 +49,7 @@ class AuthAdapter(httpx.Auth):
     Converts AuthProviderBase to httpx.Auth interface for dynamic token management.
     """
 
-    def __init__(self, auth_provider: AuthProviderBase, auth_for_tool_calls_only: bool = True):
+    def __init__(self, auth_provider: AuthProviderBase, auth_for_tool_calls_only: bool = False):
         self.auth_provider = auth_provider
         self.auth_for_tool_calls_only = auth_for_tool_calls_only
 
@@ -103,7 +102,9 @@ class AuthAdapter(httpx.Auth):
         """Get authentication headers from the NAT auth provider."""
         # Build auth request
         www_authenticate = response.headers.get("WWW-Authenticate", None) if response else None
-        auth_request = AuthRequest(reason=reason, www_authenticate=www_authenticate,
+        auth_request = AuthRequest(
+            reason=reason,
+            www_authenticate=www_authenticate,
         )
         try:
             auth_result = await self.auth_provider.authenticate(auth_request=auth_request)
@@ -129,9 +130,7 @@ class MCPBaseClient(ABC):
         auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self,
-                 transport: str = 'streamable-http',
-                 auth_provider: AuthProviderBase | None = None):
+    def __init__(self, transport: str = 'streamable-http', auth_provider: AuthProviderBase | None = None):
         self._tools = None
         self._transport = transport.lower()
         if self._transport not in ['sse', 'stdio', 'streamable-http']:
@@ -143,8 +142,7 @@ class MCPBaseClient(ABC):
         self._initial_connection = False
 
         # Convert auth provider to AuthAdapter
-        if auth_provider:
-            self._httpx_auth = AuthAdapter(auth_provider)
+        self._httpx_auth = AuthAdapter(auth_provider) if auth_provider else None
 
     @property
     def transport(self) -> str:
@@ -332,11 +330,8 @@ class MCPStreamableHTTPClient(MCPBaseClient):
       auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self,
-                 url: str,
-                 auth_provider: AuthProviderBase | None = None):
-        super().__init__("streamable-http",
-                         auth_provider=auth_provider)
+    def __init__(self, url: str, auth_provider: AuthProviderBase | None = None):
+        super().__init__("streamable-http", auth_provider=auth_provider)
         self._url = url
 
     @property

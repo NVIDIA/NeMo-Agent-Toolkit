@@ -22,39 +22,33 @@ from nat.authentication.interfaces import AuthProviderBaseConfig
 
 class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     """
-    MCP OAuth2 provider (discovery + optional DCR), composing the OAuth2AuthCodeFlow provider.
+    MCP OAuth2 provider with endpoints discovery, optional DCR, and authentication flow via the OAuth2AuthCodeFlow
+    provider.
 
     Supported modes:
-      - Dynamic Client Registration + discovery (enable_dynamic_registration=True, no client_id)
-      - Manual Client Registration + discovery (client_id + client_secret provided)
+      - Endpoints discovery + Dynamic Client Registration (DCR) (enable_dynamic_registration=True, no client_id)
+      - Endpoints discovery + Manual Client Registration (client_id + client_secret provided)
     """
     server_url: HttpUrl = Field(
         ...,
         description=
-        "URL of the MCP server (this is the MCP server that provides tools, NOT the OAuth2 authorization server)")
+        "URL of the MCP server. This is the MCP server that provides tools, NOT the OAuth2 authorization server.")
 
     # Client registration (manual registration vs DCR)
-    client_id: str | None = Field(default=None, description="OAuth2 client ID (for pre-registered clients)")
-    client_secret: str | None = Field(default=None, description="OAuth2 client secret (for pre-registered clients)")
+    client_id: str | None = Field(default=None, description="OAuth2 client ID for pre-registered clients")
+    client_secret: str | None = Field(default=None, description="OAuth2 client secret for pre-registered clients")
     enable_dynamic_registration: bool = Field(default=True,
                                               description="Enable OAuth2 Dynamic Client Registration (RFC 7591)")
     client_name: str = Field(default="NAT MCP Client", description="OAuth2 client name for dynamic registration")
 
-
     # OAuth2 flow configuration
-    redirect_uri: HttpUrl = Field(
-        ...,
-        description="OAuth2 redirect URI (defaults to localhost with random port)")
-    token_endpoint_auth_method: str = Field(
-        default="client_secret_post",
-        description=("The authentication method for the token endpoint. "
-                     "Usually one of `client_secret_post` or `client_secret_basic`."),
-        )
+    redirect_uri: HttpUrl = Field(..., description="OAuth2 redirect URI.")
+    token_endpoint_auth_method: str = Field(default="client_secret_post",
+                                            description="The authentication method for the token endpoint.")
     scopes: list[str] = Field(default_factory=list,
-                              description="OAuth2 scopes (discovered from MCP server if not provided)")
+                              description="OAuth2 scopes, discovered from MCP server if not provided")
     # Advanced options
     use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
-
 
     @model_validator(mode="after")
     def validate_auth_config(self):

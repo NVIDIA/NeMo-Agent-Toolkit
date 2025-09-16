@@ -43,4 +43,4 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     # Auth configuration
     require_auth: bool = Field(default=False, description="Require OAuth2.1 authorization for MCP server access")
     auth_server_url: str | None = Field(default=None, description="Authorization server URL for token validation")
-    required_scopes: list[str] = Field(default_factory=list, description="Required OAuth2 scopes for MCP access")
+    scopes: list[str] = Field(default_factory=list, description="Required OAuth2 scopes for MCP access")
