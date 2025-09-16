@@ -211,9 +211,9 @@ async def test_nim_langchain_agent():
 
         response = await agent.ainvoke({"input": "What is 1+2?"})
         assert isinstance(response, AIMessage)
-        assert response.text() is not None
-        assert isinstance(response.text(), str)
-        assert "3" in response.text().lower()
+        assert response.content is not None
+        assert isinstance(response.content, str)
+        assert "3" in response.content.lower()
 ```
 
 Note: Since this test requires an API key, it's marked with `@pytest.mark.integration` to exclude it from CI runs. However, these tests are necessary for maintaining and verifying the functionality of LLM providers and their client integrations.
