@@ -14,9 +14,8 @@
 # limitations under the License.
 
 
-general:
-  use_uvloop: true
 # Uncomment the following to enable tracing. Run `phoenix serve` before launching
+# general:
 #  telemetry:
 #    tracing:
 #      phoenix:
