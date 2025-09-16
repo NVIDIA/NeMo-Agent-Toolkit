@@ -238,15 +238,29 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         if (self._workflow is None):
             raise ValueError("Must set a workflow before building")
 
+        # Set of all functions which are "included" by function groups
+        included_functions = set()
+        # Dictionary of function group configs
+        function_group_configs = dict()
+        # Dictionary of function instances
+        function_instances = dict()
+        # Dictionary of function group instances
+        function_group_instances = dict()
+
+        for k, v in self._function_groups.items():
+            included_functions.update({f"{k}.{n}" for n in v.config.include})
+            function_group_configs[k] = v.config
+            function_group_instances[k] = v.instance
+
+        # Function configs need to be restricted to only the functions that are not in a function group
+        function_configs = dict()
+        function_instances = dict()
+        for k, v in self._functions.items():
+            if k not in included_functions:
+                function_configs[k] = v.config
+                function_instances[k] = v.instance
+
         # Build the config from the added objects
-
-        # Get all functions which are exposed by function groups
-        exposed_functions = {f"{k}.{n}" for k, v in self._function_groups.items() for n in v.config.expose}
-        # Expose functions that are not in a function group
-        function_configs = {k: v.config for k, v in self._functions.items() if k not in exposed_functions}
-        # Expose all function groups
-        function_group_configs = {k: v.config for k, v in self._function_groups.items()}
-
         config = Config(general=self.general_config,
                         functions=function_configs,
                         function_groups=function_group_configs,
@@ -280,11 +294,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             entry_fn_obj = self.get_workflow()
         else:
             entry_fn_obj = self.get_function(entry_function)
-
-        # Expose functions that are not in a function group
-        function_instances = {k: v.instance for k, v in self._functions.items() if k not in exposed_functions}
-        # Expose all function groups
-        function_group_instances = {k: v.instance for k, v in self._function_groups.items()}
 
         workflow = Workflow.from_entry_fn(config=config,
                                           entry_fn=entry_fn_obj,

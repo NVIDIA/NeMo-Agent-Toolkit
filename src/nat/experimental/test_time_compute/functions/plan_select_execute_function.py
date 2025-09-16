@@ -98,8 +98,7 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
 
     # Get the function dependencies of the augmented function
     function_dependencies = builder.get_function_dependencies(config.augmented_fn)
-    function_used_tools = set()
-    function_used_tools.update(function_dependencies.functions)
+    function_used_tools = set(function_dependencies.functions)
     for function_group in function_dependencies.function_groups:
         function_used_tools.update(builder.get_function_group_dependencies(function_group).functions)
 

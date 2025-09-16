@@ -17,16 +17,19 @@ limitations under the License.
 
 # Writing Custom Function Groups
 
+It is strongly recommended to first read the [Function Groups](../workflows/function-groups.md) guide before reading this guide.
+
 Function groups bundle related functions that share configuration and runtime context.
 Use them to centralize resource management (for example, database connections) and to group functions by namespace.
-It is also possible to selectively expose functions, enabling namespace isolation of functions within the group and making them addressable as ordinary functions.
+It is also possible to selectively include and exclude functions, from the function group. Selective inclusion enables namespace isolation of functions within the group and makes them addressable as ordinary functions.
 
 ## Define the Configuration
 
 Create a configuration class that inherits from {py:class}`~nat.data_models.function.FunctionGroupBaseConfig`. Use Pydantic fields for validation and documentation.
 
-The optional `include` list controls which functions in the group become globally addressable and accessible to the workflow builder.
+The optional `include` list controls which functions in the group become globally addressable and accessible to the workflow builder. If any function from the group is not listed in `include`, it will not be added to the global registry.
 The optional `exclude` list controls which functions in the group should not be addressable and accessible to the workflow builder and also not be wrapped as tools.
+If both `include` and `exclude` are empty, no functions are globally added, but you can still access the group and its functions programmatically.
 
 :::{note}
 `include` and `exclude` are mutually exclusive. If both are provided, a `ValueError` will be raised.
@@ -70,10 +73,7 @@ async def build_my_group(config: MyGroupConfig, _builder: Builder):
 
 ## Referencing Functions within a Function Group
 
-- Functions are referenced as `instance_name.function_name` (for example, `my.greet`).
-- Only functions listed in `config.include` are added to the global registry.
-- If both `include` and `exclude` are empty, no functions are globally added, but you can still access the group and its functions programmatically.
-- If `exclude` is provided, matching functions are filtered out from default exposure, but they remain accessible programmatically via the group.
+Functions are referenced as `instance_name.function_name` (for example, `my.greet`).
 
 ```python
 async with WorkflowBuilder() as builder:

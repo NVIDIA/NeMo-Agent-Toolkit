@@ -1260,6 +1260,7 @@ async def test_function_group_invalid_include_configuration():
         with pytest.raises(ValueError, match=r"Unknown included functions"):
             await builder.add_function_group("invalid_group", InvalidIncludeConfig())
 
+
 async def test_function_group_invalid_exclude_configuration():
     """Test function group with invalid exclude configuration."""
 
