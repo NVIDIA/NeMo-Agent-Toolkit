@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import logging
 import os.path
 import shutil
@@ -253,8 +254,8 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         data_dir_link = new_workflow_dir / 'data'
         os.symlink(config_dir_source, config_dir_link)
         os.symlink(data_dir_source, data_dir_link)
-
         if install:
+            # Install the new package without changing directories
             click.echo(f"Installing workflow '{workflow_name}'...")
             result = subprocess.run(install_cmd, capture_output=True, text=True, check=True)
 
@@ -287,6 +288,7 @@ def reinstall_command(workflow_name):
             click.echo(f"Workflow '{workflow_name}' does not exist.")
             return
 
+        # Reinstall the package without changing directories
         click.echo(f"Reinstalling workflow '{workflow_name}'...")
         if editable:
             reinstall_cmd = ['uv', 'pip', 'install', '-e', str(workflow_dir)]
@@ -328,6 +330,7 @@ def delete_command(workflow_name: str):
         else:
             uninstall_cmd = ['pip', 'uninstall', '-y', package_name]
 
+        # Uninstall the package
         click.echo(f"Uninstalling workflow '{workflow_name}' package...")
         result = subprocess.run(uninstall_cmd, capture_output=True, text=True, check=True)
 
@@ -341,6 +344,7 @@ def delete_command(workflow_name: str):
             click.echo(f"Unable to locate local files for {workflow_name}. Nothing will be deleted.")
             return
 
+        # Remove the workflow directory
         click.echo(f"Deleting workflow directory '{workflow_dir}'...")
         shutil.rmtree(workflow_dir)
 

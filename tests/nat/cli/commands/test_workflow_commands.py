@@ -83,6 +83,7 @@ def test_nat_workflow_create(tmp_path):
         assert expected_symlink.is_symlink()
         assert expected_symlink.resolve() == target.resolve()
 
+
 def test_create_workflow_with_invalid_name(tmp_path):
     """Ensure CLI fails with an invalid workflow name."""
     result = subprocess.run(
