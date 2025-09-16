@@ -136,4 +136,4 @@ def after_pipeline(ctx: click.Context, pipeline_start_time: float, *_, **__):
     logger.debug("Total time: %.2f sec", end_time - start_time)
 
     if (pipeline_start_time is not None):
-        logger.debug("Pipeline runtime: %.2f sec", end_time - pipeline_start_time)
+        logger.debug("Pipeline runtime: %.2f sec", end_time - pipeline_start_time)        
