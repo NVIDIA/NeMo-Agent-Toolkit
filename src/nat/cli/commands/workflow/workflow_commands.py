@@ -206,7 +206,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         files_to_render = {
             "pyproject.toml.j2": new_workflow_dir / "pyproject.toml",
             "register.py.j2": base_dir / "register.py",
-            "workflow.py.j2": base_dir / f"{workflow_name}_function.py",
+            "workflow.py.j2": base_dir / f"{package_name}_function.py",
             "__init__.py.j2": base_dir / "__init__.py",
             "config.yml.j2": configs_dir / "config.yml",
         }
@@ -227,13 +227,19 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
             content = template.render(context)
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(content)
+                
+        for src, name in ((configs_dir, "configs"), (data_dir, "data")):
+            dest = new_workflow_dir / name
+            try:
+                os.symlink(src, dest)
+            except OSError:
+                if dest.exists():
+                    if dest.is_symlink():
+                        dest.unlink()
+                    else:
+                        shutil.rmtree(dest)
+                shutil.copytree(src, dest)
 
-        try:
-            os.symlink(configs_dir, new_workflow_dir / "configs")
-            os.symlink(data_dir, new_workflow_dir / "data")
-        except OSError:
-            shutil.copytree(configs_dir, new_workflow_dir / "configs")
-            shutil.copytree(data_dir, new_workflow_dir / "data")
 
         if install:
             click.echo(f"Installing workflow '{workflow_name}'...")
@@ -300,7 +306,7 @@ def delete_command(workflow_name: str):
         package_name = _get_module_name(workflow_name)
 
         uninstall_cmd = (
-            ["uv", "pip", "uninstall", package_name]
+            ["uv", "pip", "uninstall", "-y" package_name]
             if editable
             else ["pip", "uninstall", "-y", package_name]
         )
