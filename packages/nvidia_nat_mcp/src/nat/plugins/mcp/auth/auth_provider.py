@@ -358,5 +358,4 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         await self._safe_build_oauth2_delegate(auth_request)
 
         # Let the delegate handle per-user cache + refresh
-        user_id = self._resolve_user_id(user_id=None, auth_request=auth_request)
-        return await self._auth_code_provider.authenticate(user_id=user_id)
+        return await self._auth_code_provider.authenticate(user_id=None, auth_request=None)

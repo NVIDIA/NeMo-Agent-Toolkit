@@ -63,6 +63,30 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
 
         return new_auth_result
 
+    @classmethod
+    def _resolve_user_id(cls, user_id: str | None = None, auth_request: AuthRequest | None = None) -> str | None:
+        """
+        Resolve the user ID to authenticate.
+        """
+        # 1) from auth_request
+        if auth_request and auth_request.user_id:
+            return auth_request.user_id
+
+        # 2) from explicit param
+        if user_id:
+            return user_id
+
+        # 3) from Context cookie
+        from nat.builder.context import Context
+        cookies = getattr(getattr(Context.get(), "metadata", None), "cookies", None)
+        if cookies:
+            session_id = cookies.get(cls.SESSION_COOKIE_NAME)
+            if session_id:
+                return session_id
+
+        # 4) unresolved
+        return None
+
     async def authenticate(self, user_id: str | None = None, auth_request: AuthRequest | None = None) -> AuthResult:
         user_id = self._resolve_user_id(user_id, auth_request)
 
