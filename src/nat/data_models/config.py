@@ -190,8 +190,7 @@ class GeneralConfig(BaseModel):
     use_uvloop: bool | None = Field(
         default=None,
         deprecated=
-        "`use_uvloop` field is deprecated and will be removed in a future release. The use of `uv_loop` is now " +
-        "determined smartly by sys.platform's result.")
+        "`use_uvloop` field is deprecated and will be removed in a future release. The use of `uv_loop` is now automatically determined based on platform")
     """
     This field is deprecated and ignored. It previously controlled whether to use uvloop as the event loop. uvloop
     usage is now determined automatically based on the operating system.
