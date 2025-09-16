@@ -13,12 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
+from nat.runtime.user_metadata import RequestAttributes
 
-# Import any workflows which need to be automatically registered here
-from .prompt_optimizer import register as prompt_optimizer
-from .react_agent import register as react_agent
-from .reasoning_agent import reasoning_agent
-from .rewoo_agent import register as rewoo_agent
-from .router_agent import register as router_agent
-from .tool_calling_agent import register as tool_calling_agent
+
+def test_request_attributes_defaults():
+    ra = RequestAttributes()
+    assert ra.method is None
+    assert ra.url_path is None
+    assert ra.url_port is None
+    assert ra.url_scheme is None
+    assert ra.headers is None
+    assert ra.query_params is None
+    assert ra.path_params is None
+    assert ra.client_host is None
+    assert ra.client_port is None
+    assert ra.cookies is None

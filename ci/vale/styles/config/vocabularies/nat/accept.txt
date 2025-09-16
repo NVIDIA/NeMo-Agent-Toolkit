@@ -147,3 +147,6 @@ VectorDB
 XGBoost
 zsh
 Zep
+Optuna
+[Oo]ptimizable
+[Cc]heckpointed

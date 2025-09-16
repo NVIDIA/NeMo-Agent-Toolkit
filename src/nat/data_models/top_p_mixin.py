@@ -16,9 +16,10 @@
 import re
 
 from pydantic import BaseModel
-from pydantic import Field
 
 from nat.data_models.gated_field_mixin import GatedFieldMixin
+from nat.data_models.optimizable import OptimizableField
+from nat.data_models.optimizable import SearchSpace
 
 
 class TopPMixin(
@@ -35,9 +36,9 @@ class TopPMixin(
     Attributes:
         top_p: Top-p for distribution sampling. Defaults to 1.0 when supported on the model.
     """
-    top_p: float | None = Field(
+    top_p: float | None = OptimizableField(
         default=None,
         ge=0.0,
         le=1.0,
         description="Top-p for distribution sampling. Defaults to 1.0 when supported on the model.",
-    )
+        space=SearchSpace(high=1.0, low=0.5, step=0.1))

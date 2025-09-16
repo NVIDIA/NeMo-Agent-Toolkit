@@ -28,12 +28,15 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.optimizable import OptimizableField
+from nat.data_models.optimizable import OptimizableMixin
+from nat.data_models.optimizable import SearchSpace
 from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
 
-class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
+class ReActAgentWorkflowConfig(FunctionBaseConfig, OptimizableMixin, name="react_agent"):
     """
     Defines a NAT function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the
     tool names and descriptions to select the optimal tool.
@@ -75,8 +78,14 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
     use_openai_api: bool = Field(default=False,
                                  description=("Use OpenAI API for the input/output types to the function. "
                                               "If False, strings will be used."))
-    additional_instructions: str | None = Field(
-        default=None, description="Additional instructions to provide to the agent in addition to the base prompt.")
+    additional_instructions: str | None = OptimizableField(
+        default=None,
+        description="Additional instructions to provide to the agent in addition to the base prompt.",
+        space=SearchSpace(
+            is_prompt=True,
+            prompt="No additional instructions.",
+            prompt_purpose="Additional instructions to provide to the agent in addition to the base prompt.",
+        ))
 
 
 @register_function(config_type=ReActAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
