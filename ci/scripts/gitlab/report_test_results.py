@@ -24,6 +24,13 @@ from datetime import date
 from slack_sdk import WebClient
 
 
+class ReportMessages(typing.NamedTuple):
+    plain_text: list[str]
+    blocks: list[dict]
+    failure_text: list[str] | None
+    failure_blocks: list[dict] | None
+
+
 def get_testcase_name(testcase: ET.Element) -> str:
     return f"{testcase.attrib.get('classname', 'Unknown')}::{testcase.attrib.get('name', 'Unknown')}"
 
@@ -91,8 +98,7 @@ def add_text(text: str, blocks: list[dict], plain_text: list[str]) -> None:
     plain_text.append(text)
 
 
-def build_message(junit_data: dict[str, typing.Any],
-                  coverage_data: str) -> tuple[list[str], list[dict], list[str] | None, list[dict] | None]:
+def build_message(junit_data: dict[str, typing.Any], coverage_data: str) -> ReportMessages:
     num_errors = junit_data['num_errors']
     num_failures = junit_data['num_failures']
 
@@ -136,7 +142,10 @@ def build_message(junit_data: dict[str, typing.Any],
                 failure_text.append("---\n")
                 failure_blocks.append({"type": "divider"})
 
-    return plain_text, blocks, failure_text, failure_blocks
+    return ReportMessages(plain_text=plain_text,
+                          blocks=blocks,
+                          failure_text=failure_text,
+                          failure_blocks=failure_blocks)
 
 
 def main():
@@ -155,17 +164,17 @@ def main():
     junit_data = parse_junit(args.junit_file)
     coverage_data = parse_coverage(args.coverage_file)
 
-    (plain_text, blocks, failure_text, failure_blocks) = build_message(junit_data, coverage_data)
+    report_messages = build_message(junit_data, coverage_data)
 
     client = WebClient(token=slack_token)
     response = client.chat_postMessage(channel=slack_channel,
-                                       text="\n".join(plain_text),
-                                       blocks=blocks,
-                                       link_names=failure_text is not None)
-    if failure_text is not None:
+                                       text="\n".join(report_messages.plain_text),
+                                       blocks=report_messages.blocks,
+                                       link_names=report_messages.failure_text is not None)
+    if report_messages.failure_text is not None:
         client.chat_postMessage(channel=slack_channel,
-                                text="\n".join(failure_text),
-                                blocks=failure_blocks,
+                                text="\n".join(report_messages.failure_text),
+                                blocks=report_messages.failure_blocks,
                                 thread_ts=response["ts"])
 
     return 0
