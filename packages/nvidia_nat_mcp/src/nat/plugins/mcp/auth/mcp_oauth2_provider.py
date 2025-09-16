@@ -60,6 +60,7 @@ class DiscoverOAuth2Endpoints:
     def __init__(self, config: MCPOAuth2ProviderConfig):
         self.config = config
         self._cached_endpoints: OAuth2Endpoints | None = None
+        self._last_oauth_scopes: list[str] | None = None
 
     async def discover(self, reason: AuthReason, www_authenticate: str | None) -> tuple[OAuth2Endpoints, bool]:
         # Fast path: reuse cache when not a 401 retry
@@ -153,6 +154,8 @@ class DiscoverOAuth2Endpoints:
                         continue
                     if meta.authorization_endpoint and meta.token_endpoint:
                         logger.info("Discovered OAuth2 endpoints from %s", url)
+                        # this is bit of a hack to get the scopes supported by the auth server
+                        self._last_oauth_scopes = meta.scopes_supported
                         return OAuth2Endpoints(
                             authorization_url=str(meta.authorization_endpoint),
                             token_url=str(meta.token_endpoint),
@@ -175,6 +178,9 @@ class DiscoverOAuth2Endpoints:
         urls.append(base_or_issuer.rstrip("/") + "/.well-known/openid-configuration")
         return urls
 
+    def scopes_supported(self) -> list[str] | None:
+        return self._last_oauth_scopes
+
 
 class DynamicClientRegistration:
     """Dynamic client registration utility."""
@@ -186,7 +192,7 @@ class DynamicClientRegistration:
         p = urlparse(str(self.config.server_url))
         return f"{p.scheme}://{p.netloc}"
 
-    async def register(self, endpoints: OAuth2Endpoints) -> OAuth2Credentials:
+    async def register(self, endpoints: OAuth2Endpoints, scopes: list[str] | None) -> OAuth2Credentials:
         if not self.config.redirect_uri:
             raise RuntimeError("redirect_uri must be set for dynamic client registration")
 
@@ -200,7 +206,7 @@ class DynamicClientRegistration:
                                         or "client_secret_post"),
             grant_types=["authorization_code", "refresh_token"],
             response_types=["code"],
-            scope=" ".join(self.config.scopes) if self.config.scopes else None,
+            scope=" ".join(scopes) if scopes else None,
             client_name=self.config.client_name or None,
         )
         payload = metadata.model_dump(by_alias=True, mode="json", exclude_none=True)
@@ -247,6 +253,12 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         self._auth_code_provider = None
         self._auth_code_key = None
 
+    def _effective_scopes(self) -> list[str] | None:
+        """
+        Prefer caller-provided scopes; otherwise fall back to AS-advertised scopes_supported.
+        """
+        return self.config.scopes or self._discoverer.scopes_supported()
+
     async def authenticate(self, user_id: str | None = None, auth_request: AuthRequest | None = None) -> AuthResult:
         """
         Authenticate using MCP OAuth2 flow via NAT framework.
@@ -264,6 +276,8 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             logger.info("OAuth2 endpoints: %s", self._cached_endpoints)
             self._cached_credentials = None  # invalidate credentials tied to old AS
 
+        effective_scopes = self._effective_scopes()
+
         # Client registration
         if not self._cached_credentials:
             if self.config.client_id:
@@ -278,7 +292,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                     raise RuntimeError(
                         "Dynamic registration is not enabled and no client_id/client_secret were provided")
                 # Dynamic registration mode requires registration endpoint
-                self._cached_credentials = await self._registrar.register(self._cached_endpoints)
+                self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
                 logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
 
         # Use NAT's standard OAuth2 flow
@@ -334,7 +348,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 token_url=str(endpoints.token_url),
                 token_endpoint_auth_method=getattr(self.config, "token_endpoint_auth_method", None),
                 redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
-                scopes=self.config.scopes or [],
+                scopes=self._effective_scopes() or [],
                 use_pkce=bool(self.config.use_pkce),
             )
 
