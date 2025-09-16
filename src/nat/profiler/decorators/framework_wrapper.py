@@ -51,16 +51,19 @@ def set_framework_profiler_handler(
         @asynccontextmanager
         async def wrapper(workflow_config, builder):
 
-            if LLMFrameworkEnum.LANGCHAIN in frameworks and not _library_instrumented["langchain"]:
-                from langchain_core.tracers.context import register_configure_hook
-
+            if LLMFrameworkEnum.LANGCHAIN in frameworks:
+                # Always set a fresh handler in the current context so callbacks
+                # route to the active run. Only register the hook once globally.
                 from nat.profiler.callbacks.langchain_callback_handler import LangchainProfilerHandler
 
                 handler = LangchainProfilerHandler()
                 callback_handler_var.set(handler)
-                register_configure_hook(callback_handler_var, inheritable=True)
-                _library_instrumented["langchain"] = True
-                logger.debug("LangChain/LangGraph callback handler registered")
+
+                if not _library_instrumented["langchain"]:
+                    from langchain_core.tracers.context import register_configure_hook
+                    register_configure_hook(callback_handler_var, inheritable=True)
+                    _library_instrumented["langchain"] = True
+                    logger.debug("LangChain/LangGraph callback hook registered")
 
             if LLMFrameworkEnum.LLAMA_INDEX in frameworks:
                 from llama_index.core import Settings
