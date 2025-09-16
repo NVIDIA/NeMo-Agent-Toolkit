@@ -69,7 +69,7 @@ async def llm_ainvoke(config, builder, user_prompt, system_prompt=None):
         prompt = ChatPromptTemplate([MessagesPlaceholder("msgs")])
     chain = prompt | llm
     result = await chain.ainvoke({"msgs": [HumanMessage(content=user_prompt)]})
-    return result.content
+    return result.text()
 
 
 def log_header(log_str: str, dash_length: int = 100, level: int = logging.DEBUG):
