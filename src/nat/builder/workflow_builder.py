@@ -248,7 +248,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         function_group_instances = dict()
 
         for k, v in self._function_groups.items():
-            included_functions.update({f"{k}.{n}" for n in v.config.include})
+            included_functions.update(v.instance.get_included_functions().keys())
             function_group_configs[k] = v.config
             function_group_instances[k] = v.instance
 
