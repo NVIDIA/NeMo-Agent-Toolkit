@@ -171,7 +171,10 @@ def main():
                                        text="\n".join(report_messages.plain_text),
                                        blocks=report_messages.blocks,
                                        link_names=report_messages.failure_text is not None)
+
     if report_messages.failure_text is not None:
+        # Since potentially a large number of failures could occur, we will post them in a thread to the original
+        # message to avoid spamming the channel.
         client.chat_postMessage(channel=slack_channel,
                                 text="\n".join(report_messages.failure_text),
                                 blocks=report_messages.failure_blocks,
