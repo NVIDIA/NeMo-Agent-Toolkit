@@ -150,9 +150,9 @@ class DiscoverOAuth2Endpoints:
           - endpoints: if the doc directly contains endpoints (non-standard), they’re returned
         """
         async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.get(url)
-            r.raise_for_status()
-            data = r.json()
+            response = await client.get(url)
+            response.raise_for_status()
+            data = response.json()
 
         # Standard RFC 9728: authorization_servers (list of issuers)
         issuers = data.get("authorization_servers")
@@ -325,7 +325,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             self._cached_credentials = None  # invalidate credentials tied to old AS
 
         if endpoints_changed:
-            logger.info("OAuth2 endpoints: %s", endpoints)
+            logger.info("OAuth2 endpoints: %s", self._cached_endpoints)
 
         # Client registration
         if not self._cached_credentials:
@@ -338,7 +338,10 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 logger.info("Using manual client_id: %s", self._cached_credentials.client_id)
             else:
                 if not self.config.enable_dynamic_registration:
-                    raise RuntimeError("Dynamic registration is not enabled")
+                    raise RuntimeError(
+                        "Dynamic registration is not enabled and no client_id/client_secret were provided")
+            if not self._cached_endpoints:
+
                 # Dynamic registration mode requires registration endpoint
                 self._cached_credentials = await self._registrar.register(self._cached_endpoints)
                 logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
@@ -348,9 +351,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             # force fresh delegate (clears in-mem token cache)
             self._auth_code_provider = None
             # preserve other fields, just normalize reason & inject user_id
-            auth_request = auth_request.model_copy(
-                update={"reason": AuthReason.NORMAL, "user_id": user_id, "www_authenticate": None}
-            )
+            auth_request = auth_request.model_copy(update={
+                "reason": AuthReason.NORMAL, "user_id": user_id, "www_authenticate": None
+            })
         else:
             # back-compat: propagate user_id if provided but not set in the request
             if user_id is not None and auth_request.user_id is None:
@@ -358,11 +361,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         return await self._perform_oauth2_flow(auth_request=auth_request)
 
-
     async def _perform_oauth2_flow(self, auth_request: AuthRequest | None = None) -> AuthResult:
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
-
 
         # This helper is only for non-401 flows
         if auth_request and auth_request.reason == AuthReason.RETRY_AFTER_401:
