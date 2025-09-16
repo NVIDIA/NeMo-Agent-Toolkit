@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -251,13 +252,36 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         # For the OAuth2 flow
         self._auth_code_provider = None
-        self._auth_code_key = None
+        self._auth_code_key: tuple | None = None
 
-    def _effective_scopes(self) -> list[str] | None:
-        """
-        Prefer caller-provided scopes; otherwise fall back to AS-advertised scopes_supported.
-        """
-        return self.config.scopes or self._discoverer.scopes_supported()
+        self._state_lock = asyncio.Lock()
+
+    async def _safe_discover_and_register(self, auth_request: AuthRequest):
+        async with self._state_lock:
+            # Discover OAuth2 endpoints
+            self._cached_endpoints, endpoints_changed = await self._discoverer.discover(reason=auth_request.reason,
+                                                                                        www_authenticate=auth_request.www_authenticate)
+            if endpoints_changed:
+                logger.info("OAuth2 endpoints: %s", self._cached_endpoints)
+                self._cached_credentials = None  # invalidate credentials tied to old AS
+            effective_scopes = self._effective_scopes()
+
+            # Client registration
+            if not self._cached_credentials:
+                if self.config.client_id:
+                    # Manual registration mode
+                    self._cached_credentials = OAuth2Credentials(
+                        client_id=self.config.client_id,
+                        client_secret=self.config.client_secret,
+                    )
+                    logger.info("Using manual client_id: %s", self._cached_credentials.client_id)
+                else:
+                    if not self.config.enable_dynamic_registration:
+                        raise RuntimeError(
+                            "Dynamic registration is not enabled and no client_id/client_secret were provided")
+                    # Dynamic registration mode requires registration endpoint
+                    self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
+                    logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
 
     async def authenticate(self, user_id: str | None = None, auth_request: AuthRequest | None = None) -> AuthResult:
         """
@@ -269,51 +293,50 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         if not auth_request:
             raise RuntimeError("Auth request is required")
 
-        # Discover OAuth2 endpoints
-        self._cached_endpoints, endpoints_changed = await self._discoverer.discover(reason=auth_request.reason,
-                                                                                    www_authenticate=auth_request.www_authenticate)
-        if endpoints_changed:
-            logger.info("OAuth2 endpoints: %s", self._cached_endpoints)
-            self._cached_credentials = None  # invalidate credentials tied to old AS
-
-        effective_scopes = self._effective_scopes()
-
-        # Client registration
-        if not self._cached_credentials:
-            if self.config.client_id:
-                # Manual registration mode
-                self._cached_credentials = OAuth2Credentials(
-                    client_id=self.config.client_id,
-                    client_secret=self.config.client_secret,
-                )
-                logger.info("Using manual client_id: %s", self._cached_credentials.client_id)
-            else:
-                if not self.config.enable_dynamic_registration:
-                    raise RuntimeError(
-                        "Dynamic registration is not enabled and no client_id/client_secret were provided")
-                # Dynamic registration mode requires registration endpoint
-                self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
-                logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
-
+        await self._safe_discover_and_register(auth_request)
         # Use NAT's standard OAuth2 flow
         if auth_request.reason == AuthReason.RETRY_AFTER_401:
             # force fresh delegate (clears in-mem token cache)
             self._auth_code_provider = None
             # preserve other fields, just normalize reason & inject user_id
             auth_request = auth_request.model_copy(update={
-                "reason": AuthReason.NORMAL, "user_id": user_id, "www_authenticate": None
-            })
+                        "reason": AuthReason.NORMAL, "user_id": user_id, "www_authenticate": None
+                    })
         else:
             # back-compat: propagate user_id if provided but not set in the request
             if user_id is not None and auth_request.user_id is None:
                 auth_request = auth_request.model_copy(update={"user_id": user_id})
 
+        # Perform the OAuth2 flow without lock
         return await self._perform_oauth2_flow(auth_request=auth_request)
 
-    async def _perform_oauth2_flow(self, auth_request: AuthRequest | None = None) -> AuthResult:
+    def _effective_scopes(self) -> list[str] | None:
+        """
+        Prefer caller-provided scopes; otherwise fall back to AS-advertised scopes_supported.
+        """
+        return self.config.scopes or self._discoverer.scopes_supported()
+
+    async def _safe_build_oauth2_delegate(self, auth_request: AuthRequest | None = None, key: tuple):
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 
+        async with self._state_lock:
+            if self._auth_code_provider is None or self._auth_code_key != key:
+                oauth2_config = OAuth2AuthCodeFlowProviderConfig(
+                    client_id=credentials.client_id,
+                    client_secret=credentials.client_secret or "",
+                    authorization_url=str(endpoints.authorization_url),
+                    token_url=str(endpoints.token_url),
+                    token_endpoint_auth_method=getattr(self.config, "token_endpoint_auth_method", None),
+                    redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
+                    scopes=self._effective_scopes() or [],
+                    use_pkce=bool(self.config.use_pkce),
+                )
+
+                self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
+                self._auth_code_key = key
+
+    async def _perform_oauth2_flow(self, auth_request: AuthRequest | None = None) -> AuthResult:
         # This helper is only for non-401 flows
         if auth_request and auth_request.reason == AuthReason.RETRY_AFTER_401:
             raise RuntimeError("_perform_oauth2_flow should not be called for RETRY_AFTER_401")
@@ -336,24 +359,11 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             bool(self.config.use_pkce),
         )
 
-        # (Re)build the delegate if needed
-        if self._auth_code_provider is None or self._auth_code_key != key:
-            if not self.config.redirect_uri:
+        if not self.config.redirect_uri:
                 raise RuntimeError("Redirect URI is not set")
 
-            oauth2_config = OAuth2AuthCodeFlowProviderConfig(
-                client_id=credentials.client_id,
-                client_secret=credentials.client_secret or "",
-                authorization_url=str(endpoints.authorization_url),
-                token_url=str(endpoints.token_url),
-                token_endpoint_auth_method=getattr(self.config, "token_endpoint_auth_method", None),
-                redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
-                scopes=self._effective_scopes() or [],
-                use_pkce=bool(self.config.use_pkce),
-            )
-
-            self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
-            self._auth_code_key = key
+        # (Re)build the delegate if needed (this needs to be done with the lock)
+        await self._safe_build_oauth2_delegate(auth_request, key)
 
         # Let the delegate handle per-user cache + refresh
         user_id = self._resolve_user_id(user_id=None, auth_request=auth_request)
