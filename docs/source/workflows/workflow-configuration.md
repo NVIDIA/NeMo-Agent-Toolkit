@@ -98,7 +98,7 @@ The `_type` value refers to the workflow type, in our example we are using a `re
 This section contains general configuration settings for NeMo Agent toolkit which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~nat.data_models.config.GeneralConfig` class.
 
 :::{note}
-⚠️ **Deprecated**: The `use_uvloop` parameter is deprecated and will be removed in a future release. Previously, the `use_uvloop` parameter meant to specify whether to use the [`uvloop`](https://github.com/MagicStack/uvloop) event loop, but now the use of `uv_loop` will be smartly determined based on the system platform the user is using.
+⚠️ **Deprecated**: The `use_uvloop` parameter is deprecated and will be removed in a future release. Previously, the `use_uvloop` parameter meant to specify whether to use the [`uvloop`](https://github.com/MagicStack/uvloop) event loop, but now the use of `uv_loop` will be automatically determined based on the system platform the user is using.
 :::
 
 ### `eval`
