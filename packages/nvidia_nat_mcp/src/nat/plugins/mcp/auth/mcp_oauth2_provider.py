@@ -316,12 +316,15 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         """
         return self.config.scopes or self._discoverer.scopes_supported()
 
-    async def _safe_build_oauth2_delegate(self, auth_request: AuthRequest | None = None, key: tuple):
+    async def _safe_build_oauth2_delegate(self, auth_request: AuthRequest | None = None):
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 
         async with self._state_lock:
-            if self._auth_code_provider is None or self._auth_code_key != key:
+            endpoints = self._cached_endpoints
+            credentials = self._cached_credentials
+
+            if self._auth_code_provider is None:
                 oauth2_config = OAuth2AuthCodeFlowProviderConfig(
                     client_id=credentials.client_id,
                     client_secret=credentials.client_secret or "",
@@ -341,24 +344,10 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         if auth_request and auth_request.reason == AuthReason.RETRY_AFTER_401:
             raise RuntimeError("_perform_oauth2_flow should not be called for RETRY_AFTER_401")
 
-        endpoints = self._cached_endpoints
-        credentials = self._cached_credentials
-        if not endpoints or not credentials:
+        if not self._cached_endpoints or not self._cached_credentials:
             raise RuntimeError("OAuth2 flow called before discovery/registration")
 
         # Build a key so we only (re)create the delegate when material config changes
-        key = (
-            str(endpoints.authorization_url),
-            str(endpoints.token_url),
-            str(endpoints.registration_url) if endpoints.registration_url else None,
-            credentials.client_id,
-            credentials.client_secret or None,
-            tuple(self.config.scopes or []),
-            str(self.config.redirect_uri) if self.config.redirect_uri else None,
-            getattr(self.config, "token_endpoint_auth_method", None),
-            bool(self.config.use_pkce),
-        )
-
         if not self.config.redirect_uri:
                 raise RuntimeError("Redirect URI is not set")
 
