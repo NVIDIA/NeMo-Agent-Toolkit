@@ -30,7 +30,7 @@
 functions:
   current_datetime_local:
     _type: current_datetime
-  mcp_math:
+  mcp_protected_math:
     _type: mcp_client
     server:
       transport: streamable-http
