@@ -16,12 +16,12 @@
 
 # Uncomment the following to enable tracing. Run `phoenix serve` before launching
 # general:
-#  telemetry:
-#    tracing:
-#      phoenix:
-#        _type: phoenix
-#        endpoint: http://localhost:6006/v1/traces
-#        project: simple_calculator
+#   telemetry:
+#     tracing:
+#       phoenix:
+#         _type: phoenix
+#         endpoint: http://localhost:6006/v1/traces
+#         project: simple_calculator
 
 functions:
   calculator_multiply:
