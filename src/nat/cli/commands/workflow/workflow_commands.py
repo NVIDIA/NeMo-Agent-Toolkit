@@ -24,7 +24,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import click
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 logger = logging.getLogger(__name__)
 
@@ -145,8 +145,12 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
 
         template_dir = Path(__file__).parent / "templates"
         package_name = _get_module_name(workflow_name)
-        rel_path_to_repo_root = "" if not repo_root else os.path.relpath(repo_root, new_workflow_dir)
-
+        
+        try:
+            rel_path_to_repo_root = "" if not repo_root else os.path.relpath(repo_root, new_workflow_dir)
+        except ValueError:
+            rel_path_to_repo_root = ""
+            
         if new_workflow_dir.exists():
             click.echo(f"Workflow '{workflow_name}' already exists.")
             return
@@ -159,7 +163,10 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         configs_dir.mkdir(parents=True)
         data_dir.mkdir(parents=True)
 
-        env = Environment(loader=FileSystemLoader(str(template_dir)), autoescape=False)
+        env = Environment(
+        loader=FileSystemLoader(str(template_dir)),
+        autoescape=select_autoescape(["html", "xml"]),
+        )
         editable = repo_root is not None
         uv_available = shutil.which("uv") is not None
         use_uv = editable and uv_available
