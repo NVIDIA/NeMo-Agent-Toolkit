@@ -252,7 +252,6 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         # For the OAuth2 flow
         self._auth_code_provider = None
-        self._auth_code_key: tuple | None = None
 
         self._state_lock = asyncio.Lock()
 
@@ -300,8 +299,8 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             self._auth_code_provider = None
             # preserve other fields, just normalize reason & inject user_id
             auth_request = auth_request.model_copy(update={
-                        "reason": AuthReason.NORMAL, "user_id": user_id, "www_authenticate": None
-                    })
+                "reason": AuthReason.NORMAL, "user_id": user_id, "www_authenticate": None
+            })
         else:
             # back-compat: propagate user_id if provided but not set in the request
             if user_id is not None and auth_request.user_id is None:
@@ -337,7 +336,6 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 )
 
                 self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
-                self._auth_code_key = key
 
     async def _perform_oauth2_flow(self, auth_request: AuthRequest | None = None) -> AuthResult:
         # This helper is only for non-401 flows
@@ -349,10 +347,10 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         # Build a key so we only (re)create the delegate when material config changes
         if not self.config.redirect_uri:
-                raise RuntimeError("Redirect URI is not set")
+            raise RuntimeError("Redirect URI is not set")
 
         # (Re)build the delegate if needed (this needs to be done with the lock)
-        await self._safe_build_oauth2_delegate(auth_request, key)
+        await self._safe_build_oauth2_delegate(auth_request)
 
         # Let the delegate handle per-user cache + refresh
         user_id = self._resolve_user_id(user_id=None, auth_request=auth_request)
