@@ -51,9 +51,13 @@ class PackageError(Exception):
     """Custom exception raised when package lookup fails."""
 
 
-def get_repo_root():
-    return find_package_root("nvidia-nat")
+def get_repo_root() -> Path | None:
+    """Return the repository root for package `nvidia-nat` if installed in editable mode.
 
+    Returns:
+        Path | None: Path to the repository root, or None if not installed/editable.
+    """
+    return find_package_root("nvidia-nat")
 
 def _get_module_name(workflow_name: str) -> str:
     return workflow_name.replace("-", "_")
