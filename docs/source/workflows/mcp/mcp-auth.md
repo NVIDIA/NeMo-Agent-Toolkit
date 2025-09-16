@@ -15,9 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Temporary MCP Auth Planning Notes
+# 🧪 Temporary MCP Auth Planning Notes (Experimental)
 This is currently a scratch pad for planning MCP auth. It will be rewritten when all the components are ready.
 
+## Phases of MCP auth implementation
+1. [Completed] MCP client with new `mcp_oauth2` auth provider.
+2. [Pending] MCP protected server with `TokenVerifier`.
+3. [Pending] Changes for end-to-end MCP auth testing.
 
 ## Steps for testing MCP auth
 1. Start the MCP server with auth enabled
