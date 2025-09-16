@@ -43,7 +43,6 @@ Update your workflow configuration file to include the weave telemetry settings.
 
 ```yaml
 general:
-  use_uvloop: true
   telemetry:
     tracing:
       weave:
@@ -88,7 +87,6 @@ uv pip install -e '.[weave]'
 
 ```yaml
 general:
-  use_uvloop: true
   telemetry:
     tracing:
       weave:

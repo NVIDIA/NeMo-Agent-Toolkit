@@ -14,9 +14,6 @@
 # limitations under the License.
 
 
-general:
-  use_uvloop: true
-
 llms:
   nim_rag_eval_llm:
     _type: nim
