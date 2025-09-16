@@ -30,9 +30,7 @@ rapids-logger "Running tests with Python version $(python --version) and pytest 
 set +e
 
 REPORT_IDENT_SLUG="$(arch)-py${PYTHON_VERSION}"
-# DO NOT MERGE remove the --run_slow --run_e2e --run_integration flags
 pytest --junit-xml=${REPORTS_DIR}/report-${REPORT_IDENT_SLUG}_pytest.xml \
-       --run_slow --run_e2e --run_integration \
        --cov=nat --cov-report term-missing \
        --cov-report=xml:${REPORTS_DIR}/report-${REPORT_IDENT_SLUG}_pytest_coverage.xml
 PYTEST_RESULTS=$?
