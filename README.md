@@ -169,7 +169,7 @@ The following diagram illustrates the key components of NeMo Agent toolkit and h
 
 - [x] Integrate with [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel) for continuous model improvement from production data.
 - [ ] Add support for [Google ADK](https://google.github.io/adk-docs/) framework.
-- [ ] Add an agent optimizer to auto-tune hyperparameters and prompts to maximize performance.
+- [x] Add an agent optimizer to auto-tune hyperparameters and prompts to maximize performance.
 - [ ] MCP authorization and streamable HTTP support.
 - [ ] Integration with [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) to secure any function in an agent workflow.
 - [ ] End-to-end acceleration using intelligent integrations with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo).
