@@ -98,7 +98,7 @@ def add_text(text: str, blocks: list[dict], plain_text: list[str]) -> None:
     plain_text.append(text)
 
 
-def build_message(junit_data: dict[str, typing.Any], coverage_data: str) -> ReportMessages:
+def build_messages(junit_data: dict[str, typing.Any], coverage_data: str) -> ReportMessages:
     num_errors = junit_data['num_errors']
     num_failures = junit_data['num_failures']
 
@@ -164,7 +164,7 @@ def main():
     junit_data = parse_junit(args.junit_file)
     coverage_data = parse_coverage(args.coverage_file)
 
-    report_messages = build_message(junit_data, coverage_data)
+    report_messages = build_messages(junit_data, coverage_data)
 
     client = WebClient(token=slack_token)
     response = client.chat_postMessage(channel=slack_channel,
