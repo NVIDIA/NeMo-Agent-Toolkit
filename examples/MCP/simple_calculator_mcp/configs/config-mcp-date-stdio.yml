@@ -26,8 +26,6 @@
 # on your local machine. For example, if you are using pip, you can install it with:
 # uv pip install mcp-server-time
 
-general:
-  use_uvloop: true
 
 functions:
   mcp_time:
