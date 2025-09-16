@@ -135,6 +135,14 @@ def get_workflow_path_from_name(workflow_name: str) -> Path | None:
     ),
 )
 def create_command(workflow_name: str, install: bool, workflow_dir: str, description: str) -> None:
+    """Create a new workflow project from templates.
+
+    Args:
+        workflow_name: Human‑friendly workflow name (hyphens allowed; converted to a Python‑safe package).
+        install: If True, install the workflow package after generation.
+        workflow_dir: Output directory where the workflow folder will be created.
+        description: Description used in generated module docstrings and metadata.
+    """
     if not workflow_name or not workflow_name.strip():
         raise click.BadParameter("Workflow name cannot be empty.")
 
