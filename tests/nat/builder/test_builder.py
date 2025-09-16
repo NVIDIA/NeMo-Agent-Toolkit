@@ -1257,9 +1257,8 @@ async def test_function_group_invalid_include_configuration():
 
     async with WorkflowBuilder() as builder:
         # Should raise error during add_function_group when validation happens
-        with pytest.raises(ValueError, match="includes functions that are not found in the group"):
+        with pytest.raises(ValueError, match=r"Unknown included functions"):
             await builder.add_function_group("invalid_group", InvalidIncludeConfig())
-
 
 async def test_function_group_invalid_exclude_configuration():
     """Test function group with invalid exclude configuration."""
@@ -1283,11 +1282,11 @@ async def test_function_group_invalid_exclude_configuration():
         group = builder.get_function_group("invalid_exclude_group")
 
         # Should raise error when trying to get excluded functions
-        with pytest.raises(ValueError, match="excludes functions that are not found in the group"):
+        with pytest.raises(ValueError, match=r"Unknown excluded functions"):
             group.get_excluded_functions()
 
         # Should also raise error when trying to get accessible functions
-        with pytest.raises(ValueError, match="excludes functions that are not found in the group"):
+        with pytest.raises(ValueError, match=r"Unknown excluded functions"):
             group.get_accessible_functions()
 
 
