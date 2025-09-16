@@ -12,10 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import logging
 import os.path
 import shutil
@@ -175,7 +171,6 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         description (str): Description to pre-popluate the workflow docstring.
     """
     try:
-        # 🔑 Validation: workflow name must not be empty or only spaces
         if not workflow_name.strip():
             raise click.ClickException("Workflow name cannot be empty.")
 
@@ -210,7 +205,9 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
 
         # Create directory structure
         base_dir.mkdir(parents=True)
+        # Create config directory
         configs_dir.mkdir(parents=True)
+        # Create data directory
         data_dir.mkdir(parents=True)
 
         # Initialize Jinja2 environment
