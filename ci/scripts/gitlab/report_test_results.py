@@ -134,13 +134,16 @@ def build_messages(junit_data: dict[str, typing.Any], coverage_data: str) -> Rep
         add_text(f"*Failed Tests ({num_errors_and_failures}):*", failure_blocks, failure_text)
 
         failed_tests = junit_data['failed_tests']
-        for (i, failed_test) in enumerate(failed_tests):
+        for failed_test in failed_tests:
             test_name = failed_test['test_name']
             message = failed_test['message']
             add_text(f"`{test_name}`\n```\n{message}\n```", failure_blocks, failure_text)
-            if i < len(failed_tests) - 1:
-                failure_text.append("---\n")
-                failure_blocks.append({"type": "divider"})
+            failure_text.append("---\n")
+            failure_blocks.append({"type": "divider"})
+
+        job_url = os.environ.get("CI_JOB_URL")
+        if job_url is not None:
+            add_text(f"Full details available at: {job_url}", failure_blocks, failure_text)
 
     return ReportMessages(plain_text=plain_text,
                           blocks=blocks,
