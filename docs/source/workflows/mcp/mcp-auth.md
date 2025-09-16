@@ -28,7 +28,8 @@ This starts a protected MCP server on port 9901. This MCP server has a stub toke
 
 2. Start a container with the example auth server from the MCP repo. This will start the auth server on port 9000.
 ```bash
-docker run -p 9000:9000 ghcr.io/mcp-sdk/mcp-simple-auth-as
+docker build -t mcp-sample-as -f examples/MCP/simple_calculator_mcp/deploy_example_as/Dockerfile examples/MCP/simple_calculator_mcp/deploy_example_as/
+docker run -p 9000:9000 mcp-sample-as
 ```
 This starts the auth server on port 9000.
 
