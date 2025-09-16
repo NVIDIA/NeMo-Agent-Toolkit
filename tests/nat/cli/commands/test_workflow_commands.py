@@ -12,10 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import subprocess
+
+import shutil
 from pathlib import Path
 from unittest.mock import patch
-import shutil
 
 import pytest
 from click.testing import CliRunner
@@ -45,8 +45,11 @@ def test_create_workflow_with_valid_name(tmp_path):
     shutil.rmtree(workflow_dir, ignore_errors=True)
 
 
-def test_get_repo_root(project_dir: str):
-    assert get_repo_root() == Path(project_dir)
+def test_get_repo_root(tmp_path):
+    """Ensure get_repo_root returns the correct path."""
+    # Simulate repo by creating a .git folder
+    (tmp_path / ".git").mkdir()
+    assert get_repo_root() == tmp_path
 
 
 @patch('nat.cli.entrypoint.get_version')
@@ -55,6 +58,7 @@ def test_get_repo_root(project_dir: str):
     [(True, "nvidia-nat[langchain]~=1.2"), (False, "nvidia-nat[langchain]")],
 )
 def test_get_nat_dependency(mock_get_version, versioned, expected_dep):
+    """Test the correct dependency string is returned."""
     mock_get_version.return_value = "1.2.3"
     result = _get_nat_dependency(versioned=versioned)
     assert result == expected_dep
@@ -62,23 +66,18 @@ def test_get_nat_dependency(mock_get_version, versioned, expected_dep):
 
 def test_nat_workflow_create(tmp_path):
     """Test that 'nat workflow create' command creates expected structure."""
-    # Run the nat workflow create command
-    result = subprocess.run(
-        ["nat", "workflow", "create", "--no-install", "--workflow-dir", str(tmp_path), "test_workflow"],
-        capture_output=True,
-        text=True,
-        check=True
+    runner = CliRunner()
+    result = runner.invoke(
+        create_command,
+        ["test_workflow", "--no-install", "--workflow-dir", str(tmp_path)]
     )
+    assert result.exit_code == 0
 
-    # Verify the command succeeded
-    assert result.returncode == 0
-
-    # Define the expected paths
     workflow_root = tmp_path / "test_workflow"
     src_dir = workflow_root / "src"
     test_workflow_src = src_dir / "test_workflow"
 
-    # Group all expected output paths
+    # Expected files and directories
     expected_output_paths = [
         workflow_root,
         workflow_root / "pyproject.toml",
@@ -91,17 +90,15 @@ def test_nat_workflow_create(tmp_path):
         test_workflow_src / "configs" / "config.yml",
     ]
 
-    # Verify all expected paths exist
-    for expected_output_path in expected_output_paths:
-        assert expected_output_path.exists()
+    for path in expected_output_paths:
+        assert path.exists()
 
-    # Define expected symlinks
+    # Expected symlinks
     expected_symlinks_and_targets = [
         (workflow_root / "configs", test_workflow_src / "configs"),
         (workflow_root / "data", test_workflow_src / "data"),
     ]
 
-    # Verify symlinks exist and are symlinks
-    for expected_symlink, target in expected_symlinks_and_targets:
-        assert expected_symlink.is_symlink()
-        assert expected_symlink.resolve() == target.resolve()
+    for symlink, target in expected_symlinks_and_targets:
+        assert symlink.is_symlink()
+        assert symlink.resolve() == target.resolve()
