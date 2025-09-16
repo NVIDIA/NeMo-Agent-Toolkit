@@ -118,6 +118,7 @@ def _retry_decorator(
     retry_codes: Sequence[CodePattern] | None = None,
     retry_on_messages: Sequence[str] | None = None,
     deepcopy: bool = False,
+    instance_context_aware: bool = False,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """
     Build a decorator that retries with exponential back-off *iff*:
@@ -130,69 +131,127 @@ def _retry_decorator(
     deepcopy:
         If True, each retry receives deep‑copied *args and **kwargs* to avoid
         mutating shared state between attempts.
+
+    instance_context_aware:
+        If True, the decorator will check for a retry context flag on the first
+        argument (assumed to be 'self'). If the flag is set, retries are skipped
+        to prevent retry storms in nested method calls.
     """
 
     def decorate(fn: Callable[..., T]) -> Callable[..., T]:
         use_deepcopy = deepcopy
+        use_context_aware = instance_context_aware
+
+        def _check_retry_context(args) -> bool:
+            """Check if we're already in a retry context for this instance."""
+            if not use_context_aware or not args:
+                return False
+            obj = args[0]
+            return getattr(obj, '_in_retry_context', False)
+
+        def _set_retry_context(args, value: bool) -> None:
+            """Set the retry context flag on the instance."""
+            if use_context_aware and args:
+                obj = args[0]
+                try:
+                    object.__setattr__(obj, '_in_retry_context', value)
+                except Exception:
+                    # If we can't set the attribute, just continue without context tracking
+                    pass
 
         async def _call_with_retry_async(*args, **kw) -> T:
-            delay = base_delay
-            for attempt in range(retries):
-                call_args = copy.deepcopy(args) if use_deepcopy else args
-                call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
-                try:
-                    return await fn(*call_args, **call_kwargs)
-                except retry_on as exc:
-                    if (not _want_retry(exc, code_patterns=retry_codes, msg_substrings=retry_on_messages)
-                            or attempt == retries - 1):
-                        raise
-                    await asyncio.sleep(delay)
-                    delay *= backoff
+            # Skip retries if already in retry context
+            if _check_retry_context(args):
+                return await fn(*args, **kw)
+
+            _set_retry_context(args, True)
+            try:
+                delay = base_delay
+                for attempt in range(retries):
+                    call_args = copy.deepcopy(args) if use_deepcopy else args
+                    call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
+                    try:
+                        return await fn(*call_args, **call_kwargs)
+                    except retry_on as exc:
+                        if (not _want_retry(exc, code_patterns=retry_codes, msg_substrings=retry_on_messages)
+                                or attempt == retries - 1):
+                            raise
+                        await asyncio.sleep(delay)
+                        delay *= backoff
+            finally:
+                _set_retry_context(args, False)
 
         async def _agen_with_retry(*args, **kw):
-            delay = base_delay
-            for attempt in range(retries):
-                call_args = copy.deepcopy(args) if use_deepcopy else args
-                call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
-                try:
-                    async for item in fn(*call_args, **call_kwargs):
-                        yield item
-                    return
-                except retry_on as exc:
-                    if (not _want_retry(exc, code_patterns=retry_codes, msg_substrings=retry_on_messages)
-                            or attempt == retries - 1):
-                        raise
-                    await asyncio.sleep(delay)
-                    delay *= backoff
+            # Skip retries if already in retry context
+            if _check_retry_context(args):
+                async for item in fn(*args, **kw):
+                    yield item
+                return
+
+            _set_retry_context(args, True)
+            try:
+                delay = base_delay
+                for attempt in range(retries):
+                    call_args = copy.deepcopy(args) if use_deepcopy else args
+                    call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
+                    try:
+                        async for item in fn(*call_args, **call_kwargs):
+                            yield item
+                        return
+                    except retry_on as exc:
+                        if (not _want_retry(exc, code_patterns=retry_codes, msg_substrings=retry_on_messages)
+                                or attempt == retries - 1):
+                            raise
+                        await asyncio.sleep(delay)
+                        delay *= backoff
+            finally:
+                _set_retry_context(args, False)
 
         def _gen_with_retry(*args, **kw) -> Iterable[Any]:
-            delay = base_delay
-            for attempt in range(retries):
-                call_args = copy.deepcopy(args) if use_deepcopy else args
-                call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
-                try:
-                    yield from fn(*call_args, **call_kwargs)
-                    return
-                except retry_on as exc:
-                    if (not _want_retry(exc, code_patterns=retry_codes, msg_substrings=retry_on_messages)
-                            or attempt == retries - 1):
-                        raise
-                    time.sleep(delay)
-                    delay *= backoff
+            # Skip retries if already in retry context
+            if _check_retry_context(args):
+                yield from fn(*args, **kw)
+                return
+
+            _set_retry_context(args, True)
+            try:
+                delay = base_delay
+                for attempt in range(retries):
+                    call_args = copy.deepcopy(args) if use_deepcopy else args
+                    call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
+                    try:
+                        yield from fn(*call_args, **call_kwargs)
+                        return
+                    except retry_on as exc:
+                        if (not _want_retry(exc, code_patterns=retry_codes, msg_substrings=retry_on_messages)
+                                or attempt == retries - 1):
+                            raise
+                        time.sleep(delay)
+                        delay *= backoff
+            finally:
+                _set_retry_context(args, False)
 
         def _sync_with_retry(*args, **kw) -> T:
-            delay = base_delay
-            for attempt in range(retries):
-                call_args = copy.deepcopy(args) if use_deepcopy else args
-                call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
-                try:
-                    return fn(*call_args, **call_kwargs)
-                except retry_on as exc:
-                    if (not _want_retry(exc, code_patterns=retry_codes, msg_substrings=retry_on_messages)
-                            or attempt == retries - 1):
-                        raise
-                    time.sleep(delay)
-                    delay *= backoff
+            # Skip retries if already in retry context
+            if _check_retry_context(args):
+                return fn(*args, **kw)
+
+            _set_retry_context(args, True)
+            try:
+                delay = base_delay
+                for attempt in range(retries):
+                    call_args = copy.deepcopy(args) if use_deepcopy else args
+                    call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
+                    try:
+                        return fn(*call_args, **call_kwargs)
+                    except retry_on as exc:
+                        if (not _want_retry(exc, code_patterns=retry_codes, msg_substrings=retry_on_messages)
+                                or attempt == retries - 1):
+                            raise
+                        time.sleep(delay)
+                        delay *= backoff
+            finally:
+                _set_retry_context(args, False)
 
         # Decide which wrapper to return
         if inspect.iscoroutinefunction(fn):
@@ -245,6 +304,7 @@ def patch_with_retry(
         retry_codes=retry_codes,
         retry_on_messages=retry_on_messages,
         deepcopy=deepcopy,
+        instance_context_aware=True,  # Prevent retry storms
     )
 
     # Choose attribute source: the *class* to avoid triggering __getattr__
