@@ -17,13 +17,18 @@
 import argparse
 import os
 import sys
+import typing
 import xml.etree.ElementTree as ET
 from datetime import date
 
 from slack_sdk import WebClient
 
 
-def parse_junit(junit_file: str) -> dict[str, int]:
+def get_testcase_name(testcase: ET.Element) -> str:
+    return f"{testcase.attrib.get('classname', 'Unknown')}::{testcase.attrib.get('name', 'Unknown')}"
+
+
+def parse_junit(junit_file: str) -> dict[str, typing.Any]:
     tree = ET.parse(junit_file)
     root = tree.getroot()
 
@@ -32,17 +37,34 @@ def parse_junit(junit_file: str) -> dict[str, int]:
     total_errors = 0
     total_skipped = 0
 
+    failed_tests = []
     for testsuite in root.findall('testsuite'):
         total_tests += int(testsuite.attrib.get('tests', 0))
-        total_failures += int(testsuite.attrib.get('failures', 0))
-        total_errors += int(testsuite.attrib.get('errors', 0))
+        num_failures = int(testsuite.attrib.get('failures', 0))
+        num_errors = int(testsuite.attrib.get('errors', 0))
+        total_failures += num_failures
+        total_errors += num_errors
         total_skipped += int(testsuite.attrib.get('skipped', 0))
+
+        if (num_failures + num_errors) > 0:
+            for testcase in testsuite.findall('testcase'):
+                failure = testcase.find('failure')
+                error = testcase.find('error')
+
+                for failed_test_tag in (failure, error):
+                    if failed_test_tag is not None:
+                        failed_info = {
+                            "test_name": get_testcase_name(testcase),
+                            "message": failed_test_tag.attrib.get('message', '').strip()
+                        }
+                        failed_tests.append(failed_info)
 
     return {
         "num_tests": total_tests,
         "num_failures": total_failures,
         "num_errors": total_errors,
-        "num_skipped": total_skipped
+        "num_skipped": total_skipped,
+        "failed_tests": failed_tests
     }
 
 
@@ -69,6 +91,54 @@ def add_text(text: str, blocks: list[dict], plain_text: list[str]) -> None:
     plain_text.append(text)
 
 
+def build_message(junit_data: dict[str, typing.Any],
+                  coverage_data: str) -> tuple[list[str], list[dict], list[str] | None, list[dict] | None]:
+    num_errors = junit_data['num_errors']
+    num_failures = junit_data['num_failures']
+
+    # We need to create both a plain text message and a formatted message with blocks, the plain text message is used
+    # for push notifications and accessibility purposes.
+    plain_text = []
+    blocks = []
+
+    summary_line = f"Nightly CI/CD Test Results for {date.today()}"
+    plain_text.append(summary_line + "\n")
+
+    num_errors_and_failures = num_errors + num_failures
+    if num_errors_and_failures > 0:
+        formatted_summary_line = f"@nat-core-devs :rotating_light: {summary_line}"
+    else:
+        formatted_summary_line = summary_line
+
+    blocks.append(text_to_block(formatted_summary_line))
+    test_results = "\n".join([
+        get_error_string(num_failures, "Failures"),
+        get_error_string(num_errors, "Errors"),
+        f"Skipped: {junit_data['num_skipped']}",
+        f"Total Tests: {junit_data['num_tests']}",
+        f"Coverage: {coverage_data}"
+    ])
+    add_text(test_results, blocks, plain_text)
+
+    failure_blocks = None
+    failure_text = None
+    if num_errors_and_failures > 0:
+        failure_blocks = []
+        failure_text = []
+        add_text(f"*Failed Tests ({num_errors_and_failures}):*", failure_blocks, failure_text)
+
+        failed_tests = junit_data['failed_tests']
+        for (i, failed_test) in enumerate(failed_tests):
+            test_name = failed_test['test_name']
+            message = failed_test['message']
+            add_text(f"`{test_name}`\n```\n{message}\n```", failure_blocks, failure_text)
+            if i < len(failed_tests) - 1:
+                failure_text.append("---\n")
+                failure_blocks.append({"type": "divider"})
+
+    return plain_text, blocks, failure_text, failure_blocks
+
+
 def main():
     parser = argparse.ArgumentParser(description='Report test status to slack channel')
     parser.add_argument('junit_file', type=str, help='JUnit XML file to parse')
@@ -85,36 +155,18 @@ def main():
     junit_data = parse_junit(args.junit_file)
     coverage_data = parse_coverage(args.coverage_file)
 
-    num_errors = junit_data['num_errors']
-    num_failures = junit_data['num_failures']
-
-    # We need to create both a plain text message and a formatted message with blocks, the plain text message is used
-    # for push notifications and accessibility purposes.
-    plain_text = []
-    blocks = []
-
-    summary_line = f"Nightly CI/CD Test Results for {date.today()}"
-    plain_text.append(summary_line + "\n")
-
-    link_names = False
-    if (num_errors + num_failures) > 0:
-        link_names = True
-        formatted_summary_line = f"@nat-core-devs :rotating_light: {summary_line}"
-    else:
-        formatted_summary_line = summary_line
-
-    blocks.append(text_to_block(formatted_summary_line))
-    test_results = "\n".join([
-        get_error_string(num_failures, "Failures"),
-        get_error_string(num_errors, "Errors"),
-        f"Skipped: {junit_data['num_skipped']}",
-        f"Total Tests: {junit_data['num_tests']}",
-        f"Coverage: {coverage_data}"
-    ])
-    add_text(test_results, blocks, plain_text)
+    (plain_text, blocks, failure_text, failure_blocks) = build_message(junit_data, coverage_data)
 
     client = WebClient(token=slack_token)
-    client.chat_postMessage(channel=slack_channel, text="\n".join(plain_text), blocks=blocks, link_names=link_names)
+    response = client.chat_postMessage(channel=slack_channel,
+                                       text="\n".join(plain_text),
+                                       blocks=blocks,
+                                       link_names=failure_text is not None)
+    if failure_text is not None:
+        client.chat_postMessage(channel=slack_channel,
+                                text="\n".join(failure_text),
+                                blocks=failure_blocks,
+                                thread_ts=response["ts"])
 
     return 0
 
