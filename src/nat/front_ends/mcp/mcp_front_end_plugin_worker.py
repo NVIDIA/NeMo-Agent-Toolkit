@@ -16,6 +16,7 @@
 import logging
 from abc import ABC
 from abc import abstractmethod
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 from starlette.requests import Request
@@ -102,6 +103,129 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
         return functions
 
+    def _setup_debug_endpoints(self, mcp: FastMCP, functions: dict[str, Function]):
+        """Set up HTTP debug endpoints for introspecting tools and schemas.
+
+        Exposes:
+          - GET /debug/tools/list: List tools. Optional query param `name` returns details for a single tool.
+        """
+
+        @mcp.custom_route("/debug/tools/list", methods=["GET"])
+        async def list_tools(request: Request):
+            """HTTP list tools endpoint."""
+
+            from starlette.responses import JSONResponse
+
+            from nat.front_ends.mcp.tool_converter import get_function_description
+
+            # Query params
+            # Support repeated names and comma-separated lists
+            names_param_list = request.query_params.getlist("name")
+            names: list[str] = []
+            for raw in names_param_list:
+                # if p.strip() is empty, it won't be included in the list!
+                parts = [p.strip() for p in raw.split(",") if p.strip()]
+                names.extend(parts)
+            detail_raw = request.query_params.get("detail")
+
+            def _parse_bool(value: str | None) -> bool | None:
+                if value is None:
+                    return None
+                v = value.strip().lower()
+                if v in ("1", "true", "yes", "on"):
+                    return True
+                if v in ("0", "false", "no", "off"):
+                    return False
+                return None
+
+            # Helper to build schema info
+            def build_schema_info(fn: Function):
+                schema = getattr(fn, "input_schema", None)
+                is_chat_request = False
+                if schema is not None:
+                    schema_name_part = getattr(schema, "__name__", None)
+                    qual_name_part = getattr(schema, "__qualname__", "")
+                    schema_name = schema_name_part or qual_name_part
+                    if schema_name and "ChatRequest" in str(schema_name):
+                        is_chat_request = True
+
+                if is_chat_request:
+                    # Simplified interface used by MCP wrapper for ChatRequest
+                    return {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string", "description": "User query string"
+                            }
+                        },
+                        "required": ["query"],
+                        "title": "ChatRequestQuery",
+                    }
+
+                # Pydantic models provide model_json_schema
+                if schema is not None and hasattr(schema, "model_json_schema"):
+                    return schema.model_json_schema()
+
+                return None
+
+            if names:
+                # Return selected tools
+                missing = [n for n in names if n not in functions]
+                if missing:
+                    return JSONResponse(
+                        {
+                            "error": f"Tool(s) not found: {', '.join(missing)}",
+                            "available_tools": list(functions.keys())
+                        },
+                        status_code=404)
+
+                detail_selected = _parse_bool(detail_raw)
+                include_schema = True if detail_selected is None else detail_selected
+
+                selected_tools: list[dict[str, Any]] = []
+                for n in names:
+                    fn = functions[n]
+                    selected_entry: dict[str, Any] = {
+                        "name": n,
+                        "description": get_function_description(fn),
+                        "is_workflow": hasattr(fn, "run"),
+                    }
+                    if include_schema:
+                        selected_entry["schema"] = build_schema_info(fn)
+                    selected_tools.append(selected_entry)
+
+                # Backward compatible: if exactly one name, return single object
+                if len(selected_tools) == 1:
+                    single = selected_tools[0]
+                    single["server_name"] = mcp.name
+                    return JSONResponse(single)
+
+                return JSONResponse({
+                    "count": len(selected_tools),
+                    "tools": selected_tools,
+                    "server_name": mcp.name,
+                })
+
+            tools: list[dict[str, Any]] = []
+            detail_many = _parse_bool(detail_raw)
+            # Default for listing all: detail defaults to False unless explicitly set true
+            include_schemas = True if detail_many is True else False
+            for name, fn in functions.items():
+                list_entry: dict[str, Any] = {
+                    "name": name,
+                    "description": get_function_description(fn),
+                }
+                if include_schemas:
+                    list_entry["schema"] = build_schema_info(fn)
+                    list_entry["is_workflow"] = hasattr(fn, "run")
+                tools.append(list_entry)
+
+            return JSONResponse({
+                "count": len(tools),
+                "tools": tools,
+                "server_name": mcp.name,
+            })
+
 
 class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
     """Default MCP front end plugin worker implementation."""
@@ -142,3 +266,6 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
         # Add a simple fallback function if no functions were found
         if not functions:
             raise RuntimeError("No functions found in workflow. Please check your configuration.")
+
+        # After registration, expose debug endpoints for tool/schema inspection
+        self._setup_debug_endpoints(mcp, functions)
