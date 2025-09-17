@@ -194,8 +194,6 @@ class DynamicClientRegistration:
         return f"{p.scheme}://{p.netloc}"
 
     async def register(self, endpoints: OAuth2Endpoints, scopes: list[str] | None) -> OAuth2Credentials:
-        if not self.config.redirect_uri:
-            raise RuntimeError("redirect_uri must be set for dynamic client registration")
 
         # Fallback to /register if metadata didn't provide an endpoint
         registration_url = (str(endpoints.registration_url) if endpoints.registration_url else urljoin(
@@ -255,7 +253,39 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         self._state_lock = asyncio.Lock()
 
-    async def _safe_discover_and_register(self, auth_request: AuthRequest):
+    async def authenticate(self, user_id: str | None = None, auth_request: AuthRequest | None = None) -> AuthResult:
+        """
+        Authenticate using MCP OAuth2 flow via NAT framework.
+        1. Dynamic endpoints discovery (RFC9728 + RFC 8414 + OIDC)
+        2. Client registration (RFC7591)
+        3. Use NAT's standard OAuth2 flow (OAuth2AuthCodeFlowProvider)
+        """
+        if not auth_request:
+            raise RuntimeError("Auth request is required")
+
+        if auth_request.reason != AuthReason.RETRY_AFTER_401:
+            # auth provider is expected to be setup via 401, till that time we return empty auth result
+            if not self._auth_code_provider:
+                return AuthResult(credentials=[], token_expires_at=None, raw={})
+
+        await self._discover_and_register(auth_request)
+        # Use NAT's standard OAuth2 flow
+        if auth_request.reason == AuthReason.RETRY_AFTER_401:
+            # force fresh delegate (clears in-mem token cache)
+            self._auth_code_provider = None
+            # preserve other fields, just normalize reason & inject user_id
+            auth_request = auth_request.model_copy(update={
+                "reason": AuthReason.NORMAL, "user_id": user_id, "www_authenticate": None
+            })
+        else:
+            # back-compat: propagate user_id if provided but not set in the request
+            if user_id is not None and auth_request.user_id is None:
+                auth_request = auth_request.model_copy(update={"user_id": user_id})
+
+        # Perform the OAuth2 flow without lock
+        return await self._perform_oauth2_flow(auth_request=auth_request)
+
+    async def _discover_and_register(self, auth_request: AuthRequest):
         async with self._state_lock:
             # Discover OAuth2 endpoints
             self._cached_endpoints, endpoints_changed = await self._discoverer.discover(reason=auth_request.reason,
@@ -275,44 +305,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                     )
                     logger.info("Using manual client_id: %s", self._cached_credentials.client_id)
                 else:
-                    if not self.config.enable_dynamic_registration:
-                        raise RuntimeError(
-                            "Dynamic registration is not enabled and no client_id/client_secret were provided")
                     # Dynamic registration mode requires registration endpoint
                     self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
                     logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
-
-    async def authenticate(self, user_id: str | None = None, auth_request: AuthRequest | None = None) -> AuthResult:
-        """
-        Authenticate using MCP OAuth2 flow via NAT framework.
-        1. Dynamic endpoints discovery (RFC9728 + RFC 8414 + OIDC)
-        2. Client registration (RFC7591)
-        3. Use NAT's standard OAuth2 flow (OAuth2AuthCodeFlowProvider)
-        """
-        if not auth_request:
-            raise RuntimeError("Auth request is required")
-
-        if auth_request.reason != AuthReason.RETRY_AFTER_401:
-            # auth provider is expected to be setup via 401, till that time we return empty auth result
-            if not self._auth_code_provider:
-                return AuthResult(credentials=[], token_expires_at=None, raw={})
-
-        await self._safe_discover_and_register(auth_request)
-        # Use NAT's standard OAuth2 flow
-        if auth_request.reason == AuthReason.RETRY_AFTER_401:
-            # force fresh delegate (clears in-mem token cache)
-            self._auth_code_provider = None
-            # preserve other fields, just normalize reason & inject user_id
-            auth_request = auth_request.model_copy(update={
-                "reason": AuthReason.NORMAL, "user_id": user_id, "www_authenticate": None
-            })
-        else:
-            # back-compat: propagate user_id if provided but not set in the request
-            if user_id is not None and auth_request.user_id is None:
-                auth_request = auth_request.model_copy(update={"user_id": user_id})
-
-        # Perform the OAuth2 flow without lock
-        return await self._perform_oauth2_flow(auth_request=auth_request)
 
     def _effective_scopes(self) -> list[str] | None:
         """
@@ -320,16 +315,15 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         """
         return self.config.scopes or self._discoverer.scopes_supported()
 
-    async def _safe_build_oauth2_delegate(self, auth_request: AuthRequest | None = None):
+    async def _build_oauth2_delegate(self):
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 
-        async with self._state_lock:
-            endpoints = self._cached_endpoints
-            credentials = self._cached_credentials
+        endpoints = self._cached_endpoints
+        credentials = self._cached_credentials
 
-            if self._auth_code_provider is None:
-                oauth2_config = OAuth2AuthCodeFlowProviderConfig(
+        if self._auth_code_provider is None:
+            oauth2_config = OAuth2AuthCodeFlowProviderConfig(
                     client_id=credentials.client_id,
                     client_secret=credentials.client_secret or "",
                     authorization_url=str(endpoints.authorization_url),
@@ -338,9 +332,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                     redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
                     scopes=self._effective_scopes() or [],
                     use_pkce=bool(self.config.use_pkce),
-                )
+            )
 
-                self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
+            self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
 
     async def _perform_oauth2_flow(self, auth_request: AuthRequest | None = None) -> AuthResult:
         # This helper is only for non-401 flows
@@ -350,12 +344,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         if not self._cached_endpoints or not self._cached_credentials:
             raise RuntimeError("OAuth2 flow called before discovery/registration")
 
-        # Build a key so we only (re)create the delegate when material config changes
-        if not self.config.redirect_uri:
-            raise RuntimeError("Redirect URI is not set")
-
-        # (Re)build the delegate if needed (this needs to be done with the lock)
-        await self._safe_build_oauth2_delegate(auth_request)
-
+        # (Re)build the delegate if needed
+        await self._build_oauth2_delegate()
         # Let the delegate handle per-user cache + refresh
-        return await self._auth_code_provider.authenticate(user_id=None, auth_request=None)
+        return await self._auth_code_provider.authenticate()
