@@ -62,7 +62,7 @@ class SummarizationWorkflow:
         all_content = "\n\n---\n\n".join(state["contents"])
         prompt = self.direct_summary_prompt.invoke({"documents": all_content})
         response = await self.llm.ainvoke(prompt)
-        return {"final_summary": response.content}
+        return {"final_summary": response.text()}
 
     def create_batches(self, state: OverallState) -> dict[str, Any]:
         total_tokens = self.get_num_tokens_for_strings(state["contents"])
@@ -79,7 +79,7 @@ class SummarizationWorkflow:
         combined_content = "\n\n---\n\n".join(state["batch"])
         prompt = self.map_prompt.invoke({"documents": combined_content})
         response = await self.llm.ainvoke(prompt)
-        return {"summaries": [response.content]}
+        return {"summaries": [response.text()]}
 
     def collect_batch_summaries(self, state: OverallState) -> dict[str, Any]:
         return {"collapsed_summaries": [Document(summary) for summary in state["summaries"]]}
@@ -87,7 +87,7 @@ class SummarizationWorkflow:
     async def _reduce_step(self, input_prompt: dict) -> str:
         prompt = self.reduce_prompt.invoke(input_prompt)
         response = await self.llm.ainvoke(prompt)
-        return response.content
+        return response.text()
 
     async def merge_local_summaries(self, state: OverallState) -> dict[str, Any]:
         doc_contents = [doc.page_content for doc in state["collapsed_summaries"]]

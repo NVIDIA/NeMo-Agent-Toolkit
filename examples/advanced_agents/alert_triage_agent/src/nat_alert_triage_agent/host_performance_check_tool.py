@@ -84,7 +84,7 @@ async def _run_ansible_playbook_for_host_performance_check(config: HostPerforman
     return extracted_tasks
 
 
-async def _parse_stdout_lines(config, builder, stdout_lines):
+async def _parse_stdout_lines(config, builder, stdout_lines) -> str:
     """
     Parses the stdout_lines output using nvda_nim to extract structured JSON data.
 

@@ -63,7 +63,10 @@ async def register_chat_completion(config: ChatCompletionConfig, builder: Builde
             # Generate response using the LLM
             response = await llm.ainvoke(prompt)
 
-            return response
+            if isinstance(response, str):
+                return response
+
+            return response.text()
 
         except Exception as e:
             # Fallback response if LLM call fails
