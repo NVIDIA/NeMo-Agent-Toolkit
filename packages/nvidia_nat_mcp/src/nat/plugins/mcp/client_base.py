@@ -105,7 +105,9 @@ class AuthAdapter(httpx.Auth):
             www_authenticate=www_authenticate,
         )
         try:
-            auth_result = await self.auth_provider.authenticate(auth_request=auth_request)
+            # We may need to lock here to ensure the auth request is not changed while we are authenticating
+            self.auth_provider.config.auth_request = auth_request
+            auth_result = await self.auth_provider.authenticate()
             # Check if we have BearerTokenCred
             from nat.data_models.authentication import BearerTokenCred
             if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):

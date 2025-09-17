@@ -56,16 +56,13 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
         return self._config
 
     @abstractmethod
-    async def authenticate(self, user_id: str | None = None, auth_request: AuthRequest | None = None) -> AuthResult:
+    async def authenticate(self, user_id: str | None = None) -> AuthResult:
         """
         Perform the authentication process for the client.
 
         This method handles the necessary steps to authenticate the client with the
         target API service, which may include obtaining tokens, refreshing credentials,
         or completing multi-step authentication flows.
-
-        user_id: The user ID to authenticate. This is optional and only available for backwards compatibility.
-        auth_request: The authentication request includes all the information needed to authenticate the client.
 
         Raises:
             NotImplementedError: Must be implemented by subclasses.

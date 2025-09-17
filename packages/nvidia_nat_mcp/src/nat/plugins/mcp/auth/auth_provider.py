@@ -251,17 +251,17 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         # For the OAuth2 flow
         self._auth_code_provider = None
 
-        self._state_lock = asyncio.Lock()
 
-    async def authenticate(self, user_id: str | None = None, auth_request: AuthRequest | None = None) -> AuthResult:
+    async def authenticate(self, user_id: str | None = None) -> AuthResult:
         """
         Authenticate using MCP OAuth2 flow via NAT framework.
         1. Dynamic endpoints discovery (RFC9728 + RFC 8414 + OIDC)
         2. Client registration (RFC7591)
         3. Use NAT's standard OAuth2 flow (OAuth2AuthCodeFlowProvider)
         """
+        auth_request = self.config.auth_request
         if not auth_request:
-            raise RuntimeError("Auth request is required")
+            auth_request = AuthRequest(reason=AuthReason.NORMAL)
 
         if auth_request.reason != AuthReason.RETRY_AFTER_401:
             # auth provider is expected to be setup via 401, till that time we return empty auth result
@@ -285,28 +285,27 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         return await self._perform_oauth2_flow(auth_request=auth_request)
 
     async def _discover_and_register(self, auth_request: AuthRequest):
-        async with self._state_lock:
-            # Discover OAuth2 endpoints
-            self._cached_endpoints, endpoints_changed = await self._discoverer.discover(reason=auth_request.reason,
-                                                                                        www_authenticate=auth_request.www_authenticate)
-            if endpoints_changed:
-                logger.info("OAuth2 endpoints: %s", self._cached_endpoints)
-                self._cached_credentials = None  # invalidate credentials tied to old AS
-            effective_scopes = self._effective_scopes()
+        # Discover OAuth2 endpoints
+        self._cached_endpoints, endpoints_changed = await self._discoverer.discover(reason=auth_request.reason,
+                                                                                    www_authenticate=auth_request.www_authenticate)
+        if endpoints_changed:
+            logger.info("OAuth2 endpoints: %s", self._cached_endpoints)
+            self._cached_credentials = None  # invalidate credentials tied to old AS
+        effective_scopes = self._effective_scopes()
 
-            # Client registration
-            if not self._cached_credentials:
-                if self.config.client_id:
-                    # Manual registration mode
-                    self._cached_credentials = OAuth2Credentials(
-                        client_id=self.config.client_id,
-                        client_secret=self.config.client_secret,
-                    )
-                    logger.info("Using manual client_id: %s", self._cached_credentials.client_id)
-                else:
-                    # Dynamic registration mode requires registration endpoint
-                    self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
-                    logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
+        # Client registration
+        if not self._cached_credentials:
+            if self.config.client_id:
+                # Manual registration mode
+                self._cached_credentials = OAuth2Credentials(
+                    client_id=self.config.client_id,
+                    client_secret=self.config.client_secret,
+                )
+                logger.info("Using manual client_id: %s", self._cached_credentials.client_id)
+            else:
+                # Dynamic registration mode requires registration endpoint
+                self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
+                logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
 
     def _effective_scopes(self) -> list[str] | None:
         """

@@ -245,6 +245,5 @@ class AuthRequest(BaseModel):
     """
     model_config = ConfigDict(extra="forbid")
 
-    user_id: str | None = Field(default=None, description="User identity for per-user token cache.")
     reason: AuthReason = Field(default=AuthReason.NORMAL, description="Purpose of this auth attempt.")
     www_authenticate: str | None = Field(default=None, description="Raw WWW-Authenticate header from a 401 response.")
