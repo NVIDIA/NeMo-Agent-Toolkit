@@ -120,7 +120,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
             # Query params
             # Support repeated names and comma-separated lists
-            names_param_list = request.query_params.getlist("name")
+            names_param_list = set(request.query_params.getlist("name"))
             names: list[str] = []
             for raw in names_param_list:
                 # if p.strip() is empty, it won't be included in the list!
@@ -138,18 +138,15 @@ class MCPFrontEndPluginWorkerBase(ABC):
                     return False
                 return None
 
-            # Helper to build schema info
+            # Helper function to build the input schema info
             def build_schema_info(fn: Function):
                 schema = getattr(fn, "input_schema", None)
-                is_chat_request = False
-                if schema is not None:
-                    schema_name_part = getattr(schema, "__name__", None)
-                    qual_name_part = getattr(schema, "__qualname__", "")
-                    schema_name = schema_name_part or qual_name_part
-                    if schema_name and "ChatRequest" in str(schema_name):
-                        is_chat_request = True
+                if schema is None:
+                    return None
 
-                if is_chat_request:
+                # check if schema is a ChatRequest
+                if schema.__name__ == "ChatRequest" or (hasattr(schema, "__qualname__")
+                                                        and "ChatRequest" in schema.__qualname__):
                     # Simplified interface used by MCP wrapper for ChatRequest
                     return {
                         "type": "object",
@@ -212,12 +209,10 @@ class MCPFrontEndPluginWorkerBase(ABC):
             include_schemas = True if detail_many is True else False
             for name, fn in functions.items():
                 list_entry: dict[str, Any] = {
-                    "name": name,
-                    "description": get_function_description(fn),
+                    "name": name, "description": get_function_description(fn), "is_workflow": hasattr(fn, "run")
                 }
                 if include_schemas:
                     list_entry["schema"] = build_schema_info(fn)
-                    list_entry["is_workflow"] = hasattr(fn, "run")
                 tools.append(list_entry)
 
             return JSONResponse({
