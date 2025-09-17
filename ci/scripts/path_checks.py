@@ -104,6 +104,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "conversation/chat",
     "create/reinstall/delete",
     "copy/paste",
+    "delete/recreate",
     "edit/score",
     "file/console",
     "files/functions",

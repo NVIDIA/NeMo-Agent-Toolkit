@@ -22,6 +22,7 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
@@ -35,8 +36,8 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
     input parameters to select the optimal tool.  Supports handling tool errors.
     """
 
-    tool_names: list[FunctionRef] = Field(default_factory=list,
-                                          description="The list of tools to provide to the tool calling agent.")
+    tool_names: list[FunctionRef | FunctionGroupRef] = Field(
+        default_factory=list, description="The list of tools to provide to the tool calling agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the tool calling agent.")
     verbose: bool = Field(default=False, description="Set the verbosity of the tool calling agent's logging.")
     handle_tool_errors: bool = Field(default=True, description="Specify ability to handle tool calling errors.")

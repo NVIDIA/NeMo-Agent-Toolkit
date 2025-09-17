@@ -1,0 +1,69 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+functions:
+  current_datetime_local:
+    _type: current_datetime
+  mcp_protected_math:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      auth_provider: static_oauth2
+      url: "http://localhost:9901/mcp"
+    tool_filter:
+      # skip react_agent and datetime tools from the math MCP server
+      - calculator_multiply
+      - calculator_inequality
+      - calculator_divide
+      - calculator_subtract
+
+authentication:
+  static_oauth2:
+    _type: oauth2_auth_code_flow
+    redirect_uri: http://localhost:8000/auth/redirect
+    authorization_url: http://localhost:5001/oauth/authorize
+    token_url: http://localhost:5001/oauth/token
+    token_endpoint_auth_method: client_secret_post
+    client_id: ${MCP_CLIENT_ID}
+    client_secret: ${MCP_CLIENT_SECRET}
+    scopes:
+      - openid
+      - profile
+      - email
+    use_pkce: false
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+  openai_llm:
+    _type: openai
+    model_name: gpt-3.5-turbo
+    max_tokens: 2000
+
+workflow:
+  _type: react_agent
+  tool_names:
+    - calculator_multiply
+    - calculator_inequality
+    - calculator_divide
+    - calculator_subtract
+    - current_datetime_local
+  llm_name: nim_llm
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3

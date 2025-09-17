@@ -94,8 +94,9 @@ class MCPFrontEndPluginWorkerBase(ABC):
         functions: dict[str, Function] = {}
 
         # Extract all functions from the workflow
-        for function_name, function in workflow.functions.items():
-            functions[function_name] = function
+        functions.update(workflow.functions)
+        for function_group in workflow.function_groups.values():
+            functions.update(function_group.get_accessible_functions())
 
         functions[workflow.config.workflow.type] = workflow
 

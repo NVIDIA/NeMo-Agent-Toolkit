@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import re
 import typing
 from abc import ABC
 from abc import abstractmethod
@@ -29,7 +30,9 @@ from nat.builder.function_base import InputT
 from nat.builder.function_base import SingleOutputT
 from nat.builder.function_base import StreamingOutputT
 from nat.builder.function_info import FunctionInfo
+from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 
 _InvokeFnT = Callable[[InputT], Awaitable[SingleOutputT]]
 _StreamFnT = Callable[[InputT], AsyncGenerator[StreamingOutputT]]
@@ -342,3 +345,167 @@ class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
             pass
 
         return FunctionImpl(config=config, info=info, instance_name=instance_name)
+
+
+class FunctionGroup:
+    """
+    A group of functions that can be used together, sharing the same configuration, context, and resources.
+    """
+
+    def __init__(self, *, config: FunctionGroupBaseConfig, instance_name: str | None = None):
+        """
+        Creates a new function group.
+
+        Parameters
+        ----------
+        config : FunctionGroupBaseConfig
+            The configuration for the function group.
+        instance_name : str | None, optional
+            The name of the function group. If not provided, the type of the function group will be used.
+        """
+        self._config = config
+        self._instance_name = instance_name or config.type
+        self._functions: dict[str, Function] = {}
+
+    def add_function(self,
+                     name: str,
+                     fn: Callable,
+                     *,
+                     input_schema: type[BaseModel] | None = None,
+                     description: str | None = None,
+                     converters: list[Callable] | None = None):
+        """
+        Adds a function to the function group.
+
+        Parameters
+        ----------
+        name : str
+            The name of the function.
+        fn : Callable
+            The function to add to the function group.
+        input_schema : type[BaseModel] | None, optional
+            The input schema for the function.
+        description : str | None, optional
+            The description of the function.
+        converters : list[Callable] | None, optional
+            The converters to use for the function.
+
+        Raises
+        ------
+        ValueError
+            When the function name is empty or blank.
+            When the function name contains invalid characters.
+            When the function already exists in the function group.
+        """
+        if not name.strip():
+            raise ValueError("Function name cannot be empty or blank")
+        if not re.match(r"^[a-zA-Z0-9_-]+$", name):
+            raise ValueError(f"Function name can only contain letters, numbers, underscores, and hyphens: {name}")
+        if name in self._functions:
+            raise ValueError(f"Function {name} already exists in function group {self._instance_name}")
+
+        info = FunctionInfo.from_fn(fn, input_schema=input_schema, description=description, converters=converters)
+        full_name = self._get_fn_name(name)
+        lambda_fn = LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name=full_name)
+        self._functions[name] = lambda_fn
+
+    def get_config(self) -> FunctionGroupBaseConfig:
+        """
+        Returns the configuration for the function group.
+
+        Returns
+        -------
+        FunctionGroupBaseConfig
+            The configuration for the function group.
+        """
+        return self._config
+
+    def _get_fn_name(self, name: str) -> str:
+        return f"{self._instance_name}.{name}"
+
+    def _get_all_but_excluded_functions(self) -> dict[str, Function]:
+        """
+        Returns a dictionary of all functions in the function group except the excluded functions.
+        """
+        missing = set(self._config.exclude) - set(self._functions.keys())
+        if missing:
+            raise ValueError(f"Unknown excluded functions: {sorted(missing)}")
+        excluded = set(self._config.exclude)
+        return {self._get_fn_name(name): self._functions[name] for name in self._functions if name not in excluded}
+
+    def get_accessible_functions(self) -> dict[str, Function]:
+        """
+        Returns a dictionary of all accessible functions in the function group.
+        If the function group is configured to:
+        - include some functions, this will return only the included functions.
+        - not include or exclude any function, this will return all functions in the group.
+        - exclude some functions, this will return all functions in the group except the excluded functions.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all accessible functions in the function group.
+
+        Raises
+        ------
+        ValueError
+            When the function group is configured to include functions that are not found in the group.
+        """
+        if self._config.include:
+            return self.get_included_functions()
+        if self._config.exclude:
+            return self._get_all_but_excluded_functions()
+        return self.get_all_functions()
+
+    def get_excluded_functions(self) -> dict[str, Function]:
+        """
+        Returns a dictionary of all functions in the function group which are configured to be excluded.
+        If the function group is configured to not exclude any functions, this will return an empty dictionary.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all excluded functions in the function group.
+
+        Raises
+        ------
+        ValueError
+            When the function group is configured to exclude functions that are not found in the group.
+        """
+        missing = set(self._config.exclude) - set(self._functions.keys())
+        if missing:
+            raise ValueError(f"Unknown excluded functions: {sorted(missing)}")
+        return {self._get_fn_name(name): self._functions[name] for name in self._config.exclude}
+
+    def get_included_functions(self) -> dict[str, Function]:
+        """
+        Returns a dictionary of all functions in the function group which are:
+        - configured to be included and added to the global function registry
+        - not configured to be excluded.
+        If the function group is configured to not include any functions, this will return an empty dictionary.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all included functions in the function group.
+
+        Raises
+        ------
+        ValueError
+            When the function group is configured to include functions that are not found in the group.
+        """
+        missing = set(self._config.include) - set(self._functions.keys())
+        if missing:
+            raise ValueError(f"Unknown included functions: {sorted(missing)}")
+        return {self._get_fn_name(name): self._functions[name] for name in self._config.include}
+
+    def get_all_functions(self) -> dict[str, Function]:
+        """
+        Returns a dictionary of all functions in the function group, regardless if they are included or excluded.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all functions in the function group.
+        """
+        return {self._get_fn_name(name): self._functions[name] for name in self._functions}
