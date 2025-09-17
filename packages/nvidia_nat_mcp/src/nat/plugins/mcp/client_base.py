@@ -64,7 +64,7 @@ class AuthAdapter(httpx.Auth):
             auth_headers = await self._get_auth_headers(reason=AuthReason.NORMAL)
             request.headers.update(auth_headers)
         except Exception as e:
-            logger.warning("Failed to get auth headers: %s", e)
+            logger.info("Failed to get auth headers: %s", e)
             # Continue without auth headers if auth fails
 
         response = yield request
@@ -75,11 +75,10 @@ class AuthAdapter(httpx.Auth):
                 # Get fresh auth headers with 401 context
                 auth_headers = await self._get_auth_headers(reason=AuthReason.RETRY_AFTER_401, response=response)
                 request.headers.update(auth_headers)
-                response = yield request  # Retry the request
+                yield request  # Retry the request
             except Exception as e:
-                logger.warning("Failed to refresh auth after 401: %s", e)
-
-        yield response
+                logger.info("Failed to refresh auth after 401: %s", e)
+        return
 
     def _is_tool_call_request(self, request: httpx.Request) -> bool:
         """Check if this is a tool call request based on the request body."""
