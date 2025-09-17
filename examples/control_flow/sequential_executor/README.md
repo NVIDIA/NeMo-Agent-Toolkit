@@ -139,7 +139,7 @@ nat run --config_file=examples/control_flow/sequential_executor/configs/config.y
 
 ```console
 nemo-agent-toolkit % nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "The quick brown fox jumps over the lazy dog. This is a simple test sentence to demonstrate text processing capabilities."
-None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file / data utilities can be used.
 2025-09-17 15:34:57,004 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/control_flow/sequential_executor/configs/config.yml'
 
 Configuration Summary:

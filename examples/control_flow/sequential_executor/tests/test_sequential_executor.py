@@ -48,7 +48,9 @@ async def test_full_workflow():
         },
         {
             "input_text":
-                "Natural language processing is a fascinating field that combines computational linguistics with machine learning and artificial intelligence. It enables computers to understand, interpret, and generate human language in a valuable way.",
+                "Natural language processing is a fascinating field that combines computational linguistics with "
+                "machine learning and artificial intelligence. It enables computers to understand, interpret, "
+                "and generate human language in a valuable way.",
             "expected_elements": ["text analysis report", "word count", "sentence count", "complexity", "top words"]
         },
         {
