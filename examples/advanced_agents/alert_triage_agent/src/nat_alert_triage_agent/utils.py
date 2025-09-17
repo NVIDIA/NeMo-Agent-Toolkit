@@ -53,7 +53,7 @@ async def _get_llm(builder, llm_name, wrapper_type):
     return _LLM_CACHE[cache_key]
 
 
-async def llm_ainvoke(config, builder, user_prompt, system_prompt=None):
+async def llm_ainvoke(config, builder, user_prompt, system_prompt=None) -> str:
     """
     A helper function to invoke an LLM with a system prompt and user prompt.
     Uses a cached LLM instance if one exists for the given name and wrapper type.
@@ -69,7 +69,7 @@ async def llm_ainvoke(config, builder, user_prompt, system_prompt=None):
         prompt = ChatPromptTemplate([MessagesPlaceholder("msgs")])
     chain = prompt | llm
     result = await chain.ainvoke({"msgs": [HumanMessage(content=user_prompt)]})
-    return result.content
+    return result.text()
 
 
 def log_header(log_str: str, dash_length: int = 100, level: int = logging.DEBUG):

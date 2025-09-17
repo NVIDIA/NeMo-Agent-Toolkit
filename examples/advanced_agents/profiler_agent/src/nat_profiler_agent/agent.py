@@ -132,11 +132,11 @@ class ProfilerAgent:
                 logger.debug("The agent's output is:\n%s", response)
             # parse the response to get the exec_plan
             try:
-                exec_plan = self.output_parser.parse(response.content)
+                exec_plan = self.output_parser.parse(response.text())
                 logger.info("Agent planned the execution: %s", exec_plan)
                 state["exec_plan"] = exec_plan
             except Exception as ex:
-                logger.warning("Failed to parse the agent's output: %s", response.content)
+                logger.warning("Failed to parse the agent's output: %s", response.text())
                 state.setdefault("retry_count", 0)
                 message = self.retry_prompt.format(error=ex, output_parser=self.output_parser.get_format_instructions())
                 state["messages"].append(HumanMessage(content=message))

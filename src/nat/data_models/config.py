@@ -30,6 +30,7 @@ from nat.data_models.evaluate import EvalConfig
 from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.logging import LoggingBaseConfig
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
@@ -59,9 +60,10 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
         error_type = e['type']
         if error_type == 'union_tag_invalid' and "ctx" in e and not logged_once:
             requested_type = e["ctx"]["tag"]
-
             if (info.field_name in ('workflow', 'functions')):
                 registered_keys = GlobalTypeRegistry.get().get_registered_functions()
+            elif (info.field_name == "function_groups"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_function_groups()
             elif (info.field_name == "authentication"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_auth_providers()
             elif (info.field_name == "llms"):
@@ -137,8 +139,8 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
 
 class TelemetryConfig(BaseModel):
 
-    logging: dict[str, LoggingBaseConfig] = {}
-    tracing: dict[str, TelemetryExporterBaseConfig] = {}
+    logging: dict[str, LoggingBaseConfig] = Field(default_factory=dict)
+    tracing: dict[str, TelemetryExporterBaseConfig] = Field(default_factory=dict)
 
     @field_validator("logging", "tracing", mode="wrap")
     @classmethod
@@ -246,34 +248,37 @@ class Config(HashableBaseModel):
     general: GeneralConfig = GeneralConfig()
 
     # Functions Configuration
-    functions: dict[str, FunctionBaseConfig] = {}
+    functions: dict[str, FunctionBaseConfig] = Field(default_factory=dict)
+
+    # Function Groups Configuration
+    function_groups: dict[str, FunctionGroupBaseConfig] = Field(default_factory=dict)
 
     # LLMs Configuration
-    llms: dict[str, LLMBaseConfig] = {}
+    llms: dict[str, LLMBaseConfig] = Field(default_factory=dict)
 
     # Embedders Configuration
-    embedders: dict[str, EmbedderBaseConfig] = {}
+    embedders: dict[str, EmbedderBaseConfig] = Field(default_factory=dict)
 
     # Memory Configuration
-    memory: dict[str, MemoryBaseConfig] = {}
+    memory: dict[str, MemoryBaseConfig] = Field(default_factory=dict)
 
     # Object Stores Configuration
-    object_stores: dict[str, ObjectStoreBaseConfig] = {}
+    object_stores: dict[str, ObjectStoreBaseConfig] = Field(default_factory=dict)
 
     # Optimizer Configuration
     optimizer: OptimizerConfig = OptimizerConfig()
 
     # Retriever Configuration
-    retrievers: dict[str, RetrieverBaseConfig] = {}
+    retrievers: dict[str, RetrieverBaseConfig] = Field(default_factory=dict)
 
     # TTC Strategies
-    ttc_strategies: dict[str, TTCStrategyBaseConfig] = {}
+    ttc_strategies: dict[str, TTCStrategyBaseConfig] = Field(default_factory=dict)
 
     # Workflow Configuration
     workflow: FunctionBaseConfig = EmptyFunctionConfig()
 
     # Authentication Configuration
-    authentication: dict[str, AuthProviderBaseConfig] = {}
+    authentication: dict[str, AuthProviderBaseConfig] = Field(default_factory=dict)
 
     # Evaluation Options
     eval: EvalConfig = EvalConfig()
@@ -287,6 +292,7 @@ class Config(HashableBaseModel):
             stream.write(f"Workflow Type: {self.workflow.type}\n")
 
         stream.write(f"Number of Functions: {len(self.functions)}\n")
+        stream.write(f"Number of Function Groups: {len(self.function_groups)}\n")
         stream.write(f"Number of LLMs: {len(self.llms)}\n")
         stream.write(f"Number of Embedders: {len(self.embedders)}\n")
         stream.write(f"Number of Memory: {len(self.memory)}\n")
@@ -296,6 +302,7 @@ class Config(HashableBaseModel):
         stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n")
 
     @field_validator("functions",
+                     "function_groups",
                      "llms",
                      "embedders",
                      "memory",
@@ -337,6 +344,10 @@ class Config(HashableBaseModel):
                                    typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
 
+        FunctionGroupsAnnotation = dict[str,
+                                        typing.Annotated[type_registry.compute_annotation(FunctionGroupBaseConfig),
+                                                         Discriminator(TypedBaseModel.discriminator)]]
+
         MemoryAnnotation = dict[str,
                                 typing.Annotated[type_registry.compute_annotation(MemoryBaseConfig),
                                                  Discriminator(TypedBaseModel.discriminator)]]
@@ -352,7 +363,7 @@ class Config(HashableBaseModel):
                                      typing.Annotated[type_registry.compute_annotation(TTCStrategyBaseConfig),
                                                       Discriminator(TypedBaseModel.discriminator)]]
 
-        WorkflowAnnotation = typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
+        WorkflowAnnotation = typing.Annotated[(type_registry.compute_annotation(FunctionBaseConfig)),
                                               Discriminator(TypedBaseModel.discriminator)]
 
         should_rebuild = False
@@ -375,6 +386,11 @@ class Config(HashableBaseModel):
         functions_field = cls.model_fields.get("functions")
         if functions_field is not None and functions_field.annotation != FunctionsAnnotation:
             functions_field.annotation = FunctionsAnnotation
+            should_rebuild = True
+
+        function_groups_field = cls.model_fields.get("function_groups")
+        if function_groups_field is not None and function_groups_field.annotation != FunctionGroupsAnnotation:
+            function_groups_field.annotation = FunctionGroupsAnnotation
             should_rebuild = True
 
         memory_field = cls.model_fields.get("memory")
