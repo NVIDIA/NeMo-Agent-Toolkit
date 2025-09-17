@@ -23,25 +23,25 @@ This guide will cover how to use NeMo Agent toolkit as an MCP Server to publish 
 
 ## MCP Server Usage
 
-The `nat mcp` command can be used to start an MCP server that publishes the functions from your workflow as MCP tools.
+The `nat mcp serve` command can be used to start an MCP server that publishes the functions from your workflow as MCP tools.
 
 To start an MCP server publishing all tools from your workflow, run the following command:
 
 ```bash
-nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 
 This will load the workflow configuration from the specified file, start an MCP server on the default host (localhost) and port (9901), and publish all tools from the workflow as MCP tools. The MCP server is available at `http://localhost:9901/mcp` using streamable-http transport.
 
 You can also use the `sse` (Server-Sent Events) transport for backwards compatibility via the `--transport` flag for example:
 ```bash
-nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml --transport sse
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --transport sse
 ```
 With this configuration, the MCP server is available at `http://localhost:9901/sse` using SSE transport.
 
 You can optionally specify the server settings using the following flags:
 ```bash
-nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml \
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml \
   --host 0.0.0.0 \
   --port 9901 \
   --name "My MCP Server"
@@ -51,7 +51,7 @@ nat mcp --config_file examples/getting_started/simple_calculator/configs/config.
 You can specify a filter to only publish a subset of tools from the workflow.
 
 ```bash
-nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml \
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml \
   --tool_names calculator_multiply \
   --tool_names calculator_divide \
   --tool_names calculator_subtract \

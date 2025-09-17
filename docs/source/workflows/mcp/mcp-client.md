@@ -202,7 +202,7 @@ functions:
 To run the simple calculator workflow using remote MCP tools, follow these steps:
 1. Start the example remote MCP server.
 ```bash
-nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. This MCP server serves the calculator tools. See the [MCP Server](./mcp-server.md) documentation for more information.
 
