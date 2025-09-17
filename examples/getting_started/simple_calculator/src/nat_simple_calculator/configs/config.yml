@@ -39,8 +39,6 @@ llms:
 
 workflow:
   _type: react_agent
-  description: "This is a simple calculator agent that can perform basic arithmetic operations. When using as a MCP tool, this
-      MUST be the entry point agent that should be called before calling any other tools."
   tool_names:
     - calculator_multiply
     - calculator_inequality
