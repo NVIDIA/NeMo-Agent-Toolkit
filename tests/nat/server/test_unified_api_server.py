@@ -15,6 +15,7 @@
 
 import datetime
 import json
+import os
 import re
 
 import httpx
@@ -284,11 +285,13 @@ system_interaction_multiple_choice_dropdown_message = {
 }
 
 
-@pytest.fixture(scope="session", name="config")
-def server_config(file_path: str = "tests/nat/server/config.yml") -> BaseModel:
+@pytest.fixture(name="config")
+def server_config(restore_environ, file_path: str = "tests/nat/server/config.yml") -> BaseModel:
     data = None
     with open(file_path, "r", encoding="utf-8") as file:
         data = yaml.safe_load(file)
+
+    os.environ["NAT_CONFIG_FILE"] = file_path
     return Config(**data)
 
 

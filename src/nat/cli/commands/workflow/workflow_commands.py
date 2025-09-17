@@ -171,6 +171,9 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         workflow_dir (str): The directory to create the workflow package.
         description (str): Description to pre-popluate the workflow docstring.
     """
+    # Fail fast with Click's standard exit code (2) for bad params.
+    if not workflow_name or not workflow_name.strip():
+        raise click.BadParameter("Workflow name cannot be empty.")  # noqa: TRY003
     try:
         # Get the repository root
         try:
@@ -217,15 +220,13 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         else:
             install_cmd = ['pip', 'install', '-e', str(new_workflow_dir)]
 
-        config_source = configs_dir / 'config.yml'
-
         # List of templates and their destinations
         files_to_render = {
             'pyproject.toml.j2': new_workflow_dir / 'pyproject.toml',
             'register.py.j2': base_dir / 'register.py',
             'workflow.py.j2': base_dir / f'{workflow_name}_function.py',
             '__init__.py.j2': base_dir / '__init__.py',
-            'config.yml.j2': config_source,
+            'config.yml.j2': configs_dir / 'config.yml',
         }
 
         # Render templates
@@ -245,10 +246,6 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
             content = template.render(context)
             with open(output_path, 'w', encoding="utf-8") as f:
                 f.write(content)
-
-        # Create symlink for config.yml
-        config_link = new_workflow_dir / 'configs' / 'config.yml'
-        os.symlink(config_source, config_link)
 
         # Create symlinks for config and data directories
         config_dir_source = configs_dir

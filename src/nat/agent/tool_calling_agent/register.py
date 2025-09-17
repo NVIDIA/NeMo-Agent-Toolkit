@@ -47,6 +47,8 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
     system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
     additional_instructions: str | None = Field(default=None,
                                                 description="Additional instructions appended to the system prompt.")
+    return_direct: list[FunctionRef] | None = Field(
+        default=None, description="List of tool names that should return responses directly without LLM processing.")
 
 
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -68,13 +70,18 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
     if not tools:
         raise ValueError(f"No tools specified for Tool Calling Agent '{config.llm_name}'")
 
+    # convert return_direct FunctionRef objects to BaseTool objects
+    return_direct_tools = builder.get_tools(tool_names=config.return_direct,
+                                            wrapper_type=LLMFrameworkEnum.LANGCHAIN) if config.return_direct else None
+
     # construct the Tool Calling Agent Graph from the configured llm, and tools
     graph: CompiledStateGraph = await ToolCallAgentGraph(llm=llm,
                                                          tools=tools,
                                                          prompt=prompt,
                                                          detailed_logs=config.verbose,
                                                          log_response_max_chars=config.log_response_max_chars,
-                                                         handle_tool_errors=config.handle_tool_errors).build_graph()
+                                                         handle_tool_errors=config.handle_tool_errors,
+                                                         return_direct=return_direct_tools).build_graph()
 
     async def _response_fn(input_message: str) -> str:
         try:

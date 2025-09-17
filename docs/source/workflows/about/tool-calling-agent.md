@@ -86,6 +86,8 @@ functions:
 
 * `max_iterations`: Defaults to 15. The maximum number of tool calls the agent may perform.
 
+* `return_direct`: Optional list of tool names that should return their output directly without additional agent processing. When a tool in this list is called, its response is returned immediately to the user, bypassing the agent's reasoning step.
+
 * `description`:  Defaults to "Tool Calling Agent Workflow". When the agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
 
 ---

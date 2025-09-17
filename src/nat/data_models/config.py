@@ -20,6 +20,7 @@ import typing
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Discriminator
+from pydantic import Field
 from pydantic import ValidationError
 from pydantic import ValidationInfo
 from pydantic import ValidatorFunctionWrapHandler
@@ -30,6 +31,7 @@ from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.logging import LoggingBaseConfig
+from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
@@ -185,10 +187,14 @@ class GeneralConfig(BaseModel):
 
     model_config = ConfigDict(protected_namespaces=())
 
-    use_uvloop: bool = True
+    use_uvloop: bool | None = Field(
+        default=None,
+        deprecated=
+        "`use_uvloop` field is deprecated and will be removed in a future release. The use of `uv_loop` is now" +
+        "automatically determined based on platform")
     """
-    Whether to use uvloop for the event loop. This can provide a significant speedup in some cases. Disable to provide
-    better error messages when debugging.
+    This field is deprecated and ignored. It previously controlled whether to use uvloop as the event loop. uvloop
+    usage is now determined automatically based on the platform.
     """
 
     telemetry: TelemetryConfig = TelemetryConfig()
@@ -253,6 +259,9 @@ class Config(HashableBaseModel):
 
     # Object Stores Configuration
     object_stores: dict[str, ObjectStoreBaseConfig] = {}
+
+    # Optimizer Configuration
+    optimizer: OptimizerConfig = OptimizerConfig()
 
     # Retriever Configuration
     retrievers: dict[str, RetrieverBaseConfig] = {}
@@ -335,7 +344,6 @@ class Config(HashableBaseModel):
         ObjectStoreAnnotation = dict[str,
                                      typing.Annotated[type_registry.compute_annotation(ObjectStoreBaseConfig),
                                                       Discriminator(TypedBaseModel.discriminator)]]
-
         RetrieverAnnotation = dict[str,
                                    typing.Annotated[type_registry.compute_annotation(RetrieverBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
