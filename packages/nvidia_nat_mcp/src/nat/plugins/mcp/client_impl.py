@@ -24,6 +24,7 @@ from pydantic import model_validator
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.plugins.mcp.client_base import MCPBaseClient
@@ -54,6 +55,9 @@ class MCPServerConfig(BaseModel):
     args: list[str] | None = Field(default=None, description="Arguments for the stdio command")
     env: dict[str, str] | None = Field(default=None, description="Environment variables for the stdio process")
 
+    # Authentication configuration
+    auth_provider: AuthenticationRef | None = Field(default=None, description="Reference to authentication provider")
+
     @model_validator(mode="after")
     def validate_model(self):
         """Validate that stdio and SSE/Streamable HTTP properties are mutually exclusive."""
@@ -62,11 +66,23 @@ class MCPServerConfig(BaseModel):
                 raise ValueError("url should not be set when using stdio transport")
             if not self.command:
                 raise ValueError("command is required when using stdio transport")
-        elif self.transport in ("sse", "streamable-http"):
+            # Auth is not supported for stdio transport
+            if self.auth_provider is not None:
+                raise ValueError("Authentication is not supported for stdio transport")
+        elif self.transport == "sse":
             if self.command is not None or self.args is not None or self.env is not None:
-                raise ValueError("command, args, and env should not be set when using sse or streamable-http transport")
+                raise ValueError("command, args, and env should not be set when using sse transport")
             if not self.url:
-                raise ValueError("url is required when using sse or streamable-http transport")
+                raise ValueError("url is required when using sse transport")
+            # Auth is not supported for SSE transport
+            if self.auth_provider is not None:
+                raise ValueError("Authentication is not supported for SSE transport.")
+        elif self.transport == "streamable-http":
+            if self.command is not None or self.args is not None or self.env is not None:
+                raise ValueError("command, args, and env should not be set when using streamable-http transport")
+            if not self.url:
+                raise ValueError("url is required when using streamable-http transport")
+
         return self
 
 
@@ -97,16 +113,6 @@ class MCPSingleToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
     model_config = {"arbitrary_types_allowed": True}
 
 
-def _get_server_name_safe(client: MCPBaseClient) -> str:
-    # Avoid leaking env secrets from stdio client in logs.
-    if client.transport == "stdio":
-        safe_server = f"stdio: {client.command}"
-    else:
-        safe_server = f"{client.transport}: {client.url}"
-
-    return safe_server
-
-
 @register_function(config_type=MCPSingleToolConfig)
 async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
     """
@@ -117,7 +123,7 @@ async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
         tool.set_description(description=config.tool_description)
     input_schema = tool.input_schema
 
-    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, _get_server_name_safe(config.client))
+    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, config.client.server_name)
 
     def _convert_from_str(input_str: str) -> BaseModel:
         return input_schema.model_validate_json(input_str)
@@ -152,18 +158,24 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
     from nat.plugins.mcp.client_base import MCPStdioClient
     from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
 
-    # Build the appropriate client
-    client_cls = {
-        "stdio": lambda: MCPStdioClient(config.server.command, config.server.args, config.server.env),
-        "sse": lambda: MCPSSEClient(str(config.server.url)),
-        "streamable-http": lambda: MCPStreamableHTTPClient(str(config.server.url)),
-    }.get(config.server.transport)
+    # Resolve auth provider if specified
+    auth_provider = None
+    if config.server.auth_provider:
+        auth_provider = await builder.get_auth_provider(config.server.auth_provider)
 
-    if not client_cls:
+    # Build the appropriate client
+    if config.server.transport == "stdio":
+        if not config.server.command:
+            raise ValueError("command is required for stdio transport")
+        client = MCPStdioClient(config.server.command, config.server.args, config.server.env)
+    elif config.server.transport == "sse":
+        client = MCPSSEClient(str(config.server.url))
+    elif config.server.transport == "streamable-http":
+        client = MCPStreamableHTTPClient(str(config.server.url), auth_provider=auth_provider)
+    else:
         raise ValueError(f"Unsupported transport: {config.server.transport}")
 
-    client = client_cls()
-    logger.info("Configured to use MCP server at %s", _get_server_name_safe(client))
+    logger.info("Configured to use MCP server at %s", client.server_name)
 
     # client aenter connects to the server and stores the client in the exit stack
     # so it's cleaned up when the workflow is done

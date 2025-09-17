@@ -229,3 +229,21 @@ class AuthResult(BaseModel):
                 target_kwargs.setdefault(k, {}).update(v)
             else:
                 target_kwargs[k] = v
+
+
+class AuthReason(str, Enum):
+    """
+    Why the caller is asking for auth now.
+    """
+    NORMAL = "normal"
+    RETRY_AFTER_401 = "retry_after_401"
+
+
+class AuthRequest(BaseModel):
+    """
+    Authentication request payload for provider.authenticate(...).
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    reason: AuthReason = Field(default=AuthReason.NORMAL, description="Purpose of this auth attempt.")
+    www_authenticate: str | None = Field(default=None, description="Raw WWW-Authenticate header from a 401 response.")

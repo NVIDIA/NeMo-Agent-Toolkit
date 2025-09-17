@@ -55,19 +55,62 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
 
         return worker_class(self.full_config)
 
+    def _create_token_verifier(self):
+        """Create a token verifier stub that logs and always returns success."""
+        if not self.front_end_config.require_auth:
+            return None
+
+        from mcp.server.auth.provider import AccessToken
+        from mcp.server.auth.provider import TokenVerifier
+
+        class StubTokenVerifier(TokenVerifier):
+
+            def __init__(self, server_url: str, scopes: list[str]):
+                self.server_url = server_url
+                self.scopes = scopes
+
+            async def verify_token(self, token: str) -> AccessToken | None:
+                logger.info("STUB: Token verification requested for token")
+                logger.info("STUB: Server URL %s", self.server_url)
+                logger.info("STUB: Required scopes: %s", self.scopes)
+                logger.info("STUB: Returning successful validation (stub implementation)")
+
+                # Always return a successful AccessToken for testing
+                return AccessToken(token=token, client_id="stub_client", scopes=self.scopes, resource=self.server_url)
+
+        server_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}"
+        return StubTokenVerifier(server_url, self.front_end_config.scopes)
+
+    def _get_server_url(self) -> str:
+        """Get the server URL."""
+        return f"http://{self.front_end_config.host}:{self.front_end_config.port}"
+
     async def run(self) -> None:
         """Run the MCP server."""
         # Import FastMCP
         from mcp.server.fastmcp import FastMCP
 
+        # Create auth settings if auth is required
+        auth_settings = None
+        if self.front_end_config.require_auth:
+            from mcp.server.auth.settings import AuthSettings
+            from pydantic import AnyHttpUrl
+
+            if not self.front_end_config.auth_server_url:
+                raise ValueError("auth_server_url is required when require_auth is True")
+
+            auth_settings = AuthSettings(issuer_url=AnyHttpUrl(self.front_end_config.auth_server_url),
+                                         required_scopes=self.front_end_config.scopes,
+                                         resource_server_url=self._get_server_url())
+
         # Create an MCP server with the configured parameters
-        mcp = FastMCP(
-            self.front_end_config.name,
-            host=self.front_end_config.host,
-            port=self.front_end_config.port,
-            debug=self.front_end_config.debug,
-            log_level=self.front_end_config.log_level,
-        )
+        mcp = FastMCP(self.front_end_config.name,
+                      host=self.front_end_config.host,
+                      port=self.front_end_config.port,
+                      debug=self.front_end_config.debug,
+                      log_level=self.front_end_config.log_level,
+                      token_verifier=self._create_token_verifier(),
+                      auth=auth_settings)
 
         # Get the worker instance and set up routes
         worker = self._get_worker_instance()
