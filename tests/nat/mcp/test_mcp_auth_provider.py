@@ -17,7 +17,6 @@ from unittest.mock import AsyncMock
 from unittest.mock import patch
 
 import pytest
-from pydantic import HttpUrl
 from pydantic import SecretStr
 
 from nat.data_models.authentication import AuthReason
@@ -40,8 +39,8 @@ from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
 def mock_config() -> MCPOAuth2ProviderConfig:
     """Create a mock MCP OAuth2 provider config for testing."""
     return MCPOAuth2ProviderConfig(
-        server_url=HttpUrl("https://example.com/mcp"),
-        redirect_uri=HttpUrl("https://example.com/callback"),
+        server_url="https://example.com/mcp",
+        redirect_uri="https://example.com/callback",
         client_name="Test Client",
         enable_dynamic_registration=True,
     )
@@ -51,8 +50,8 @@ def mock_config() -> MCPOAuth2ProviderConfig:
 def mock_config_with_credentials() -> MCPOAuth2ProviderConfig:
     """Create a mock config with pre-registered credentials."""
     return MCPOAuth2ProviderConfig(
-        server_url=HttpUrl("https://example.com/mcp"),
-        redirect_uri=HttpUrl("https://example.com/callback"),
+        server_url="https://example.com/mcp",
+        redirect_uri="https://example.com/callback",
         client_id="test_client_id",
         client_secret="test_client_secret",
         client_name="Test Client",
@@ -64,9 +63,9 @@ def mock_config_with_credentials() -> MCPOAuth2ProviderConfig:
 def mock_endpoints() -> OAuth2Endpoints:
     """Create mock OAuth2 endpoints for testing."""
     return OAuth2Endpoints(
-        authorization_url=HttpUrl("https://auth.example.com/authorize"),
-        token_url=HttpUrl("https://auth.example.com/token"),
-        registration_url=HttpUrl("https://auth.example.com/register"),
+        authorization_url="https://auth.example.com/authorize",
+        token_url="https://auth.example.com/token",
+        registration_url="https://auth.example.com/register",
     )
 
 
@@ -83,8 +82,8 @@ def mock_credentials() -> OAuth2Credentials:
 def mock_config_with_auth_request() -> MCPOAuth2ProviderConfig:
     """Create a mock config with auth request for testing."""
     return MCPOAuth2ProviderConfig(
-        server_url=HttpUrl("https://example.com/mcp"),
-        redirect_uri=HttpUrl("https://example.com/callback"),
+        server_url="https://example.com/mcp",
+        redirect_uri="https://example.com/callback",
         client_name="Test Client",
         enable_dynamic_registration=True,
         auth_request=AuthRequest(
@@ -109,8 +108,8 @@ class TestDiscoverOAuth2Endpoints:
 
         # Set up cached endpoints
         cached_endpoints = OAuth2Endpoints(
-            authorization_url=HttpUrl("https://auth.example.com/authorize"),
-            token_url=HttpUrl("https://auth.example.com/token"),
+            authorization_url="https://auth.example.com/authorize",
+            token_url="https://auth.example.com/token",
         )
         discoverer._cached_endpoints = cached_endpoints
 
@@ -134,9 +133,9 @@ class TestDiscoverOAuth2Endpoints:
             # Mock OAuth metadata response
             with patch.object(discoverer, '_discover_via_issuer_or_base') as mock_discover:
                 mock_discover.return_value = OAuth2Endpoints(
-                    authorization_url=HttpUrl("https://auth.example.com/authorize"),
-                    token_url=HttpUrl("https://auth.example.com/token"),
-                    registration_url=HttpUrl("https://auth.example.com/register"),
+                    authorization_url="https://auth.example.com/authorize",
+                    token_url="https://auth.example.com/token",
+                    registration_url="https://auth.example.com/register",
                 )
 
                 endpoints, changed = await discoverer.discover(
@@ -153,8 +152,8 @@ class TestDiscoverOAuth2Endpoints:
 
         with patch.object(discoverer, '_discover_via_issuer_or_base') as mock_discover:
             mock_discover.return_value = OAuth2Endpoints(
-                authorization_url=HttpUrl("https://auth.example.com/authorize"),
-                token_url=HttpUrl("https://auth.example.com/token"),
+                authorization_url="https://auth.example.com/authorize",
+                token_url="https://auth.example.com/token",
             )
 
             endpoints, changed = await discoverer.discover(reason=AuthReason.NORMAL, www_authenticate=None)
@@ -252,8 +251,8 @@ class TestDynamicClientRegistration:
         registrar = DynamicClientRegistration(mock_config)
 
         endpoints = OAuth2Endpoints(
-            authorization_url=HttpUrl("https://auth.example.com/authorize"),
-            token_url=HttpUrl("https://auth.example.com/token"),
+            authorization_url="https://auth.example.com/authorize",
+            token_url="https://auth.example.com/token",
             registration_url=None,
         )
 
@@ -323,9 +322,9 @@ class TestMCPOAuth2Provider:
         # Mock the discovery and registration process
         with patch.object(provider._discoverer, 'discover') as mock_discover:
             mock_discover.return_value = (OAuth2Endpoints(
-                authorization_url=HttpUrl("https://auth.example.com/authorize"),
-                token_url=HttpUrl("https://auth.example.com/token"),
-                registration_url=HttpUrl("https://auth.example.com/register"),
+                authorization_url="https://auth.example.com/authorize",
+                token_url="https://auth.example.com/token",
+                registration_url="https://auth.example.com/register",
             ),
                                           True)
 
@@ -404,8 +403,8 @@ class TestMCPOAuth2Provider:
     async def test_authenticate_dynamic_registration_disabled(self, mock_endpoints):
         """Test authentication works when dynamic registration is disabled but valid credentials provided."""
         config = MCPOAuth2ProviderConfig(
-            server_url=HttpUrl("https://example.com/mcp"),
-            redirect_uri=HttpUrl("https://example.com/callback"),
+            server_url="https://example.com/mcp",
+            redirect_uri="https://example.com/callback",
             client_id="test_client_id",
             client_secret="test_client_secret",
             enable_dynamic_registration=False,
@@ -431,8 +430,8 @@ class TestMCPOAuth2Provider:
     async def test_effective_scopes_uses_config_scopes(self):
         """Test that effective scopes uses config scopes when provided."""
         config = MCPOAuth2ProviderConfig(
-            server_url=HttpUrl("https://example.com/mcp"),
-            redirect_uri=HttpUrl("https://example.com/callback"),
+            server_url="https://example.com/mcp",
+            redirect_uri="https://example.com/callback",
             scopes=["read", "write"],
             enable_dynamic_registration=True,
         )
@@ -461,8 +460,8 @@ class TestMCPOAuth2Provider:
     async def test_perform_oauth2_flow_requires_discovery(self):
         """Test that OAuth2 flow requires discovery to be completed first."""
         config = MCPOAuth2ProviderConfig(
-            server_url=HttpUrl("https://example.com/mcp"),
-            redirect_uri=HttpUrl("https://example.com/callback"),
+            server_url="https://example.com/mcp",
+            redirect_uri="https://example.com/callback",
             enable_dynamic_registration=True,
         )
         provider = MCPOAuth2Provider(config)
@@ -473,8 +472,8 @@ class TestMCPOAuth2Provider:
     async def test_perform_oauth2_flow_prevents_retry_after_401(self, mock_endpoints, mock_credentials):
         """Test that OAuth2 flow prevents being called for RETRY_AFTER_401."""
         config = MCPOAuth2ProviderConfig(
-            server_url=HttpUrl("https://example.com/mcp"),
-            redirect_uri=HttpUrl("https://example.com/callback"),
+            server_url="https://example.com/mcp",
+            redirect_uri="https://example.com/callback",
             enable_dynamic_registration=True,
         )
         provider = MCPOAuth2Provider(config)
