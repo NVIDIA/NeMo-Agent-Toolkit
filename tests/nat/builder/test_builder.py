@@ -17,12 +17,14 @@ import logging
 from unittest.mock import MagicMock
 
 import pytest
-from openai import BaseModel
+from pydantic import BaseModel
 from pydantic import ConfigDict
+from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
 from nat.builder.retriever import RetrieverProviderInfo
@@ -31,6 +33,7 @@ from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_embedder_client
 from nat.cli.register_workflow import register_embedder_provider
 from nat.cli.register_workflow import register_function
+from nat.cli.register_workflow import register_function_group
 from nat.cli.register_workflow import register_llm_client
 from nat.cli.register_workflow import register_llm_provider
 from nat.cli.register_workflow import register_memory
@@ -44,6 +47,7 @@ from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
@@ -107,6 +111,42 @@ class FailingFunctionConfig(FunctionBaseConfig, name="failing_function"):
     pass
 
 
+# Function Group Test Configurations
+class IncludesFunctionGroupConfig(FunctionGroupBaseConfig, name="test_includes_function_group"):
+    """Test configuration for function groups."""
+    include: list[str] = Field(default_factory=lambda: ["add", "multiply"])
+    raise_error: bool = False
+
+
+class ExcludesFunctionGroupConfig(FunctionGroupBaseConfig, name="test_excludes_function_group"):
+    """Test configuration for function groups."""
+    exclude: list[str] = Field(default_factory=lambda: ["add", "multiply"])
+    raise_error: bool = False
+
+
+class DefaultFunctionGroup(FunctionGroupBaseConfig, name="default_function_group"):
+    """Test configuration with no included functions."""
+    exclude: list[str] = Field(default_factory=lambda: ["internal_function"])  # Exclude the only function
+    raise_error: bool = False
+
+
+class AllIncludesFunctionGroupConfig(FunctionGroupBaseConfig, name="all_includes_function_group"):
+    """Test configuration that includes all functions."""
+    include: list[str] = Field(default_factory=lambda: ["add", "multiply", "subtract"])
+    raise_error: bool = False
+
+
+class AllExcludesFunctionGroupConfig(FunctionGroupBaseConfig, name="all_excludes_function_group"):
+    """Test configuration that includes all functions."""
+    exclude: list[str] = Field(default_factory=lambda: ["add", "multiply", "subtract"])
+    raise_error: bool = False
+
+
+class FailingFunctionGroupConfig(FunctionGroupBaseConfig, name="failing_function_group"):
+    """Test configuration for function group that fails during initialization."""
+    raise_error: bool = True
+
+
 @pytest.fixture(scope="module", autouse=True)
 async def _register():
 
@@ -132,7 +172,7 @@ async def _register():
     @register_function(config_type=FunctionReturningDerivedConfig)
     async def register3(config: FunctionReturningDerivedConfig, b: Builder):
 
-        class DerivedFunction(Function[str, str, None]):
+        class DerivedFunction(Function[str, str, str]):
 
             def __init__(self, config: FunctionReturningDerivedConfig):
                 super().__init__(config=config, description="Test function")
@@ -191,7 +231,7 @@ async def _register():
 
     # Register mock provider
     @register_retriever_provider(config_type=TRetrieverProviderConfig)
-    async def register7(config: TRetrieverProviderConfig, builder: Builder):
+    async def register7(config: TRetrieverProviderConfig, _builder: Builder):
 
         if (config.raise_error):
             raise ValueError("Error")
@@ -199,7 +239,7 @@ async def _register():
         yield RetrieverProviderInfo(config=config, description="Mock retriever to test the registration process")
 
     @register_object_store(config_type=TObjectStoreConfig)
-    async def register8(config: TObjectStoreConfig, builder: Builder):
+    async def register8(config: TObjectStoreConfig, _builder: Builder):
         if (config.raise_error):
             raise ValueError("Error")
 
@@ -207,7 +247,7 @@ async def _register():
 
     # Register mock telemetry exporter
     @register_telemetry_exporter(config_type=TTelemetryExporterConfig)
-    async def register9(config: TTelemetryExporterConfig, builder: Builder):
+    async def register9(config: TTelemetryExporterConfig, _builder: Builder):
 
         if (config.raise_error):
             raise ValueError("Error")
@@ -220,7 +260,7 @@ async def _register():
         yield TestTelemetryExporter()
 
     @register_ttc_strategy(config_type=TTTCStrategyConfig)
-    async def register_ttc(config: TTTCStrategyConfig, builder: Builder):
+    async def register_ttc(config: TTTCStrategyConfig, _builder: Builder):
 
         if config.raise_error:
             raise ValueError("Error")
@@ -232,16 +272,150 @@ async def _register():
                 # Do nothing, just return what we got
                 return items
 
-            async def build_components(self, builder: Builder) -> None:
+            async def build_components(self, _builder: Builder) -> None:
                 pass
 
-            def supported_pipeline_types(self) -> [PipelineTypeEnum]:
+            def supported_pipeline_types(self) -> list[PipelineTypeEnum]:
                 return [PipelineTypeEnum.AGENT_EXECUTION]
 
             def stage_type(self) -> StageTypeEnum:
                 return StageTypeEnum.SCORING
 
         yield DummyTTCStrategy(config)
+
+    # Function Group registrations
+    @register_function_group(config_type=IncludesFunctionGroupConfig)
+    async def register_test_includes_function_group(config: IncludesFunctionGroupConfig, _builder: Builder):
+        """Register a test function group with basic arithmetic operations."""
+
+        if config.raise_error:
+            raise ValueError("Function group initialization failed")
+
+        async def add(a: int, b: int) -> int:
+            """Add two numbers."""
+            return a + b
+
+        async def multiply(a: int, b: int) -> int:
+            """Multiply two numbers."""
+            return a * b
+
+        async def subtract(a: int, b: int) -> int:
+            """Subtract two numbers."""
+            return a - b
+
+        group = FunctionGroup(config=config)
+
+        group.add_function("add", add, description="Add two numbers")
+        group.add_function("multiply", multiply, description="Multiply two numbers")
+        group.add_function("subtract", subtract, description="Subtract two numbers")
+
+        yield group
+
+    @register_function_group(config_type=ExcludesFunctionGroupConfig)
+    async def register_test_excludes_function_group(config: ExcludesFunctionGroupConfig, _builder: Builder):
+        """Register a test function group with basic arithmetic operations."""
+
+        if config.raise_error:
+            raise ValueError("Function group initialization failed")
+
+        async def add(a: int, b: int) -> int:
+            """Add two numbers."""
+            return a + b
+
+        async def multiply(a: int, b: int) -> int:
+            """Multiply two numbers."""
+            return a * b
+
+        async def subtract(a: int, b: int) -> int:
+            """Subtract two numbers."""
+            return a - b
+
+        group = FunctionGroup(config=config)
+
+        group.add_function("add", add, description="Add two numbers")
+        group.add_function("multiply", multiply, description="Multiply two numbers")
+        group.add_function("subtract", subtract, description="Subtract two numbers")
+
+        yield group
+
+    @register_function_group(config_type=DefaultFunctionGroup)
+    async def register_empty_includes_group(config: DefaultFunctionGroup, _builder: Builder):
+        """Register a function group with no included functions."""
+
+        if config.raise_error:
+            raise ValueError("Function group initialization failed")
+
+        async def internal_function(x: int) -> int:
+            """Internal function that is not included."""
+            return x * 2
+
+        group = FunctionGroup(config=config)
+
+        group.add_function("internal_function", internal_function, description="Internal function")
+
+        yield group
+
+    @register_function_group(config_type=AllIncludesFunctionGroupConfig)
+    async def register_all_includes_group(config: AllIncludesFunctionGroupConfig, _builder: Builder):
+        """Register a function group that includes all functions."""
+
+        if config.raise_error:
+            raise ValueError("Function group initialization failed")
+
+        async def add(a: int, b: int) -> int:
+            """Add two numbers."""
+            return a + b
+
+        async def multiply(a: int, b: int) -> int:
+            """Multiply two numbers."""
+            return a * b
+
+        async def subtract(a: int, b: int) -> int:
+            """Subtract two numbers."""
+            return a - b
+
+        group = FunctionGroup(config=config)
+
+        group.add_function("add", add, description="Add two numbers")
+        group.add_function("multiply", multiply, description="Multiply two numbers")
+        group.add_function("subtract", subtract, description="Subtract two numbers")
+
+        yield group
+
+    @register_function_group(config_type=AllExcludesFunctionGroupConfig)
+    async def register_all_excludes_group(config: AllExcludesFunctionGroupConfig, _builder: Builder):
+        """Register a function group that excludes all functions."""
+
+        if config.raise_error:
+            raise ValueError("Function group initialization failed")
+
+        async def add(a: int, b: int) -> int:
+            """Add two numbers."""
+            return a + b
+
+        async def multiply(a: int, b: int) -> int:
+            """Multiply two numbers."""
+            return a * b
+
+        async def subtract(a: int, b: int) -> int:
+            """Subtract two numbers."""
+            return a - b
+
+        group = FunctionGroup(config=config)
+
+        group.add_function("add", add, description="Add two numbers")
+        group.add_function("multiply", multiply, description="Multiply two numbers")
+        group.add_function("subtract", subtract, description="Subtract two numbers")
+
+        yield group
+
+    @register_function_group(config_type=FailingFunctionGroupConfig)
+    async def register_failing_function_group(config: FailingFunctionGroupConfig, _builder: Builder):
+        """Register a function group that always fails during initialization."""
+
+        # This function group always raises an exception during initialization
+        raise ValueError("Function group initialization failed")
+        yield  # This line will never be reached, but needed for the AsyncGenerator type
 
 
 async def test_build():
@@ -266,7 +440,7 @@ async def test_add_function():
     class FunctionReturningBadConfig(FunctionBaseConfig, name="fn_return_bad"):
         pass
 
-    @register_function(config_type=FunctionReturningBadConfig)
+    @register_function(config_type=FunctionReturningBadConfig)  # type: ignore
     async def register2(config: FunctionReturningBadConfig, b: Builder):
 
         yield {}
@@ -320,7 +494,7 @@ async def test_set_workflow():
     class FunctionReturningBadConfig(FunctionBaseConfig, name="fn_return_bad"):
         pass
 
-    @register_function(config_type=FunctionReturningBadConfig)
+    @register_function(config_type=FunctionReturningBadConfig)  # type: ignore
     async def register2(config: FunctionReturningBadConfig, b: Builder):
 
         yield {}
@@ -606,7 +780,7 @@ async def test_get_object_store_config():
             builder.get_object_store_config("object_store_name_not_exist")
 
 
-async def get_retriever():
+async def test_get_retriever():
 
     @register_retriever_client(config_type=TRetrieverProviderConfig, wrapper_type="test_framework")
     async def register(config: TRetrieverProviderConfig, b: Builder):
@@ -621,7 +795,7 @@ async def get_retriever():
         yield TestFrameworkRetriever(config=config, builder=b)
 
     @register_retriever_client(config_type=TRetrieverProviderConfig, wrapper_type=None)
-    async def register_no_framework(config: TRetrieverProviderConfig, builder: Builder):
+    async def register_no_framework(config: TRetrieverProviderConfig, _builder: Builder):
 
         class TestRetriever(Retriever):
 
@@ -630,12 +804,6 @@ async def get_retriever():
 
             async def search(self, query: str, **kwargs):
                 return RetrieverOutput(results=[Document(page_content="page content", metadata={})])
-
-            async def add_items(self, items):
-                return await super().add_items(items)
-
-            async def remove_items(self, **kwargs):
-                return await super().remove_items(**kwargs)
 
         yield TestRetriever(**config.model_dump())
 
@@ -647,7 +815,7 @@ async def get_retriever():
 
         retriever = await builder.get_retriever("retriever_name", wrapper_type="test_framework")
 
-        assert retriever.config == builder.get_retriever_config("retriever_name")
+        assert retriever.config == await builder.get_retriever_config("retriever_name")
 
         with pytest.raises(ValueError):
             await builder.get_retriever("retriever_name_not_exist", wrapper_type="test_framework")
@@ -657,7 +825,7 @@ async def get_retriever():
         assert isinstance(retriever, Retriever)
 
 
-async def get_retriever_config():
+async def test_get_retriever_config():
 
     async with WorkflowBuilder() as builder:
 
@@ -665,10 +833,10 @@ async def get_retriever_config():
 
         await builder.add_retriever("retriever_name", config)
 
-        assert builder.get_retriever_config("retriever_name") == config
+        assert await builder.get_retriever_config("retriever_name") == config
 
         with pytest.raises(ValueError):
-            builder.get_retriever_config("retriever_name_not_exist")
+            await builder.get_retriever_config("retriever_name_not_exist")
 
 
 async def test_add_ttc_strategy():
@@ -722,7 +890,7 @@ async def test_get_ttc_strategy_and_config():
 
 async def test_built_config():
 
-    general_config = GeneralConfig(cache_dir="Something else")
+    general_config = GeneralConfig()
     function_config = FunctionReturningFunctionConfig()
     workflow_config = FunctionReturningFunctionConfig()
     llm_config = TLLMProviderConfig()
@@ -763,6 +931,416 @@ async def test_built_config():
         assert workflow_config.retrievers == {"retriever1": retriever_config}
         assert workflow_config.object_stores == {"object_store1": object_store_config}
         assert workflow_config.ttc_strategies == {"ttc_strategy": ttc_config}
+
+
+# Function Group Tests
+
+
+async def test_add_function_group():
+    """Test adding function groups to a workflow builder."""
+
+    async with WorkflowBuilder() as builder:
+        includes_group = await builder.add_function_group("includes_group", IncludesFunctionGroupConfig())
+        assert isinstance(includes_group, FunctionGroup)
+
+        excludes_group = await builder.add_function_group("excludes_group", ExcludesFunctionGroupConfig())
+        assert isinstance(excludes_group, FunctionGroup)
+
+        # Test adding a function group with no included functions
+        empty_group = await builder.add_function_group("empty_group", DefaultFunctionGroup())
+        assert isinstance(empty_group, FunctionGroup)
+
+        # Test adding a function group that includes all functions
+        all_includes_group = await builder.add_function_group("all_includes_group", AllIncludesFunctionGroupConfig())
+        assert isinstance(all_includes_group, FunctionGroup)
+
+        all_excludes_group = await builder.add_function_group("all_excludes_group", AllExcludesFunctionGroupConfig())
+        assert isinstance(all_excludes_group, FunctionGroup)
+
+        # Test error when adding function group with existing name
+        with pytest.raises(ValueError):
+            await builder.add_function_group("includes_group", IncludesFunctionGroupConfig())
+
+        # Test error when adding function group that fails during initialization
+        with pytest.raises(ValueError):
+            await builder.add_function_group("failing_group", FailingFunctionGroupConfig())
+
+
+async def test_get_function_group():
+    """Test getting function groups from a workflow builder."""
+
+    async with WorkflowBuilder() as builder:
+        # Add a function group
+        added_group = await builder.add_function_group("math_group", IncludesFunctionGroupConfig())
+
+        # Test getting existing function group
+        retrieved_group = builder.get_function_group("math_group")
+        assert retrieved_group == added_group
+
+        # Test error when getting non-existent function group
+        with pytest.raises(ValueError):
+            builder.get_function_group("non_existent_group")
+
+
+async def test_get_function_group_config():
+    """Test getting function group configurations."""
+
+    async with WorkflowBuilder() as builder:
+        # Add a function group
+        config = IncludesFunctionGroupConfig()
+        await builder.add_function_group("includes_group", config)
+
+        # Test getting existing function group config
+        retrieved_config = builder.get_function_group_config("includes_group")
+        assert retrieved_config == config
+        assert retrieved_config is config
+
+        # Test error when getting non-existent function group config
+        with pytest.raises(ValueError):
+            builder.get_function_group_config("non_existent_group")
+
+
+async def test_function_group_included_functions():
+    """Test that included functions from function groups are accessible."""
+
+    async with WorkflowBuilder() as builder:
+        # Add function group with some included functions
+        await builder.add_function_group("includes_group", IncludesFunctionGroupConfig())
+
+        # Test that included functions are accessible as regular functions
+        add_fn = builder.get_function("test_includes_function_group.add")
+        multiply_fn = builder.get_function("test_includes_function_group.multiply")
+
+        assert add_fn is not None
+        assert multiply_fn is not None
+
+        # Test that non-included functions are not accessible
+        with pytest.raises(ValueError):
+            builder.get_function("test_includes_function_group.subtract")
+
+
+async def test_function_group_excluded_functions():
+    """Test that excluded functions from function groups are not accessible."""
+
+    async with WorkflowBuilder() as builder:
+        # Add function group with some excluded functions
+        await builder.add_function_group("excludes_group", ExcludesFunctionGroupConfig())
+
+        # Test that NO functions are accessible globally since the group uses exclude (not include)
+        # The function group doesn't expose any functions to the global registry when using exclude only
+        with pytest.raises(ValueError):
+            builder.get_function("test_excludes_function_group.add")
+        with pytest.raises(ValueError):
+            builder.get_function("test_excludes_function_group.multiply")
+        with pytest.raises(ValueError):
+            builder.get_function("test_excludes_function_group.subtract")
+
+        # But the functions should be accessible through the function group itself
+        group = builder.get_function_group("excludes_group")
+        accessible_functions = group.get_accessible_functions()
+
+        # Should have only subtract (add and multiply are excluded)
+        assert len(accessible_functions) == 1
+        assert "test_excludes_function_group.subtract" in accessible_functions
+
+
+async def test_function_group_empty_includes_and_excludes():
+    """Test function group with no included functions."""
+
+    async with WorkflowBuilder() as builder:
+        # Add function group with no included functions
+        await builder.add_function_group("empty_group", DefaultFunctionGroup())
+
+        # Verify no functions were added to global registry
+        included_functions = [k for k in builder._functions.keys() if k.startswith("empty_group.")]
+        assert len(included_functions) == 0
+
+        # But the group itself should exist
+        group = builder.get_function_group("empty_group")
+        assert isinstance(group, FunctionGroup)
+
+        assert len(group.get_accessible_functions()) == 0  # No functions accessible (empty include list)
+        assert len(group.get_all_functions()) == 1  # One function in the group (internal_function)
+        assert len(group.get_included_functions()) == 0  # No functions in include list
+
+
+async def test_function_group_all_includes():
+    """Test function group that includes all functions."""
+
+    async with WorkflowBuilder() as builder:
+        # Add function group that includes all functions
+        await builder.add_function_group("all_includes_group", AllIncludesFunctionGroupConfig())
+
+        # All functions should be accessible
+        add_fn = builder.get_function("all_includes_function_group.add")
+        multiply_fn = builder.get_function("all_includes_function_group.multiply")
+        subtract_fn = builder.get_function("all_includes_function_group.subtract")
+
+        assert add_fn is not None
+        assert multiply_fn is not None
+        assert subtract_fn is not None
+
+        group = builder.get_function_group("all_includes_group")
+
+        assert len(group.get_accessible_functions()) == 3
+        assert len(group.get_all_functions()) == 3
+        assert len(group.get_included_functions()) == 3
+
+
+async def test_function_group_all_excludes():
+    """Test function group that excludes all functions."""
+
+    async with WorkflowBuilder() as builder:
+        # Add function group that excludes all functions
+        await builder.add_function_group("all_excludes_group", AllExcludesFunctionGroupConfig())
+
+        # No functions should be accessible globally (function group uses exclude only)
+        with pytest.raises(ValueError):
+            builder.get_function("all_excludes_function_group.add")
+        with pytest.raises(ValueError):
+            builder.get_function("all_excludes_function_group.multiply")
+        with pytest.raises(ValueError):
+            builder.get_function("all_excludes_function_group.subtract")
+
+        group = builder.get_function_group("all_excludes_group")
+
+        assert len(group.get_accessible_functions()) == 0
+        assert len(group.get_all_functions()) == 3
+        assert len(group.get_included_functions()) == 0
+
+
+async def test_function_group_name_conflicts():
+    """Test function group name conflict handling."""
+
+    async with WorkflowBuilder() as builder:
+        # Add a function first
+        await builder.add_function("math_group", FunctionReturningFunctionConfig())
+
+        # Try to add function group with same name - should fail
+        with pytest.raises(ValueError):
+            await builder.add_function_group("math_group", IncludesFunctionGroupConfig())
+
+
+async def test_function_group_dependencies_tracking():
+    """Test that function group dependencies are properly tracked."""
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_function_group("math_group", IncludesFunctionGroupConfig())
+
+        # Check that dependencies are tracked
+        assert "math_group" in builder.function_group_dependencies
+        from nat.data_models.function_dependencies import FunctionDependencies
+        dependencies = builder.function_group_dependencies["math_group"]
+        assert isinstance(dependencies, FunctionDependencies)
+
+
+async def test_function_group_integration_with_workflow():
+    """Test building a workflow that includes function groups."""
+
+    async with WorkflowBuilder() as builder:
+        # Add function groups
+        await builder.add_function_group("math_group", IncludesFunctionGroupConfig())
+        await builder.add_function_group("empty_group", DefaultFunctionGroup())
+
+        # Add regular functions
+        await builder.add_function("regular_fn", FunctionReturningFunctionConfig())
+
+        # Set workflow
+        await builder.set_workflow(FunctionReturningFunctionConfig())
+
+        # Test that function groups were added correctly
+        assert "math_group" in builder._function_groups
+        assert "empty_group" in builder._function_groups
+
+        # Test that included functions are accessible
+        assert "test_includes_function_group.add" in builder._functions
+        assert "test_includes_function_group.multiply" in builder._functions
+
+        # Test that non-included functions are not accessible
+        assert "test_includes_function_group.subtract" not in builder._functions
+
+        # Test that no functions were included from empty group
+        empty_group_functions = [k for k in builder._functions.keys() if k.startswith("default_function_group.")]
+        assert len(empty_group_functions) == 0
+
+        # Test that regular functions still work
+        assert "regular_fn" in builder._functions
+
+
+async def test_function_group_config_validation():
+    """Test function group configuration validation."""
+
+    # Test that function group configs are stored correctly in the builder
+    async with WorkflowBuilder() as builder:
+        config = IncludesFunctionGroupConfig()
+        await builder.add_function_group("math_group", config)
+
+        # Test getting function group config
+        retrieved_config = builder.get_function_group_config("math_group")
+        assert retrieved_config == config
+        assert retrieved_config is config
+
+        # Test that function group is stored correctly
+        function_group = builder.get_function_group("math_group")
+        assert isinstance(function_group, FunctionGroup)
+
+
+async def test_function_group_add_function_validation():
+    """Test function group add_function validation errors."""
+
+    config = IncludesFunctionGroupConfig()
+    group = FunctionGroup(config=config)
+
+    # Test empty function name
+    with pytest.raises(ValueError, match="Function name cannot be empty"):
+
+        async def dummy_func(x: int) -> int:
+            return x
+
+        group.add_function("", dummy_func)
+
+    # Test function name with whitespace
+    with pytest.raises(ValueError, match="Function name can only contain letters, numbers, underscores, and hyphens"):
+
+        async def dummy_func2(x: int) -> int:
+            return x
+
+        group.add_function("invalid name", dummy_func2)
+
+    # Test duplicate function names
+    async def test_func(x: int) -> int:
+        return x
+
+    group.add_function("test_func", test_func)
+    with pytest.raises(ValueError):
+        group.add_function("test_func", test_func)  # Should fail - duplicate name
+
+
+async def test_function_group_get_excluded_functions():
+    """Test getting excluded functions from function groups."""
+
+    async with WorkflowBuilder() as builder:
+        # Test group with exclude configuration
+        await builder.add_function_group("excludes_group", ExcludesFunctionGroupConfig())
+        group = builder.get_function_group("excludes_group")
+
+        excluded_functions = group.get_excluded_functions()
+        assert len(excluded_functions) == 2  # add and multiply are excluded
+        assert "test_excludes_function_group.add" in excluded_functions
+        assert "test_excludes_function_group.multiply" in excluded_functions
+        assert "test_excludes_function_group.subtract" not in excluded_functions
+
+        # Test group with no exclude configuration
+        await builder.add_function_group("includes_group", IncludesFunctionGroupConfig())
+        includes_group = builder.get_function_group("includes_group")
+
+        excluded_from_includes = includes_group.get_excluded_functions()
+        assert len(excluded_from_includes) == 0  # No exclude list defined
+
+
+async def test_function_group_invalid_include_configuration():
+    """Test function group with invalid include configuration."""
+
+    class InvalidIncludeConfig(FunctionGroupBaseConfig, name="invalid_include_group"):
+        include: list[str] = Field(default_factory=lambda: ["non_existent_function"])
+        raise_error: bool = False
+
+    @register_function_group(config_type=InvalidIncludeConfig)
+    async def register_invalid_group(config: InvalidIncludeConfig, _builder: Builder):
+        group = FunctionGroup(config=config)
+
+        async def real_function(x: int) -> int:
+            return x
+
+        group.add_function("real_function", real_function, description="A real function")
+        yield group
+
+    async with WorkflowBuilder() as builder:
+        # Should raise error during add_function_group when validation happens
+        with pytest.raises(ValueError, match=r"Unknown included functions"):
+            await builder.add_function_group("invalid_group", InvalidIncludeConfig())
+
+
+async def test_function_group_invalid_exclude_configuration():
+    """Test function group with invalid exclude configuration."""
+
+    class InvalidExcludeConfig(FunctionGroupBaseConfig, name="invalid_exclude_group"):
+        exclude: list[str] = Field(default_factory=lambda: ["non_existent_function"])
+        raise_error: bool = False
+
+    @register_function_group(config_type=InvalidExcludeConfig)
+    async def register_invalid_exclude_group(config: InvalidExcludeConfig, _builder: Builder):
+        group = FunctionGroup(config=config)
+
+        async def real_function(x: int) -> int:
+            return x
+
+        group.add_function("real_function", real_function, description="A real function")
+        yield group
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_function_group("invalid_exclude_group", InvalidExcludeConfig())
+        group = builder.get_function_group("invalid_exclude_group")
+
+        # Should raise error when trying to get excluded functions
+        with pytest.raises(ValueError, match=r"Unknown excluded functions"):
+            group.get_excluded_functions()
+
+        # Should also raise error when trying to get accessible functions
+        with pytest.raises(ValueError, match=r"Unknown excluded functions"):
+            group.get_accessible_functions()
+
+
+async def test_function_group_get_config():
+    """Test getting function group configuration."""
+
+    config = IncludesFunctionGroupConfig()
+    group = FunctionGroup(config=config)
+
+    retrieved_config = group.get_config()
+    assert retrieved_config == config
+    assert retrieved_config is config
+
+
+async def test_function_group_function_execution():
+    """Test executing functions within function groups."""
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_function_group("math_group", IncludesFunctionGroupConfig())
+
+        # Get and execute functions from the group
+        add_fn = builder.get_function("test_includes_function_group.add")
+        result = await add_fn.ainvoke({"a": 5, "b": 3})
+        assert result == 8
+
+        multiply_fn = builder.get_function("test_includes_function_group.multiply")
+        result = await multiply_fn.ainvoke({"a": 4, "b": 6})
+        assert result == 24
+
+
+async def test_function_group_custom_instance_name():
+    """Test function group with custom instance name."""
+
+    # Create a config that includes the "add" function
+    class CustomInstanceConfig(FunctionGroupBaseConfig, name="custom_instance_group"):
+        include: list[str] = Field(default_factory=lambda: ["add"])
+        raise_error: bool = False
+
+    config = CustomInstanceConfig()
+    group = FunctionGroup(config=config, instance_name="custom_math_group")
+
+    async def add_func(a: int, b: int) -> int:
+        return a + b
+
+    group.add_function("add", add_func, description="Add two numbers")
+
+    # Function should be returned with instance name prefix
+    all_functions = group.get_all_functions()
+    assert "custom_math_group.add" in all_functions
+
+    # When getting included functions, should use custom instance name prefix
+    included = group.get_included_functions()
+    assert "custom_math_group.add" in included
 
 
 async def test_add_telemetry_exporter():

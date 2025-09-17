@@ -113,7 +113,12 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
                          f"function without a description.")
 
     # Get the function dependencies of the augmented function
-    function_used_tools = builder.get_function_dependencies(config.augmented_fn).functions
+    function_dependencies = builder.get_function_dependencies(config.augmented_fn)
+    function_used_tools = set()
+    function_used_tools.update(function_dependencies.functions)
+    for function_group in function_dependencies.function_groups:
+        function_used_tools.update(builder.get_function_group_dependencies(function_group).functions)
+
     tool_names_with_desc: list[tuple[str, str]] = []
 
     for tool in function_used_tools:
