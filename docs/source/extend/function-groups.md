@@ -126,11 +126,109 @@ group.add_function(name="greet",
                    description="Return a friendly greeting")
 ```
 
+## Using Filters
+
+Function groups support dynamic filtering to control which functions are accessible at runtime. Filters are applied when functions are accessed, not when they are added to the group.
+
+### Group-Level Filters
+
+Group-level filters receive a list of function names and return a filtered list. Set them during group creation or use {py:meth}`~nat.builder.function.FunctionGroup.set_filter_fn`:
+
+```python
+from collections.abc import Sequence
+
+@register_function_group(config_type=MyGroupConfig)
+async def build_my_group(config: MyGroupConfig, _builder: Builder):
+    # Define a group-level filter
+    def admin_filter(function_names: Sequence[str]) -> Sequence[str]:
+        # Only include admin functions in production
+        if config.environment == "production":
+            return [name for name in function_names if name.startswith("admin_")]
+        return function_names
+    
+    # Create group with filter
+    group = FunctionGroup(config=config, instance_name="my", filter_fn=admin_filter)
+    
+    # Or set filter later
+    # group.set_filter_fn(admin_filter)
+    
+    # Add functions as normal
+    group.add_function("admin_reset", reset_fn)
+    group.add_function("user_greet", greet_fn)
+    
+    yield group
+```
+
+### Per-Function Filters
+
+Per-function filters are set on individual functions and receive the function name. They determine whether that specific function should be included:
+
+```python
+@register_function_group(config_type=MyGroupConfig)
+async def build_my_group(config: MyGroupConfig, _builder: Builder):
+    group = FunctionGroup(config=config, instance_name="my")
+    
+    # Define per-function filter
+    def debug_only(name: str) -> bool:
+        return config.debug_mode  # Only include if debug mode is enabled
+    
+    async def debug_fn(message: str) -> str:
+        return f"DEBUG: {message}"
+    
+    # Add function with per-function filter
+    group.add_function(name="debug", 
+                       fn=debug_fn, 
+                       filter_fn=debug_only)
+    
+    # Or set filter after adding
+    # group.set_per_function_filter_fn("debug", debug_only)
+    
+    yield group
+```
+
+### Filter Interaction
+
+Filters work in combination with `include` and `exclude` configuration:
+
+1. **Configuration filtering**: Applied first based on `include`/`exclude` lists
+2. **Group-level filtering**: Applied to the result of configuration filtering  
+3. **Per-function filtering**: Applied to each remaining function individually
+
+```python
+class FilteredGroupConfig(FunctionGroupBaseConfig, name="filtered_group"):
+    include: list[str] = ["func1", "func2", "func3"]
+    environment: str = "development"
+
+@register_function_group(config_type=FilteredGroupConfig)
+async def build_filtered_group(config: FilteredGroupConfig, _builder: Builder):
+    # Group filter: only production-ready functions in production
+    def env_filter(names: Sequence[str]) -> Sequence[str]:
+        if config.environment == "production":
+            return [name for name in names if not name.startswith("test_")]
+        return names
+    
+    # Per-function filter: exclude experimental features
+    def stable_only(name: str) -> bool:
+        return not name.endswith("_experimental")
+    
+    group = FunctionGroup(config=config, filter_fn=env_filter)
+    
+    group.add_function("func1", fn1)  # Included by config
+    group.add_function("test_func2", fn2)  # Included by config, but filtered by env_filter in production
+    group.add_function("func3_experimental", fn3, filter_fn=stable_only)  # Excluded by per-function filter
+    
+    yield group
+```
+
 ## Best Practices
 
 - Keep group instance names short and descriptive; they become part of function names.
 - Share expensive resources (for example, clients, caches) through the group context instead of recreating them per function.
 - Validate inputs with Pydantic schemas for robust error handling.
+- Use group-level filters for environment-based or broad categorical filtering (for example, production readiness, feature flags).
+- Use per-function filters for function-specific conditions (for example, user permissions, feature availability).
+- Apply filters that depend on runtime configuration rather than static conditions that could be handled by `include`/`exclude` lists.
+- Test filter logic thoroughly, as filters are applied dynamically and can change function availability based on runtime conditions.
 
 ## Next Steps
 

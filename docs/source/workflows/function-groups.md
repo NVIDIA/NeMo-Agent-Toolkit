@@ -35,9 +35,27 @@ Functions inside a group are automatically grouped by the group instance name. I
 
 Use the `include` list to control which functions are added to the global registry. If `include` is empty, the group remains usable as a group, but individual functions are not globally addressable. If `exclude` is provided, matching functions are filtered out and are not wrapped as tools, but they remain accessible programmatically.
 
+### Dynamic Filtering
+
+Function groups support dynamic filtering to control which functions are accessible at runtime. Filters work alongside the `include` and `exclude` configuration and are applied when functions are accessed, not when they are added.
+
+#### Filter Types
+
+**Group-level filters**: Applied to all functions in the group and receive a list of function names to filter.
+
+**Per-function filters**: Applied to individual functions and receive the function name to determine inclusion.
+
+#### Filter Interaction
+
+Filters work in combination with `include` and `exclude` configuration:
+
+1. First, the configuration determines the base set of functions (include/exclude logic)
+2. Then, group-level filters are applied to the resulting set
+3. Finally, per-function filters are applied to each remaining function
+
 ### Tool Wrapping
 
-You can request tools for an entire function group. The builder will wrap all accessible functions (honoring `include` and `exclude`) into the requested tool wrapper for a given agent framework.
+You can request tools for an entire function group. The builder will wrap all accessible functions (honoring `include`, `exclude`, and any active filters) into the requested tool wrapper for a given agent framework.
 
 ## Using Function Groups
 
@@ -145,6 +163,29 @@ async with WorkflowBuilder() as builder:
     # Call an included function directly by its fully-qualified name
     add = builder.get_function("math.add")
     result = await add.ainvoke([1, 2, 3])  # 6
+```
+
+#### Using Filters
+
+You can apply dynamic filters to control function accessibility at runtime:
+
+```python
+async with WorkflowBuilder() as builder:
+    # Add function group with a group-level filter
+    def math_filter(function_names):
+        # Only allow functions that start with "add"
+        return [name for name in function_names if name.startswith("add")]
+    
+    config = MathGroupConfig(include=["add", "mul"])
+    group = await builder.add_function_group("math", config)
+    
+    # Set the group-level filter
+    math_group = builder.get_function_group("math")
+    math_group.set_filter_fn(math_filter)
+    
+    # Now only "add" functions will be accessible, even though "mul" was included
+    accessible = math_group.get_accessible_functions()
+    # accessible contains only "math.add"
 ```
 
 ### Getting Tools for a Function Group
