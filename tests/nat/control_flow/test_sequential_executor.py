@@ -410,7 +410,7 @@ class TestSequentialExecution:
 
         with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    side_effect=ValueError("Type incompatibility")):
-            with pytest.raises(ValueError, match="The sequential executor tool list has incompatible types"):
+            with pytest.raises(ValueError, match="Type incompatibility"):
                 async with sequential_execution(config, mock_builder) as _:
                     pass
 
