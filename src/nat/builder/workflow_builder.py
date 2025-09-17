@@ -240,6 +240,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         # Set of all functions which are "included" by function groups
         included_functions = set()
+        # Dictionary of function configs
+        function_configs = dict()
         # Dictionary of function group configs
         function_group_configs = dict()
         # Dictionary of function instances
@@ -253,8 +255,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             function_group_instances[k] = v.instance
 
         # Function configs need to be restricted to only the functions that are not in a function group
-        function_configs = dict()
-        function_instances = dict()
         for k, v in self._functions.items():
             if k not in included_functions:
                 function_configs[k] = v.config

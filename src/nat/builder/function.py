@@ -365,7 +365,6 @@ class FunctionGroup:
         """
         self._config = config
         self._instance_name = instance_name or config.type
-        self._context = Context.get()
         self._functions: dict[str, Function] = {}
 
     def add_function(self,
