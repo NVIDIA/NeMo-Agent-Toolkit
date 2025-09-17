@@ -77,7 +77,7 @@ class MCPServerConfig(BaseModel):
             # Auth is not supported for SSE transport
             if self.auth_provider is not None:
                 raise ValueError(
-                    "Authentication is not supported for SSE transport. Use streamable-http transport for authenticated connections."
+                    "Authentication is not supported for SSE transport."
                 )
         elif self.transport == "streamable-http":
             if self.command is not None or self.args is not None or self.env is not None:
