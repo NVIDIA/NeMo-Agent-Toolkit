@@ -476,9 +476,9 @@ class FunctionGroup:
 
         First, the functions are filtered by the function group's configuration.
         If the function group is configured to:
-          - include some functions, this will return only the included functions.
-          - not include or exclude any function, this will return all functions in the group.
-          - exclude some functions, this will return all functions in the group except the excluded functions.
+        - include some functions, this will return only the included functions.
+        - not include or exclude any function, this will return all functions in the group.
+        - exclude some functions, this will return all functions in the group except the excluded functions.
 
         Then, the functions are filtered by filter function and per-function filter functions.
 
