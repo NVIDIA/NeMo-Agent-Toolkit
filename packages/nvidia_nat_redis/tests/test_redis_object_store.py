@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from contextlib import asynccontextmanager
 
 import pytest
@@ -31,7 +32,7 @@ def fixture_redis_server(fail_missing: bool):
     """Fixture to safely skip redis based tests if redis is not running"""
     try:
         import redis
-        client = redis.Redis(host="localhost", port=6379, db=0)
+        client = redis.Redis(host=os.environ.get("NAT_CI_REDIS_HOST", "localhost"), port=6379, db=0)
         if not client.ping():
             raise RuntimeError("Failed to connect to Redis")
         yield
@@ -54,7 +55,10 @@ class TestRedisObjectStore(ObjectStoreTests):
         async with WorkflowBuilder() as builder:
             await builder.add_object_store(
                 "object_store_name",
-                RedisObjectStoreClientConfig(bucket_name="test", host="localhost", port=6379, db=0),
+                RedisObjectStoreClientConfig(bucket_name="test",
+                                             host=os.environ.get("NAT_CI_REDIS_HOST", "localhost"),
+                                             port=6379,
+                                             db=0),
             )
 
             yield await builder.get_object_store_client("object_store_name")
