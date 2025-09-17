@@ -105,7 +105,9 @@ class AuthAdapter(httpx.Auth):
             www_authenticate=www_authenticate,
         )
         try:
-            # We may need to lock here to ensure the auth request is not changed while we are authenticating
+            # Mutating the config is not thread-safe, so we need to lock here
+            # Is mutating the config the only way to pass the auth request to the auth provider? This needs
+            # to be re-visited.
             self.auth_provider.config.auth_request = auth_request
             auth_result = await self.auth_provider.authenticate()
             # Check if we have BearerTokenCred
