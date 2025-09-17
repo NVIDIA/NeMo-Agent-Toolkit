@@ -117,7 +117,8 @@ async def sequential_execution(config: SequentialExecutorConfig, builder: Builde
         input_type, output_type = _validate_tool_list_type_compatibility(config, builder)
     except ValueError as e:
         if config.raise_type_incompatibility:
-            raise ValueError(f"The sequential executor tool list has incompatible types: {e}")
+            logger.error(f"The sequential executor tool list has incompatible types: {e}")
+            raise
         else:
             logger.warning(f"The sequential executor tool list has incompatible types: {e}")
             input_type = typing.Any

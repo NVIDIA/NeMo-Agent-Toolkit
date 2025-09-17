@@ -50,5 +50,3 @@ workflow:
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3
-  env:
-    - NVIDIA_API_KEY: "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"
