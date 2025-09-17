@@ -63,7 +63,12 @@ workflow:
   # List all tools that are needed for the workflow from the two MCP servers
   # get_current_time_mcp_tool is from the local mcp_server_time server
   # calculator_multiply, calculator_divide, calculator_subtract, calculator_inequality are from the remote mcp_server_math server
-  tool_names: ["get_current_time_mcp_tool", "calculator_multiply", "calculator_divide", "calculator_subtract", "calculator_inequality"]
+  tool_names:
+    - calculator_multiply
+    - calculator_inequality
+    - calculator_divide
+    - calculator_subtract
+    - get_current_time_mcp_tool
   llm_name: nim_llm
   verbose: true
   retry_parsing_errors: true

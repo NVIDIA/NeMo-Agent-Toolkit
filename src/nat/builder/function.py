@@ -14,12 +14,14 @@
 # limitations under the License.
 
 import logging
+import re
 import typing
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import AsyncGenerator
 from collections.abc import Awaitable
 from collections.abc import Callable
+from collections.abc import Sequence
 
 from pydantic import BaseModel
 
@@ -29,7 +31,9 @@ from nat.builder.function_base import InputT
 from nat.builder.function_base import SingleOutputT
 from nat.builder.function_base import StreamingOutputT
 from nat.builder.function_info import FunctionInfo
+from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 
 _InvokeFnT = Callable[[InputT], Awaitable[SingleOutputT]]
 _StreamFnT = Callable[[InputT], AsyncGenerator[StreamingOutputT]]
@@ -342,3 +346,294 @@ class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
             pass
 
         return FunctionImpl(config=config, info=info, instance_name=instance_name)
+
+
+class FunctionGroup:
+    """
+    A group of functions that can be used together, sharing the same configuration, context, and resources.
+    """
+
+    def __init__(self,
+                 *,
+                 config: FunctionGroupBaseConfig,
+                 instance_name: str | None = None,
+                 filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None):
+        """
+        Creates a new function group.
+
+        Parameters
+        ----------
+        config : FunctionGroupBaseConfig
+            The configuration for the function group.
+        instance_name : str | None, optional
+            The name of the function group. If not provided, the type of the function group will be used.
+        filter_fn : Callable[[Sequence[str]], Sequence[str]] | None, optional
+            A callback function to additionally filter the functions in the function group dynamically when
+            the functions are accessed via any accessor method.
+        """
+        self._config = config
+        self._instance_name = instance_name or config.type
+        self._functions: dict[str, Function] = dict()
+        self._filter_fn = filter_fn
+        self._per_function_filter_fn: dict[str, Callable[[str], bool]] = dict()
+
+    def add_function(self,
+                     name: str,
+                     fn: Callable,
+                     *,
+                     input_schema: type[BaseModel] | None = None,
+                     description: str | None = None,
+                     converters: list[Callable] | None = None,
+                     filter_fn: Callable[[str], bool] | None = None):
+        """
+        Adds a function to the function group.
+
+        Parameters
+        ----------
+        name : str
+            The name of the function.
+        fn : Callable
+            The function to add to the function group.
+        input_schema : type[BaseModel] | None, optional
+            The input schema for the function.
+        description : str | None, optional
+            The description of the function.
+        converters : list[Callable] | None, optional
+            The converters to use for the function.
+        filter_fn : Callable[[str], bool] | None, optional
+            A callback to determine if the function should be included in the function group. The
+            callback will be called with the function name. The callback is invoked dynamically when
+            the functions are accessed via any accessor method such as `get_accessible_functions`,
+            `get_included_functions`, `get_excluded_functions`, `get_all_functions`.
+
+        Raises
+        ------
+        ValueError
+            When the function name is empty or blank.
+            When the function name contains invalid characters.
+            When the function already exists in the function group.
+        """
+        if not name.strip():
+            raise ValueError("Function name cannot be empty or blank")
+        if not re.match(r"^[a-zA-Z0-9_-]+$", name):
+            raise ValueError(f"Function name can only contain letters, numbers, underscores, and hyphens: {name}")
+        if name in self._functions:
+            raise ValueError(f"Function {name} already exists in function group {self._instance_name}")
+
+        info = FunctionInfo.from_fn(fn, input_schema=input_schema, description=description, converters=converters)
+        full_name = self._get_fn_name(name)
+        lambda_fn = LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name=full_name)
+        self._functions[name] = lambda_fn
+        if filter_fn:
+            self._per_function_filter_fn[name] = filter_fn
+
+    def get_config(self) -> FunctionGroupBaseConfig:
+        """
+        Returns the configuration for the function group.
+
+        Returns
+        -------
+        FunctionGroupBaseConfig
+            The configuration for the function group.
+        """
+        return self._config
+
+    def _get_fn_name(self, name: str) -> str:
+        return f"{self._instance_name}.{name}"
+
+    def _fn_should_be_included(self, name: str) -> bool:
+        return (name not in self._per_function_filter_fn or self._per_function_filter_fn[name](name))
+
+    def _get_all_but_excluded_functions(
+        self,
+        filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None,
+    ) -> dict[str, Function]:
+        """
+        Returns a dictionary of all functions in the function group except the excluded functions.
+        """
+        missing = set(self._config.exclude) - set(self._functions.keys())
+        if missing:
+            raise ValueError(f"Unknown excluded functions: {sorted(missing)}")
+        filter_fn = filter_fn or self._filter_fn or (lambda x: x)
+        excluded = set(self._config.exclude)
+        included = set(filter_fn(list(self._functions.keys())))
+
+        def predicate(name: str) -> bool:
+            if name in excluded:
+                return False
+            if not self._fn_should_be_included(name):
+                return False
+            return name in included
+
+        return {self._get_fn_name(name): self._functions[name] for name in self._functions if predicate(name)}
+
+    def get_accessible_functions(
+        self,
+        filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None,
+    ) -> dict[str, Function]:
+        """
+        Returns a dictionary of all accessible functions in the function group.
+
+        First, the functions are filtered by the function group's configuration.
+        If the function group is configured to:
+        - include some functions, this will return only the included functions.
+        - not include or exclude any function, this will return all functions in the group.
+        - exclude some functions, this will return all functions in the group except the excluded functions.
+
+        Then, the functions are filtered by filter function and per-function filter functions.
+
+        Parameters
+        ----------
+        filter_fn : Callable[[Sequence[str]], Sequence[str]] | None, optional
+            A callback function to additionally filter the functions in the function group dynamically. If not provided
+            then fall back to the function group's filter function. If no filter function is set for the function group
+            all functions will be returned.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all accessible functions in the function group.
+
+        Raises
+        ------
+        ValueError
+            When the function group is configured to include functions that are not found in the group.
+        """
+        if self._config.include:
+            return self.get_included_functions(filter_fn=filter_fn)
+        if self._config.exclude:
+            return self._get_all_but_excluded_functions(filter_fn=filter_fn)
+        return self.get_all_functions(filter_fn=filter_fn)
+
+    def get_excluded_functions(
+        self,
+        filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None,
+    ) -> dict[str, Function]:
+        """
+        Returns a dictionary of all functions in the function group which are configured to be excluded or filtered
+        out by a filter function or per-function filter function.
+
+        Parameters
+        ----------
+        filter_fn : Callable[[Sequence[str]], Sequence[str]] | None, optional
+            A callback function to additionally filter the functions in the function group dynamically. If not provided
+            then fall back to the function group's filter function. If no filter function is set for the function group
+            then no functions will be added to the returned dictionary.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all excluded functions in the function group.
+
+        Raises
+        ------
+        ValueError
+            When the function group is configured to exclude functions that are not found in the group.
+        """
+        missing = set(self._config.exclude) - set(self._functions.keys())
+        if missing:
+            raise ValueError(f"Unknown excluded functions: {sorted(missing)}")
+        filter_fn = filter_fn or self._filter_fn or (lambda x: x)
+        excluded = set(self._config.exclude)
+        included = set(filter_fn(list(self._functions.keys())))
+
+        def predicate(name: str) -> bool:
+            if name in excluded:
+                return True
+            if not self._fn_should_be_included(name):
+                return True
+            return name not in included
+
+        return {self._get_fn_name(name): self._functions[name] for name in self._functions if predicate(name)}
+
+    def get_included_functions(
+        self,
+        filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None,
+    ) -> dict[str, Function]:
+        """
+        Returns a dictionary of all functions in the function group which are:
+        - configured to be included and added to the global function registry
+        - not configured to be excluded.
+        - not filtered out by a filter function.
+
+        Parameters
+        ----------
+        filter_fn : Callable[[Sequence[str]], Sequence[str]] | None, optional
+            A callback function to additionally filter the functions in the function group dynamically. If not provided
+            then fall back to the function group's filter function. If no filter function is set for the function group
+            all functions will be returned.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all included functions in the function group.
+
+        Raises
+        ------
+        ValueError
+            When the function group is configured to include functions that are not found in the group.
+        """
+        missing = set(self._config.include) - set(self._functions.keys())
+        if missing:
+            raise ValueError(f"Unknown included functions: {sorted(missing)}")
+        filter_fn = filter_fn or self._filter_fn or (lambda x: x)
+        included = set(filter_fn(list(self._config.include)))
+        included = {name for name in included if self._fn_should_be_included(name)}
+        return {self._get_fn_name(name): self._functions[name] for name in included}
+
+    def get_all_functions(
+        self,
+        filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None,
+    ) -> dict[str, Function]:
+        """
+        Returns a dictionary of all functions in the function group, regardless if they are included or excluded.
+
+        If a filter function has been set, the returned functions will additionally be filtered by the callback.
+
+        Parameters
+        ----------
+        filter_fn : Callable[[Sequence[str]], Sequence[str]] | None, optional
+            A callback function to additionally filter the functions in the function group dynamically. If not provided
+            then fall back to the function group's filter function. If no filter function is set for the function group
+            all functions will be returned.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all functions in the function group.
+        """
+        filter_fn = filter_fn or self._filter_fn or (lambda x: x)
+        included = set(filter_fn(list(self._functions.keys())))
+        included = {name for name in included if self._fn_should_be_included(name)}
+        return {self._get_fn_name(name): self._functions[name] for name in included}
+
+    def set_filter_fn(self, filter_fn: Callable[[Sequence[str]], Sequence[str]]):
+        """
+        Sets the filter function for the function group.
+
+        Parameters
+        ----------
+        filter_fn : Callable[[Sequence[str]], Sequence[str]]
+            The filter function to set for the function group.
+        """
+        self._filter_fn = filter_fn
+
+    def set_per_function_filter_fn(self, name: str, filter_fn: Callable[[str], bool]):
+        """
+        Sets the a per-function filter function for the a function within the function group.
+
+        Parameters
+        ----------
+        name : str
+            The name of the function.
+        filter_fn : Callable[[str], bool]
+            The per-function filter function to set for the function group.
+
+        Raises
+        ------
+        ValueError
+            When the function is not found in the function group.
+        """
+        if name not in self._functions:
+            raise ValueError(f"Function {name} not found in function group {self._instance_name}")
+        self._per_function_filter_fn[name] = filter_fn

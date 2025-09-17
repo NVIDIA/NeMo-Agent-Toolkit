@@ -23,6 +23,7 @@ class FunctionDependencies(BaseModel):
     A class to represent the dependencies of a function.
     """
     functions: set[str] = Field(default_factory=set)
+    function_groups: set[str] = Field(default_factory=set)
     llms: set[str] = Field(default_factory=set)
     embedders: set[str] = Field(default_factory=set)
     memory_clients: set[str] = Field(default_factory=set)
@@ -31,6 +32,10 @@ class FunctionDependencies(BaseModel):
 
     @field_serializer("functions", when_used="json")
     def serialize_functions(self, v: set[str]) -> list[str]:
+        return list(v)
+
+    @field_serializer("function_groups", when_used="json")
+    def serialize_function_groups(self, v: set[str]) -> list[str]:
         return list(v)
 
     @field_serializer("llms", when_used="json")
@@ -55,6 +60,9 @@ class FunctionDependencies(BaseModel):
 
     def add_function(self, function: str):
         self.functions.add(function)
+
+    def add_function_group(self, function_group: str):
+        self.function_groups.add(function_group)  # pylint: disable=no-member
 
     def add_llm(self, llm: str):
         self.llms.add(llm)

@@ -97,7 +97,11 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
                          f"function without a description.")
 
     # Get the function dependencies of the augmented function
-    function_used_tools = builder.get_function_dependencies(config.augmented_fn).functions
+    function_dependencies = builder.get_function_dependencies(config.augmented_fn)
+    function_used_tools = set(function_dependencies.functions)
+    for function_group in function_dependencies.function_groups:
+        function_used_tools.update(builder.get_function_group_dependencies(function_group).functions)
+
     tool_list = "Tool: Description\n"
 
     for tool in function_used_tools:

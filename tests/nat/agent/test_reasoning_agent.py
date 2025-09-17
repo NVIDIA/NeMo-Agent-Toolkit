@@ -138,9 +138,11 @@ async def fake_builder_fixture() -> Builder:
 
     # get_function_dependencies is used just for referencing tool names, etc
     class FakeDeps:
-        functions = ["SomeTool"]
+        functions = {"SomeTool"}
+        function_groups = set()
 
     builder.get_function_dependencies.return_value = FakeDeps()
+    builder.get_function_group_dependencies.return_value = FakeDeps()
 
     return builder
 
@@ -300,9 +302,11 @@ async def test_build_reasoning_function_prompt_contains_tools(fake_builder):
 
     # The builder says we have 2 tools
     class FakeDeps:
-        functions = ["ToolA", "ToolB"]
+        functions = {"ToolA", "ToolB"}
+        function_groups = set()
 
     fake_builder.get_function_dependencies.return_value = FakeDeps()
+    fake_builder.get_function_group_dependencies.return_value = FakeDeps()
 
     mock_llm = MagicMock()
 
@@ -373,9 +377,11 @@ async def test_build_reasoning_function_handles_empty_tool_list(fake_builder):
 
     # The builder says we have no tools
     class FakeDeps:
-        functions = []
+        functions = set()
+        function_groups = set()
 
     fake_builder.get_function_dependencies.return_value = FakeDeps()
+    fake_builder.get_function_group_dependencies.return_value = FakeDeps()
 
     mock_llm = MagicMock()
     mock_llm.ainvoke_stream.side_effect = _fake_llm_stream

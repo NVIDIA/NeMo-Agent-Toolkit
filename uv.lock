@@ -5931,7 +5931,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mcp", specifier = "~=1.13" },
+    { name = "mcp", specifier = "~=1.14" },
     { name = "nvidia-nat", editable = "." },
 ]
 
