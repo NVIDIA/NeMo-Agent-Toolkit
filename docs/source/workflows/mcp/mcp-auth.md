@@ -28,7 +28,7 @@ This is currently a scratch pad for planning MCP auth. It will be rewritten when
 ```bash
 nat mcp --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-server-auth.yml
 ```
-This starts a protected MCP server on port 9901. This MCP server has a stub token verifier that will always return sucess without AS introspection.
+This starts a protected MCP server on port 9901. This MCP server has a stub token verifier that will always return success without AS introspection.
 
 2. Start a container with the example auth server from the MCP repo. This will start the auth server on port 9000.
 ```bash
