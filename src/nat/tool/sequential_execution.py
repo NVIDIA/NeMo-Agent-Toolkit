@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from langchain_core.runnables import RunnableConfig
+import logging
+import typing
+
 from langchain_core.tools.base import BaseTool
 from pydantic import BaseModel
 from pydantic import Field
@@ -27,19 +29,18 @@ from nat.data_models.component_ref import FunctionRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.utils.type_utils import DecomposedType
 
+logger = logging.getLogger(__name__)
+
 
 class ToolExecutionConfig(BaseModel):
     """Configuration for individual tool execution within sequential execution."""
 
     use_streaming: bool = Field(default=False, description="Whether to use streaming output for the tool.")
-    output_type: type | None = Field(
-        default=None,
-        description=
-        "The customized output type of the tool. If set to different type than the output function, the output type will "
-        "be converted using the converters.")
 
 
 class SequentialExecutionToolConfig(FunctionBaseConfig, name="sequential_execution"):
+    """Configuration for sequential execution of a list of functions."""
+
     sequential_tool_list: list[FunctionRef] = Field(default_factory=list,
                                                     description="A list of functions to execute sequentially.")
     tool_execution_config: dict[str, ToolExecutionConfig] = Field(default_factory=dict,
@@ -47,6 +48,12 @@ class SequentialExecutionToolConfig(FunctionBaseConfig, name="sequential_executi
                                                                   "configuration for each tool in the sequential"
                                                                   "execution. Keys should match the tool names from the"
                                                                   "sequential_tool_list.")
+    check_type_compatibility: bool = Field(
+        default=False,
+        description="Check if the adjacent tools are type compatible,"
+        "which means the output type of the source function is compatible with the input type of the target function."
+        "If set to True, any incompatibility will raise an exception. If set to false, the incompatibility will only"
+        "generate a warning and the sequential execution will continue.")
 
 
 def _validate_function_type_compatibility(src_fn: Function,
@@ -55,10 +62,7 @@ def _validate_function_type_compatibility(src_fn: Function,
     # Validate if the output type of the source function is compatible with the input type of the target function
     src_fn_config = tool_execution_config.get(src_fn.instance_name, None)
     if src_fn_config:
-        if src_fn_config.output_type:
-            src_output_type = src_fn_config.output_type
-        else:
-            src_output_type = src_fn.streaming_output_type if src_fn_config.use_streaming else src_fn.single_output_type
+        src_output_type = src_fn.streaming_output_type if src_fn_config.use_streaming else src_fn.single_output_type
     else:
         src_output_type = src_fn.single_output_type
 
@@ -87,10 +91,7 @@ def _validate_sequential_tool_list(sequential_execution_config: SequentialExecut
     last_fn = function_list[-1]
     last_fn_config = tool_execution_config.get(last_fn.instance_name, None)
     if last_fn_config:
-        if last_fn_config.output_type:
-            output_type = last_fn_config.output_type
-        else:
-            output_type = last_fn.streaming_output_type if last_fn_config.use_streaming else last_fn.single_output_type
+        output_type = last_fn.streaming_output_type if last_fn_config.use_streaming else last_fn.single_output_type
     else:
         output_type = last_fn.single_output_type
     return (input_type, output_type)
@@ -105,7 +106,12 @@ async def sequential_execution(_config: SequentialExecutionToolConfig, builder: 
     try:
         input_type, output_type = _validate_sequential_tool_list(_config, builder)
     except ValueError as e:
-        raise ValueError(f"The sequential tool list has incompatible types: {e}")
+        if _config.check_type_compatibility:
+            raise ValueError(f"The sequential tool list has incompatible types: {e}")
+        else:
+            logger.warning(f"The sequential tool list has incompatible types: {e}")
+            input_type = typing.Any
+            output_type = typing.Any
 
     async def _async_sequential_execution(initial_tool_input):
         sequential_tool_list: list[FunctionRef] = _config.sequential_tool_list
@@ -114,16 +120,21 @@ async def sequential_execution(_config: SequentialExecutionToolConfig, builder: 
         for tool_name in sequential_tool_list:
             tool = tools_dict[tool_name]
             tool_execution_config = _config.tool_execution_config.get(tool_name, None)
-            if tool_execution_config:
-                if tool_execution_config.use_streaming:
-                    output = ""
-                    async for chunk in tool.astream(tool_input, config=RunnableConfig(callbacks=[])):
-                        output += chunk.content
-                    tool_response = output
+            try:
+                if tool_execution_config:
+                    if tool_execution_config.use_streaming:
+                        output = ""
+                        async for chunk in tool.astream(tool_input):
+                            output += chunk.content
+                        tool_response = output
+                    else:
+                        tool_response = await tool.ainvoke(tool_input)
                 else:
-                    tool_response = await tool.ainvoke(tool_input, config=RunnableConfig(callbacks=[]))
-            else:
-                tool_response = await tool.ainvoke(tool_input, config=RunnableConfig(callbacks=[]))
+                    tool_response = await tool.ainvoke(tool_input)
+            except Exception as e:
+                logger.error(f"Error with tool {tool_name}: {e}")
+                raise
+
             tool_input = tool_response
 
         return tool_response
