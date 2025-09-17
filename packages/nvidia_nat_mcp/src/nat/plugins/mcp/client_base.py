@@ -20,11 +20,9 @@ from abc import ABC
 from abc import abstractmethod
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
-from typing import Any
 from typing import AsyncGenerator
 
 import httpx
-from pydantic import BaseModel
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client

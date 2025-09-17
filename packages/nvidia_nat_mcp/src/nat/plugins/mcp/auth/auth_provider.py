@@ -277,10 +277,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             auth_request = auth_request.model_copy(update={
                 "reason": AuthReason.NORMAL, "user_id": user_id, "www_authenticate": None
             })
-        else:
-            # back-compat: propagate user_id if provided but not set in the request
-            if user_id is not None and auth_request.user_id is None:
-                auth_request = auth_request.model_copy(update={"user_id": user_id})
+        # back-compat: propagate user_id if provided but not set in the request
+        elif user_id is not None and auth_request.user_id is None:
+            auth_request = auth_request.model_copy(update={"user_id": user_id})
 
         # Perform the OAuth2 flow without lock
         return await self._perform_oauth2_flow(auth_request=auth_request)
@@ -324,14 +323,14 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         if self._auth_code_provider is None:
             oauth2_config = OAuth2AuthCodeFlowProviderConfig(
-                    client_id=credentials.client_id,
-                    client_secret=credentials.client_secret or "",
-                    authorization_url=str(endpoints.authorization_url),
-                    token_url=str(endpoints.token_url),
-                    token_endpoint_auth_method=getattr(self.config, "token_endpoint_auth_method", None),
-                    redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
-                    scopes=self._effective_scopes() or [],
-                    use_pkce=bool(self.config.use_pkce),
+                client_id=credentials.client_id,
+                client_secret=credentials.client_secret or "",
+                authorization_url=str(endpoints.authorization_url),
+                token_url=str(endpoints.token_url),
+                token_endpoint_auth_method=getattr(self.config, "token_endpoint_auth_method", None),
+                redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
+                scopes=self._effective_scopes() or [],
+                use_pkce=bool(self.config.use_pkce),
             )
 
             self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)

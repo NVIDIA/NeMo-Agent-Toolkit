@@ -22,9 +22,7 @@ import httpx
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
-from pydantic import HttpUrl
 from pydantic import SecretStr
-from pydantic import model_validator
 
 from nat.data_models.common import BaseModelRegistryTag
 from nat.data_models.common import TypedBaseModel
@@ -231,6 +229,7 @@ class AuthResult(BaseModel):
                 target_kwargs.setdefault(k, {}).update(v)
             else:
                 target_kwargs[k] = v
+
 
 class AuthReason(str, Enum):
     """

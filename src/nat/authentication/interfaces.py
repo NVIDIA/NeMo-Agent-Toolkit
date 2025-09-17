@@ -55,7 +55,6 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
         """
         return self._config
 
-
     @abstractmethod
     async def authenticate(self, user_id: str | None = None, auth_request: AuthRequest | None = None) -> AuthResult:
         """

@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import asyncio
-from typing import Any
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
@@ -35,6 +34,7 @@ from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
 # --------------------------------------------------------------------------- #
 # Test Fixtures
 # --------------------------------------------------------------------------- #
+
 
 @pytest.fixture
 def mock_config() -> MCPOAuth2ProviderConfig:
@@ -94,13 +94,15 @@ def mock_retry_auth_request() -> AuthRequest:
     return AuthRequest(
         user_id="test_user",
         reason=AuthReason.RETRY_AFTER_401,
-        www_authenticate='Bearer realm="api", resource_metadata="https://auth.example.com/.well-known/oauth-protected-resource"',
+        www_authenticate=
+        'Bearer realm="api", resource_metadata="https://auth.example.com/.well-known/oauth-protected-resource"',
     )
 
 
 # --------------------------------------------------------------------------- #
 # DiscoverOAuth2Endpoints Tests
 # --------------------------------------------------------------------------- #
+
 
 class TestDiscoverOAuth2Endpoints:
     """Test the DiscoverOAuth2Endpoints class."""
@@ -117,10 +119,7 @@ class TestDiscoverOAuth2Endpoints:
         discoverer._cached_endpoints = cached_endpoints
 
         # Test normal request returns cached endpoints
-        endpoints, changed = await discoverer.discover(
-            reason=AuthReason.NORMAL,
-            www_authenticate=None
-        )
+        endpoints, changed = await discoverer.discover(reason=AuthReason.NORMAL, www_authenticate=None)
 
         assert endpoints == cached_endpoints
         assert changed is False
@@ -162,10 +161,7 @@ class TestDiscoverOAuth2Endpoints:
                 token_url=HttpUrl("https://auth.example.com/token"),
             )
 
-            endpoints, changed = await discoverer.discover(
-                reason=AuthReason.NORMAL,
-                www_authenticate=None
-            )
+            endpoints, changed = await discoverer.discover(reason=AuthReason.NORMAL, www_authenticate=None)
 
             assert endpoints is not None
             assert changed is True
@@ -177,26 +173,22 @@ class TestDiscoverOAuth2Endpoints:
 
         # Test with double quotes
         url = discoverer._extract_from_www_authenticate_header(
-            'Bearer realm="api", resource_metadata="https://auth.example.com/.well-known/oauth-protected-resource"'
-        )
+            'Bearer realm="api", resource_metadata="https://auth.example.com/.well-known/oauth-protected-resource"')
         assert url == "https://auth.example.com/.well-known/oauth-protected-resource"
 
         # Test with single quotes
         url = discoverer._extract_from_www_authenticate_header(
-            "Bearer realm='api', resource_metadata='https://auth.example.com/.well-known/oauth-protected-resource'"
-        )
+            "Bearer realm='api', resource_metadata='https://auth.example.com/.well-known/oauth-protected-resource'")
         assert url == "https://auth.example.com/.well-known/oauth-protected-resource"
 
         # Test without quotes
         url = discoverer._extract_from_www_authenticate_header(
-            "Bearer realm=api, resource_metadata=https://auth.example.com/.well-known/oauth-protected-resource"
-        )
+            "Bearer realm=api, resource_metadata=https://auth.example.com/.well-known/oauth-protected-resource")
         assert url == "https://auth.example.com/.well-known/oauth-protected-resource"
 
         # Test case insensitive
         url = discoverer._extract_from_www_authenticate_header(
-            "Bearer realm=api, RESOURCE_METADATA=https://auth.example.com/.well-known/oauth-protected-resource"
-        )
+            "Bearer realm=api, RESOURCE_METADATA=https://auth.example.com/.well-known/oauth-protected-resource")
         assert url == "https://auth.example.com/.well-known/oauth-protected-resource"
 
         # Test no match
@@ -232,9 +224,11 @@ class TestDiscoverOAuth2Endpoints:
         ]
         assert urls == expected
 
+
 # --------------------------------------------------------------------------- #
 # DynamicClientRegistration Tests
 # --------------------------------------------------------------------------- #
+
 
 class TestDynamicClientRegistration:
     """Test the DynamicClientRegistration class."""
@@ -249,6 +243,7 @@ class TestDynamicClientRegistration:
             mock_resp.raise_for_status.return_value = None
             mock_resp.aread.return_value = b'{"client_id": "registered_client_id",\
             "client_secret": "registered_client_secret", "redirect_uris": ["https://example.com/callback"]}'
+
             mock_client.return_value.__aenter__.return_value.post.return_value = mock_resp
 
             credentials = await registrar.register(mock_endpoints, ["read", "write"])
@@ -279,7 +274,6 @@ class TestDynamicClientRegistration:
             mock_client.return_value.__aenter__.return_value.post.assert_called_once()
             call_args = mock_client.return_value.__aenter__.return_value.post.call_args
             assert call_args[0][0] == "https://example.com/register"
-
 
     async def test_register_invalid_response(self, mock_config, mock_endpoints):
         """Test registration fails with invalid JSON response."""
@@ -312,6 +306,7 @@ class TestDynamicClientRegistration:
 # MCPOAuth2Provider Tests
 # --------------------------------------------------------------------------- #
 
+
 class TestMCPOAuth2Provider:
     """Test the MCPOAuth2Provider class."""
 
@@ -337,7 +332,8 @@ class TestMCPOAuth2Provider:
         with pytest.raises(RuntimeError, match="Auth request is required"):
             await provider.authenticate(user_id="test_user", auth_request=None)
 
-    async def test_authenticate_with_manual_credentials(self, mock_config_with_credentials, mock_endpoints, monkeypatch):
+    async def test_authenticate_with_manual_credentials(self, mock_config_with_credentials, mock_endpoints,
+                                                        monkeypatch):
         """Test authentication with pre-registered credentials."""
         provider = MCPOAuth2Provider(mock_config_with_credentials)
 
@@ -366,7 +362,11 @@ class TestMCPOAuth2Provider:
                 mock_discover.assert_called_once()
                 mock_flow.assert_called_once()
 
-    async def test_authenticate_with_dynamic_registration(self, mock_config, mock_endpoints, mock_credentials, monkeypatch):
+    async def test_authenticate_with_dynamic_registration(self,
+                                                          mock_config,
+                                                          mock_endpoints,
+                                                          mock_credentials,
+                                                          monkeypatch):
         """Test authentication with dynamic client registration."""
         provider = MCPOAuth2Provider(mock_config)
 
@@ -473,7 +473,6 @@ class TestMCPOAuth2Provider:
         with pytest.raises(RuntimeError, match="OAuth2 flow called before discovery"):
             await provider._perform_oauth2_flow(auth_request=auth_request)
 
-
     async def test_perform_oauth2_flow_prevents_retry_after_401(self, mock_config, mock_endpoints, mock_credentials):
         """Test that OAuth2 flow prevents being called for RETRY_AFTER_401."""
         provider = MCPOAuth2Provider(mock_config)
@@ -494,16 +493,12 @@ class TestMCPOAuth2Provider:
         provider = MCPOAuth2Provider(mock_config)
 
         # Create different endpoints for each request to simulate different 401 responses
-        endpoints1 = OAuth2Endpoints(
-            authorization_url=HttpUrl("https://auth1.example.com/authorize"),
-            token_url=HttpUrl("https://auth1.example.com/token"),
-            registration_url=HttpUrl("https://auth1.example.com/register")
-        )
-        endpoints2 = OAuth2Endpoints(
-            authorization_url=HttpUrl("https://auth2.example.com/authorize"),
-            token_url=HttpUrl("https://auth2.example.com/token"),
-            registration_url=HttpUrl("https://auth2.example.com/register")
-        )
+        endpoints1 = OAuth2Endpoints(authorization_url=HttpUrl("https://auth1.example.com/authorize"),
+                                     token_url=HttpUrl("https://auth1.example.com/token"),
+                                     registration_url=HttpUrl("https://auth1.example.com/register"))
+        endpoints2 = OAuth2Endpoints(authorization_url=HttpUrl("https://auth2.example.com/authorize"),
+                                     token_url=HttpUrl("https://auth2.example.com/token"),
+                                     registration_url=HttpUrl("https://auth2.example.com/register"))
 
         async def discover_with_delay(*args, **kwargs):
             # Simulate discovery taking time
@@ -524,16 +519,12 @@ class TestMCPOAuth2Provider:
                     mock_flow.return_value = AuthResult(credentials=[], token_expires_at=None, raw={})
 
                     # Create two 401 retry requests
-                    auth_request1 = AuthRequest(
-                        user_id="test_user1",
-                        reason=AuthReason.RETRY_AFTER_401,
-                        www_authenticate='Bearer realm="api1"'
-                    )
-                    auth_request2 = AuthRequest(
-                        user_id="test_user2",
-                        reason=AuthReason.RETRY_AFTER_401,
-                        www_authenticate='Bearer realm="api2"'
-                    )
+                    auth_request1 = AuthRequest(user_id="test_user1",
+                                                reason=AuthReason.RETRY_AFTER_401,
+                                                www_authenticate='Bearer realm="api1"')
+                    auth_request2 = AuthRequest(user_id="test_user2",
+                                                reason=AuthReason.RETRY_AFTER_401,
+                                                www_authenticate='Bearer realm="api2"')
 
                     # Start two concurrent 401 retry operations
                     task1 = asyncio.create_task(provider._discover_and_register(auth_request1))

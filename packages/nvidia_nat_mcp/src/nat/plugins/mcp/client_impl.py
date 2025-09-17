@@ -19,7 +19,6 @@ from typing import Literal
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
-from pydantic import SecretStr
 from pydantic import model_validator
 
 from nat.builder.builder import Builder
