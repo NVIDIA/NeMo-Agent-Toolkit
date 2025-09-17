@@ -34,11 +34,13 @@ stages:
   - upload
 
 variables:
-  UV_CACHE_DIR: .uv-cache
-  BUILD_NAT_COMPAT: "true"
-  GIT_SUBMODULE_STRATEGY: recursive
-  GIT_SUBMODULE_FORCE_HTTPS: "true"
   BUILD_AIQ_COMPAT: "true"
+  BUILD_NAT_COMPAT: "true"
+  GIT_SUBMODULE_FORCE_HTTPS: "true"
+  GIT_SUBMODULE_STRATEGY: recursive
+  MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+  NAT_CI_MYSQL_HOST: "mysql"
+  UV_CACHE_DIR: .uv-cache
   WORKSPACE_TMP: "${CI_PROJECT_DIR}/.tmp"
 
 default:
@@ -71,6 +73,8 @@ check:style:
 
 test:python_tests:
   stage: test
+  services:
+    - mysql:9.3
   script:
     - echo "Running tests"
     - ./ci/scripts/gitlab/tests.sh
