@@ -13,10 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-general:
-  use_uvloop: true
-
 functions:
   text_processor:
     _type: text_processor
@@ -26,6 +22,6 @@ functions:
     _type: report_generator
 
 workflow:
-  _type: sequential_execution
-  sequential_tool_list: [text_processor, data_analyzer, report_generator]
+  _type: sequential_executor
+  tool_list: [text_processor, data_analyzer, report_generator]
   check_type_compatibility: false

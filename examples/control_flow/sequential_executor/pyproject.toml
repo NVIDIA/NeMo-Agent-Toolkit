@@ -7,7 +7,7 @@ git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
-name = "nat_sequential_execution"
+name = "nat_sequential_executor"
 dynamic = ["version"]
 dependencies = [
    "nvidia-nat[langchain]~=1.3"
@@ -20,4 +20,4 @@ classifiers = ["Programming Language :: Python"]
 nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'nat.components']
-nat_sequential_execution = "nat_sequential_execution.register"
+nat_sequential_executor = "nat_sequential_executor.register"

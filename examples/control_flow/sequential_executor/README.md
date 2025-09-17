@@ -124,7 +124,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/agents/sequential_execution
+uv pip install -e examples/control_flow/sequential_executor
 ```
 
 ### Set Up API Keys
@@ -141,24 +141,24 @@ This workflow showcases the Sequential Execution functionality by processing raw
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-nat run --config_file=examples/agents/sequential_execution/configs/config.yml --input "The quick brown fox jumps over the lazy dog. This is a simple test sentence to demonstrate text processing capabilities."
+nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "The quick brown fox jumps over the lazy dog. This is a simple test sentence to demonstrate text processing capabilities."
 ```
 
 **Additional Example Commands:**
 ```bash
 # Test with a longer, more complex text
-nat run --config_file=examples/agents/sequential_execution/configs/config.yml --input "Natural language processing is a fascinating field that combines computational linguistics with machine learning and artificial intelligence. It enables computers to understand, interpret, and generate human language in a valuable way."
+nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "Natural language processing is a fascinating field that combines computational linguistics with machine learning and artificial intelligence. It enables computers to understand, interpret, and generate human language in a valuable way."
 
 # Test with shorter text
-nat run --config_file=examples/agents/sequential_execution/configs/config.yml --input "Hello world! This is a test."
+nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "Hello world! This is a test."
 
 # Test with text containing special characters
-nat run --config_file=examples/agents/sequential_execution/configs/config.yml --input "This text has special characters: @#$%^&*()! Let's see how the pipeline handles them."
+nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "This text has special characters: @#$%^&*()! Let's see how the pipeline handles them."
 ```
 
 **Expected Workflow Output**
 ```console
-nemo-agent-toolkit % nat run --config_file=examples/agents/sequential_execution/configs/config.yml --input "The quick brown fox jumps over the lazy dog. This is a simple test sentence to demonstrate text processing capabilities."
+nemo-agent-toolkit % nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "The quick brown fox jumps over the lazy dog. This is a simple test sentence to demonstrate text processing capabilities."
 
 Configuration Summary:
 --------------------
@@ -203,7 +203,7 @@ You can start the NeMo Agent toolkit server using the `nat serve` command with t
 **Starting the Sequential Execution Example Workflow**
 
 ```bash
-nat serve --config_file=examples/agents/sequential_execution/configs/config.yml
+nat serve --config_file=examples/control_flow/sequential_executor/configs/config.yml
 ```
 
 ### Making Requests to the NeMo Agent Toolkit Server

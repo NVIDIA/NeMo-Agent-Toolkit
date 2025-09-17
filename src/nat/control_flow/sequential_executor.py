@@ -44,29 +44,34 @@ class SequentialExecutorConfig(FunctionBaseConfig, name="sequential_executor"):
     tool_list: list[FunctionRef] = Field(default_factory=list,
                                          description="A list of functions to execute sequentially.")
     tool_execution_config: dict[str, ToolExecutionConfig] = Field(default_factory=dict,
-                                                                  description="Optional"
-                                                                  "configuration for each tool in the sequential"
-                                                                  "execution. Keys should match the tool names from the"
+                                                                  description="Optional configuration for each"
+                                                                  "tool in the sequential execution tool list."
+                                                                  "Keys should match the tool names from the"
                                                                   "tool_list.")
     raise_type_incompatibility: bool = Field(
         default=False,
         description="Default to False. Check if the adjacent tools are type compatible,"
         "which means the output type of the previous function is compatible with the input type of the next function."
         "If set to True, any incompatibility will raise an exception. If set to false, the incompatibility will only"
-        "generate a warning and the sequential execution will continue.")
+        "generate a warning message and the sequential execution will continue.")
+
+
+def _get_function_output_type(function: Function, tool_execution_config: dict[str, ToolExecutionConfig]) -> type:
+    function_config = tool_execution_config.get(function.instance_name, None)
+    if function_config:
+        return function.streaming_output_type if function_config.use_streaming else function.single_output_type
+    else:
+        return function.single_output_type
 
 
 def _validate_function_type_compatibility(src_fn: Function,
                                           target_fn: Function,
                                           tool_execution_config: dict[str, ToolExecutionConfig]) -> None:
-    # Validate if the output type of the source function is compatible with the input type of the target function
-    src_fn_config = tool_execution_config.get(src_fn.instance_name, None)
-    if src_fn_config:
-        src_output_type = src_fn.streaming_output_type if src_fn_config.use_streaming else src_fn.single_output_type
-    else:
-        src_output_type = src_fn.single_output_type
-
+    src_output_type = _get_function_output_type(src_fn, tool_execution_config)
     target_input_type = target_fn.input_type
+    logger.debug(
+        f"The output type of the {src_fn.instance_name} function is {str(src_output_type)}, is not compatible with"
+        f"the input type of the {target_fn.instance_name} function, which is {str(target_input_type)}")
 
     is_compatible = DecomposedType.is_type_compatible(src_output_type, target_input_type)
     if not is_compatible:
@@ -75,7 +80,6 @@ def _validate_function_type_compatibility(src_fn: Function,
             f"the input type of the {target_fn.instance_name} function, which is {str(target_input_type)}")
 
 
-# Return the input and output types of the sequential tool list
 def _validate_tool_list_type_compatibility(sequential_executor_config: SequentialExecutorConfig,
                                            builder: Builder) -> tuple[type, type]:
     tool_list = sequential_executor_config.tool_list
@@ -95,37 +99,44 @@ def _validate_tool_list_type_compatibility(sequential_executor_config: Sequentia
             except ValueError as e:
                 raise ValueError(f"The sequential tool list has incompatible types: {e}")
 
-    last_fn = function_list[-1]
-    last_fn_config = tool_execution_config.get(last_fn.instance_name, None)
-    if last_fn_config:
-        output_type = last_fn.streaming_output_type if last_fn_config.use_streaming else last_fn.single_output_type
-    else:
-        output_type = last_fn.single_output_type
+    output_type = _get_function_output_type(function_list[-1], tool_execution_config)
+    logger.debug(f"The input type of the sequential executor tool list is {str(input_type)},"
+                 f"the output type is {str(output_type)}")
+
     return (input_type, output_type)
 
 
 @register_function(config_type=SequentialExecutorConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def sequential_execution(_config: SequentialExecutorConfig, builder: Builder):
+async def sequential_execution(config: SequentialExecutorConfig, builder: Builder):
+    logger.debug(f"Initializing sequential executor with tool list: {config.tool_list}")
 
-    tools: list[BaseTool] = builder.get_tools(tool_names=_config.tool_list, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools: list[BaseTool] = builder.get_tools(tool_names=config.tool_list, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     tools_dict: dict[str, BaseTool] = {tool.name: tool for tool in tools}
+
     try:
-        input_type, output_type = _validate_tool_list_type_compatibility(_config, builder)
+        input_type, output_type = _validate_tool_list_type_compatibility(config, builder)
     except ValueError as e:
-        if _config.raise_type_incompatibility:
-            raise ValueError(f"The sequential tool list has incompatible types: {e}")
+        if config.raise_type_incompatibility:
+            raise ValueError(f"The sequential executor tool list has incompatible types: {e}")
         else:
-            logger.warning(f"The sequential tool list has incompatible types: {e}")
+            logger.warning(f"The sequential executor tool list has incompatible types: {e}")
             input_type = typing.Any
             output_type = typing.Any
+    except Exception as e:
+        raise ValueError(f"Error with the sequential executor tool list: {e}")
 
-    async def _async_sequential_execution(initial_tool_input):
-        sequential_tool_list: list[FunctionRef] = _config.tool_list
+    # The type annotation of _sequential_function_execution is dynamically set according to the tool list
+    async def _sequential_function_execution(initial_tool_input):
+        logger.debug(f"Executing sequential executor with tool list: {config.tool_list}")
+
+        tool_list: list[FunctionRef] = config.tool_list
         tool_input = initial_tool_input
         tool_response = None
-        for tool_name in sequential_tool_list:
+
+        for tool_name in tool_list:
             tool = tools_dict[tool_name]
-            tool_execution_config = _config.tool_execution_config.get(tool_name, None)
+            tool_execution_config = config.tool_execution_config.get(tool_name, None)
+            logger.debug(f"Executing tool {tool_name} with input: {tool_input}")
             try:
                 if tool_execution_config:
                     if tool_execution_config.use_streaming:
@@ -141,11 +152,15 @@ async def sequential_execution(_config: SequentialExecutorConfig, builder: Build
                 logger.error(f"Error with tool {tool_name}: {e}")
                 raise
 
+            # The input of the next tool is the response of the previous tool
             tool_input = tool_response
 
         return tool_response
 
     # Dynamically set the annotations for the function
-    _async_sequential_execution.__annotations__ = {"initial_tool_input": input_type, "return": output_type}
+    _sequential_function_execution.__annotations__ = {"initial_tool_input": input_type, "return": output_type}
+    logger.debug(f"Sequential executor function annotations: {_sequential_function_execution.__annotations__}")
 
-    yield FunctionInfo.from_fn(_async_sequential_execution, description="Executes a list of functions sequentially.")
+    yield FunctionInfo.from_fn(_sequential_function_execution,
+                               description="Executes a list of functions sequentially."
+                               "The input of the next tool is the response of the previous tool.")

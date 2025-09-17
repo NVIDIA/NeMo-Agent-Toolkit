@@ -25,12 +25,12 @@ from pydantic import BaseModel
 from nat.builder.builder import Builder
 from nat.builder.function import Function
 from nat.builder.function_info import FunctionInfo
+from nat.control_flow.sequential_executor import SequentialExecutorConfig
+from nat.control_flow.sequential_executor import ToolExecutionConfig
+from nat.control_flow.sequential_executor import _validate_function_type_compatibility
+from nat.control_flow.sequential_executor import _validate_tool_list_type_compatibility
+from nat.control_flow.sequential_executor import sequential_execution
 from nat.data_models.component_ref import FunctionRef
-from nat.tool.sequential_execution import SequentialExecutorConfig
-from nat.tool.sequential_execution import ToolExecutionConfig
-from nat.tool.sequential_execution import _validate_function_type_compatibility
-from nat.tool.sequential_execution import _validate_tool_list_type_compatibility
-from nat.tool.sequential_execution import sequential_execution
 from nat.utils.type_utils import DecomposedType
 
 
@@ -94,14 +94,14 @@ class StreamingMockTool(BaseTool):
     name: str = "streaming_mock_tool"
     description: str = "A streaming mock tool for testing"
 
-    def __init__(self, name: str = "streaming_mock_tool", chunks: list[str] = None, **kwargs):
+    def __init__(self, name: str = "streaming_mock_tool", chunks: list[str] | None = None, **kwargs):
         super().__init__(**kwargs)
         self.name = name
         # Store chunks in a way that doesn't conflict with Pydantic
         self.__dict__['_chunks'] = chunks if chunks is not None else ["chunk1", "chunk2", "chunk3"]
         self.__dict__['_call_count'] = 0
 
-    async def astream(self, input_data, config=None, **kwargs):
+    async def astream(self, input, config=None, **kwargs):
         self.__dict__['_call_count'] += 1
         for chunk in self.__dict__['_chunks']:
             chunk_obj = MagicMock()
@@ -212,9 +212,10 @@ class TestValidateFunctionTypeCompatibility:
         tool_config = {}
 
         with patch.object(DecomposedType, 'is_type_compatible', return_value=True) as mock_check:
-            result = _validate_function_type_compatibility(src_func, target_func, tool_config)
+            # Function should not raise an exception when types are compatible
+            _validate_function_type_compatibility(src_func, target_func, tool_config)
 
-            assert result is True
+            # Verify that the type compatibility check was called
             mock_check.assert_called_once_with(str, str)
 
     def test_compatible_types_with_streaming(self, mock_function_compatible):
@@ -224,9 +225,10 @@ class TestValidateFunctionTypeCompatibility:
         tool_config = {"compatible_func": ToolExecutionConfig(use_streaming=True)}
 
         with patch.object(DecomposedType, 'is_type_compatible', return_value=True) as mock_check:
-            result = _validate_function_type_compatibility(src_func, target_func, tool_config)
+            # Function should not raise an exception when types are compatible
+            _validate_function_type_compatibility(src_func, target_func, tool_config)
 
-            assert result is True
+            # Verify that the type compatibility check was called
             mock_check.assert_called_once_with(str, str)
 
     def test_incompatible_types(self, mock_function_compatible, mock_function_incompatible):
@@ -236,9 +238,11 @@ class TestValidateFunctionTypeCompatibility:
         tool_config = {}
 
         with patch.object(DecomposedType, 'is_type_compatible', return_value=False) as mock_check:
-            result = _validate_function_type_compatibility(src_func, target_func, tool_config)
+            # Function should raise ValueError when types are incompatible
+            with pytest.raises(ValueError, match="is not compatible with"):
+                _validate_function_type_compatibility(src_func, target_func, tool_config)
 
-            assert not result
+            # Verify that the type compatibility check was called
             mock_check.assert_called_once_with(int, str)
 
 
@@ -274,11 +278,11 @@ class TestValidateSequentialToolList:
 
         mock_builder.get_function.side_effect = compatible_functions
 
-        with patch('nat.tool.sequential_execution._validate_function_type_compatibility', return_value=True):
+        with patch('nat.control_flow.sequential_executor._validate_function_type_compatibility', return_value=True):
             input_type, output_type = _validate_tool_list_type_compatibility(config, mock_builder)
 
-            assert input_type == str  # First function's input type
-            assert output_type == int  # Last function's output type
+            assert input_type is str  # First function's input type
+            assert output_type is int  # Last function's output type
 
     def test_incompatible_sequential_tools_with_exception(self, mock_builder, compatible_functions):
         """Test validation raises exception for incompatible tools when check_type_compatibility is True."""
@@ -287,8 +291,9 @@ class TestValidateSequentialToolList:
 
         mock_builder.get_function.side_effect = compatible_functions
 
-        with patch('nat.tool.sequential_execution._validate_function_type_compatibility', return_value=False):
-            with pytest.raises(ValueError, match="The output type of the func1 function is not compatible"):
+        with patch('nat.control_flow.sequential_executor._validate_function_type_compatibility',
+                   side_effect=ValueError("The output type of the func1 function is not compatible")):
+            with pytest.raises(ValueError, match="The sequential tool list has incompatible types"):
                 _validate_tool_list_type_compatibility(config, mock_builder)
 
     def test_streaming_output_type_selection(self, mock_builder, compatible_functions):
@@ -298,11 +303,11 @@ class TestValidateSequentialToolList:
 
         mock_builder.get_function.side_effect = compatible_functions
 
-        with patch('nat.tool.sequential_execution._validate_function_type_compatibility', return_value=True):
+        with patch('nat.control_flow.sequential_executor._validate_function_type_compatibility', return_value=True):
             input_type, output_type = _validate_tool_list_type_compatibility(config, mock_builder)
 
-            assert input_type == str  # First function's input type
-            assert output_type == int  # Last function's streaming_output_type
+            assert input_type is str  # First function's input type
+            assert output_type is int  # Last function's streaming_output_type
 
 
 class TestSequentialExecution:
@@ -348,7 +353,8 @@ class TestSequentialExecution:
         """Test basic sequential execution of tools."""
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
 
-        with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, str)):
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+                   return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 assert isinstance(function_info, FunctionInfo)
                 assert function_info.description and "sequential" in function_info.description.lower()
@@ -367,7 +373,8 @@ class TestSequentialExecution:
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")],
                                           tool_execution_config={"tool2": ToolExecutionConfig(use_streaming=True)})
 
-        with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, str)):
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+                   return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 # Test that we get a function info object
                 assert isinstance(function_info, FunctionInfo)
@@ -385,7 +392,8 @@ class TestSequentialExecution:
 
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
 
-        with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, str)):
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+                   return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 # Get the actual function from the generator
                 actual_function = function_info.single_fn  # type: ignore
@@ -400,9 +408,9 @@ class TestSequentialExecution:
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
                                           raise_type_incompatibility=True)
 
-        with patch('nat.tool.sequential_execution._validate_sequential_tool_list',
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    side_effect=ValueError("Type incompatibility")):
-            with pytest.raises(ValueError, match="The sequential tool list has incompatible types"):
+            with pytest.raises(ValueError, match="The sequential executor tool list has incompatible types"):
                 async with sequential_execution(config, mock_builder) as _:
                     pass
 
@@ -412,14 +420,14 @@ class TestSequentialExecution:
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
                                           raise_type_incompatibility=False)
 
-        with patch('nat.tool.sequential_execution._validate_sequential_tool_list',
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    side_effect=ValueError("Type incompatibility")):
             with caplog.at_level(logging.WARNING):
                 async with sequential_execution(config, mock_builder) as function_info:
                     assert isinstance(function_info, FunctionInfo)
 
                 # Check that warning was logged
-                assert "The sequential tool list has incompatible types" in caplog.text
+                assert "The sequential executor tool list has incompatible types" in caplog.text
 
     @pytest.mark.asyncio
     async def test_empty_tool_list(self, mock_builder):
@@ -428,9 +436,9 @@ class TestSequentialExecution:
 
         mock_builder.get_tools.return_value = []
 
-        with patch('nat.tool.sequential_execution._validate_sequential_tool_list',
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    side_effect=IndexError("list index out of range")):
-            with pytest.raises(IndexError):
+            with pytest.raises(ValueError, match="Error with the sequential executor tool list"):
                 async with sequential_execution(config, mock_builder) as _:
                     pass
 
@@ -451,7 +459,8 @@ class TestSequentialExecution:
         func1.streaming_output_type = str
         mock_builder.get_function.return_value = func1
 
-        with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, str)):
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+                   return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 actual_function = function_info.single_fn  # type: ignore
                 result = await actual_function("test_input")  # type: ignore
@@ -483,7 +492,8 @@ class TestSequentialExecution:
         tools = [OrderTestTool(tool_name="tool1"), OrderTestTool(tool_name="tool2"), OrderTestTool(tool_name="tool3")]
         mock_builder.get_tools.return_value = tools
 
-        with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, str)):
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+                   return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 actual_function = function_info.single_fn  # type: ignore
                 result = await actual_function("start")  # type: ignore
@@ -500,7 +510,8 @@ class TestSequentialExecution:
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
                                           tool_execution_config={"tool1": ToolExecutionConfig(use_streaming=True)})
 
-        with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, str)):
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+                   return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 actual_function = function_info.single_fn  # type: ignore
                 result = await actual_function("input")  # type: ignore
@@ -510,7 +521,8 @@ class TestSequentialExecution:
         """Test that function annotations are set correctly based on type validation."""
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1")])
 
-        with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, int)):
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+                   return_value=(str, int)):
             # Get the generator
             gen = sequential_execution(config, mock_builder)
 
@@ -577,7 +589,8 @@ class TestErrorScenarios:
         builder.get_function.return_value = func
 
         # This should not raise an error - extra config should be ignored
-        with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, str)):
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+                   return_value=(str, str)):
             async with sequential_execution(config, builder) as function_info:
                 actual_function = function_info.single_fn  # type: ignore
                 result = await actual_function("test")  # type: ignore
