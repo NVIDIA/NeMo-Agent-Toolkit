@@ -168,7 +168,7 @@ def test_optimize_parameters_happy_path(tmp_path: Path):
                side_effect=fake_apply_suggestions) as apply_mock, \
          patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
                return_value=SimpleNamespace(params=best_params)) as pick_mock, \
-         patch("nat.profiler.parameter_optimization.parameter_optimizer.create_pareto_visualization") as viz_mock, \
+         patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization") as viz_mock, \
          patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
                side_effect=fake_create_study) as study_mock, \
          patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
