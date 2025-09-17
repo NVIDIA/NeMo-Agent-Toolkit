@@ -76,9 +76,7 @@ class MCPServerConfig(BaseModel):
                 raise ValueError("url is required when using sse transport")
             # Auth is not supported for SSE transport
             if self.auth_provider is not None:
-                raise ValueError(
-                    "Authentication is not supported for SSE transport."
-                )
+                raise ValueError("Authentication is not supported for SSE transport.")
         elif self.transport == "streamable-http":
             if self.command is not None or self.args is not None or self.env is not None:
                 raise ValueError("command, args, and env should not be set when using streamable-http transport")
