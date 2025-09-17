@@ -88,7 +88,7 @@ def _validate_tool_list_type_compatibility(sequential_executor_config: Sequentia
     function_list: list[Function] = []
     for function_ref in tool_list:
         function_list.append(builder.get_function(function_ref))
-    if len(function_list) == 0:
+    if not function_list:
         raise RuntimeError("The function list is empty")
     input_type = function_list[0].input_type
 
