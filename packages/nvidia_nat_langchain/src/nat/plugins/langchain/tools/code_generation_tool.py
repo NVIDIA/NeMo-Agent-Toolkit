@@ -61,6 +61,6 @@ You are a helpful code assistant that can teach a junior developer how to code. 
         response = await tool.ainvoke({"question": query})
         if config.verbose:
             log.debug('Tool input was: %s\nTool output is: \n%s', query, response)
-        return response.content
+        return response.text()
 
     yield FunctionInfo.from_fn(_inner, description=config.description)

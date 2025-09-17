@@ -21,7 +21,6 @@ from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.authentication import AuthProviderBaseConfigT
-from nat.data_models.authentication import AuthRequest
 from nat.data_models.authentication import AuthResult
 
 AUTHORIZATION_HEADER = "Authorization"
@@ -32,7 +31,6 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
     Base class for authenticating to API services.
     This class provides an interface for authenticating to API services.
     """
-    SESSION_COOKIE_NAME = "nat-session"
 
     def __init__(self, config: AuthProviderBaseConfigT):
         """
@@ -55,41 +53,14 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
         """
         return self._config
 
-    @classmethod
-    def _resolve_user_id(cls, user_id: str | None = None, auth_request: AuthRequest | None = None) -> str | None:
-        """
-        Resolve the user ID to authenticate.
-        """
-        # 1) from auth_request
-        if auth_request and auth_request.user_id:
-            return auth_request.user_id
-
-        # 2) from explicit param
-        if user_id:
-            return user_id
-
-        # 3) from Context cookie
-        from nat.builder.context import Context
-        cookies = getattr(getattr(Context.get(), "metadata", None), "cookies", None)
-        if cookies:
-            session_id = cookies.get(cls.SESSION_COOKIE_NAME)
-            if session_id:
-                return session_id
-
-        # 4) unresolved
-        return None
-
     @abstractmethod
-    async def authenticate(self, user_id: str | None = None, auth_request: AuthRequest | None = None) -> AuthResult:
+    async def authenticate(self, user_id: str | None = None) -> AuthResult:
         """
         Perform the authentication process for the client.
 
         This method handles the necessary steps to authenticate the client with the
         target API service, which may include obtaining tokens, refreshing credentials,
         or completing multi-step authentication flows.
-
-        user_id: The user ID to authenticate. This is optional and only available for backwards compatibility.
-        auth_request: The authentication request includes all the information needed to authenticate the client.
 
         Raises:
             NotImplementedError: Must be implemented by subclasses.

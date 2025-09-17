@@ -22,6 +22,7 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
@@ -35,8 +36,8 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
     input parameters to select the optimal tool.  Supports handling tool errors.
     """
 
-    tool_names: list[FunctionRef] = Field(default_factory=list,
-                                          description="The list of tools to provide to the tool calling agent.")
+    tool_names: list[FunctionRef | FunctionGroupRef] = Field(
+        default_factory=list, description="The list of tools to provide to the tool calling agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the tool calling agent.")
     verbose: bool = Field(default=False, description="Set the verbosity of the tool calling agent's logging.")
     handle_tool_errors: bool = Field(default=True, description="Specify ability to handle tool calling errors.")
@@ -47,6 +48,8 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
     system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
     additional_instructions: str | None = Field(default=None,
                                                 description="Additional instructions appended to the system prompt.")
+    return_direct: list[FunctionRef] | None = Field(
+        default=None, description="List of tool names that should return responses directly without LLM processing.")
 
 
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -68,13 +71,18 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
     if not tools:
         raise ValueError(f"No tools specified for Tool Calling Agent '{config.llm_name}'")
 
+    # convert return_direct FunctionRef objects to BaseTool objects
+    return_direct_tools = builder.get_tools(tool_names=config.return_direct,
+                                            wrapper_type=LLMFrameworkEnum.LANGCHAIN) if config.return_direct else None
+
     # construct the Tool Calling Agent Graph from the configured llm, and tools
     graph: CompiledStateGraph = await ToolCallAgentGraph(llm=llm,
                                                          tools=tools,
                                                          prompt=prompt,
                                                          detailed_logs=config.verbose,
                                                          log_response_max_chars=config.log_response_max_chars,
-                                                         handle_tool_errors=config.handle_tool_errors).build_graph()
+                                                         handle_tool_errors=config.handle_tool_errors,
+                                                         return_direct=return_direct_tools).build_graph()
 
     async def _response_fn(input_message: str) -> str:
         try:

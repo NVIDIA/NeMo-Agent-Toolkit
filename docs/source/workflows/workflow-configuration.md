@@ -95,15 +95,10 @@ This section ties the previous sections together by defining the tools and LLM m
 The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. You can also use the workflow type, `tool_calling_agent`. The parameters for each are specified by the {py:class}`~nat.agent.react_agent.register.ReActAgentWorkflowConfig` and {py:class}`~nat.agent.tool_calling_agent.register.ToolCallAgentWorkflowConfig` classes respectively.
 
 ### `general`
-This section contains general configuration settings for AngentIQ which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~nat.data_models.config.GeneralConfig` class.
+This section contains general configuration settings for NeMo Agent toolkit which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~nat.data_models.config.GeneralConfig` class.
 
 :::{note}
-The `use_uvloop` parameter which specifies whether to use the [`uvloop`](https://github.com/MagicStack/uvloop) event loop. This is set to `true` by default, and can provide a significant speedup in some cases, however this can also make it difficult to debug workflow issues. For debugging purposes it is recommended to set this to `false`:
-
-```yaml
-general:
-  use_uvloop: false
-```
+⚠️ **Deprecated**: The `use_uvloop` parameter is deprecated and will be removed in a future release. Previously, the `use_uvloop` parameter meant to specify whether to use the [`uvloop`](https://github.com/MagicStack/uvloop) event loop, but now the use of `uv_loop` will be automatically determined based on the system platform the user is using.
 :::
 
 ### `eval`

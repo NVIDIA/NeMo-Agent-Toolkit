@@ -15,17 +15,14 @@
 
 from __future__ import annotations
 
-
 import logging
 from abc import ABC
 from abc import abstractmethod
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
-from typing import Any
 from typing import AsyncGenerator
 
 import httpx
-from pydantic import BaseModel
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -50,7 +47,7 @@ class AuthAdapter(httpx.Auth):
     Converts AuthProviderBase to httpx.Auth interface for dynamic token management.
     """
 
-    def __init__(self, auth_provider: AuthProviderBase, auth_for_tool_calls_only: bool = True):
+    def __init__(self, auth_provider: AuthProviderBase, auth_for_tool_calls_only: bool = False):
         self.auth_provider = auth_provider
         self.auth_for_tool_calls_only = auth_for_tool_calls_only
 
@@ -67,7 +64,7 @@ class AuthAdapter(httpx.Auth):
             auth_headers = await self._get_auth_headers(reason=AuthReason.NORMAL)
             request.headers.update(auth_headers)
         except Exception as e:
-            logger.warning("Failed to get auth headers: %s", e)
+            logger.info("Failed to get auth headers: %s", e)
             # Continue without auth headers if auth fails
 
         response = yield request
@@ -78,11 +75,10 @@ class AuthAdapter(httpx.Auth):
                 # Get fresh auth headers with 401 context
                 auth_headers = await self._get_auth_headers(reason=AuthReason.RETRY_AFTER_401, response=response)
                 request.headers.update(auth_headers)
-                response = yield request  # Retry the request
+                yield request  # Retry the request
             except Exception as e:
-                logger.warning("Failed to refresh auth after 401: %s", e)
-
-        yield response
+                logger.info("Failed to refresh auth after 401: %s", e)
+        return
 
     def _is_tool_call_request(self, request: httpx.Request) -> bool:
         """Check if this is a tool call request based on the request body."""
@@ -103,10 +99,16 @@ class AuthAdapter(httpx.Auth):
         """Get authentication headers from the NAT auth provider."""
         # Build auth request
         www_authenticate = response.headers.get("WWW-Authenticate", None) if response else None
-        auth_request = AuthRequest(reason=reason, www_authenticate=www_authenticate,
+        auth_request = AuthRequest(
+            reason=reason,
+            www_authenticate=www_authenticate,
         )
         try:
-            auth_result = await self.auth_provider.authenticate(auth_request=auth_request)
+            # Mutating the config is not thread-safe, so we need to lock here
+            # Is mutating the config the only way to pass the auth request to the auth provider? This needs
+            # to be re-visited.
+            self.auth_provider.config.auth_request = auth_request
+            auth_result = await self.auth_provider.authenticate()
             # Check if we have BearerTokenCred
             from nat.data_models.authentication import BearerTokenCred
             if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
@@ -129,9 +131,7 @@ class MCPBaseClient(ABC):
         auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self,
-                 transport: str = 'streamable-http',
-                 auth_provider: AuthProviderBase | None = None):
+    def __init__(self, transport: str = 'streamable-http', auth_provider: AuthProviderBase | None = None):
         self._tools = None
         self._transport = transport.lower()
         if self._transport not in ['sse', 'stdio', 'streamable-http']:
@@ -143,8 +143,7 @@ class MCPBaseClient(ABC):
         self._initial_connection = False
 
         # Convert auth provider to AuthAdapter
-        if auth_provider:
-            self._httpx_auth = AuthAdapter(auth_provider)
+        self._httpx_auth = AuthAdapter(auth_provider) if auth_provider else None
 
     @property
     def transport(self) -> str:
@@ -332,11 +331,8 @@ class MCPStreamableHTTPClient(MCPBaseClient):
       auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self,
-                 url: str,
-                 auth_provider: AuthProviderBase | None = None):
-        super().__init__("streamable-http",
-                         auth_provider=auth_provider)
+    def __init__(self, url: str, auth_provider: AuthProviderBase | None = None):
+        super().__init__("streamable-http", auth_provider=auth_provider)
         self._url = url
 
     @property

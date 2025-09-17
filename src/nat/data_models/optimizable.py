@@ -108,8 +108,12 @@ def OptimizableField(
 
 
 class OptimizableMixin(BaseModel):
-    optimizable_params: list[str] = Field(default_factory=list, description="List of parameters that can be optimized.")
+    optimizable_params: list[str] = Field(default_factory=list,
+                                          description="List of parameters that can be optimized.",
+                                          exclude=True)
+
     search_space: dict[str, SearchSpace] = Field(
         default_factory=dict,
         description="Optional search space overrides for optimizable parameters.",
+        exclude=True,
     )

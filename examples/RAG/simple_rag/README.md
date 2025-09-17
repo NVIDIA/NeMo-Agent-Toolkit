@@ -114,9 +114,6 @@ options:
 Configure your Agent to use the Milvus collections for RAG. We have pre-configured a configuration file for you in `examples/RAG/simple_rag/configs/milvus_rag_config.yml`. You can modify this file to point to your Milvus instance and collections or add tools to your agent. The agent, by default, is a `tool_calling` agent that can be used to interact with the retriever component. The configuration file is shown below. You can also modify your agent to be another one of the NeMo Agent toolkit pre-built agent implementations such as the `react_agent`
 
     ```yaml
-    general:
-      use_uvloop: true
-
     retrievers:
       cuda_retriever:
         _type: milvus_retriever
@@ -190,9 +187,6 @@ export MEM0_API_KEY=<MEM0 API KEY HERE>
 Adding the ability to add and retrieve long-term memory to the agent is just a matter of adding a `memory` section to the configuration file. The NeMo Agent toolkit built-in abstractions for long term memory management allow agents to automatically interact with them as tools. We will use the following configuration file, which you can also find in the `configs` directory.
 
 ```yaml
-general:
-  use_uvloop: true
-
 memory:
   saas_memory:
     _type: mem0_memory

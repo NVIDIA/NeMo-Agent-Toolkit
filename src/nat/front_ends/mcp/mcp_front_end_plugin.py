@@ -60,7 +60,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
         """Create a token verifier based on configuration."""
         from nat.front_ends.mcp.introspection_token_verifier import IntrospectionTokenVerifier
 
-        if not self.front_end_config.auth:
+        if not self.front_end_config.server_auth:
             return None
 
         return IntrospectionTokenVerifier(token_verifier_config)
@@ -77,17 +77,17 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
         # Build the workflow and add routes using the worker
         async with WorkflowBuilder.from_config(config=self.full_config) as builder:
 
-            if self.front_end_config.auth:
+            if self.front_end_config.server_auth:
                 from mcp.server.auth.settings import AuthSettings
                 from pydantic import AnyHttpUrl
 
                 server_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}"
 
-                auth_settings = AuthSettings(issuer_url=AnyHttpUrl(self.front_end_config.auth.issuer_url),
-                                             required_scopes=self.front_end_config.auth.scopes,
+                auth_settings = AuthSettings(issuer_url=AnyHttpUrl(self.front_end_config.server_auth.issuer_url),
+                                             required_scopes=self.front_end_config.server_auth.scopes,
                                              resource_server_url=AnyHttpUrl(server_url))
 
-                token_verifier = await self._create_token_verifier(self.front_end_config.auth)
+                token_verifier = await self._create_token_verifier(self.front_end_config.server_auth)
 
             # Create an MCP server with the configured parameters
             mcp = FastMCP(name=self.front_end_config.name,
