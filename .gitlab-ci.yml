@@ -40,6 +40,7 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
   MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
   NAT_CI_MYSQL_HOST: "mysql"
+  NAT_CI_S3_HOST: "minio"
   UV_CACHE_DIR: .uv-cache
   WORKSPACE_TMP: "${CI_PROJECT_DIR}/.tmp"
 
@@ -75,6 +76,9 @@ test:python_tests:
   stage: test
   services:
     - mysql:9.3
+    - name: minio/minio:RELEASE.2025-07-18T21-56-31Z
+      alias: minio
+      command: ["server", "/data", "--console-address", ":9001"]
   script:
     - echo "Running tests"
     - ./ci/scripts/gitlab/tests.sh
