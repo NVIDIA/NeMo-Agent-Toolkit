@@ -112,7 +112,7 @@ def mock_aiohttp_session_fixture():
 
 @pytest.fixture(name="set_test_api_keys")
 def set_test_api_keys_fixture(restore_environ):
-    for key in ("NGC_API_KEY", "NVIDIA_API_KEY", "OPENAI_API_KEY", "SERPAPI_API_KEY"):
+    for key in ("NGC_API_KEY", "NVIDIA_API_KEY", "OPENAI_API_KEY"):
         os.environ[key] = "test_key"
 
 
