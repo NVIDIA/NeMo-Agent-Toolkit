@@ -15,67 +15,67 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Sequential Execution Example
+# Sequential Executor
 
-This example demonstrates how to use the sequential execution functionality with the NeMo Agent toolkit. Sequential execution allows you to chain multiple functions together where the output of one function becomes the input of the next, creating a data processing pipeline. For this purpose, NeMo Agent toolkit provides a [`sequential_execution`](../../../src/nat/tool/sequential_execution.py) tool.
+This example demonstrates how to use the sequential executor functionality with the NVIDIA NeMo Agent toolkit. The sequential executor is a control flow component that chains multiple functions together, where each function's output becomes the input for the next function. This creates a linear tool execution pipeline that executes functions in a predetermined sequence.
+
+The NeMo Agent toolkit provides a [`sequential_executor`](../../../src/nat/control_flow/sequential_executor.py) tool to implement this functionality.
 
 ## Table of Contents
 
 - [Key Features](#key-features)
 - [Graph Structure](#graph-structure)
+- [Configuration](#configuration)
+  - [Required Configuration Options](#required-configuration-options)
+  - [Optional Configuration Options](#optional-configuration-options)
+  - [Example Configuration](#example-configuration)
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
-  - [Set Up API Keys](#set-up-api-keys)
 - [Run the Workflow](#run-the-workflow)
-  - [Starting the NeMo Agent Toolkit Server](#starting-the-nemo-agent-toolkit-server)
-  - [Making Requests to the NeMo Agent Toolkit Server](#making-requests-to-the-nemo-agent-toolkit-server)
+  - [Expected Output](#expected-output)
 
 ## Key Features
 
-- **Sequential Function Chaining:** Demonstrates how to chain multiple functions together where the output of one becomes the input of the next.
-- **Data Processing Pipeline:** Shows a complete text processing pipeline with three stages: text processing, data analysis, and report generation.
-- **Type Compatibility Checking:** Optionally validates that the output type of one function is compatible with the input type of the next function in the chain.
-- **Error Handling:** Demonstrates proper error handling throughout the sequential execution process.
+The sequential executor provides the following capabilities:
 
-## Pipeline Structure
+- **Sequential function chaining**: Chain multiple functions together where each function's output becomes the input for the next function
+- **Type compatibility checking**: Optionally validate that the output type of one function is compatible with the input type of the next function in the chain
+- **Error handling**: Handle errors gracefully throughout the sequential execution process
 
-The Sequential Execution example demonstrates a linear data processing pipeline where each function processes the output from the previous function:
+## Graph Structure
 
-1. **Text Processor** - Cleans raw text input and extracts basic statistics
-2. **Data Analyzer** - Analyzes the processed text and generates insights about complexity and content
-3. **Report Generator** - Creates a formatted report from the analysis data
+The sequential executor uses a linear graph structure where functions execute in a predetermined order. The following diagram illustrates the sequential executor's workflow:
 
-```
-Raw Text Input → Text Processor → Data Analyzer → Report Generator → Final Report
-```
+<div align="center">
+<img src="../../../docs/source/_static/sequential_executor.png" alt="Sequential Executor Graph Structure" width="750" style="max-width: 100%; height: auto;">
+</div>
+
+During execution, each function receives the output from the previous function as its input. The sequential executor supports type compatibility checking between adjacent functions, which you can configure as described in the [Configuration](#configuration) section.
+
+**Note**: The sequential executor does not use agents or LLMs during execution.
 
 ## Configuration
 
-The Sequential Execution example is configured through the `config.yml` file. The configuration defines individual functions and then chains them together using the `sequential_execution` tool.
+Configure the sequential executor through the `config.yml` file. The configuration defines individual functions and chains them together using the `sequential_executor` tool.
 
-### Function Configuration
+### Required Configuration Options
 
-Each function in the pipeline is configured individually:
+The following options are required for the sequential executor:
 
-- **`text_processor`**: Processes raw text input and returns structured JSON data
-- **`data_analyzer`**: Analyzes processed text data and generates insights
-- **`report_generator`**: Creates a formatted report from analysis data
+- **`_type`**: Set to `sequential_executor` to use the sequential executor tool
+- **`tool_list`**: List of functions to execute in order (such as `[text_processor, data_analyzer, report_generator]`)
+- **`raise_type_incompatibility`**: Whether to raise an exception if the type compatibility check fails (default: `false`).The type compatibility check runs before executing the tool list, based on the type annotations of the functions. When set to `true`, any incompatibility immediately raises an exception. When set to `false`, incompatibilities generate warning messages and the sequential executor continues execution. Set this to `false` when functions in the tool list include custom type converters, as the type compatibility check may fail even though the sequential executor can still execute the tool list.
 
-### Sequential Execution Configuration
+### Optional Configuration Options
 
-- **`_type`**: Set to `sequential_execution` to use the sequential execution tool
-- **`sequential_tool_list`**: List of functions to execute in order (e.g., `[text_processor, data_analyzer, report_generator]`)
-- **`check_type_compatibility`**: Whether to validate type compatibility between adjacent functions (default: false)
-- **`tool_execution_config`**: Optional configuration for individual tools in the pipeline (e.g., streaming options)
-
-### Workflow Configuration
-
-- **`_type`**: Set to `function` to execute a single function
-- **`function_name`**: Name of the sequential execution function to run
+- **`tool_execution_config`**: Configuration for each tool in the sequential execution tool list. Keys should match the tool names from the `tool_list`
+  - **`use_streaming`**: Whether to use streaming output for the tool (default: `false`)
 
 ### Example Configuration
 
-**Basic Configuration:**
+The following examples show different configuration approaches:
+
+#### Basic Configuration
 ```yaml
 functions:
   text_processor:
@@ -84,17 +84,14 @@ functions:
     _type: data_analyzer
   report_generator:
     _type: report_generator
-  text_processing_pipeline:
-    _type: sequential_execution
-    sequential_tool_list: [text_processor, data_analyzer, report_generator]
-    check_type_compatibility: false
 
 workflow:
-  _type: function
-  function_name: text_processing_pipeline
+  _type: sequential_executor
+  tool_list: [text_processor, data_analyzer, report_generator]
+  raise_type_incompatibility: false
 ```
 
-**Configuration with Type Checking:**
+#### Configuration with Tool Execution Settings
 ```yaml
 functions:
   text_processor:
@@ -103,68 +100,53 @@ functions:
     _type: data_analyzer
   report_generator:
     _type: report_generator
-  text_processing_pipeline:
-    _type: sequential_execution
-    sequential_tool_list: [text_processor, data_analyzer, report_generator]
-    check_type_compatibility: true  # Enable type compatibility checking
 
 workflow:
-  _type: function
-  function_name: text_processing_pipeline
+  _type: sequential_executor
+  tool_list: [text_processor, data_analyzer, report_generator]
+  tool_execution_config:
+    text_processor:
+      use_streaming: false
+    data_analyzer:
+      use_streaming: false
+    report_generator:
+      use_streaming: false
+  raise_type_incompatibility: false
 ```
-
-The pipeline will automatically execute each function in sequence, passing the output of each function as input to the next function in the chain.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+Before running this example, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install the NeMo Agent toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent toolkit repository, run the following command:
 
 ```bash
 uv pip install -e examples/control_flow/sequential_executor
 ```
-
-### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
-
-```bash
-export NVIDIA_API_KEY=<YOUR_API_KEY>
-```
-
 ## Run the Workflow
 
-This workflow showcases the Sequential Execution functionality by processing raw text through a three-stage pipeline. The example demonstrates how the output of each function becomes the input for the next function in the chain.
+This workflow demonstrates sequential executor functionality by processing raw text through a three-stage pipeline. Each function's output becomes the input for the next function in the chain.
 
-Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the NeMo Agent toolkit repository to execute this workflow:
 
 ```bash
 nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "The quick brown fox jumps over the lazy dog. This is a simple test sentence to demonstrate text processing capabilities."
 ```
 
-**Additional Example Commands:**
-```bash
-# Test with a longer, more complex text
-nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "Natural language processing is a fascinating field that combines computational linguistics with machine learning and artificial intelligence. It enables computers to understand, interpret, and generate human language in a valuable way."
+### Expected Output
 
-# Test with shorter text
-nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "Hello world! This is a test."
-
-# Test with text containing special characters
-nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "This text has special characters: @#$%^&*()! Let's see how the pipeline handles them."
-```
-
-**Expected Workflow Output**
 ```console
 nemo-agent-toolkit % nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "The quick brown fox jumps over the lazy dog. This is a simple test sentence to demonstrate text processing capabilities."
+None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+2025-09-17 15:34:57,004 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/control_flow/sequential_executor/configs/config.yml'
 
 Configuration Summary:
 --------------------
-Workflow Type: function
-Number of Functions: 4
-Number of LLMs: 1
+Workflow Type: sequential_executor
+Number of Functions: 3
+Number of LLMs: 0
 Number of Embedders: 0
 Number of Memory: 0
 Number of Object Stores: 0
@@ -172,63 +154,11 @@ Number of Retrievers: 0
 Number of TTC Strategies: 0
 Number of Authentication Providers: 0
 
+2025-09-17 15:34:57,571 - nat.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
-=== TEXT ANALYSIS REPORT ===
-
-Text Statistics:
-  - Word Count: 18
-  - Sentence Count: 2
-  - Average Words per Sentence: 9.0
-  - Text Complexity: Simple
-
-Top Words:
-  1. quick
-  2. brown
-  3. jumps
-  4. simple
-  5. test
-
-Report generated successfully.
-==========================
+['=== TEXT ANALYSIS REPORT ===\n\nText Statistics:\n  - Word Count: 20\n  - Sentence Count: 2\n  - Average Words per Sentence: 10.0\n  - Text Complexity: Moderate\n\nTop Words:\n  1. quick\n  2. brown\n  3. jumps\n  4. over\n  5. lazy\n\nReport generated successfully.\n==========================']
 --------------------------------------------------
 ```
 
-This demonstrates the Sequential Execution functionality where each function processes the output from the previous function, creating a complete data processing pipeline from raw text input to a formatted report.
-
-### Starting the NeMo Agent Toolkit Server
-
-You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
-
-**Starting the Sequential Execution Example Workflow**
-
-```bash
-nat serve --config_file=examples/control_flow/sequential_executor/configs/config.yml
-```
-
-### Making Requests to the NeMo Agent Toolkit Server
-
-Once the server is running, you can make HTTP requests to interact with the workflow.
-
-#### Non-Streaming Requests
-
-**Non-Streaming Request to the Sequential Execution Example Workflow**
-
-```bash
-curl --request POST \
-  --url http://localhost:8000/generate \
-  --header 'Content-Type: application/json' \
-  --data '{"input_message": "The quick brown fox jumps over the lazy dog. This is a simple test sentence to demonstrate text processing capabilities."}'
-```
-
-#### Streaming Requests
-
-**Streaming Request to the Sequential Execution Example Workflow**
-
-```bash
-curl --request POST \
-  --url http://localhost:8000/generate/stream \
-  --header 'Content-Type: application/json' \
-  --data '{"input_message": "The quick brown fox jumps over the lazy dog. This is a simple test sentence to demonstrate text processing capabilities."}'
-```
----
+This output demonstrates how the sequential executor processes raw text input through multiple functions, creating a complete data processing pipeline that generates a formatted analysis report.

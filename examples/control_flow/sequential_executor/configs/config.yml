@@ -24,4 +24,11 @@ functions:
 workflow:
   _type: sequential_executor
   tool_list: [text_processor, data_analyzer, report_generator]
-  check_type_compatibility: false
+  tool_execution_config:
+    text_processor:
+      use_streaming: false
+    data_analyzer:
+      use_streaming: false
+    report_generator:
+      use_streaming: false
+  raise_type_incompatibility: false
