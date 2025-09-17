@@ -143,6 +143,10 @@ def optimize_parameters(
             show_plots=False  # Don't show plots in automated runs
         )
         logger.info("Pareto visualizations saved to: %s", out_dir / "plots")
+    except ImportError as ie:
+        logger.warning("Could not import visualization dependencies: %s. "
+                       "Have you installed nvidia-nat-profiling?",
+                       ie)
     except Exception as e:
         logger.warning("Failed to generate visualizations: %s", e)
 
