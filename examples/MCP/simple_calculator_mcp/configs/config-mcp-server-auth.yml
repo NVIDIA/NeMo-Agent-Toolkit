@@ -13,39 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This config file shows how to use the MCP server to access the `math` tools.
-# Here the workflow acts as a MCP client and connects to the MCP server running
-# on the specified URL. streamable-http is the recommended transport for HTTP-based
-# connections, but sse is also supported for backwards compatibility.
+# This is used to start a protected MCP math server with auth enabled.
 
+general:
+  front_end:
+    _type: mcp
+    require_auth: true
+    auth_server_url: http://localhost:9000
+    required_scopes: ["user"]
 
 functions:
   calculator_multiply:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    transport: "streamable-http"
-    mcp_tool_name: calculator_multiply
-    description: "Returns the product of two numbers"
+    _type: calculator_multiply
   calculator_inequality:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    transport: "streamable-http"
-    mcp_tool_name: calculator_inequality
-    description: "Returns the inequality of two numbers"
+    _type: calculator_inequality
   calculator_divide:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    transport: "streamable-http"
-    mcp_tool_name: calculator_divide
-    description: "Returns the quotient of two numbers"
+    _type: nat_simple_calculator/calculator_divide
   current_datetime:
     _type: current_datetime
   calculator_subtract:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    transport: "streamable-http"
-    mcp_tool_name: calculator_subtract
-    description: "Returns the difference of two numbers"
+    _type: calculator_subtract
 
 llms:
   nim_llm:
@@ -63,9 +50,9 @@ workflow:
   tool_names:
     - calculator_multiply
     - calculator_inequality
+    - current_datetime
     - calculator_divide
     - calculator_subtract
-    - current_datetime
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3

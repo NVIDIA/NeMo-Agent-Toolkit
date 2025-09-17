@@ -19,9 +19,9 @@ limitations under the License.
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-You can use NeMo Agent toolkit as an MCP Client to connect to and use tools served by remote MCP servers.
+You can use NeMo Agent toolkit as an MCP Host with one or more MCP Clients serving tools from remote MCP servers.
 
-This guide will cover how to use NeMo Agent toolkit as an MCP Client. For more information on how to use NeMo Agent toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
+This guide will cover how to use NeMo Agent toolkit as an MCP Host with one or more MCP Clients. For more information on how to use NeMo Agent toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
 
 ## Installation
 
@@ -74,6 +74,12 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
 
 ```
 In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as a NeMo Agent toolkit function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between NeMo Agent toolkit functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
+
+Once configured, a Pydantic input schema will be generated based on the input schema provided by the MCP server. This input schema is included with the configured function and is accessible by any agent or function calling the configured `mcp_tool_wrapper` function. The `mcp_tool_wrapper` function can accept the following type of arguments as long as they satisfy the input schema:
+ * a validated instance of it's input schema
+ * a string that represents a valid JSON
+ * A python dictionary
+ * Keyword arguments
 
 ### 🧪 `mcp_client` Configuration (Experimental)
 
@@ -178,13 +184,6 @@ functions:
         GITHUB_PERSONAL_ACCESS_TOKEN: "${input:github_token}"
 ```
 STDIO mode support is experimental. Note that you should use `mcp_client` instead of `mcp_tool_wrapper` as the function type for `stdio` mode. `mcp_client` allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. See `examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml` for a complete example.
-
-Once configured, a Pydantic input schema will be generated based on the input schema provided by the MCP server. This input schema is included with the configured function and is accessible by any agent or function calling the configured `mcp_tool_wrapper` function. The `mcp_tool_wrapper` function can accept the following type of arguments as long as they satisfy the input schema:
- * a validated instance of it's input schema
- * a string that represents a valid JSON
- * A python dictionary
- * Keyword arguments
-
 
 ## Example
 The simple calculator workflow can be configured to use remote MCP tools. Sample configuration is provided in the `config-mcp-math.yml` file.
