@@ -31,7 +31,6 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
     Base class for authenticating to API services.
     This class provides an interface for authenticating to API services.
     """
-    SESSION_COOKIE_NAME = "nat-session"
 
     def __init__(self, config: AuthProviderBaseConfigT):
         """
