@@ -26,10 +26,10 @@ from nat.builder.builder import Builder
 from nat.builder.function import Function
 from nat.builder.function_info import FunctionInfo
 from nat.data_models.component_ref import FunctionRef
-from nat.tool.sequential_execution import SequentialExecutionToolConfig
+from nat.tool.sequential_execution import SequentialExecutorConfig
 from nat.tool.sequential_execution import ToolExecutionConfig
 from nat.tool.sequential_execution import _validate_function_type_compatibility
-from nat.tool.sequential_execution import _validate_sequential_tool_list
+from nat.tool.sequential_execution import _validate_tool_list_type_compatibility
 from nat.tool.sequential_execution import sequential_execution
 from nat.utils.type_utils import DecomposedType
 
@@ -145,11 +145,11 @@ class TestSequentialExecutionToolConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = SequentialExecutionToolConfig()
+        config = SequentialExecutorConfig()
 
-        assert config.sequential_tool_list == []
+        assert config.tool_list == []
         assert config.tool_execution_config == {}
-        assert not config.check_type_compatibility
+        assert not config.raise_type_incompatibility
 
     def test_config_with_values(self):
         """Test configuration with custom values."""
@@ -159,13 +159,13 @@ class TestSequentialExecutionToolConfig:
             "tool2": ToolExecutionConfig(use_streaming=False),
         }
 
-        config = SequentialExecutionToolConfig(sequential_tool_list=tool_list,
-                                               tool_execution_config=tool_config,
-                                               check_type_compatibility=True)
+        config = SequentialExecutorConfig(tool_list=tool_list,
+                                          tool_execution_config=tool_config,
+                                          raise_type_incompatibility=True)
 
-        assert config.sequential_tool_list == tool_list
+        assert config.tool_list == tool_list
         assert config.tool_execution_config == tool_config
-        assert config.check_type_compatibility
+        assert config.raise_type_incompatibility
 
 
 class TestToolExecutionConfig:
@@ -270,36 +270,36 @@ class TestValidateSequentialToolList:
 
     def test_compatible_sequential_tools(self, mock_builder, compatible_functions):
         """Test validation of compatible sequential tools."""
-        config = SequentialExecutionToolConfig(sequential_tool_list=[FunctionRef("func1"), FunctionRef("func2")])
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("func1"), FunctionRef("func2")])
 
         mock_builder.get_function.side_effect = compatible_functions
 
         with patch('nat.tool.sequential_execution._validate_function_type_compatibility', return_value=True):
-            input_type, output_type = _validate_sequential_tool_list(config, mock_builder)
+            input_type, output_type = _validate_tool_list_type_compatibility(config, mock_builder)
 
             assert input_type == str  # First function's input type
             assert output_type == int  # Last function's output type
 
     def test_incompatible_sequential_tools_with_exception(self, mock_builder, compatible_functions):
         """Test validation raises exception for incompatible tools when check_type_compatibility is True."""
-        config = SequentialExecutionToolConfig(sequential_tool_list=[FunctionRef("func1"), FunctionRef("func2")],
-                                               check_type_compatibility=True)
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("func1"), FunctionRef("func2")],
+                                          raise_type_incompatibility=True)
 
         mock_builder.get_function.side_effect = compatible_functions
 
         with patch('nat.tool.sequential_execution._validate_function_type_compatibility', return_value=False):
             with pytest.raises(ValueError, match="The output type of the func1 function is not compatible"):
-                _validate_sequential_tool_list(config, mock_builder)
+                _validate_tool_list_type_compatibility(config, mock_builder)
 
     def test_streaming_output_type_selection(self, mock_builder, compatible_functions):
         """Test that streaming output type is selected when configured."""
-        config = SequentialExecutionToolConfig(sequential_tool_list=[FunctionRef("func1"), FunctionRef("func2")],
-                                               tool_execution_config={"func2": ToolExecutionConfig(use_streaming=True)})
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("func1"), FunctionRef("func2")],
+                                          tool_execution_config={"func2": ToolExecutionConfig(use_streaming=True)})
 
         mock_builder.get_function.side_effect = compatible_functions
 
         with patch('nat.tool.sequential_execution._validate_function_type_compatibility', return_value=True):
-            input_type, output_type = _validate_sequential_tool_list(config, mock_builder)
+            input_type, output_type = _validate_tool_list_type_compatibility(config, mock_builder)
 
             assert input_type == str  # First function's input type
             assert output_type == int  # Last function's streaming_output_type
@@ -346,8 +346,7 @@ class TestSequentialExecution:
     @pytest.mark.asyncio
     async def test_basic_sequential_execution(self, mock_builder):
         """Test basic sequential execution of tools."""
-        config = SequentialExecutionToolConfig(
-            sequential_tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
 
         with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
@@ -365,9 +364,8 @@ class TestSequentialExecution:
             MockTool(name="tool3", return_value="final_result")
         ]
 
-        config = SequentialExecutionToolConfig(
-            sequential_tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")],
-            tool_execution_config={"tool2": ToolExecutionConfig(use_streaming=True)})
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")],
+                                          tool_execution_config={"tool2": ToolExecutionConfig(use_streaming=True)})
 
         with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
@@ -385,8 +383,7 @@ class TestSequentialExecution:
             MockTool(name="tool3", return_value="final_result")
         ]
 
-        config = SequentialExecutionToolConfig(
-            sequential_tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
 
         with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
@@ -400,8 +397,8 @@ class TestSequentialExecution:
     @pytest.mark.asyncio
     async def test_type_compatibility_error_with_check_enabled(self, mock_builder):
         """Test type compatibility error when check_type_compatibility is True."""
-        config = SequentialExecutionToolConfig(sequential_tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
-                                               check_type_compatibility=True)
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
+                                          raise_type_incompatibility=True)
 
         with patch('nat.tool.sequential_execution._validate_sequential_tool_list',
                    side_effect=ValueError("Type incompatibility")):
@@ -412,8 +409,8 @@ class TestSequentialExecution:
     @pytest.mark.asyncio
     async def test_type_compatibility_warning_with_check_disabled(self, mock_builder, caplog):
         """Test type compatibility warning when check_type_compatibility is False."""
-        config = SequentialExecutionToolConfig(sequential_tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
-                                               check_type_compatibility=False)
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
+                                          raise_type_incompatibility=False)
 
         with patch('nat.tool.sequential_execution._validate_sequential_tool_list',
                    side_effect=ValueError("Type incompatibility")):
@@ -427,7 +424,7 @@ class TestSequentialExecution:
     @pytest.mark.asyncio
     async def test_empty_tool_list(self, mock_builder):
         """Test handling of empty tool list."""
-        config = SequentialExecutionToolConfig(sequential_tool_list=[])
+        config = SequentialExecutorConfig(tool_list=[])
 
         mock_builder.get_tools.return_value = []
 
@@ -440,7 +437,7 @@ class TestSequentialExecution:
     @pytest.mark.asyncio
     async def test_single_tool_execution(self, mock_builder):
         """Test execution with a single tool."""
-        config = SequentialExecutionToolConfig(sequential_tool_list=[FunctionRef("tool1")])
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1")])
 
         # Mock single tool
         single_tool = MockTool(name="tool1", return_value="single_result")
@@ -463,8 +460,7 @@ class TestSequentialExecution:
     @pytest.mark.asyncio
     async def test_tool_execution_order(self, mock_builder):
         """Test that tools are executed in the correct order."""
-        config = SequentialExecutionToolConfig(
-            sequential_tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
 
         # Create tools that append their names to the input
         class OrderTestTool(BaseTool):
@@ -501,8 +497,8 @@ class TestSequentialExecution:
 
         mock_builder.get_tools.return_value = [streaming_tool, regular_tool]
 
-        config = SequentialExecutionToolConfig(sequential_tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
-                                               tool_execution_config={"tool1": ToolExecutionConfig(use_streaming=True)})
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
+                                          tool_execution_config={"tool1": ToolExecutionConfig(use_streaming=True)})
 
         with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
@@ -512,7 +508,7 @@ class TestSequentialExecution:
 
     def test_function_annotations_set_correctly(self, mock_builder):
         """Test that function annotations are set correctly based on type validation."""
-        config = SequentialExecutionToolConfig(sequential_tool_list=[FunctionRef("tool1")])
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1")])
 
         with patch('nat.tool.sequential_execution._validate_sequential_tool_list', return_value=(str, int)):
             # Get the generator
@@ -556,7 +552,7 @@ class TestErrorScenarios:
     @pytest.mark.asyncio
     async def test_missing_tool_error(self, mock_builder_with_missing_tool):
         """Test error handling when a tool is missing."""
-        config = SequentialExecutionToolConfig(sequential_tool_list=[FunctionRef("missing_tool")])
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("missing_tool")])
 
         with pytest.raises(KeyError):
             async with sequential_execution(config, mock_builder_with_missing_tool) as _:
@@ -565,8 +561,8 @@ class TestErrorScenarios:
     @pytest.mark.asyncio
     async def test_invalid_tool_configuration(self):
         """Test error handling with invalid tool configuration."""
-        config = SequentialExecutionToolConfig(
-            sequential_tool_list=[FunctionRef("tool1")],
+        config = SequentialExecutorConfig(
+            tool_list=[FunctionRef("tool1")],
             tool_execution_config={"nonexistent_tool": ToolExecutionConfig(use_streaming=True)})
 
         builder = MagicMock(spec=Builder)

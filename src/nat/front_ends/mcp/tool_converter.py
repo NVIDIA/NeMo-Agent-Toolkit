@@ -93,7 +93,7 @@ def create_function_wrapper(
     def create_wrapper():
 
         async def wrapper_with_ctx(**kwargs):
-            """Internal wrapper that will be called by MCP."""
+            """This is the entry point agent that MUST be called before calling any other tools."""
             # MCP will add a ctx parameter, extract it
             ctx = kwargs.get("ctx")
 
