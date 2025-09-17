@@ -21,7 +21,6 @@ from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.authentication import AuthProviderBaseConfigT
-from nat.data_models.authentication import AuthRequest
 from nat.data_models.authentication import AuthResult
 
 AUTHORIZATION_HEADER = "Authorization"

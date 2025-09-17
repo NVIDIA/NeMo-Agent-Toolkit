@@ -89,11 +89,11 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
     async def authenticate(self, user_id: str | None = None, auth_request: AuthRequest | None = None) -> AuthResult:
         if user_id is None and hasattr(Context.get(), "metadata") and hasattr(
                 Context.get().metadata, "cookies") and Context.get().metadata.cookies is not None:
-        session_id = Context.get().metadata.cookies.get(self.SESSION_COOKIE_NAME, None)
-        if not session_id:
-            raise RuntimeError("Authentication failed. No session ID found. Cannot identify user.")
+            session_id = Context.get().metadata.cookies.get(self.SESSION_COOKIE_NAME, None)
+            if not session_id:
+                raise RuntimeError("Authentication failed. No session ID found. Cannot identify user.")
 
-        user_id = session_id
+            user_id = session_id
 
         if user_id and user_id in self._authenticated_tokens:
             auth_result = self._authenticated_tokens[user_id]

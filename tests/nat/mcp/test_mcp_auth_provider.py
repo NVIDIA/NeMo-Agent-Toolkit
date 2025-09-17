@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
 import pytest
 from pydantic import HttpUrl
+from pydantic import SecretStr
 
 from nat.data_models.authentication import AuthReason
 from nat.data_models.authentication import AuthRequest
@@ -80,22 +80,18 @@ def mock_credentials() -> OAuth2Credentials:
 
 
 @pytest.fixture
-def mock_auth_request() -> AuthRequest:
-    """Create a mock auth request for testing."""
-    return AuthRequest(
-        user_id="test_user",
-        reason=AuthReason.NORMAL,
-    )
-
-
-@pytest.fixture
-def mock_retry_auth_request() -> AuthRequest:
-    """Create a mock retry auth request for testing."""
-    return AuthRequest(
-        user_id="test_user",
-        reason=AuthReason.RETRY_AFTER_401,
-        www_authenticate=
-        'Bearer realm="api", resource_metadata="https://auth.example.com/.well-known/oauth-protected-resource"',
+def mock_config_with_auth_request() -> MCPOAuth2ProviderConfig:
+    """Create a mock config with auth request for testing."""
+    return MCPOAuth2ProviderConfig(
+        server_url=HttpUrl("https://example.com/mcp"),
+        redirect_uri=HttpUrl("https://example.com/callback"),
+        client_name="Test Client",
+        enable_dynamic_registration=True,
+        auth_request=AuthRequest(
+            reason=AuthReason.RETRY_AFTER_401,
+            www_authenticate=
+            'Bearer realm="api", resource_metadata="https://auth.example.com/.well-known/oauth-protected-resource"',
+        ),
     )
 
 
@@ -314,28 +310,45 @@ class TestMCPOAuth2Provider:
         """Test that normal requests return empty auth result when no provider is set up."""
         provider = MCPOAuth2Provider(mock_config)
 
-        auth_request = AuthRequest(
-            user_id="test_user",
-            reason=AuthReason.NORMAL,
-        )
-
-        result = await provider.authenticate(user_id="test_user", auth_request=auth_request)
+        result = await provider.authenticate(user_id="test_user")
 
         assert result.credentials == []
         assert result.token_expires_at is None
         assert result.raw == {}
 
-    async def test_authenticate_requires_auth_request(self, mock_config):
-        """Test that authenticate requires an auth request."""
-        provider = MCPOAuth2Provider(mock_config)
+    async def test_authenticate_uses_config_auth_request(self, mock_config_with_auth_request):
+        """Test that authenticate uses auth request from config."""
+        provider = MCPOAuth2Provider(mock_config_with_auth_request)
 
-        with pytest.raises(RuntimeError, match="Auth request is required"):
-            await provider.authenticate(user_id="test_user", auth_request=None)
+        # Mock the discovery and registration process
+        with patch.object(provider._discoverer, 'discover') as mock_discover:
+            mock_discover.return_value = (OAuth2Endpoints(
+                authorization_url=HttpUrl("https://auth.example.com/authorize"),
+                token_url=HttpUrl("https://auth.example.com/token"),
+                registration_url=HttpUrl("https://auth.example.com/register"),
+            ),
+                                          True)
 
-    async def test_authenticate_with_manual_credentials(self, mock_config_with_credentials, mock_endpoints,
-                                                        monkeypatch):
+            with patch.object(provider._registrar, 'register') as mock_register:
+                mock_register.return_value = OAuth2Credentials(client_id="test_client_id",
+                                                               client_secret="test_client_secret")
+
+                with patch.object(provider, '_perform_oauth2_flow') as mock_flow:
+                    mock_flow.return_value = AuthResult(credentials=[], token_expires_at=None, raw={})
+
+                    result = await provider.authenticate(user_id="test_user")
+
+                    # Should use the auth request from config
+                    assert result.credentials == []
+                    mock_discover.assert_called_once()
+                    mock_register.assert_called_once()
+
+    async def test_authenticate_with_manual_credentials(self, mock_config_with_credentials, mock_endpoints):
         """Test authentication with pre-registered credentials."""
-        provider = MCPOAuth2Provider(mock_config_with_credentials)
+        # Add auth request to config
+        config = mock_config_with_credentials.model_copy(
+            update={'auth_request': AuthRequest(reason=AuthReason.RETRY_AFTER_401, )})
+        provider = MCPOAuth2Provider(config)
 
         # Mock the discovery process
         with patch.object(provider._discoverer, 'discover') as mock_discover:
@@ -343,7 +356,7 @@ class TestMCPOAuth2Provider:
 
             # Mock the OAuth2 flow
             mock_auth_result = AuthResult(
-                credentials=[BearerTokenCred(token="test_token")],
+                credentials=[BearerTokenCred(token=SecretStr("test_token"))],
                 token_expires_at=None,
                 raw={},
             )
@@ -351,24 +364,17 @@ class TestMCPOAuth2Provider:
             with patch.object(provider, '_perform_oauth2_flow') as mock_flow:
                 mock_flow.return_value = mock_auth_result
 
-                auth_request = AuthRequest(
-                    user_id="test_user",
-                    reason=AuthReason.RETRY_AFTER_401,
-                )
-
-                result = await provider.authenticate(user_id="test_user", auth_request=auth_request)
+                result = await provider.authenticate(user_id="test_user")
 
                 assert result == mock_auth_result
                 mock_discover.assert_called_once()
                 mock_flow.assert_called_once()
 
-    async def test_authenticate_with_dynamic_registration(self,
-                                                          mock_config,
-                                                          mock_endpoints,
-                                                          mock_credentials,
-                                                          monkeypatch):
+    async def test_authenticate_with_dynamic_registration(self, mock_config, mock_endpoints, mock_credentials):
         """Test authentication with dynamic client registration."""
-        provider = MCPOAuth2Provider(mock_config)
+        # Add auth request to config
+        config = mock_config.model_copy(update={'auth_request': AuthRequest(reason=AuthReason.RETRY_AFTER_401, )})
+        provider = MCPOAuth2Provider(config)
 
         # Mock the discovery process
         with patch.object(provider._discoverer, 'discover') as mock_discover:
@@ -380,7 +386,7 @@ class TestMCPOAuth2Provider:
 
                 # Mock the OAuth2 flow
                 mock_auth_result = AuthResult(
-                    credentials=[BearerTokenCred(token="test_token")],
+                    credentials=[BearerTokenCred(token=SecretStr("test_token"))],
                     token_expires_at=None,
                     raw={},
                 )
@@ -388,19 +394,14 @@ class TestMCPOAuth2Provider:
                 with patch.object(provider, '_perform_oauth2_flow') as mock_flow:
                     mock_flow.return_value = mock_auth_result
 
-                    auth_request = AuthRequest(
-                        user_id="test_user",
-                        reason=AuthReason.RETRY_AFTER_401,
-                    )
-
-                    result = await provider.authenticate(user_id="test_user", auth_request=auth_request)
+                    result = await provider.authenticate(user_id="test_user")
 
                     assert result == mock_auth_result
                     mock_discover.assert_called_once()
                     mock_register.assert_called_once_with(mock_endpoints, None)
                     mock_flow.assert_called_once()
 
-    async def test_authenticate_dynamic_registration_disabled(self, mock_config, mock_endpoints, monkeypatch):
+    async def test_authenticate_dynamic_registration_disabled(self, mock_endpoints):
         """Test authentication works when dynamic registration is disabled but valid credentials provided."""
         config = MCPOAuth2ProviderConfig(
             server_url=HttpUrl("https://example.com/mcp"),
@@ -408,6 +409,7 @@ class TestMCPOAuth2Provider:
             client_id="test_client_id",
             client_secret="test_client_secret",
             enable_dynamic_registration=False,
+            auth_request=AuthRequest(reason=AuthReason.RETRY_AFTER_401, ),
         )
         provider = MCPOAuth2Provider(config)
 
@@ -419,19 +421,14 @@ class TestMCPOAuth2Provider:
                 mock_auth_result = AuthResult(credentials=[], token_expires_at=None, raw={})
                 mock_flow.return_value = mock_auth_result
 
-                auth_request = AuthRequest(
-                    user_id="test_user",
-                    reason=AuthReason.RETRY_AFTER_401,
-                )
-
                 # Should succeed with manual credentials
-                result = await provider.authenticate(user_id="test_user", auth_request=auth_request)
+                result = await provider.authenticate(user_id="test_user")
 
                 assert result == mock_auth_result
                 mock_discover.assert_called_once()
                 mock_flow.assert_called_once()
 
-    async def test_effective_scopes_uses_config_scopes(self, mock_config):
+    async def test_effective_scopes_uses_config_scopes(self):
         """Test that effective scopes uses config scopes when provided."""
         config = MCPOAuth2ProviderConfig(
             server_url=HttpUrl("https://example.com/mcp"),
@@ -461,88 +458,31 @@ class TestMCPOAuth2Provider:
         scopes = provider._effective_scopes()
         assert scopes is None
 
-    async def test_perform_oauth2_flow_requires_discovery(self, mock_config):
+    async def test_perform_oauth2_flow_requires_discovery(self):
         """Test that OAuth2 flow requires discovery to be completed first."""
-        provider = MCPOAuth2Provider(mock_config)
-
-        auth_request = AuthRequest(
-            user_id="test_user",
-            reason=AuthReason.NORMAL,
+        config = MCPOAuth2ProviderConfig(
+            server_url=HttpUrl("https://example.com/mcp"),
+            redirect_uri=HttpUrl("https://example.com/callback"),
+            enable_dynamic_registration=True,
         )
+        provider = MCPOAuth2Provider(config)
 
         with pytest.raises(RuntimeError, match="OAuth2 flow called before discovery"):
-            await provider._perform_oauth2_flow(auth_request=auth_request)
+            await provider._perform_oauth2_flow()
 
-    async def test_perform_oauth2_flow_prevents_retry_after_401(self, mock_config, mock_endpoints, mock_credentials):
+    async def test_perform_oauth2_flow_prevents_retry_after_401(self, mock_endpoints, mock_credentials):
         """Test that OAuth2 flow prevents being called for RETRY_AFTER_401."""
-        provider = MCPOAuth2Provider(mock_config)
+        config = MCPOAuth2ProviderConfig(
+            server_url=HttpUrl("https://example.com/mcp"),
+            redirect_uri=HttpUrl("https://example.com/callback"),
+            enable_dynamic_registration=True,
+        )
+        provider = MCPOAuth2Provider(config)
 
         provider._cached_endpoints = mock_endpoints
         provider._cached_credentials = mock_credentials
 
-        auth_request = AuthRequest(
-            user_id="test_user",
-            reason=AuthReason.RETRY_AFTER_401,
-        )
+        auth_request = AuthRequest(reason=AuthReason.RETRY_AFTER_401, )
 
         with pytest.raises(RuntimeError, match="should not be called for RETRY_AFTER_401"):
             await provider._perform_oauth2_flow(auth_request=auth_request)
-
-    async def test_state_lock_prevents_concurrent_discovery(self, mock_config, mock_endpoints, mock_credentials):
-        """Test that state lock prevents concurrent 401 retries from clearing each other's endpoints."""
-        provider = MCPOAuth2Provider(mock_config)
-
-        # Create different endpoints for each request to simulate different 401 responses
-        endpoints1 = OAuth2Endpoints(authorization_url=HttpUrl("https://auth1.example.com/authorize"),
-                                     token_url=HttpUrl("https://auth1.example.com/token"),
-                                     registration_url=HttpUrl("https://auth1.example.com/register"))
-        endpoints2 = OAuth2Endpoints(authorization_url=HttpUrl("https://auth2.example.com/authorize"),
-                                     token_url=HttpUrl("https://auth2.example.com/token"),
-                                     registration_url=HttpUrl("https://auth2.example.com/register"))
-
-        async def discover_with_delay(*args, **kwargs):
-            # Simulate discovery taking time
-            await asyncio.sleep(0.1)
-            # Return different endpoints based on which request this is
-            if not hasattr(discover_with_delay, 'call_count'):
-                discover_with_delay.call_count = 0
-            discover_with_delay.call_count += 1
-
-            if discover_with_delay.call_count == 1:
-                return endpoints1, True
-            else:
-                return endpoints2, True
-
-        with patch.object(provider._discoverer, 'discover', side_effect=discover_with_delay):
-            with patch.object(provider._registrar, 'register', return_value=mock_credentials):
-                with patch.object(provider, '_perform_oauth2_flow') as mock_flow:
-                    mock_flow.return_value = AuthResult(credentials=[], token_expires_at=None, raw={})
-
-                    # Create two 401 retry requests
-                    auth_request1 = AuthRequest(user_id="test_user1",
-                                                reason=AuthReason.RETRY_AFTER_401,
-                                                www_authenticate='Bearer realm="api1"')
-                    auth_request2 = AuthRequest(user_id="test_user2",
-                                                reason=AuthReason.RETRY_AFTER_401,
-                                                www_authenticate='Bearer realm="api2"')
-
-                    # Start two concurrent 401 retry operations
-                    task1 = asyncio.create_task(provider._discover_and_register(auth_request1))
-                    task2 = asyncio.create_task(provider._discover_and_register(auth_request2))
-
-                    # Both should complete without issues due to locking
-                    results = await asyncio.gather(task1, task2)
-
-                    # Verify both operations completed successfully
-                    assert len(results) == 2
-
-                    # Verify that the final cached endpoints are consistent
-                    # (not overwritten by the second request due to race conditions)
-                    assert provider._cached_endpoints is not None
-                    assert provider._cached_credentials is not None
-
-                    # The lock should ensure that one request's endpoints don't get
-                    # overwritten by the other request's endpoints
-                    # We can't predict which one wins, but we should have consistent state
-                    final_endpoints = provider._cached_endpoints
-                    assert final_endpoints in [endpoints1, endpoints2]

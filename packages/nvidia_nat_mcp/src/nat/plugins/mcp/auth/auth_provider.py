@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -64,6 +63,16 @@ class DiscoverOAuth2Endpoints:
         self._last_oauth_scopes: list[str] | None = None
 
     async def discover(self, reason: AuthReason, www_authenticate: str | None) -> tuple[OAuth2Endpoints, bool]:
+        """
+        Discover OAuth2 endpoints from MCP server.
+
+        Args:
+            reason: The reason for the discovery.
+            www_authenticate: The WWW-Authenticate header from a 401 response.
+
+        Returns:
+            A tuple of OAuth2Endpoints and a boolean indicating if the endpoints have changed.
+        """
         # Fast path: reuse cache when not a 401 retry
         if reason != AuthReason.RETRY_AFTER_401 and self._cached_endpoints is not None:
             return self._cached_endpoints, False
@@ -106,10 +115,12 @@ class DiscoverOAuth2Endpoints:
 
     # --------------------------- helpers ---------------------------
     def _authorization_base_url(self) -> str:
+        """Get the authorization base URL from the MCP server URL."""
         p = urlparse(str(self.config.server_url))
         return f"{p.scheme}://{p.netloc}"
 
     def _extract_from_www_authenticate_header(self, hdr: str) -> str | None:
+        """Extract the resource_metadata URL from the WWW-Authenticate header."""
         import re
 
         if not hdr:
@@ -167,6 +178,7 @@ class DiscoverOAuth2Endpoints:
         return None
 
     def _build_path_aware_discovery_urls(self, base_or_issuer: str) -> list[str]:
+        """Build path-aware discovery URLs."""
         p = urlparse(base_or_issuer)
         base = f"{p.scheme}://{p.netloc}"
         path = (p.path or "").rstrip("/")
@@ -180,6 +192,7 @@ class DiscoverOAuth2Endpoints:
         return urls
 
     def scopes_supported(self) -> list[str] | None:
+        """Get the last OAuth scopes discovered from the AS."""
         return self._last_oauth_scopes
 
 
@@ -190,11 +203,12 @@ class DynamicClientRegistration:
         self.config = config
 
     def _authorization_base_url(self) -> str:
+        """Get the authorization base URL from the MCP server URL."""
         p = urlparse(str(self.config.server_url))
         return f"{p.scheme}://{p.netloc}"
 
     async def register(self, endpoints: OAuth2Endpoints, scopes: list[str] | None) -> OAuth2Credentials:
-
+        """Register an OAuth2 client with the Authorization Server using OIDC client registration."""
         # Fallback to /register if metadata didn't provide an endpoint
         registration_url = (str(endpoints.registration_url) if endpoints.registration_url else urljoin(
             self._authorization_base_url(), "/register"))
@@ -251,7 +265,6 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         # For the OAuth2 flow
         self._auth_code_provider = None
 
-
     async def authenticate(self, user_id: str | None = None) -> AuthResult:
         """
         Authenticate using MCP OAuth2 flow via NAT framework.
@@ -285,6 +298,10 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         return await self._perform_oauth2_flow(auth_request=auth_request)
 
     async def _discover_and_register(self, auth_request: AuthRequest):
+        """
+        Discover OAuth2 endpoints and register an OAuth2 client with the Authorization Server
+        using OIDC client registration.
+        """
         # Discover OAuth2 endpoints
         self._cached_endpoints, endpoints_changed = await self._discoverer.discover(reason=auth_request.reason,
                                                                                     www_authenticate=auth_request.www_authenticate)
@@ -314,6 +331,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         return self.config.scopes or self._discoverer.scopes_supported()
 
     async def _build_oauth2_delegate(self):
+        """Build NAT OAuth2 provider and delegate auth token acquisition and refresh to it"""
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 
@@ -335,6 +353,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
 
     async def _perform_oauth2_flow(self, auth_request: AuthRequest | None = None) -> AuthResult:
+        """Perform the OAuth2 flow using NAT OAuth2 provider."""
         # This helper is only for non-401 flows
         if auth_request and auth_request.reason == AuthReason.RETRY_AFTER_401:
             raise RuntimeError("_perform_oauth2_flow should not be called for RETRY_AFTER_401")

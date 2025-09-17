@@ -18,6 +18,7 @@ from pydantic import HttpUrl
 from pydantic import model_validator
 
 from nat.authentication.interfaces import AuthProviderBaseConfig
+from nat.data_models.authentication import AuthRequest
 
 
 class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
