@@ -27,6 +27,7 @@ from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontE
 from nat.front_ends.fastapi.main import get_app
 from nat.front_ends.fastapi.utils import get_class_name
 from nat.utils.io.yaml_tools import yaml_dump
+from nat.utils.log_levels import LOG_LEVELS
 
 if (typing.TYPE_CHECKING):
     from nat.data_models.config import Config
@@ -79,16 +80,14 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             except:  # noqa: E722
                 logger.exception("Error during job cleanup")
 
-    async def _submit_cleanup_task(self, scheduler_address: str, db_url: str):
+    async def _submit_cleanup_task(self, scheduler_address: str, db_url: str, log_level: int = logging.INFO):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
-        logger.info("Submitting periodic cleanup task to Dask cluster at %s", scheduler_address)
+        logger.debug("Submitting periodic cleanup task to Dask cluster at %s", scheduler_address)
         async with self.client(self._scheduler_address) as client:
             self._periodic_cleanup_future = client.submit(self._periodic_cleanup,
                                                           scheduler_address=self._scheduler_address,
                                                           db_url=db_url,
-                                                          log_level=logger.getEffectiveLevel())
-
-        logger.info("Submitted periodic cleanup task to Dask cluster at %s", scheduler_address)
+                                                          log_level=log_level)
 
     async def run(self):
 
@@ -102,6 +101,10 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             # 1. Dask is installed and scheduler_address is None, we create a LocalCluster
             # 2. Dask is installed and scheduler_address is set, we use the existing cluster
             # 3. Dask is not installed, we skip the cluster setup
+            dask_log_level = LOG_LEVELS.get(self.front_end_config.dask_log_level.upper(), logging.WARNING)
+            dask_logger = logging.getLogger("distributed")
+            dask_logger.setLevel(dask_log_level)
+
             self._scheduler_address = self.front_end_config.scheduler_address
             if self._scheduler_address is None:
                 try:
@@ -128,7 +131,9 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                 # If self.front_end_config.db_url is None, then we need to get the actual url from the engine
                 db_url = str(db_engine.url)
-                await self._submit_cleanup_task(scheduler_address=self._scheduler_address, db_url=db_url)
+                await self._submit_cleanup_task(scheduler_address=self._scheduler_address,
+                                                db_url=db_url,
+                                                log_level=dask_log_level)
 
                 # Set environment variabls such that the worker subprocesses will know how to connect to dask and to
                 # the database
