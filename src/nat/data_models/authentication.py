@@ -180,7 +180,6 @@ Credential = typing.Annotated[
 class TokenValidationResult(BaseModel):
     """
     Standard result for Bearer Token Validation.
-
     """
     model_config = ConfigDict(extra="forbid")
 

@@ -1,3 +1,18 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import time
 from typing import Any
 
@@ -11,7 +26,7 @@ from nat.authentication.credential_validator.bearer_token_validator import Beare
 from nat.data_models.authentication import TokenValidationResult
 
 
-# ========= Dynamic key generation (no hardcoded PEM) =========
+# ========= Dynamic key generation =========
 @pytest.fixture(scope="session")
 def rsa_private_pem() -> str:
     """Generate a fresh RSA private key (PKCS8 PEM) for signing JWTs."""
@@ -87,7 +102,7 @@ def _make_jwt(
     return token.decode() if isinstance(token, bytes) else token
 
 
-class _FakeHTTPResponse:
+class _MockHTTPResponse:
 
     def __init__(self, json_data: dict[str, Any], status: int = 200):
         self._json = json_data
@@ -101,8 +116,7 @@ class _FakeHTTPResponse:
             raise RuntimeError(f"HTTP {self.status_code}")
 
 
-class _FakeAsyncHTTPClient:
-    """Fake httpx.AsyncClient that returns discovery and JWKS payloads (success paths)."""
+class _MockAsyncHTTPClient:
 
     def __init__(self, *args, **kwargs):
         self._closed = False
@@ -118,14 +132,14 @@ class _FakeAsyncHTTPClient:
         jwks = kwargs.pop("_jwks_payload", None)
 
         if url == DISCOVERY_URL:
-            return _FakeHTTPResponse({"jwks_uri": JWKS_URI})
+            return _MockHTTPResponse({"jwks_uri": JWKS_URI})
         if url == JWKS_URI:
-            return _FakeHTTPResponse(jwks)
-        return _FakeHTTPResponse({"error": "not found"}, status=404)
+            return _MockHTTPResponse(jwks)
+        return _MockHTTPResponse({"error": "not found"}, status=404)
 
 
-class _FakeAsyncOAuth2Client:
-    """Fake AsyncOAuth2Client that returns a configurable introspection response."""
+class _MockAsyncOAuth2Client:
+
     call_count = 0
     response: dict[str, Any] = {}
 
@@ -139,42 +153,39 @@ class _FakeAsyncOAuth2Client:
         pass
 
     async def introspect_token(self, endpoint: str, token: str, token_type_hint: str = "access_token"):
-        _FakeAsyncOAuth2Client.call_count += 1
-        return _FakeAsyncOAuth2Client.response
+        _MockAsyncOAuth2Client.call_count += 1
+        return _MockAsyncOAuth2Client.response
 
 
 @pytest.fixture(autouse=True)
 def patch_httpx_and_oauth(monkeypatch, jwks_from_private):
-    # Patch httpx.AsyncClient **inside the module under test**
+
     monkeypatch.setattr(
         "nat.authentication.credential_validator.bearer_token_validator.httpx.AsyncClient",
-        _FakeAsyncHTTPClient,
+        _MockAsyncHTTPClient,
         raising=True,
     )
 
-    # Inject dynamic JWKS into our fake httpx client
-    orig_get = _FakeAsyncHTTPClient.get
+    orig_get = _MockAsyncHTTPClient.get
 
     async def get_with_jwks(self, url: str, *args, **kwargs):
         kwargs["_jwks_payload"] = jwks_from_private
         return await orig_get(self, url, *args, **kwargs)
 
-    monkeypatch.setattr(_FakeAsyncHTTPClient, "get", get_with_jwks, raising=True)
+    monkeypatch.setattr(_MockAsyncHTTPClient, "get", get_with_jwks, raising=True)
 
-    # Patch AsyncOAuth2Client **inside the module under test**
     monkeypatch.setattr(
         "nat.authentication.credential_validator.bearer_token_validator.AsyncOAuth2Client",
-        _FakeAsyncOAuth2Client,
+        _MockAsyncOAuth2Client,
         raising=True,
     )
 
-    # Reset counters per test
-    _FakeAsyncOAuth2Client.call_count = 0
-    _FakeAsyncOAuth2Client.response = {}
+    _MockAsyncOAuth2Client.call_count = 0
+    _MockAsyncOAuth2Client.response = {}
     yield
 
 
-# ========= Validators (instances) =========
+# ========= Validators =========
 @pytest.fixture
 def validator_with_discovery():
     return BearerTokenValidator(
@@ -259,7 +270,7 @@ async def test_jwt_wrong_audience_rejected(validator_with_jwks, rsa_private_pem)
 @pytest.mark.asyncio
 async def test_opaque_happy_path(validator_opaque):
     now = int(time.time())
-    _FakeAsyncOAuth2Client.response = {
+    _MockAsyncOAuth2Client.response = {
         "active": True,
         "client_id": "client-abc",
         "username": "alice",
@@ -284,7 +295,7 @@ async def test_opaque_happy_path(validator_opaque):
 @pytest.mark.asyncio
 async def test_opaque_missing_scope_rejected(validator_opaque):
     now = int(time.time())
-    _FakeAsyncOAuth2Client.response = {
+    _MockAsyncOAuth2Client.response = {
         "active": True,
         "client_id": "client-abc",
         "token_type": "access_token",
@@ -309,7 +320,7 @@ async def test_routing_uses_jwt_when_three_segments(validator_both, rsa_private_
 @pytest.mark.asyncio
 async def test_routing_uses_opaque_when_non_jwt(validator_both):
     now = int(time.time())
-    _FakeAsyncOAuth2Client.response = {
+    _MockAsyncOAuth2Client.response = {
         "active": True,
         "client_id": "client-abc",
         "token_type": "access_token",

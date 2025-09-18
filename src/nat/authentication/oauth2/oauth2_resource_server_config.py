@@ -45,7 +45,7 @@ class OAuth2ResourceServerConfig(AuthProviderBaseConfig, name="oauth2_resource_s
         ),
     )
 
-    # JWT verification config
+    # JWT verification params
     jwks_uri: str | None = Field(
         default=None,
         description=("Direct JWKS endpoint URI for JWT signature verification. "
@@ -56,7 +56,7 @@ class OAuth2ResourceServerConfig(AuthProviderBaseConfig, name="oauth2_resource_s
         description=("OIDC discovery metadata URL. Used to automatically resolve JWKS and introspection endpoints."),
     )
 
-    # Opaque token (introspection) config
+    # Opaque token (introspection) params
     introspection_endpoint: str | None = Field(
         default=None,
         description=("RFC 7662 token introspection endpoint. "
@@ -71,37 +71,32 @@ class OAuth2ResourceServerConfig(AuthProviderBaseConfig, name="oauth2_resource_s
         description="OAuth2 client secret for authenticating to the introspection endpoint (opaque token validation).",
     )
 
-    # ---------- URL validators (HTTPS except localhost) ----------
-
     @staticmethod
     def _is_https_or_localhost(url: str) -> bool:
         try:
-            p = urlparse(url)
-            if not p.scheme or not p.netloc:
+            value = urlparse(url)
+            if not value.scheme or not value.netloc:
                 return False
-            if p.scheme == "https":
+            if value.scheme == "https":
                 return True
-            # Allow http only for localhost-style hosts during local dev
-            return p.scheme == "http" and (p.hostname in {"localhost", "127.0.0.1", "::1"})
+            return value.scheme == "http" and (value.hostname in {"localhost", "127.0.0.1", "::1"})
         except Exception:
             return False
 
     @field_validator("issuer_url", "jwks_uri", "discovery_url", "introspection_endpoint")
     @classmethod
-    def _require_valid_url(cls, v: str | None, info):
-        if v is None:
-            return v
-        if not cls._is_https_or_localhost(v):
-            raise ValueError(f"{info.field_name} must be HTTPS (http allowed only for localhost). Got: {v}")
-        return v
+    def _require_valid_url(cls, value: str | None, info):
+        if value is None:
+            return value
+        if not cls._is_https_or_localhost(value):
+            raise ValueError(f"{info.field_name} must be HTTPS (http allowed only for localhost). Got: {value}")
+        return value
 
     # ---------- Cross-field validation: ensure at least one viable path ----------
 
     @model_validator(mode="after")
     def _ensure_verification_path(self):
         """
-        Fail fast unless configuration enables at least one verification path:
-
         JWT path viable if any of: jwks_uri OR discovery_url OR issuer_url (fallback JWKS).
         Opaque path viable if: introspection_endpoint AND client_id AND client_secret.
         """

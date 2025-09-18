@@ -49,8 +49,7 @@ class BearerTokenValidator:
         leeway: int = 60,
         discovery_url: str | None = None,
     ):
-        """Initialize the RFC 7519/7662 compliant bearer token validator.
-
+        """
         Args:
             introspection_endpoint: OAuth 2.0 introspection URL (required to validate opaque tokens).
             issuer: Expected token issuer (`iss`); recommended for policy, not required for JWT signature validity.
@@ -75,6 +74,9 @@ class BearerTokenValidator:
         self.leeway = leeway
         self.discovery_url = discovery_url
 
+        # Validate configuration
+        self._validate_configuration()
+
         # HTTPS validation for configured URLs
         if self.discovery_url:
             self._require_https(self.discovery_url, "discovery_url")
@@ -95,11 +97,22 @@ class BearerTokenValidator:
         self._jwks_cache_ttl = 900  # 15 minutes
         self._discovery_cache_ttl = 900  # 15 minutes
 
+    def _validate_configuration(self) -> None:
+        """Validate that at least one token verification method is configured."""
+
+        jwt_possible = self.jwks_uri or self.discovery_url or self.issuer
+        introspection_possible = self.introspection_endpoint and self.client_id and self.client_secret
+
+        if not jwt_possible and not introspection_possible:
+            raise ValueError("No valid token verification method configured. "
+                             "Either provide JWT verification (jwks_uri, discovery_url, or issuer for derived JWKS) "
+                             "or introspection (introspection_endpoint with client_id and client_secret)")
+
     async def verify(self, token: str) -> TokenValidationResult:
         """Validate bearer token per RFC 7519 (JWT) and RFC 7662 (Introspection).
 
         Args:
-            token: The bearer token to validate (with or without "Bearer " prefix)
+            token: Bearer token to validate
 
         Returns:
             TokenValidationResult
@@ -128,7 +141,14 @@ class BearerTokenValidator:
         return token.count(".") == 2
 
     async def _verify_jwt_token(self, token: str) -> TokenValidationResult:
-        """Verify JWT token."""
+        """Verify JWT token.
+
+        Args:
+            token: JWT token to verify
+
+        Returns:
+            TokenValidationResult
+        """
         jwks_uri = await self._resolve_jwks_uri()
         keyset = await self._fetch_jwks(jwks_uri)
 
@@ -172,7 +192,14 @@ class BearerTokenValidator:
         )
 
     async def _verify_opaque_token(self, token: str) -> TokenValidationResult:
-        """Verify opaque token via RFC 7662 introspection."""
+        """Verify opaque token via RFC 7662 introspection.
+
+        Args:
+            token: Opaque token to verify
+
+        Returns:
+            TokenValidationResult
+        """
 
         cache_key = token[:10] if len(token) >= 10 else token
 
@@ -262,7 +289,12 @@ class BearerTokenValidator:
             raise ValueError(f"Introspection failed: {e}") from e
 
     async def _resolve_jwks_uri(self) -> str:
-        """Resolve JWKS URI using configuration priority: jwks_uri → discovery → issuer."""
+        """Resolve JWKS URI using configuration priority: jwks_uri → discovery → issuer.
+
+        Returns:
+            JWKS URI string
+        """
+
         if self.jwks_uri:
             return self.jwks_uri
 
@@ -284,7 +316,15 @@ class BearerTokenValidator:
         raise ValueError("No JWKS URI available - no jwks_uri, discovery_url, or issuer configured")
 
     async def _get_oidc_configuration(self, discovery_url: str) -> dict[str, Any]:
-        """Get OIDC configuration with TTL caching."""
+        """Get OIDC configuration.
+
+        Args:
+            discovery_url: OIDC discovery URL
+
+        Returns:
+            OIDC configuration dict
+        """
+
         # Check cache first
         cache_entry = self._oidc_config_cache.get(discovery_url)
         if cache_entry:
@@ -324,7 +364,15 @@ class BearerTokenValidator:
             raise ValueError(f"Invalid OIDC discovery response: {e}") from e
 
     async def _fetch_jwks(self, jwks_uri: str) -> KeySet:
-        """Fetch JWKS from URI with TTL caching - raises exceptions on failure."""
+        """Fetch JWKS from URI.
+
+        Args:
+            jwks_uri: JWKS endpoint URI
+
+        Returns:
+            KeySet for token verification
+        """
+
         # Check cache first
         cache_entry = self._jwks_cache.get(jwks_uri)
         if cache_entry:
@@ -357,7 +405,15 @@ class BearerTokenValidator:
         return keyset
 
     def _extract_audience_from_claims(self, claims: dict[str, Any]) -> list[str] | None:
-        """Extract audience values from JWT claims."""
+        """Extract audience from JWT claims.
+
+        Args:
+            claims: JWT claims dict
+
+        Returns:
+            List of audience values
+        """
+
         audience = claims.get("aud")
         if isinstance(audience, str):
             return [audience]
@@ -367,7 +423,15 @@ class BearerTokenValidator:
         return None
 
     def _extract_audience_from_introspection(self, response: dict[str, Any]) -> list[str] | None:
-        """Extract audience values from introspection response."""
+        """Extract audience from introspection response.
+
+        Args:
+            response: Introspection response dict
+
+        Returns:
+            List of audience values
+        """
+
         audience = response.get("aud")
         if isinstance(audience, str):
             return [audience]
@@ -377,7 +441,13 @@ class BearerTokenValidator:
         return None
 
     def _require_https(self, url: str, url_description: str) -> None:
-        """Enforce HTTPS requirement (except localhost for testing)."""
+        """Enforce HTTPS requirement.
+
+        Args:
+            url: URL to validate
+            url_description: Description for error messages
+        """
+
         if url.startswith("https://"):
             return
         parsed_url = urlparse(url)
@@ -395,9 +465,6 @@ class BearerTokenValidator:
             issuer_claim: Issuer from JWT token
             audience_claim: Audience list from JWT token
             token_scopes: Scopes from JWT token
-
-        Raises:
-            ValueError: If any policy check fails
         """
         # Check issuer policy
         if self.issuer and issuer_claim != self.issuer:
@@ -431,9 +498,6 @@ class BearerTokenValidator:
             issuer_claim: Issuer from introspection response
             audience_claim: Audience list from introspection response
             token_scopes: Scopes from introspection response
-
-        Raises:
-            ValueError: If any policy check fails
         """
         # Check issuer policy
         if self.issuer and issuer_claim != self.issuer:
@@ -459,7 +523,16 @@ class BearerTokenValidator:
                     f"Opaque token missing required scopes: {sorted(missing_scopes)} (has: {sorted(token_scope_set)})")
 
     def _is_expired(self, exp: int | None, leeway: int | None = None) -> bool:
-        """Check if timestamp is expired considering leeway."""
+        """Check if timestamp is expired considering leeway.
+
+        Args:
+            exp: Expiration timestamp
+            leeway: Clock skew allowance
+
+        Returns:
+            True if expired
+        """
+
         if exp is None:
             return False
         leeway = leeway or self.leeway
@@ -467,7 +540,16 @@ class BearerTokenValidator:
         return now > (exp + leeway)
 
     def _is_not_yet_valid(self, nbf: int | None, leeway: int | None = None) -> bool:
-        """Check if timestamp is not yet valid considering leeway."""
+        """Check if timestamp is not yet valid considering leeway.
+
+        Args:
+            nbf: Not-before timestamp
+            leeway: Clock skew allowance
+
+        Returns:
+            True if not yet valid
+        """
+
         if nbf is None:
             return False
         leeway = leeway or self.leeway

@@ -43,16 +43,6 @@ class IntrospectionTokenVerifier(TokenVerifier):
         client_id = config.client_id
         client_secret = config.client_secret
 
-        # Check that we have at least one verification method available
-        jwt_possible = jwks_uri or discovery_url or issuer
-        introspection_possible = introspection_endpoint and client_id and client_secret
-
-        if not jwt_possible and not introspection_possible:
-            raise ValueError("No valid token verification method configured. "
-                             "Either provide JWT verification (jwks_uri, discovery_url, or issuer for derived JWKS) "
-                             "or introspection (introspection_endpoint with client_id and client_secret)")
-
-        # Initialize BearerTokenValidator with mapped fields
         self._bearer_token_validator = BearerTokenValidator(
             issuer=issuer,
             audience=audience,
