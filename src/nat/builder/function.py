@@ -637,3 +637,14 @@ class FunctionGroup:
         if name not in self._functions:
             raise ValueError(f"Function {name} not found in function group {self._instance_name}")
         self._per_function_filter_fn[name] = filter_fn
+
+    def set_instance_name(self, instance_name: str):
+        """
+        Sets the instance name for the function group.
+
+        Parameters
+        ----------
+        instance_name : str
+            The instance name to set for the function group.
+        """
+        self._instance_name = instance_name
