@@ -16,11 +16,15 @@
 import logging
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import Mapping
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from starlette.exceptions import HTTPException
 from starlette.requests import Request
 
 from nat.builder.function import Function
+from nat.builder.function_base import FunctionBase
 from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
@@ -102,6 +106,103 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
         return functions
 
+    def _setup_debug_endpoints(self, mcp: FastMCP, functions: Mapping[str, FunctionBase]) -> None:
+        """Set up HTTP debug endpoints for introspecting tools and schemas.
+
+        Exposes:
+          - GET /debug/tools/list: List tools. Optional query param `name` (one or more, repeatable or comma separated)
+            selects a subset and returns details for those tools.
+        """
+
+        @mcp.custom_route("/debug/tools/list", methods=["GET"])
+        async def list_tools(request: Request):
+            """HTTP list tools endpoint."""
+
+            from starlette.responses import JSONResponse
+
+            from nat.front_ends.mcp.tool_converter import get_function_description
+
+            # Query params
+            # Support repeated names and comma-separated lists
+            names_param_list = set(request.query_params.getlist("name"))
+            names: list[str] = []
+            for raw in names_param_list:
+                # if p.strip() is empty, it won't be included in the list!
+                parts = [p.strip() for p in raw.split(",") if p.strip()]
+                names.extend(parts)
+            detail_raw = request.query_params.get("detail")
+
+            def _parse_detail_param(detail_param: str | None, has_names: bool) -> bool:
+                if detail_param is None:
+                    if has_names:
+                        return True
+                    return False
+                v = detail_param.strip().lower()
+                if v in ("0", "false", "no", "off"):
+                    return False
+                if v in ("1", "true", "yes", "on"):
+                    return True
+                # For invalid values, default based on whether names are present
+                return has_names
+
+            # Helper function to build the input schema info
+            def _build_schema_info(fn: FunctionBase) -> dict[str, Any] | None:
+                schema = getattr(fn, "input_schema", None)
+                if schema is None:
+                    return None
+
+                # check if schema is a ChatRequest
+                schema_name = getattr(schema, "__name__", "")
+                schema_qualname = getattr(schema, "__qualname__", "")
+                if "ChatRequest" in schema_name or "ChatRequest" in schema_qualname:
+                    # Simplified interface used by MCP wrapper for ChatRequest
+                    return {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string", "description": "User query string"
+                            }
+                        },
+                        "required": ["query"],
+                        "title": "ChatRequestQuery",
+                    }
+
+                # Pydantic models provide model_json_schema
+                if schema is not None and hasattr(schema, "model_json_schema"):
+                    return schema.model_json_schema()
+
+                return None
+
+            def _build_final_json(functions_to_include: Mapping[str, FunctionBase],
+                                  include_schemas: bool = False) -> dict[str, Any]:
+                tools = []
+                for name, fn in functions_to_include.items():
+                    list_entry: dict[str, Any] = {
+                        "name": name, "description": get_function_description(fn), "is_workflow": hasattr(fn, "run")
+                    }
+                    if include_schemas:
+                        list_entry["schema"] = _build_schema_info(fn)
+                    tools.append(list_entry)
+
+                return {
+                    "count": len(tools),
+                    "tools": tools,
+                    "server_name": mcp.name,
+                }
+
+            if names:
+                # Return selected tools
+                try:
+                    functions_to_include = {n: functions[n] for n in names}
+                except KeyError as e:
+                    raise HTTPException(status_code=404, detail=f"Tool \"{e.args[0]}\" not found.") from e
+            else:
+                functions_to_include = functions
+
+            # Default for listing all: detail defaults to False unless explicitly set true
+            return JSONResponse(
+                _build_final_json(functions_to_include, _parse_detail_param(detail_raw, has_names=bool(names))))
+
 
 class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
     """Default MCP front end plugin worker implementation."""
@@ -142,3 +243,6 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
         # Add a simple fallback function if no functions were found
         if not functions:
             raise RuntimeError("No functions found in workflow. Please check your configuration.")
+
+        # After registration, expose debug endpoints for tool/schema inspection
+        self._setup_debug_endpoints(mcp, functions)
