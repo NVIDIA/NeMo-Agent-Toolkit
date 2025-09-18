@@ -19,9 +19,9 @@ limitations under the License.
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-You can use NeMo Agent toolkit as an MCP Host with one or more MCP Clients serving tools from remote MCP servers.
+You can create a workflow that uses MCP tools as functions. In this case the workflow acts as a MCP host and creates MCP clients to connect to MCP servers and use their tools as functions.
 
-This guide will cover how to use NeMo Agent toolkit as an MCP Host with one or more MCP Clients. For more information on how to use NeMo Agent toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
+This guide will cover how to use a NeMo Agent toolkit workflow as a MCP host with one or more MCP clients. For more information on how to use NeMo Agent toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
 
 ## Installation
 
@@ -31,10 +31,9 @@ MCP client functionality requires the `nvidia-nat-mcp` package. Install it with:
 uv pip install nvidia-nat[mcp]
 ```
 
-## MCP Client
+## MCP Client Configuration
 NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allow the workflow to use MCP tools as regular functions.
 
-## Usage
 Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions in one of two ways:
 - `mcp_client`: A flexible configuration using function groups, that allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
 - `mcp_tool_wrapper`: A simple configuration that allows you wrap a single MCP tool as a NeMo Agent toolkit function.
@@ -60,11 +59,11 @@ workflows:
   tool_names:
     - mcp_tools
 ```
-You can use `mcp_client` function group to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
+You can use the `mcp_client` function group to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
 
 The function group supports filtering via the `include` and `exclude` parameters. You can also optionally override the tool name and description defined by the MCP server via the `tool_overrides` parameter.
 
-The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers.
+The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers. See [Function Groups](../workflows/function-groups.md) for more information about function group capabilities.
 
 ### `mcp_tool_wrapper` Configuration
 ```yaml
@@ -84,10 +83,10 @@ workflows:
     - mcp_tool_a
     - mcp_tool_b
 ```
-You can use `mcp_tool_wrapper` to wrap a single MCP tool as a NeMo Agent toolkit function. You need to specify the server URL and the tool name. This configuration needs to be repeated for each tool you want to wrap.
+You can use `mcp_tool_wrapper` to wrap a single MCP tool as a NeMo Agent toolkit function. Specify the server URL and the tool name for each tool you want to wrap. This approach requires a separate configuration entry for each individual tool.
 
-## Transport
-The MCP client can connect to MCP servers using different transport types. The choice of transport should match the server's configuration.
+## Transport Configuration
+The `mcp_client` function group can connect to MCP servers using different transport types. Choose the transport that matches your MCP server's configuration to ensure proper communication.
 
 ### Transport Types
 
@@ -142,7 +141,8 @@ function_groups:
 ```
 
 ## Example
-The simple calculator workflow can be configured to use local and remote MCP tools. Sample configuration is provided in the `config-mcp-date-stdio.yml` file.
+
+The following example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers. This configuration shows how to use multiple MCP servers with different transports in the same workflow.
 
 `examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml`:
 ```yaml
@@ -158,27 +158,48 @@ function_groups:
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
+
+workflows:
+  _type: react_agent
+  tool_names:
+    - mcp_time
+    - mcp_math
 ```
 
-To run the simple calculator workflow using local and remote MCP tools, follow these steps:
-1. Start the example remote MCP server.
+This configuration creates two function groups:
+- `mcp_time`: Connects to a local MCP server using stdio transport to get current date and time
+- `mcp_math`: Connects to a remote MCP server using streamable-http transport to access calculator tools
+
+To run this example:
+
+1. Start the remote MCP server:
 ```bash
 nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
-This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. This MCP server serves the calculator tools. See the [MCP Server](./mcp-server.md) documentation for more information.
+This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. See the [MCP Server](./mcp-server.md) documentation for more information.
 
-2. Run the workflow using the `nat run` command.
+2. Run the workflow:
 ```bash
 nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
-This configuration uses:
-- a local MCP server to get the current date and time using stdio transport
-- a remote MCP server to access the calculator tools using streamable-http transport.
 
 ## Displaying MCP Tools
-The `nat info mcp` command can be used to list the tools served by an MCP server.
+
+The `nat info mcp` command allows you to inspect the tools available from an MCP server before configuring your workflow. This is useful for discovering available tools and understanding their input schemas.
+
+### List All Tools
+
+To list all tools served by an MCP server:
+
 ```bash
+# For streamable-http transport (default)
 nat info mcp --url http://localhost:9901/mcp
+
+# For stdio transport
+nat info mcp --transport stdio --command "python" --args "-m" "mcp_server_time"
+
+# For sse transport
+nat info mcp --url http://localhost:8080/sse --transport sse
 ```
 
 Sample output:
@@ -191,10 +212,14 @@ calculator_subtract
 react_agent
 ```
 
-To get more detailed information about a specific tool, you can use the `--tool` flag.
+### Get Tool Details
+
+To get detailed information about a specific tool, use the `--tool` flag:
+
 ```bash
 nat info mcp --url http://localhost:9901/mcp --tool calculator_multiply
 ```
+
 Sample output:
 ```text
 Tool: calculator_multiply
@@ -216,3 +241,11 @@ Input Schema:
 }
 ------------------------------------------------------------
 ```
+
+### Troubleshooting
+
+If you encounter connection issues:
+- Verify the MCP server is running and accessible via the `nat info mcp` command
+- Check that the transport type matches the server configuration
+- Ensure the URL or command is correct
+- Check network connectivity for remote servers
