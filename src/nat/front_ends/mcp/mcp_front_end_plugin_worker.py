@@ -19,6 +19,7 @@ from abc import abstractmethod
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from starlette.exceptions import HTTPException
 from starlette.requests import Request
 
 from nat.builder.function import Function
@@ -128,18 +129,16 @@ class MCPFrontEndPluginWorkerBase(ABC):
                 names.extend(parts)
             detail_raw = request.query_params.get("detail")
 
-            def _parse_bool(value: str | None) -> bool | None:
+            def _parse_param_detail(value: str | None) -> bool:
                 if value is None:
-                    return None
-                v = value.strip().lower()
-                if v in ("1", "true", "yes", "on"):
                     return True
+                v = value.strip().lower()
                 if v in ("0", "false", "no", "off"):
                     return False
-                return None
+                return True
 
             # Helper function to build the input schema info
-            def build_schema_info(fn: Function):
+            def _build_schema_info(fn: Function) -> dict[str, Any] | None:
                 schema = getattr(fn, "input_schema", None)
                 if schema is None:
                     return None
@@ -165,61 +164,33 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
                 return None
 
+            def _build_final_json(functions_to_include: Any, include_schemas: bool = False) -> dict[str, Any]:
+                tools = []
+                for name, fn in functions_to_include.items():
+                    list_entry: dict[str, Any] = {
+                        "name": name, "description": get_function_description(fn), "is_workflow": hasattr(fn, "run")
+                    }
+                    if include_schemas:
+                        list_entry["schema"] = _build_schema_info(fn)
+                    tools.append(list_entry)
+
+                return {
+                    "count": len(tools),
+                    "tools": tools,
+                    "server_name": mcp.name,
+                }
+
             if names:
                 # Return selected tools
-                missing = [n for n in names if n not in functions]
-                if missing:
-                    return JSONResponse(
-                        {
-                            "error": f"Tool(s) not found: {', '.join(missing)}",
-                            "available_tools": list(functions.keys())
-                        },
-                        status_code=404)
+                try:
+                    functions_to_include = {n: functions[n] for n in names}
+                except KeyError as e:
+                    raise HTTPException(status_code=404, detail=f"Tool \"{e.args[0]}\" not found.") from e
+            else:
+                functions_to_include = functions
 
-                detail_selected = _parse_bool(detail_raw)
-                include_schema = True if detail_selected is None else detail_selected
-
-                selected_tools: list[dict[str, Any]] = []
-                for n in names:
-                    fn = functions[n]
-                    selected_entry: dict[str, Any] = {
-                        "name": n,
-                        "description": get_function_description(fn),
-                        "is_workflow": hasattr(fn, "run"),
-                    }
-                    if include_schema:
-                        selected_entry["schema"] = build_schema_info(fn)
-                    selected_tools.append(selected_entry)
-
-                # Backward compatible: if exactly one name, return single object
-                if len(selected_tools) == 1:
-                    single = selected_tools[0]
-                    single["server_name"] = mcp.name
-                    return JSONResponse(single)
-
-                return JSONResponse({
-                    "count": len(selected_tools),
-                    "tools": selected_tools,
-                    "server_name": mcp.name,
-                })
-
-            tools: list[dict[str, Any]] = []
-            detail_many = _parse_bool(detail_raw)
             # Default for listing all: detail defaults to False unless explicitly set true
-            include_schemas = True if detail_many is True else False
-            for name, fn in functions.items():
-                list_entry: dict[str, Any] = {
-                    "name": name, "description": get_function_description(fn), "is_workflow": hasattr(fn, "run")
-                }
-                if include_schemas:
-                    list_entry["schema"] = build_schema_info(fn)
-                tools.append(list_entry)
-
-            return JSONResponse({
-                "count": len(tools),
-                "tools": tools,
-                "server_name": mcp.name,
-            })
+            return JSONResponse(_build_final_json(functions_to_include, _parse_param_detail(detail_raw)))
 
 
 class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
