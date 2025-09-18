@@ -15,7 +15,6 @@
 
 from contextlib import asynccontextmanager
 from typing import Any
-from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -91,8 +90,7 @@ def test_mcp_apply_tool_alias_and_description_none_returns_empty():
 def test_mcp_apply_tool_alias_and_description_filters_to_existing():
     """Only keep overrides for tools that exist in discovery list."""
     tools = {"a": _FakeTool("a", "da")}
-    overrides = {"a": MCPToolOverrideConfig(alias=None, description=None),
-                 "missing": MCPToolOverrideConfig()}
+    overrides = {"a": MCPToolOverrideConfig(alias=None, description=None), "missing": MCPToolOverrideConfig()}
     out = mcp_apply_tool_alias_and_description(tools, tool_overrides=overrides)
     assert set(out.keys()) == {"a"}
 
