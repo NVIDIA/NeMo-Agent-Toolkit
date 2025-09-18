@@ -141,7 +141,7 @@ nat run --config_file=examples/control_flow/router_agent/configs/config.yml --in
 **Expected Workflow Output**
 ```console
 nemo-agent-toolkit % nat run --config_file=examples/control_flow/router_agent/configs/config.yml --input "I want a yellow fruit"
-2025-09-10 10:52:59,058 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/agents/router/configs/config.yml'
+2025-09-10 10:52:59,058 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/control_flow/router_agent/configs/config.yml'
 
 Configuration Summary:
 --------------------
