@@ -34,6 +34,10 @@ function_groups:
       transport: stdio
       command: "python"
       args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
+    tool_overrides:
+      get_current_time:
+        alias: get_current_time_mcp_tool
+        description: "Returns the current date and time"
 
   mcp_math:
     _type: mcp_client
