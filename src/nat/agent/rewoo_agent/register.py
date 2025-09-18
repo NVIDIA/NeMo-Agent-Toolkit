@@ -40,6 +40,10 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
     tool names and descriptions to select the optimal tool.
     """
 
+    workflow_alias: str | None = Field(default=None,
+                                       description="The alias of the workflow. Useful when the ReWOO"
+                                       "agent is configured as a workflow and need to expose a customized name as a"
+                                       "tool.")
     tool_names: list[FunctionRef | FunctionGroupRef] = Field(
         default_factory=list, description="The list of tools to provide to the rewoo agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the rewoo agent.")

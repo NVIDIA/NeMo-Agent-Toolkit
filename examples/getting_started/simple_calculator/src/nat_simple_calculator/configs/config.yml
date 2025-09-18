@@ -39,6 +39,7 @@ llms:
 
 workflow:
   _type: react_agent
+  workflow_alias: calculator_agent
   tool_names:
     - calculator_multiply
     - calculator_inequality
@@ -48,3 +49,5 @@ workflow:
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3
+  description: "This is a simple calculator agent that can perform basic arithmetic operations. When using as a MCP tool, this
+      MUST be the entry point agent that should be called before calling any other tools."

@@ -38,7 +38,10 @@ class ReasoningFunctionConfig(FunctionBaseConfig, name="reasoning_agent"):
 
     Designed to be used with an InterceptingFunction.
     """
-
+    workflow_alias: str | None = Field(default=None,
+                                       description="The alias of the workflow. Useful when the Reasoning"
+                                       "agent is configured as a workflow and need to expose a customized name as a"
+                                       "tool.")
     llm_name: LLMRef = Field(description="The name of the LLM to use for reasoning.")
     augmented_fn: FunctionRef = Field(description="The name of the function to reason on.")
     verbose: bool = Field(default=False, description="Whether to log detailed information.")

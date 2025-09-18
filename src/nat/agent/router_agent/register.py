@@ -34,6 +34,11 @@ class RouterAgentWorkflowConfig(FunctionBaseConfig, name="router_agent"):
     A router agent takes in the incoming message, combines it with a prompt and the list of branches,
     and ask a LLM about which branch to take.
     """
+
+    workflow_alias: str | None = Field(default=None,
+                                       description="The alias of the workflow. Useful when the Router"
+                                       "agent is configured as a workflow and need to expose a customized name as a"
+                                       "tool.")
     branches: list[FunctionRef] = Field(default_factory=list,
                                         description="The list of branches to provide to the router agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the routing agent.")

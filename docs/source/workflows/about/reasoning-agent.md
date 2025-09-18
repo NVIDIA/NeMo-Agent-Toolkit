@@ -46,6 +46,9 @@ workflow:
 ```
 
 ### Configurable Options:
+
+* `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the Reasoning agent is configured as a workflow and need to expose a customized name as a tool.
+
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
 
 * `verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the agent will log input, output, and intermediate steps.

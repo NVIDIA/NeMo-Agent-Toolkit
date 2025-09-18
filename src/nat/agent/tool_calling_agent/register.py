@@ -36,6 +36,10 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
     input parameters to select the optimal tool.  Supports handling tool errors.
     """
 
+    workflow_alias: str | None = Field(default=None,
+                                       description="The alias of the workflow. Useful when the Tool Calling"
+                                       "agent is configured as a workflow and need to expose a customized name as a"
+                                       "tool.")
     tool_names: list[FunctionRef | FunctionGroupRef] = Field(
         default_factory=list, description="The list of tools to provide to the tool calling agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the tool calling agent.")
