@@ -107,6 +107,11 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
 async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     """
     Connect to an MCP server and expose tools as a function group.
+    Args:
+        config: The configuration for the MCP client
+        _builder: The builder
+    Returns:
+        The function group
     """
     from nat.plugins.mcp.client_base import MCPSSEClient
     from nat.plugins.mcp.client_base import MCPStdioClient
@@ -165,7 +170,9 @@ def mcp_apply_tool_alias_and_description(
         all_tools: dict, tool_overrides: dict[str, MCPToolOverrideConfig] | None) -> dict[str, MCPToolOverrideConfig]:
     """
     Filter tool overrides to only include tools that exist in the MCP server.
-
+    Args:
+        all_tools: The tools from the MCP server
+        tool_overrides: The tool overrides to apply
     Returns:
         Dictionary of valid tool overrides
     """

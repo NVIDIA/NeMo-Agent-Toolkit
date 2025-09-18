@@ -71,8 +71,14 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
 
 def mcp_tool_function(tool: MCPToolClient) -> FunctionInfo:
     """
-        Create a NeMo Agent toolkit function from an MCP tool.
-        """
+    Create a NeMo Agent toolkit function from an MCP tool.
+
+    Args:
+        tool: The MCP tool to wrap
+
+    Returns:
+        The NeMo Agent toolkit function
+    """
 
     def _convert_from_str(input_str: str) -> tool.input_schema:
         return tool.input_schema.model_validate_json(input_str)
