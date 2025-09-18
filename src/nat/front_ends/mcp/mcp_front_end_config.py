@@ -41,6 +41,5 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     runner_class: str | None = Field(
         default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")
 
-    # Auth configuration
     server_auth: OAuth2ResourceServerConfig | None = Field(
         description=("OAuth 2.0 Resource Server configuration for token verification."))

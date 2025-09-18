@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from contextlib import asynccontextmanager
 
 import pytest
@@ -33,10 +34,11 @@ def fixture_s3_server(fail_missing: bool):
     try:
         import botocore.session
         session = botocore.session.get_session()
+        host = os.getenv("NAT_CI_S3_HOST", "localhost")
         client = session.create_client("s3",
                                        aws_access_key_id="minioadmin",
                                        aws_secret_access_key="minioadmin",
-                                       endpoint_url="http://localhost:9000")
+                                       endpoint_url=f"http://{host}:9000")
         client.head_bucket(Bucket="test")
         yield
     except ImportError:
@@ -59,11 +61,12 @@ class TestS3ObjectStore(ObjectStoreTests):
 
     @asynccontextmanager
     async def _get_store(self):
+        host = os.getenv("NAT_CI_S3_HOST", "localhost")
         async with WorkflowBuilder() as builder:
             await builder.add_object_store(
                 "object_store_name",
                 S3ObjectStoreClientConfig(bucket_name="test",
-                                          endpoint_url="http://localhost:9000",
+                                          endpoint_url=f"http://{host}:9000",
                                           access_key="minioadmin",
                                           secret_key="minioadmin"))
 

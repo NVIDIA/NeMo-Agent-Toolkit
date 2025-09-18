@@ -45,5 +45,5 @@ async def s3_object_store_client(config: S3ObjectStoreClientConfig, _builder: Bu
 
     from .s3_object_store import S3ObjectStore
 
-    async with S3ObjectStore(**config.model_dump(exclude={"type"}, exclude_none=True)) as store:
+    async with S3ObjectStore(**config.model_dump(exclude={"type"}, exclude_none=False)) as store:
         yield store
