@@ -1008,15 +1008,15 @@ async def test_function_group_included_functions():
         await builder.add_function_group("includes_group", IncludesFunctionGroupConfig())
 
         # Test that included functions are accessible as regular functions
-        add_fn = builder.get_function("test_includes_function_group.add")
-        multiply_fn = builder.get_function("test_includes_function_group.multiply")
+        add_fn = builder.get_function("includes_group.add")
+        multiply_fn = builder.get_function("includes_group.multiply")
 
         assert add_fn is not None
         assert multiply_fn is not None
 
         # Test that non-included functions are not accessible
         with pytest.raises(ValueError):
-            builder.get_function("test_includes_function_group.subtract")
+            builder.get_function("includes_group.subtract")
 
 
 async def test_function_group_excluded_functions():
@@ -1029,11 +1029,11 @@ async def test_function_group_excluded_functions():
         # Test that NO functions are accessible globally since the group uses exclude (not include)
         # The function group doesn't expose any functions to the global registry when using exclude only
         with pytest.raises(ValueError):
-            builder.get_function("test_excludes_function_group.add")
+            builder.get_function("excludes_group.add")
         with pytest.raises(ValueError):
-            builder.get_function("test_excludes_function_group.multiply")
+            builder.get_function("excludes_group.multiply")
         with pytest.raises(ValueError):
-            builder.get_function("test_excludes_function_group.subtract")
+            builder.get_function("excludes_group.subtract")
 
         # But the functions should be accessible through the function group itself
         group = builder.get_function_group("excludes_group")
@@ -1041,7 +1041,7 @@ async def test_function_group_excluded_functions():
 
         # Should have only subtract (add and multiply are excluded)
         assert len(accessible_functions) == 1
-        assert "test_excludes_function_group.subtract" in accessible_functions
+        assert "excludes_group.subtract" in accessible_functions
 
 
 async def test_function_group_empty_includes_and_excludes():
@@ -1072,9 +1072,9 @@ async def test_function_group_all_includes():
         await builder.add_function_group("all_includes_group", AllIncludesFunctionGroupConfig())
 
         # All functions should be accessible
-        add_fn = builder.get_function("all_includes_function_group.add")
-        multiply_fn = builder.get_function("all_includes_function_group.multiply")
-        subtract_fn = builder.get_function("all_includes_function_group.subtract")
+        add_fn = builder.get_function("all_includes_group.add")
+        multiply_fn = builder.get_function("all_includes_group.multiply")
+        subtract_fn = builder.get_function("all_includes_group.subtract")
 
         assert add_fn is not None
         assert multiply_fn is not None
@@ -1096,11 +1096,11 @@ async def test_function_group_all_excludes():
 
         # No functions should be accessible globally (function group uses exclude only)
         with pytest.raises(ValueError):
-            builder.get_function("all_excludes_function_group.add")
+            builder.get_function("all_excludes_group.add")
         with pytest.raises(ValueError):
-            builder.get_function("all_excludes_function_group.multiply")
+            builder.get_function("all_excludes_group.multiply")
         with pytest.raises(ValueError):
-            builder.get_function("all_excludes_function_group.subtract")
+            builder.get_function("all_excludes_group.subtract")
 
         group = builder.get_function_group("all_excludes_group")
 
@@ -1153,14 +1153,14 @@ async def test_function_group_integration_with_workflow():
         assert "empty_group" in builder._function_groups
 
         # Test that included functions are accessible
-        assert "test_includes_function_group.add" in builder._functions
-        assert "test_includes_function_group.multiply" in builder._functions
+        assert "math_group.add" in builder._functions
+        assert "math_group.multiply" in builder._functions
 
         # Test that non-included functions are not accessible
-        assert "test_includes_function_group.subtract" not in builder._functions
+        assert "math_group.subtract" not in builder._functions
 
         # Test that no functions were included from empty group
-        empty_group_functions = [k for k in builder._functions.keys() if k.startswith("default_function_group.")]
+        empty_group_functions = [k for k in builder._functions.keys() if k.startswith("empty_group.")]
         assert len(empty_group_functions) == 0
 
         # Test that regular functions still work
@@ -1226,9 +1226,9 @@ async def test_function_group_get_excluded_functions():
 
         excluded_functions = group.get_excluded_functions()
         assert len(excluded_functions) == 2  # add and multiply are excluded
-        assert "test_excludes_function_group.add" in excluded_functions
-        assert "test_excludes_function_group.multiply" in excluded_functions
-        assert "test_excludes_function_group.subtract" not in excluded_functions
+        assert "excludes_group.add" in excluded_functions
+        assert "excludes_group.multiply" in excluded_functions
+        assert "excludes_group.subtract" not in excluded_functions
 
         # Test group with no exclude configuration
         await builder.add_function_group("includes_group", IncludesFunctionGroupConfig())
@@ -1309,11 +1309,11 @@ async def test_function_group_function_execution():
         await builder.add_function_group("math_group", IncludesFunctionGroupConfig())
 
         # Get and execute functions from the group
-        add_fn = builder.get_function("test_includes_function_group.add")
+        add_fn = builder.get_function("math_group.add")
         result = await add_fn.ainvoke({"a": 5, "b": 3})
         assert result == 8
 
-        multiply_fn = builder.get_function("test_includes_function_group.multiply")
+        multiply_fn = builder.get_function("math_group.multiply")
         result = await multiply_fn.ainvoke({"a": 4, "b": 6})
         assert result == 24
 
