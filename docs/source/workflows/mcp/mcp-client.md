@@ -63,7 +63,7 @@ You can use the `mcp_client` function group to connect to an MCP server, dynamic
 
 The function group supports filtering via the `include` and `exclude` parameters. You can also optionally override the tool name and description defined by the MCP server via the `tool_overrides` parameter.
 
-The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers. See [Function Groups](../workflows/function-groups.md) for more information about function group capabilities.
+The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers. See [Function Groups](../function-groups.md) for more information about function group capabilities.
 
 ### `mcp_tool_wrapper` Configuration
 ```yaml
