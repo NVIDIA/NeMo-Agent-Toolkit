@@ -34,6 +34,7 @@ The examples in the NeMo-Agent-Toolkit-Examples repository are community contrib
   - [Getting Started](#getting-started)
   - [Agents](#agents)
   - [Advanced Agents](#advanced-agents)
+  - [Control Flow](#control-flow)
   - [Custom Functions](#custom-functions)
   - [Evaluation and Profiling](#evaluation-and-profiling)
   - [Frameworks](#frameworks)
@@ -71,6 +72,9 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`AIQ Blueprint`](advanced_agents/aiq_blueprint/README.md)**: Blueprint documentation for the official NVIDIA AIQ Blueprint for building an AI agent designed for enterprise research use cases.
 - **[`alert_triage_agent`](advanced_agents/alert_triage_agent/README.md)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization
 - **[`profiler_agent`](advanced_agents/profiler_agent/README.md)**: Performance profiling agent for analyzing NeMo Agent toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
+
+### Control Flow
+- **[`sequential_executor`](control_flow/sequential_executor/README.md)**: Linear tool execution pipeline that chains multiple functions together where each function's output becomes the input for the next function, with optional type compatibility checking and error handling
 
 ### Custom Functions
 - **[`automated_description_generation`](custom_functions/automated_description_generation/README.md)**: Intelligent system that automatically generates descriptions for vector database collections by sampling and summarizing documents
