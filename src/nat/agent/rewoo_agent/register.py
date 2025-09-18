@@ -63,6 +63,10 @@ class ReWOOAgentWorkflowConfig(AgentBaseConfig, name="rewoo_agent"):
     additional_solver_instructions: str | None = Field(
         default=None,
         description="Additional instructions to provide to the agent in addition to the base solver prompt.")
+    raise_tool_call_error: bool = Field(default=True,
+                                        description="Whether to raise a exception immediately if a tool"
+                                        "call fails. If set to False, the tool call error message will be included in"
+                                        "the tool response and passed to the next tool.")
 
 
 @register_function(config_type=ReWOOAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -117,7 +121,8 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
         use_tool_schema=config.include_tool_input_schema_in_tool_description,
         detailed_logs=config.verbose,
         log_response_max_chars=config.log_response_max_chars,
-        tool_call_max_retries=config.tool_call_max_retries).build_graph()
+        tool_call_max_retries=config.tool_call_max_retries,
+        raise_tool_call_error=config.raise_tool_call_error).build_graph()
 
     async def _response_fn(input_message: ChatRequest) -> ChatResponse:
         try:
