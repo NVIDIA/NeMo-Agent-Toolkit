@@ -80,6 +80,8 @@ functions:
 
 #### Required Options
 
+* `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the Router agent is configured as a workflow and need to expose a customized name as a tool.
+
 * `branches`: A list of available tools, functions, or agents that the router can direct requests to. These branches must be configured in the YAML file.
 
 * `llm_name`: The language model used for request analysis and routing decisions. The LLM must be configured in the YAML file.
