@@ -23,28 +23,22 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.component_ref import FunctionRef
-from nat.data_models.component_ref import LLMRef
-from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
 
-class ReasoningFunctionConfig(FunctionBaseConfig, name="reasoning_agent"):
+class ReasoningFunctionConfig(AgentBaseConfig, name="reasoning_agent"):
     """
     Defines a NAT function that performs reasoning on the input data.
     Output is passed to the next function in the workflow.
 
     Designed to be used with an InterceptingFunction.
     """
-    workflow_alias: str | None = Field(default=None,
-                                       description="The alias of the workflow. Useful when the Reasoning"
-                                       "agent is configured as a workflow and need to expose a customized name as a"
-                                       "tool.")
-    llm_name: LLMRef = Field(description="The name of the LLM to use for reasoning.")
+    description: str = Field(default="Reasoning Agent", description="The description of this function's use.")
     augmented_fn: FunctionRef = Field(description="The name of the function to reason on.")
-    verbose: bool = Field(default=False, description="Whether to log detailed information.")
     reasoning_prompt_template: str = Field(
         default=("You are an expert reasoning model task with creating a detailed execution plan"
                  " for a system that has the following description:\n\n"

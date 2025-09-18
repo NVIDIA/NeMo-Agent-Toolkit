@@ -5022,12 +5022,6 @@ requires-dist = [
 [[package]]
 name = "nat-sequential-executor"
 source = { editable = "examples/control_flow/sequential_executor" }
-dependencies = [
-    { name = "nvidia-nat", extra = ["langchain"] },
-]
-
-[package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
 
 [[package]]
 name = "nat-simple-auth"

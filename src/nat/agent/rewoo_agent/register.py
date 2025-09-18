@@ -23,34 +23,26 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
-from nat.data_models.component_ref import LLMRef
-from nat.data_models.function import FunctionBaseConfig
 from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
 
-class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
+class ReWOOAgentWorkflowConfig(AgentBaseConfig, name="rewoo_agent"):
     """
     Defines a NAT function that uses a ReWOO Agent performs reasoning inbetween tool calls, and utilizes the
     tool names and descriptions to select the optimal tool.
     """
-
-    workflow_alias: str | None = Field(default=None,
-                                       description="The alias of the workflow. Useful when the ReWOO"
-                                       "agent is configured as a workflow and need to expose a customized name as a"
-                                       "tool.")
+    description: str = Field(default="ReWOO Agent Workflow", description="The description of this functions use.")
     tool_names: list[FunctionRef | FunctionGroupRef] = Field(
         default_factory=list, description="The list of tools to provide to the rewoo agent.")
-    llm_name: LLMRef = Field(description="The LLM model to use with the rewoo agent.")
-    verbose: bool = Field(default=False, description="Set the verbosity of the rewoo agent's logging.")
     include_tool_input_schema_in_tool_description: bool = Field(
         default=True, description="Specify inclusion of tool input schemas in the prompt.")
-    description: str = Field(default="ReWOO Agent Workflow", description="The description of this functions use.")
     planner_prompt: str | None = Field(
         default=None,
         description="Provides the PLANNER_PROMPT to use with the agent")  # defaults to PLANNER_PROMPT in prompt.py
@@ -61,8 +53,6 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
                                                description="The number of retries before raising a tool call error.",
                                                ge=1)
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
-    log_response_max_chars: PositiveInt = Field(
-        default=1000, description="Maximum number of characters to display in logs when logging tool responses.")
     use_openai_api: bool = Field(default=False,
                                  description=("Use OpenAI API for the input/output types to the function. "
                                               "If False, strings will be used."))
