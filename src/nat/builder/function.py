@@ -648,3 +648,10 @@ class FunctionGroup:
             The instance name to set for the function group.
         """
         self._instance_name = instance_name
+
+    @property
+    def instance_name(self) -> str:
+        """
+        Returns the instance name for the function group.
+        """
+        return self._instance_name
