@@ -30,6 +30,8 @@ import time
 import click
 import nest_asyncio
 
+from nat.utils.log_levels import LOG_LEVELS
+
 from .commands.configure.configure import configure_command
 from .commands.evaluate import eval_command
 from .commands.info.info import info_command
@@ -44,15 +46,6 @@ from .commands.workflow.workflow import workflow_command
 
 # Apply at the beginning of the file to avoid issues with asyncio
 nest_asyncio.apply()
-
-# Define log level choices
-LOG_LEVELS = {
-    'DEBUG': logging.DEBUG,
-    'INFO': logging.INFO,
-    'WARNING': logging.WARNING,
-    'ERROR': logging.ERROR,
-    'CRITICAL': logging.CRITICAL
-}
 
 
 def setup_logging(log_level: str):
