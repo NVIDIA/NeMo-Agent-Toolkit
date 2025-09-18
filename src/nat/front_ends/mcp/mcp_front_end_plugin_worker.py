@@ -98,7 +98,10 @@ class MCPFrontEndPluginWorkerBase(ABC):
         for function_group in workflow.function_groups.values():
             functions.update(function_group.get_accessible_functions())
 
-        functions[workflow.config.workflow.type] = workflow
+        if workflow.config.workflow.workflow_alias:
+            functions[workflow.config.workflow.workflow_alias] = workflow
+        else:
+            functions[workflow.config.workflow.type] = workflow
 
         return functions
 

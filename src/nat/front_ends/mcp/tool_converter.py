@@ -229,6 +229,9 @@ def get_function_description(function: FunctionBase) -> str:
         # Try to get anything that might be a description
         elif hasattr(config, "topic") and config.topic:
             function_description = config.topic
+        # Try to get description from the workflow config
+        elif hasattr(config, "workflow") and config.workflow.description:
+            function_description = config.workflow.description
 
     elif isinstance(function, Function):
         function_description = function.description

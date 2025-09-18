@@ -42,7 +42,7 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, OptimizableMixin, name="react
     Defines a NAT function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the
     tool names and descriptions to select the optimal tool.
     """
-
+    workflow_alias: str | None = Field(default=None, description="The alias of the workflow.")
     tool_names: list[FunctionRef | FunctionGroupRef] = Field(
         default_factory=list, description="The list of tools to provide to the react agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the react agent.")
