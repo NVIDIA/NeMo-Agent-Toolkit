@@ -196,10 +196,10 @@ To list all tools served by an MCP server:
 nat info mcp --url http://localhost:9901/mcp
 
 # For stdio transport
-nat info mcp --transport stdio --command "python" --args "-m" "mcp_server_time"
+nat info mcp --transport stdio --command "python" --args "-m mcp_server_time"
 
 # For sse transport
-nat info mcp --url http://localhost:8080/sse --transport sse
+nat info mcp --url http://localhost:9901/sse --transport sse
 ```
 
 Sample output:
