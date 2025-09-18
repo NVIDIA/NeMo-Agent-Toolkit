@@ -129,13 +129,18 @@ class MCPFrontEndPluginWorkerBase(ABC):
                 names.extend(parts)
             detail_raw = request.query_params.get("detail")
 
-            def _parse_param_detail(value: str | None) -> bool:
-                if value is None:
-                    return True
-                v = value.strip().lower()
+            def _parse_detail_param(detail_param: str | None, has_names: bool) -> bool:
+                if detail_param is None:
+                    if has_names:
+                        return True
+                    return False
+                v = detail_param.strip().lower()
                 if v in ("0", "false", "no", "off"):
                     return False
-                return True
+                if v in ("1", "true", "yes", "on"):
+                    return True
+                # For invalid values, default based on whether names are present
+                return has_names
 
             # Helper function to build the input schema info
             def _build_schema_info(fn: Function) -> dict[str, Any] | None:
@@ -144,8 +149,9 @@ class MCPFrontEndPluginWorkerBase(ABC):
                     return None
 
                 # check if schema is a ChatRequest
-                if schema.__name__ == "ChatRequest" or (hasattr(schema, "__qualname__")
-                                                        and "ChatRequest" in schema.__qualname__):
+                schema_name = getattr(schema, "__name__", "")
+                schema_qualname = getattr(schema, "__qualname__", "")
+                if "ChatRequest" in schema_name or "ChatRequest" in schema_qualname:
                     # Simplified interface used by MCP wrapper for ChatRequest
                     return {
                         "type": "object",
@@ -190,7 +196,8 @@ class MCPFrontEndPluginWorkerBase(ABC):
                 functions_to_include = functions
 
             # Default for listing all: detail defaults to False unless explicitly set true
-            return JSONResponse(_build_final_json(functions_to_include, _parse_param_detail(detail_raw)))
+            return JSONResponse(
+                _build_final_json(functions_to_include, _parse_detail_param(detail_raw, has_names=bool(names))))
 
 
 class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
