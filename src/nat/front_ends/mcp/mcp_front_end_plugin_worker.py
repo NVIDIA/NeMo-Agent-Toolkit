@@ -16,6 +16,7 @@
 import logging
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import Mapping
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
@@ -23,6 +24,7 @@ from starlette.exceptions import HTTPException
 from starlette.requests import Request
 
 from nat.builder.function import Function
+from nat.builder.function_base import FunctionBase
 from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
@@ -104,11 +106,12 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
         return functions
 
-    def _setup_debug_endpoints(self, mcp: FastMCP, functions: dict[str, Function]):
+    def _setup_debug_endpoints(self, mcp: FastMCP, functions: Mapping[str, FunctionBase]) -> None:
         """Set up HTTP debug endpoints for introspecting tools and schemas.
 
         Exposes:
-          - GET /debug/tools/list: List tools. Optional query param `name` returns details for a single tool.
+          - GET /debug/tools/list: List tools. Optional query param `name` (one or more, repeatable or comma separated)
+            selects a subset and returns details for those tools.
         """
 
         @mcp.custom_route("/debug/tools/list", methods=["GET"])
@@ -143,7 +146,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
                 return has_names
 
             # Helper function to build the input schema info
-            def _build_schema_info(fn: Function) -> dict[str, Any] | None:
+            def _build_schema_info(fn: FunctionBase) -> dict[str, Any] | None:
                 schema = getattr(fn, "input_schema", None)
                 if schema is None:
                     return None
@@ -170,7 +173,8 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
                 return None
 
-            def _build_final_json(functions_to_include: Any, include_schemas: bool = False) -> dict[str, Any]:
+            def _build_final_json(functions_to_include: Mapping[str, FunctionBase],
+                                  include_schemas: bool = False) -> dict[str, Any]:
                 tools = []
                 for name, fn in functions_to_include.items():
                     list_entry: dict[str, Any] = {
