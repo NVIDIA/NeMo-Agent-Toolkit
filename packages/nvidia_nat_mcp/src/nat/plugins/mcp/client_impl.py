@@ -22,12 +22,11 @@ from pydantic import HttpUrl
 from pydantic import model_validator
 
 from nat.builder.builder import Builder
-from nat.builder.function_info import FunctionInfo
-from nat.cli.register_workflow import register_function
+from nat.builder.function import FunctionGroup
+from nat.cli.register_workflow import register_function_group
 from nat.data_models.component_ref import AuthenticationRef
-from nat.data_models.function import FunctionBaseConfig
-from nat.experimental.decorators.experimental_warning_decorator import experimental
-from nat.plugins.mcp.client_base import MCPBaseClient
+from nat.data_models.function import FunctionGroupBaseConfig
+from nat.plugins.mcp.tool import mcp_tool_function
 
 logger = logging.getLogger(__name__)
 
@@ -86,73 +85,33 @@ class MCPServerConfig(BaseModel):
         return self
 
 
-class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
+class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
     """
     Configuration for connecting to an MCP server as a client and exposing selected tools.
     """
     server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
-    tool_filter: dict[str, MCPToolOverrideConfig] | list[str] | None = Field(
+    tool_overrides: dict[str, MCPToolOverrideConfig] | None = Field(
         default=None,
-        description="""Filter or map tools to expose from the server (list or dict).
-        Can be:
-        - A list of tool names to expose: ['tool1', 'tool2']
-        - A dict mapping tool names to override configs:
-          {'tool1': {'alias': 'new_name', 'description': 'New desc'}}
-          {'tool2': {'description': 'Override description only'}}  # alias defaults to 'tool2'
+        description="""Optional tool name overrides and description changes.
+        Example:
+          tool_overrides:
+            calculator_add:
+              alias: "add_numbers"
+              description: "Add two numbers together"
+            calculator_multiply:
+              description: "Multiply two numbers"  # alias defaults to original name
         """)
 
 
-class MCPSingleToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
+@register_function_group(config_type=MCPClientConfig)
+async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     """
-    Configuration for wrapping a single tool from an MCP server as a NeMo Agent toolkit function.
-    """
-    client: MCPBaseClient = Field(..., description="MCP client to use for the tool")
-    tool_name: str = Field(..., description="Name of the tool to use")
-    tool_description: str | None = Field(default=None, description="Description of the tool")
-
-    model_config = {"arbitrary_types_allowed": True}
-
-
-@register_function(config_type=MCPSingleToolConfig)
-async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
-    """
-    Wrap a single tool from an MCP server as a NeMo Agent toolkit function.
-    """
-    tool = await config.client.get_tool(config.tool_name)
-    if config.tool_description:
-        tool.set_description(description=config.tool_description)
-    input_schema = tool.input_schema
-
-    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, config.client.server_name)
-
-    def _convert_from_str(input_str: str) -> BaseModel:
-        return input_schema.model_validate_json(input_str)
-
-    @experimental(feature_name="mcp_client")
-    async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
-        try:
-            if tool_input:
-                return await tool.acall(tool_input.model_dump())
-            _ = input_schema.model_validate(kwargs)
-            return await tool.acall(kwargs)
-        except Exception as e:
-            return str(e)
-
-    fn = FunctionInfo.create(single_fn=_response_fn,
-                             description=tool.description,
-                             input_schema=input_schema,
-                             converters=[_convert_from_str])
-    yield fn
-
-
-@register_function(MCPClientConfig)
-async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder):
-    """
-    Connect to an MCP server, discover tools, and register them as functions in the workflow.
-
-    Note:
-    - Uses builder's exit stack to manage client lifecycle
-    - Applies tool filters if provided
+    Connect to an MCP server and expose tools as a function group.
+    Args:
+        config: The configuration for the MCP client
+        _builder: The builder
+    Returns:
+        The function group
     """
     from nat.plugins.mcp.client_base import MCPSSEClient
     from nat.plugins.mcp.client_base import MCPStdioClient
@@ -161,7 +120,7 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
     # Resolve auth provider if specified
     auth_provider = None
     if config.server.auth_provider:
-        auth_provider = await builder.get_auth_provider(config.server.auth_provider)
+        auth_provider = await _builder.get_auth_provider(config.server.auth_provider)
 
     # Build the appropriate client
     if config.server.transport == "stdio":
@@ -177,65 +136,47 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
 
     logger.info("Configured to use MCP server at %s", client.server_name)
 
-    # client aenter connects to the server and stores the client in the exit stack
-    # so it's cleaned up when the workflow is done
+    # Create the function group
+    group = FunctionGroup(config=config)
+
     async with client:
         all_tools = await client.get_tools()
-        tool_configs = mcp_filter_tools(all_tools, config.tool_filter)
+        tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
 
-        for tool_name, tool_cfg in tool_configs.items():
-            await builder.add_function(
-                tool_cfg["function_name"],
-                MCPSingleToolConfig(
-                    client=client,
-                    tool_name=tool_name,
-                    tool_description=tool_cfg["description"],
-                ))
+        # Add each tool as a function to the group
+        for tool_name, tool in all_tools.items():
+            # Get override if it exists
+            override = tool_overrides.get(tool_name)
 
-        @experimental(feature_name="mcp_client")
-        async def idle_fn(text: str) -> str:
-            # This function is a placeholder and will be removed when function groups are used
-            return f"MCP client connected: {text}"
+            # Use override values or defaults
+            function_name = override.alias if override and override.alias else tool_name
+            description = override.description if override and override.description else tool.description
 
-        yield FunctionInfo.create(single_fn=idle_fn, description="MCP client")
+            # Create the tool function
+            tool_fn = mcp_tool_function(tool)
+
+            # Add to group
+            logger.info("Adding tool %s to group", function_name)
+            group.add_function(name=function_name,
+                               description=description,
+                               fn=tool_fn.single_fn,
+                               input_schema=tool_fn.input_schema,
+                               converters=tool_fn.converters)
+
+        yield group
 
 
-def mcp_filter_tools(all_tools: dict, tool_filter) -> dict[str, dict]:
+def mcp_apply_tool_alias_and_description(
+        all_tools: dict, tool_overrides: dict[str, MCPToolOverrideConfig] | None) -> dict[str, MCPToolOverrideConfig]:
     """
-    Apply tool filtering and optional aliasing/description overrides.
-
+    Filter tool overrides to only include tools that exist in the MCP server.
+    Args:
+        all_tools: The tools from the MCP server
+        tool_overrides: The tool overrides to apply
     Returns:
-        Dict[str, dict] where each value has:
-            - function_name
-            - description
+        Dictionary of valid tool overrides
     """
-    if tool_filter is None:
-        return {name: {"function_name": name, "description": tool.description} for name, tool in all_tools.items()}
+    if not tool_overrides:
+        return {}
 
-    if isinstance(tool_filter, list):
-        return {
-            name: {
-                "function_name": name, "description": all_tools[name].description
-            }
-            for name in tool_filter if name in all_tools
-        }
-
-    if isinstance(tool_filter, dict):
-        result = {}
-        for name, override in tool_filter.items():
-            tool = all_tools.get(name)
-            if not tool:
-                logger.warning("Tool '%s' specified in tool_filter not found in MCP server", name)
-                continue
-
-            if isinstance(override, MCPToolOverrideConfig):
-                result[name] = {
-                    "function_name": override.alias or name, "description": override.description or tool.description
-                }
-            else:
-                logger.warning("Unsupported override type for '%s': %s", name, type(override))
-                result[name] = {"function_name": name, "description": tool.description}
-        return result
-
-    # Fallback for unsupported tool_filter types
-    raise ValueError(f"Unsupported tool_filter type: {type(tool_filter)}")
+    return {name: override for name, override in tool_overrides.items() if name in all_tools}

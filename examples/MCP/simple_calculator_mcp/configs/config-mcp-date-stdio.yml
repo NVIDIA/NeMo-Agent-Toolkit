@@ -27,25 +27,30 @@
 # uv pip install mcp-server-time
 
 
-functions:
+function_groups:
   mcp_time:
     _type: mcp_client
     server:
       transport: stdio
       command: "python"
       args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
-    # load 1 of 2 tools and override tool attributes
-    tool_filter:
+    tool_overrides:
+      # Optionally override the tool name and description from the MCP server
       get_current_time:
         alias: get_current_time_mcp_tool
-        description: "Returns the current date and time from the MCP server"
+        description: "Returns the current date and time"
 
   mcp_math:
     _type: mcp_client
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
-    # load all tools and use the names and descriptions from the server
+    include:
+      - calculator_multiply
+      - calculator_inequality
+      - calculator_divide
+      - calculator_subtract
+
 
 llms:
   nim_llm:
@@ -60,15 +65,9 @@ llms:
 
 workflow:
   _type: react_agent
-  # List all tools that are needed for the workflow from the two MCP servers
-  # get_current_time_mcp_tool is from the local mcp_server_time server
-  # calculator_multiply, calculator_divide, calculator_subtract, calculator_inequality are from the remote mcp_server_math server
   tool_names:
-    - calculator_multiply
-    - calculator_inequality
-    - calculator_divide
-    - calculator_subtract
-    - get_current_time_mcp_tool
+    - mcp_time
+    - mcp_math
   llm_name: nim_llm
   verbose: true
   retry_parsing_errors: true

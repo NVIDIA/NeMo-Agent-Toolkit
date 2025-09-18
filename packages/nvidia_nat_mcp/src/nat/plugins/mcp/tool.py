@@ -25,6 +25,7 @@ from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
+from nat.plugins.mcp.client_base import MCPToolClient
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +51,6 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         Description for the tool that will override the description provided by the MCP server. Should only be used if
         the description provided by the server is poor or nonexistent
         """)
-    return_exception: bool = Field(default=True,
-                                   description="""
-        If true, the tool will return the exception message if the tool call fails.
-        If false, raise the exception.
-        """)
 
     @model_validator(mode="after")
     def validate_model(self):
@@ -73,6 +69,45 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         return self
 
 
+def mcp_tool_function(tool: MCPToolClient) -> FunctionInfo:
+    """
+    Create a NeMo Agent toolkit function from an MCP tool.
+
+    Args:
+        tool: The MCP tool to wrap
+
+    Returns:
+        The NeMo Agent toolkit function
+    """
+
+    def _convert_from_str(input_str: str) -> tool.input_schema:
+        return tool.input_schema.model_validate_json(input_str)
+
+    async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
+        # Run the tool, catching any errors and sending to agent for correction
+        try:
+            if tool_input:
+                args = tool_input.model_dump()
+                return await tool.acall(args)
+
+            _ = tool.input_schema.model_validate(kwargs)
+            return await tool.acall(kwargs)
+        except Exception as e:
+            if tool_input:
+                logger.warning("Error calling tool %s with serialized input: %s",
+                               tool.name,
+                               tool_input.model_dump(),
+                               exc_info=True)
+            else:
+                logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
+            return str(e)
+
+    return FunctionInfo.create(single_fn=_response_fn,
+                               description=tool.description,
+                               input_schema=tool.input_schema,
+                               converters=[_convert_from_str])
+
+
 @register_function(config_type=MCPToolConfig)
 async def mcp_tool(config: MCPToolConfig, builder: Builder):
     """
@@ -82,7 +117,6 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):
     from nat.plugins.mcp.client_base import MCPSSEClient
     from nat.plugins.mcp.client_base import MCPStdioClient
     from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
-    from nat.plugins.mcp.client_base import MCPToolClient
 
     # Initialize the client
     if config.transport == 'stdio':
@@ -102,32 +136,4 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):
 
         logger.info("Configured to use tool: %s from MCP server at %s", tool.name, client.server_name)
 
-        def _convert_from_str(input_str: str) -> tool.input_schema:
-            return tool.input_schema.model_validate_json(input_str)
-
-        async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
-            # Run the tool, catching any errors and sending to agent for correction
-            try:
-                if tool_input:
-                    args = tool_input.model_dump()
-                    return await tool.acall(args)
-
-                _ = tool.input_schema.model_validate(kwargs)
-                return await tool.acall(kwargs)
-            except Exception as e:
-                if config.return_exception:
-                    if tool_input:
-                        logger.warning("Error calling tool %s with serialized input: %s",
-                                       tool.name,
-                                       tool_input.model_dump(),
-                                       exc_info=True)
-                    else:
-                        logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
-                    return str(e)
-                # If the tool call fails, raise the exception.
-                raise
-
-        yield FunctionInfo.create(single_fn=_response_fn,
-                                  description=tool.description,
-                                  input_schema=tool.input_schema,
-                                  converters=[_convert_from_str])
+        yield mcp_tool_function(tool)
