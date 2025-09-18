@@ -415,6 +415,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError("Expected a FunctionGroup object to be returned from the function group builder. "
                              f"Got {type(build_result)}")
 
+        # set the instance name for the function group based on the workflow-provided name
+        build_result.set_instance_name(name)
         return ConfiguredFunctionGroup(config=config, instance=build_result)
 
     @override
