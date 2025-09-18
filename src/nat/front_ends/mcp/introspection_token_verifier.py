@@ -15,15 +15,12 @@
 """OAuth 2.0 Token Introspection verifier implementation for MCP servers."""
 
 import logging
-from typing import Any
-from typing import overload
 
 from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.provider import TokenVerifier
 
 from nat.authentication.credential_validator.bearer_token_validator import BearerTokenValidator
 from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
-from nat.data_models.authentication import TokenValidationResult
 
 logger = logging.getLogger(__name__)
 
@@ -67,21 +64,20 @@ class IntrospectionTokenVerifier(TokenVerifier):
             client_secret=client_secret,
         )
 
-    @overload
-    async def verify_token(self, token: str) -> TokenValidationResult | None:
-        ...
-
-    @overload
     async def verify_token(self, token: str) -> AccessToken | None:
-        ...
-
-    async def verify_token(self, token: str) -> Any:
         """Verify token by delegating to BearerTokenValidator.
 
         Args:
             token: The Bearer token to verify
 
         Returns:
-            TokenValidationResult | AccessToken | None
+            AccessToken | None: AccessToken if valid, None if invalid
         """
-        return await self._bearer_token_validator.verify(token)
+        validation_result = await self._bearer_token_validator.verify(token)
+
+        if validation_result.active:
+            return AccessToken(token=token,
+                               expires_at=validation_result.expires_at,
+                               scopes=validation_result.scopes or [],
+                               client_id=validation_result.client_id or "")
+        return None

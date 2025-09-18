@@ -184,7 +184,7 @@ class TokenValidationResult(BaseModel):
     """
     model_config = ConfigDict(extra="forbid")
 
-    client_id: str = Field(description="OAuth2 client identifier")
+    client_id: str | None = Field(description="OAuth2 client identifier")
     scopes: list[str] | None = Field(default=None, description="List of granted scopes (introspection only)")
     expires_at: int | None = Field(default=None, description="Token expiration time (Unix timestamp)")
     audience: list[str] | None = Field(default=None, description="Token audiences (aud claim)")

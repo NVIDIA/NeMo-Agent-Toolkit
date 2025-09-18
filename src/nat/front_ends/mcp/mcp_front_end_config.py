@@ -42,4 +42,4 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
         default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")
 
     server_auth: OAuth2ResourceServerConfig | None = Field(
-        description=("OAuth 2.0 Resource Server configuration for token verification."))
+        default=None, description=("OAuth 2.0 Resource Server configuration for token verification."))
