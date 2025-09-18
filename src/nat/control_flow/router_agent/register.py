@@ -47,9 +47,9 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
     from langgraph.graph.state import CompiledStateGraph
 
     from nat.agent.base import AGENT_LOG_PREFIX
-    from nat.agent.router_agent.agent import RouterAgentGraph
-    from nat.agent.router_agent.agent import RouterAgentGraphState
-    from nat.agent.router_agent.agent import create_router_agent_prompt
+    from nat.control_flow.router_agent.agent import RouterAgentGraph
+    from nat.control_flow.router_agent.agent import RouterAgentGraphState
+    from nat.control_flow.router_agent.agent import create_router_agent_prompt
 
     prompt = create_router_agent_prompt(config)
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
