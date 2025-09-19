@@ -89,6 +89,15 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                                                           db_url=db_url,
                                                           log_level=log_level)
 
+    @staticmethod
+    def _setup_worker():
+        """
+        Setup function to be run in each worker process. This moves each worker into it's own process group.
+        This fixes an issue where a Ctrl-C in the terminal sends a SIGINT to all workers, which then causes the
+        workers to exit before the main process can shutdown the cluster gracefully.
+        """
+        os.setsid()
+
     async def run(self):
 
         # Write the entire config to a temporary file
@@ -108,12 +117,20 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             self._scheduler_address = self.front_end_config.scheduler_address
             if self._scheduler_address is None:
                 try:
+
                     from dask.distributed import LocalCluster
 
-                    self._cluster = LocalCluster(n_workers=self.front_end_config.max_running_async_jobs,
+                    self._cluster = LocalCluster(processes=True,
+                                                 silence_logs=dask_log_level,
+                                                 n_workers=self.front_end_config.max_running_async_jobs,
                                                  threads_per_worker=1)
 
                     self._scheduler_address = self._cluster.scheduler.address
+
+                    with self.blocking_client(self._scheduler_address) as client:
+                        # Client.run submits a function to be run on each worker
+                        client.run(self._setup_worker)
+
                     logger.info("Created local Dask cluster with scheduler at %s", self._scheduler_address)
 
                 except ImportError:
@@ -221,8 +238,9 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
             if self._cluster is not None:
                 # Only shut down the cluster if we created it
-                logger.info("Closing Local Dask cluster.")
+                logger.debug("Closing Local Dask cluster.")
                 self._cluster.close()
+
             try:
                 os.remove(config_file_name)
             except OSError as e:
