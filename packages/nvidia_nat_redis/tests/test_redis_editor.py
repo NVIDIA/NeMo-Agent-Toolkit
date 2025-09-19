@@ -151,6 +151,15 @@ async def test_search_success(redis_editor: RedisEditor, mock_redis_client: Asyn
     # Set up the client mock to return the ft mock
     mock_redis_client.ft = MagicMock(return_value=mock_ft_index)
 
+    # Mock Redis JSON get to return document data
+    mock_redis_client.json().get.return_value = {
+        "conversation": mock_doc.conversation,
+        "user_id": mock_doc.user_id,
+        "tags": mock_doc.tags,
+        "metadata": mock_doc.metadata,
+        "memory": mock_doc.memory
+    }
+
     result = await redis_editor.search(query="test query", user_id="user123", top_k=1)
 
     assert len(result) == 1

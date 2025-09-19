@@ -16,9 +16,8 @@
 from typing import Literal
 
 from pydantic import Field
-from pydantic import ValidationError
-from pydantic import model_validator
 
+from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 from nat.data_models.front_end import FrontEndBaseConfig
 
 
@@ -42,13 +41,5 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     runner_class: str | None = Field(
         default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")
 
-    # Auth configuration
-    require_auth: bool = Field(default=False, description="Require OAuth2.1 authorization for MCP server access")
-    auth_server_url: str | None = Field(default=None, description="Authorization server URL for token validation")
-    scopes: list[str] = Field(default_factory=list, description="Required OAuth2 scopes for MCP access")
-
-    @model_validator(mode="after")
-    def validate_auth_server_url(self) -> "MCPFrontEndConfig":
-        if self.require_auth and not self.auth_server_url:
-            raise ValidationError("auth_server_url is required when require_auth is True")
-        return self
+    server_auth: OAuth2ResourceServerConfig | None = Field(
+        default=None, description=("OAuth 2.0 Resource Server configuration for token verification."))

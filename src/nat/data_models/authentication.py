@@ -177,6 +177,26 @@ Credential = typing.Annotated[
 ]
 
 
+class TokenValidationResult(BaseModel):
+    """
+    Standard result for Bearer Token Validation.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    client_id: str | None = Field(description="OAuth2 client identifier")
+    scopes: list[str] | None = Field(default=None, description="List of granted scopes (introspection only)")
+    expires_at: int | None = Field(default=None, description="Token expiration time (Unix timestamp)")
+    audience: list[str] | None = Field(default=None, description="Token audiences (aud claim)")
+    subject: str | None = Field(default=None, description="Token subject (sub claim)")
+    issuer: str | None = Field(default=None, description="Token issuer (iss claim)")
+    token_type: str = Field(description="Token type")
+    active: bool | None = Field(default=True, description="Token active status")
+    nbf: int | None = Field(default=None, description="Not before time (Unix timestamp)")
+    iat: int | None = Field(default=None, description="Issued at time (Unix timestamp)")
+    jti: str | None = Field(default=None, description="JWT ID")
+    username: str | None = Field(default=None, description="Username (introspection only)")
+
+
 class AuthResult(BaseModel):
     """
     Represents the result of an authentication process.
