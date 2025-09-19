@@ -52,9 +52,16 @@ def mock_blocking_client_fixture():
     return mock_client
 
 
-async def test_async_client_context_manager(dask_client_mixin, mock_async_client):
+@pytest.fixture(name="test_address")
+def test_address_fixture():
+    """Fixture providing a test Dask client address."""
+    return "tcp://127.0.0.1:8786"
+
+
+async def test_async_client_context_manager(dask_client_mixin: DaskClientMixin,
+                                            mock_async_client: AsyncMock,
+                                            test_address: str):
     """Test async client context manager creates and closes client properly."""
-    test_address = "tcp://127.0.0.1:8786"
 
     with patch('dask.distributed.Client', new=mock_async_client) as mock_client_class:
         async with dask_client_mixin.client(test_address) as client:
@@ -71,9 +78,10 @@ async def test_async_client_context_manager(dask_client_mixin, mock_async_client
         mock_async_client.close.assert_called_once()
 
 
-async def test_async_client_exception_handling(dask_client_mixin, mock_async_client):
+async def test_async_client_exception_handling(dask_client_mixin: DaskClientMixin,
+                                               mock_async_client: AsyncMock,
+                                               test_address: str):
     """Test that the async client is closed even when an exception occurs."""
-    test_address = "tcp://127.0.0.1:8786"
 
     with patch('dask.distributed.Client', new=mock_async_client):
         with pytest.raises(ValueError, match="Test exception"):
@@ -84,9 +92,10 @@ async def test_async_client_exception_handling(dask_client_mixin, mock_async_cli
         mock_async_client.close.assert_called_once()
 
 
-def test_blocking_client_context_manager(dask_client_mixin, mock_blocking_client):
+def test_blocking_client_context_manager(dask_client_mixin: DaskClientMixin,
+                                         mock_blocking_client: MagicMock,
+                                         test_address: str):
     """Test blocking client context manager creates and closes properly."""
-    test_address = "tcp://127.0.0.1:8786"
 
     with patch('dask.distributed.Client', new=mock_blocking_client) as mock_client_class:
         with dask_client_mixin.blocking_client(test_address) as client:
@@ -103,9 +112,10 @@ def test_blocking_client_context_manager(dask_client_mixin, mock_blocking_client
         mock_blocking_client.close.assert_called_once()
 
 
-def test_blocking_client_exception_handling(dask_client_mixin, mock_blocking_client):
+def test_blocking_client_exception_handling(dask_client_mixin: DaskClientMixin,
+                                            mock_blocking_client: MagicMock,
+                                            test_address: str):
     """Test blocking client is closed even when an exception occurs."""
-    test_address = "tcp://127.0.0.1:8786"
 
     with patch('dask.distributed.Client', new=mock_blocking_client):
         with pytest.raises(RuntimeError, match="Test exception"):
