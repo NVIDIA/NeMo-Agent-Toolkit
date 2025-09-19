@@ -273,7 +273,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         self._authenticated_servers: dict[str, AuthResult] = {}
         self._flow_handler: MCPAuthenticationFlowHandler = MCPAuthenticationFlowHandler()
 
-    async def authenticate(self, user_id: str | None = None) -> AuthResult:  # TODO EE: New Method
+    async def authenticate(self, user_id: str | None = None) -> AuthResult: 
         """
         Authenticate using MCP OAuth2 flow via NAT framework.
         1. Dynamic endpoints discovery (RFC9728 + RFC 8414 + OIDC)
