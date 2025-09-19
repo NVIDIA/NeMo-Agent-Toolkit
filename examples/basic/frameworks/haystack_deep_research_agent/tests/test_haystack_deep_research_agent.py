@@ -69,8 +69,6 @@ async def test_full_workflow_e2e() -> None:
 def test_config_yaml_loads_and_has_keys() -> None:
     config_file = (
         Path(__file__).resolve().parents[1]
-        / "src"
-        / "aiq_haystack_deep_research_agent"
         / "configs"
         / "config.yml"
     )
