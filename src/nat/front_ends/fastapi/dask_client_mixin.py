@@ -40,9 +40,10 @@ class DaskClientMixin(ABC):
         from dask.distributed import Client
         client = await Client(address=address, asynchronous=True)
 
-        yield client
-
-        await client.close()
+        try:
+            yield client
+        finally:
+            await client.close()
 
     @contextmanager
     def blocking_client(self, address: str) -> Generator["Client"]:
@@ -58,6 +59,7 @@ class DaskClientMixin(ABC):
         from dask.distributed import Client
         client = Client(address=address)
 
-        yield client
-
-        client.close()
+        try:
+            yield client
+        finally:
+            client.close()
