@@ -56,10 +56,11 @@ def create_schema(embedding_dim: int = DEFAULT_DIM):
     logger.info("Created embedding field with dimension %d", embedding_dim)
 
     schema = (
+        # Redis search can't directly index complex objects (e.g. conversation and metadata) in return_fields
+        # They need to be retrieved via json().get() for full object access
         TextField("$.user_id", as_name="user_id"),
         TagField("$.tags[*]", as_name="tags"),
         TextField("$.memory", as_name="memory"),
-        # TextField("$.conversations[*]", as_name="conversations"), # TODO: figure out if/how this should be done
         embedding_field)
 
     # Log the schema details
