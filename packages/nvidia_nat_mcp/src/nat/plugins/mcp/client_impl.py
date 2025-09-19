@@ -179,7 +179,8 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             _mcp_initialized = True
 
     # Only use lazy initialization if auth provider is specified
-    if config.server.auth_provider:
+    delayed_init = False
+    if config.server.auth_provider and delayed_init:
         # Use lazy initialization with retry on every access for auth-based connections
         group = FunctionGroup(
             config=config,

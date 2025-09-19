@@ -492,7 +492,7 @@ class FunctionGroup:
 
         return {self._get_fn_name(name): self._functions[name] for name in self._functions if predicate(name)}
 
-    async def get_accessible_functions(
+    def get_accessible_functions(
         self,
         filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None,
     ) -> dict[str, Function]:
@@ -524,7 +524,6 @@ class FunctionGroup:
         ValueError
             When the function group is configured to include functions that are not found in the group.
         """
-        await self._ensure_refreshed()
         if self._config.include:
             return self.get_included_functions(filter_fn=filter_fn)
         if self._config.exclude:
