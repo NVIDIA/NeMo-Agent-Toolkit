@@ -28,14 +28,14 @@ class ConcreteDaskClientMixin(DaskClientMixin):
     pass
 
 
-@pytest.fixture
-def dask_client_mixin():
+@pytest.fixture(name="dask_client_mixin")
+def dask_client_mixin_fixture():
     """Fixture providing a concrete instance of DaskClientMixin."""
     return ConcreteDaskClientMixin()
 
 
-@pytest_asyncio.fixture
-async def mock_async_client():
+@pytest_asyncio.fixture(name="mock_async_client")
+async def mock_async_client_fixture():
     """Fixture providing a mocked async Dask client."""
     mock_client = AsyncMock()
     mock_client.return_value = mock_client
@@ -43,8 +43,8 @@ async def mock_async_client():
     return mock_client
 
 
-@pytest.fixture
-def mock_blocking_client():
+@pytest.fixture(name="mock_blocking_client")
+def mock_blocking_client_fixture():
     """Fixture providing a mocked blocking Dask client."""
     mock_client = MagicMock()
     mock_client.return_value = mock_client
