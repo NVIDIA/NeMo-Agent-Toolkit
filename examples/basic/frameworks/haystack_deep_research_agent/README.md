@@ -52,14 +52,7 @@ Before using this workflow, ensure you have:
    - Set as environment variable: `export SERPERDEV_API_KEY=your_key_here`
 
 3. **OpenSearch Instance**: Required for RAG functionality
-   - You can run OpenSearch locally using Docker:
-
-     ```bash
-     docker run -d --name opensearch -p 9200:9200 -p 9600:9600 \
-       -e "discovery.type=single-node" \
-       -e "plugins.security.disabled=true" \
-       opensearchproject/opensearch:2.11.1
-     ```
+   - You can run OpenSearch locally using `docker`
 
 ## Installation and Usage
 
