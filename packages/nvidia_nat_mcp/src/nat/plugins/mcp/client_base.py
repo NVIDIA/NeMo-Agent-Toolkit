@@ -31,8 +31,9 @@ from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
 from nat.authentication.interfaces import AuthProviderBase
-from nat.data_models.authentication import AuthReason
-from nat.data_models.authentication import AuthRequest
+from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import BearerTokenCred
+from nat.plugins.mcp.auth.auth_provider import MCPOAuth2Provider
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
 from nat.plugins.mcp.exceptions import MCPToolNotFoundError
 from nat.plugins.mcp.utils import model_from_mcp_schema
@@ -47,8 +48,8 @@ class AuthAdapter(httpx.Auth):
     Converts AuthProviderBase to httpx.Auth interface for dynamic token management.
     """
 
-    def __init__(self, auth_provider: AuthProviderBase, auth_for_tool_calls_only: bool = False):
-        self.auth_provider = auth_provider
+    def __init__(self, auth_provider: MCPOAuth2Provider, auth_for_tool_calls_only: bool = False):
+        self.auth_provider: MCPOAuth2Provider = auth_provider
         self.auth_for_tool_calls_only = auth_for_tool_calls_only
 
     async def async_auth_flow(self, request: httpx.Request) -> AsyncGenerator[httpx.Request, httpx.Response]:
@@ -59,22 +60,34 @@ class AuthAdapter(httpx.Auth):
             yield request
             return
 
-        try:
-            # Get fresh auth headers from the NAT auth provider
-            auth_headers = await self._get_auth_headers(reason=AuthReason.NORMAL)
-            request.headers.update(auth_headers)
-        except Exception as e:
-            logger.info("Failed to get auth headers: %s", e)
-            # Continue without auth headers if auth fails
-
         response = yield request
 
-        # Handle 401 responses by retrying with fresh auth
+        # Trigger authentication on 401 response
         if response.status_code == 401:
             try:
+                auth_header: dict = {}
+
+                server_url_key = str(self.auth_provider.config.server_url)
+                if not server_url_key in self.auth_provider._authenticated_servers:
+                    await self.auth_provider.discover_and_register(response)
+                    auth_result: AuthResult = await self.auth_provider.authenticate(str(self.auth_provider.config.server_url))
+
+                    if auth_result.credentials:
+                        header = auth_result.credentials[0].header_name
+                        scheme = auth_result.credentials[0].scheme
+                        token = auth_result.credentials[0].token.get_secret_value()
+                        auth_header = {f"{header}": f"{scheme} {token}"}
+
+                else:
+                    auth_result = self.auth_provider._authenticated_servers[server_url_key]
+                    header = auth_result.credentials[0].header_name
+                    scheme = auth_result.credentials[0].scheme
+                    token = auth_result.credentials[0].token.get_secret_value()
+                    auth_header = {f"{header}": f"{scheme} {token}"}
+
+
                 # Get fresh auth headers with 401 context
-                auth_headers = await self._get_auth_headers(reason=AuthReason.RETRY_AFTER_401, response=response)
-                request.headers.update(auth_headers)
+                request.headers.update(auth_header)
                 yield request  # Retry the request
             except Exception as e:
                 logger.info("Failed to refresh auth after 401: %s", e)
@@ -95,31 +108,7 @@ class AuthAdapter(httpx.Auth):
             pass
         return False
 
-    async def _get_auth_headers(self, reason: AuthReason, response: httpx.Response | None = None) -> dict[str, str]:
-        """Get authentication headers from the NAT auth provider."""
-        # Build auth request
-        www_authenticate = response.headers.get("WWW-Authenticate", None) if response else None
-        auth_request = AuthRequest(
-            reason=reason,
-            www_authenticate=www_authenticate,
-        )
-        try:
-            # Mutating the config is not thread-safe, so we need to lock here
-            # Is mutating the config the only way to pass the auth request to the auth provider? This needs
-            # to be re-visited.
-            self.auth_provider.config.auth_request = auth_request
-            auth_result = await self.auth_provider.authenticate()
-            # Check if we have BearerTokenCred
-            from nat.data_models.authentication import BearerTokenCred
-            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
-                token = auth_result.credentials[0].token.get_secret_value()
-                return {"Authorization": f"Bearer {token}"}
-            else:
-                logger.warning("Auth provider did not return BearerTokenCred")
-                return {}
-        except Exception as e:
-            logger.warning("Failed to get auth token: %s", e)
-            return {}
+
 
 
 class MCPBaseClient(ABC):
