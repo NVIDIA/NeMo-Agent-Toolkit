@@ -104,7 +104,7 @@ workflow:
 
 * `raise_type_incompatibility`: Defaults to `False`. Whether to raise an exception if the type compatibility check fails. The type compatibility check runs before executing the tool list, based on the type annotations of the functions. When set to `True`, any incompatibility immediately raises an exception. When set to `False`, incompatibilities generate warning messages and the sequential executor continues execution. Set this to `False` when functions in the tool list include custom type converters, as the type compatibility check may fail even though the sequential executor can still execute the tool list.
 
-* `tool_execution_config`: Optional configuration for each tool in the sequential execution tool list. Keys should match the tool names from the `tool_list`.
+* `tool_execution_config`: Optional configuration for each tool in the sequential execution tool list. Keys must match the tool names from the `tool_list`.
   - `use_streaming`: Defaults to `False`. Whether to use streaming output for the tool.
 
 ---
