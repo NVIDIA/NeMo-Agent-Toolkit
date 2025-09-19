@@ -116,7 +116,6 @@ def test_mcp_tool_config_defaults():
     """Test that MCPToolConfig has correct defaults."""
     config = MCPToolConfig(mcp_tool_name="test_tool", url=HttpUrl("http://localhost:8000/mcp"))
     assert config.transport == "streamable-http"
-    assert config.return_exception is True
     assert config.description is None
 
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +15,6 @@
 
 # flake8: noqa
 
-# Import any workflows which need to be automatically registered here
-from .prompt_optimizer import register as prompt_optimizer
-from .react_agent import register as react_agent
-from .reasoning_agent import reasoning_agent
-from .rewoo_agent import register as rewoo_agent
-from .tool_calling_agent import register as tool_calling_agent
+# Import any control flows which need to be automatically registered here
+from . import sequential_executor
+from .router_agent import register

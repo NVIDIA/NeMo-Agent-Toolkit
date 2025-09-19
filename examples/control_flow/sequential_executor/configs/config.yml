@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
+functions:
+  text_processor:
+    _type: text_processor
+  data_analyzer:
+    _type: data_analyzer
+  report_generator:
+    _type: report_generator
 
-# Import any workflows which need to be automatically registered here
-from .prompt_optimizer import register as prompt_optimizer
-from .react_agent import register as react_agent
-from .reasoning_agent import reasoning_agent
-from .rewoo_agent import register as rewoo_agent
-from .tool_calling_agent import register as tool_calling_agent
+workflow:
+  _type: sequential_executor
+  tool_list: [text_processor, data_analyzer, report_generator]
+  raise_type_incompatibility: false

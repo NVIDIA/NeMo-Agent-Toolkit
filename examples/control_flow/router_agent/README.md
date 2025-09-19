@@ -106,7 +106,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/agents/router
+uv pip install -e examples/control_flow/router_agent
 ```
 
 ### Set Up API Keys
@@ -123,25 +123,25 @@ This workflow showcases the Router Agent's ability to route requests to the most
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-nat run --config_file=examples/agents/router/configs/config.yml --input "I want a yellow fruit"
+nat run --config_file=examples/control_flow/router_agent/configs/config.yml --input "I want a yellow fruit"
 ```
 
 **Additional Example Commands:**
 ```bash
 # Test fruit advisor
-nat run --config_file=examples/agents/router/configs/config.yml --input "What red fruit would you recommend?"
+nat run --config_file=examples/control_flow/router_agent/configs/config.yml --input "What red fruit would you recommend?"
 
 # Test city advisor
-nat run --config_file=examples/agents/router/configs/config.yml --input "What city should I visit in the United States?"
+nat run --config_file=examples/control_flow/router_agent/configs/config.yml --input "What city should I visit in the United States?"
 
 # Test literature advisor
-nat run --config_file=examples/agents/router/configs/config.yml --input "Can you recommend something by Shakespeare?"
+nat run --config_file=examples/control_flow/router_agent/configs/config.yml --input "Can you recommend something by Shakespeare?"
 ```
 
 **Expected Workflow Output**
 ```console
-nemo-agent-toolkit % nat run --config_file=examples/agents/router/configs/config.yml --input "I want a yellow fruit"
-2025-09-10 10:52:59,058 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/agents/router/configs/config.yml'
+nemo-agent-toolkit % nat run --config_file=examples/control_flow/router_agent/configs/config.yml --input "I want a yellow fruit"
+2025-09-10 10:52:59,058 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/control_flow/router_agent/configs/config.yml'
 
 Configuration Summary:
 --------------------
@@ -186,7 +186,7 @@ You can start the NeMo Agent toolkit server using the `nat serve` command with t
 **Starting the Router Agent Example Workflow**
 
 ```bash
-nat serve --config_file=examples/agents/router/configs/config.yml
+nat serve --config_file=examples/control_flow/router_agent/configs/config.yml
 ```
 
 ### Making Requests to the NeMo Agent Toolkit Server

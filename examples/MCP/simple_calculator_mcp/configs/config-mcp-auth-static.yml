@@ -16,14 +16,15 @@
 functions:
   current_datetime_local:
     _type: current_datetime
+
+function_groups:
   mcp_protected_math:
     _type: mcp_client
     server:
       transport: streamable-http
       auth_provider: static_oauth2
       url: "http://localhost:9901/mcp"
-    tool_filter:
-      # skip react_agent and datetime tools from the math MCP server
+    include:
       - calculator_multiply
       - calculator_inequality
       - calculator_divide

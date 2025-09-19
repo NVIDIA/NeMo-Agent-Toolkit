@@ -15,7 +15,6 @@
 
 from contextlib import asynccontextmanager
 from typing import Any
-from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -25,10 +24,9 @@ from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.mcp.client_base import MCPBaseClient
 from nat.plugins.mcp.client_impl import MCPClientConfig
 from nat.plugins.mcp.client_impl import MCPServerConfig
-from nat.plugins.mcp.client_impl import MCPSingleToolConfig
 from nat.plugins.mcp.client_impl import MCPToolOverrideConfig
-from nat.plugins.mcp.client_impl import mcp_client_function_handler
-from nat.plugins.mcp.client_impl import mcp_filter_tools
+from nat.plugins.mcp.client_impl import mcp_apply_tool_alias_and_description
+from nat.plugins.mcp.client_impl import mcp_client_function_group
 
 
 class _InputSchema(BaseModel):
@@ -82,68 +80,81 @@ class _FakeMCPClient(MCPBaseClient):
         yield self
 
 
-def test_filter_and_configure_tools_none_filter_returns_all():
-    """Test that None filter returns all tools."""
+def test_mcp_apply_tool_alias_and_description_none_returns_empty():
+    """If no overrides are provided, helper returns empty mapping."""
     tools = {"a": _FakeTool("a", "da"), "b": _FakeTool("b", "db")}
-    out = mcp_filter_tools(tools, tool_filter=None)
-    assert out == {
-        "a": {
-            "function_name": "a", "description": "da"
-        },
-        "b": {
-            "function_name": "b", "description": "db"
-        },
-    }
+    out = mcp_apply_tool_alias_and_description(tools, tool_overrides=None)
+    assert out == {}
 
 
-def test_filter_and_configure_tools_list_filter_subsets():
-    """Test that list filter returns subset of tools."""
-    tools = {"a": _FakeTool("a", "da"), "b": _FakeTool("b", "db")}
-    out = mcp_filter_tools(tools, tool_filter=["b"])  # type: ignore[arg-type]
-    assert out == {
-        "b": {
-            "function_name": "b", "description": "db"
-        },
-    }
+def test_mcp_apply_tool_alias_and_description_filters_to_existing():
+    """Only keep overrides for tools that exist in discovery list."""
+    tools = {"a": _FakeTool("a", "da")}
+    overrides = {"a": MCPToolOverrideConfig(alias=None, description=None), "missing": MCPToolOverrideConfig()}
+    out = mcp_apply_tool_alias_and_description(tools, tool_overrides=overrides)
+    assert set(out.keys()) == {"a"}
 
 
-def test_filter_and_configure_tools_dict_overrides_alias_and_description(caplog):
-    """Test that dict filter with overrides works correctly."""
+def test_mcp_apply_tool_alias_and_description_applies_alias_and_desc(caplog):
+    """Alias and description are applied when provided."""
     tools = {"raw": _FakeTool("raw", "original")}
     overrides = {"raw": MCPToolOverrideConfig(alias="alias", description="new desc")}
-    out = mcp_filter_tools(tools, tool_filter=overrides)  # type: ignore[arg-type]
-    assert out == {"raw": {"function_name": "alias", "description": "new desc"}}
+    out = mcp_apply_tool_alias_and_description(tools, tool_overrides=overrides)
+    assert "raw" in out
+    assert out["raw"].alias == "alias"
+    assert out["raw"].description == "new desc"
 
 
-async def test_mcp_client_function_handler():
-    """Test MCP client function handler."""
+async def test_mcp_client_function_group_includes_respected():
+    """Function group exposes only included tools as accessible functions."""
     with patch("nat.plugins.mcp.client_base.MCPStdioClient") as mock_client:
         fake_tools = {
             "fake_tool_1": _FakeTool("fake_tool_1", "A fake tool for testing"),
-            "fake_tool_2": _FakeTool("fake_tool_2", "Another fake tool for testing")
+            "fake_tool_2": _FakeTool("fake_tool_2", "Another fake tool for testing"),
         }
 
         mock_client.return_value = _FakeMCPClient(tools=fake_tools, command="python", args=["server.py"])
 
         server_cfg = MCPServerConfig(transport="stdio", command="python", args=["server.py"])
-        client_cfg = MCPClientConfig(server=server_cfg, tool_filter=["fake_tool_1"])
+        client_cfg = MCPClientConfig(server=server_cfg, include=["fake_tool_1"])  # only include one tool
 
-        # Mock the WorkflowBuilder
         mock_builder = MagicMock(spec=WorkflowBuilder)
-        mock_builder.add_function = AsyncMock()
 
-        # Test the handler function
-        async with mcp_client_function_handler(client_cfg, mock_builder) as fn_info:
-            # fn_info is the idle FunctionInfo ("MCP client")
-            assert fn_info.description == "MCP client"
+        async with mcp_client_function_group(client_cfg, mock_builder) as group:
+            accessible = group.get_accessible_functions()
+            assert set(accessible.keys()) == {"mcp_client.fake_tool_1"}
 
-        # Verify the MCP client was constructed and used
-        mock_client.assert_called_once()
 
-        # Verify that add_function was awaited exactly once for the filtered tool
-        mock_builder.add_function.assert_awaited_once()
-        name, cfg = mock_builder.add_function.await_args.args
-        assert name == "fake_tool_1"
-        assert isinstance(cfg, MCPSingleToolConfig)
-        assert cfg.tool_name == "fake_tool_1"  # original tool name
-        assert cfg.tool_description == "A fake tool for testing"  # carried through
+async def test_mcp_client_function_group_applies_overrides():
+    with patch("nat.plugins.mcp.client_base.MCPStdioClient") as mock_client:
+        fake_tools = {"raw": _FakeTool("raw", "original")}
+        mock_client.return_value = _FakeMCPClient(tools=fake_tools, command="python", args=["server.py"])
+
+        server_cfg = MCPServerConfig(transport="stdio", command="python", args=["server.py"])
+        client_cfg = MCPClientConfig(
+            server=server_cfg,
+            include=["alias_raw"],
+            tool_overrides={"raw": MCPToolOverrideConfig(alias="alias_raw", description="new desc")},
+        )
+
+        mock_builder = MagicMock(spec=WorkflowBuilder)
+
+        async with mcp_client_function_group(client_cfg, mock_builder) as group:
+            accessible = group.get_accessible_functions()
+            assert set(accessible.keys()) == {"mcp_client.alias_raw"}
+            assert accessible["mcp_client.alias_raw"].description == "new desc"
+
+
+async def test_mcp_client_function_group_no_include_exposes_all():
+    with patch("nat.plugins.mcp.client_base.MCPStdioClient") as mock_client:
+        fake_tools = {"a": _FakeTool("a", "da"), "b": _FakeTool("b", "db")}
+        mock_client.return_value = _FakeMCPClient(tools=fake_tools, command="python", args=["server.py"])
+
+        server_cfg = MCPServerConfig(transport="stdio", command="python", args=["server.py"])
+        client_cfg = MCPClientConfig(server=server_cfg)  # no include/exclude
+
+        mock_builder = MagicMock(spec=WorkflowBuilder)
+
+        async with mcp_client_function_group(client_cfg, mock_builder) as group:
+            accessible = group.get_accessible_functions()
+            assert set(accessible.keys()) == {"mcp_client.a", "mcp_client.b"}
