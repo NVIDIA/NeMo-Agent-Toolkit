@@ -38,6 +38,7 @@ def dask_client_mixin():
 async def mock_async_client():
     """Fixture providing a mocked async Dask client."""
     mock_client = AsyncMock()
+    mock_client.return_value = mock_client
     mock_client.close = AsyncMock()
     return mock_client
 
@@ -46,6 +47,7 @@ async def mock_async_client():
 def mock_blocking_client():
     """Fixture providing a mocked blocking Dask client."""
     mock_client = MagicMock()
+    mock_client.return_value = mock_client
     mock_client.close = MagicMock()
     return mock_client
 
@@ -54,7 +56,7 @@ async def test_async_client_context_manager(dask_client_mixin, mock_async_client
     """Test async client context manager creates and closes client properly."""
     test_address = "tcp://127.0.0.1:8786"
 
-    with patch('nat.front_ends.fastapi.dask_client_mixin.Client', return_value=mock_async_client) as mock_client_class:
+    with patch('dask.distributed.Client', new=mock_async_client) as mock_client_class:
         async with dask_client_mixin.client(test_address) as client:
             # Verify the client was constructed with correct parameters
             mock_client_class.assert_called_once_with(address=test_address, asynchronous=True)
@@ -69,21 +71,11 @@ async def test_async_client_context_manager(dask_client_mixin, mock_async_client
         mock_async_client.close.assert_called_once()
 
 
-async def test_async_client_with_different_address(dask_client_mixin, mock_async_client):
-    """Test the async client context manager with a different address."""
-    test_address = "tcp://dask-scheduler:8786"
-
-    with patch('nat.front_ends.fastapi.dask_client_mixin.Client', return_value=mock_async_client) as mock_client_class:
-        async with dask_client_mixin.client(test_address) as client:
-            mock_client_class.assert_called_once_with(address=test_address, asynchronous=True)
-            assert client is mock_async_client
-
-
 async def test_async_client_exception_handling(dask_client_mixin, mock_async_client):
     """Test that the async client is closed even when an exception occurs."""
     test_address = "tcp://127.0.0.1:8786"
 
-    with patch('nat.front_ends.fastapi.dask_client_mixin.Client', return_value=mock_async_client):
+    with patch('dask.distributed.Client', new=mock_async_client):
         with pytest.raises(ValueError, match="Test exception"):
             async with dask_client_mixin.client(test_address):
                 raise ValueError("Test exception")
@@ -96,8 +88,7 @@ def test_blocking_client_context_manager(dask_client_mixin, mock_blocking_client
     """Test blocking client context manager creates and closes properly."""
     test_address = "tcp://127.0.0.1:8786"
 
-    with patch('nat.front_ends.fastapi.dask_client_mixin.Client',
-               return_value=mock_blocking_client) as mock_client_class:
+    with patch('dask.distributed.Client', new=mock_blocking_client) as mock_client_class:
         with dask_client_mixin.blocking_client(test_address) as client:
             # Verify the client was constructed with correct parameters
             mock_client_class.assert_called_once_with(address=test_address)
@@ -112,22 +103,11 @@ def test_blocking_client_context_manager(dask_client_mixin, mock_blocking_client
         mock_blocking_client.close.assert_called_once()
 
 
-def test_blocking_client_with_different_address(dask_client_mixin, mock_blocking_client):
-    """Test the blocking client context manager with different address."""
-    test_address = "tcp://remote-scheduler:8786"
-
-    with patch('nat.front_ends.fastapi.dask_client_mixin.Client',
-               return_value=mock_blocking_client) as mock_client_class:
-        with dask_client_mixin.blocking_client(test_address) as client:
-            mock_client_class.assert_called_once_with(address=test_address)
-            assert client is mock_blocking_client
-
-
 def test_blocking_client_exception_handling(dask_client_mixin, mock_blocking_client):
     """Test blocking client is closed even when an exception occurs."""
     test_address = "tcp://127.0.0.1:8786"
 
-    with patch('nat.front_ends.fastapi.dask_client_mixin.Client', return_value=mock_blocking_client):
+    with patch('dask.distributed.Client', new=mock_blocking_client):
         with pytest.raises(RuntimeError, match="Test exception"):
             with dask_client_mixin.blocking_client(test_address):
                 raise RuntimeError("Test exception")
