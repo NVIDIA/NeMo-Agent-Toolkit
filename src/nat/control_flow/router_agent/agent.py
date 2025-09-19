@@ -31,7 +31,7 @@ from nat.agent.base import AGENT_LOG_PREFIX
 from nat.agent.base import BaseAgent
 
 if typing.TYPE_CHECKING:
-    from nat.agent.router_agent.register import RouterAgentWorkflowConfig
+    from nat.control_flow.router_agent.register import RouterAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
 
@@ -304,8 +304,8 @@ def create_router_agent_prompt(config: "RouterAgentWorkflowConfig") -> ChatPromp
     Raises:
         ValueError: If the system_prompt or user_prompt validation fails.
     """
-    from nat.agent.router_agent.prompt import SYSTEM_PROMPT
-    from nat.agent.router_agent.prompt import USER_PROMPT
+    from nat.control_flow.router_agent.prompt import SYSTEM_PROMPT
+    from nat.control_flow.router_agent.prompt import USER_PROMPT
     # the Router Agent prompt can be customized via config option system_prompt and user_prompt.
 
     if config.system_prompt:

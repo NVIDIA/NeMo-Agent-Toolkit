@@ -17,7 +17,7 @@ limitations under the License.
 
 # Router Agent
 
-The Router Agent analyzes incoming requests and directs them to the most appropriate branch (other agents or tools) based on the request content. It uses a single-pass architecture to select exactly one branch that best handles the request, making it ideal for scenarios where different types of requests need specialized handling.
+The Router Agent is a control flow component that analyzes incoming requests and directs them to the most appropriate branch (other agents or tools) based on the request content. It uses a single-pass architecture to select exactly one branch that best handles the request, making it ideal for scenarios where different types of requests need specialized handling.
 
 The Router Agent's implementation uses a two-node graph structure: a Router Node that analyzes the request and selects the appropriate branch, and a Branch Node that executes the selected branch and returns the result.
 
@@ -27,7 +27,6 @@ The Router Agent's implementation uses a two-node graph structure: a Router Node
 - **Single-Pass Architecture**: Uses a two-node graph structure with Router Node (analyzes request and selects branch) and Branch Node (executes the selected branch)
 - **Intelligent Request Routing**: Analyzes user input and selects exactly one branch that best handles the request
 - **Pre-built Tools**: Leverages core library agents and tools
-- **Custom Plugin System**: Developers can bring in new tools using plugins
 - **Configurable Branches**: Support for routing to any combination of functions, tools, or agents
 - **Easy Fine-tuning**: Single-pass approach makes it easy to customize routing logic through prompt modification
 - **Customizable Prompts**: Modify system and user prompts for specific routing needs
