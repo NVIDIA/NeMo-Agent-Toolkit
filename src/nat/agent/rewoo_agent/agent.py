@@ -69,7 +69,8 @@ class ReWOOAgentGraph(BaseAgent):
                  callbacks: list[AsyncCallbackHandler] | None = None,
                  detailed_logs: bool = False,
                  log_response_max_chars: int = 1000,
-                 tool_call_max_retries: int = 3):
+                 tool_call_max_retries: int = 3,
+                 raise_tool_call_error: bool = True):
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
@@ -96,6 +97,7 @@ class ReWOOAgentGraph(BaseAgent):
         self.solver_prompt = solver_prompt
         self.tools_dict = {tool.name: tool for tool in tools}
         self.tool_call_max_retries = tool_call_max_retries
+        self.raise_tool_call_error = raise_tool_call_error
 
         logger.debug("%s Initialized ReWOO Agent Graph", AGENT_LOG_PREFIX)
 
@@ -275,6 +277,9 @@ class ReWOOAgentGraph(BaseAgent):
 
             if self.detailed_logs:
                 self._log_tool_response(requested_tool.name, tool_input_parsed, str(tool_response))
+
+            if self.raise_tool_call_error and tool_response.status == "error":
+                raise RuntimeError(f"Tool call failed: {tool_response.content}")
 
             intermediate_results[placeholder] = tool_response
             return {"intermediate_results": intermediate_results}

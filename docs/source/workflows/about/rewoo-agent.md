@@ -101,6 +101,8 @@ functions:
 
 * `additional_solver_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base solver prompt.
 
+* `raise_tool_call_error`: Defaults to True. Whether to raise a exception immediately if a tool call fails. If set to False, the tool call error message will be included in the tool response and passed to the next tool.
+
 
 ## **Step-by-Step Breakdown of a ReWOO Agent**
 
