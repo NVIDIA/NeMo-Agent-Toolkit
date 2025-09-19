@@ -16,35 +16,28 @@
 import logging
 
 from pydantic import Field
-from pydantic import PositiveInt
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
-from nat.data_models.component_ref import LLMRef
-from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
 
-class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent"):
+class ToolCallAgentWorkflowConfig(AgentBaseConfig, name="tool_calling_agent"):
     """
     A Tool Calling Agent requires an LLM which supports tool calling. A tool Calling Agent utilizes the tool
     input parameters to select the optimal tool.  Supports handling tool errors.
     """
-
+    description: str = Field(default="Tool Calling Agent Workflow", description="Description of this functions use.")
     tool_names: list[FunctionRef | FunctionGroupRef] = Field(
         default_factory=list, description="The list of tools to provide to the tool calling agent.")
-    llm_name: LLMRef = Field(description="The LLM model to use with the tool calling agent.")
-    verbose: bool = Field(default=False, description="Set the verbosity of the tool calling agent's logging.")
     handle_tool_errors: bool = Field(default=True, description="Specify ability to handle tool calling errors.")
-    description: str = Field(default="Tool Calling Agent Workflow", description="Description of this functions use.")
     max_iterations: int = Field(default=15, description="Number of tool calls before stoping the tool calling agent.")
-    log_response_max_chars: PositiveInt = Field(
-        default=1000, description="Maximum number of characters to display in logs when logging tool responses.")
     system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
     additional_instructions: str | None = Field(default=None,
                                                 description="Additional instructions appended to the system prompt.")

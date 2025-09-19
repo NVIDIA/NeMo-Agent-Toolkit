@@ -26,12 +26,12 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.tools import BaseTool
 from langgraph.graph.state import CompiledStateGraph
 
-from nat.agent.router_agent.agent import RouterAgentGraph
-from nat.agent.router_agent.agent import RouterAgentGraphState
-from nat.agent.router_agent.agent import create_router_agent_prompt
-from nat.agent.router_agent.prompt import SYSTEM_PROMPT
-from nat.agent.router_agent.prompt import USER_PROMPT
-from nat.agent.router_agent.register import RouterAgentWorkflowConfig
+from nat.control_flow.router_agent.agent import RouterAgentGraph
+from nat.control_flow.router_agent.agent import RouterAgentGraphState
+from nat.control_flow.router_agent.agent import create_router_agent_prompt
+from nat.control_flow.router_agent.prompt import SYSTEM_PROMPT
+from nat.control_flow.router_agent.prompt import USER_PROMPT
+from nat.control_flow.router_agent.register import RouterAgentWorkflowConfig
 
 
 class MockTool(BaseTool):
@@ -259,7 +259,7 @@ class TestRouterAgentGraph:
     @pytest.mark.asyncio
     async def test_build_graph(self, router_agent):
         """Test graph building and compilation."""
-        with patch('nat.agent.router_agent.agent.StateGraph') as mock_state_graph:
+        with patch('nat.control_flow.router_agent.agent.StateGraph') as mock_state_graph:
             mock_graph_instance = Mock()
             mock_compiled_graph = Mock(spec=CompiledStateGraph)
             mock_graph_instance.compile.return_value = mock_compiled_graph
@@ -281,7 +281,7 @@ class TestRouterAgentGraph:
     @pytest.mark.asyncio
     async def test_build_graph_exception(self, router_agent):
         """Test build_graph handles exceptions."""
-        with patch('nat.agent.router_agent.agent.StateGraph', side_effect=Exception("Graph error")):
+        with patch('nat.control_flow.router_agent.agent.StateGraph', side_effect=Exception("Graph error")):
             with pytest.raises(Exception, match="Graph error"):
                 await router_agent.build_graph()
 

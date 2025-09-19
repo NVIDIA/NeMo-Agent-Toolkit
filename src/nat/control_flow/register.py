@@ -17,3 +17,4 @@
 
 # Import any control flows which need to be automatically registered here
 from . import sequential_executor
+from .router_agent import register

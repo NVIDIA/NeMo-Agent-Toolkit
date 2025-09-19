@@ -4997,7 +4997,7 @@ requires-dist = [
 
 [[package]]
 name = "nat-router-agent"
-source = { editable = "examples/agents/router" }
+source = { editable = "examples/control_flow/router_agent" }
 dependencies = [
     { name = "nvidia-nat", extra = ["langchain"] },
 ]
@@ -5665,7 +5665,7 @@ requires-dist = [
     { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
     { name = "nat-redact-pii", marker = "extra == 'examples'", editable = "examples/observability/redact_pii" },
     { name = "nat-retail-sales-agent", marker = "extra == 'examples'", editable = "examples/notebooks/retail_sales_agent" },
-    { name = "nat-router-agent", marker = "extra == 'examples'", editable = "examples/agents/router" },
+    { name = "nat-router-agent", marker = "extra == 'examples'", editable = "examples/control_flow/router_agent" },
     { name = "nat-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
     { name = "nat-sequential-executor", marker = "extra == 'examples'", editable = "examples/control_flow/sequential_executor" },
     { name = "nat-simple-auth", marker = "extra == 'examples'", editable = "examples/front_ends/simple_auth" },

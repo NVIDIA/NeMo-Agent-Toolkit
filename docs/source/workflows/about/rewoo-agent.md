@@ -73,6 +73,8 @@ functions:
 
 ### Configurable Options:
 
+* `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReWOO agent is configured as a workflow and need to expose a customized name as a tool.
+
 * `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
@@ -98,6 +100,8 @@ functions:
 * `additional_planner_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base planner prompt.
 
 * `additional_solver_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base solver prompt.
+
+* `raise_tool_call_error`: Defaults to True. Whether to raise a exception immediately if a tool call fails. If set to False, the tool call error message will be included in the tool response and passed to the next tool.
 
 
 ## **Step-by-Step Breakdown of a ReWOO Agent**

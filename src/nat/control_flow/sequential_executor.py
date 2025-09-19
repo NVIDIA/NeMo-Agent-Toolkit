@@ -46,7 +46,7 @@ class SequentialExecutorConfig(FunctionBaseConfig, name="sequential_executor"):
     tool_execution_config: dict[str, ToolExecutionConfig] = Field(default_factory=dict,
                                                                   description="Optional configuration for each"
                                                                   "tool in the sequential execution tool list."
-                                                                  "Keys should match the tool names from the"
+                                                                  "Keys must match the tool names from the"
                                                                   "tool_list.")
     raise_type_incompatibility: bool = Field(
         default=False,

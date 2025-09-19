@@ -17,18 +17,16 @@ import logging
 
 from pydantic import AliasChoices
 from pydantic import Field
-from pydantic import PositiveInt
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
-from nat.data_models.component_ref import LLMRef
-from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.optimizable import SearchSpace
@@ -37,16 +35,14 @@ from nat.utils.type_converter import GlobalTypeConverter
 logger = logging.getLogger(__name__)
 
 
-class ReActAgentWorkflowConfig(FunctionBaseConfig, OptimizableMixin, name="react_agent"):
+class ReActAgentWorkflowConfig(AgentBaseConfig, OptimizableMixin, name="react_agent"):
     """
     Defines a NAT function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the
     tool names and descriptions to select the optimal tool.
     """
-
+    description: str = Field(default="ReAct Agent Workflow", description="The description of this functions use.")
     tool_names: list[FunctionRef | FunctionGroupRef] = Field(
         default_factory=list, description="The list of tools to provide to the react agent.")
-    llm_name: LLMRef = Field(description="The LLM model to use with the react agent.")
-    verbose: bool = Field(default=False, description="Set the verbosity of the react agent's logging.")
     retry_agent_response_parsing_errors: bool = Field(
         default=True,
         validation_alias=AliasChoices("retry_agent_response_parsing_errors", "retry_parsing_errors"),
@@ -65,7 +61,6 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, OptimizableMixin, name="react
         description="Whether to pass tool call errors to agent. If False, failed tool calls will raise an exception.")
     include_tool_input_schema_in_tool_description: bool = Field(
         default=True, description="Specify inclusion of tool input schemas in the prompt.")
-    description: str = Field(default="ReAct Agent Workflow", description="The description of this functions use.")
     normalize_tool_input_quotes: bool = Field(
         default=True,
         description="Whether to replace single quotes with double quotes in the tool input. "
@@ -74,8 +69,6 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, OptimizableMixin, name="react
         default=None,
         description="Provides the SYSTEM_PROMPT to use with the agent")  # defaults to SYSTEM_PROMPT in prompt.py
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
-    log_response_max_chars: PositiveInt = Field(
-        default=1000, description="Maximum number of characters to display in logs when logging tool responses.")
     use_openai_api: bool = Field(default=False,
                                  description=("Use OpenAI API for the input/output types to the function. "
                                               "If False, strings will be used."))

@@ -68,7 +68,7 @@ The following options are required for the sequential executor:
 
 ### Optional Configuration Options
 
-- **`tool_execution_config`**: Configuration for each tool in the sequential execution tool list. Keys should match the tool names from the `tool_list`
+- **`tool_execution_config`**: Configuration for each tool in the sequential execution tool list. Keys must match the tool names from the `tool_list`
   - **`use_streaming`**: Whether to use streaming output for the tool (default: `false`)
 
 ### Example Configuration
