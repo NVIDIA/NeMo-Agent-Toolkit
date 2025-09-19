@@ -66,7 +66,7 @@ async def haystack_deep_research_agent_workflow(
     from haystack.tools import Toolset
     from haystack_integrations.components.generators.nvidia import NvidiaChatGenerator
     from haystack_integrations.document_stores.opensearch import OpenSearchDocumentStore
-    from aiq_haystack_deep_research_agent.pipelines import (
+    from aiq_haystack_deep_research_agent import (
         create_search_tool,
         create_rag_tool,
         run_startup_indexing,
