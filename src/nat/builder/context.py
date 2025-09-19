@@ -69,12 +69,10 @@ class ContextState(metaclass=Singleton):
         self.user_message_id: ContextVar[str | None] = ContextVar("user_message_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
-        self.metadata: ContextVar[RequestAttributes] = ContextVar("request_attributes", default=RequestAttributes())
-        self.event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=Subject())
-        self.active_function: ContextVar[InvocationNode] = ContextVar("active_function",
-                                                                      default=InvocationNode(function_id="root",
-                                                                                             function_name="root"))
-        self.active_span_id_stack: ContextVar[list[str]] = ContextVar("active_span_id_stack", default=["root"])
+        self._metadata: ContextVar[RequestAttributes | None] = ContextVar("request_attributes", default=None)
+        self._event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=None)
+        self._active_function: ContextVar[InvocationNode | None] = ContextVar("active_function", default=None)
+        self._active_span_id_stack: ContextVar[list[str] | None] = ContextVar("active_span_id_stack", default=None)
 
         # Default is a lambda no-op which returns NoneType
         self.user_input_callback: ContextVar[Callable[[InteractionPrompt], Awaitable[HumanResponse | None]]
@@ -84,6 +82,30 @@ class ContextState(metaclass=Singleton):
         self.user_auth_callback: ContextVar[Callable[[AuthProviderBaseConfig, AuthFlowType],
                                                      Awaitable[AuthenticatedContext]]
                                             | None] = ContextVar("user_auth_callback", default=None)
+
+    @property
+    def metadata(self) -> ContextVar[RequestAttributes]:
+        if self._metadata.get() is None:
+            self._metadata.set(RequestAttributes())
+        return typing.cast(ContextVar[RequestAttributes], self._metadata)
+
+    @property
+    def active_function(self) -> ContextVar[InvocationNode]:
+        if self._active_function.get() is None:
+            self._active_function.set(InvocationNode(function_id="root", function_name="root"))
+        return typing.cast(ContextVar[InvocationNode], self._active_function)
+
+    @property
+    def event_stream(self) -> ContextVar[Subject[IntermediateStep]]:
+        if self._event_stream.get() is None:
+            self._event_stream.set(Subject())
+        return typing.cast(ContextVar[Subject[IntermediateStep]], self._event_stream)
+
+    @property
+    def active_span_id_stack(self) -> ContextVar[list[str]]:
+        if self._active_span_id_stack.get() is None:
+            self._active_span_id_stack.set(["root"])
+        return typing.cast(ContextVar[list[str]], self._active_span_id_stack)
 
     @staticmethod
     def get() -> "ContextState":
