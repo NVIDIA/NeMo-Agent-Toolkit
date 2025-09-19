@@ -282,21 +282,41 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         2. Client registration (RFC7591)
         3. Use NAT's standard OAuth2 flow (OAuth2AuthCodeFlowProvider)
         """
+        auth_result = await self._perform_oauth2_authentication()
+
+        if user_id:
+            self._authenticated_servers[user_id] = auth_result
+
+        return auth_result
+
+    async def _perform_oauth2_authentication(self) -> AuthResult:
+        """
+        Perform OAuth2 authentication using cached endpoints and credentials.
+
+        Returns:
+            AuthResult containing the bearer token and metadata.
+        """
         endpoints = self._cached_endpoints
         credentials = self._cached_credentials
 
+        if endpoints is None:
+            raise RuntimeError("OAuth2 endpoints not discovered. Call discover_and_register() first.")
+        if credentials is None:
+            raise RuntimeError("OAuth2 credentials not available. Call discover_and_register() first.")
+
         config = OAuth2AuthCodeFlowProviderConfig(
-                client_id=credentials.client_id,
-                client_secret=credentials.client_secret or "",
-                authorization_url=str(endpoints.authorization_url),
-                token_url=str(endpoints.token_url),
-                token_endpoint_auth_method=getattr(self.config, "token_endpoint_auth_method", None),
-                redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
-                scopes=self._effective_scopes() or [],
-                use_pkce=bool(self.config.use_pkce),
+            client_id=credentials.client_id,
+            client_secret=credentials.client_secret or "",
+            authorization_url=str(endpoints.authorization_url),
+            token_url=str(endpoints.token_url),
+            token_endpoint_auth_method=getattr(self.config, "token_endpoint_auth_method", None),
+            redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
+            scopes=self._effective_scopes() or [],
+            use_pkce=bool(self.config.use_pkce),
         )
 
-        authenticated_context: AuthenticatedContext = await self._flow_handler.authenticate(config, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
+        authenticated_context: AuthenticatedContext = await self._flow_handler.authenticate(
+            config, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
 
         auth_header = authenticated_context.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
@@ -309,9 +329,6 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             token_expires_at=authenticated_context.metadata.get("expires_at"),
             raw=authenticated_context.metadata.get("raw_token"),
         )
-
-        if user_id:
-            self._authenticated_servers[user_id] = auth_result
 
         return auth_result
 
