@@ -21,16 +21,22 @@ import httpx
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import SecretStr
 
 from mcp.shared.auth import OAuthClientInformationFull
 from mcp.shared.auth import OAuthClientMetadata
 from mcp.shared.auth import OAuthMetadata
 from mcp.shared.auth import ProtectedResourceMetadata
 from nat.authentication.interfaces import AuthProviderBase
+from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.data_models.authentication import AuthenticatedContext
+from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthReason
 from nat.data_models.authentication import AuthRequest
 from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import BearerTokenCred
 from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
+from nat.plugins.mcp.auth.auth_flow_handler import MCPAuthenticationFlowHandler
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +67,8 @@ class DiscoverOAuth2Endpoints:
         self.config = config
         self._cached_endpoints: OAuth2Endpoints | None = None
         self._last_oauth_scopes: list[str] | None = None
+        self._authenticated_servers: dict[str, AuthResult] = {}
+        self._flow_handler: MCPAuthenticationFlowHandler = MCPAuthenticationFlowHandler()
 
     async def discover(self, reason: AuthReason, www_authenticate: str | None) -> tuple[OAuth2Endpoints, bool]:
         """
