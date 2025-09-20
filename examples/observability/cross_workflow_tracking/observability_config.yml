@@ -13,16 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.observability.context import ObservabilityContext
-from nat.observability.context import ObservabilityContextManager
-from nat.observability.processor.cross_workflow_processor import CrossWorkflowProcessor
-from nat.observability.processor.cross_workflow_processor import WorkflowRelationshipProcessor
-from nat.observability.workflow_utils import ObservabilityWorkflowInvoker
+# Configuration demonstrating cross-workflow observability integration
 
-__all__ = [
-    "ObservabilityContext",
-    "ObservabilityContextManager",
-    "ObservabilityWorkflowInvoker",
-    "CrossWorkflowProcessor",
-    "WorkflowRelationshipProcessor"
-]
+general:
+  telemetry:
+    tracing:
+      main_exporter:
+        _type: file
+        output_path: "cross_workflow_traces.jsonl"
+        project: "cross_workflow_demo"
+        mode: append
+        enable_rolling: false
+        # processors:
+        #   - _type: cross_workflow_processor
+        #   - _type: workflow_relationship_processor
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-8b-instruct
+    temperature: 0.7
+    max_tokens: 1024
+
+workflow:
+  _type: chat_completion
+  llm_name: nim_llm
+  system_prompt: "You are a helpful assistant that provides concise, friendly responses."

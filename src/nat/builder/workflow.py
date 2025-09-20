@@ -31,6 +31,7 @@ from nat.data_models.config import Config
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
 from nat.memory.interfaces import MemoryEditor
 from nat.object_store.interfaces import ObjectStore
+from nat.observability.context import ObservabilityContext
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.observability.exporter_manager import ExporterManager
 from nat.runtime.runner import Runner
@@ -94,23 +95,31 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         return self._exporter_manager.get()
 
     @asynccontextmanager
-    async def run(self, message: InputT):
+    async def run(self, message: InputT, observability_context: ObservabilityContext | None = None):
         """
         Called each time we start a new workflow run. We'll create
         a new top-level workflow span here.
+
+        Args:
+            message: The input message for the workflow
+            observability_context: Optional observability context for cross-workflow tracking
         """
 
         async with Runner(input_message=message,
                           entry_fn=self._entry_fn,
                           context_state=self._context_state,
-                          exporter_manager=self.exporter_manager) as runner:
+                          exporter_manager=self.exporter_manager,
+                          observability_context=observability_context) as runner:
 
             # The caller can `yield runner` so they can do `runner.result()` or `runner.result_stream()`
             yield runner
 
-    async def result_with_steps(self, message: InputT, to_type: type | None = None):
+    async def result_with_steps(self,
+                                message: InputT,
+                                to_type: type | None = None,
+                                observability_context: ObservabilityContext | None = None):
 
-        async with self.run(message) as runner:
+        async with self.run(message, observability_context=observability_context) as runner:
 
             from nat.eval.runtime_event_subscriber import pull_intermediate
 
