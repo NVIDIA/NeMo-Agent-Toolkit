@@ -45,6 +45,7 @@ function_groups:
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
+      lazy_init: true
     include:
       - calculator_multiply
       - calculator_inequality

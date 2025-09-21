@@ -56,6 +56,7 @@ class MCPServerConfig(BaseModel):
 
     # Authentication configuration
     auth_provider: AuthenticationRef | None = Field(default=None, description="Reference to authentication provider")
+    lazy_init: bool = Field(default=False, description="Whether to lazily initialize the MCP client")
 
     @model_validator(mode="after")
     def validate_model(self):
@@ -178,9 +179,8 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             # Mark as successfully initialized
             _mcp_initialized = True
 
-    # Only use lazy initialization if auth provider is specified
-    delayed_init = False
-    if config.server.auth_provider and delayed_init:
+    # Lazy initialization
+    if config.server.lazy_init:
         # Use lazy initialization with retry on every access for auth-based connections
         group = FunctionGroup(
             config=config,
