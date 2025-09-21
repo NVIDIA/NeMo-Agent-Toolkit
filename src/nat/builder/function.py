@@ -612,17 +612,16 @@ class FunctionGroup:
         -------
         dict[str, Function]
             A dictionary of all included functions in the function group.
-
-        Raises
-        ------
-        ValueError
-            When the function group is configured to include functions that are not found in the group.
+            Functions that are configured to be included but not found in the group
+            will be logged as info and ignored.
         """
         missing = set(self._config.include) - set(self._functions.keys())
         if missing:
-            raise ValueError(f"Unknown included functions: {sorted(missing)}")
+            logger.info(f"Unknown included functions (ignoring): {sorted(missing)}")
         filter_fn = filter_fn or self._filter_fn or (lambda x: x)
-        included = set(filter_fn(list(self._config.include)))
+        # Only include functions that actually exist in the function group
+        available_functions = set(self._config.include) - missing
+        included = set(filter_fn(list(available_functions)))
         included = {name for name in included if self._fn_should_be_included(name)}
         return {self._get_fn_name(name): self._functions[name] for name in included}
 
