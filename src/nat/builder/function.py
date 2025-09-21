@@ -457,7 +457,7 @@ class FunctionGroup:
         - Only if not yet called successfully, if refresh_on_every_access is False
         """
         if self._refresh_fn:
-            if self._init_success or rebuild:
+            if not self._init_success or rebuild:
                 await self._refresh_fn()
                 self._init_success = True
 
