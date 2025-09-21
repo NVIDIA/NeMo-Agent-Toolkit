@@ -375,10 +375,6 @@ class FunctionGroup:
         refresh_fn : Callable[[], Awaitable[None]] | None, optional
             An async function to call for refreshing/updating the function group. This function will be called before any
             function access and can be used to add or update functions in the group dynamically.
-        refresh_on_every_access : bool, optional
-            Whether to call refresh_fn on every access. If True, refresh_fn is called
-            on every function access, allowing dynamic updates. If False, refresh_fn
-            is only called once (lazy initialization). Defaults to True.
         """
         self._config = config
         self._instance_name = instance_name or config.type
@@ -387,7 +383,6 @@ class FunctionGroup:
         self._per_function_filter_fn: dict[str, Callable[[str], bool]] = dict()
         self._refresh_fn = refresh_fn
         self._init_success = False
-        self._refresh_on_every_access = refresh_on_every_access
 
     def add_function(self,
                      name: str,
@@ -453,16 +448,16 @@ class FunctionGroup:
     def _get_fn_name(self, name: str) -> str:
         return f"{self._instance_name}.{name}"
 
-    async def _ensure_refreshed(self):
+    async def _ensure_refreshed(self, rebuild: bool = False):
         """
         Ensure the function group has been refreshed.
 
         This method will call the refresh function:
-        - Always, if refresh_on_every_access is True
+        - Always, if rebuild is True
         - Only if not yet called successfully, if refresh_on_every_access is False
         """
         if self._refresh_fn:
-            if self._refresh_on_every_access or not self._init_success:
+            if self._init_success or rebuild:
                 await self._refresh_fn()
                 self._init_success = True
 
@@ -529,6 +524,31 @@ class FunctionGroup:
         if self._config.exclude:
             return self._get_all_but_excluded_functions(filter_fn=filter_fn)
         return self.get_all_functions(filter_fn=filter_fn)
+
+    async def get_accessible_functions_with_refresh(
+        self,
+        filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None,
+    ) -> dict[str, Function]:
+        """
+        Returns a dictionary of all accessible functions in the function group with refresh.
+
+        This method first calls the refresh function if configured, then returns the accessible functions.
+        This is useful for lazy loading scenarios where functions need to be refreshed before access.
+
+        Parameters
+        ----------
+        filter_fn : Callable[[Sequence[str]], Sequence[str]] | None, optional
+            A callback function to additionally filter the functions in the function group dynamically. If not provided
+            then fall back to the function group's filter function. If no filter function is set for the function group
+            all functions will be returned.
+
+        Returns
+        -------
+        dict[str, Function]
+            A dictionary of all accessible functions in the function group.
+        """
+        await self._ensure_refreshed()
+        return self.get_accessible_functions(filter_fn=filter_fn)
 
     def get_excluded_functions(
         self,
