@@ -3,11 +3,12 @@
 
 from pathlib import Path
 
-from haystack.core.pipeline import Pipeline
 from haystack.components.converters.pypdf import PyPDFToDocument
 from haystack.components.converters.txt import TextFileToDocument
-from haystack.components.preprocessors import DocumentCleaner, DocumentSplitter
+from haystack.components.preprocessors import DocumentCleaner
+from haystack.components.preprocessors import DocumentSplitter
 from haystack.components.writers import DocumentWriter
+from haystack.core.pipeline import Pipeline
 from haystack.document_stores.types import DuplicatePolicy
 
 
@@ -45,12 +46,7 @@ def run_startup_indexing(document_store, data_dir: str, logger) -> None:
         if data_dir_path.exists() and data_dir_path.is_dir():
             pdf_sources, text_sources = _gather_sources(data_dir_path)
 
-        if (
-            not pdf_sources
-            and not text_sources
-            and fallback_data_dir.exists()
-            and fallback_data_dir.is_dir()
-        ):
+        if (not pdf_sources and not text_sources and fallback_data_dir.exists() and fallback_data_dir.is_dir()):
             logger.info(
                 "Data directory '%s' is missing or empty. Falling back to example data at '%s'",
                 str(data_dir_path),
@@ -70,9 +66,7 @@ def run_startup_indexing(document_store, data_dir: str, logger) -> None:
 
             indexing_pipeline = _build_indexing_pipeline(document_store)
             indexing_pipeline.add_component("pdf_converter", PyPDFToDocument())
-            indexing_pipeline.add_component(
-                "text_converter", TextFileToDocument(encoding="utf-8")
-            )
+            indexing_pipeline.add_component("text_converter", TextFileToDocument(encoding="utf-8"))
 
             indexing_pipeline.connect("pdf_converter.documents", "cleaner.documents")
             indexing_pipeline.connect("text_converter.documents", "cleaner.documents")
@@ -82,19 +76,11 @@ def run_startup_indexing(document_store, data_dir: str, logger) -> None:
             indexing_pipeline.warm_up()
 
             if pdf_sources:
-                res_pdf = indexing_pipeline.run(
-                    {"pdf_converter": {"sources": pdf_sources}}
-                )
-                total_written += int(
-                    res_pdf.get("writer", {}).get("documents_written", 0)
-                )
+                res_pdf = indexing_pipeline.run({"pdf_converter": {"sources": pdf_sources}})
+                total_written += int(res_pdf.get("writer", {}).get("documents_written", 0))
             if text_sources:
-                res_text = indexing_pipeline.run(
-                    {"text_converter": {"sources": text_sources}}
-                )
-                total_written += int(
-                    res_text.get("writer", {}).get("documents_written", 0)
-                )
+                res_text = indexing_pipeline.run({"text_converter": {"sources": text_sources}})
+                total_written += int(res_text.get("writer", {}).get("documents_written", 0))
 
             logger.info("Indexing complete. Documents written: %s", total_written)
         else:
@@ -105,6 +91,4 @@ def run_startup_indexing(document_store, data_dir: str, logger) -> None:
             )
 
     except Exception as e:  # pragma: no cover
-        logger.warning(
-            "Indexing pipeline failed or was skipped due to an error: %s", str(e)
-        )
+        logger.warning("Indexing pipeline failed or was skipped due to an error: %s", str(e))

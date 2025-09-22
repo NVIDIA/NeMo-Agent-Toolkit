@@ -7,9 +7,7 @@ from haystack.core.super_component import SuperComponent
 from haystack.dataclasses import ChatMessage
 from haystack.tools import ComponentTool
 from haystack_integrations.components.generators.nvidia import NvidiaChatGenerator
-from haystack_integrations.components.retrievers.opensearch import (
-    OpenSearchBM25Retriever,
-)
+from haystack_integrations.components.retrievers.opensearch import OpenSearchBM25Retriever
 
 
 def create_rag_tool(
@@ -34,9 +32,7 @@ def create_rag_tool(
     """
     retriever = OpenSearchBM25Retriever(document_store=document_store, top_k=top_k)
     if generator is None:
-        raise ValueError(
-            "NvidiaChatGenerator instance must be provided via builder-configured LLM."
-        )
+        raise ValueError("NvidiaChatGenerator instance must be provided via builder-configured LLM.")
 
     template = """
 	{% for document in documents %}
@@ -47,9 +43,7 @@ def create_rag_tool(
 
 	{{query}}
 	"""
-    prompt_builder = ChatPromptBuilder(
-        template=[ChatMessage.from_user(template)], required_variables="*"
-    )
+    prompt_builder = ChatPromptBuilder(template=[ChatMessage.from_user(template)], required_variables="*")
 
     rag_pipeline = Pipeline()
     rag_pipeline.add_component("retriever", retriever)

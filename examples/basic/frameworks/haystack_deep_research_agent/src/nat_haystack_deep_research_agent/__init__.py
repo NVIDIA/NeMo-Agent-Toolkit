@@ -3,8 +3,8 @@
 
 # Re-export pipelines helpers for convenience
 try:
-	from .pipelines.search import create_search_tool  # noqa: F401
-	from .pipelines.rag import create_rag_tool  # noqa: F401
-	from .pipelines.indexing import run_startup_indexing  # noqa: F401
+    from .pipelines.indexing import run_startup_indexing  # noqa: F401
+    from .pipelines.rag import create_rag_tool  # noqa: F401
+    from .pipelines.search import create_search_tool  # noqa: F401
 except Exception:  # pragma: no cover - optional during install time
-	pass
+    pass

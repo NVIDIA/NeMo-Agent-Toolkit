@@ -34,7 +34,7 @@ The workflow consists of three main components:
 
 1. **Web Search Tool**: Uses Haystack's SerperDevWebSearch and LinkContentFetcher to search the web and extract content from web pages
 2. **RAG Tool**: Uses OpenSearchDocumentStore to index and query internal documents with semantic retrieval
-3. **Deep Research Agent** (`register.py`): Orchestrates the agent and imports modular pipelines from `src/aiq_haystack_deep_research_agent/pipelines/`:
+3. **Deep Research Agent** (`register.py`): Orchestrates the agent and imports modular pipelines from `src/nat_haystack_deep_research_agent/pipelines/`:
    - `search.py`: builds the web search tool
    - `rag.py`: builds the RAG pipeline and tool
    - `indexing.py`: startup indexing (PDF/TXT/MD) into OpenSearch
@@ -48,7 +48,7 @@ Before using this workflow, ensure you have:
    - Set as environment variable: `export NVIDIA_API_KEY=your_key_here`
 
 2. **SerperDev API Key**: Required for web search functionality
-   - Get your key from [SerperDev](https://serper.dev/api-key)
+   - Get your key from [SerperDev](https://serper.dev)
    - Set as environment variable: `export SERPERDEV_API_KEY=your_key_here`
 
 3. **OpenSearch Instance**: Required for RAG functionality
@@ -56,7 +56,7 @@ Before using this workflow, ensure you have:
 
 ## Installation and Usage
 
-Follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
+Follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NVIDIA NeMo Agent Toolkit.
 
 ### Step 1: Set Your API Keys
 

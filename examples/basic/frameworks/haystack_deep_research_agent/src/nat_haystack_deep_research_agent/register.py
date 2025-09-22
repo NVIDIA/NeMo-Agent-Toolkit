@@ -24,14 +24,12 @@ from aiq.llm.nim_llm import NIMModelConfig
 logger = logging.getLogger(__name__)
 
 
-class HaystackDeepResearchWorkflowConfig(
-    FunctionBaseConfig, name="haystack_deep_research_agent"
-):  # type: ignore
+class HaystackDeepResearchWorkflowConfig(FunctionBaseConfig, name="haystack_deep_research_agent"):  # type: ignore
     system_prompt: str = """
     You are a deep research assistant.
     You create comprehensive research reports to answer the user's questions.
     You use the 'search' tool to answer any questions by using web search.
-    You use the 'rag' tool to answer any questions by using retrieval augmented generation on your internal document database.
+    You use the 'rag' tool to answer any questions by using retrieval augmented generation on your internal document DB.
     You perform multiple searches until you have the information you need to answer the question.
     Make sure you research different aspects of the question.
     Use markdown to format your response.
@@ -51,9 +49,7 @@ class HaystackDeepResearchWorkflowConfig(
 
 
 @register_function(config_type=HaystackDeepResearchWorkflowConfig)
-async def haystack_deep_research_agent_workflow(
-    config: HaystackDeepResearchWorkflowConfig, builder: Builder
-):
+async def haystack_deep_research_agent_workflow(config: HaystackDeepResearchWorkflowConfig, builder: Builder):
     """
     Main workflow that creates and returns the deep research agent.
 
@@ -61,14 +57,15 @@ async def haystack_deep_research_agent_workflow(
     for both the agent and RAG tool, per review suggestions.
     """
     from haystack.components.agents import Agent
-    from haystack.utils import Secret
     from haystack.dataclasses import ChatMessage
     from haystack.tools import Toolset
+    from haystack.utils import Secret
     from haystack_integrations.components.generators.nvidia import NvidiaChatGenerator
     from haystack_integrations.document_stores.opensearch import OpenSearchDocumentStore
-    from aiq_haystack_deep_research_agent import create_search_tool
-    from aiq_haystack_deep_research_agent import create_rag_tool
-    from aiq_haystack_deep_research_agent import run_startup_indexing
+
+    from nat_haystack_deep_research_agent import create_rag_tool
+    from nat_haystack_deep_research_agent import create_search_tool
+    from nat_haystack_deep_research_agent import run_startup_indexing
 
     logger.info(f"Starting Haystack Deep Research Agent workflow with config: {config}")
 
@@ -76,16 +73,12 @@ async def haystack_deep_research_agent_workflow(
     search_tool = create_search_tool(top_k=config.search_top_k)
 
     # Create document store
-    document_store = OpenSearchDocumentStore(
-        hosts=[config.opensearch_url], index="deep_research_docs"
-    )
+    document_store = OpenSearchDocumentStore(hosts=[config.opensearch_url], index="deep_research_docs")
     logger.info("Connected to OpenSearch successfully")
 
     # Optionally index local data at startup
     if config.index_on_startup:
-        run_startup_indexing(
-            document_store=document_store, data_dir=config.data_dir, logger=logger
-        )
+        run_startup_indexing(document_store=document_store, data_dir=config.data_dir, logger=logger)
 
     def _nim_to_haystack_generator(cfg: NIMModelConfig) -> NvidiaChatGenerator:
         return NvidiaChatGenerator(
