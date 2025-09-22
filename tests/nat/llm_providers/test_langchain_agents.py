@@ -112,7 +112,9 @@ async def test_azure_openai_langchain_agent():
     """
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
 
-    llm_config = AzureOpenAIModelConfig(azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1"))
+    llm_config = AzureOpenAIModelConfig(azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1"),
+                                        azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+                                        api_key=os.environ.get("AZURE_OPENAI_API_KEY"))
 
     async with WorkflowBuilder() as builder:
         await builder.add_llm("azure_openai_llm", llm_config)
