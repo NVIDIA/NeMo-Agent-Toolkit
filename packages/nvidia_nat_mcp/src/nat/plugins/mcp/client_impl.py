@@ -127,22 +127,18 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             raise
 
     # Build the appropriate client
-    try:
-        if config.server.transport == "stdio":
-            if not config.server.command:
-                logger.error("command is required for stdio transport")
-                raise ValueError("command is required for stdio transport")
-            client = MCPStdioClient(config.server.command, config.server.args, config.server.env)
-        elif config.server.transport == "sse":
-            client = MCPSSEClient(str(config.server.url))
-        elif config.server.transport == "streamable-http":
-            client = MCPStreamableHTTPClient(str(config.server.url), auth_provider=auth_provider)
-        else:
-            logger.error("Unsupported transport: %s", config.server.transport)
-            raise ValueError(f"Unsupported transport: {config.server.transport}")
-    except Exception as e:
-        logger.error("Failed to create MCP client: %s", str(e))
-        raise
+    if config.server.transport == "stdio":
+        if not config.server.command:
+            logger.error("command is required for stdio transport")
+            raise ValueError("command is required for stdio transport")
+        client = MCPStdioClient(config.server.command, config.server.args, config.server.env)
+    elif config.server.transport == "sse":
+        client = MCPSSEClient(str(config.server.url))
+    elif config.server.transport == "streamable-http":
+        client = MCPStreamableHTTPClient(str(config.server.url), auth_provider=auth_provider)
+    else:
+        logger.error("Unsupported transport: %s", config.server.transport)
+        raise ValueError(f"Unsupported transport: {config.server.transport}")
 
     logger.info("Connecting to MCP server at %s", client.server_name)
 
@@ -166,16 +162,13 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             tool_fn = mcp_tool_function(tool)
 
             # Add to group (only if single_fn exists)
-            if tool_fn.single_fn is not None:
-                logger.info("Adding tool %s to group", function_name)
-                group.add_function(name=function_name,
-                                   description=description,
-                                   fn=tool_fn.single_fn,
-                                   input_schema=tool_fn.input_schema if tool_fn.input_schema is not None
-                                   and tool_fn.input_schema is not type(None) else None,
-                                   converters=tool_fn.converters)
-            else:
-                logger.warning("Tool %s has no single function, skipping", function_name)
+            logger.info("Adding tool %s to group", function_name)
+            group.add_function(name=function_name,
+                               description=description,
+                               fn=tool_fn.single_fn,
+                               input_schema=tool_fn.input_schema
+                               if tool_fn.input_schema is not None and tool_fn.input_schema is not type(None) else None,
+                               converters=tool_fn.converters)
 
         logger.info("Successfully initialized MCP client and added %d tools", len(all_tools))
 
