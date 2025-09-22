@@ -433,4 +433,4 @@ async def test_load_hierarchial_workflow(nested_nat_config: Config):
 
     # Validate nested workflow instantiation
     async with WorkflowBuilder.from_config(config=nested_nat_config) as workflow:
-        assert SessionManager(workflow.build(), max_concurrency=1)
+        assert SessionManager(await workflow.build(), max_concurrency=1)
