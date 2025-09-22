@@ -96,7 +96,7 @@ wget "https://docs.aws.amazon.com/pdfs/bedrock/latest/userguide/bedrock-ug.pdf" 
 ### Step 5: Run the Workflow
 
 ```bash
-aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src/aiq_haystack_deep_research_agent/configs/config.yml --input "What are the latest updates on the Artemis moon mission?"
+nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the latest updates on the Artemis moon mission?"
 ```
 
 ## Example Queries
