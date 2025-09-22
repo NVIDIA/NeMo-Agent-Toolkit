@@ -477,6 +477,7 @@ class TypeIntrospectionMixin:
             logger.warning("Item %s is not compatible with output type %s", item, self.output_type)
             return False
 
+    @lru_cache
     def extract_non_optional_type(self, type_obj: type | types.UnionType) -> Any:
         """Extract the non-None type from Optional[T] or Union[T, None] types.
 
