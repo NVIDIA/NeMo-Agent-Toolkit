@@ -107,7 +107,7 @@ Here are some example queries you can try:
 
 ```bash
 # Current events
-aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src/aiq_haystack_deep_research_agent/configs/config.yml --input "What are the latest developments in AI research for 2024?"
+nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the latest developments in AI research for 2024?"
 
 # Technology news
 nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the new features in the latest Python release?"
