@@ -26,15 +26,6 @@
 # on your local machine. For example, if you are using pip, you can install it with:
 # uv pip install mcp-server-time
 
-general:
-  front_end:
-    _type: fastapi
-    endpoints:
-      - path: /refresh-mcp-tools
-        method: POST
-        description: Refreshes all MCP client function groups
-        function_name: refresh_mcp_tools
-
 function_groups:
   mcp_time:
     _type: mcp_client
