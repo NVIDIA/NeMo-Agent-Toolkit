@@ -117,7 +117,7 @@ nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/con
 
 ```bash
 # Document-specific queries
-aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src/aiq_haystack_deep_research_agent/configs/config.yml --input "What are the key features of AWS Bedrock?"
+nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the key features of AWS Bedrock?"
 
 # Mixed queries (will use both web search and RAG)
 nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "How does AWS Bedrock compare to other AI platforms in 2024?"
