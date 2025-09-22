@@ -23,10 +23,8 @@ from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
 from nat.object_store.models import ObjectStoreItem
-from nat_user_report.user_report_tools import DeleteUserReportConfig
-from nat_user_report.user_report_tools import GetUserReportConfig
-from nat_user_report.user_report_tools import PutUserReportConfig
-from nat_user_report.user_report_tools import UpdateUserReportConfig
+from nat_user_report.user_report_tools import UserReportConfig
+from nat_user_report.user_report_tools import user_report_group
 
 
 @pytest.fixture
@@ -34,18 +32,12 @@ async def builder():
     """Pytest fixture to create a builder with an InMemoryObjectStore and user_report_tool functions."""
     async with WorkflowBuilder() as builder:
         await builder.add_object_store("test_object_store", InMemoryObjectStoreConfig())
-        await builder.add_function(
-            "get_user_report",
-            GetUserReportConfig(object_store=ObjectStoreRef("test_object_store"), description="Get user report"))
-        await builder.add_function(
-            "put_user_report",
-            PutUserReportConfig(object_store=ObjectStoreRef("test_object_store"), description="Put user report"))
-        await builder.add_function(
-            "update_user_report",
-            UpdateUserReportConfig(object_store=ObjectStoreRef("test_object_store"), description="Update user report"))
-        await builder.add_function(
-            "delete_user_report",
-            DeleteUserReportConfig(object_store=ObjectStoreRef("test_object_store"), description="Delete user report"))
+        user_report_config = UserReportConfig(object_store=ObjectStoreRef(name="test_object_store"),
+                                              get="Get user report",
+                                              put="Put user report",
+                                              update="Update user report",
+                                              delete="Delete user report")
+        await user_report_group(user_report_config, builder)
         yield builder
 
 
