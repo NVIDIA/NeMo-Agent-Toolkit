@@ -17,6 +17,7 @@
 
 # Import any tools which need to be automatically registered here
 from . import chat_completion
+from . import chat_feedback
 from . import datetime_tools
 from . import document_search
 from . import github_tools

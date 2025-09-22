@@ -20,6 +20,13 @@ general:
       weave:
         _type: weave
         project: "nat-demo"
+  front_end:
+    _type: fastapi
+    endpoints:
+      - path: /chat_feedback
+        method: POST
+        description: Set reaction feedback for an assistant message via Weave call ID
+        function_name: chat_feedback
 
 functions:
   calculator_multiply:
@@ -32,6 +39,8 @@ functions:
     _type: current_datetime
   calculator_subtract:
     _type: calculator_subtract
+  chat_feedback:
+    _type: chat_feedback
 
 llms:
   nim_llm:

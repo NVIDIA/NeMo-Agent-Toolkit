@@ -19,6 +19,7 @@ from pydantic import AliasChoices
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
@@ -118,6 +119,10 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         normalize_tool_input_quotes=config.normalize_tool_input_quotes).build_graph()
 
     async def _response_fn(input_message: ChatRequest) -> ChatResponse:
+        # Get the trace ID for feedback tracking
+        context = Context.get()
+        trace_id = context.trace_id
+
         try:
             # initialize the starting state with the user query
             messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in input_message.messages],
@@ -138,14 +143,14 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             # get and return the output from the state
             state = ReActGraphState(**state)
             output_message = state.messages[-1]
-            return ChatResponse.from_string(str(output_message.content))
+            return ChatResponse.from_string(str(output_message.content), trace_id=trace_id)
 
         except Exception as ex:
             logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
             # here, we can implement custom error messages
             if config.verbose:
-                return ChatResponse.from_string(str(ex))
-            return ChatResponse.from_string("I seem to be having a problem.")
+                return ChatResponse.from_string(str(ex), trace_id=trace_id)
+            return ChatResponse.from_string("I seem to be having a problem.", trace_id=trace_id)
 
     if (config.use_openai_api):
         yield FunctionInfo.from_fn(_response_fn, description=config.description)

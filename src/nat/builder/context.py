@@ -67,6 +67,7 @@ class ContextState(metaclass=Singleton):
     def __init__(self):
         self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
         self.user_message_id: ContextVar[str | None] = ContextVar("user_message_id", default=None)
+        self.trace_id: ContextVar[str | None] = ContextVar("trace_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
         self._metadata: ContextVar[RequestAttributes | None] = ContextVar("request_attributes", default=None)
@@ -195,6 +196,19 @@ class Context:
         This property retrieves the user message ID which is the unique identifier for the current user message.
         """
         return self._context_state.user_message_id.get()
+
+    @property
+    def trace_id(self) -> str | None:
+        """
+        Retrieves the trace ID from the current context state.
+
+        This can be used to identify traces across different tracing systems
+        (e.g., Weave call IDs, Phoenix Trace IDs, OpenTelemetry trace IDs, etc.).
+
+        Returns:
+            str | None: The trace ID if available, None otherwise.
+        """
+        return self._context_state.trace_id.get()
 
     @contextmanager
     def push_active_function(self,

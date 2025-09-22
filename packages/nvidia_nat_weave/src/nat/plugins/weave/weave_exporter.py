@@ -17,6 +17,7 @@ import logging
 from collections.abc import Generator
 from contextlib import contextmanager
 
+from nat.builder.context import Context
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.span import Span
 from nat.observability.exporter.base_exporter import IsolatedAttribute
@@ -80,7 +81,18 @@ class WeaveExporter(SpanExporter[Span, Span]):
         if span is None:
             logger.warning("No span found for event %s", event.UUID)
             return
-        self._create_weave_call(event, span)
+        call = self._create_weave_call(event, span)
+
+        # capture the call ID for mapping reaction feedbacks to specific traces
+        if (event.payload.event_type == "FUNCTION_START" and event.payload.name == "<workflow>"):
+            try:
+                # Store the workflow call ID in the context for later retrieval
+                context = Context.get()
+                context._context_state.trace_id.set(call.id)
+                logger.info("DEBUG: Captured workflow weave call ID: %s", call.id)
+
+            except Exception as e:
+                logger.debug("Could not store workflow trace ID: %s", e)
 
     def _process_end_event(self, event: IntermediateStep):
         """Process the end event for a Weave call.
