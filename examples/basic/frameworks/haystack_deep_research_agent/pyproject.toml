@@ -22,7 +22,7 @@ description = "Haystack Deep Research Agent workflow for AIQ toolkit"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../../..", editable = true }
+nvidia-nat = { path = "../../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_haystack_deep_research_agent = "aiq_haystack_deep_research_agent.register"
