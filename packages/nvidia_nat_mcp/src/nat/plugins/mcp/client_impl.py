@@ -146,39 +146,38 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
 
     logger.info("Connecting to MCP server at %s", client.server_name)
 
-    try:
-        async with client:
-            all_tools = await client.get_tools()
-            tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
+    # Create the function group
+    group = FunctionGroup(config=config)
 
-            # Add each tool as a function to the group
-            for tool_name, tool in all_tools.items():
-                # Get override if it exists
-                override = tool_overrides.get(tool_name)
+    async with client:
+        all_tools = await client.get_tools()
+        tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
 
-                # Use override values or defaults
-                function_name = override.alias if override and override.alias else tool_name
-                description = override.description if override and override.description else tool.description
+        # Add each tool as a function to the group
+        for tool_name, tool in all_tools.items():
+            # Get override if it exists
+            override = tool_overrides.get(tool_name)
 
-                # Create the tool function
-                tool_fn = mcp_tool_function(tool)
+            # Use override values or defaults
+            function_name = override.alias if override and override.alias else tool_name
+            description = override.description if override and override.description else tool.description
 
-                # Add to group (only if single_fn exists)
-                if tool_fn.single_fn is not None:
-                    logger.info("Adding tool %s to group", function_name)
-                    group.add_function(name=function_name,
-                                       description=description,
-                                       fn=tool_fn.single_fn,
-                                       input_schema=tool_fn.input_schema if tool_fn.input_schema is not None
-                                       and tool_fn.input_schema is not type(None) else None,
-                                       converters=tool_fn.converters)
-                else:
-                    logger.warning("Tool %s has no single function, skipping", function_name)
+            # Create the tool function
+            tool_fn = mcp_tool_function(tool)
 
-            logger.info("Successfully initialized MCP client and added %d tools", len(all_tools))
-    except Exception as e:
-        logger.error("Failed to initialize MCP client: %s", str(e))
-        raise
+            # Add to group (only if single_fn exists)
+            if tool_fn.single_fn is not None:
+                logger.info("Adding tool %s to group", function_name)
+                group.add_function(name=function_name,
+                                   description=description,
+                                   fn=tool_fn.single_fn,
+                                   input_schema=tool_fn.input_schema if tool_fn.input_schema is not None
+                                   and tool_fn.input_schema is not type(None) else None,
+                                   converters=tool_fn.converters)
+            else:
+                logger.warning("Tool %s has no single function, skipping", function_name)
+
+        logger.info("Successfully initialized MCP client and added %d tools", len(all_tools))
 
     yield group
 
