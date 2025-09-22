@@ -98,6 +98,34 @@ def test_tool_calling_agent_init_w_prompt(mock_config_tool_calling_agent, mock_l
     assert output_messages[0].content == prompt
 
 
+async def test_tool_calling_agent_with_conversation_history(mock_config_tool_calling_agent, mock_llm, mock_tool):
+    """
+    Test that the tool calling agent with a conversation history will keep the conversation history.
+    """
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = "If a tool is available to help answer the question, use it to answer the question."
+    agent = ToolCallAgentGraph(llm=mock_llm,
+                               tools=tools,
+                               detailed_logs=mock_config_tool_calling_agent.verbose,
+                               prompt=prompt)
+    assert isinstance(agent, ToolCallAgentGraph)
+    assert agent.llm == mock_llm
+    assert agent.tools == tools
+    assert agent.detailed_logs == mock_config_tool_calling_agent.verbose
+    assert isinstance(agent.tool_caller, ToolNode)
+    assert list(agent.tool_caller.tools_by_name.keys()) == ['Tool A', 'Tool B']
+    messages = [
+        HumanMessage(content='please, mock tool call!'),
+        AIMessage(content='mock tool call'),
+        HumanMessage(content='please, mock a different tool call!')
+    ]
+    state = ToolCallAgentGraphState(messages=messages)
+    graph = await agent.build_graph()
+    state = await graph.ainvoke(state, config={'recursion_limit': 5})
+    state = ToolCallAgentGraphState(**state)
+    assert len(state.messages) > 3
+
+
 def test_tool_calling_agent_init_w_return_direct(mock_config_tool_calling_agent, mock_llm, mock_tool):
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
     return_direct_tools = [tools[0]]
