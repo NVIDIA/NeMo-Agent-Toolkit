@@ -32,7 +32,7 @@ uv pip install nvidia-nat[mcp]
 ```
 
 ## MCP Client Configuration
-NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allow the workflow to use MCP tools as regular functions.
+NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
 
 Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions in one of two ways:
 - `mcp_client`: A flexible configuration using function groups, that allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
@@ -257,7 +257,10 @@ Input Schema:
 ### Troubleshooting
 
 If you encounter connection issues:
-- Verify the MCP server is running and accessible via the `nat mcp client ping` command
+- Verify the MCP server is running and accessible via the `nat mcp client ping` command, e.g.:
+  ```bash
+  nat mcp client ping --url http://localhost:9901/mcp
+  ```
 - Check that the transport type matches the server configuration
 - Ensure the URL or command is correct
 - Check network connectivity for remote servers

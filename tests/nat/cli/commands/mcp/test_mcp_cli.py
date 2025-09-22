@@ -464,7 +464,7 @@ def test_list_tools_direct_error_is_formatted(monkeypatch, transport, command):
         def __init__(self, name):  # noqa: ARG002
             self.name = name
 
-    def _broken_list_tools(*args, **kwargs):  # noqa: ARG002
+    def _broken_list_tools(*args, **kwargs):
         raise RuntimeError("boom")
 
     _install_fake_mcp(monkeypatch, list_tools_response=[_Tool("x")])
@@ -502,7 +502,7 @@ def test_ping_mcp_server_healthy_transports(monkeypatch, transport, command):
 @pytest.mark.parametrize("transport", ["sse", "streamable-http", "stdio"])
 def test_ping_mcp_server_timeout(monkeypatch, transport):
 
-    async def _raise_timeout(coro, timeout=None, **_kwargs):  # noqa: ARG002
+    async def _raise_timeout(coro, timeout=None, **_kwargs):
         del timeout, _kwargs
         # Dispose the passed coroutine to avoid "never awaited" warnings
         try:

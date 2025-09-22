@@ -309,7 +309,7 @@ async def list_tools_direct(command, url, tool_name=None, transport='sse', args=
             def extract_primary_exception(exceptions):
                 return exceptions[0] if exceptions else Exception("Unknown error")
 
-        if isinstance(e, ExceptionGroup):  # noqa: F821
+        if isinstance(e, ExceptionGroup):
             primary_exception = extract_primary_exception(list(e.exceptions))
             mcp_error = convert_to_mcp_error(primary_exception, url)
         else:
@@ -620,7 +620,7 @@ async def call_tool_direct(command: str | None,
                 return exceptions[0] if exceptions else Exception("Unknown error")
 
         endpoint = url or (f"stdio:{command}" if transport == 'stdio' else "unknown")
-        if isinstance(e, ExceptionGroup):  # noqa: F821
+        if isinstance(e, ExceptionGroup):
             primary_exception = extract_primary_exception(list(e.exceptions))
             mcp_error = convert_to_mcp_error(primary_exception, endpoint)
         else:

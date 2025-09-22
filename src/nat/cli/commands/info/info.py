@@ -13,14 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-
 import click
 
 from nat.cli.commands.info.list_channels import list_channels
 from nat.cli.commands.info.list_components import list_components
-
-logger = logging.getLogger(__name__)
 
 
 @click.group(name=__name__, invoke_without_command=False, help="Provide information about the local NAT environment.")
