@@ -18,11 +18,11 @@ dependencies = [
   "docstring-parser~=0.16",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Haystack Deep Research Agent workflow for AIQ toolkit"
+description = "Haystack Deep Research Agent workflow for NVIDIA NeMo Agent Toolkit"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_haystack_deep_research_agent = "aiq_haystack_deep_research_agent.register"
+[project.entry-points.'nat.components']
+nat_haystack_deep_research_agent = "nat_haystack_deep_research_agent.register"
