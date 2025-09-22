@@ -383,6 +383,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         # if user id is not provided use the MCP server url as the user id
         if user_id is None:
+            # This makes no sense as the server url is not a valid user id
             user_id = str(self.config.server_url)
 
         # Auth code provider is responsible for per-user cache + refresh
