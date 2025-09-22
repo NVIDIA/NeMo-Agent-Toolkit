@@ -557,3 +557,111 @@ class TestRealWorldPatterns:
         # Should resolve single type argument to both input and output
         assert instance.input_type is MockSpan
         assert instance.output_type is MockSpan
+
+
+class TestExtractNonOptionalType:
+    """Test extract_non_optional_type method functionality"""
+
+    def test_extract_from_optional_type_int(self):
+        """Test extracting concrete type from int | None"""
+        instance = ConcreteDirectClass()
+
+        # Test with int | None
+        optional_int = int | None
+        result = instance.extract_non_optional_type(optional_int)
+        assert result is int
+
+    def test_extract_from_optional_type_str(self):
+        """Test extracting concrete type from str | None"""
+        instance = ConcreteDirectClass()
+
+        # Test with str | None
+        optional_str = str | None
+        result = instance.extract_non_optional_type(optional_str)
+        assert result is str
+
+    def test_extract_from_optional_complex_type(self):
+        """Test extracting concrete type from complex optional types"""
+        instance = ConcreteDirectClass()
+
+        # Test with dict[str, int] | None
+        optional_dict = dict[str, int] | None
+        result = instance.extract_non_optional_type(optional_dict)
+        assert result == dict[str, int]
+
+        # Test with list[str] | None
+        optional_list = list[str] | None
+        result = instance.extract_non_optional_type(optional_list)
+        assert result == list[str]
+
+    def test_extract_from_union_with_none_first(self):
+        """Test extracting when None is first in union"""
+        instance = ConcreteDirectClass()
+
+        # Test with None | str (order shouldn't matter)
+        union_type = None | str
+        result = instance.extract_non_optional_type(union_type)
+        assert result is str
+
+    def test_extract_from_non_optional_type(self):
+        """Test that non-optional types are returned unchanged"""
+        instance = ConcreteDirectClass()
+
+        # Test with concrete types that are not optional
+        assert instance.extract_non_optional_type(int) is int
+        assert instance.extract_non_optional_type(str) is str
+        assert instance.extract_non_optional_type(dict[str, int]) == dict[str, int]
+        assert instance.extract_non_optional_type(list[str]) == list[str]
+
+    def test_extract_from_union_without_none(self):
+        """Test that unions without None are returned unchanged"""
+        instance = ConcreteDirectClass()
+
+        # Test with union that doesn't include None
+        union_type = str | int
+        result = instance.extract_non_optional_type(union_type)
+        assert result == (str | int)
+
+    def test_extract_from_complex_union_with_none(self):
+        """Test extracting from complex union with None"""
+        instance = ConcreteDirectClass()
+
+        # Test with multiple types and None
+        union_type = str | int | None
+        result = instance.extract_non_optional_type(union_type)
+        # Should extract the non-None part of the union
+        assert result == (str | int)
+
+    def test_extract_from_nested_generic_optional(self):
+        """Test extracting from nested generic optional types"""
+        instance = ConcreteDirectClass()
+
+        # Test with nested generics
+        optional_nested = dict[str, list[int]] | None
+        result = instance.extract_non_optional_type(optional_nested)
+        assert result == dict[str, list[int]]
+
+        # Test with very complex nested type
+        complex_optional = dict[str, list[tuple[str, int]]] | None
+        result = instance.extract_non_optional_type(complex_optional)
+        assert result == dict[str, list[tuple[str, int]]]
+
+    def test_extract_preserves_original_type_object(self):
+        """Test that the extracted type maintains its identity"""
+        instance = ConcreteDirectClass()
+
+        # Create a specific type
+        custom_type = dict[str, int]
+        optional_custom = custom_type | None
+
+        result = instance.extract_non_optional_type(optional_custom)
+        assert result == custom_type
+        assert result is not optional_custom
+
+    def test_extract_with_direct_types(self):
+        """Test extracting with direct types (non-optional)"""
+        instance = ConcreteDirectClass()
+
+        # This tests that the method correctly handles direct types
+        result = instance.extract_non_optional_type(str)  # Direct type, not optional
+        assert result is str
