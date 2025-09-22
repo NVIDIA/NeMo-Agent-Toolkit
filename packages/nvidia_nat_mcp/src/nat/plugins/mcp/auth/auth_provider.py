@@ -289,6 +289,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
          - If a valid token is found in the cache, return it
          - Otherwise, perform the OAuth2 flow
         """
+        if self.config.use_tmp_oauth2_provider:
+            return await self._tmp_oauth2_authenticate(user_id=user_id)
+
         return await self._nat_oauth2_authenticate(user_id=user_id)
 
     async def _discover_and_register(self, response: httpx.Response | None = None):
@@ -351,3 +354,36 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         # Auth code provider is responsible for per-user cache + refresh
         return await self._auth_code_provider.authenticate()
+
+    async def _tmp_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
+        """Perform the OAuth2 flow using NAT OAuth2 provider."""
+        from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+        from nat.plugins.mcp.auth.tmp_oauth2_provider import TmpOAuth2AuthCodeFlowProvider
+
+        if not self._cached_endpoints or not self._cached_credentials:
+            # if discovery is yet to done return empty auth result
+            return AuthResult(credentials=[], token_expires_at=None, raw={})
+
+        endpoints = self._cached_endpoints
+        credentials = self._cached_credentials
+
+        # Build the OAuth2 provider if not already built
+        if self._auth_code_provider is None:
+            oauth2_config = OAuth2AuthCodeFlowProviderConfig(
+                client_id=credentials.client_id,
+                client_secret=credentials.client_secret or "",
+                authorization_url=str(endpoints.authorization_url),
+                token_url=str(endpoints.token_url),
+                token_endpoint_auth_method=getattr(self.config, "token_endpoint_auth_method", None),
+                redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
+                scopes=self._effective_scopes() or [],
+                use_pkce=bool(self.config.use_pkce),
+            )
+            self._auth_code_provider = TmpOAuth2AuthCodeFlowProvider(oauth2_config)
+
+        # if user id is not provided use the MCP server url as the user id
+        if user_id is None:
+            user_id = str(self.config.server_url)
+
+        # Auth code provider is responsible for per-user cache + refresh
+        return await self._auth_code_provider.authenticate(user_id=user_id)

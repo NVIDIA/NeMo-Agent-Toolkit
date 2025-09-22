@@ -50,6 +50,8 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     # Advanced options
     use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
 
+    # Temporary config parameter (should be removed before merging)
+    use_tmp_oauth2_provider: bool = Field(default=False, description="Use the temporary OAuth2 provider")
 
     @model_validator(mode="after")
     def validate_auth_config(self):
