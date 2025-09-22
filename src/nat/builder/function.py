@@ -528,6 +528,7 @@ class FunctionGroup:
     async def get_accessible_functions_with_refresh(
         self,
         filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None,
+        rebuild: bool = False
     ) -> dict[str, Function]:
         """
         Returns a dictionary of all accessible functions in the function group with refresh.
@@ -541,13 +542,15 @@ class FunctionGroup:
             A callback function to additionally filter the functions in the function group dynamically. If not provided
             then fall back to the function group's filter function. If no filter function is set for the function group
             all functions will be returned.
+        rebuild: bool, optional
+            Whether to rebuild the function group. If True, the refresh function will be called.
 
         Returns
         -------
         dict[str, Function]
             A dictionary of all accessible functions in the function group.
         """
-        await self._ensure_refreshed()
+        await self._ensure_refreshed(rebuild=rebuild)
         return self.get_accessible_functions(filter_fn=filter_fn)
 
     def get_excluded_functions(
