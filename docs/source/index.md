@@ -23,7 +23,7 @@ limitations under the License.
    :class: highlight
 ```
 
-![NVIDIA NeMo Agent Toolkit](./_static/aiqtoolkit_banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](./_static/banner.png "NeMo Agent toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit Overview
 
@@ -31,7 +31,7 @@ NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that 
 
 
 :::{note}
-NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. The transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
+NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `nvidia-nat` instead of `aiqtoolkit` or `agentiq`. The transitional packages named `aiqtoolkit` and `agentiq` are available for backwards compatibility, but will be removed in the future.
 :::
 
 ## Key Features
@@ -44,7 +44,7 @@ NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on 
 
 - [**Profiling:**](./workflows/profiler.md) Use the profiler to profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 
-- [**Observability:**](./workflows/observe/index.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool, with examples using [Phoenix](./workflows/observe/observe-workflow-with-phoenix.md) and [W&B Weave](./workflows/observe/observe-workflow-with-weave.md).
+- [**Observability:**](./workflows/observe/index.md) Monitor and debug your workflows with dedicated integrations for popular observability platforms such as Phoenix, Weave, and Langfuse, plus compatibility with OpenTelemetry-based systems. Track performance, trace execution flows, and gain insights into your agent behaviors.
 
 - [**Evaluation System:**](./workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
@@ -81,12 +81,16 @@ Tutorials <./tutorials/index.md>
 About Workflows <./workflows/about/index.md>
 ./workflows/run-workflows.md
 Workflow Configuration <./workflows/workflow-configuration.md>
+./workflows/llms/index.md
+./workflows/embedders.md
+./workflows/retrievers.md
 Functions <./workflows/functions/index.md>
+./workflows/function-groups.md
 ./workflows/mcp/index.md
 Evaluate Workflows <./workflows/evaluate.md>
+Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 Profiling Workflows <./workflows/profiler.md>
 Sizing Calculator <./workflows/sizing-calc.md>
-./workflows/using-local-llms.md
 ./workflows/observe/index.md
 ```
 
@@ -96,6 +100,7 @@ Sizing Calculator <./workflows/sizing-calc.md>
 
 Memory Module <./store-and-retrieve/memory.md>
 ./store-and-retrieve/retrievers.md
+Object Store <./store-and-retrieve/object-store.md>
 ```
 
 ```{toctree}
@@ -103,14 +108,19 @@ Memory Module <./store-and-retrieve/memory.md>
 :caption: Extend
 
 Writing Custom Functions <./extend/functions.md>
+Writing Custom Function Groups <./extend/function-groups.md>
 Extending the NeMo Agent Toolkit Using Plugins <./extend/plugins.md>
 Sharing Components <./extend/sharing-components.md>
 Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/adding-a-retriever.md
 ./extend/memory.md
 Adding an LLM Provider <./extend/adding-an-llm-provider.md>
+Gated Fields <./extend/gated-fields.md>
+Adding an Object Store Provider <./extend/object-store.md>
+Adding an Authentication Provider <./extend/adding-an-authentication-provider.md>
 Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
 Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
+Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
 ```
 
 ```{toctree}
@@ -118,13 +128,16 @@ Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
 :caption: Reference
 
 ./api/index.rst
-./reference/interactive-models.md
+API Authentication <./reference/api-authentication.md>
+Interactive Models <./reference/interactive-models.md>
 API Server Endpoints <./reference/api-server-endpoints.md>
-./reference/websockets.md
+Websockets <./reference/websockets.md>
 Command Line Interface (CLI) <./reference/cli.md>
 Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
+Optimizer <./reference/optimizer.md>
+Test Time Compute <./reference/test-time-compute.md>
 Troubleshooting <./troubleshooting.md>
 ```
 
@@ -134,8 +147,9 @@ Troubleshooting <./troubleshooting.md>
 
 FAQ <./resources/faq.md>
 Code of Conduct <./resources/code-of-conduct.md>
+Migration Guide <./resources/migration-guide.md>
 Contributing <./resources/contributing.md>
 ./resources/running-ci-locally.md
 ./support.md
-./resources/licensing
+./resources/licensing.md
 ```

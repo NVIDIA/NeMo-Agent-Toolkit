@@ -17,13 +17,13 @@ limitations under the License.
 
 # About NVIDIA NeMo Agent Toolkit Workflows
 
-Workflows are the heart of NeMo Agent toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
+Workflows are the heart of the NeMo Agent toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
 
 ## Understanding the Workflow Configuration File
 
-The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/basic/functions/simple` workflow to show how they're organized.
+The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/getting_started/simple_web_query` workflow to show how they're organized.
 
-`examples/basic/functions/simple/configs/config.yml`:
+`examples/getting_started/simple_web_query/configs/config.yml`:
 ```yaml
 functions:
   webpage_query:
@@ -51,8 +51,7 @@ workflow:
   tool_names: [webpage_query, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 ```
 
 This workflow configuration is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. The `functions` section contains the tools used in the workflow, while `llms` and `embedders` define the models used in the workflow, and lastly the `workflow` section ties the other sections together and defines the workflow itself.
@@ -69,6 +68,8 @@ For details on workflow configuration, including sections not utilized in the ab
 
 ReAct Agent <./react-agent.md>
 Reasoning Agent <./reasoning-agent.md>
-./rewoo-agent.md
+ReWOO Agent <./rewoo-agent.md>
+Router Agent <./router-agent.md>
+Sequential Executor <./sequential-executor.md>
 Tool Calling Agent <./tool-calling-agent.md>
 ```

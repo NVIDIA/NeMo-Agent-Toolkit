@@ -1,0 +1,28 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../../.."
+
+[project]
+name = "nat_multi_frameworks"
+dynamic = ["version"]
+dependencies = [
+  "nvidia-nat[langchain,llama-index]~=1.3",
+  "arxiv~=2.1.3",
+  "bs4==0.0.2",
+  "markdown-it-py~=3.0",
+  "nvidia-haystack==0.1.2",
+  "openai~=1.106", # Pin to compatible range with llama-index
+]
+requires-python = ">=3.11,<3.14"
+description = "Custom NeMo Agent toolkit Workflow"
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+
+[project.entry-points.'nat.components']
+nat_multi_frameworks = "nat_multi_frameworks.register"

@@ -38,11 +38,11 @@ if typing.TYPE_CHECKING:
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 DOC_DIR = os.path.dirname(CUR_DIR)
 ROOT_DIR = os.path.dirname(os.path.dirname(CUR_DIR))
-AIQ_DIR = os.path.join(ROOT_DIR, "src", "aiq")
+NAT_DIR = os.path.join(ROOT_DIR, "src", "nat")
 
 # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
 # AutoAPI support for implicit namespaces is broken, so we need to manually
-# construct an aiq package with an __init__.py file
+# construct an nat package with an __init__.py file
 BUILD_DIR = os.path.join(DOC_DIR, "build")
 API_TREE = os.path.join(BUILD_DIR, "_api_tree")
 
@@ -50,20 +50,20 @@ if os.path.exists(API_TREE):
     shutil.rmtree(API_TREE)
 
 os.makedirs(API_TREE)
-shutil.copytree(AIQ_DIR, os.path.join(API_TREE, "aiq"))
-with open(os.path.join(API_TREE, "aiq", "__init__.py"), "w") as f:
+shutil.copytree(NAT_DIR, os.path.join(API_TREE, "nat"))
+with open(os.path.join(API_TREE, "nat", "__init__.py"), "w") as f:
     f.write("")
 
 # -- Project information -----------------------------------------------------
 
-project = 'NVIDIA Agent Intelligence Toolkit'
+project = 'NVIDIA NeMo Agent Toolkit'
 copyright = '2025, NVIDIA'
 author = 'NVIDIA Corporation'
 
 # Retrieve the version number from git via setuptools_scm
 called_proc = subprocess.run('python -m setuptools_scm', shell=True, capture_output=True, check=True)
 release = called_proc.stdout.strip().decode('utf-8')
-version = '.'.join(release.split('.')[:3])
+version = '.'.join(release.split('.')[:2])
 
 # -- General configuration ---------------------------------------------------
 
@@ -126,13 +126,19 @@ numpydoc_class_members_toctree = False
 # Config linkcheck
 # Ignore localhost and url prefix fragments
 # Ignore openai.com links, as these always report a 403 when requested by the linkcheck agent
+# mysql.com  reports a 403 when requested by linkcheck
+# api.service.com is a placeholder for a service example
+# Once v1.2 is merged into main, remove the ignore for the banner.png
 linkcheck_ignore = [
     r'http://localhost:\d+/',
     r'https://localhost:\d+/',
     r'^http://$',
     r'^https://$',
     r'https://(platform\.)?openai.com',
-    r'https://code.visualstudio.com'
+    r'https://code.visualstudio.com',
+    r'https://www.mysql.com',
+    r'https://api.service.com',
+    r'http://custom-server'
 ]
 
 # The suffix(es) of source filenames.
@@ -174,9 +180,13 @@ html_theme = "nvidia_sphinx_theme"
 html_logo = '_static/main_nv_logo_square.png'
 html_title = f'{project} ({version})'
 
+# Setting check_switcher to False, since we are building the version switcher for the first time, the json_url will
+# return 404s, which will then cause the build to fail.
 html_theme_options = {
-    'collapse_navigation': False,
-    'navigation_depth': 6,
+    'collapse_navigation':
+        False,
+    'navigation_depth':
+        6,
     'extra_head': [  # Adding Adobe Analytics
         '''
     <script src="https://assets.adobedtm.com/5d4962a43b79/c1061d2c5e7b/launch-191c2462b890.min.js" ></script>
@@ -187,8 +197,21 @@ html_theme_options = {
     <script type="text/javascript">if (typeof _satellite !== "undefined") {_satellite.pageBottom();}</script>
     '''
     ],
-    "show_nav_level": 2
+    "show_nav_level":
+        2,
+    "switcher": {
+        "json_url": "../versions1.json", "version_match": version
+    },
+    "check_switcher":
+        False,
+    "icon_links": [{
+        "name": "GitHub",
+        "url": "https://github.com/NVIDIA/NeMo-Agent-Toolkit",
+        "icon": "fa-brands fa-github",
+    }],
 }
+
+html_extra_path = ["versions1.json"]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -208,7 +231,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'aiqdoc'
+htmlhelp_basename = 'natdoc'
 
 # -- Options for LaTeX output ------------------------------------------------
 
@@ -234,14 +257,14 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (root_doc, 'aiq.tex', 'Agent Intelligence Toolkit Documentation', 'NVIDIA', 'manual'),
+    (root_doc, 'nat.tex', 'NeMo Agent Toolkit Documentation', 'NVIDIA', 'manual'),
 ]
 
 # -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(root_doc, 'aiq', 'Agent Intelligence Toolkit Documentation', [author], 1)]
+man_pages = [(root_doc, 'nat', 'NeMo Agent Toolkit Documentation', [author], 1)]
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -250,10 +273,10 @@ man_pages = [(root_doc, 'aiq', 'Agent Intelligence Toolkit Documentation', [auth
 #  dir menu entry, description, category)
 texinfo_documents = [
     (root_doc,
-     'aiq',
-     'Agent Intelligence Toolkit Documentation',
+     'nat',
+     'NeMo Agent Toolkit Documentation',
      author,
-     'aiq',
+     'nat',
      'One line description of project.',
      'Miscellaneous'),
 ]
@@ -273,7 +296,7 @@ default_role = "py:obj"
 # The defauylt docstring for Pydantic models contains some docstrings that cause parsing warnings for docutils.
 # While this string is tightly tied to a specific version of Pydantic, it is hoped that this will be resolved in future
 # versions of Pydantic.
-PYDANTIC_DEFAULT_DOCSTRING = 'Usage docs: https://docs.pydantic.dev/2.10/concepts/models/\n'
+PYDANTIC_DEFAULT_DOCSTRING = "A base class for creating Pydantic models."
 
 
 def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonObject", skip: bool,
@@ -282,7 +305,7 @@ def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonO
     if not skip:
         bases = getattr(obj, 'bases', [])
         if (not skip and ('pydantic.BaseModel' in bases or 'EndpointBase' in bases)
-                and obj.docstring.startswith(PYDANTIC_DEFAULT_DOCSTRING)):
+                and PYDANTIC_DEFAULT_DOCSTRING in obj.docstring):
             obj.docstring = ""
 
     return skip

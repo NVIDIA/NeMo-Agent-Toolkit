@@ -1,0 +1,25 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../../.."
+
+[project]
+name = "nat_automated_description_generation"
+dynamic = ["version"]
+dependencies = [
+    "nvidia-nat[ingestion,langchain]~=1.3",
+    "usearch~=2.21.0",
+]
+requires-python = ">=3.11,<3.14"
+description = "Automated Description Generation NAT example"
+keywords = ["ai", "rag", "agents"]
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+
+[project.entry-points.'nat.components']
+nat_automated_description_generation = "nat_automated_description_generation.register"

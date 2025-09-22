@@ -1,3 +1,4 @@
+
 # SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -23,6 +24,7 @@ workflow:
     - if: $CI_COMMIT_TAG
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH =~ /^release\/.*$/
 
 stages:
   - check
@@ -32,28 +34,26 @@ stages:
   - upload
 
 variables:
-  UV_CACHE_DIR: .uv-cache
-  GIT_SUBMODULE_STRATEGY: recursive
-  GIT_SUBMODULE_FORCE_HTTPS: "true"
   BUILD_AIQ_COMPAT: "true"
+  BUILD_NAT_COMPAT: "true"
+  GIT_SUBMODULE_FORCE_HTTPS: "true"
+  GIT_SUBMODULE_STRATEGY: recursive
+  MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+  NAT_CI_MYSQL_HOST: "mysql"
+  NAT_CI_REDIS_HOST: "redis"
+  NAT_CI_S3_HOST: "minio"
+  UV_CACHE_DIR: .uv-cache
+  WORKSPACE_TMP: "${CI_PROJECT_DIR}/.tmp"
 
 default:
-  image: rapidsai/ci-conda:cuda12.5.1-ubuntu22.04-py3.12
+  image: ghcr.io/astral-sh/uv:python3.13-bookworm
   cache:
     - key: $CI_COMMIT_REF_SLUG
       paths:
         - $UV_CACHE_DIR
   before_script:
-    # Ensure UV is installed
-    - pip install uv
-    - uv venv --seed .venv
-    - source .venv/bin/activate
+    - mkdir -p ${WORKSPACE_TMP}
 
-    # Ensure Git LFS is installed
-    - conda install git-lfs -y
-    - git lfs install
-    - git lfs fetch
-    - git lfs pull
   after_script:
     # Your `uv` commands
     - uv cache prune --ci
@@ -75,19 +75,23 @@ check:style:
 
 test:python_tests:
   stage: test
+  services:
+    - mysql:9.3
+    - name: minio/minio:RELEASE.2025-07-18T21-56-31Z
+      alias: minio
+      command: ["server", "/data", "--console-address", ":9001"]
+    - redis:7-alpine
   script:
     - echo "Running tests"
     - ./ci/scripts/gitlab/tests.sh
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
   coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
   artifacts:
     when: always
     reports:
-      junit: report_*.xml
+      junit: pytest_junit_report*.xml
       coverage_report:
         coverage_format: cobertura  # or jacoco
-        path: report_pytest_coverage.xml
+        path: pytest_coverage_report*.xml
 
 docs:build:
   stage: docs
@@ -109,12 +113,12 @@ package:wheel:
     - ./ci/scripts/gitlab/build_wheel.sh
   artifacts:
     paths:
-      # match - .tmp/wheels/aiqtoolkit/aiqtoolkit/<version>/*.whl, .tmp/wheels/aiqtoolkit/aiqtoolkit-crewai/<version>/*.whl etc.
-      - .tmp/wheels/aiqtoolkit/*/*/*.whl
+      # match - .tmp/wheels/nvidia-nat/<version>/*.whl, .tmp/wheels/nvidia-nat/nvidia-nat-crewai/<version>/*.whl etc.
+      - .tmp/wheels/nvidia-nat/*/*/*.whl
       # Match the example wheels
-      - .tmp/wheels/aiqtoolkit/examples/*.whl
+      - .tmp/wheels/nvidia-nat/examples/*.whl
       # Match  the transitional wheels
-      - .tmp/wheels/agentiq/*/*/*.whl
+      - .tmp/wheels/nat/*/*/*.whl
     expire_in: 1 week
 
 

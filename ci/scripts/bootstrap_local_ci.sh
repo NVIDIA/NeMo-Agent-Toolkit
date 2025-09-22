@@ -14,15 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [[ "${USE_HOST_GIT}" == "1" ]]; then
-    cd aiqtoolkit/
-    git config --global --add safe.directory /aiqtoolkit
-
+if [[ -n "${SSH_AUTH_SOCK}" ]]; then
     # Avoids SSH host key verification prompt
     ssh-keyscan github.com >> /etc/ssh/ssh_known_hosts
+fi
+
+if [[ "${USE_HOST_GIT}" == "1" ]]; then
+    cd nat/
+    git config --global --add safe.directory /nat
+
 else
-    git clone ${GIT_URL} aiqtoolkit
-    cd aiqtoolkit/
+    echo "Cloning from ${GIT_URL}"
+
+    git clone -q ${GIT_URL} nat
+    cd nat/
     git remote add upstream ${GIT_UPSTREAM_URL}
     git fetch upstream
     git checkout develop
@@ -39,8 +44,9 @@ export WORKSPACE=$(pwd)
 export LOCAL_CI=1
 export WORKSPACE_TMP="${LOCAL_CI_TMP}/local_ci_workspace"
 export UV_CACHE_DIR="${LOCAL_CI_TMP}/cache/uv"
+export UV_VENV_CLEAR=1
 export PRE_COMMIT_HOME="${LOCAL_CI_TMP}/cache/pre_commit"
-export BUILD_AIQ_COMPAT="true"
+export BUILD_NAT_COMPAT="true"
 mkdir -p ${UV_CACHE_DIR}
 
 GH_SCRIPT_DIR="${WORKSPACE}/ci/scripts/github"

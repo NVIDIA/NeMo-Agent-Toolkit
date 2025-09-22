@@ -22,7 +22,7 @@ NeMo Agent toolkit workflows are defined by a [YAML configuration file](#workflo
 The configuration attributes of each entity in NeMo Agent toolkit is defined by a [Configuration Object](#configuration-object). This object defines both the type and optionally the default value of each attribute. Any attribute without a default value is required to be specified in the configuration file.
 
 ## Configuration Object
-Each NeMo Agent toolkit tool requires a configuration object which inherits from {py:class}`~aiq.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all NeMo Agent toolkit configuration objects are subclasses of the [`pydantic.BaseModel `](https://docs.pydantic.dev/2.9/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.9/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
+Each NeMo Agent toolkit tool requires a configuration object which inherits from {py:class}`~nat.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all NeMo Agent toolkit configuration objects are subclasses of the [`pydantic.BaseModel `](https://docs.pydantic.dev/2.9/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.9/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
 
 - `FunctionRef`: Refers to a registered function by its instance name in the `functions` section configuration object.
 - `LLMRef`: Refers to a registered LLM by its instance name in the `llms` section of the configuration object.
@@ -35,7 +35,7 @@ Each NeMo Agent toolkit tool requires a configuration object which inherits from
 
 The workflow configuration file is a YAML file that specifies the tools and models to use in the workflow, along with general configuration settings. To illustrate how these are organized, we will examine the configuration of the simple workflow.
 
-`examples/basic/functions/simple/configs/config.yml`:
+`examples/getting_started/simple_web_query/configs/config.yml`:
 ```yaml
 functions:
   webpage_query:
@@ -63,8 +63,7 @@ workflow:
   tool_names: [webpage_query, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 ```
 
 From the above we see that it is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. There are additional optional sections not used in the above example they are: `general`, `memory`, `retrievers`, and `eval`.
@@ -74,31 +73,32 @@ The `functions` section contains the tools used in the workflow, in our example 
 
 
 ### `llms`
-This section contains the models used in the workflow. The `_type` value refers to the API hosting the model, in this case `nim` refers to an NIM model hosted on [`build.nvidia.com`](https://build.nvidia.com). The supported API types are `nim`, and `openai`.
+This section contains the models used in the workflow. The `_type` value refers to the API hosting the model, in this case `nim` refers to an NIM model hosted on [`build.nvidia.com`](https://build.nvidia.com).
 
+<!-- path-check-skip-next-line -->
 The `model_name` value then needs to match a model hosted by the API, in our example we are using the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model.
 
-Both the `nim` and `openai` APIs support API specific attributes. For `nim` these are defined in the {py:class}`~aiq.llm.nim_llm.NIMModelConfig` class, and for `openai` these are defined in the {py:class}`~aiq.llm.openai_llm.OpenAIModelConfig` class.
+Each type of API supports specific attributes. For `nim` these are defined in the {py:class}`~nat.llm.nim_llm.NIMModelConfig` class.
+
+See the [LLMs](./llms/index.md) documentation for more information.
 
 ### `embedders`
+<!-- path-check-skip-next-line -->
 This section follows a the same structure as the `llms` section and serves as a way to separate the embedding models from the LLM models. In our example, we are using the [`nvidia/nv-embedqa-e5-v5`](https://build.nvidia.com/nvidia/nv-embedqa-e5-v5) model.
+
+See the [Embedders](./embedders.md) documentation for more information.
 
 ### `workflow`
 
 This section ties the previous sections together by defining the tools and LLM models to use. The `tool_names` section lists the tool names from the `functions` section, while the `llm_name` section specifies the LLM model to use.
 
-The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. You can also use the workflow type, `tool_calling_agent`. The parameters for each are specified by the {py:class}`~aiq.agent.react_agent.register.ReActAgentWorkflowConfig` and {py:class}`~aiq.agent.tool_calling_agent.register.ToolCallAgentWorkflowConfig` classes respectively.
+The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. You can also use the workflow type, `tool_calling_agent`. The parameters for each are specified by the {py:class}`~nat.agent.react_agent.register.ReActAgentWorkflowConfig` and {py:class}`~nat.agent.tool_calling_agent.register.ToolCallAgentWorkflowConfig` classes respectively.
 
 ### `general`
-This section contains general configuration settings for AngentIQ which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~aiq.data_models.config.GeneralConfig` class.
+This section contains general configuration settings for NeMo Agent toolkit which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~nat.data_models.config.GeneralConfig` class.
 
 :::{note}
-The `use_uvloop` parameter which specifies whether to use the [`uvloop`](https://github.com/MagicStack/uvloop) event loop. This is set to `true` by default, and can provide a significant speedup in some cases, however this can also make it difficult to debug workflow issues. For debugging purposes it is recommended to set this to `false`:
-
-```yaml
-general:
-  use_uvloop: false
-```
+⚠️ **Deprecated**: The `use_uvloop` parameter is deprecated and will be removed in a future release. Previously, the `use_uvloop` parameter meant to specify whether to use the [`uvloop`](https://github.com/MagicStack/uvloop) event loop, but now the use of `uv_loop` will be automatically determined based on the system platform the user is using.
 :::
 
 ### `eval`
@@ -110,7 +110,9 @@ This section configures integration of memory layers with tools such as the [Mem
 
 ### `retrievers`
 
-This section configures retrievers for vector stores. It follows the same format as the `llms` section. Refer to the `examples/rag_demo` example workflow for an example on how this is used.
+This section configures retrievers for vector stores. It follows the same format as the `llms` section. Refer to the `examples/RAG/simple_rag` example workflow for an example on how this is used.
+
+See the [Retrievers](./retrievers.md) documentation for more information.
 
 ### Environment Variable Interpolation
 

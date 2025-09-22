@@ -16,9 +16,7 @@ limitations under the License.
 -->
 
 # ReAct Agent
-Agents are a major use-case for language models. Agents are systems that use LLMs to reason and determine what actions
-to take and what inputs to use for those actions. After executing those actions, the agent uses the LLM to determine
-if more actions are required. This agent is a ReAct (Reasoning and Acting) Agent, based on the [ReAct paper](https://react-lm.github.io/).
+Agents are a major use-case for language models. Agents are systems that use LLMs to reason and determine what actions to take and what inputs to use for those actions. After executing those actions, the agent uses the LLM to determine if more actions are required. This agent is a ReAct (Reasoning and Acting) agent, based on the [ReAct paper](https://react-lm.github.io/).
 
 The ReAct agent's prompt is directly inspired by the prompt examples in the appendix of the
 paper.
@@ -36,7 +34,7 @@ paper.
 ---
 
 ## Requirements
-The ReAct agent requires the `aiqtoolkit[langchain]` plugin to be installed.
+The ReAct agent requires the `nvidia-nat[langchain]` plugin to be installed.
 
 If you have performed a source code checkout, you can install this with the following command:
 
@@ -46,7 +44,7 @@ uv pip install -e '.[langchain]'
 
 ## Configuration
 
-The ReAct agent may be utilized as a Workflow or a Function.
+The ReAct agent may be utilized as a workflow or a function.
 
 ### Example `config.yml`
 In your YAML file, to use the ReAct agent as a workflow:
@@ -56,8 +54,7 @@ workflow:
   tool_names: [wikipedia_search, current_datetime, code_generation, math_agent]
   llm_name: nim_llm
   verbose: true
-  handle_parsing_errors: true
-  max_retries: 2
+  parse_agent_response_max_retries: 2
 ```
 In your YAML file, to use the ReAct agent as a function:
 ```yaml
@@ -67,7 +64,7 @@ functions:
   calculator_inequality:
     _type: calculator_inequality
   calculator_divide:
-    _type: aiq_simple_calculator/calculator_divide
+    _type: nat_simple_calculator/calculator_divide
   math_agent:
     _type: react_agent
     tool_names:
@@ -78,17 +75,26 @@ functions:
 ```
 
 ### Configurable Options:
+
+* `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReAct agent is configured as a workflow and need to expose a customized name as a tool.
+
 * `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file.
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file.
 
-* `verbose`: Defaults to `False` (useful to prevent logging of sensitive data).  If set to `True`, the Agent will log input, output, and intermediate steps.
+* `verbose`: Defaults to `False` (useful to prevent logging of sensitive data).  If set to `True`, the agent will log input, output, and intermediate steps.
 
-* `retry_parsing_errors`: Defaults to `True`.  Sometimes, the Agent may hallucinate and might not output exactly in the ReAct output format (due to inherit LLM variability.  These hallucinations can be reduced by tweaking the prompt to be more specific for your use-case.); if set to `True`, the Agent will identify the issue with the LLM output (how exactly are we missing the ReAct output format?) and will retry the LLM call, including the output format error information.
+* `retry_agent_response_parsing_errors`: Defaults to `True`.  If set to `True`, the agent will retry parsing errors.  If set to `False`, the agent will raise an exception.
 
-* `max_retries`: Defaults to `1`.  Maximum amount of times the Agent may retry parsing errors.  Prevents the Agent from getting into infinite hallucination loops.
+* `parse_agent_response_max_retries`: Defaults to `1`.  Maximum amount of times the agent may retry parsing errors.  Prevents the agent from getting into infinite hallucination loops.
 
-* `max_iterations`: Defaults to `15`.  The ReAct agent may reason between tool calls, and might use multiple tools to answer the question; the maximum amount of tool calls the Agent may take before answering the original question.
+* `tool_call_max_retries`: Defaults to `1`.  Maximum amount of times the agent may retry tool call errors.  Prevents the agent from getting into infinite tool call loops.
+
+* `max_tool_calls`: Defaults to `15`.  The ReAct agent may reason between tool calls, and might use multiple tools to answer the question; the maximum amount of tool calls the agent may take before answering the original question.
+
+* `pass_tool_call_errors_to_agent`: Defaults to `True`.  If set to `True`, the agent will pass tool call errors to the agent.  If set to `False`, the agent will raise an exception.
+
+* `normalize_tool_input_quotes`: Defaults to `True`. When JSON parsing of the tool input fails and this is `True`, the agent attempts a fallback that replaces single quotes with double quotes and retries parsing. Set to `False` to bypass normalization and pass the raw string to the tool (useful when inputs contain SQL or other quote‑sensitive content).
 
 * `description`:  Defaults to `"ReAct Agent Workflow"`.  When the ReAct agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
 
@@ -102,12 +108,12 @@ If modifying the prompt, see the limitations section below. The prompt must have
 * `include_tool_input_schema_in_tool_description`: Defaults to `True`.  If set to `True`, the ReAct agent will inspect its tools' input schemas, and append the following to each tool description:
   >. Arguments must be provided as a valid JSON object following this format: {tool_schema}
 
+* `additional_instructions`: Optional.  Additional instructions to provide to the agent in addition to the base prompt.
 ---
 
 ## How the ReAct Agent works
 
-A **ReAct (Reasoning and Acting) agent** is an AI system that decides what actions to take by reasoning step-by-step. Instead of making a decision in one go, it follows an **iterative thought process**, inspired by the [ReAct paper](https://react-lm.github.io/).
-The Agent uses an LLM to make the decisions, and to summarize the tool responses in natural human language.  To decide which tool(s) to use to answer the question, the ReAct agent uses the names and descriptions of its tools.
+A **ReAct agent** is an AI system that decides what actions to take by reasoning step-by-step. Instead of making a decision in one go, it follows an **iterative thought process**. The agent uses an LLM to make the decisions, and to summarize the tool responses in natural human language.  To decide which tool(s) to use to answer the question, the ReAct agent uses the names and descriptions of its tools.
 
 ### **Step-by-Step Breakdown of a ReAct Agent**
 
@@ -136,6 +142,7 @@ Imagine a ReAct agent needs to answer:
 ### ReAct Prompting and Output Format
 
 ReAct agents require the LLM to output in ReAct output format.  This is an example of the ReAct output format for calling a tool:
+
 ```
 Thought: To answer this question, I need to find information about Djikstra.
 
@@ -143,19 +150,20 @@ Action: wikipedia_search
 Action Input: Djikstra
 
 Observation: (I will wait for the human to call the wikipedia tool and provide the response...)
-
 ```
+
 This is an example of the ReAct output format when the agent has the final answer:
+
 ```
 Thought: I now know the final answer
 
 Final Answer: Djikstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist. He is best known for his work on the shortest path problem and the development of Dijkstra's algorithm, which is used to find the shortest path between nodes in a weighted graph.
-
 ```
 
 We may tweak, modify, or completely change the ReAct agent prompt, but the LLM output must match the ReAct output format, and the prompt must have a prompt variable named `{tools}` and `{tool_names}`
 
 A sample ReAct agent prompt is provided in prompt.py:
+
 ```
 Answer the following questions as best you can. You may ask the human to use the following tools:
 
@@ -180,7 +188,7 @@ Final Answer: the final answer to the original input question
 ---
 
 ## Limitations
-ReAct (Reasoning and Acting) agents are powerful but come with several limitations that make them less efficient in certain use cases compared to tool-calling agents or reasoning agents. The limitations are as follows:
+ReAct agents are powerful but come with several limitations that make them less efficient in certain use cases compared to tool-calling agents or reasoning agents. The limitations are as follows:
 
 * ReAct agents Require More LLM Calls
 

@@ -15,58 +15,119 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Agent Intelligence Toolkit Examples
+# NeMo Agent Toolkit Examples
 
-Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular feature or use case of the AIQ toolkit library. Most of these contain a custom [workflow](../docs/source/tutorials/index.md) along with a set of custom tools ([functions](../docs/source/workflows/functions/index.md) in AIQ toolkit). These examples can be used as a starting off point for creating your own custom workflows and tools. Each example contains a `README.md` file that explains the use case along with instructions on how to run the example.
+Each NVIDIA NeMo Agent toolkit example demonstrates a particular feature or use case of the NeMo Agent toolkit library. Most of these contain a custom [workflow](../docs/source/tutorials/index.md) along with a set of custom tools ([functions](../docs/source/workflows/functions/index.md) in NeMo Agent toolkit). These examples can be used as a starting off point for creating your own custom workflows and tools. Each example contains a `README.md` file that explains the use case along with instructions on how to run the example.
+
+## Examples Repository
+In addition the examples in this repository, there are examples in the [NeMo-Agent-Toolkit-Examples](https://github.com/NVIDIA/NeMo-Agent-Toolkit-Examples) repository.
+
+The difference between the examples in this repository and the NeMo-Agent-Toolkit-Examples repository is that the examples in this repository are maintained, tested, and updated with each release of the NeMo Agent toolkit. These examples have high quality standards and demonstrate a capability of the NeMo Agent toolkit.
+
+The examples in the NeMo-Agent-Toolkit-Examples repository are community contributed and are tied to a specific version of the NeMo Agent toolkit, and do not need to demonstrate a specific capability of the library.
+
+
+## Table of Contents
+
+- [Installation and Setup](#installation-and-setup)
+- [Example Categories](#example-categories)
+  - [Getting Started](#getting-started)
+  - [Agents](#agents)
+  - [Advanced Agents](#advanced-agents)
+  - [Control Flow](#control-flow)
+  - [Custom Functions](#custom-functions)
+  - [Evaluation and Profiling](#evaluation-and-profiling)
+  - [Frameworks](#frameworks)
+  - [Front Ends](#front-ends)
+  - [Human In The Loop (HITL)](#human-in-the-loop-hitl)
+  - [Memory](#memory)
+  - [Model Context Protocol (MCP)](#model-context-protocol-mcp)
+  - [Notebooks](#notebooks)
+  - [Object Store](#object-store)
+  - [Observability](#observability)
+  - [Retrieval Augmented Generation (RAG)](#retrieval-augmented-generation-rag)
+  - [UI](#ui)
+- [Documentation Guide Files](#documentation-guide-files)
+  - [Locally Hosted LLMs](#locally-hosted-llms)
+  - [Workflow Artifacts](#workflow-artifacts)
+
+## Installation and Setup
+
+To run the examples, install the NeMo Agent toolkit from source, if you haven't already done so, by following the instructions in [Install From Source](../docs/source/quick-start/installing.md#install-from-source).
 
 ## Example Categories
 
-### Basic ([`basic`](basic/))
-- **[`scaffolding`](basic/scaffolding/)**: Workflow scaffolding and project generation using automated commands and intelligent code generation
-- **[`functions`](basic/functions/)**: Function implementation examples including:
-  - [`simple`](basic/functions/simple/): LangSmith documentation agent that scrapes and answers questions about LangSmith using web retrieval and vector search
-  - [`simple_calculator`](basic/functions/simple_calculator/): Mathematical agent with tools for arithmetic operations, time comparison, and complex calculations
-  - [`automated_description_generation`](basic/functions/automated_description_generation/): Intelligent system that automatically generates descriptions for vector database collections by sampling and summarizing documents
-  - [`plot_charts`](basic/functions/plot_charts/): Multi-agent chart plotting system that routes requests to create different chart types (line, bar, etc.) from data
-- **[`frameworks`](basic/frameworks/)**: Integration examples with different AI frameworks including:
-  - [`multi_frameworks`](basic/frameworks/multi_frameworks/): Supervisor agent coordinating LangChain, LlamaIndex, and Haystack agents for research, RAG, and chitchat tasks
-  - [`agno_personal_finance`](basic/frameworks/agno_personal_finance/): Personal finance planning agent built with Agno framework that researches and creates tailored financial plans
-  - [`semantic_kernel_demo`](basic/frameworks/semantic_kernel_demo/): Multi-agent travel planning system using Microsoft Semantic Kernel with specialized agents for itinerary creation, budget management, and report formatting, including long-term memory for user preferences
+### Getting Started
+- **[`scaffolding`](getting_started/scaffolding/README.md)**: Workflow scaffolding and project generation using automated commands and intelligent code generation
+- **[`simple_web_query`](getting_started/simple_web_query/README.md)**: Basic LangSmith documentation agent that searches the internet to answer questions about LangSmith.
+- **[`simple_calculator`](getting_started/simple_calculator/README.md)**: Mathematical agent with tools for arithmetic operations, time comparison, and complex calculations
 
-### Intermediate ([`intermediate`](intermediate/))
-- **[`evaluation_and_profiling`](intermediate/evaluation_and_profiling/)**: Performance evaluation and profiling tools including:
-  - [`swe_bench`](intermediate/evaluation_and_profiling/swe_bench/): Software engineering benchmark system for evaluating AI models on real-world coding tasks
-  - [`simple_calculator_eval`](intermediate/evaluation_and_profiling/simple_calculator_eval/): Evaluation and profiling configurations based on the basic simple calculator example
-  - [`simple_eval`](intermediate/evaluation_and_profiling/simple_eval/): Evaluation and profiling configurations based on the basic simple example
-  - [`email_phishing_analyzer`](intermediate/evaluation_and_profiling/email_phishing_analyzer/): Security-focused email analysis system that detects phishing attempts using multiple LLMs, including its evaluation and profiling configurations
-- **[`UI`](intermediate/UI/)**: User interface examples for interactive AIQ toolkit applications
-- **[`HITL`](intermediate/HITL/)**: Human-in-the-loop workflow examples including:
-  - [`simple_calculator_hitl`](intermediate/HITL/simple_calculator_hitl/): Human-in-the-loop version of the basic simple calculator that requests approval before increasing the agent's iteration limits
-  - [`por_to_jiratickets`](intermediate/HITL/por_to_jiratickets/): Project requirements to Jira ticket conversion with human oversight
-- **[`MCP`](intermediate/MCP/)**: Model Context Protocol implementation examples:
-  - [`simple_calculator_mcp`](intermediate/MCP/simple_calculator_mcp/): Demonstrates Model Context Protocol support using the basic simple calculator example
-- **[`custom_routes`](intermediate/custom_routes/)**: Custom routing and API endpoint examples:
-  - [`simple_calculator_custom_routes`](intermediate/custom_routes/simple_calculator_custom_routes/): Basic simple calculator with custom API routing and endpoint configuration
-- **[`observability`](intermediate/observability/)**: Monitoring and observability integration examples:
-  - [`redact_pii`](intermediate/observability/redact_pii/): Demonstrates how to use Weights & Biases (W&B) Weave with PII redaction
-  - [`simple_calculator_observability`](intermediate/observability/simple_calculator_observability/): Basic simple calculator with integrated monitoring, telemetry, and observability features
-- **[`RAG`](intermediate/RAG/)**: Retrieval-Augmented Generation examples:
-  - [`simple_rag`](intermediate/RAG/simple_rag/): Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform
-- **[`agents`](intermediate/agents/)**: AI agent architecture examples showcasing 4 distinct agent patterns:
-  - [`mixture_of_agents`](intermediate/agents/mixture_of_agents/): Multi-agent system with ReAct agent coordinating multiple specialized Tool Calling agents
-  - [`react`](intermediate/agents/react/): ReAct (Reasoning and Acting) agent implementation for step-by-step problem solving
-  - [`rewoo`](intermediate/agents/rewoo/): ReWOO (Reasoning WithOut Observation) agent pattern for planning-based workflows
-  - [`tool_calling`](intermediate/agents/tool_calling/): Tool-calling agent with direct function invocation capabilities
+### Agents
+- **[`mixture_of_agents`](agents/mixture_of_agents/README.md)**: Multi-agent system with ReAct agent coordinating multiple specialized Tool Calling agents
+- **[`react`](agents/react/README.md)**: ReAct (Reasoning and Acting) agent implementation for step-by-step problem-solving
+- **[`rewoo`](agents/rewoo/README.md)**: ReWOO (Reasoning WithOut Observation) agent pattern for planning-based workflows
+- **[`tool_calling`](agents/tool_calling/README.md)**: Tool-calling agent with direct function invocation capabilities
 
-### Advanced ([`advanced`](advanced/))
-- **[`alert_triage_agent`](advanced/alert_triage_agent/)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization
-- **[`profiler_agent`](advanced/profiler_agent/)**: Performance profiling agent for analyzing AIQ toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
-- **[`AIQ-blueprint.md`](advanced/aiq-blueprint.md)**: Blueprint documentation for advanced system architectures and design patterns
+### Advanced Agents
+- **[`AIQ Blueprint`](advanced_agents/aiq_blueprint/README.md)**: Blueprint documentation for the official NVIDIA AIQ Blueprint for building an AI agent designed for enterprise research use cases.
+- **[`alert_triage_agent`](advanced_agents/alert_triage_agent/README.md)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization
+- **[`profiler_agent`](advanced_agents/profiler_agent/README.md)**: Performance profiling agent for analyzing NeMo Agent toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
 
-### Documentation Guides ([`documentation_guides`](documentation_guides/))
-- **[`locally_hosted_llms`](documentation_guides/locally_hosted_llms/)**: Configuration examples for the basic simple LangSmith agent using locally hosted LLM models (NIM and vLLM configurations)
-- **[`workflows`](documentation_guides/workflows/)**: Workflow examples for documentation and tutorials:
-  - [`custom_workflow`](documentation_guides/workflows/custom_workflow/): Extended version of the basic simple example with multiple documentation sources (LangSmith and LangGraph)
-  - [`text_file_ingest`](documentation_guides/workflows/text_file_ingest/): Text file processing and ingestion pipeline for document workflows
+### Control Flow
+- **[`sequential_executor`](control_flow/sequential_executor/README.md)**: Linear tool execution pipeline that chains multiple functions together where each function's output becomes the input for the next function, with optional type compatibility checking and error handling
 
-To run the examples, install the AIQ toolkit from source, if you haven't already done so, by following the instructions in  [Install From Source](../docs/source/quick-start/installing.md#install-from-source) .
+### Custom Functions
+- **[`automated_description_generation`](custom_functions/automated_description_generation/README.md)**: Intelligent system that automatically generates descriptions for vector database collections by sampling and summarizing documents
+- **[`plot_charts`](custom_functions/plot_charts/README.md)**: Multi-agent chart plotting system that routes requests to create different chart types (line, bar, etc.) from data
+
+### Evaluation and Profiling
+- **[`email_phishing_analyzer`](evaluation_and_profiling/email_phishing_analyzer/README.md)**: Evaluation and profiling configurations for the email phishing analyzer example
+- **[`simple_calculator_eval`](evaluation_and_profiling/simple_calculator_eval/README.md)**: Evaluation and profiling configurations based on the basic simple calculator example
+- **[`simple_web_query_eval`](evaluation_and_profiling/simple_web_query_eval/README.md)**: Evaluation and profiling configurations based on the basic simple web query example
+- **[`swe_bench`](evaluation_and_profiling/swe_bench/README.md)**: Software engineering benchmark system for evaluating AI models on real-world coding tasks
+
+### Frameworks
+- **[`agno_personal_finance`](frameworks/agno_personal_finance/README.md)**: Personal finance planning agent built with Agno framework that researches and creates tailored financial plans
+- **[`multi_frameworks`](frameworks/multi_frameworks/README.md)**: Supervisor agent coordinating LangChain/LangGraph, LlamaIndex, and Haystack agents for research, RAG, and chitchat tasks
+- **[`semantic_kernel_demo`](frameworks/semantic_kernel_demo/README.md)**: Multi-agent travel planning system using Microsoft Semantic Kernel with specialized agents for itinerary creation, budget management, and report formatting, including long-term memory for user preferences
+
+### Front Ends
+- **[`simple_auth`](front_ends/simple_auth/README.md)**: Simple example demonstrating authentication and authorization using OAuth 2.0 Authorization Code Flow
+- **[`simple_calculator_custom_routes`](front_ends/simple_calculator_custom_routes/README.md)**: Simple calculator example with custom API routing and endpoint configuration
+
+### Human In The Loop (HITL)
+- **[`por_to_jiratickets`](HITL/por_to_jiratickets/README.md)**: Project requirements to Jira ticket conversion with human oversight
+- **[`simple_calculator_hitl`](HITL/simple_calculator_hitl/README.md)**: Human-in-the-loop version of the basic simple calculator that requests approval from the user before allowing the agent to make additional tool calls.
+
+### Memory
+- **[`redis`](memory/redis/README.md)**: Basic long-term memory example using redis
+
+### Model Context Protocol (MCP)
+- **[`simple_calculator_mcp`](MCP/simple_calculator_mcp/README.md)**: Demonstrates Model Context Protocol support using the basic simple calculator example
+
+### Notebooks
+- **[`first_search_agent`](notebooks/first_search_agent/)**: Demonstrates how to bring an existing agent from a framework like LangChain/LangGraph into this toolkit
+- **[`retail_sales_agent`](notebooks/retail_sales_agent/)**: A simple retail agent that showcases how to incrementally add tools and agents to build a multi-agent system
+
+### Object Store
+- **[`user_report`](object_store/user_report/README.md)**: User report generation and storage system using object store (S3, MySQL, and/or memory)
+
+### Observability
+- **[`redact_pii`](observability/redact_pii/README.md)**: Demonstrates how to use Weights & Biases (W&B) Weave with PII redaction
+- **[`simple_calculator_observability`](observability/simple_calculator_observability/README.md)**: Basic simple calculator with integrated monitoring, telemetry, and observability features
+
+### Retrieval Augmented Generation (RAG)
+- **[`simple_rag`](RAG/simple_rag/README.md)**: Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform
+
+### UI
+- **[`UI`](UI/README.md)**: Guide for integrating and using the web-based user interface of the NeMo Agent toolkit for interactive workflow management.
+
+## Documentation Guide Files
+
+### Locally Hosted LLMs
+- **[`nim_config`](documentation_guides/locally_hosted_llms/nim_config.yml)**: Configuration for locally hosted NIM LLM models
+- **[`vllm_config`](documentation_guides/locally_hosted_llms/vllm_config.yml)**: Configuration for locally hosted vLLM models
+
+### Workflow Artifacts
+- **`custom_workflow`**: Artifacts for the [Custom Workflow](../docs/source/tutorials/add-tools-to-a-workflow.md) tutorial
+- **`text_file_ingest`**: Artifacts for the [Text File Ingest](../docs/source/tutorials/create-a-new-workflow.md) tutorial

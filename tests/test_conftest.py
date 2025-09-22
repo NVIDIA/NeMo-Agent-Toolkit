@@ -15,10 +15,10 @@
 
 import pytest
 
-from aiq.cli.register_workflow import register_function
-from aiq.cli.type_registry import GlobalTypeRegistry
-from aiq.cli.type_registry import TypeRegistry
-from aiq.data_models.function import FunctionBaseConfig
+from nat.cli.register_workflow import register_function
+from nat.cli.type_registry import GlobalTypeRegistry
+from nat.cli.type_registry import TypeRegistry
+from nat.data_models.function import FunctionBaseConfig
 
 
 @pytest.fixture(name="registry_counter", scope="module")

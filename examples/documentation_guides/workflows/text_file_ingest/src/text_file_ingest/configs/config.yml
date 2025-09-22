@@ -14,9 +14,6 @@
 # limitations under the License.
 
 
-general:
-  use_uvloop: true
-
 functions:
   doca_documents:
     _type: text_file_ingest
@@ -56,15 +53,14 @@ workflow:
   tool_names: [doca_documents, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/basic/functions/simple/
+    output_dir: .tmp/nat/examples/getting_started/simple_web_query/
     dataset:
       _type: json
-      file_path: examples/basic/functions/simple/data/langsmith.json
+      file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
     profiler:
       fit_model: True
 

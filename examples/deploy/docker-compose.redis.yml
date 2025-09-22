@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+services:
+  redis:
+    image: redis:8.0
+    volumes:
+      - redis-data:/data
+    container_name: redis
+    ports:
+      - 6379:6379
+    # command: redis-server --save 60 1 --loglevel warning
+    # restart: unless-stopped
+
+  # to connect to the above redis server, use host.docker.internal for host
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight:/data
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  redisinsight:

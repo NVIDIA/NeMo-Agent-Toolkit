@@ -53,13 +53,13 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
 1. Clone your personal fork of the NeMo Agent toolkit repository to your local machine.
     ```bash
-    git clone <your fork url> aiqtoolkit
-    cd aiqtoolkit
+    git clone <your fork url> nemo-agent-toolkit
+    cd nemo-agent-toolkit
     ```
 
     Then, set the upstream to the main repository and fetch the latest changes:
     ```bash
-    git remote add upstream git@github.com:NVIDIA/NeMo-Agent-Toolkit.git
+    git remote add upstream https://github.com/NVIDIA/NeMo-Agent-Toolkit.git
     git fetch --all
     ```
 
@@ -83,16 +83,16 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
     uv sync --all-groups --all-extras
     ```
 
-1. Install and configure pre-commit hooks.
+1. Install and configure pre-commit hooks (optional these can also be run manually).
 
     ```bash
     pre-commit install
     ```
     **NOTE**: Running pre-commit for the first time will take longer than normal.
 
-7. Open the NeMo Agent toolkit Workspace in Visual Studio Code.
+1. Open the NeMo Agent toolkit Workspace in Visual Studio Code.
     ```bash
-    code ./aiq.code-workspace
+    code ./nat.code-workspace
     ```
 
 ### Install the NeMo Agent toolkit Library
@@ -107,20 +107,25 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
    For example, install the Simple Calculator example with the following command.
 
      ```bash
-     uv pip install -e ./examples/basic/functions/simple_calculator
+     uv pip install -e ./examples/getting_started/simple_web_query
      ```
 
-2. Verify that you've installed the NeMo Agent toolkit library.
+1. Verify that you've installed the NeMo Agent toolkit library.
 
      ```bash
-     aiq --help
-     aiq --version
+     nat --help
+     nat --version
      ```
 
-     If the installation succeeded, the `aiq` command will log the help message and its current version.
+     If the installation succeeded, the `nat` command will log the help message and its current version.
 
 
 ## Code contributions
+
+Please ensure that all new contributions adhere to the latest version notes within the [Migration Guide](./migration-guide.md).
+
+### Example Workflow Contributions
+We welcome contributions of new example workflows in this repository and in the [NeMo-Agent-Toolkit-Examples](https://github.com/NVIDIA/NeMo-Agent-Toolkit-Examples) repository. The difference is that examples in this repository are maintained, tested, and updated with each release of the NeMo Agent toolkit. These examples have high quality standards and demonstrate a capability of the NeMo Agent toolkit, while examples in the NeMo-Agent-Toolkit-Examples repository are community contributed and are tied to a specific version of the NeMo Agent toolkit, and do not need to demonstrate a specific capability of the library.
 
 ### Your first issue
 
@@ -131,11 +136,20 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 1. Code!
     - Make sure to update unit tests!
     - Ensure the [license headers are set properly](./licensing.md).
-1. Verify your changes by [running CI locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command.
+1. Verify your changes:
+    * Run the style and lint checks, from the root of the repository run:
+        ```bash
+        ./ci/scripts/checks.sh
+        ```
+    * Run all unittests and verify that they are passing, from the root of the repository run:
+        ```bash
+        pytest
+        ```
+    * Optionally [run the entire CI pipeline locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command. This is useful if CI is failing in GitHub Actions and you want to debug the issue locally.
 1. When done, [create your pull request](https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
 1. Wait for other developers to review your code and update code as needed.
-1. Once reviewed and approved, an NeMo Agent toolkit developer will merge your pull request.
+1. Once reviewed and approved, a NeMo Agent toolkit developer will merge your pull request.
 
 Remember, if you are unsure about anything, don't hesitate to comment on issues and ask for clarifications!
 
@@ -210,9 +224,90 @@ Refer to the [Get Started](../quick-start/installing.md) guide to quickly begin 
 All NeMo Agent toolkit documentation should be written in Markdown format. The documentation located under the `docs/source` directory is included in the documentation builds, refer to `docs/README.md` for information on how to build the documentation. In addition to this, each example should contain a `README.md` file that describes the example.
 
 ### Checks
-All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `aiq` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
+All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `nat` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
 
-The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/aiq/accept.txt` and `ci/vale/styles/config/vocabularies/aiq/reject.txt` files.
+The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/nat/accept.txt` and `ci/vale/styles/config/vocabularies/nat/reject.txt` files.
+
+### Path Checks
+
+All documentation and files which match certain criteria are checked using a custom path check script.
+
+Path checks are used to ensure:
+* all symbolic links are valid
+* all paths within files are relative paths
+* all paths within files are valid (they exist)
+
+#### Adding to the path allowlist
+
+In the case of referential paths, the checker will fail if the path is outside of the outer-level directory. To allowlist a path, add the path to the `ALLOWLISTED_FILE_PATH_PAIRS` set in the `ci/scripts/path_checks.py` file. Paths in the allowlist are always checked for existence.
+
+#### Adding to the word allowlist
+
+In the case of common word groups such as `input/output`, `and/or`, `N/A`, the checker will fail if the word group is not added to the allowlist. To allowlist a word group, add the word group to the `ALLOWLISTED_WORDS` set in the `ci/scripts/path_checks.py` file.
+
+#### Ignoring paths
+
+Ignoring paths is not recommended and should be used as a last resort. If a path is ignored, it will not be checked for existence. It is intended to be used for paths that are not valid or do not exist under source control.
+
+If an exception is needed for a specific path, consider modifying the `ci/scripts/path_checks.py` file to add the path to one of the following sets:
+* `IGNORED_PATHS` - a list of paths to ignore (regular expressions)
+* `IGNORED_FILES` - a list of files to ignore (regular expressions).
+* `IGNORED_FILE_PATH_PAIRS` - a tuple of two regular expressions, the first is the file path and the second is the path to check.
+
+#### Skipping regions of files
+
+The check can be quite aggressive and may detect false positives. If a path is detected as invalid but is actually valid, such as a path to a file that is generated by a tool or a model name, you can add comment(s) to the file to skip the check.
+
+* To skip the **entire file**, ensure `path-check-skip-file` (as a comment) is present near the top of the file.
+* To skip a **section of the file**, ensure `path-check-skip` (as a comment) is present on the line above the section and `path-check-skip-end` (as a comment) is present on the line below the section.
+* To skip the **next line** in the file, ensure `path-check-skip-next-line` (as a comment) is present on the line above the line to skip.
+
+##### YAML
+
+To skip an entire YAML file, add the following comment to the top of the file:
+```yaml
+# path-check-skip-file
+```
+
+Or to skip sections of a YAML file see the following example:
+```yaml
+# path-check-skip-begin
+this-will-be-skipped: /path/to/skip
+so-will-this: /path/to/skip/too
+# path-check-skip-end
+...
+# path-check-skip-next-line
+this-will-be-skipped: /path/to/skip
+but-this-will-not: /path/to/not/skip
+```
+
+##### Markdown
+
+To skip an entire Markdown file, add the following comment to the top of the file:
+```markdown
+<!-- path-check-skip-file -->
+```
+
+To skip a section of a Markdown file, add the following bookend comments:
+```markdown
+<!-- path-check-skip-begin -->
+Here is a list of generated files:
+* /path/to/skip
+* /path/to/skip/too
+<!-- path-check-skip-end -->
+...
+<!-- path-check-skip-next-line -->
+For example, the path mentioned here: `/path/to/skip` will be skipped.
+But this path will not be skipped: `/path/to/not/skip`
+```
+
+#### File-type specific checks
+
+The path checker is designed to be file-type specific. For example, the checker will check for valid paths in YAML files, JSON files, or Markdown files.
+
+There is logic within the checker to support per-line checks. For example, within a YAML file, the checker will automatically skip lines that contain `model_name` or `_type` since these are often used to indicate the model or tool name which is not a path.
+
+If you are expanding the checker to support a new file type or adding a new per-line check, you can add a new file-type specific checker by adding a new function to the `ci/scripts/path_checks.py` file.
 
 ### NVIDIA NeMo Agent toolkit Name Guidelines
 
@@ -226,4 +321,3 @@ The spelling of a project name should use the casing of the project, for example
   - Use for situations where capitalization will be preserved like the GitHub URL, directories, etc.
   - Do not use dashes or underscores
   - Note that the 't' is lowercase in toolkit unless used in a title or heading
-

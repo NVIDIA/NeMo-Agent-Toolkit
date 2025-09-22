@@ -1,0 +1,26 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../../.."
+
+[project]
+name = "nat_plot_charts"
+dynamic = ["version"]
+dependencies = [
+  "nvidia-nat[langchain]~=1.3",
+  "matplotlib==3.9.*",
+  "seaborn==0.13.*",
+]
+requires-python = ">=3.11,<3.14"
+description = "Simple Plot Chart Agent example"
+keywords = ["ai", "rag", "agents"]
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+
+[project.entry-points.'nat.components']
+nat_plot_charts = "nat_plot_charts.register"

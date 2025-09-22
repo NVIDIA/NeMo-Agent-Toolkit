@@ -39,13 +39,16 @@ function git_ssh_to_https()
 }
 
 CI_ARCH=${CI_ARCH:-$(dpkg --print-architecture)}
-AIQ_ROOT=${AIQ_ROOT:-$(git rev-parse --show-toplevel)}
+NAT_ROOT=${NAT_ROOT:-$(git rev-parse --show-toplevel)}
 
 GIT_URL=$(git remote get-url origin)
-GIT_URL=$(git_ssh_to_https ${GIT_URL})
-
 GIT_UPSTREAM_URL=$(git remote get-url upstream)
-GIT_UPSTREAM_URL=$(git_ssh_to_https ${GIT_UPSTREAM_URL})
+
+if [[ -z "${SSH_AUTH_SOCK}" ]]; then
+    echo "Warning: SSH_AUTH_SOCK not set, using HTTPS for git operations, git-lfs operations may fail if authentication is required"
+    GIT_URL=$(git_ssh_to_https ${GIT_URL})
+    GIT_UPSTREAM_URL=$(git_ssh_to_https ${GIT_UPSTREAM_URL})
+fi
 
 GIT_BRANCH=$(git branch --show-current)
 GIT_COMMIT=$(git log -n 1 --pretty=format:%H)
@@ -53,10 +56,10 @@ GIT_COMMIT=$(git log -n 1 --pretty=format:%H)
 # Specifies whether to mount the current git repo or to use a clean clone (the default)
 USE_HOST_GIT=${USE_HOST_GIT:-0}
 
-LOCAL_CI_TMP=${LOCAL_CI_TMP:-${AIQ_ROOT}/.tmp/local_ci_tmp/${CI_ARCH}}
+LOCAL_CI_TMP=${LOCAL_CI_TMP:-${NAT_ROOT}/.tmp/local_ci_tmp/${CI_ARCH}}
 DOCKER_EXTRA_ARGS=${DOCKER_EXTRA_ARGS:-""}
 
-CI_CONTAINER=${CI_CONTAINER:-"ghcr.io/astral-sh/uv:python3.12-bookworm"}
+CI_CONTAINER=${CI_CONTAINER:-"ghcr.io/astral-sh/uv:python3.13-bookworm"}
 
 
 # These variables are common to all stages
@@ -72,13 +75,18 @@ for STAGE in "${STAGES[@]}"; do
     ENV_LIST="${BASE_ENV_LIST}"
 
     mkdir -p ${LOCAL_CI_TMP}
-    cp ${AIQ_ROOT}/ci/scripts/bootstrap_local_ci.sh ${LOCAL_CI_TMP}
+    cp ${NAT_ROOT}/ci/scripts/bootstrap_local_ci.sh ${LOCAL_CI_TMP}
 
     DOCKER_RUN_ARGS="--rm -ti --net=host --platform=linux/${CI_ARCH} -v "${LOCAL_CI_TMP}":/ci_tmp ${ENV_LIST} --env STAGE=${STAGE}"
 
     if [[ "${USE_HOST_GIT}" == "1" ]]; then
-        DOCKER_RUN_ARGS="${DOCKER_RUN_ARGS} -v ${AIQ_ROOT}:/aiqtoolkit"
+        DOCKER_RUN_ARGS="${DOCKER_RUN_ARGS} -v ${NAT_ROOT}:/nat"
     fi
+
+    if [[ -n "${SSH_AUTH_SOCK}" ]]; then
+        DOCKER_RUN_ARGS="${DOCKER_RUN_ARGS} -v $(readlink -f $SSH_AUTH_SOCK):/ssh-agent:ro --env SSH_AUTH_SOCK=/ssh-agent"
+    fi
+
 
     if [[ "${STAGE}" == "bash" ]]; then
         DOCKER_RUN_CMD="bash --init-file /ci_tmp/bootstrap_local_ci.sh"

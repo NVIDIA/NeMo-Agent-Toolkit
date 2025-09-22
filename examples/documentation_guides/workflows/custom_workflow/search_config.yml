@@ -35,5 +35,4 @@ workflow:
   tool_names: [internet_search, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3

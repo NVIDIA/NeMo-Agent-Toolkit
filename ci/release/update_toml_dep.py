@@ -24,11 +24,11 @@ from packaging.specifiers import SpecifierSet
 @click.command()
 @click.option("--toml-file-path", required=True, type=click.Path(exists=True), help="Path to the TOML file.")
 @click.option("--new-version", required=True, help="New version to set for the package.")
-@click.option("--package-name", default="aiqtoolkit", help="Name of the package to update.")
+@click.option("--package-name", default="nvidia-nat", help="Name of the package to update.")
 @click.option("--version-match", default="~=", help="Version match specifier to use for the dependency.")
 def main(toml_file_path: str, new_version: str, package_name: str, version_match: str):
     """
-    Update the dependency version of aiqtoolkit that a plugin depends on in the pyproject.toml file.
+    Update the dependency version of nvidia-nat that a plugin depends on in the pyproject.toml file.
 
     Parameters
     ----------
@@ -48,7 +48,7 @@ def main(toml_file_path: str, new_version: str, package_name: str, version_match
     depdendencies: tomlkit.items.Array = toml_project['dependencies']
     for (i, dep) in enumerate(depdendencies):
         req = Requirement(dep)
-        if req.name == package_name:  # will also match aiqtoolkit[<plugin>]
+        if req.name == package_name:  # will also match nvidia-nat[<plugin>]
             # Update the version specifier
             specifier = SpecifierSet(f"{version_match}{new_version}")
             req.specifier = specifier
