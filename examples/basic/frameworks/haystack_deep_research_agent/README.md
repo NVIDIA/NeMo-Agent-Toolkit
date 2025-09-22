@@ -120,7 +120,7 @@ nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/con
 aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src/aiq_haystack_deep_research_agent/configs/config.yml --input "What are the key features of AWS Bedrock?"
 
 # Mixed queries (will use both web search and RAG)
-aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src/aiq_haystack_deep_research_agent/configs/config.yml --input "How does AWS Bedrock compare to other AI platforms in 2024?"
+nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "How does AWS Bedrock compare to other AI platforms in 2024?"
 ```
 
 **Web Search + RAG Examples:**
