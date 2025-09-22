@@ -120,6 +120,8 @@ def format_tool(tool: Any) -> dict[str, str | None]:
         }
     elif hasattr(input_schema, "schema_json"):
         schema_str = input_schema.schema_json(indent=2)
+    elif hasattr(input_schema, "model_json_schema"):
+        schema_str = json.dumps(input_schema.model_json_schema(), indent=2)
     elif isinstance(input_schema, dict):
         schema_str = json.dumps(input_schema, indent=2)
     else:
