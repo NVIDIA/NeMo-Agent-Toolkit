@@ -157,7 +157,14 @@ def print_tool(tool_dict: dict[str, str | None], detail: bool = False) -> None:
         click.echo("-" * 60)
 
 
-async def list_tools_via_function_group(command, url, tool_name=None, transport='sse', args=None, env=None):
+async def list_tools_via_function_group(
+    command: str | None,
+    url: str | None,
+    tool_name: str | None = None,
+    transport: str = 'sse',
+    args: list[str] | None = None,
+    env: dict[str, str] | None = None,
+) -> list[dict[str, str | None]]:
     """List tools by constructing the mcp_client function group and introspecting functions.
 
     Mirrors the behavior of list_mcp.py but routes through the registered function group to ensure

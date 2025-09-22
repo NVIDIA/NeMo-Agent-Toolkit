@@ -38,7 +38,7 @@ from nat.cli.commands.mcp.mcp import validate_transport_cli_args
 
 
 @pytest.fixture(name="mock_tools")
-def _mock_tools():
+def fixture_mock_tools():
     return [
         {
             "name": "tool_a",
@@ -54,7 +54,7 @@ def _mock_tools():
 
 
 @pytest.fixture(name="cli_runner")
-def _cli_runner():
+def fixture_cli_runner():
     return CliRunner()
 
 
