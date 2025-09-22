@@ -217,6 +217,8 @@ To get detailed information about a specific tool, use the `--tool` flag:
 
 ```bash
 nat mcp client tool list --url http://localhost:9901/mcp --tool calculator_multiply
+```
+
 ### Call a Tool
 
 To call a tool and see its output:
@@ -226,11 +228,6 @@ To call a tool and see its output:
 nat mcp client tool call calculator_multiply \
   --url http://localhost:9901/mcp \
   --json-args '{"a": 2, "b": 3}'
-
-# Or provide key=value pairs
-nat mcp client tool call calculator_multiply \
-  --url http://localhost:9901/mcp \
-  --arg a=2 --arg b=3
 ```
 
 ```
