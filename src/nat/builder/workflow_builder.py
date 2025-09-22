@@ -569,60 +569,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return tools
 
-    async def get_tools_with_refresh(self,
-                                     tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
-                                     wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
-        """
-        Get tools with refresh for lazy loading scenarios.
-
-        This method first refreshes function groups that support lazy loading,
-        then returns the tools. This is useful for MCP function groups that
-        need to establish connections before tool discovery.
-
-        Parameters
-        ----------
-        tool_names : Sequence[str | FunctionRef | FunctionGroupRef]
-            The names of the tools to get.
-        wrapper_type : LLMFrameworkEnum | str
-            The wrapper type for the tools.
-
-        Returns
-        -------
-        list[typing.Any]
-            A list of tools.
-        """
-        tools = []
-        seen = set()
-        for n in tool_names:
-            is_function_group_ref = isinstance(n, FunctionGroupRef)
-            if isinstance(n, FunctionRef) or is_function_group_ref:
-                n = str(n)
-            if n in seen:
-                raise ValueError(f"Function or Function Group `{n}` already seen")
-            seen.add(n)
-            if n not in self._function_groups:
-                # the passed tool name is probably a function
-                if is_function_group_ref:
-                    raise ValueError(f"Function group `{n}` not found in the list of function groups")
-                tools.append(self.get_tool(n, wrapper_type))
-                continue
-
-            # Using the registry, get the tool wrapper for the requested framework
-            tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
-
-            current_function_group = self._function_groups[n]
-
-            # walk through all functions in the function group with refresh for lazy loading
-            for fn_name, fn_instance in (await current_function_group.instance.get_accessible_functions_with_refresh()).items():
-                try:
-                    # Wrap in the correct wrapper and add to tools list
-                    tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
-                except Exception:
-                    logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
-                    raise
-
-        return tools
-
     @override
     def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str):
         if isinstance(fn_name, FunctionRef):
@@ -1223,23 +1169,6 @@ class ChildBuilder(Builder):
                   tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
                   wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
         tools = self._workflow_builder.get_tools(tool_names, wrapper_type)
-        for tool_name in tool_names:
-            if tool_name in self._workflow_builder._function_groups:
-                self._dependencies.add_function_group(tool_name)
-            else:
-                self._dependencies.add_function(tool_name)
-        return tools
-
-    async def get_tools_with_refresh(self,
-                                     tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
-                                     wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
-        """
-        Get tools with refresh for lazy loading scenarios.
-
-        This method delegates to the workflow builder's get_tools_with_refresh method
-        and tracks dependencies.
-        """
-        tools = await self._workflow_builder.get_tools_with_refresh(tool_names, wrapper_type)
         for tool_name in tool_names:
             if tool_name in self._workflow_builder._function_groups:
                 self._dependencies.add_function_group(tool_name)

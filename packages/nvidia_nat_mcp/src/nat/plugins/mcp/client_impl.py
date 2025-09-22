@@ -120,16 +120,11 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     # Resolve auth provider if specified
     auth_provider = None
     if config.server.auth_provider:
-        try:
-            auth_provider = await _builder.get_auth_provider(config.server.auth_provider)
-        except Exception as e:
-            logger.error("Failed to get auth provider: %s", str(e))
-            raise
+        auth_provider = await _builder.get_auth_provider(config.server.auth_provider)
 
     # Build the appropriate client
     if config.server.transport == "stdio":
         if not config.server.command:
-            logger.error("command is required for stdio transport")
             raise ValueError("command is required for stdio transport")
         client = MCPStdioClient(config.server.command, config.server.args, config.server.env)
     elif config.server.transport == "sse":
@@ -137,10 +132,9 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     elif config.server.transport == "streamable-http":
         client = MCPStreamableHTTPClient(str(config.server.url), auth_provider=auth_provider)
     else:
-        logger.error("Unsupported transport: %s", config.server.transport)
         raise ValueError(f"Unsupported transport: {config.server.transport}")
 
-    logger.info("Connecting to MCP server at %s", client.server_name)
+    logger.info("Configured to use MCP server at %s", client.server_name)
 
     # Create the function group
     group = FunctionGroup(config=config)
@@ -161,18 +155,15 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             # Create the tool function
             tool_fn = mcp_tool_function(tool)
 
-            # Add to group (only if single_fn exists)
+            # Add to group
             logger.info("Adding tool %s to group", function_name)
             group.add_function(name=function_name,
                                description=description,
                                fn=tool_fn.single_fn,
-                               input_schema=tool_fn.input_schema
-                               if tool_fn.input_schema is not None and tool_fn.input_schema is not type(None) else None,
+                               input_schema=tool_fn.input_schema,
                                converters=tool_fn.converters)
 
-        logger.info("Successfully initialized MCP client and added %d tools", len(all_tools))
-
-    yield group
+        yield group
 
 
 def mcp_apply_tool_alias_and_description(
