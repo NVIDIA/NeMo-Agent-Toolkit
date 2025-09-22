@@ -60,12 +60,12 @@ nat mcp serve --config_file examples/getting_started/simple_calculator/configs/c
 
 ## Displaying MCP Tools published by an MCP server
 
-To list the tools published by the MCP server you can use the `nat info mcp` command. This command acts as a MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
+To list the tools published by the MCP server you can use the `nat mcp client tool list` command. This command acts as an MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
 
-**Note:** The `nat info mcp` command requires the `nvidia-nat-mcp` package. If you encounter an error about missing MCP client functionality, install it with `uv pip install nvidia-nat[mcp]`.
+**Note:** The `nat mcp client` commands require the `nvidia-nat-mcp` package. If you encounter an error about missing MCP client functionality, install it with `uv pip install nvidia-nat[mcp]`.
 
 ```bash
-nat info mcp
+nat mcp client tool list
 ```
 
 Sample output:
@@ -117,7 +117,7 @@ curl -s "http://localhost:9901/debug/tools/list?detail=true" | jq
 To get more information about a specific tool, use the `--detail` flag or the `--tool` flag followed by the tool name.
 
 ```bash
-nat info mcp --tool calculator_multiply
+nat mcp client tool list --tool calculator_multiply
 ```
 
 Sample output:
@@ -193,7 +193,7 @@ In this example, the `calculator_multiply`, `calculator_inequality`, `calculator
 
 
 ## Verifying MCP Server Health
-You can verify the health of the MCP using the `/health` route or the `nat info mcp ping` command.
+You can verify the health of the MCP using the `/health` route or the `nat mcp client ping` command.
 
 ### Using the `/health` route
 The MCP server exposes a `/health` route that can be used to verify the health of the MCP server.
@@ -211,10 +211,10 @@ Sample output:
 }
 ```
 
-### Using the `nat info mcp ping` command
-You can also test if an MCP server is responsive and healthy using the `nat info mcp ping` command:
+### Using the `nat mcp client ping` command
+You can also test if an MCP server is responsive and healthy using the `nat mcp client ping` command:
 ```bash
-nat info mcp ping --url http://localhost:9901/mcp
+nat mcp client ping --url http://localhost:9901/mcp
 ```
 
 Sample output:

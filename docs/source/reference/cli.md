@@ -47,6 +47,12 @@ nat
 │   ├── console
 │   ├── fastapi
 │   └── mcp
+│       ├── serve
+│       └── client
+│           ├── ping
+│           └── tool
+│               ├── list
+│               └── call
 ├── uninstall
 ├── validate
 └── workflow

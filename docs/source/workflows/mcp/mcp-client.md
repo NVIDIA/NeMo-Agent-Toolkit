@@ -184,7 +184,7 @@ nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date
 
 ## Displaying MCP Tools
 
-The `nat info mcp` command allows you to inspect the tools available from an MCP server before configuring your workflow. This is useful for discovering available tools and understanding their input schemas.
+Use the `nat mcp client` commands to inspect and call tools available from an MCP server before configuring your workflow. This is useful for discovering available tools and understanding their input schemas.
 
 ### List All Tools
 
@@ -192,13 +192,13 @@ To list all tools served by an MCP server:
 
 ```bash
 # For streamable-http transport (default)
-nat info mcp --url http://localhost:9901/mcp
+nat mcp client tool list --url http://localhost:9901/mcp
 
 # For stdio transport
-nat info mcp --transport stdio --command "python" --args "-m mcp_server_time"
+nat mcp client tool list --transport stdio --command "python" --args "-m mcp_server_time"
 
 # For sse transport
-nat info mcp --url http://localhost:9901/sse --transport sse
+nat mcp client tool list --url http://localhost:9901/sse --transport sse
 ```
 
 Sample output:
@@ -216,7 +216,23 @@ react_agent
 To get detailed information about a specific tool, use the `--tool` flag:
 
 ```bash
-nat info mcp --url http://localhost:9901/mcp --tool calculator_multiply
+nat mcp client tool list --url http://localhost:9901/mcp --tool calculator_multiply
+### Call a Tool
+
+To call a tool and see its output:
+
+```bash
+# Pass arguments as JSON
+nat mcp client tool call calculator_multiply \
+  --url http://localhost:9901/mcp \
+  --json-args '{"a": 2, "b": 3}'
+
+# Or provide key=value pairs
+nat mcp client tool call calculator_multiply \
+  --url http://localhost:9901/mcp \
+  --arg a=2 --arg b=3
+```
+
 ```
 
 Sample output:
@@ -244,7 +260,7 @@ Input Schema:
 ### Troubleshooting
 
 If you encounter connection issues:
-- Verify the MCP server is running and accessible via the `nat info mcp` command
+- Verify the MCP server is running and accessible via the `nat mcp client ping` command
 - Check that the transport type matches the server configuration
 - Ensure the URL or command is correct
 - Check network connectivity for remote servers

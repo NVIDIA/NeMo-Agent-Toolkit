@@ -19,7 +19,6 @@ import click
 
 from nat.cli.commands.info.list_channels import list_channels
 from nat.cli.commands.info.list_components import list_components
-from nat.cli.commands.info.list_mcp import list_mcp
 
 logger = logging.getLogger(__name__)
 
@@ -34,4 +33,19 @@ def info_command(**kwargs):
 
 info_command.add_command(list_components, name="components")
 info_command.add_command(list_channels, "channels")
-info_command.add_command(list_mcp, "mcp")
+
+
+@click.command(
+    name="mcp",
+    help="Removed. Use 'nat mcp client' instead.",
+)
+def info_mcp_deprecated():
+    """
+    Removing support for the old 'nat info mcp' command.
+    """
+    raise click.UsageError("The 'nat info mcp' command has been removed. "
+                           "Use the new 'nat mcp client' commands instead")
+
+
+# Register deprecated shim so `nat info mcp` shows guidance
+info_command.add_command(info_mcp_deprecated, name="mcp")
