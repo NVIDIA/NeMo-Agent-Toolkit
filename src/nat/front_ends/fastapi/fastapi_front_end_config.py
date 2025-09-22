@@ -211,6 +211,10 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             "Maximum number of async jobs to run concurrently, this controls the number of dask workers created. "
             "This parameter is only used when scheduler_address is `None` and a Dask local cluster is created."),
         ge=1)
+    dask_log_level: str = Field(
+        default="WARNING",
+        description="Logging level for Dask.",
+    )
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
