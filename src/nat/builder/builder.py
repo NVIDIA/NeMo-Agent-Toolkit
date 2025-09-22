@@ -107,9 +107,9 @@ class Builder(ABC):
         pass
 
     @abstractmethod
-    def get_tools(self,
-                  tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
-                  wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
+    async def get_tools(self,
+                        tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
+                        wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
         pass
 
     @abstractmethod

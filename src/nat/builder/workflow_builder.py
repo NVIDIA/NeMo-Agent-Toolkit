@@ -214,7 +214,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         await self._exit_stack.__aexit__(*exc_details)
 
-    def build(self, entry_function: str | None = None) -> Workflow:
+    async def build(self, entry_function: str | None = None) -> Workflow:
         """
         Creates an instance of a workflow object using the added components and the desired entry function.
 
@@ -250,7 +250,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         function_group_instances = dict()
 
         for k, v in self._function_groups.items():
-            included_functions.update(v.instance.get_included_functions().keys())
+            included_functions.update((await v.instance.get_included_functions()).keys())
             function_group_configs[k] = v.config
             function_group_instances[k] = v.instance
 
@@ -448,12 +448,13 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         # If the function group exposes functions, add them to the global function registry
         # If the function group exposes functions, record and add them to the registry
-        for k in build_result.instance.get_included_functions():
+        included_functions = await build_result.instance.get_included_functions()
+        for k in included_functions:
             if k in self._functions:
                 raise ValueError(f"Exposed function `{k}` from group `{name}` conflicts with an existing function")
         self._functions.update({
             k: ConfiguredFunction(config=v.config, instance=v)
-            for k, v in build_result.instance.get_included_functions().items()
+            for k, v in included_functions.items()
         })
 
         return build_result.instance
@@ -534,9 +535,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self.function_group_dependencies[fn_name]
 
     @override
-    def get_tools(self,
-                  tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
-                  wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
+    async def get_tools(self,
+                        tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
+                        wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
         tools = []
         seen = set()
         for n in tool_names:
@@ -559,7 +560,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             current_function_group = self._function_groups[n]
 
             # walk through all functions in the function group -- guaranteed to not be fallible
-            for fn_name, fn_instance in current_function_group.instance.get_accessible_functions().items():
+            for fn_name, fn_instance in (await current_function_group.instance.get_accessible_functions()).items():
                 try:
                     # Wrap in the correct wrapper and add to tools list
                     tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
@@ -1165,10 +1166,10 @@ class ChildBuilder(Builder):
         return self._workflow_builder.get_workflow_config()
 
     @override
-    def get_tools(self,
-                  tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
-                  wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
-        tools = self._workflow_builder.get_tools(tool_names, wrapper_type)
+    async def get_tools(self,
+                        tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
+                        wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
+        tools = await self._workflow_builder.get_tools(tool_names, wrapper_type)
         for tool_name in tool_names:
             if tool_name in self._workflow_builder._function_groups:
                 self._dependencies.add_function_group(tool_name)

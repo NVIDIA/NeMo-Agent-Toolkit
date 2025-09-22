@@ -176,7 +176,7 @@ class MockBuilder(Builder):
         """Mock implementation."""
         return FunctionBaseConfig()
 
-    def get_tools(self, tool_names: Sequence[str], wrapper_type):
+    async def get_tools(self, tool_names: Sequence[str], wrapper_type):
         """Mock implementation."""
         return []
 

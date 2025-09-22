@@ -58,7 +58,7 @@ async def telemetry_metrics_analysis_agent_tool(config: TelemetryMetricsAnalysis
         """
         utils.log_header("Telemetry Metrics Analysis Agent")
 
-        tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        tools = await builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         llm = await builder.get_llm(llm_name=config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         # Bind tools to LLM for parallel execution
         llm_n_tools = llm.bind_tools(tools, parallel_tool_calls=True)

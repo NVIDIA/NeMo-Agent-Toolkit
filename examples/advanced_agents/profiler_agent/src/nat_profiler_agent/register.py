@@ -75,7 +75,7 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     from nat_profiler_agent.tool import flow_chart  # noqa: F401
 
     # Create the agent executor
-    tools = builder.get_tools(tool_names=config.tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools = await builder.get_tools(tool_names=config.tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     output_parser = PydanticOutputParser(pydantic_object=ExecPlan)
     tools_dict = {t.name: t for t in tools}

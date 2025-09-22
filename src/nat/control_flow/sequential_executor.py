@@ -110,7 +110,8 @@ def _validate_tool_list_type_compatibility(sequential_executor_config: Sequentia
 async def sequential_execution(config: SequentialExecutorConfig, builder: Builder):
     logger.debug(f"Initializing sequential executor with tool list: {config.tool_list}")
 
-    tools: list[BaseTool] = builder.get_tools(tool_names=config.tool_list, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools: list[BaseTool] = await builder.get_tools(tool_names=config.tool_list,
+                                                    wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     tools_dict: dict[str, BaseTool] = {tool.name: tool for tool in tools}
 
     try:

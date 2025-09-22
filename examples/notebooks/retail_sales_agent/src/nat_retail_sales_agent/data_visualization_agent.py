@@ -57,7 +57,7 @@ async def data_visualization_agent_function(config: DataVisualizationAgentConfig
         messages: list[BaseMessage]
         approved: bool = True
 
-    tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools = await builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     llm = await builder.get_llm(llm_name=config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     llm_n_tools = llm.bind_tools(tools)
 

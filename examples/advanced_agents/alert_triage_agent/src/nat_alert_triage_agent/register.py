@@ -101,7 +101,7 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
     builder_graph = StateGraph(MessagesState)
 
     # Get tools specified in config
-    tools = builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools = await builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     # Add nodes to graph
     builder_graph.add_node("ata_assistant", ata_assistant)

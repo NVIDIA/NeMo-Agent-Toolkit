@@ -48,7 +48,7 @@ async def second_search_agent_function(config: SecondSearchAgentFunctionConfig, 
     from langchain.agents import create_react_agent
 
     # Create a list of tools for the agent
-    tools = builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools = await builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 

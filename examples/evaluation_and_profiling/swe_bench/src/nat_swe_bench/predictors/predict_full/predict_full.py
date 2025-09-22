@@ -67,8 +67,7 @@ class SweBenchPredictor(SweBenchPredictorBase):
     def setup_predictor(self):
         '''Setup git tools'''
         logger.info("Setting up git tools for repository management")
-        self.tools = self.builder.get_tools(["git_repo_tool"], wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-        self.git_tool = self.tools[0]
+        self.git_tool = self.builder.get_tool("git_repo_tool", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def _parse_ast(self, file_path: str):
         """Parse AST of a Python file and extract symbols and imports."""
