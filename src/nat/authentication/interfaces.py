@@ -17,6 +17,8 @@ import typing
 from abc import ABC
 from abc import abstractmethod
 
+import httpx
+
 from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
@@ -52,6 +54,14 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
             The auth provider configuration object.
         """
         return self._config
+
+    @abstractmethod
+    async def discover_and_authenticate(self, response: httpx.Response | None = None,
+                                        user_id: str | None = None) -> AuthResult:
+        """
+        Discover the authentication endpoints for the client.
+        """
+        pass
 
     @abstractmethod
     async def authenticate(self, user_id: str | None = None) -> AuthResult:

@@ -18,7 +18,6 @@ from pydantic import HttpUrl
 from pydantic import model_validator
 
 from nat.authentication.interfaces import AuthProviderBaseConfig
-from nat.data_models.authentication import AuthRequest
 
 
 class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
@@ -51,7 +50,6 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     # Advanced options
     use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
 
-    auth_request: AuthRequest | None = Field(default=None, description="Auth request for authentication (metadata)")
 
     @model_validator(mode="after")
     def validate_auth_config(self):
