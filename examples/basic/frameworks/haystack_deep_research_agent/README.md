@@ -126,7 +126,7 @@ aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src
 **Web Search + RAG Examples:**
 
 ```bash
-aiq run --config_file=examples/basic/frameworks/haystack_deep_research_agent/src/aiq_haystack_deep_research_agent/configs/config.yml --input "Is panna (heavy cream) needed on carbonara? Check online the recipe and compare it with the one from our internal dataset."
+nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "Is panna (heavy cream) needed on carbonara? Check online the recipe and compare it with the one from our internal dataset."
 ```
 
 ## Testing
