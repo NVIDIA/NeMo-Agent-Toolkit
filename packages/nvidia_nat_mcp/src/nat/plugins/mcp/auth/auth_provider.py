@@ -30,8 +30,8 @@ from mcp.shared.auth import ProtectedResourceMetadata
 from nat.authentication.interfaces import AuthProviderBase
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from nat.data_models.authentication import AuthResult
-from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
 from nat.plugins.mcp.auth.auth_flow_handler import MCPAuthenticationFlowHandler
+from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
 
 logger = logging.getLogger(__name__)
 
@@ -271,7 +271,8 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         # For the OAuth2 flow
         self._auth_code_provider = None
 
-    async def discover_and_authenticate(self, response: httpx.Response | None = None,
+    async def discover_and_authenticate(self,
+                                        response: httpx.Response | None = None,
                                         user_id: str | None = None) -> AuthResult:
         """
         Authenticate using MCP OAuth2 flow via NAT framework.
@@ -280,14 +281,15 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         3. Authentication
         """
         await self._discover_and_register(response=response)
-        return await self._perform_oauth2_flow(user_id=user_id)
+        return await self.authenticate(user_id=user_id)
 
     async def authenticate(self, user_id: str | None = None) -> AuthResult:
         """
         Use NAT's standard OAuth2 flow (OAuth2AuthCodeFlowProvider)
+         - If a valid token is found in the cache, return it
+         - Otherwise, perform the OAuth2 flow
         """
-        # Perform the OAuth2 flow without lock
-        return await self._perform_oauth2_flow(user_id=user_id)
+        return await self._nat_oauth2_authenticate(user_id=user_id)
 
     async def _discover_and_register(self, response: httpx.Response | None = None):
         """
@@ -321,7 +323,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         """
         return self.config.scopes or self._discoverer.scopes_supported()
 
-    async def _perform_oauth2_flow(self, user_id: str | None = None) -> AuthResult:
+    async def _nat_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
         """Perform the OAuth2 flow using NAT OAuth2 provider."""
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
