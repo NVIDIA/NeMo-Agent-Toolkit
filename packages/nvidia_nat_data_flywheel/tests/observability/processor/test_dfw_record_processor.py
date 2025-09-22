@@ -179,7 +179,8 @@ class TestSpanToDFWRecordProcessor:
         result = await processor.process(span)
 
         # Verify span_to_dfw_record was called correctly
-        mock_span_to_dfw_record.assert_called_once_with(span=span, to_type=processor.output_type, client_id=client_id)
+        expected_type = processor.extract_non_optional_type(processor.output_type)
+        mock_span_to_dfw_record.assert_called_once_with(span=span, to_type=expected_type, client_id=client_id)
 
         assert result == mock_converted_record
 
@@ -254,7 +255,8 @@ class TestSpanToDFWRecordProcessor:
         await processor.process(span)
 
         # Verify all parameters are passed correctly
-        mock_span_to_dfw_record.assert_called_once_with(span=span, to_type=processor.output_type, client_id=client_id)
+        expected_type = processor.extract_non_optional_type(processor.output_type)
+        mock_span_to_dfw_record.assert_called_once_with(span=span, to_type=expected_type, client_id=client_id)
 
     @patch('nat.plugins.data_flywheel.observability.processor.dfw_record_processor.span_to_dfw_record')
     @patch('nat.plugins.data_flywheel.observability.processor.dfw_record_processor.logger')

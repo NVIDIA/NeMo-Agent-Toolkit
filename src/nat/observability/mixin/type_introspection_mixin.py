@@ -15,6 +15,7 @@
 
 import inspect
 import logging
+import types
 from functools import lru_cache
 from typing import Any
 from typing import TypeVar
@@ -475,3 +476,21 @@ class TypeIntrospectionMixin:
         except ValidationError:
             logger.warning("Item %s is not compatible with output type %s", item, self.output_type)
             return False
+
+    @lru_cache
+    def extract_non_optional_type(self, type_obj: type | types.UnionType) -> Any:
+        """Extract the non-None type from Optional[T] or Union[T, None] types.
+
+        This is useful when you need to pass a type to a system that doesn't
+        understand Optional types (like registries that expect concrete types).
+
+        Args:
+            type_obj (type | types.UnionType): The type to extract from (could be Optional[T] or Union[T, None])
+
+        Returns:
+            Any: The actual type without None, or the original type if not a union with None
+        """
+        decomposed = DecomposedType(type_obj)  # type: ignore[arg-type]
+        if decomposed.is_optional:
+            return decomposed.get_optional_type().type
+        return type_obj

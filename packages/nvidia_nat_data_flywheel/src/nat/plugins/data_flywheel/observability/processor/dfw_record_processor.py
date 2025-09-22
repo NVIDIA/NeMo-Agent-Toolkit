@@ -56,7 +56,7 @@ class DFWToDictProcessor(Processor[DFWRecordT, dict]):
         return json.loads(item.model_dump_json(by_alias=True))
 
 
-class SpanToDFWRecordProcessor(Processor[Span, DFWRecordT], TypeIntrospectionMixin):
+class SpanToDFWRecordProcessor(Processor[Span, DFWRecordT | None], TypeIntrospectionMixin):
     """Processor that converts a Span to a Data Flywheel record.
 
     Extracts trace data from spans and uses the trace adapter registry to convert
@@ -79,7 +79,9 @@ class SpanToDFWRecordProcessor(Processor[Span, DFWRecordT], TypeIntrospectionMix
 
         match item.attributes.get("nat.event_type"):
             case IntermediateStepType.LLM_START:
-                dfw_record = span_to_dfw_record(span=item, to_type=self.output_type, client_id=self._client_id)
+                # Extract the concrete type from Optional[DFWRecordT] to avoid passing Optional to converters
+                target_type = self.extract_non_optional_type(self.output_type)
+                dfw_record = span_to_dfw_record(span=item, to_type=target_type, client_id=self._client_id)
                 return cast(DFWRecordT | None, dfw_record)
             case _:
                 logger.debug("Unsupported event type: '%s'", item.attributes.get("nat.event_type"))
