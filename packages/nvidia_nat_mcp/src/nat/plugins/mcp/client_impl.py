@@ -121,76 +121,92 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     # Track initialization state for this specific group
     _mcp_initialized = False
 
-    async def refresh_mcp_tools():
+    async def refresh_mcp_tools(rebuild: bool = False):
         """Refresh function that connects to MCP server and adds/updates tools."""
         nonlocal _mcp_initialized
 
-        # If already initialized successfully, don't reinitialize
-        if _mcp_initialized:
-            return
+        # If already initialized successfully and not rebuilding, don't reinitialize
+        if _mcp_initialized and not rebuild:
+            return True
 
         # Resolve auth provider if specified
         auth_provider = None
         if config.server.auth_provider:
-            auth_provider = await _builder.get_auth_provider(config.server.auth_provider)
+            try:
+                auth_provider = await _builder.get_auth_provider(config.server.auth_provider)
+            except Exception as e:
+                logger.error("Failed to get auth provider: %s", str(e))
+                return False
 
         # Build the appropriate client
-        if config.server.transport == "stdio":
-            if not config.server.command:
-                raise ValueError("command is required for stdio transport")
-            client = MCPStdioClient(config.server.command, config.server.args, config.server.env)
-        elif config.server.transport == "sse":
-            client = MCPSSEClient(str(config.server.url))
-        elif config.server.transport == "streamable-http":
-            client = MCPStreamableHTTPClient(str(config.server.url), auth_provider=auth_provider)
-        else:
-            raise ValueError(f"Unsupported transport: {config.server.transport}")
+        try:
+            if config.server.transport == "stdio":
+                if not config.server.command:
+                    logger.error("command is required for stdio transport")
+                    return False
+                client = MCPStdioClient(config.server.command, config.server.args, config.server.env)
+            elif config.server.transport == "sse":
+                client = MCPSSEClient(str(config.server.url))
+            elif config.server.transport == "streamable-http":
+                client = MCPStreamableHTTPClient(str(config.server.url), auth_provider=auth_provider)
+            else:
+                logger.error("Unsupported transport: %s", config.server.transport)
+                return False
+        except Exception as e:
+            logger.error("Failed to create MCP client: %s", str(e))
+            return False
 
         logger.info("Connecting to MCP server at %s", client.server_name)
 
-        async with client:
-            all_tools = await client.get_tools()
-            tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
+        try:
+            async with client:
+                all_tools = await client.get_tools()
+                tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
 
-            # Add each tool as a function to the group
-            for tool_name, tool in all_tools.items():
-                # Get override if it exists
-                override = tool_overrides.get(tool_name)
+                # Add each tool as a function to the group
+                for tool_name, tool in all_tools.items():
+                    # Get override if it exists
+                    override = tool_overrides.get(tool_name)
 
-                # Use override values or defaults
-                function_name = override.alias if override and override.alias else tool_name
-                description = override.description if override and override.description else tool.description
+                    # Use override values or defaults
+                    function_name = override.alias if override and override.alias else tool_name
+                    description = override.description if override and override.description else tool.description
 
-                # Create the tool function
-                tool_fn = mcp_tool_function(tool)
+                    # Create the tool function
+                    tool_fn = mcp_tool_function(tool)
 
-                # Add to group (only if single_fn exists)
-                if tool_fn.single_fn is not None:
-                    logger.info("Adding tool %s to group", function_name)
-                    group.add_function(name=function_name,
-                                       description=description,
-                                       fn=tool_fn.single_fn,
-                                       input_schema=tool_fn.input_schema if tool_fn.input_schema is not None
-                                       and tool_fn.input_schema is not type(None) else None,
-                                       converters=tool_fn.converters)
-                else:
-                    logger.warning("Tool %s has no single function, skipping", function_name)
+                    # Add to group (only if single_fn exists)
+                    if tool_fn.single_fn is not None:
+                        logger.info("Adding tool %s to group", function_name)
+                        group.add_function(name=function_name,
+                                           description=description,
+                                           fn=tool_fn.single_fn,
+                                           input_schema=tool_fn.input_schema if tool_fn.input_schema is not None
+                                           and tool_fn.input_schema is not type(None) else None,
+                                           converters=tool_fn.converters)
+                    else:
+                        logger.warning("Tool %s has no single function, skipping", function_name)
 
-            # Mark as successfully initialized
-            _mcp_initialized = True
+                # Mark as successfully initialized only if we get here
+                _mcp_initialized = True
+                logger.info("Successfully initialized MCP client and added %d tools", len(all_tools))
+                return True
+        except Exception as e:
+            logger.error("Failed to initialize MCP client: %s", str(e))
+            return False
 
     # Lazy initialization
     if config.server.lazy_init:
         # Use lazy initialization with retry on every access for auth-based connections
         group = FunctionGroup(
             config=config,
-            refresh_fn=refresh_mcp_tools,
+            refresh_fn=lambda rebuild=False: refresh_mcp_tools(rebuild),
             refresh_on_every_access=True  # Retry on every access for auth-based connections
         )
     else:
         # Do immediate initialization for non-auth connections
         group = FunctionGroup(config=config)
-        await refresh_mcp_tools()
+        await refresh_mcp_tools(rebuild=False)
 
     yield group
 

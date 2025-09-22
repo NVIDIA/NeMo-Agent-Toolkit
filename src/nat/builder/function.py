@@ -358,7 +358,7 @@ class FunctionGroup:
                  config: FunctionGroupBaseConfig,
                  instance_name: str | None = None,
                  filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None,
-                 refresh_fn: Callable[[], Awaitable[None]] | None = None,
+                 refresh_fn: Callable[[bool], Awaitable[bool]] | None = None,
                  refresh_on_every_access: bool = True):
         """
         Creates a new function group.
@@ -372,9 +372,10 @@ class FunctionGroup:
         filter_fn : Callable[[Sequence[str]], Sequence[str]] | None, optional
             A callback function to additionally filter the functions in the function group dynamically when
             the functions are accessed via any accessor method.
-        refresh_fn : Callable[[], Awaitable[None]] | None, optional
+        refresh_fn : Callable[[bool], Awaitable[bool]] | None, optional
             An async function to call for refreshing/updating the function group. This function will be called before any
-            function access and can be used to add or update functions in the group dynamically.
+            function access and can be used to add or update functions in the group dynamically. Takes a rebuild parameter
+            (True to force refresh even if already initialized). Should return True on success, False on failure.
         """
         self._config = config
         self._instance_name = instance_name or config.type
@@ -458,8 +459,9 @@ class FunctionGroup:
         """
         if self._refresh_fn:
             if not self._init_success or rebuild:
-                await self._refresh_fn()
-                self._init_success = True
+                success = await self._refresh_fn(rebuild)
+                if success:
+                    self._init_success = True
 
     def _fn_should_be_included(self, name: str) -> bool:
         return (name not in self._per_function_filter_fn or self._per_function_filter_fn[name](name))
@@ -525,11 +527,9 @@ class FunctionGroup:
             return self._get_all_but_excluded_functions(filter_fn=filter_fn)
         return self.get_all_functions(filter_fn=filter_fn)
 
-    async def get_accessible_functions_with_refresh(
-        self,
-        filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None,
-        rebuild: bool = False
-    ) -> dict[str, Function]:
+    async def get_accessible_functions_with_refresh(self,
+                                                    filter_fn: Callable[[Sequence[str]], Sequence[str]] | None = None,
+                                                    rebuild: bool = False) -> dict[str, Function]:
         """
         Returns a dictionary of all accessible functions in the function group with refresh.
 

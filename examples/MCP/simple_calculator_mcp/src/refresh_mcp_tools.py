@@ -15,15 +15,16 @@
 
 import logging
 from typing import Any
-from typing import Dict
 
 from nat.builder import Builder
 from nat.builder import LLMFrameworkEnum
+from nat.experimental.decorators.experimental_warning_decorator import experimental
 
 logger = logging.getLogger(__name__)
 
 
-async def refresh_mcp_tools(builder: Builder) -> Dict[str, Any]:
+@experimental(feature_name="MCP Tools Refresh")
+async def refresh_mcp_tools(builder: Builder) -> dict[str, Any]:
     """
     Refreshes all MCP client function groups in the builder.
 
@@ -38,7 +39,7 @@ async def refresh_mcp_tools(builder: Builder) -> Dict[str, Any]:
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         Summary of refreshed function groups including:
         - refreshed_groups: List of function group names that were refreshed
         - total_groups: Total number of MCP function groups found
@@ -56,10 +57,8 @@ async def refresh_mcp_tools(builder: Builder) -> Dict[str, Any]:
         mcp_groups = []
         for group_name, group_info in function_groups.items():
             # Check if this is an MCP client function group
-            if hasattr(group_info, 'instance') and hasattr(group_info.instance, '_config'):
-                config = group_info.instance._config
-                if hasattr(config, 'type') and config.type == 'mcp_client':
-                    mcp_groups.append((group_name, group_info.instance))
+            if group_info.instance._config.type == 'mcp_client':
+                mcp_groups.append((group_name, group_info.instance))
 
         logger.info(f"Found {len(mcp_groups)} MCP client function groups to refresh")
 
@@ -94,7 +93,8 @@ async def refresh_mcp_tools(builder: Builder) -> Dict[str, Any]:
         return {"refreshed_groups": refreshed_groups, "total_groups": 0, "success": False, "errors": [error_msg]}
 
 
-async def refresh_workflow_tools(builder: Builder) -> Dict[str, Any]:
+@experimental(feature_name="Workflow Tools Refresh")
+async def refresh_workflow_tools(builder: Builder) -> dict[str, Any]:
     """
     Refreshes all tools in a workflow by rebuilding them from the builder.
 
@@ -109,7 +109,7 @@ async def refresh_workflow_tools(builder: Builder) -> Dict[str, Any]:
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         Summary of the refresh operation including:
         - refreshed_groups: List of MCP function group names that were refreshed
         - refreshed_tools: List of tool names that were refreshed
