@@ -18,6 +18,7 @@ from typing import Any
 from typing import Dict
 
 from nat.builder import Builder
+from nat.builder import LLMFrameworkEnum
 
 logger = logging.getLogger(__name__)
 
@@ -91,3 +92,84 @@ async def refresh_mcp_tools(builder: Builder) -> Dict[str, Any]:
         error_msg = f"Unexpected error during MCP function group refresh: {str(e)}"
         logger.error(error_msg, exc_info=True)
         return {"refreshed_groups": refreshed_groups, "total_groups": 0, "success": False, "errors": [error_msg]}
+
+
+async def refresh_workflow_tools(builder: Builder) -> Dict[str, Any]:
+    """
+    Refreshes all tools in a workflow by rebuilding them from the builder.
+
+    This function first refreshes MCP function groups, then rebuilds all tools
+    from the builder to ensure the workflow has the latest tool definitions.
+    It automatically detects tool names from the workflow configuration.
+
+    Parameters
+    ----------
+    builder : Builder
+        The builder instance containing function groups to refresh.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Summary of the refresh operation including:
+        - refreshed_groups: List of MCP function group names that were refreshed
+        - refreshed_tools: List of tool names that were refreshed
+        - total_groups: Total number of MCP function groups found
+        - total_tools: Total number of tools refreshed
+        - success: Boolean indicating if all refreshes succeeded
+        - errors: List of any errors encountered during refresh
+    """
+    refreshed_groups = []
+    refreshed_tools = []
+    errors = []
+
+    try:
+        # First, refresh MCP function groups
+        mcp_result = await refresh_mcp_tools(builder)
+        refreshed_groups = mcp_result.get("refreshed_groups", [])
+        errors.extend(mcp_result.get("errors", []))
+
+        # Get all function groups to determine tool names
+        function_groups = getattr(builder, '_function_groups', {})
+        tool_names = list(function_groups.keys())
+
+        # Then, rebuild all tools from the builder
+        try:
+            logger.info(f"Refreshing {len(tool_names)} tools from builder")
+            new_tools = await builder.get_tools_with_refresh(tool_names=tool_names,
+                                                             wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+            refreshed_tools = [tool.name for tool in new_tools]
+            logger.info(f"Successfully refreshed {len(refreshed_tools)} tools")
+        except Exception as e:
+            error_msg = f"Failed to refresh tools from builder: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            errors.append(error_msg)
+
+        success = len(errors) == 0
+
+        result = {
+            "refreshed_groups": refreshed_groups,
+            "refreshed_tools": refreshed_tools,
+            "total_groups": mcp_result.get("total_groups", 0),
+            "total_tools": len(refreshed_tools),
+            "success": success,
+            "errors": errors
+        }
+
+        if success:
+            logger.info(f"Successfully refreshed {len(refreshed_groups)} MCP groups and {len(refreshed_tools)} tools")
+        else:
+            logger.warning(f"Refreshed with {len(errors)} errors")
+
+        return result
+
+    except Exception as e:
+        error_msg = f"Unexpected error during workflow tool refresh: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return {
+            "refreshed_groups": refreshed_groups,
+            "refreshed_tools": refreshed_tools,
+            "total_groups": 0,
+            "total_tools": 0,
+            "success": False,
+            "errors": [error_msg]
+        }

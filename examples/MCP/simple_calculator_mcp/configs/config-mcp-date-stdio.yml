@@ -34,10 +34,10 @@ general:
         method: POST
         description: Refreshes all MCP client function groups
         function_name: refresh_mcp_tools
-
-functions:
-  refresh_mcp_tools:
-    _type: refresh_mcp_tools
+      - path: /refresh-workflow-tools
+        method: POST
+        description: Refreshes all tools in the workflow (MCP groups + tools)
+        function_name: refresh_workflow_tools
 
 function_groups:
   mcp_time:
@@ -63,6 +63,12 @@ function_groups:
       - calculator_inequality
       - calculator_divide
       - calculator_subtract
+
+functions:
+  refresh_mcp_tools:
+    _type: refresh_mcp_tools
+  refresh_workflow_tools:
+    _type: refresh_workflow_tools
 
 
 llms:

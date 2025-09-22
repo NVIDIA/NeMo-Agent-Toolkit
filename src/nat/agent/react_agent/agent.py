@@ -89,6 +89,7 @@ class ReActAgentGraph(DualNodeAgent):
         self.tool_call_max_retries = tool_call_max_retries
         self.pass_tool_call_errors_to_agent = pass_tool_call_errors_to_agent
         self.normalize_tool_input_quotes = normalize_tool_input_quotes
+        self.use_tool_schema = use_tool_schema
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
@@ -104,6 +105,8 @@ class ReActAgentGraph(DualNodeAgent):
                 for tool in tools[:-1]
             ]) + "\n" + (f"{tools[-1].name}: {tools[-1].description}. "
                          f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
+        # Store the original prompt template for later updates
+        self._original_prompt_template = prompt
         prompt = prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         # construct the ReAct Agent
         self.agent = prompt | self._maybe_bind_llm_and_yield()
@@ -344,6 +347,83 @@ class ReActAgentGraph(DualNodeAgent):
         except Exception as ex:
             logger.error("%s Failed to build ReAct Graph: %s", AGENT_LOG_PREFIX, ex)
             raise
+
+    def refresh_tools(self, new_tools: list[BaseTool]):
+        """
+        Refresh all tools in the agent with a new set of tools.
+
+        This method replaces the entire tools_dict with the new tools and
+        updates the agent's internal state accordingly, including the prompt
+        and agent chain.
+
+        Parameters
+        ----------
+        new_tools : list[BaseTool]
+            The new set of tools to use.
+        """
+        # Update tools_dict
+        self.tools_dict = {tool.name: tool for tool in new_tools}
+
+        # Update the tools list in the parent class
+        self.tools = new_tools
+
+        # Update the prompt with new tool information
+        self._update_prompt_with_tools(new_tools)
+
+        logger.info(f"{AGENT_LOG_PREFIX} Refreshed tools: {len(new_tools)} tools available")
+        logger.debug(f"{AGENT_LOG_PREFIX} Available tools: {list(self.tools_dict.keys())}")
+
+    def _update_prompt_with_tools(self, tools: list[BaseTool]):
+        """
+        Update the agent's prompt with new tool information.
+
+        This method regenerates the prompt with the updated tool names and
+        descriptions, then rebuilds the agent chain.
+
+        Parameters
+        ----------
+        tools : list[BaseTool]
+            The new set of tools to include in the prompt.
+        """
+        if not tools:
+            logger.warning(f"{AGENT_LOG_PREFIX} No tools provided for prompt update")
+            return
+
+        # Generate tool names and descriptions
+        tool_names = ",".join([tool.name for tool in tools[:-1]]) + ',' + tools[-1].name
+
+        if not self.use_tool_schema:
+            tool_names_and_descriptions = "\n".join([f"{tool.name}: {tool.description}" for tool in tools[:-1]
+                                                     ]) + "\n" + f"{tools[-1].name}: {tools[-1].description}"
+        else:
+            logger.debug(f"{AGENT_LOG_PREFIX} Adding the tools' input schema to the tools' description")
+            tool_names_and_descriptions = "\n".join([
+                f"{tool.name}: {tool.description}. {INPUT_SCHEMA_MESSAGE.format(schema=tool.input_schema.model_fields)}"
+                for tool in tools[:-1]
+            ]) + "\n" + (f"{tools[-1].name}: {tools[-1].description}. "
+                         f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
+
+        # Update the prompt with new tool information
+        if self._original_prompt_template:
+            # Create new partial with updated tools using the original template
+            updated_prompt = self._original_prompt_template.partial(tools=tool_names_and_descriptions,
+                                                                    tool_names=tool_names)
+            # Rebuild the agent chain with updated prompt
+            self.agent = updated_prompt | self._maybe_bind_llm_and_yield()
+            logger.info(f"{AGENT_LOG_PREFIX} Updated agent prompt with {len(tools)} tools")
+        else:
+            logger.warning(f"{AGENT_LOG_PREFIX} Cannot update prompt - original prompt template not found")
+
+    def get_available_tools(self) -> list[str]:
+        """
+        Get a list of available tool names.
+
+        Returns
+        -------
+        list[str]
+            List of tool names currently available to the agent.
+        """
+        return list(self.tools_dict.keys())
 
     @staticmethod
     def validate_system_prompt(system_prompt: str) -> bool:
