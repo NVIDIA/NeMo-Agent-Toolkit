@@ -22,6 +22,8 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatResponse
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 
@@ -38,6 +40,8 @@ class ToolCallAgentWorkflowConfig(AgentBaseConfig, name="tool_calling_agent"):
         default_factory=list, description="The list of tools to provide to the tool calling agent.")
     handle_tool_errors: bool = Field(default=True, description="Specify ability to handle tool calling errors.")
     max_iterations: int = Field(default=15, description="Number of tool calls before stoping the tool calling agent.")
+    max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
+
     system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
     additional_instructions: str | None = Field(default=None,
                                                 description="Additional instructions appended to the system prompt.")
@@ -47,7 +51,8 @@ class ToolCallAgentWorkflowConfig(AgentBaseConfig, name="tool_calling_agent"):
 
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, builder: Builder):
-    from langchain_core.messages.human import HumanMessage
+    from langchain_core.messages import trim_messages
+    from langchain_core.messages.base import BaseMessage
     from langgraph.graph.state import CompiledStateGraph
 
     from nat.agent.base import AGENT_LOG_PREFIX
@@ -77,11 +82,16 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                                                          handle_tool_errors=config.handle_tool_errors,
                                                          return_direct=return_direct_tools).build_graph()
 
-    async def _response_fn(input_message: str) -> str:
+    async def _response_fn(input_message: ChatRequest) -> ChatResponse:
         try:
             # initialize the starting state with the user query
-            input_message = HumanMessage(content=input_message)
-            state = ToolCallAgentGraphState(messages=[input_message])
+            messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in input_message.messages],
+                                                        max_tokens=config.max_history,
+                                                        strategy="last",
+                                                        token_counter=len,
+                                                        start_on="human",
+                                                        include_system=True)
+            state = ToolCallAgentGraphState(messages=messages)
 
             # run the Tool Calling Agent Graph
             state = await graph.ainvoke(state, config={'recursion_limit': (config.max_iterations + 1) * 2})
