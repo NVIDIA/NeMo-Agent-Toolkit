@@ -63,6 +63,9 @@ class IntrospectionTokenVerifier(TokenVerifier):
         Returns:
             AccessToken | None: AccessToken if valid, None if invalid
         """
+        if self.config.disable_token_verification:
+            return self.stub_verify_token(token)
+
         validation_result = await self._bearer_token_validator.verify(token)
 
         if validation_result.active:
@@ -71,3 +74,8 @@ class IntrospectionTokenVerifier(TokenVerifier):
                                scopes=validation_result.scopes or [],
                                client_id=validation_result.client_id or "")
         return None
+
+    async def stub_verify_token(self, token: str) -> AccessToken | None:
+        """Stub verify token. This mehod must be removed before meging the PR"""
+        logger.info("Token verification is stubbed out for development purposes")
+        return AccessToken(token=token, expires_at=None, scopes=config.scopes or [], client_id="")

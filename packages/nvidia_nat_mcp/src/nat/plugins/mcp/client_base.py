@@ -31,8 +31,6 @@ from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
 from nat.authentication.interfaces import AuthProviderBase
-from nat.data_models.authentication import AuthReason
-from nat.data_models.authentication import AuthRequest
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
 from nat.plugins.mcp.exceptions import MCPToolNotFoundError
 from nat.plugins.mcp.utils import model_from_mcp_schema

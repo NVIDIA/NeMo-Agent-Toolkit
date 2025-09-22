@@ -70,6 +70,10 @@ class OAuth2ResourceServerConfig(AuthProviderBaseConfig, name="oauth2_resource_s
         default=None,
         description="OAuth2 client secret for authenticating to the introspection endpoint (opaque token validation).",
     )
+    disable_token_verification: bool = Field(
+        default=False,
+        description="Disable token verification. This is only for development purposes.",
+    )
 
     @staticmethod
     def _is_https_or_localhost(url: str) -> bool:

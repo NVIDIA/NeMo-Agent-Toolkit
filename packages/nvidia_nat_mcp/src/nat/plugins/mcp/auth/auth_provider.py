@@ -332,7 +332,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 
         if not self._cached_endpoints or not self._cached_credentials:
-            # if discovery is yet to done return empty auth result
+            # if discovery is yet to to be done return empty auth result
             return AuthResult(credentials=[], token_expires_at=None, raw={})
 
         endpoints = self._cached_endpoints
@@ -356,12 +356,12 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         return await self._auth_code_provider.authenticate()
 
     async def _tmp_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
-        """Perform the OAuth2 flow using NAT OAuth2 provider."""
+        """Perform the OAuth2 flow using temporary OAuth2 provider."""
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
         from nat.plugins.mcp.auth.tmp_oauth2_provider import TmpOAuth2AuthCodeFlowProvider
 
         if not self._cached_endpoints or not self._cached_credentials:
-            # if discovery is yet to done return empty auth result
+            # if discovery is yet to to be done return empty auth result
             return AuthResult(credentials=[], token_expires_at=None, raw={})
 
         endpoints = self._cached_endpoints
