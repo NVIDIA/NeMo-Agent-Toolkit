@@ -90,7 +90,7 @@ class TypeConverter:
         decomposed = DecomposedType(to_type)
 
         # 1) If data is already correct type, return it
-        if to_type is None or decomposed.is_instance((data, to_type)):
+        if to_type is None or decomposed.is_instance(data):
             return data
 
         root = decomposed.root
@@ -249,17 +249,16 @@ class TypeConverter:
         """
         Warn once if an indirect path was used between these two types.
         """
-        if source_type is not to_type:
-            pair = (source_type, to_type)
-            if pair not in self._indirect_warnings_shown:
-                logger.warning(
-                    "Indirect type conversion used to convert %s to %s, which may lead to unintended conversions. "
-                    "Consider adding a direct converter from %s to %s to ensure correctness.",
-                    source_type,
-                    to_type,
-                    source_type,
-                    to_type)
-                self._indirect_warnings_shown.add(pair)
+        pair = (source_type, to_type)
+        if pair not in self._indirect_warnings_shown:
+            logger.warning(
+                "Indirect type conversion used to convert %s to %s, which may lead to unintended conversions. "
+                "Consider adding a direct converter from %s to %s to ensure correctness.",
+                source_type,
+                to_type,
+                source_type,
+                to_type)
+            self._indirect_warnings_shown.add(pair)
 
 
 class GlobalTypeConverter:
