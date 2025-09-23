@@ -47,6 +47,12 @@ nat
 │   ├── console
 │   ├── fastapi
 │   └── mcp
+│       ├── serve
+│       └── client
+│           ├── ping
+│           └── tool
+│               ├── list
+│               └── call
 ├── uninstall
 ├── validate
 └── workflow
@@ -140,13 +146,13 @@ Options:
 
 ### MCP
 
-The `nat start mcp` command (or simply `nat mcp`) will start a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your NeMo Agent toolkit functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. The MCP front-end is especially useful for integrating NeMo Agent toolkit workflows with MCP-compatible clients.
+The `nat mcp serve` command (equivalent to `nat start mcp`) starts a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your NeMo Agent toolkit functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. The MCP front-end is especially useful for integrating NeMo Agent toolkit workflows with MCP-compatible clients.
 
 The MCP front-end can be configured using the following options:
 
 ```console
-$ nat mcp --help
-Usage: nat mcp [OPTIONS]
+$ nat mcp serve --help
+Usage: nat mcp serve [OPTIONS]
 
 Options:
   --config_file FILE         A JSON/YAML file that sets the parameters for the
@@ -166,7 +172,7 @@ Options:
 For example, to start an MCP server with a specific workflow and expose only a particular tool:
 
 ```bash
-nat mcp --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --tool_names mcp_retriever_tool
+nat mcp serve --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --tool_names mcp_retriever_tool
 ```
 
 This will start an MCP server exposing the `mcp_retriever_tool` function from the workflow, which can then be accessed by any MCP-compatible client.
