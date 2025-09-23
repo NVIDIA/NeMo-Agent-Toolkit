@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.usefixtures("mem0_api_key")
-@pytest.mark.e2e
+@pytest.mark.integration
 async def test_full_workflow():
 
     package_name = inspect.getmodule(SKTravelPlanningWorkflowConfig).__package__

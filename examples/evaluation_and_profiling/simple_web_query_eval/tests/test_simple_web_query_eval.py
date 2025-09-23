@@ -102,7 +102,7 @@ def validate_trajectory_accuracy(trajectory_output_file: Path):
 
 
 @pytest.mark.skip(reason="Failing accuracy checks, need to verify/update")
-@pytest.mark.e2e
+@pytest.mark.integration
 async def test_eval():
     """
     1. nat-eval writes the workflow output to workflow_output.json

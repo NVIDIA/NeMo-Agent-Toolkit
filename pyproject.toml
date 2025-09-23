@@ -264,7 +264,6 @@ include-package-data = true
 [tool.pytest.ini_options]
 markers = [
   "benchmark: Benchmarks",
-  "e2e: End-to-end tests",
   "integration: Integration tests which do not use mocks and may require external services",
   "requires_cache: Tests that require a reverse-proxy cache to be running",
   "slow: Slow tests",

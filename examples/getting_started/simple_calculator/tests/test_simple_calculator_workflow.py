@@ -29,7 +29,7 @@ from nat_simple_calculator.register import MultiplyToolConfig
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_inequality_tool_workflow():
 
@@ -47,7 +47,7 @@ async def test_inequality_tool_workflow():
         assert "no" in result
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_multiply_tool_workflow():
 
@@ -65,7 +65,7 @@ async def test_multiply_tool_workflow():
         assert "8" in result
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_division_tool_workflow():
 

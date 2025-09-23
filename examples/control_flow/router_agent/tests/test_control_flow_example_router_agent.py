@@ -34,7 +34,7 @@ async def _test_workflow(config_file: str, question: str, answer: str):
 
 
 @pytest.mark.usefixtures("nvidia_api_key")
-@pytest.mark.e2e
+@pytest.mark.integration
 async def test_full_workflow():
 
     current_dir = os.path.dirname(os.path.abspath(__file__))

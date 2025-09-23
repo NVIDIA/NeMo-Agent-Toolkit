@@ -23,13 +23,6 @@ def pytest_addoption(parser: pytest.Parser):
     Adds command line options for running specfic tests that are disabled by default
     """
     parser.addoption(
-        "--run_e2e",
-        action="store_true",
-        dest="run_e2e",
-        help="Run end to end tests that would otherwise be skipped",
-    )
-
-    parser.addoption(
         "--run_integration",
         action="store_true",
         dest="run_integration",
@@ -54,10 +47,6 @@ def pytest_addoption(parser: pytest.Parser):
 
 
 def pytest_runtest_setup(item):
-    if (not item.config.getoption("--run_e2e")):
-        if (item.get_closest_marker("e2e") is not None):
-            pytest.skip("Skipping end to end tests by default. Use --run_e2e to enable")
-
     if (not item.config.getoption("--run_integration")):
         if (item.get_closest_marker("integration") is not None):
             pytest.skip("Skipping integration tests by default. Use --run_integration to enable")
