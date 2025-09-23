@@ -29,7 +29,7 @@ from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.skip(reason="Test hangs, needs investigation")
+@pytest.mark.integration
 async def test_full_workflow():
 
     package_name = inspect.getmodule(AlertTriageAgentWorkflowConfig).__package__
@@ -37,14 +37,14 @@ async def test_full_workflow():
     config_file: Path = importlib.resources.files(package_name).joinpath("configs",
                                                                          "config_offline_mode.yml").absolute()
 
-    with open(config_file, "r") as file:
+    with open(config_file, "r", encoding="utf-8") as file:
         config = yaml.safe_load(file)
         input_filepath = config["eval"]["general"]["dataset"]["file_path"]
 
     input_filepath_abs = importlib.resources.files(package_name).joinpath("../../../../../", input_filepath).absolute()
 
     # Load input data
-    with open(input_filepath_abs, 'r') as f:
+    with open(input_filepath_abs, 'r', encoding="utf-8") as f:
         input_data = json.load(f)
 
     # Run the workflow
