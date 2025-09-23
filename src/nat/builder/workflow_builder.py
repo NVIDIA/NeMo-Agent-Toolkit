@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import dataclasses
 import inspect
 import logging
@@ -22,6 +23,7 @@ from collections.abc import Sequence
 from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
+from typing import cast
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
@@ -73,6 +75,7 @@ from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from nat.profiler.utils import detect_llm_frameworks_in_build_fn
+from nat.retriever.interface import Retriever
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
@@ -293,7 +296,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         if (entry_function is None):
             entry_fn_obj = self.get_workflow()
         else:
-            entry_fn_obj = self.get_function(entry_function)
+            entry_fn_obj = await self.get_function(entry_function)
 
         workflow = Workflow.from_entry_fn(config=config,
                                           entry_fn=entry_fn_obj,
@@ -460,7 +463,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return build_result.instance
 
     @override
-    def get_function(self, name: str | FunctionRef) -> Function:
+    async def get_function(self, name: str | FunctionRef) -> Function:
         if isinstance(name, FunctionRef):
             name = str(name)
         if name not in self._functions:
@@ -469,7 +472,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._functions[name].instance
 
     @override
-    def get_function_group(self, name: str | FunctionGroupRef) -> FunctionGroup:
+    async def get_function_group(self, name: str | FunctionGroupRef) -> FunctionGroup:
         if isinstance(name, FunctionGroupRef):
             name = str(name)
         if name not in self._function_groups:
@@ -538,40 +541,38 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     async def get_tools(self,
                         tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
                         wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
-        tools = []
-        seen = set()
-        for n in tool_names:
+
+        unique = set(tool_names)
+        if len(unique) != len(tool_names):
+            raise ValueError("Tool names must be unique")
+
+        async def _get_tools(n: str | FunctionRef | FunctionGroupRef):
+            tools = []
             is_function_group_ref = isinstance(n, FunctionGroupRef)
             if isinstance(n, FunctionRef) or is_function_group_ref:
                 n = str(n)
-            if n in seen:
-                raise ValueError(f"Function or Function Group `{n}` already seen")
-            seen.add(n)
             if n not in self._function_groups:
-                # the passed tool name is probably a function
+                # the passed tool name is probably a function, but first check if it's a function group
                 if is_function_group_ref:
                     raise ValueError(f"Function group `{n}` not found in the list of function groups")
-                tools.append(self.get_tool(n, wrapper_type))
-                continue
+                tools.append(await self.get_tool(n, wrapper_type))
+            else:
+                tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
+                current_function_group = self._function_groups[n]
+                for fn_name, fn_instance in (await current_function_group.instance.get_accessible_functions()).items():
+                    try:
+                        tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
+                    except Exception:
+                        logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
+                        raise
+            return tools
 
-            # Using the registry, get the tool wrapper for the requested framework
-            tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
-
-            current_function_group = self._function_groups[n]
-
-            # walk through all functions in the function group -- guaranteed to not be fallible
-            for fn_name, fn_instance in (await current_function_group.instance.get_accessible_functions()).items():
-                try:
-                    # Wrap in the correct wrapper and add to tools list
-                    tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
-                except Exception:
-                    logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
-                    raise
-
-        return tools
+        tool_lists = await asyncio.gather(*[_get_tools(n) for n in tool_names])
+        # Flatten the list of lists into a single list
+        return [tool for tools in tool_lists for tool in tools]
 
     @override
-    def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str):
+    async def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
         if isinstance(fn_name, FunctionRef):
             fn_name = str(fn_name)
         if fn_name not in self._functions:
@@ -588,7 +589,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise
 
     @override
-    async def add_llm(self, name: str | LLMRef, config: LLMBaseConfig):
+    async def add_llm(self, name: str | LLMRef, config: LLMBaseConfig) -> None:
 
         if (name in self._llms):
             raise ValueError(f"LLM `{name}` already exists in the list of LLMs")
@@ -604,7 +605,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise
 
     @override
-    async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str):
+    async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
 
         if (llm_name not in self._llms):
             raise ValueError(f"LLM `{llm_name}` not found")
@@ -704,7 +705,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._auth_providers[auth_provider_name].instance
 
     @override
-    async def add_embedder(self, name: str | EmbedderRef, config: EmbedderBaseConfig):
+    async def add_embedder(self, name: str | EmbedderRef, config: EmbedderBaseConfig) -> None:
 
         if (name in self._embedders):
             raise ValueError(f"Embedder `{name}` already exists in the list of embedders")
@@ -764,7 +765,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return info_obj
 
     @override
-    def get_memory_client(self, memory_name: str | MemoryRef) -> MemoryEditor:
+    async def get_memory_client(self, memory_name: str | MemoryRef) -> MemoryEditor:
         """
         Return the instantiated memory client for the given name.
         """
@@ -810,7 +811,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._object_stores[object_store_name].config
 
     @override
-    async def add_retriever(self, name: str | RetrieverRef, config: RetrieverBaseConfig):
+    async def add_retriever(self, name: str | RetrieverRef, config: RetrieverBaseConfig) -> None:
 
         if (name in self._retrievers):
             raise ValueError(f"Retriever '{name}' already exists in the list of retrievers")
@@ -825,8 +826,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         except Exception as e:
             logger.error("Error adding retriever `%s` with config `%s`: %s", name, config, e)
             raise
-
-        # return info_obj
 
     @override
     async def get_retriever(self,
@@ -862,7 +861,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @experimental(feature_name="TTC")
     @override
-    async def add_ttc_strategy(self, name: str | str, config: TTCStrategyBaseConfig):
+    async def add_ttc_strategy(self, name: str | TTCStrategyRef, config: TTCStrategyBaseConfig) -> None:
         if (name in self._ttc_strategies):
             raise ValueError(f"TTC strategy '{name}' already exists in the list of TTC strategies")
 
@@ -1049,32 +1048,40 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
                 # Instantiate a the llm
                 if component_instance.component_group == ComponentGroup.LLMS:
-                    await self.add_llm(component_instance.name, component_instance.config)
+                    await self.add_llm(component_instance.name, cast(LLMBaseConfig, component_instance.config))
                 # Instantiate a the embedder
                 elif component_instance.component_group == ComponentGroup.EMBEDDERS:
-                    await self.add_embedder(component_instance.name, component_instance.config)
+                    await self.add_embedder(component_instance.name,
+                                            cast(EmbedderBaseConfig, component_instance.config))
                 # Instantiate a memory client
                 elif component_instance.component_group == ComponentGroup.MEMORY:
-                    await self.add_memory_client(component_instance.name, component_instance.config)
+                    await self.add_memory_client(component_instance.name,
+                                                 cast(MemoryBaseConfig, component_instance.config))
                 # Instantiate a object store client
                 elif component_instance.component_group == ComponentGroup.OBJECT_STORES:
-                    await self.add_object_store(component_instance.name, component_instance.config)
+                    await self.add_object_store(component_instance.name,
+                                                cast(ObjectStoreBaseConfig, component_instance.config))
                 # Instantiate a retriever client
                 elif component_instance.component_group == ComponentGroup.RETRIEVERS:
-                    await self.add_retriever(component_instance.name, component_instance.config)
+                    await self.add_retriever(component_instance.name,
+                                             cast(RetrieverBaseConfig, component_instance.config))
                 # Instantiate a function group
                 elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
-                    await self.add_function_group(component_instance.name, component_instance.config)
+                    await self.add_function_group(component_instance.name,
+                                                  cast(FunctionGroupBaseConfig, component_instance.config))
                 # Instantiate a function
                 elif component_instance.component_group == ComponentGroup.FUNCTIONS:
                     # If the function is the root, set it as the workflow later
                     if (not component_instance.is_root):
-                        await self.add_function(component_instance.name, component_instance.config)
+                        await self.add_function(component_instance.name,
+                                                cast(FunctionBaseConfig, component_instance.config))
                 elif component_instance.component_group == ComponentGroup.TTC_STRATEGIES:
-                    await self.add_ttc_strategy(component_instance.name, component_instance.config)
+                    await self.add_ttc_strategy(component_instance.name,
+                                                cast(TTCStrategyBaseConfig, component_instance.config))
 
                 elif component_instance.component_group == ComponentGroup.AUTHENTICATION:
-                    await self.add_auth_provider(component_instance.name, component_instance.config)
+                    await self.add_auth_provider(component_instance.name,
+                                                 cast(AuthProviderBaseConfig, component_instance.config))
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
@@ -1128,18 +1135,18 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.add_function_group(name, config)
 
     @override
-    def get_function(self, name: str) -> Function:
+    async def get_function(self, name: str) -> Function:
         # If a function tries to get another function, we assume it uses it
-        fn = self._workflow_builder.get_function(name)
+        fn = await self._workflow_builder.get_function(name)
 
         self._dependencies.add_function(name)
 
         return fn
 
     @override
-    def get_function_group(self, name: str) -> FunctionGroup:
+    async def get_function_group(self, name: str) -> FunctionGroup:
         # If a function tries to get a function group, we assume it uses it
-        function_group = self._workflow_builder.get_function_group(name)
+        function_group = await self._workflow_builder.get_function_group(name)
 
         self._dependencies.add_function_group(name)
 
@@ -1178,20 +1185,21 @@ class ChildBuilder(Builder):
         return tools
 
     @override
-    def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str):
+    async def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str):
         # If a function tries to get another function as a tool, we assume it uses it
-        fn = self._workflow_builder.get_tool(fn_name, wrapper_type)
+        fn = await self._workflow_builder.get_tool(fn_name, wrapper_type)
 
         self._dependencies.add_function(fn_name)
 
         return fn
 
     @override
-    async def add_llm(self, name: str, config: LLMBaseConfig):
+    async def add_llm(self, name: str, config: LLMBaseConfig) -> None:
         return await self._workflow_builder.add_llm(name, config)
 
+    @experimental(feature_name="Authentication")
     @override
-    async def add_auth_provider(self, name: str, config: AuthProviderBaseConfig):
+    async def add_auth_provider(self, name: str, config: AuthProviderBaseConfig) -> AuthProviderBase:
         return await self._workflow_builder.add_auth_provider(name, config)
 
     @override
@@ -1199,7 +1207,7 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.get_auth_provider(auth_provider_name)
 
     @override
-    async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum | str):
+    async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
         llm = await self._workflow_builder.get_llm(llm_name, wrapper_type)
 
         self._dependencies.add_llm(llm_name)
@@ -1211,11 +1219,11 @@ class ChildBuilder(Builder):
         return self._workflow_builder.get_llm_config(llm_name)
 
     @override
-    async def add_embedder(self, name: str, config: EmbedderBaseConfig):
+    async def add_embedder(self, name: str, config: EmbedderBaseConfig) -> typing.Any:
         return await self._workflow_builder.add_embedder(name, config)
 
     @override
-    async def get_embedder(self, embedder_name: str, wrapper_type: LLMFrameworkEnum | str):
+    async def get_embedder(self, embedder_name: str, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
         embedder = await self._workflow_builder.get_embedder(embedder_name, wrapper_type)
 
         self._dependencies.add_embedder(embedder_name)
@@ -1231,11 +1239,11 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.add_memory_client(name, config)
 
     @override
-    def get_memory_client(self, memory_name: str) -> MemoryEditor:
+    async def get_memory_client(self, memory_name: str) -> MemoryEditor:
         """
         Return the instantiated memory client for the given name.
         """
-        memory_client = self._workflow_builder.get_memory_client(memory_name)
+        memory_client = await self._workflow_builder.get_memory_client(memory_name)
 
         self._dependencies.add_memory_client(memory_name)
 
@@ -1264,8 +1272,9 @@ class ChildBuilder(Builder):
     def get_object_store_config(self, object_store_name: str) -> ObjectStoreBaseConfig:
         return self._workflow_builder.get_object_store_config(object_store_name)
 
+    @experimental(feature_name="TTC")
     @override
-    async def add_ttc_strategy(self, name: str, config: TTCStrategyBaseConfig):
+    async def add_ttc_strategy(self, name: str, config: TTCStrategyBaseConfig) -> StrategyBase:
         return await self._workflow_builder.add_ttc_strategy(name, config)
 
     @override
@@ -1287,11 +1296,11 @@ class ChildBuilder(Builder):
                                                                     stage_type=stage_type)
 
     @override
-    async def add_retriever(self, name: str, config: RetrieverBaseConfig):
+    async def add_retriever(self, name: str, config: RetrieverBaseConfig) -> Retriever:
         return await self._workflow_builder.add_retriever(name, config)
 
     @override
-    async def get_retriever(self, retriever_name: str, wrapper_type: LLMFrameworkEnum | str | None = None):
+    async def get_retriever(self, retriever_name: str, wrapper_type: LLMFrameworkEnum | str | None = None) -> Retriever:
         if not wrapper_type:
             return await self._workflow_builder.get_retriever(retriever_name=retriever_name)
         return await self._workflow_builder.get_retriever(retriever_name=retriever_name, wrapper_type=wrapper_type)

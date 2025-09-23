@@ -61,13 +61,8 @@ class SweBenchPredictor(SweBenchPredictorBase):
 
     def __init__(self, config: SweBenchWorkflowConfig, builder: Builder):
         super().__init__(config, builder)
-        self.setup_predictor()
+        self.git_tool = None
         self.openai_client = OpenAI(api_key=config.predictor.openai_api_key)
-
-    def setup_predictor(self):
-        '''Setup git tools'''
-        logger.info("Setting up git tools for repository management")
-        self.git_tool = self.builder.get_tool("git_repo_tool", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def _parse_ast(self, file_path: str):
         """Parse AST of a Python file and extract symbols and imports."""
@@ -326,6 +321,8 @@ Output only the complete fixed version of the code without any explanations or m
     async def predict_fn(self, swebench_input: SWEBenchInput) -> str:
         logger.info("Processing instance %s", swebench_input.instance_id)
 
+        if self.git_tool is None:
+            self.git_tool = await self.builder.get_tool("git_repo_tool", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         try:
             # 1. Setup repository
             repo_name = swebench_input.instance_id.split('-')[0]

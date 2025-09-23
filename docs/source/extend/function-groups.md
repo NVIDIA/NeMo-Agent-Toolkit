@@ -80,10 +80,10 @@ async with WorkflowBuilder() as builder:
     await builder.add_function_group("my", MyGroupConfig(include=["greet"]))
 
     # Able to reference the function directly by its fully qualified name
-    greet = builder.get_function("my.greet")
+    greet = await builder.get_function("my.greet")
     print(await greet.ainvoke("World"))
 
-    my_group = builder.get_function_group("my")
+    my_group = await builder.get_function_group("my")
 
     # Get all accessible functions in the function group.
     # If the function group is configured to:

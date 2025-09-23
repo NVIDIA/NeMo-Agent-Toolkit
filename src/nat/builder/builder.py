@@ -45,6 +45,7 @@ from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.memory.interfaces import MemoryEditor
@@ -72,19 +73,20 @@ class Builder(ABC):
         pass
 
     @abstractmethod
-    def get_function(self, name: str | FunctionRef) -> Function:
+    async def get_function(self, name: str | FunctionRef) -> Function:
         pass
 
     @abstractmethod
-    def get_function_group(self, name: str | FunctionGroupRef) -> FunctionGroup:
+    async def get_function_group(self, name: str | FunctionGroupRef) -> FunctionGroup:
         pass
 
-    def get_functions(self, function_names: Sequence[str | FunctionRef]) -> list[Function]:
+    async def get_functions(self, function_names: Sequence[str | FunctionRef]) -> list[Function]:
+        tasks = [self.get_function(name) for name in function_names]
+        return list(await asyncio.gather(*tasks, return_exceptions=False))
 
-        return [self.get_function(name) for name in function_names]
-
-    def get_function_groups(self, function_group_names: Sequence[str | FunctionGroupRef]) -> list[FunctionGroup]:
-        return [self.get_function_group(name) for name in function_group_names]
+    async def get_function_groups(self, function_group_names: Sequence[str | FunctionGroupRef]) -> list[FunctionGroup]:
+        tasks = [self.get_function_group(name) for name in function_group_names]
+        return list(await asyncio.gather(*tasks, return_exceptions=False))
 
     @abstractmethod
     def get_function_config(self, name: str | FunctionRef) -> FunctionBaseConfig:
@@ -113,11 +115,11 @@ class Builder(ABC):
         pass
 
     @abstractmethod
-    def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
+    async def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
         pass
 
     @abstractmethod
-    async def add_llm(self, name: str | LLMRef, config: LLMBaseConfig):
+    async def add_llm(self, name: str | LLMRef, config: LLMBaseConfig) -> typing.Any:
         pass
 
     @abstractmethod
@@ -137,8 +139,10 @@ class Builder(ABC):
     def get_llm_config(self, llm_name: str | LLMRef) -> LLMBaseConfig:
         pass
 
+    @experimental(feature_name="Authentication")
     @abstractmethod
-    async def add_auth_provider(self, name: str | AuthenticationRef, config: AuthProviderBaseConfig):
+    async def add_auth_provider(self, name: str | AuthenticationRef,
+                                config: AuthProviderBaseConfig) -> AuthProviderBase:
         pass
 
     @abstractmethod
@@ -154,7 +158,7 @@ class Builder(ABC):
         return list(auth_providers)
 
     @abstractmethod
-    async def add_object_store(self, name: str | ObjectStoreRef, config: ObjectStoreBaseConfig):
+    async def add_object_store(self, name: str | ObjectStoreRef, config: ObjectStoreBaseConfig) -> ObjectStore:
         pass
 
     async def get_object_store_clients(self, object_store_names: Sequence[str | ObjectStoreRef]) -> list[ObjectStore]:
@@ -172,7 +176,7 @@ class Builder(ABC):
         pass
 
     @abstractmethod
-    async def add_embedder(self, name: str | EmbedderRef, config: EmbedderBaseConfig):
+    async def add_embedder(self, name: str | EmbedderRef, config: EmbedderBaseConfig) -> None:
         pass
 
     async def get_embedders(self, embedder_names: Sequence[str | EmbedderRef],
@@ -193,17 +197,18 @@ class Builder(ABC):
         pass
 
     @abstractmethod
-    async def add_memory_client(self, name: str | MemoryRef, config: MemoryBaseConfig):
+    async def add_memory_client(self, name: str | MemoryRef, config: MemoryBaseConfig) -> MemoryEditor:
         pass
 
-    def get_memory_clients(self, memory_names: Sequence[str | MemoryRef]) -> list[MemoryEditor]:
+    async def get_memory_clients(self, memory_names: Sequence[str | MemoryRef]) -> list[MemoryEditor]:
         """
         Return a list of memory clients for the specified names.
         """
-        return [self.get_memory_client(n) for n in memory_names]
+        tasks = [self.get_memory_client(n) for n in memory_names]
+        return list(await asyncio.gather(*tasks, return_exceptions=False))
 
     @abstractmethod
-    def get_memory_client(self, memory_name: str | MemoryRef) -> MemoryEditor:
+    async def get_memory_client(self, memory_name: str | MemoryRef) -> MemoryEditor:
         """
         Return the instantiated memory client for the given name.
         """
@@ -214,12 +219,12 @@ class Builder(ABC):
         pass
 
     @abstractmethod
-    async def add_retriever(self, name: str | RetrieverRef, config: RetrieverBaseConfig):
+    async def add_retriever(self, name: str | RetrieverRef, config: RetrieverBaseConfig) -> None:
         pass
 
     async def get_retrievers(self,
                              retriever_names: Sequence[str | RetrieverRef],
-                             wrapper_type: LLMFrameworkEnum | str | None = None):
+                             wrapper_type: LLMFrameworkEnum | str | None = None) -> list[Retriever]:
 
         tasks = [self.get_retriever(n, wrapper_type=wrapper_type) for n in retriever_names]
 
@@ -250,8 +255,9 @@ class Builder(ABC):
     async def get_retriever_config(self, retriever_name: str | RetrieverRef) -> RetrieverBaseConfig:
         pass
 
+    @experimental(feature_name="TTC")
     @abstractmethod
-    async def add_ttc_strategy(self, name: str | str, config: TTCStrategyBaseConfig):
+    async def add_ttc_strategy(self, name: str | TTCStrategyRef, config: TTCStrategyBaseConfig):
         pass
 
     @abstractmethod
@@ -304,5 +310,5 @@ class EvalBuilder(ABC):
         pass
 
     @abstractmethod
-    def get_all_tools(self, wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
+    async def get_all_tools(self, wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
         pass

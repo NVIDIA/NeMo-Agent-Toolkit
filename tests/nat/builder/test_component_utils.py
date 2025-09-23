@@ -82,12 +82,12 @@ def nested_nat_config_fixture():
         if config.embedder_name is not None:
             await builder.get_embedder(embedder_name=config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         if config.object_store_name is not None:
-            await builder.get_object_store(object_store_name=config.object_store_name)
+            await builder.get_object_store_client(object_store_name=config.object_store_name)
         if config.retriever_name is not None:
             await builder.get_retriever(retriever_name=config.retriever_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
         for fn_name in config.fn_names:
-            builder.get_function(name=fn_name)
+            await builder.get_function(name=fn_name)
 
         async def _inner_func(fn_input: str) -> str:
             return ""

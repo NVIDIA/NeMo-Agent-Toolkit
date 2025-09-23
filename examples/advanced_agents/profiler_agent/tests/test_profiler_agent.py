@@ -65,7 +65,7 @@ def require_phoenix_server(fail_missing: bool = False):
 async def test_flow_chart_tool():
     async with WorkflowBuilder() as builder:
         await builder.add_function("flow_chart", FlowChartConfig())
-        flow_chart_tool = builder.get_tool("flow_chart", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        flow_chart_tool = await builder.get_tool("flow_chart", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         data_path = Path(__file__).parent / "test_spans.csv"
         result = await flow_chart_tool.ainvoke(input={"df_path": str(data_path)})
         assert len(result.trace_id_to_flow_info) == 1
@@ -78,7 +78,7 @@ async def test_flow_chart_tool():
 async def test_token_usage_tool():
     async with WorkflowBuilder() as builder:
         await builder.add_function("token_usage", TokenUsageConfig())
-        token_usage_tool = builder.get_tool("token_usage", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        token_usage_tool = await builder.get_tool("token_usage", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         data_path = Path(__file__).parent / "test_spans.csv"
         result = await token_usage_tool.ainvoke(input={"df_path": str(data_path)})
         assert len(result.trace_id_to_token_usage) == 1

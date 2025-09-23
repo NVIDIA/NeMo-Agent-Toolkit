@@ -18,7 +18,9 @@ import inspect
 import uuid
 from collections.abc import Callable
 from typing import Any
+from typing import TypeVar
 from typing import cast
+from typing import overload
 
 from pydantic import BaseModel
 
@@ -77,7 +79,24 @@ def push_intermediate_step(step_manager: IntermediateStepManager,
     step_manager.push_intermediate_step(payload)
 
 
-def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
+# Type variable for overloads
+F = TypeVar('F', bound=Callable[..., Any])
+
+
+# Overloads for different function types
+@overload
+def track_function(func: F, *, metadata: dict[str, Any] | None = None) -> F:
+    """Overload for when a function is passed directly."""
+    ...
+
+
+@overload
+def track_function(*, metadata: dict[str, Any] | None = None) -> Callable[[F], F]:
+    """Overload for decorator factory usage (when called with parentheses)."""
+    ...
+
+
+def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None) -> Any:
     """
     Decorator that can wrap any type of function (sync, async, generator,
     async generator) and executes "tracking logic" around it.
@@ -254,6 +273,19 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
         return result
 
     return sync_wrapper
+
+
+# Overloads for track_unregistered_function
+@overload
+def track_unregistered_function(func: F, *, name: str | None = None, metadata: dict[str, Any] | None = None) -> F:
+    """Overload for when a function is passed directly."""
+    ...
+
+
+@overload
+def track_unregistered_function(*, name: str | None = None, metadata: dict[str, Any] | None = None) -> Callable[[F], F]:
+    """Overload for decorator factory usage (when called with parentheses)."""
+    ...
 
 
 def track_unregistered_function(func: Callable[..., Any] | None = None,

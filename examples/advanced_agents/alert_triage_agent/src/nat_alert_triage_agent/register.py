@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 import typing
 
@@ -81,14 +82,16 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
 
     # Get tools for alert triage
     tool_names = config.tool_names
-    tools = []
-    for tool_name in tool_names:
-        tool = builder.get_tool(tool_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-        tools.append(tool)
+
+    async def _get_tool(tool_name: str):
+        return await builder.get_tool(tool_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+    tools = [_get_tool(tool_name) for tool_name in tool_names]
+    tools = await asyncio.gather(*tools)
     llm_n_tools = llm.bind_tools(tools, parallel_tool_calls=True)
 
-    categorizer_tool = builder.get_tool("categorizer", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    maintenance_check_tool = builder.get_tool("maintenance_check", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    categorizer_tool = await _get_tool("categorizer")
+    maintenance_check_tool = await _get_tool("maintenance_check")
 
     # Define assistant function that processes messages with the LLM
     async def ata_assistant(state: MessagesState):

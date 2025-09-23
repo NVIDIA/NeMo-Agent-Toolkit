@@ -61,8 +61,8 @@ async def data_visualization_agent_function(config: DataVisualizationAgentConfig
     llm = await builder.get_llm(llm_name=config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     llm_n_tools = llm.bind_tools(tools)
 
-    hitl_approval_fn: Function = builder.get_function(config.hitl_approval_fn)
-    graph_summarizer_fn: Function = builder.get_function(config.graph_summarizer_fn)
+    hitl_approval_fn: Function = await builder.get_function(config.hitl_approval_fn)
+    graph_summarizer_fn: Function = await builder.get_function(config.graph_summarizer_fn)
 
     async def conditional_edge(state: AgentState):
         try:

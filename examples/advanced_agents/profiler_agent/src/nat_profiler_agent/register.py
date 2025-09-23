@@ -82,7 +82,7 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     graph: CompiledStateGraph = await ProfilerAgent(
         llm=llm,
         tools=tools_dict,
-        response_composer_tool=builder.get_tool("response_composer", wrapper_type=LLMFrameworkEnum.LANGCHAIN),
+        response_composer_tool=await builder.get_tool("response_composer", wrapper_type=LLMFrameworkEnum.LANGCHAIN),
         detailed_logs=True,
         max_retries=config.max_retries,
         retry_prompt=config.retry_prompt,

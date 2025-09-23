@@ -161,7 +161,7 @@ async with WorkflowBuilder() as builder:
     await builder.add_function_group("math", MathGroupConfig(include=["add"]))
 
     # Call an included function directly by its fully-qualified name
-    add = builder.get_function("math.add")
+    add = await builder.get_function("math.add")
     result = await add.ainvoke([1, 2, 3])  # 6
 ```
 
@@ -180,7 +180,7 @@ async with WorkflowBuilder() as builder:
     group = await builder.add_function_group("math", config)
     
     # Set the group-level filter
-    math_group = builder.get_function_group("math")
+    math_group = await builder.get_function_group("math")
     math_group.set_filter_fn(math_filter)
     
     # Now only "add" functions will be accessible, even though "mul" was included
