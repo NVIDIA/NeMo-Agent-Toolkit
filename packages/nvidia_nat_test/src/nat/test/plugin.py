@@ -177,6 +177,17 @@ def tavily_api_key_fixture(fail_missing: bool):
         fail_missing=fail_missing)
 
 
+@pytest.fixture(name="mem0_api_key", scope='session')
+def mem0_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Mem0 API key.
+    """
+    yield require_env_variables(
+        varnames=["MEM0_API_KEY"],
+        reason="Mem0 integration tests require the `MEM0_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
 @pytest.fixture(name="aws_keys", scope='session')
 def aws_keys_fixture(fail_missing: bool):
     """

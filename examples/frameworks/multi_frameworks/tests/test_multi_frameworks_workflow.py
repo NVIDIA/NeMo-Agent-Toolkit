@@ -27,6 +27,7 @@ from nat_multi_frameworks.register import MultiFrameworksWorkflowConfig
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.usefixtures("nvidia_api_key")
 @pytest.mark.e2e
 async def test_full_workflow():
 

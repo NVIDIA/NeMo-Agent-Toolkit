@@ -27,6 +27,7 @@ from nat_semantic_kernel_demo.register import SKTravelPlanningWorkflowConfig
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.usefixtures("mem0_api_key")
 @pytest.mark.e2e
 async def test_full_workflow():
 
