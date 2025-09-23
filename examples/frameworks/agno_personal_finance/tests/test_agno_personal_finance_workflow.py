@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.e2e
+@pytest.mark.usefixtures("serp_api_key", "openai_api_key")
 async def test_full_workflow():
 
     package_name = inspect.getmodule(AgnoPersonalFinanceFunctionConfig).__package__
