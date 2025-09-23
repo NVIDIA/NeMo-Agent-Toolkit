@@ -237,6 +237,10 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
             sub_span.set_attribute(SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value,
                                    usage_info.token_usage.total_tokens if usage_info.token_usage else 0)
 
+        # Set the status of the span
+        sub_span.set_attribute(f"{self._span_prefix}.status",
+                               event.payload.status.value if event.payload.status else "unknown")
+
         if event.payload.data and event.payload.data.output is not None:
             serialized_output, is_json = self._serialize_payload(event.payload.data.output)
             sub_span.set_attribute(SpanAttributes.OUTPUT_VALUE.value, serialized_output)
@@ -264,7 +268,6 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         sub_span.set_attribute(f"{self._span_prefix}.metadata", serialized_metadata)
         sub_span.set_attribute(f"{self._span_prefix}.metadata.mime_type",
                                MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
-
         end_ns = ns_timestamp(event.payload.event_timestamp)
 
         # End the subspan

@@ -103,6 +103,15 @@ class ToolSchema(BaseModel):
     function: ToolDetails = Field(..., description="The function details.")
 
 
+class ErrorDetails(BaseModel):
+    """
+    Standardized error details captured for failed intermediate steps.
+    """
+    message: str | None = Field(default=None, description="Human-readable error message.")
+    exception_type: str | None = Field(default=None, description="Exception class name (e.g., ValueError).")
+    traceback: str | None = Field(default=None, description="Formatted traceback string, if available.")
+
+
 class TraceMetadata(BaseModel):
     chat_responses: typing.Any | None = None
     chat_inputs: typing.Any | None = None
@@ -114,9 +123,20 @@ class TraceMetadata(BaseModel):
     provided_metadata: typing.Any | None = None
     tools_schema: list[ToolSchema] = Field(default_factory=list,
                                            description="The schema of tools used in a tool calling request.")
+    error_details: ErrorDetails | None = Field(default=None,
+                                               description="Standardized error details if the step failed.")
 
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")
+
+
+class EventStatus(str, Enum):
+    """
+    The status of the intermediate step payload, useful to track when a step was successful or not.
+    """
+    SUCCESS = "success"
+    ERROR = "error"
+    UNKNOWN = "unknown"
 
 
 class IntermediateStepPayload(BaseModel):
@@ -140,6 +160,7 @@ class IntermediateStepPayload(BaseModel):
     data: StreamEventData | None = None
     usage_info: UsageInfo | None = None
     UUID: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    status: EventStatus = Field(default=EventStatus.SUCCESS)
 
     @property
     def event_category(self) -> IntermediateStepCategory:
