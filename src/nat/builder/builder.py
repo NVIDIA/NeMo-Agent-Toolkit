@@ -139,8 +139,8 @@ class Builder(ABC):
     def get_llm_config(self, llm_name: str | LLMRef) -> LLMBaseConfig:
         pass
 
-    @experimental(feature_name="Authentication")
     @abstractmethod
+    @experimental(feature_name="Authentication")
     async def add_auth_provider(self, name: str | AuthenticationRef,
                                 config: AuthProviderBaseConfig) -> AuthProviderBase:
         pass
@@ -255,8 +255,8 @@ class Builder(ABC):
     async def get_retriever_config(self, retriever_name: str | RetrieverRef) -> RetrieverBaseConfig:
         pass
 
-    @experimental(feature_name="TTC")
     @abstractmethod
+    @experimental(feature_name="TTC")
     async def add_ttc_strategy(self, name: str | TTCStrategyRef, config: TTCStrategyBaseConfig):
         pass
 
@@ -264,7 +264,7 @@ class Builder(ABC):
     async def get_ttc_strategy(self,
                                strategy_name: str | TTCStrategyRef,
                                pipeline_type: PipelineTypeEnum,
-                               stage_type: StageTypeEnum):
+                               stage_type: StageTypeEnum) -> typing.Any:
         pass
 
     @abstractmethod

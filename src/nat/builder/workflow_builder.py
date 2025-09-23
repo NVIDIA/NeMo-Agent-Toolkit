@@ -859,8 +859,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._retrievers[retriever_name].config
 
-    @experimental(feature_name="TTC")
     @override
+    @experimental(feature_name="TTC")
     async def add_ttc_strategy(self, name: str | TTCStrategyRef, config: TTCStrategyBaseConfig) -> None:
         if (name in self._ttc_strategies):
             raise ValueError(f"TTC strategy '{name}' already exists in the list of TTC strategies")
@@ -1272,10 +1272,10 @@ class ChildBuilder(Builder):
     def get_object_store_config(self, object_store_name: str) -> ObjectStoreBaseConfig:
         return self._workflow_builder.get_object_store_config(object_store_name)
 
-    @experimental(feature_name="TTC")
     @override
-    async def add_ttc_strategy(self, name: str, config: TTCStrategyBaseConfig) -> StrategyBase:
-        return await self._workflow_builder.add_ttc_strategy(name, config)
+    @experimental(feature_name="TTC")
+    async def add_ttc_strategy(self, name: str, config: TTCStrategyBaseConfig) -> None:
+        await self._workflow_builder.add_ttc_strategy(name, config)
 
     @override
     async def get_ttc_strategy(self,
@@ -1296,8 +1296,8 @@ class ChildBuilder(Builder):
                                                                     stage_type=stage_type)
 
     @override
-    async def add_retriever(self, name: str, config: RetrieverBaseConfig) -> Retriever:
-        return await self._workflow_builder.add_retriever(name, config)
+    async def add_retriever(self, name: str, config: RetrieverBaseConfig) -> None:
+        await self._workflow_builder.add_retriever(name, config)
 
     @override
     async def get_retriever(self, retriever_name: str, wrapper_type: LLMFrameworkEnum | str | None = None) -> Retriever:
