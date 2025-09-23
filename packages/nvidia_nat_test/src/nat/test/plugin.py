@@ -23,13 +23,6 @@ def pytest_addoption(parser: pytest.Parser):
     Adds command line options for running specfic tests that are disabled by default
     """
     parser.addoption(
-        "--run_e2e",
-        action="store_true",
-        dest="run_e2e",
-        help="Run end to end tests that would otherwise be skipped",
-    )
-
-    parser.addoption(
         "--run_integration",
         action="store_true",
         dest="run_integration",
@@ -54,10 +47,6 @@ def pytest_addoption(parser: pytest.Parser):
 
 
 def pytest_runtest_setup(item):
-    if (not item.config.getoption("--run_e2e")):
-        if (item.get_closest_marker("e2e") is not None):
-            pytest.skip("Skipping end to end tests by default. Use --run_e2e to enable")
-
     if (not item.config.getoption("--run_integration")):
         if (item.get_closest_marker("integration") is not None):
             pytest.skip("Skipping integration tests by default. Use --run_integration to enable")
@@ -152,6 +141,39 @@ def nvidia_api_key_fixture(fail_missing: bool):
     yield require_env_variables(
         varnames=["NVIDIA_API_KEY"],
         reason="Nvidia integration tests require the `NVIDIA_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="serp_api_key", scope='session')
+def serp_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a SERP API key.
+    """
+    yield require_env_variables(
+        varnames=["SERP_API_KEY"],
+        reason="SERP integration tests require the `SERP_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="tavily_api_key", scope='session')
+def tavily_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Tavily API key.
+    """
+    yield require_env_variables(
+        varnames=["TAVILY_API_KEY"],
+        reason="Tavily integration tests require the `TAVILY_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="mem0_api_key", scope='session')
+def mem0_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Mem0 API key.
+    """
+    yield require_env_variables(
+        varnames=["MEM0_API_KEY"],
+        reason="Mem0 integration tests require the `MEM0_API_KEY` environment variable to be defined.",
         fail_missing=fail_missing)
 
 

@@ -311,7 +311,7 @@ async def client_fixture(config):
             yield client
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_generate_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests generate endpoint to verify it responds successfully."""
@@ -320,7 +320,7 @@ async def test_generate_endpoint(client: httpx.AsyncClient, config: Config):
     assert response.status_code == 200
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_generate_stream_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests generate stream endpoint to verify it responds successfully."""
@@ -329,7 +329,7 @@ async def test_generate_stream_endpoint(client: httpx.AsyncClient, config: Confi
     assert response.status_code == 200
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests chat endpoint to verify it responds successfully."""
@@ -340,7 +340,7 @@ async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
     assert isinstance(validated_response, ChatResponse)
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests chat stream endpoint to verify it responds successfully."""
@@ -355,7 +355,7 @@ async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
     assert isinstance(validated_response, ChatResponseChunk)
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_user_attributes_from_http_request(client: httpx.AsyncClient, config: Config):
     """Tests setting user attributes from HTTP request."""

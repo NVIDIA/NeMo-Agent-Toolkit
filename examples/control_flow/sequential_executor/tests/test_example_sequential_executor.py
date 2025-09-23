@@ -34,7 +34,7 @@ async def _test_workflow(config_file: str, input_text: str, expected_elements: l
             assert element in result
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 async def test_full_workflow():
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
