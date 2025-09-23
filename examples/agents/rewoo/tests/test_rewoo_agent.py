@@ -33,6 +33,7 @@ async def _test_workflow(config_file: str, question: str, answer: str):
         assert answer in result
 
 
+@pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")
 @pytest.mark.e2e
 async def test_full_workflow():
 

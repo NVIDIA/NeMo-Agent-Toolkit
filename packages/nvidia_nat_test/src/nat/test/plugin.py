@@ -166,6 +166,17 @@ def serp_api_key_fixture(fail_missing: bool):
         fail_missing=fail_missing)
 
 
+@pytest.fixture(name="tavily_api_key", scope='session')
+def tavily_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Tavily API key.
+    """
+    yield require_env_variables(
+        varnames=["TAVILY_API_KEY"],
+        reason="Tavily integration tests require the `TAVILY_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
 @pytest.fixture(name="aws_keys", scope='session')
 def aws_keys_fixture(fail_missing: bool):
     """
