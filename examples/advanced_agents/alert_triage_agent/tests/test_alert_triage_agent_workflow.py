@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_full_workflow():
 
     package_name = inspect.getmodule(AlertTriageAgentWorkflowConfig).__package__
