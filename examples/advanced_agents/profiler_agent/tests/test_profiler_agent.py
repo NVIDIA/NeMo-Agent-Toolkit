@@ -61,7 +61,7 @@ def require_phoenix_server(fail_missing: bool = False):
 
 
 @pytest.mark.skip(reason="Raises a ValueError")
-@pytest.mark.e2e
+@pytest.mark.integration
 async def test_flow_chart_tool():
     async with WorkflowBuilder() as builder:
         await builder.add_function("flow_chart", FlowChartConfig())
@@ -74,7 +74,7 @@ async def test_flow_chart_tool():
 
 
 @pytest.mark.skip(reason="Raises a ValueError")
-@pytest.mark.e2e
+@pytest.mark.integration
 async def test_token_usage_tool():
     async with WorkflowBuilder() as builder:
         await builder.add_function("token_usage", TokenUsageConfig())
