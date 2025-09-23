@@ -1219,8 +1219,8 @@ class ChildBuilder(Builder):
         return self._workflow_builder.get_llm_config(llm_name)
 
     @override
-    async def add_embedder(self, name: str, config: EmbedderBaseConfig) -> typing.Any:
-        return await self._workflow_builder.add_embedder(name, config)
+    async def add_embedder(self, name: str, config: EmbedderBaseConfig) -> None:
+        await self._workflow_builder.add_embedder(name, config)
 
     @override
     async def get_embedder(self, embedder_name: str, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:

@@ -52,6 +52,9 @@ from nat.memory.interfaces import MemoryEditor
 from nat.object_store.interfaces import ObjectStore
 from nat.retriever.interface import Retriever
 
+if typing.TYPE_CHECKING:
+    from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+
 
 class UserManagerHolder():
 
@@ -264,7 +267,7 @@ class Builder(ABC):
     async def get_ttc_strategy(self,
                                strategy_name: str | TTCStrategyRef,
                                pipeline_type: PipelineTypeEnum,
-                               stage_type: StageTypeEnum) -> typing.Any:
+                               stage_type: StageTypeEnum) -> StrategyBase:
         pass
 
     @abstractmethod
