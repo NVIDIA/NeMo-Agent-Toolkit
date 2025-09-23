@@ -45,7 +45,7 @@ class SimpleFrontEndPluginBase(FrontEndBase[FrontEndConfigT], ABC):
 
                 click.echo(stream.getvalue())
 
-            workflow = builder.build()
+            workflow = await builder.build()
             session_manager = SessionManager(workflow)
             await self.run_workflow(session_manager)
 

@@ -161,7 +161,7 @@ async with WorkflowBuilder() as builder:
     await builder.add_function_group("math", MathGroupConfig(include=["add"]))
 
     # Call an included function directly by its fully-qualified name
-    add = builder.get_function("math.add")
+    add = await builder.get_function("math.add")
     result = await add.ainvoke([1, 2, 3])  # 6
 ```
 
@@ -180,11 +180,11 @@ async with WorkflowBuilder() as builder:
     group = await builder.add_function_group("math", config)
     
     # Set the group-level filter
-    math_group = builder.get_function_group("math")
+    math_group = await builder.get_function_group("math")
     math_group.set_filter_fn(math_filter)
     
     # Now only "add" functions will be accessible, even though "mul" was included
-    accessible = math_group.get_accessible_functions()
+    accessible = await math_group.get_accessible_functions()
     # accessible contains only "math.add"
 ```
 
@@ -197,10 +197,10 @@ from nat.data_models.component_ref import FunctionGroupRef
 from nat.builder.framework_enum import LLMFrameworkEnum
 
 
-tools = builder.get_tools([FunctionGroupRef("math")], wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+tools = await builder.get_tools([FunctionGroupRef("math")], wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
 # or the following:
-# tools = builder.get_tools(["math"], wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+# tools = await builder.get_tools(["math"], wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 ```
 
 ## Writing Function Groups
