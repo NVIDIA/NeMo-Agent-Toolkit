@@ -178,8 +178,6 @@ function get_lfs_files() {
     if [[ "${USE_HOST_GIT}" == "1" ]]; then
         rapids-logger "Using host git, skipping git-lfs install"
     else
-        rapids-logger "Fetching LFS files"
-        git lfs install
         rapids-logger "Calling git lfs fetch"
         git lfs fetch
         rapids-logger "Calling git lfs pull"
