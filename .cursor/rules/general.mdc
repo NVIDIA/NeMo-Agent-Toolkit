@@ -43,7 +43,7 @@ These are the overarching standards that every **source, test, documentation and
   - The `pyproject.toml` should declare a dependency on `nvidia-nat` or another package with a name starting with `nvidia-nat-`.
   - Dependencies should use `~=<version>` format with two-digit versions (e.g., `~=1.0`).
   - If packages contain Python code, they should have tests in a `tests/` directory at the same level as `pyproject.toml`.
-- Unit tests live in `tests/` (or `examples/*/tests`) and use the markers defined in `pyproject.toml` (e.g. `e2e`, `integration`).
+- Unit tests live in `tests/` (or `examples/*/tests`) and use the markers defined in `pyproject.toml` (e.g. `integration`).
 - Documentation sources are Markdown files under `docs/source`. Image files should be placed in `docs/source/_static` directory.
 - Configuration files consumed by code are stored next to that code in a `configs/` folder.
 - Large / binary assets **must** be committed with Git-LFS and placed in a neighbouring `data/` folder.

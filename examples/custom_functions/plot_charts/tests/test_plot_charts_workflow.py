@@ -27,7 +27,7 @@ from nat_plot_charts.register import PlotChartsWorkflowConfig
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 async def test_full_workflow():
 
     package_name = inspect.getmodule(PlotChartsWorkflowConfig).__package__
@@ -41,4 +41,4 @@ async def test_full_workflow():
             result = await runner.result(to_type=str)
 
         result = result.lower()
-        assert "saved output to" in result
+        assert result.startswith("successfully created line chart")
