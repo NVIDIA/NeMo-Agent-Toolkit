@@ -123,7 +123,12 @@ async def test_tool_calling_agent_with_conversation_history(mock_config_tool_cal
     graph = await agent.build_graph()
     state = await graph.ainvoke(state, config={'recursion_limit': 5})
     state = ToolCallAgentGraphState(**state)
-    assert len(state.messages) > 3
+    # history preserved in order
+    assert [type(m) for m in state.messages[:3]] == [type(m) for m in messages]
+    assert [m.content for m in state.messages[:3]] == [m.content for m in messages]
+    # exactly one new AI message appended for this scenario
+    assert len(state.messages) == len(messages) + 1
+    assert isinstance(state.messages[-1], AIMessage)
 
 
 def test_tool_calling_agent_init_w_return_direct(mock_config_tool_calling_agent, mock_llm, mock_tool):
