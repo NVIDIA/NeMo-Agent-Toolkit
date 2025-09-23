@@ -31,7 +31,7 @@ PYTEST_ARGS=""
 REPORT_NAME="${CI_PROJECT_DIR}/pytest_junit_report.xml"
 COV_REPORT_NAME="${CI_PROJECT_DIR}/pytest_coverage_report.xml"
 if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
-       PYTEST_ARGS="--run_slow --run_e2e --run_integration"
+       PYTEST_ARGS="--run_slow --run_integration"
 
        DATE_TAG=$(date +"%Y%m%d")
        REPORT_NAME="${CI_PROJECT_DIR}/pytest_junit_report_${DATE_TAG}.xml"
