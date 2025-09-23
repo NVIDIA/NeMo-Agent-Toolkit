@@ -227,7 +227,7 @@ To call a tool and see its output:
 # Pass arguments as JSON
 nat mcp client tool call calculator_multiply \
   --url http://localhost:9901/mcp \
-  --json-args '{"a": 2, "b": 3}'
+  --json-args '{"text": "2 * 3"}'
 ```
 
 ```
