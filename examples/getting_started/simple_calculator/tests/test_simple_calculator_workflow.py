@@ -72,9 +72,9 @@ async def test_division_tool_workflow():
 
     async with load_workflow(config_file) as workflow:
 
-        async with workflow.run("What is 8 divided by 2?") as runner:
+        async with workflow.run("What is 12 divided by 2?") as runner:
 
             result = await runner.result(to_type=str)
 
         result = result.lower()
-        assert "4" in result
+        assert "6" in result
