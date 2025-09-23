@@ -267,7 +267,7 @@ class Builder(ABC):
     async def get_ttc_strategy(self,
                                strategy_name: str | TTCStrategyRef,
                                pipeline_type: PipelineTypeEnum,
-                               stage_type: StageTypeEnum) -> StrategyBase:
+                               stage_type: StageTypeEnum) -> "StrategyBase":
         pass
 
     @abstractmethod
