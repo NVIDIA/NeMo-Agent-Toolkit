@@ -81,7 +81,7 @@ async def test_token_usage_tool(df_path: Path):
     async with WorkflowBuilder() as builder:
         await builder.add_function("token_usage", TokenUsageConfig())
         token_usage_tool = await builder.get_tool("token_usage", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-        result = await flow_chart_tool.ainvoke(input={"df_path": str(df_path)})
+        result = await token_usage_tool.ainvoke(input={"df_path": str(df_path)})
         assert len(result.trace_id_to_token_usage) == 1
         token_usage_info = result.trace_id_to_token_usage.popitem()[1]
         assert (token_usage_info.token_usage_detail_chart_path is not None
