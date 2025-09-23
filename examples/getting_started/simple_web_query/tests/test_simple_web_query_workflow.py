@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.e2e
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_full_workflow():
 
     package_name = inspect.getmodule(WebQueryToolConfig).__package__

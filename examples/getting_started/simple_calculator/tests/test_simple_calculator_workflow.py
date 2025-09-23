@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.e2e
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_inequality_tool_workflow():
 
     package_name = inspect.getmodule(InequalityToolConfig).__package__
@@ -47,6 +48,7 @@ async def test_inequality_tool_workflow():
 
 
 @pytest.mark.e2e
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_multiply_tool_workflow():
 
     package_name = inspect.getmodule(MultiplyToolConfig).__package__
@@ -64,6 +66,7 @@ async def test_multiply_tool_workflow():
 
 
 @pytest.mark.e2e
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_division_tool_workflow():
 
     package_name = inspect.getmodule(DivisionToolConfig).__package__
