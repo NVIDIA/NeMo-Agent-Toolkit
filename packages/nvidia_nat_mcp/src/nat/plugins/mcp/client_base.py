@@ -20,6 +20,7 @@ from abc import ABC
 from abc import abstractmethod
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
+from datetime import timedelta
 from typing import AsyncGenerator
 
 import httpx
@@ -131,7 +132,10 @@ class MCPBaseClient(ABC):
         auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self, transport: str = 'streamable-http', auth_provider: AuthProviderBase | None = None):
+    def __init__(self,
+                 transport: str = 'streamable-http',
+                 auth_provider: AuthProviderBase | None = None,
+                 tool_call_timeout: timedelta = timedelta(seconds=5)):
         self._tools = None
         self._transport = transport.lower()
         if self._transport not in ['sse', 'stdio', 'streamable-http']:
@@ -144,6 +148,8 @@ class MCPBaseClient(ABC):
 
         # Convert auth provider to AuthAdapter
         self._httpx_auth = AuthAdapter(auth_provider) if auth_provider else None
+
+        self._tool_call_timeout = tool_call_timeout
 
     @property
     def transport(self) -> str:
@@ -204,7 +210,8 @@ class MCPBaseClient(ABC):
                               tool_name=tool.name,
                               tool_description=tool.description,
                               tool_input_schema=tool.inputSchema,
-                              parent_client=self)
+                              parent_client=self,
+                              tool_call_timeout=self._tool_call_timeout)
             for tool in response.tools
         }
 
@@ -250,8 +257,8 @@ class MCPSSEClient(MCPBaseClient):
       url (str): The url of the MCP server
     """
 
-    def __init__(self, url: str):
-        super().__init__("sse")
+    def __init__(self, url: str, tool_call_timeout: timedelta = timedelta(seconds=5)):
+        super().__init__("sse", tool_call_timeout=tool_call_timeout)
         self._url = url
 
     @property
@@ -286,8 +293,12 @@ class MCPStdioClient(MCPBaseClient):
       env (dict[str, str] | None): Environment variables to set for the process
     """
 
-    def __init__(self, command: str, args: list[str] | None = None, env: dict[str, str] | None = None):
-        super().__init__("stdio")
+    def __init__(self,
+                 command: str,
+                 args: list[str] | None = None,
+                 env: dict[str, str] | None = None,
+                 tool_call_timeout: timedelta = timedelta(seconds=5)):
+        super().__init__("stdio", tool_call_timeout=tool_call_timeout)
         self._command = command
         self._args = args
         self._env = env
@@ -331,8 +342,11 @@ class MCPStreamableHTTPClient(MCPBaseClient):
       auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
     """
 
-    def __init__(self, url: str, auth_provider: AuthProviderBase | None = None):
-        super().__init__("streamable-http", auth_provider=auth_provider)
+    def __init__(self,
+                 url: str,
+                 auth_provider: AuthProviderBase | None = None,
+                 tool_call_timeout: timedelta = timedelta(seconds=5)):
+        super().__init__("streamable-http", auth_provider=auth_provider, tool_call_timeout=tool_call_timeout)
         self._url = url
 
     @property
@@ -374,12 +388,14 @@ class MCPToolClient:
                  tool_name: str,
                  tool_description: str | None,
                  tool_input_schema: dict | None = None,
-                 parent_client: "MCPBaseClient | None" = None):
+                 parent_client: "MCPBaseClient | None" = None,
+                 tool_call_timeout: timedelta = timedelta(seconds=5)):
         self._session = session
         self._tool_name = tool_name
         self._tool_description = tool_description
         self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
         self._parent_client = parent_client
+        self._tool_call_timeout = tool_call_timeout
 
     @property
     def name(self):
@@ -418,7 +434,7 @@ class MCPToolClient:
         if self._session is None:
             raise RuntimeError("No session available for tool call")
         logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
-        result = await self._session.call_tool(self._tool_name, tool_args)
+        result = await self._session.call_tool(self._tool_name, tool_args, read_timeout_seconds=self._tool_call_timeout)
 
         output = []
 
