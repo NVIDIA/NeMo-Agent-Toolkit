@@ -164,7 +164,26 @@ class DiscoverOAuth2Endpoints:
                     resp = await client.get(url, headers={"Accept": "application/json"})
                     if resp.status_code != 200:
                         continue
+
+                    # Check content type before attempting JSON parsing
+                    content_type = resp.headers.get("content-type", "").lower()
+                    if "application/json" not in content_type:
+                        logger.info(
+                            "Discovery endpoint %s returned non-JSON content type: %s. "
+                            "This may indicate the endpoint doesn't support OAuth discovery or requires authentication.",
+                            url,
+                            content_type)
+                        # If it's HTML, log a more helpful message
+                        if "text/html" in content_type:
+                            logger.info("The endpoint appears to be returning an HTML page instead of OAuth metadata. "
+                                        "This often means:")
+                            logger.info("1. The OAuth discovery endpoint doesn't exist at this URL")
+                            logger.info("2. The server requires authentication before providing discovery metadata")
+                            logger.info("3. The URL is pointing to a web application instead of an OAuth server")
+                        continue
+
                     body = await resp.aread()
+
                     try:
                         meta = OAuthMetadata.model_validate_json(body)
                     except Exception as e:
@@ -181,6 +200,10 @@ class DiscoverOAuth2Endpoints:
                         )
                 except Exception as e:
                     logger.debug("Discovery failed at %s: %s", url, e)
+
+        # If we get here, all discovery URLs failed
+        logger.info("OAuth discovery failed for all attempted URLs.")
+        logger.info("Attempted URLs: %s", urls)
         return None
 
     def _build_path_aware_discovery_urls(self, base_or_issuer: str) -> list[str]:
@@ -190,10 +213,10 @@ class DiscoverOAuth2Endpoints:
         path = (p.path or "").rstrip("/")
         urls: list[str] = []
         if path:
-            urls.append(urljoin(base, f"/.well-known/oauth-authorization-server{path}"))
+            urls.append(urljoin(base, f"{path}/.well-known/oauth-authorization-server"))
         urls.append(urljoin(base, "/.well-known/oauth-authorization-server"))
         if path:
-            urls.append(urljoin(base, f"/.well-known/openid-configuration{path}"))
+            urls.append(urljoin(base, f"{path}/.well-known/openid-configuration"))
         urls.append(base_or_issuer.rstrip("/") + "/.well-known/openid-configuration")
         return urls
 
@@ -289,10 +312,20 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
          - If a valid token is found in the cache, return it
          - Otherwise, perform the OAuth2 flow
         """
-        if self.config.use_tmp_oauth2_provider:
-            return await self._tmp_oauth2_authenticate(user_id=user_id)
-
         return await self._nat_oauth2_authenticate(user_id=user_id)
+
+    async def _get_user_id(self, user_id: str | None = None) -> str:
+        """
+        Get the user ID for authentication.
+        If user_id is provided, return it.
+        If user_id is not provided, return the user_id from the context.
+        If no user id is available in the context fallback to the user id from the config.
+        """
+        if user_id:
+            return user_id
+        if self.config.user_id:
+            return self.config.user_id
+        return str(self.config.server_url)
 
     async def _discover_and_register(self, response: httpx.Response | None = None):
         """

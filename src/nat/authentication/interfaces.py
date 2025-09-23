@@ -55,13 +55,16 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
         """
         return self._config
 
-    @abstractmethod
-    async def discover_and_authenticate(self, response: httpx.Response | None = None,
+    async def discover_and_authenticate(self,
+                                        _response: httpx.Response | None = None,
                                         user_id: str | None = None) -> AuthResult:
         """
-        Discover the authentication endpoints for the client.
+        Optionally discover authentication endpoints and authenticate the client.
+
+        Default behavior delegates to `authenticate` so providers that don't
+        require discovery don't need to override this method.
         """
-        pass
+        return await self.authenticate(user_id=user_id)
 
     @abstractmethod
     async def authenticate(self, user_id: str | None = None) -> AuthResult:
