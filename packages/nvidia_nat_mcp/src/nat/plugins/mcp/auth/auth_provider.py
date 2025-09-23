@@ -277,6 +277,9 @@ class DynamicClientRegistration:
         return OAuth2Credentials(client_id=info.client_id, client_secret=info.client_secret)
 
 
+from nat.plugins.mcp.auth.auth_flow_handler import MCPAuthenticationFlowHandler
+
+
 class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
     """MCP OAuth2 authentication provider that delegates to NAT framework."""
 
@@ -293,6 +296,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         # For the OAuth2 flow
         self._auth_code_provider = None
+        self._flow_handler = MCPAuthenticationFlowHandler()
 
     async def discover_and_authenticate(self,
                                         response: httpx.Response | None = None,
@@ -312,20 +316,8 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
          - If a valid token is found in the cache, return it
          - Otherwise, perform the OAuth2 flow
         """
+        user_id = user_id or self.config.default_user_id
         return await self._nat_oauth2_authenticate(user_id=user_id)
-
-    async def _get_user_id(self, user_id: str | None = None) -> str:
-        """
-        Get the user ID for authentication.
-        If user_id is provided, return it.
-        If user_id is not provided, return the user_id from the context.
-        If no user id is available in the context fallback to the user id from the config.
-        """
-        if user_id:
-            return user_id
-        if self.config.user_id:
-            return self.config.user_id
-        return str(self.config.server_url)
 
     async def _discover_and_register(self, response: httpx.Response | None = None):
         """
@@ -371,6 +363,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         endpoints = self._cached_endpoints
         credentials = self._cached_credentials
 
+        # strip "/mcp" or "/mcp/" from the server url
+        resource = str(self.config.server_url).rstrip("/mcp").rstrip("/mcp/")
+
         # Build the OAuth2 provider if not already built
         if self._auth_code_provider is None:
             oauth2_config = OAuth2AuthCodeFlowProviderConfig(
@@ -382,11 +377,12 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
                 scopes=self._effective_scopes() or [],
                 use_pkce=bool(self.config.use_pkce),
-            )
+                authorization_kwargs={"resource": str(self.config.server_url)})
             self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
+            self._auth_code_provider._set_custom_auth_callback(self._flow_handler.authenticate)
 
         # Auth code provider is responsible for per-user cache + refresh
-        return await self._auth_code_provider.authenticate()
+        return await self._auth_code_provider.authenticate(user_id=user_id)
 
     async def _tmp_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
         """Perform the OAuth2 flow using temporary OAuth2 provider."""

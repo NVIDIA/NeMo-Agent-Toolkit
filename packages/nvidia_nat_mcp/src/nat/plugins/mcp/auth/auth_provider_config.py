@@ -53,6 +53,8 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     # Temporary config parameter (should be removed before merging)
     use_tmp_oauth2_provider: bool = Field(default=False, description="Use the temporary OAuth2 provider")
 
+    default_user_id: str | None = Field(default=None, description="Default user ID for authentication")
+
     @model_validator(mode="after")
     def validate_auth_config(self):
         """Validate authentication configuration for MCP-specific options."""
