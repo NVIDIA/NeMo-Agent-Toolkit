@@ -118,6 +118,17 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         normalize_tool_input_quotes=config.normalize_tool_input_quotes).build_graph()
 
     async def _response_fn(input_message: ChatRequest) -> ChatResponse:
+        """
+        Main workflow entry function for the ReAct Agent.
+
+        This function invokes the ReAct Agent Graph and returns the response.
+
+        Args:
+            input_message (ChatRequest): The input message to process
+
+        Returns:
+            ChatResponse: The response from the agent or error message
+        """
         try:
             # initialize the starting state with the user query
             messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in input_message.messages],
