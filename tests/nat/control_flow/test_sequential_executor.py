@@ -15,6 +15,7 @@
 
 import logging
 import typing
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -253,6 +254,8 @@ class TestValidateSequentialToolList:
     def mock_builder(self):
         """Create a mock builder."""
         builder = MagicMock(spec=Builder)
+        builder.get_function = AsyncMock()
+        builder.get_functions = AsyncMock()
         return builder
 
     @pytest.fixture
@@ -272,39 +275,42 @@ class TestValidateSequentialToolList:
 
         return [func1, func2]
 
-    def test_compatible_sequential_tools(self, mock_builder, compatible_functions):
+    @pytest.mark.asyncio
+    async def test_compatible_sequential_tools(self, mock_builder, compatible_functions):
         """Test validation of compatible sequential tools."""
         config = SequentialExecutorConfig(tool_list=[FunctionRef("func1"), FunctionRef("func2")])
 
-        mock_builder.get_function.side_effect = compatible_functions
+        mock_builder.get_functions.return_value = compatible_functions
 
         with patch('nat.control_flow.sequential_executor._validate_function_type_compatibility', return_value=True):
-            input_type, output_type = _validate_tool_list_type_compatibility(config, mock_builder)
+            input_type, output_type = await _validate_tool_list_type_compatibility(config, mock_builder)
 
             assert input_type is str  # First function's input type
             assert output_type is int  # Last function's output type
 
-    def test_incompatible_sequential_tools_with_exception(self, mock_builder, compatible_functions):
+    @pytest.mark.asyncio
+    async def test_incompatible_sequential_tools_with_exception(self, mock_builder, compatible_functions):
         """Test validation raises exception for incompatible tools when check_type_compatibility is True."""
         config = SequentialExecutorConfig(tool_list=[FunctionRef("func1"), FunctionRef("func2")],
                                           raise_type_incompatibility=True)
 
-        mock_builder.get_function.side_effect = compatible_functions
+        mock_builder.get_functions.return_value = compatible_functions
 
         with patch('nat.control_flow.sequential_executor._validate_function_type_compatibility',
                    side_effect=ValueError("The output type of the func1 function is not compatible")):
             with pytest.raises(ValueError, match="The sequential tool list has incompatible types"):
-                _validate_tool_list_type_compatibility(config, mock_builder)
+                await _validate_tool_list_type_compatibility(config, mock_builder)
 
-    def test_streaming_output_type_selection(self, mock_builder, compatible_functions):
+    @pytest.mark.asyncio
+    async def test_streaming_output_type_selection(self, mock_builder, compatible_functions):
         """Test that streaming output type is selected when configured."""
         config = SequentialExecutorConfig(tool_list=[FunctionRef("func1"), FunctionRef("func2")],
                                           tool_execution_config={"func2": ToolExecutionConfig(use_streaming=True)})
 
-        mock_builder.get_function.side_effect = compatible_functions
+        mock_builder.get_functions.return_value = compatible_functions
 
         with patch('nat.control_flow.sequential_executor._validate_function_type_compatibility', return_value=True):
-            input_type, output_type = _validate_tool_list_type_compatibility(config, mock_builder)
+            input_type, output_type = await _validate_tool_list_type_compatibility(config, mock_builder)
 
             assert input_type is str  # First function's input type
             assert output_type is int  # Last function's streaming_output_type
