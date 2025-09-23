@@ -46,11 +46,11 @@ class StrategyBase(ABC):
                       items: list[TTCItem],
                       original_prompt: str | None = None,
                       agent_context: str | None = None,
-                      **kwargs) -> [TTCItem]:
+                      **kwargs) -> list[TTCItem]:
         pass
 
     @abstractmethod
-    def supported_pipeline_types(self) -> [PipelineTypeEnum]:
+    def supported_pipeline_types(self) -> list[PipelineTypeEnum]:
         """Return the stage types supported by this selector."""
         pass
 

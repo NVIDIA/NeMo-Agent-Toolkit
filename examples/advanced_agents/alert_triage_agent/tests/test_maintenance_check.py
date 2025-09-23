@@ -247,7 +247,8 @@ async def test_maintenance_check_tool():
             async with WorkflowBuilder() as builder:
                 builder.get_llm = mock_builder.get_llm
                 await builder.add_function("maintenance_check", config)
-                maintenance_check_tool = builder.get_tool("maintenance_check", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+                maintenance_check_tool = await builder.get_tool("maintenance_check",
+                                                                wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
                 # Run test cases
                 for case in test_cases:

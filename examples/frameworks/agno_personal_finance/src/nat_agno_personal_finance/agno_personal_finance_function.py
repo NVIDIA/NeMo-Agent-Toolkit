@@ -59,7 +59,7 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.AGNO)
 
     # Get the search tool
-    tools = builder.get_tools(tool_names=config.tools, wrapper_type=LLMFrameworkEnum.AGNO)
+    tools = await builder.get_tools(tool_names=config.tools, wrapper_type=LLMFrameworkEnum.AGNO)
 
     # Create researcher agent
     researcher = Agent(

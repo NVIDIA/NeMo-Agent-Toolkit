@@ -99,7 +99,7 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
     llm: BaseChatModel = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     # Get the augmented function's description
-    augmented_function = builder.get_function(config.augmented_fn)
+    augmented_function = await builder.get_function(config.augmented_fn)
 
     # For now, we rely on runtime checking for type conversion
 
@@ -119,7 +119,7 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
     tool_names_with_desc: list[tuple[str, str]] = []
 
     for tool in function_used_tools:
-        tool_impl = builder.get_function(tool)
+        tool_impl = await builder.get_function(tool)
         tool_names_with_desc.append((tool, tool_impl.description if hasattr(tool_impl, "description") else ""))
 
     # Draft the reasoning prompt for the augmented function
