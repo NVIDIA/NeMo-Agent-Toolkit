@@ -198,16 +198,17 @@ class TypeConverter:
         """
         visited = set()
         final = self._try_indirect_conversion(data, to_type, visited)
+        src_type = type(data)
         if final is not None:
             # Warn once if found a chain
-            self._maybe_warn_indirect(type(data), to_type)
+            self._maybe_warn_indirect(src_type, to_type)
             return final
 
         # If no success, try parent's indirect
         if self._parent is not None:
             parent_final = self._parent._try_indirect_convert(data, to_type)
             if parent_final is not None:
-                self._maybe_warn_indirect(type(data), to_type)
+                self._maybe_warn_indirect(src_type, to_type)
                 return parent_final
 
         return None
@@ -248,16 +249,17 @@ class TypeConverter:
         """
         Warn once if an indirect path was used between these two types.
         """
-        pair = (source_type, to_type)
-        if pair not in self._indirect_warnings_shown:
-            logger.warning(
-                "Indirect type conversion used to convert %s to %s, which may lead to unintended conversions. "
-                "Consider adding a direct converter from %s to %s to ensure correctness.",
-                source_type,
-                to_type,
-                source_type,
-                to_type)
-            self._indirect_warnings_shown.add(pair)
+        if source_type is not to_type:
+            pair = (source_type, to_type)
+            if pair not in self._indirect_warnings_shown:
+                logger.warning(
+                    "Indirect type conversion used to convert %s to %s, which may lead to unintended conversions. "
+                    "Consider adding a direct converter from %s to %s to ensure correctness.",
+                    source_type,
+                    to_type,
+                    source_type,
+                    to_type)
+                self._indirect_warnings_shown.add(pair)
 
 
 class GlobalTypeConverter:
