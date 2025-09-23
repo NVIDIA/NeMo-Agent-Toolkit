@@ -132,17 +132,15 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self.last_call_ts = time.time()
         self._run_id_to_start_time[run_id] = time.time()
 
-    async def on_chat_model_start(
-        self,
-        serialized: dict[str, Any],
-        messages: list[list[BaseMessage]],
-        *,
-        run_id: UUID,
-        parent_run_id: UUID | None = None,
-        tags: list[str] | None = None,
-        metadata: dict[str, Any] | None = None,
-        **kwargs: Any,
-    ) -> Any:
+    async def on_chat_model_start(self,
+                                  serialized: dict[str, Any],
+                                  messages: list[list[BaseMessage]],
+                                  *,
+                                  run_id: UUID,
+                                  parent_run_id: UUID | None = None,
+                                  tags: list[str] | None = None,
+                                  metadata: dict[str, Any] | None = None,
+                                  **kwargs: Any) -> Any:
 
         model_name = ""
         try:
@@ -262,14 +260,12 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self._run_id_to_llm_input.pop(run_id_str, None)
         self._run_id_to_start_time.pop(run_id_str, None)
 
-    async def on_llm_error(
-        self,
-        error: BaseException,
-        *,
-        run_id: UUID,
-        parent_run_id: UUID | None = None,
-        **kwargs: Any,
-    ) -> Any:
+    async def on_llm_error(self,
+                           error: BaseException,
+                           *,
+                           run_id: UUID,
+                           parent_run_id: UUID | None = None,
+                           **kwargs: Any) -> Any:
 
         run_id_str = str(run_id)
         model_name = self._run_id_to_model_name.get(run_id_str, "")
@@ -322,14 +318,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self._run_id_to_tool_input[str(run_id)] = input_str
         self._run_id_to_start_time[str(run_id)] = time.time()
 
-    async def on_tool_end(
-        self,
-        output: Any,
-        *,
-        run_id: UUID,
-        parent_run_id: UUID | None = None,
-        **kwargs: Any,
-    ) -> Any:
+    async def on_tool_end(self, output: Any, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
 
         run_id_str = str(run_id)
 
@@ -350,14 +339,12 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self._run_id_to_tool_input.pop(run_id_str, None)
         self._run_id_to_start_time.pop(run_id_str, None)
 
-    async def on_tool_error(
-        self,
-        error: BaseException,
-        *,
-        run_id: UUID,
-        parent_run_id: UUID | None = None,
-        **kwargs: Any,
-    ) -> Any:
+    async def on_tool_error(self,
+                            error: BaseException,
+                            *,
+                            run_id: UUID,
+                            parent_run_id: UUID | None = None,
+                            **kwargs: Any) -> Any:
 
         run_id_str = str(run_id)
 
