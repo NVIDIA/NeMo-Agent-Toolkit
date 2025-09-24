@@ -23,7 +23,7 @@ import pytest
 
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
-from nat_swe_bench.register import SweBenchWorkflowConfig
+from nat_swe_bench.config import SweBenchWorkflowConfig
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,6 @@ def validate_evaluation_output(eval_output_file: Path):
         f"The 'average_accuracy' is less than {score_min}"
 
 
-@pytest.mark.skip(reason="Raises a TypeError")
 @pytest.mark.integration
 async def test_eval():
     """
@@ -102,6 +101,7 @@ async def test_eval():
         endpoint_timeout=300,
         reps=1,
     )
+
     # Run evaluation
     eval_runner = EvaluationRun(config=config)
     output = await eval_runner.run_and_evaluate()
