@@ -144,23 +144,7 @@ Once the server is running, you can make HTTP requests to interact with the work
 curl --request POST \
   --url http://localhost:8000/generate \
   --header 'Content-Type: application/json' \
-  --data '{
-  "input_message":[
-    {
-      "content": "tell me a joke",
-      "role": "user"
-    },
-    {
-      "content": "Why did the computer show up at work late?  \nBecause it had a hard drive!",
-      "role": "assistant"
-    },
-    {
-      "content": "why was that funny",
-      "role": "user"
-    }
-  ],
-  "additionalProp1": {}
-}'
+  --data '{"input_message": "What are LLMs?"}'
 ```
 
 #### Streaming Requests
