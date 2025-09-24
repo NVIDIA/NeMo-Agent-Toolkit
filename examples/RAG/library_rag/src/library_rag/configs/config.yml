@@ -1,0 +1,31 @@
+general:
+  use_uvloop: true
+
+
+functions:
+  library_rag_tool:
+    _type: library_rag
+    base_url: "http://localhost:8081"
+    reranker_top_k: 2
+    vdb_top_k: 10
+    vdb_endpoint: "http://milvus:19530"
+    collection_names: ["cuda"]
+    enable_query_rewriting: True
+    enable_reranker: True
+
+    #description: Retrieve documents given the input query
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0
+    max_tokens: 4096
+    top_p: 1
+
+workflow:
+  _type: tool_calling_agent
+  tool_names:
+   - library_rag_tool
+  llm_name: nim_llm
+  verbose: true

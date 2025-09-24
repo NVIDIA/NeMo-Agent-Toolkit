@@ -1,0 +1,25 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+# NAT uses the --first-parent flag to avoid tags from previous releases which have been merged into the develop branch
+# from causing an unexpected version change. This can be safely removed if developing outside of the NAT repository.
+git_describe_command = "git describe --long --first-parent"
+root = "../../.."
+
+[project]
+name = "library_rag"
+dynamic = ["version"]
+dependencies = [
+  "nvidia-nat[langchain]~=1.3",
+]
+requires-python = ">=3.11,<3.14"
+description = "Custom NeMo Agent Toolkit Workflow"
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+
+[project.entry-points.'nat.components']
+library_rag = "library_rag.register"

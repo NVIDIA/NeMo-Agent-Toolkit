@@ -1,0 +1,25 @@
+general:
+  use_uvloop: true
+
+
+functions:
+  local_rag_tool:
+    _type: local_rag
+    base_url: "https://10.184.173.138/api/data-engine/workspaces/f44f314c-2c9b-4a83-9050-3fc72d896ddf/data-collections/580bd688-9425-4140-87fc-586b89eefc99/search"
+    max_records: 5
+    #description: Retrieve documents given the input query
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0
+    max_tokens: 4096
+    top_p: 1
+
+workflow:
+  _type: tool_calling_agent
+  tool_names:
+   - local_rag_tool
+  llm_name: nim_llm
+  verbose: true
