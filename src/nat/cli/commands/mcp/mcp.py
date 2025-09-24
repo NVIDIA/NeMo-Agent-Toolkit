@@ -174,7 +174,7 @@ async def _create_mcp_client_config(
             auth_config = MCPOAuth2ProviderConfig(
                 server_url=url,
                 redirect_uri=auth_redirect_uri,
-                default_user_id=auth_user_id,
+                default_user_id=auth_user_id or url,
                 scopes=auth_scopes or [],
             )
             auth_provider_name = "mcp_oauth2_cli"
