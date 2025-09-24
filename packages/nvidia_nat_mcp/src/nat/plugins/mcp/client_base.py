@@ -184,13 +184,12 @@ class MCPBaseClient(ABC):
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        if not self._exit_stack:
-            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
+        if self._exit_stack:
+            # Close session
+            await self._exit_stack.aclose()
+            self._session = None
+            self._exit_stack = None
 
-        # Close session
-        await self._exit_stack.aclose()
-        self._session = None
-        self._exit_stack = None
         self._connection_established = False
 
     @property
@@ -220,6 +219,7 @@ class MCPBaseClient(ABC):
             while attempt < self._reconnect_max_attempts:
                 attempt += 1
                 try:
+                    # Close the existing stack and ClientSession
                     if self._exit_stack:
                         await self._exit_stack.aclose()
                     # Create a fresh stack and session
@@ -269,7 +269,11 @@ class MCPBaseClient(ABC):
             session = self._session
             return await session.list_tools()
 
-        response = await self._with_reconnect(_get_tools)
+        try:
+            response = await self._with_reconnect(_get_tools)
+        except Exception as e:
+            logger.error("Failed to get tools: %s", e)
+            raise
 
         return {
             tool.name:
