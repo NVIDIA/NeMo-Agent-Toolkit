@@ -164,6 +164,9 @@ async def list_tools_via_function_group(
     transport: str = 'sse',
     args: list[str] | None = None,
     env: dict[str, str] | None = None,
+    auth_redirect_uri: str | None = None,
+    auth_user_id: str | None = None,
+    auth_scopes: list[str] | None = None,
 ) -> list[dict[str, str | None]]:
     """List tools by constructing the mcp_client function group and introspecting functions.
 
@@ -192,15 +195,35 @@ async def list_tools_via_function_group(
         args=args if transport == 'stdio' else None,
         env=env if transport == 'stdio' else None,
     )
+
     group_cfg = MCPClientConfig(server=server_cfg)
 
     tools: list[dict[str, str | None]] = []
 
     async with WorkflowBuilder() as builder:  # type: ignore
+        # Add auth provider if url is provided and auth_redirect_uri is given (only for streamable-http)
+        if url and transport == 'streamable-http' and auth_redirect_uri:
+            try:
+                from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
+                auth_config = MCPOAuth2ProviderConfig(server_url=url,
+                                                      redirect_uri=auth_redirect_uri,
+                                                      default_user_id=auth_user_id,
+                                                      scopes=auth_scopes or [])
+                # Register the auth provider with a unique name
+                auth_provider_name = f"mcp_oauth2_{hash(url)}_{hash(auth_redirect_uri)}"
+                await builder.add_auth_provider(auth_provider_name, auth_config)
+                # Update the server config to reference the auth provider
+                server_cfg.auth_provider = auth_provider_name
+                group_cfg = MCPClientConfig(server=server_cfg)
+            except ImportError:
+                click.echo(
+                    "[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat[mcp]",
+                    err=True)
+
         group = await builder.add_function_group("mcp_client", group_cfg)
 
         # Access functions exposed by the group
-        fns = group.get_accessible_functions()
+        fns = await group.get_accessible_functions()
 
         def to_tool_entry(full_name: str, fn_obj) -> dict[str, str | None]:
             # full_name like "mcp_client.<tool>"
@@ -324,7 +347,10 @@ async def ping_mcp_server(url: str,
                           transport: str = 'streamable-http',
                           command: str | None = None,
                           args: list[str] | None = None,
-                          env: dict[str, str] | None = None) -> MCPPingResult:
+                          env: dict[str, str] | None = None,
+                          auth_redirect_uri: str | None = None,
+                          auth_user_id: str | None = None,
+                          auth_scopes: list[str] | None = None) -> MCPPingResult:
     """Ping an MCP server to check if it's responsive.
 
     Args:
@@ -412,14 +438,31 @@ def mcp_client_tool_group():
 @click.option('--tool', default=None, help='Get details for a specific tool by name')
 @click.option('--detail', is_flag=True, help='Show full details for all tools')
 @click.option('--json-output', is_flag=True, help='Output tool metadata in JSON format')
+@click.option('--auth-redirect-uri',
+              help='OAuth2 redirect URI for authentication (streamable-http only, not with --direct)')
+@click.option('--auth-user-id', help='User ID for authentication (streamable-http only, not with --direct)')
+@click.option('--auth-scopes', help='OAuth2 scopes (comma-separated, streamable-http only, not with --direct)')
 @click.pass_context
-def mcp_client_tool_list(ctx, direct, url, transport, command, args, env, tool, detail, json_output):
+def mcp_client_tool_list(ctx,
+                         direct,
+                         url,
+                         transport,
+                         command,
+                         args,
+                         env,
+                         tool,
+                         detail,
+                         json_output,
+                         auth_redirect_uri,
+                         auth_user_id,
+                         auth_scopes):
     """List MCP tool names (default) or show detailed tool information.
 
     Use --detail for full output including descriptions and input schemas.
     If --tool is provided, always shows full output for that specific tool.
     Use --direct to bypass MCPBuilder and use raw MCP protocol.
     Use --json-output to get structured JSON data instead of formatted text.
+    Use --auth-redirect-uri to enable OAuth2 authentication for protected MCP servers (streamable-http only, not with --direct).
 
     Args:
         ctx (click.Context): Click context object for command invocation
@@ -428,13 +471,20 @@ def mcp_client_tool_list(ctx, direct, url, transport, command, args, env, tool, 
         tool (str | None): Optional specific tool name to retrieve detailed info for
         detail (bool): Whether to show full details (description + schema) for all tools
         json_output (bool): Whether to output tool metadata in JSON format instead of text
+        auth_redirect_uri (str | None): OAuth2 redirect URI for authentication (required for auth, streamable-http only, not with --direct)
+        auth_user_id (str | None): User ID for authentication (streamable-http only, not with --direct)
+        auth_scopes (str | None): OAuth2 scopes (comma-separated, streamable-http only, not with --direct)
 
     Examples:
         nat mcp client tool list                           # List tool names only
         nat mcp client tool list --detail                  # Show all tools with full details
         nat mcp client tool list --tool my_tool            # Show details for specific tool
         nat mcp client tool list --json-output             # Get JSON format output
-        nat mcp client tool list --direct --url http://... # Use direct protocol with custom URL
+        nat mcp client tool list --direct --url http://... # Use direct protocol with custom URL (no auth)
+        nat mcp client tool list --url https://example.com/mcp/ --transport streamable-http \
+            --auth-redirect-uri http://localhost:8000/auth/redirect # With auth
+        nat mcp client tool list --url https://example.com/mcp/ --transport streamable-http \
+            --auth-redirect-uri http://localhost:8000/auth/redirect --auth-user-id myuser # With auth and user ID
     """
     if ctx.invoked_subcommand is not None:
         return
@@ -450,8 +500,23 @@ def mcp_client_tool_list(ctx, direct, url, transport, command, args, env, tool, 
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
 
-    fetcher = list_tools_direct if direct else list_tools_via_function_group
-    tools = asyncio.run(fetcher(command, url, tool, transport, stdio_args, stdio_env))
+    # Parse auth scopes
+    auth_scopes_list = auth_scopes.split(',') if auth_scopes else None
+
+    if direct:
+        tools = asyncio.run(
+            list_tools_direct(command, url, tool_name=tool, transport=transport, args=stdio_args, env=stdio_env))
+    else:
+        tools = asyncio.run(
+            list_tools_via_function_group(command,
+                                          url,
+                                          tool_name=tool,
+                                          transport=transport,
+                                          args=stdio_args,
+                                          env=stdio_env,
+                                          auth_redirect_uri=auth_redirect_uri,
+                                          auth_user_id=auth_user_id,
+                                          auth_scopes=auth_scopes_list))
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))
@@ -482,13 +547,20 @@ def mcp_client_tool_list(ctx, direct, url, transport, command, args, env, tool, 
 @click.option('--env', help='For stdio: Environment variables in KEY=VALUE format (space-separated)')
 @click.option('--timeout', default=60, show_default=True, help='Timeout in seconds for ping request')
 @click.option('--json-output', is_flag=True, help='Output ping result in JSON format')
+@click.option('--auth-redirect-uri',
+              help='OAuth2 redirect URI for authentication (streamable-http only, not with --direct)')
+@click.option('--auth-user-id', help='User ID for authentication (streamable-http only, not with --direct)')
+@click.option('--auth-scopes', help='OAuth2 scopes (comma-separated, streamable-http only, not with --direct)')
 def mcp_client_ping(url: str,
                     transport: str,
                     command: str | None,
                     args: str | None,
                     env: str | None,
                     timeout: int,
-                    json_output: bool) -> None:
+                    json_output: bool,
+                    auth_redirect_uri: str | None,
+                    auth_user_id: str | None,
+                    auth_scopes: str | None) -> None:
     """Ping an MCP server to check if it's responsive.
 
     This command sends a ping request to the MCP server and measures the response time.
@@ -498,12 +570,17 @@ def mcp_client_ping(url: str,
         url (str): MCP server URL to ping (default: http://localhost:9901/mcp)
         timeout (int): Timeout in seconds for the ping request (default: 60)
         json_output (bool): Whether to output the result in JSON format
+        auth_redirect_uri (str | None): OAuth2 redirect URI for authentication (required for auth, streamable-http only, not with --direct)
+        auth_user_id (str | None): User ID for authentication (streamable-http only, not with --direct)
+        auth_scopes (str | None): OAuth2 scopes (comma-separated, streamable-http only, not with --direct)
 
     Examples:
         nat mcp client ping                                    # Ping default server
         nat mcp client ping --url http://custom-server:9901/mcp # Ping custom server
         nat mcp client ping --timeout 10                      # Use 10 second timeout
         nat mcp client ping --json-output                     # Get JSON format output
+        nat mcp client ping --url https://example.com/mcp/ --transport streamable-http --auth-redirect-uri http://localhost:8000/auth/redirect # With auth
+        nat mcp client ping --url https://example.com/mcp/ --transport streamable-http --auth-redirect-uri http://localhost:8000/auth/redirect --auth-user-id myuser # With auth and user ID
     """
     # Validate combinations similar to list command
     if not validate_transport_cli_args(transport, command, args, env):
@@ -512,7 +589,19 @@ def mcp_client_ping(url: str,
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
 
-    result = asyncio.run(ping_mcp_server(url, timeout, transport, command, stdio_args, stdio_env))
+    # Parse auth scopes
+    auth_scopes_list = auth_scopes.split(',') if auth_scopes else None
+
+    result = asyncio.run(
+        ping_mcp_server(url,
+                        timeout,
+                        transport,
+                        command,
+                        stdio_args,
+                        stdio_env,
+                        auth_redirect_uri,
+                        auth_user_id,
+                        auth_scopes_list))
 
     if json_output:
         click.echo(result.model_dump_json(indent=2))
@@ -635,7 +724,10 @@ async def call_tool_and_print(command: str | None,
                               args: list[str] | None,
                               env: dict[str, str] | None,
                               tool_args: dict[str, Any] | None,
-                              direct: bool) -> str:
+                              direct: bool,
+                              auth_redirect_uri: str | None = None,
+                              auth_user_id: str | None = None,
+                              auth_scopes: list[str] | None = None) -> str:
     """Call an MCP tool either directly or via the function group and return output.
 
     When ``direct`` is True, uses the raw MCP protocol client (bypassing the
@@ -681,11 +773,31 @@ async def call_tool_and_print(command: str | None,
         args=args if transport == 'stdio' else None,
         env=env if transport == 'stdio' else None,
     )
+
     group_cfg = MCPClientConfig(server=server_cfg)
 
     async with WorkflowBuilder() as builder:  # type: ignore
+        # Add auth provider if url is provided and auth_redirect_uri is given (only for streamable-http)
+        if url and transport == 'streamable-http' and auth_redirect_uri:
+            try:
+                from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
+                auth_config = MCPOAuth2ProviderConfig(server_url=url,
+                                                      redirect_uri=auth_redirect_uri,
+                                                      default_user_id=auth_user_id,
+                                                      scopes=auth_scopes or [])
+                # Register the auth provider with a unique name
+                auth_provider_name = f"mcp_oauth2_{hash(url)}_{hash(auth_redirect_uri)}"
+                await builder.add_auth_provider(auth_provider_name, auth_config)
+                # Update the server config to reference the auth provider
+                server_cfg.auth_provider = auth_provider_name
+                group_cfg = MCPClientConfig(server=server_cfg)
+            except ImportError:
+                click.echo(
+                    "[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat[mcp]",
+                    err=True)
+
         group = await builder.add_function_group("mcp_client", group_cfg)
-        fns = group.get_accessible_functions()
+        fns = await group.get_accessible_functions()
         full = f"mcp_client.{tool_name}"
         fn = fns.get(full)
         if fn is None:
@@ -713,6 +825,10 @@ async def call_tool_and_print(command: str | None,
 @click.option('--args', help='For stdio: Additional arguments for the command (space-separated)')
 @click.option('--env', help='For stdio: Environment variables in KEY=VALUE format (space-separated)')
 @click.option('--json-args', default=None, help='Pass tool args as a JSON object string')
+@click.option('--auth-redirect-uri',
+              help='OAuth2 redirect URI for authentication (streamable-http only, not with --direct)')
+@click.option('--auth-user-id', help='User ID for authentication (streamable-http only, not with --direct)')
+@click.option('--auth-scopes', help='OAuth2 scopes (comma-separated, streamable-http only, not with --direct)')
 def mcp_client_tool_call(tool_name: str,
                          direct: bool,
                          url: str | None,
@@ -720,7 +836,10 @@ def mcp_client_tool_call(tool_name: str,
                          command: str | None,
                          args: str | None,
                          env: str | None,
-                         json_args: str | None) -> None:
+                         json_args: str | None,
+                         auth_redirect_uri: str | None,
+                         auth_user_id: str | None,
+                         auth_scopes: str | None) -> None:
     """Call an MCP tool by name with optional JSON arguments.
 
     Validates transport parameters, parses ``--json-args`` into a dictionary,
@@ -737,13 +856,20 @@ def mcp_client_tool_call(tool_name: str,
         args (str | None): For ``stdio`` transport, space-separated command arguments.
         env (str | None): For ``stdio`` transport, space-separated ``KEY=VALUE`` pairs.
         json_args (str | None): JSON object string with tool arguments (e.g. '{"q": "hello"}').
+        auth_redirect_uri (str | None): OAuth2 redirect URI for authentication (required for auth, streamable-http only, not with --direct)
+        auth_user_id (str | None): User ID for authentication (streamable-http only, not with --direct)
+        auth_scopes (str | None): OAuth2 scopes (comma-separated, streamable-http only, not with --direct)
 
     Examples:
         nat mcp client tool call echo --json-args '{"text": "Hello"}'
         nat mcp client tool call search --direct --url http://localhost:9901/mcp \
-            --json-args '{"query": "NVIDIA"}'
+            --json-args '{"query": "NVIDIA"}' # Direct mode (no auth)
         nat mcp client tool call run --transport stdio --command mcp-server \
             --args "--flag1 --flag2" --env "ENV1=V1 ENV2=V2" --json-args '{}'
+        nat mcp client tool call search --url https://example.com/mcp/ \
+            --transport streamable-http --json-args '{"query": "test"}' --auth-redirect-uri http://localhost:8000/auth/redirect
+        nat mcp client tool call search --url https://example.com/mcp/ \
+            --transport streamable-http --json-args '{"query": "test"}' --auth-redirect-uri http://localhost:8000/auth/redirect --auth-user-id myuser
     """
     # Validate transport args
     if not validate_transport_cli_args(transport, command, args, env):
@@ -752,6 +878,9 @@ def mcp_client_tool_call(tool_name: str,
     # Parse stdio params
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
+
+    # Parse auth scopes
+    auth_scopes_list = auth_scopes.split(',') if auth_scopes else None
 
     # Parse tool args
     arg_obj: dict[str, Any] = {}
@@ -777,6 +906,9 @@ def mcp_client_tool_call(tool_name: str,
                 env=stdio_env,
                 tool_args=arg_obj,
                 direct=direct,
+                auth_redirect_uri=auth_redirect_uri,
+                auth_user_id=auth_user_id,
+                auth_scopes=auth_scopes_list,
             ))
         if output:
             click.echo(output)
