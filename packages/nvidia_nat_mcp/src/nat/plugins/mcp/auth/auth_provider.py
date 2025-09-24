@@ -213,9 +213,15 @@ class DiscoverOAuth2Endpoints:
         path = (p.path or "").rstrip("/")
         urls: list[str] = []
         if path:
+            # this is the sprecified by the MCP spec
+            urls.append(urljoin(base, f".well-known/oauth-protected-resource{path}"))
+            # this is fallback for backward compatibility
             urls.append(urljoin(base, f"{path}/.well-known/oauth-authorization-server"))
         urls.append(urljoin(base, "/.well-known/oauth-authorization-server"))
         if path:
+            # this is the sprecified by the MCP spec
+            urls.append(urljoin(base, f".well-known/openid-configuration{path}"))
+            # this is fallback for backward compatibility
             urls.append(urljoin(base, f"{path}/.well-known/openid-configuration"))
         urls.append(base_or_issuer.rstrip("/") + "/.well-known/openid-configuration")
         return urls
@@ -380,40 +386,6 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 authorization_kwargs={"resource": str(self.config.server_url)})
             self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
             self._auth_code_provider._set_custom_auth_callback(self._flow_handler.authenticate)
-
-        # Auth code provider is responsible for per-user cache + refresh
-        return await self._auth_code_provider.authenticate(user_id=user_id)
-
-    async def _tmp_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
-        """Perform the OAuth2 flow using temporary OAuth2 provider."""
-        from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
-        from nat.plugins.mcp.auth.tmp_oauth2_provider import TmpOAuth2AuthCodeFlowProvider
-
-        if not self._cached_endpoints or not self._cached_credentials:
-            # if discovery is yet to to be done return empty auth result
-            return AuthResult(credentials=[], token_expires_at=None, raw={})
-
-        endpoints = self._cached_endpoints
-        credentials = self._cached_credentials
-
-        # Build the OAuth2 provider if not already built
-        if self._auth_code_provider is None:
-            oauth2_config = OAuth2AuthCodeFlowProviderConfig(
-                client_id=credentials.client_id,
-                client_secret=credentials.client_secret or "",
-                authorization_url=str(endpoints.authorization_url),
-                token_url=str(endpoints.token_url),
-                token_endpoint_auth_method=getattr(self.config, "token_endpoint_auth_method", None),
-                redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
-                scopes=self._effective_scopes() or [],
-                use_pkce=bool(self.config.use_pkce),
-            )
-            self._auth_code_provider = TmpOAuth2AuthCodeFlowProvider(oauth2_config)
-
-        # if user id is not provided use the MCP server url as the user id
-        if user_id is None:
-            # This makes no sense as the server url is not a valid user id
-            user_id = str(self.config.server_url)
 
         # Auth code provider is responsible for per-user cache + refresh
         return await self._auth_code_provider.authenticate(user_id=user_id)
