@@ -55,9 +55,10 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         self.auth_flow_handler = ConsoleAuthenticationFlowHandler()
 
     async def pre_run(self):
-
-        if (not self.front_end_config.input_query and not self.front_end_config.input_file):
-            raise click.UsageError("Must specify either --input_query or --input_file")
+        if (self.front_end_config.input_query is not None and self.front_end_config.input_file is not None):
+            raise click.UsageError("Must specify either --input or --input_file, not both")
+        if (self.front_end_config.input_query is None and self.front_end_config.input_file is None):
+            raise click.UsageError("Must specify either --input or --input_file")
 
     async def run_workflow(self, session_manager: SessionManager):
 
