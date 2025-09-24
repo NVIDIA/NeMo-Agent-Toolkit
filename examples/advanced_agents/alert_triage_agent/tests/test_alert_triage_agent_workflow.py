@@ -56,7 +56,7 @@ async def test_full_workflow():
             result = await runner.result(to_type=str)
 
     # Check that the results are as expected
-    assert len(result) > 0, f"Result is empty"
+    assert len(result) > 0, "Result is empty"
 
     # Deterministic data point: host under maintenance
     assert input_data['label'] in result

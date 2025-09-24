@@ -19,12 +19,10 @@ import pytest
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.component_ref import ObjectStoreRef
-from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
 from nat.object_store.models import ObjectStoreItem
 from nat_user_report.user_report_tools import UserReportConfig
-from nat_user_report.user_report_tools import user_report_group
 
 
 @pytest.fixture
