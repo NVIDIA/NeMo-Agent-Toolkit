@@ -272,7 +272,7 @@ async def _register():
                 # Do nothing, just return what we got
                 return items
 
-            async def build_components(self, _builder: Builder) -> None:
+            async def build_components(self, builder: Builder) -> None:
                 pass
 
             def supported_pipeline_types(self) -> list[PipelineTypeEnum]:
@@ -424,13 +424,13 @@ async def test_build():
 
         # Test building without anything set
         with pytest.raises(ValueError):
-            workflow = builder.build()
+            workflow = await builder.build()
 
         # Add a workflows
         await builder.set_workflow(FunctionReturningFunctionConfig())
 
         # Test building with a workflow set
-        workflow = builder.build()
+        workflow = await builder.build()
 
         assert isinstance(workflow, Workflow)
 
@@ -469,10 +469,10 @@ async def test_get_function():
     async with WorkflowBuilder() as builder:
 
         fn = await builder.add_function("ret_function", FunctionReturningFunctionConfig())
-        assert builder.get_function("ret_function") == fn
+        assert await builder.get_function("ret_function") == fn
 
         with pytest.raises(ValueError):
-            builder.get_function("ret_function_not_exist")
+            await builder.get_function("ret_function_not_exist")
 
 
 async def test_get_function_config():
@@ -566,11 +566,11 @@ async def test_get_tool():
     async with WorkflowBuilder() as builder:
 
         with pytest.raises(ValueError):
-            builder.get_tool("ret_function", "test_framework")
+            await builder.get_tool("ret_function", "test_framework")
 
         fn = await builder.add_function("ret_function", FunctionReturningFunctionConfig())
 
-        tool = builder.get_tool("ret_function", "test_framework")
+        tool = await builder.get_tool("ret_function", "test_framework")
 
         assert tool.name == "ret_function"
         assert tool.fn == fn
@@ -710,10 +710,10 @@ async def test_get_memory():
 
         memory = await builder.add_memory_client("memory_name", config)
 
-        assert memory == builder.get_memory_client("memory_name")
+        assert memory == await builder.get_memory_client("memory_name")
 
         with pytest.raises(ValueError):
-            builder.get_memory_client("memory_name_not_exist")
+            await builder.get_memory_client("memory_name_not_exist")
 
 
 async def test_get_memory_config():
@@ -918,7 +918,7 @@ async def test_built_config():
 
         await builder.add_ttc_strategy("ttc_strategy", ttc_config)
 
-        workflow = builder.build()
+        workflow = await builder.build()
 
         workflow_config = workflow.config
 
@@ -974,12 +974,12 @@ async def test_get_function_group():
         added_group = await builder.add_function_group("math_group", IncludesFunctionGroupConfig())
 
         # Test getting existing function group
-        retrieved_group = builder.get_function_group("math_group")
+        retrieved_group = await builder.get_function_group("math_group")
         assert retrieved_group == added_group
 
         # Test error when getting non-existent function group
         with pytest.raises(ValueError):
-            builder.get_function_group("non_existent_group")
+            await builder.get_function_group("non_existent_group")
 
 
 async def test_get_function_group_config():
@@ -1008,15 +1008,15 @@ async def test_function_group_included_functions():
         await builder.add_function_group("includes_group", IncludesFunctionGroupConfig())
 
         # Test that included functions are accessible as regular functions
-        add_fn = builder.get_function("includes_group.add")
-        multiply_fn = builder.get_function("includes_group.multiply")
+        add_fn = await builder.get_function("includes_group.add")
+        multiply_fn = await builder.get_function("includes_group.multiply")
 
         assert add_fn is not None
         assert multiply_fn is not None
 
         # Test that non-included functions are not accessible
         with pytest.raises(ValueError):
-            builder.get_function("includes_group.subtract")
+            await builder.get_function("includes_group.subtract")
 
 
 async def test_function_group_excluded_functions():
@@ -1029,15 +1029,15 @@ async def test_function_group_excluded_functions():
         # Test that NO functions are accessible globally since the group uses exclude (not include)
         # The function group doesn't expose any functions to the global registry when using exclude only
         with pytest.raises(ValueError):
-            builder.get_function("excludes_group.add")
+            await builder.get_function("excludes_group.add")
         with pytest.raises(ValueError):
-            builder.get_function("excludes_group.multiply")
+            await builder.get_function("excludes_group.multiply")
         with pytest.raises(ValueError):
-            builder.get_function("excludes_group.subtract")
+            await builder.get_function("excludes_group.subtract")
 
         # But the functions should be accessible through the function group itself
-        group = builder.get_function_group("excludes_group")
-        accessible_functions = group.get_accessible_functions()
+        group = await builder.get_function_group("excludes_group")
+        accessible_functions = await group.get_accessible_functions()
 
         # Should have only subtract (add and multiply are excluded)
         assert len(accessible_functions) == 1
@@ -1056,12 +1056,12 @@ async def test_function_group_empty_includes_and_excludes():
         assert len(included_functions) == 0
 
         # But the group itself should exist
-        group = builder.get_function_group("empty_group")
+        group = await builder.get_function_group("empty_group")
         assert isinstance(group, FunctionGroup)
 
-        assert len(group.get_accessible_functions()) == 0  # No functions accessible (empty include list)
-        assert len(group.get_all_functions()) == 1  # One function in the group (internal_function)
-        assert len(group.get_included_functions()) == 0  # No functions in include list
+        assert len(await group.get_accessible_functions()) == 0  # No functions accessible (empty include list)
+        assert len(await group.get_all_functions()) == 1  # One function in the group (internal_function)
+        assert len(await group.get_included_functions()) == 0  # No functions in include list
 
 
 async def test_function_group_all_includes():
@@ -1072,19 +1072,19 @@ async def test_function_group_all_includes():
         await builder.add_function_group("all_includes_group", AllIncludesFunctionGroupConfig())
 
         # All functions should be accessible
-        add_fn = builder.get_function("all_includes_group.add")
-        multiply_fn = builder.get_function("all_includes_group.multiply")
-        subtract_fn = builder.get_function("all_includes_group.subtract")
+        add_fn = await builder.get_function("all_includes_group.add")
+        multiply_fn = await builder.get_function("all_includes_group.multiply")
+        subtract_fn = await builder.get_function("all_includes_group.subtract")
 
         assert add_fn is not None
         assert multiply_fn is not None
         assert subtract_fn is not None
 
-        group = builder.get_function_group("all_includes_group")
+        group = await builder.get_function_group("all_includes_group")
 
-        assert len(group.get_accessible_functions()) == 3
-        assert len(group.get_all_functions()) == 3
-        assert len(group.get_included_functions()) == 3
+        assert len(await group.get_accessible_functions()) == 3
+        assert len(await group.get_all_functions()) == 3
+        assert len(await group.get_included_functions()) == 3
 
 
 async def test_function_group_all_excludes():
@@ -1096,17 +1096,17 @@ async def test_function_group_all_excludes():
 
         # No functions should be accessible globally (function group uses exclude only)
         with pytest.raises(ValueError):
-            builder.get_function("all_excludes_group.add")
+            await builder.get_function("all_excludes_group.add")
         with pytest.raises(ValueError):
-            builder.get_function("all_excludes_group.multiply")
+            await builder.get_function("all_excludes_group.multiply")
         with pytest.raises(ValueError):
-            builder.get_function("all_excludes_group.subtract")
+            await builder.get_function("all_excludes_group.subtract")
 
-        group = builder.get_function_group("all_excludes_group")
+        group = await builder.get_function_group("all_excludes_group")
 
-        assert len(group.get_accessible_functions()) == 0
-        assert len(group.get_all_functions()) == 3
-        assert len(group.get_included_functions()) == 0
+        assert len(await group.get_accessible_functions()) == 0
+        assert len(await group.get_all_functions()) == 3
+        assert len(await group.get_included_functions()) == 0
 
 
 async def test_function_group_name_conflicts():
@@ -1181,7 +1181,7 @@ async def test_function_group_config_validation():
         assert retrieved_config is config
 
         # Test that function group is stored correctly
-        function_group = builder.get_function_group("math_group")
+        function_group = await builder.get_function_group("math_group")
         assert isinstance(function_group, FunctionGroup)
 
 
@@ -1222,9 +1222,9 @@ async def test_function_group_get_excluded_functions():
     async with WorkflowBuilder() as builder:
         # Test group with exclude configuration
         await builder.add_function_group("excludes_group", ExcludesFunctionGroupConfig())
-        group = builder.get_function_group("excludes_group")
+        group = await builder.get_function_group("excludes_group")
 
-        excluded_functions = group.get_excluded_functions()
+        excluded_functions = await group.get_excluded_functions()
         assert len(excluded_functions) == 2  # add and multiply are excluded
         assert "excludes_group.add" in excluded_functions
         assert "excludes_group.multiply" in excluded_functions
@@ -1232,9 +1232,9 @@ async def test_function_group_get_excluded_functions():
 
         # Test group with no exclude configuration
         await builder.add_function_group("includes_group", IncludesFunctionGroupConfig())
-        includes_group = builder.get_function_group("includes_group")
+        includes_group = await builder.get_function_group("includes_group")
 
-        excluded_from_includes = includes_group.get_excluded_functions()
+        excluded_from_includes = await includes_group.get_excluded_functions()
         assert len(excluded_from_includes) == 0  # No exclude list defined
 
 
@@ -1280,15 +1280,15 @@ async def test_function_group_invalid_exclude_configuration():
 
     async with WorkflowBuilder() as builder:
         await builder.add_function_group("invalid_exclude_group", InvalidExcludeConfig())
-        group = builder.get_function_group("invalid_exclude_group")
+        group = await builder.get_function_group("invalid_exclude_group")
 
         # Should raise error when trying to get excluded functions
         with pytest.raises(ValueError, match=r"Unknown excluded functions"):
-            group.get_excluded_functions()
+            await group.get_excluded_functions()
 
         # Should also raise error when trying to get accessible functions
         with pytest.raises(ValueError, match=r"Unknown excluded functions"):
-            group.get_accessible_functions()
+            await group.get_accessible_functions()
 
 
 async def test_function_group_get_config():
@@ -1309,11 +1309,11 @@ async def test_function_group_function_execution():
         await builder.add_function_group("math_group", IncludesFunctionGroupConfig())
 
         # Get and execute functions from the group
-        add_fn = builder.get_function("math_group.add")
+        add_fn = await builder.get_function("math_group.add")
         result = await add_fn.ainvoke({"a": 5, "b": 3})
         assert result == 8
 
-        multiply_fn = builder.get_function("math_group.multiply")
+        multiply_fn = await builder.get_function("math_group.multiply")
         result = await multiply_fn.ainvoke({"a": 4, "b": 6})
         assert result == 24
 
@@ -1335,11 +1335,11 @@ async def test_function_group_custom_instance_name():
     group.add_function("add", add_func, description="Add two numbers")
 
     # Function should be returned with instance name prefix
-    all_functions = group.get_all_functions()
+    all_functions = await group.get_all_functions()
     assert "custom_math_group.add" in all_functions
 
     # When getting included functions, should use custom instance name prefix
-    included = group.get_included_functions()
+    included = await group.get_included_functions()
     assert "custom_math_group.add" in included
 
 
@@ -1360,7 +1360,7 @@ async def test_add_telemetry_exporter():
         with pytest.raises(ValueError):
             await builder.add_telemetry_exporter("exporter1", TTelemetryExporterConfig())
 
-        workflow = builder.build()
+        workflow = await builder.build()
 
         exporter1_instance = workflow.telemetry_exporters.get("exporter1", None)
 

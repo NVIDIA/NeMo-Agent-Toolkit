@@ -108,7 +108,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
 
     # the agent can run any installed tool, simply install the tool and add it to the config file
     # the sample tool provided can easily be copied or changed
-    tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools = await builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     if not tools:
         raise ValueError(f"No tools specified for ReWOO Agent '{config.llm_name}'")
 
@@ -125,6 +125,17 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
         raise_tool_call_error=config.raise_tool_call_error).build_graph()
 
     async def _response_fn(input_message: ChatRequest) -> ChatResponse:
+        """
+        Main workflow entry function for the ReWOO Agent.
+
+        This function invokes the ReWOO Agent Graph and returns the response.
+
+        Args:
+            input_message (ChatRequest): The input message to process
+
+        Returns:
+            ChatResponse: The response from the agent or error message
+        """
         try:
             # initialize the starting state with the user query
             messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in input_message.messages],

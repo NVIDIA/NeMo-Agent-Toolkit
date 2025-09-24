@@ -520,7 +520,8 @@ class EvaluationRun:
                     await self.run_workflow_remote()
                 elif not self.config.skip_workflow:
                     if session_manager is None:
-                        session_manager = SessionManager(eval_workflow.build(),
+                        workflow = await eval_workflow.build()
+                        session_manager = SessionManager(workflow,
                                                          max_concurrency=self.eval_config.general.max_concurrency)
                     await self.run_workflow_local(session_manager)
 

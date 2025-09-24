@@ -54,11 +54,13 @@ def test_mcp_front_end_plugin_init(mcp_config):
     assert plugin.front_end_config is mcp_config.general.front_end
 
 
-def test_get_all_functions():
+@pytest.mark.asyncio
+async def test_get_all_functions():
     """Test the _get_all_functions method."""
     # Create a mock workflow
     mock_workflow = MagicMock()
     mock_workflow.functions = {"function1": MagicMock(), "function2": MagicMock()}
+    mock_workflow.function_groups = {}
     mock_workflow.config.workflow.type = "test_workflow"
     mock_workflow.config.workflow.workflow_alias = None  # No alias, should use type
 
@@ -68,7 +70,7 @@ def test_get_all_functions():
     worker = plugin._get_worker_instance()
 
     # Test the method
-    functions = worker._get_all_functions(mock_workflow)
+    functions = await worker._get_all_functions(mock_workflow)
 
     # Verify that the functions were correctly extracted
     assert "function1" in functions
@@ -78,7 +80,8 @@ def test_get_all_functions():
 
 
 @patch.object(MCPFrontEndPlugin, 'run')
-def test_filter_functions(_mock_run, mcp_config):
+@pytest.mark.asyncio
+async def test_filter_functions(_mock_run, mcp_config):
     """Test function filtering logic directly."""
     # Create a plugin
     plugin = MCPFrontEndPlugin(full_config=mcp_config)
@@ -86,11 +89,12 @@ def test_filter_functions(_mock_run, mcp_config):
     # Mock workflow with multiple functions
     mock_workflow = MagicMock()
     mock_workflow.functions = {"echo": MagicMock(), "another_function": MagicMock()}
+    mock_workflow.function_groups = {}
     mock_workflow.config.workflow.type = "test_workflow"
     worker = plugin._get_worker_instance()
 
     # Call _get_all_functions first
-    all_functions = worker._get_all_functions(mock_workflow)
+    all_functions = await worker._get_all_functions(mock_workflow)
     assert len(all_functions) == 3
 
     # Now simulate filtering with tool_names
@@ -105,7 +109,8 @@ def test_filter_functions(_mock_run, mcp_config):
     assert "echo" in filtered_functions
 
 
-def test_workflow_alias_usage_in_mcp_front_end():
+@pytest.mark.asyncio
+async def test_workflow_alias_usage_in_mcp_front_end():
     """Test that workflow_alias is properly used in MCP front end plugin worker."""
     from unittest.mock import MagicMock
 
@@ -125,7 +130,7 @@ def test_workflow_alias_usage_in_mcp_front_end():
     config = Config(general=GeneralConfig(front_end=MCPFrontEndConfig()), workflow=EchoFunctionConfig())
     worker = MCPFrontEndPluginWorker(config)
 
-    functions = worker._get_all_functions(mock_workflow)
+    functions = await worker._get_all_functions(mock_workflow)
 
     # Should include the workflow under the alias name
     assert "custom_workflow_name" in functions
@@ -135,7 +140,7 @@ def test_workflow_alias_usage_in_mcp_front_end():
     # Test case 2: workflow_alias is None, should use type
     mock_workflow.config.workflow.workflow_alias = None
 
-    functions = worker._get_all_functions(mock_workflow)
+    functions = await worker._get_all_functions(mock_workflow)
 
     # Should include the workflow under the type name
     assert "original_type" in functions
@@ -143,7 +148,8 @@ def test_workflow_alias_usage_in_mcp_front_end():
     assert "func1" in functions
 
 
-def test_workflow_alias_priority_over_type():
+@pytest.mark.asyncio
+async def test_workflow_alias_priority_over_type():
     """Test that workflow_alias takes priority over workflow type when both are present."""
     from unittest.mock import MagicMock
 
@@ -161,7 +167,7 @@ def test_workflow_alias_priority_over_type():
     config = Config(general=GeneralConfig(front_end=MCPFrontEndConfig()), workflow=EchoFunctionConfig())
     worker = MCPFrontEndPluginWorker(config)
 
-    functions = worker._get_all_functions(mock_workflow)
+    functions = await worker._get_all_functions(mock_workflow)
 
     # Should use alias, not type
     assert "my_custom_alias" in functions
@@ -169,8 +175,10 @@ def test_workflow_alias_priority_over_type():
     assert functions["my_custom_alias"] == mock_workflow
 
 
-def test_workflow_alias_with_function_groups():
+@pytest.mark.asyncio
+async def test_workflow_alias_with_function_groups():
     """Test that workflow_alias works correctly when function groups are present."""
+    from unittest.mock import AsyncMock
     from unittest.mock import MagicMock
 
     from nat.data_models.config import Config
@@ -178,7 +186,9 @@ def test_workflow_alias_with_function_groups():
 
     # Create mock functions for function group
     mock_func_group = MagicMock()
-    mock_func_group.get_accessible_functions.return_value = {"group_func1": MagicMock(), "group_func2": MagicMock()}
+    mock_func_group.get_accessible_functions = AsyncMock(return_value={
+        "group_func1": MagicMock(), "group_func2": MagicMock()
+    })
 
     # Create a mock workflow
     mock_workflow = MagicMock()
@@ -191,7 +201,7 @@ def test_workflow_alias_with_function_groups():
     config = Config(general=GeneralConfig(front_end=MCPFrontEndConfig()), workflow=EchoFunctionConfig())
     worker = MCPFrontEndPluginWorker(config)
 
-    functions = worker._get_all_functions(mock_workflow)
+    functions = await worker._get_all_functions(mock_workflow)
 
     # Should include all functions plus workflow under alias
     assert "aliased_workflow" in functions

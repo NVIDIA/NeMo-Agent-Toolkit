@@ -161,8 +161,8 @@ class MyCompositeConfig(FunctionBaseConfig, name="my_composite_function"):
 @register_function(config_type=MyCompositeConfig)
 async def register_composite_function(config: MyCompositeConfig, builder: Builder):
     """Registers a function that calls two other functions."""
-    func1 = builder.get_function(config.first_function)
-    func2 = builder.get_function(config.second_function)
+    func1 = await builder.get_function(config.first_function)
+    func2 = await builder.get_function(config.second_function)
 
     async def _composite_function(data: str) -> str:
         res1 = await func1.ainvoke(data)
