@@ -22,6 +22,7 @@ from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+import anyio
 import httpx
 
 from mcp import ClientSession
@@ -74,7 +75,6 @@ class AuthAdapter(httpx.Auth):
                     # 3. The auth headers are expired
                     # 4. The auth headers are revoked
                     # 5. Auth config on the MCP server has changed
-                    #
                     # In this case we attempt to re-run discovery and authentication
                     auth_headers = await self._get_auth_headers(response=response)
                     request.headers.update(auth_headers)
