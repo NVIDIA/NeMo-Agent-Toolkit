@@ -20,11 +20,11 @@ import json
 import logging
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Any
-from typing import AsyncGenerator
 
 import httpx
 
@@ -39,8 +39,6 @@ from nat.authentication.interfaces import AuthProviderBase
 from nat.data_models.authentication import AuthReason
 from nat.data_models.authentication import AuthRequest
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
-from nat.plugins.mcp.exceptions import MCPError
-from nat.plugins.mcp.exceptions import MCPErrorCategory
 from nat.plugins.mcp.exceptions import MCPToolNotFoundError
 from nat.plugins.mcp.utils import model_from_mcp_schema
 from nat.utils.type_utils import override
@@ -204,7 +202,7 @@ class MCPBaseClient(ABC):
 
     @abstractmethod
     @asynccontextmanager
-    async def connect_to_server(self) -> AsyncGenerator[Any, None]:
+    async def connect_to_server(self) -> AsyncGenerator[ClientSession, None]:
         """
         Establish a session with an MCP server within an async context
         """
@@ -222,17 +220,12 @@ class MCPBaseClient(ABC):
             while attempt < self._reconnect_max_attempts:
                 attempt += 1
                 try:
-
-                    # Create a fresh stack and session
-                    exit_stack = AsyncExitStack()
-                    session = await exit_stack.enter_async_context(self.connect_to_server())
-
-                    # If new session is created successfully,
-                    # tear down existing stack and set the new stack and session
                     if self._exit_stack:
                         await self._exit_stack.aclose()
-                    self._exit_stack = exit_stack
-                    self._session = session
+                    # Create a fresh stack and session
+                    self._exit_stack = AsyncExitStack()
+                    self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
+
                     self._connection_established = True
 
                     logger.info("Reconnected to MCP server (%s) on attempt %d", self.server_name, attempt)
