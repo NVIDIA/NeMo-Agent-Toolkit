@@ -453,6 +453,141 @@ def test_config_alias_max_retries():
     assert config.parse_agent_response_max_retries == 5
 
 
+# Tests for multi-turn chat bug fix
+async def test_final_answer_field_set_on_agent_finish(mock_react_agent):
+    """Test that final_answer field is properly set when agent finishes."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    from langchain_core.agents import AgentFinish
+
+    # Mock state with initial message
+    state = ReActGraphState()
+    state.messages = [HumanMessage(content="What is 2+2?")]
+
+    # Mock the agent output to return AgentFinish
+    mock_agent_finish = AgentFinish(return_values={'output': 'The answer is 4'}, log='Final answer: 4')
+
+    # Mock the _stream_llm method instead of trying to patch the agent directly
+    with patch.object(mock_react_agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = AIMessage(content="Final Answer: The answer is 4")
+
+        with patch('nat.agent.react_agent.agent.ReActOutputParser.aparse', new_callable=AsyncMock) as mock_parse:
+            mock_parse.return_value = mock_agent_finish
+
+            # Call the agent node
+            result_state = await mock_react_agent.agent_node(state)
+
+            # Verify that final_answer field is set
+            assert result_state.final_answer == 'The answer is 4'
+            # Verify that the message is also added
+            assert len(result_state.messages) == 2
+            assert isinstance(result_state.messages[-1], AIMessage)
+            assert result_state.messages[-1].content == 'The answer is 4'
+
+
+async def test_conditional_edge_uses_final_answer_field(mock_react_agent):
+    """Test that conditional edge correctly uses final_answer field instead of message length."""
+    # Test case 1: When final_answer is set, should return END
+    state_with_final_answer = ReActGraphState()
+    state_with_final_answer.messages = [HumanMessage(content="Question")]
+    state_with_final_answer.final_answer = "This is the final answer"
+
+    decision = await mock_react_agent.conditional_edge(state_with_final_answer)
+    assert decision == AgentDecision.END
+
+    # Test case 2: When final_answer is None but agent_scratchpad has actions, should return TOOL
+    state_with_action = ReActGraphState()
+    state_with_action.messages = [HumanMessage(content="Question"), AIMessage(content="Response")]
+    state_with_action.final_answer = None
+    state_with_action.agent_scratchpad = [AgentAction(tool="TestTool", tool_input="input", log="log")]
+
+    decision = await mock_react_agent.conditional_edge(state_with_action)
+    assert decision == AgentDecision.TOOL
+
+
+async def test_multi_turn_chat_scenario(mock_react_agent):
+    """Test multi-turn conversation scenario that was broken before the fix."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    from langchain_core.agents import AgentAction
+    from langchain_core.agents import AgentFinish
+
+    # Simulate a multi-turn conversation
+    # Turn 1: User asks first question
+    state = ReActGraphState()
+    state.messages = [HumanMessage(content="What is 2+2?")]
+
+    # Mock first response - agent finishes immediately
+    mock_agent_finish = AgentFinish(return_values={'output': 'The answer is 4'}, log='Final answer: 4')
+
+    # Mock the _stream_llm method instead of trying to patch the agent directly
+    with patch.object(mock_react_agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = AIMessage(content="Final Answer: The answer is 4")
+
+        with patch('nat.agent.react_agent.agent.ReActOutputParser.aparse', new_callable=AsyncMock) as mock_parse:
+            mock_parse.return_value = mock_agent_finish
+
+            # Process first turn
+            result_state = await mock_react_agent.agent_node(state)
+
+            # Verify first turn completed correctly
+            assert result_state.final_answer == 'The answer is 4'
+            assert len(result_state.messages) == 2
+
+            # Check conditional edge returns END
+            decision = await mock_react_agent.conditional_edge(result_state)
+            assert decision == AgentDecision.END
+
+    # Turn 2: User asks second question - this is where the bug was
+    # Add a new human message to simulate multi-turn
+    result_state.messages.append(HumanMessage(content="What is 3+3?"))
+    result_state.final_answer = None  # Reset for new turn
+    result_state.agent_scratchpad = []  # Reset scratchpad
+
+    # Mock second response - agent finishes with new answer
+    mock_agent_finish_2 = AgentFinish(return_values={'output': 'The answer is 6'}, log='Final answer: 6')
+
+    with patch.object(mock_react_agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm_2:
+        mock_stream_llm_2.return_value = AIMessage(content="Final Answer: The answer is 6")
+
+        with patch('nat.agent.react_agent.agent.ReActOutputParser.aparse', new_callable=AsyncMock) as mock_parse_2:
+            mock_parse_2.return_value = mock_agent_finish_2
+
+            # Process second turn
+            result_state_2 = await mock_react_agent.agent_node(result_state)
+
+            # Verify second turn completed correctly
+            assert result_state_2.final_answer == 'The answer is 6'
+            assert len(result_state_2.messages) == 4  # Original 2 + 2 new messages
+
+            # Check conditional edge returns END for second turn
+            decision_2 = await mock_react_agent.conditional_edge(result_state_2)
+            assert decision_2 == AgentDecision.END
+
+
+async def test_conditional_edge_with_multiple_messages_but_no_final_answer(mock_react_agent):
+    """Test that conditional edge doesn't incorrectly end when there are multiple messages but no final_answer.
+
+    This test verifies the fix - previously the logic was checking message length > 1,
+    which could incorrectly trigger END in multi-turn scenarios.
+    """
+    # Create state with multiple messages but no final answer (agent still working)
+    state = ReActGraphState()
+    state.messages = [
+        HumanMessage(content="First question"),
+        AIMessage(content="Let me think about this..."),
+        HumanMessage(content="Second question")
+    ]
+    state.final_answer = None
+    state.agent_scratchpad = [AgentAction(tool="TestTool", tool_input="input", log="thinking...")]
+
+    # The conditional edge should return TOOL, not END
+    decision = await mock_react_agent.conditional_edge(state)
+    assert decision == AgentDecision.TOOL
+
+
 def test_config_alias_max_iterations():
     """Test that max_iterations alias works correctly."""
     config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', max_iterations=20)
