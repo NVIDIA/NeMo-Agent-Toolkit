@@ -55,7 +55,8 @@ class MCPServerConfig(BaseModel):
     env: dict[str, str] | None = Field(default=None, description="Environment variables for the stdio process")
 
     # Authentication configuration
-    auth_provider: AuthenticationRef | None = Field(default=None, description="Reference to authentication provider")
+    auth_provider: str | AuthenticationRef | None = Field(default=None,
+                                                          description="Reference to authentication provider")
 
     @model_validator(mode="after")
     def validate_model(self):

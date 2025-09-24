@@ -157,6 +157,38 @@ def print_tool(tool_dict: dict[str, str | None], detail: bool = False) -> None:
         click.echo("-" * 60)
 
 
+async def _create_mcp_client_config(
+    builder,
+    server_cfg,
+    url: str | None,
+    transport: str,
+    auth_redirect_uri: str | None,
+    auth_user_id: str | None,
+    auth_scopes: list[str] | None,
+):
+    from nat.plugins.mcp.client_impl import MCPClientConfig
+
+    if url and transport == "streamable-http" and auth_redirect_uri:
+        try:
+            from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
+            auth_config = MCPOAuth2ProviderConfig(
+                server_url=url,
+                redirect_uri=auth_redirect_uri,
+                default_user_id=auth_user_id,
+                scopes=auth_scopes or [],
+            )
+            auth_provider_name = "mcp_oauth2_cli"
+            await builder.add_auth_provider(auth_provider_name, auth_config)
+            server_cfg.auth_provider = auth_provider_name
+        except ImportError:
+            click.echo(
+                "[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat[mcp]",
+                err=True,
+            )
+
+    return MCPClientConfig(server=server_cfg)
+
+
 async def list_tools_via_function_group(
     command: str | None,
     url: str | None,
@@ -176,7 +208,6 @@ async def list_tools_via_function_group(
     try:
         # Ensure the registration side-effects are loaded
         from nat.builder.workflow_builder import WorkflowBuilder
-        from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
         from nat.plugins.mcp.client_impl import MCPClientConfig
         from nat.plugins.mcp.client_impl import MCPServerConfig
     except ImportError:
@@ -203,24 +234,13 @@ async def list_tools_via_function_group(
 
     async with WorkflowBuilder() as builder:  # type: ignore
         # Add auth provider if url is provided and auth_redirect_uri is given (only for streamable-http)
-        if url and transport == 'streamable-http' and auth_redirect_uri:
-            try:
-
-                auth_config = MCPOAuth2ProviderConfig(server_url=url,
-                                                      redirect_uri=auth_redirect_uri,
-                                                      default_user_id=auth_user_id,
-                                                      scopes=auth_scopes or [])
-                # Register the auth provider with a unique name
-                auth_provider_name = "mcp_oauth2_cli"
-                await builder.add_auth_provider(auth_provider_name, auth_config)
-                # Update the server config to reference the auth provider
-                server_cfg.auth_provider = auth_provider_name
-                group_cfg = MCPClientConfig(server=server_cfg)
-            except ImportError:
-                click.echo(
-                    "[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat[mcp]",
-                    err=True)
-
+        group_cfg = await _create_mcp_client_config(builder,
+                                                    server_cfg,
+                                                    url,
+                                                    transport,
+                                                    auth_redirect_uri,
+                                                    auth_user_id,
+                                                    auth_scopes)
         group = await builder.add_function_group("mcp_client", group_cfg)
 
         # Access functions exposed by the group
@@ -507,6 +527,11 @@ def mcp_client_tool_list(ctx,
             click.echo("[ERROR] --url is required when using sse or streamable-http client type", err=True)
             return
 
+    # Auth validation: if user_id or scopes provided, require redirect_uri
+    if (auth_user_id or auth_scopes) and not auth_redirect_uri:
+        click.echo("[ERROR] --auth-redirect-uri is required when using --auth-user-id or --auth-scopes", err=True)
+        return
+
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
 
@@ -598,6 +623,11 @@ def mcp_client_ping(url: str,
 
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
+
+    # Auth validation: if user_id or scopes provided, require redirect_uri
+    if (auth_user_id or auth_scopes) and not auth_redirect_uri:
+        click.echo("[ERROR] --auth-redirect-uri is required when using --auth-user-id or --auth-scopes", err=True)
+        return
 
     # Parse auth scopes
     auth_scopes_list = auth_scopes.split(',') if auth_scopes else None
@@ -790,17 +820,13 @@ async def call_tool_and_print(command: str | None,
         # Add auth provider if url is provided and auth_redirect_uri is given (only for streamable-http)
         if url and transport == 'streamable-http' and auth_redirect_uri:
             try:
-                from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
-                auth_config = MCPOAuth2ProviderConfig(server_url=url,
-                                                      redirect_uri=auth_redirect_uri,
-                                                      default_user_id=auth_user_id,
-                                                      scopes=auth_scopes or [])
-                # Register the auth provider with a unique name
-                auth_provider_name = f"mcp_oauth2_{hash(url)}_{hash(auth_redirect_uri)}"
-                await builder.add_auth_provider(auth_provider_name, auth_config)
-                # Update the server config to reference the auth provider
-                server_cfg.auth_provider = auth_provider_name
-                group_cfg = MCPClientConfig(server=server_cfg)
+                group_cfg = await _create_mcp_client_config(builder,
+                                                            server_cfg,
+                                                            url,
+                                                            transport,
+                                                            auth_redirect_uri,
+                                                            auth_user_id,
+                                                            auth_scopes)
             except ImportError:
                 click.echo(
                     "[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat[mcp]",
@@ -888,6 +914,11 @@ def mcp_client_tool_call(tool_name: str,
     # Parse stdio params
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
+
+    # Auth validation: if user_id or scopes provided, require redirect_uri
+    if (auth_user_id or auth_scopes) and not auth_redirect_uri:
+        click.echo("[ERROR] --auth-redirect-uri is required when using --auth-user-id or --auth-scopes", err=True)
+        return
 
     # Parse auth scopes
     auth_scopes_list = auth_scopes.split(',') if auth_scopes else None
