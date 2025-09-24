@@ -453,7 +453,6 @@ def test_config_alias_max_retries():
     assert config.parse_agent_response_max_retries == 5
 
 
-# Tests for multi-turn chat bug fix
 async def test_final_answer_field_set_on_agent_finish(mock_react_agent):
     """Test that final_answer field is properly set when agent finishes."""
     from unittest.mock import AsyncMock
@@ -511,7 +510,6 @@ async def test_multi_turn_chat_scenario(mock_react_agent):
     from unittest.mock import AsyncMock
     from unittest.mock import patch
 
-    from langchain_core.agents import AgentAction
     from langchain_core.agents import AgentFinish
 
     # Simulate a multi-turn conversation
