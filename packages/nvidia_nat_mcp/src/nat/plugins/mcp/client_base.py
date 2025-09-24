@@ -210,24 +210,6 @@ class MCPBaseClient(ABC):
         """
         yield
 
-    async def ensure_connected(self):
-        """
-        Ensure the client has a healthy connection. If not, attempt to reconnect.
-        """
-        if not self._exit_stack or not self._session:
-            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
-
-        try:
-            # Lightweight health check
-            await self._session.send_ping()
-            return
-        except Exception:
-            # Attempt reconnect if enabled
-            if self._reconnect_enabled:
-                await self._reconnect()
-            else:
-                raise
-
     async def _reconnect(self):
         """
         Attempt to reconnect by tearing down and re-establishing the session.
@@ -245,14 +227,17 @@ class MCPBaseClient(ABC):
                     exit_stack = AsyncExitStack()
                     session = await exit_stack.enter_async_context(self.connect_to_server())
 
-                    # Tear down existing stack if present, and set the new stack and session
+                    # If new session is created successfully,
+                    # tear down existing stack and set the new stack and session
                     if self._exit_stack:
                         await self._exit_stack.aclose()
                     self._exit_stack = exit_stack
                     self._session = session
                     self._connection_established = True
+
                     logger.info("Reconnected to MCP server (%s) on attempt %d", self.server_name, attempt)
                     return
+
                 except Exception as e:
                     last_error = e
                     logger.warning("Reconnect attempt %d failed for %s: %s", attempt, self.server_name, e)
@@ -264,36 +249,19 @@ class MCPBaseClient(ABC):
             if last_error:
                 raise last_error
 
-    def _is_recoverable_error(self, error: Exception) -> bool:
-        """Determine whether an error should trigger a reconnect attempt."""
-        if isinstance(error, MCPError):
-            return error.category in (
-                MCPErrorCategory.CONNECTION,
-                MCPErrorCategory.TIMEOUT,
-                MCPErrorCategory.PROTOCOL,
-            )
-        # Fallback on common network/transport errors
-        recoverable_httpx = isinstance(
-            error,
-            (httpx.ConnectError, httpx.ReadError, httpx.RemoteProtocolError, httpx.TimeoutException,
-             httpx.RequestError))
-        recoverable_os = isinstance(error, (ConnectionError, TimeoutError, BrokenPipeError))
-        return recoverable_httpx or recoverable_os
-
     async def _with_reconnect(self, coro):
         """
-        Execute an awaited operation, reconnecting once on recoverable errors.
+        Execute an awaited operation, reconnecting once on errors.
         """
         try:
             return await coro()
         except Exception as e:
-            # if self._reconnect_enabled and self._is_recoverable_error(e):
             if self._reconnect_enabled:
-                logger.info("Operation failed. Attempting reconnect: %s", e)
+                logger.info("MCP Client operation failed. Attempting reconnect: %s", e)
                 try:
                     await self._reconnect()
                 except Exception as reconnect_err:
-                    logger.warning("Reconnect attempt failed: %s", reconnect_err)
+                    logger.error("MCP Client reconnect attempt failed: %s", reconnect_err)
                     raise
                 return await coro()
             raise
@@ -304,14 +272,11 @@ class MCPBaseClient(ABC):
         Uses unauthenticated session for discovery.
         """
 
-        # await self.ensure_connected()
-        async def _op():
+        async def _get_tools():
             session = self._session
-            if session is None:
-                raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
             return await session.list_tools()
 
-        response = await self._with_reconnect(_op)
+        response = await self._with_reconnect(_get_tools)
 
         return {
             tool.name:
@@ -353,16 +318,13 @@ class MCPBaseClient(ABC):
     async def call_tool(self, tool_name: str, tool_args: dict | None):
 
         try:
-            # await self.ensure_connected()
 
-            async def _op():
+            async def _call_tool():
                 session = self._session
-                if session is None:
-                    raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
-
                 return await session.call_tool(tool_name, tool_args, read_timeout_seconds=self._tool_call_timeout)
 
-            return await self._with_reconnect(_op)
+            return await self._with_reconnect(_call_tool)
+
         except Exception as e:
             message = f"Call to tool '{tool_name}' failed: {e}"
             return CallToolResult(content=[TextContent(type="text", text=message)], isError=True)
@@ -504,10 +466,10 @@ class MCPToolClient:
 
     def __init__(self,
                  session: ClientSession,
+                 parent_client: "MCPBaseClient",
                  tool_name: str,
                  tool_description: str | None,
                  tool_input_schema: dict | None = None,
-                 parent_client: "MCPBaseClient | None" = None,
                  tool_call_timeout: timedelta = timedelta(seconds=5)):
         self._session = session
         self._tool_name = tool_name
@@ -515,6 +477,9 @@ class MCPToolClient:
         self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
         self._parent_client = parent_client
         self._tool_call_timeout = tool_call_timeout
+
+        if self._parent_client is None:
+            raise RuntimeError("MCPToolClient initialized without a parent client.")
 
     @property
     def name(self):
@@ -552,16 +517,9 @@ class MCPToolClient:
         """
         logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
 
-        # Prefer delegating to parent client to leverage reconnect logic
-        if self._parent_client is not None:
-            result = await self._parent_client.call_tool(self._tool_name, tool_args)
-        else:
-            result = await self._session.call_tool(self._tool_name,
-                                                   tool_args,
-                                                   read_timeout_seconds=self._tool_call_timeout)
+        result = await self._parent_client.call_tool(self._tool_name, tool_args)
 
         output = []
-
         for res in result.content:
             if isinstance(res, TextContent):
                 output.append(res.text)
