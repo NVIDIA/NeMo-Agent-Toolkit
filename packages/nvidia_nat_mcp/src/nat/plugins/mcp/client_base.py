@@ -47,37 +47,40 @@ class AuthAdapter(httpx.Auth):
 
     def __init__(self, auth_provider: AuthProviderBase):
         self.auth_provider = auth_provider
+        # each adapter instance has its own lock to avoid unnecessary delays for multiple clients
+        self._lock = anyio.Lock()
 
     async def async_auth_flow(self, request: httpx.Request) -> AsyncGenerator[httpx.Request, httpx.Response]:
         """Add authentication headers to the request using NAT auth provider."""
-        try:
-            # Get auth headers from the NAT auth provider:
-            # 1. If discovery is yet to done this will return None and request will be sent without auth header.
-            # 2. If discovery is done, this will return the auth header from cache if the token is still valid
-            auth_headers = await self._get_auth_headers(response=None)
-            request.headers.update(auth_headers)
-        except Exception as e:
-            logger.info("Failed to get auth headers: %s", e)
-            # Continue without auth headers if auth fails
-
-        response = yield request
-
-        # Handle 401 responses by retrying with fresh auth
-        if response.status_code == 401:
+        async with self._lock:
             try:
-                # 401 can happen if:
-                # 1. The request was sent without auth header
-                # 2. The auth headers are invalid
-                # 3. The auth headers are expired
-                # 4. The auth headers are revoked
-                # 5. Auth confing on the MCP server has changed
-                #
-                # In this case we attempt to re-run discovery and authentication
-                auth_headers = await self._get_auth_headers(response=response)
+                # Get auth headers from the NAT auth provider:
+                # 1. If discovery is yet to done this will return None and request will be sent without auth header.
+                # 2. If discovery is done, this will return the auth header from cache if the token is still valid
+                auth_headers = await self._get_auth_headers(response=None)
                 request.headers.update(auth_headers)
-                yield request  # Retry the request
             except Exception as e:
-                logger.info("Failed to refresh auth after 401: %s", e)
+                logger.info("Failed to get auth headers: %s", e)
+                # Continue without auth headers if auth fails
+
+            response = yield request
+
+            # Handle 401 responses by retrying with fresh auth
+            if response.status_code == 401:
+                try:
+                    # 401 can happen if:
+                    # 1. The request was sent without auth header
+                    # 2. The auth headers are invalid
+                    # 3. The auth headers are expired
+                    # 4. The auth headers are revoked
+                    # 5. Auth config on the MCP server has changed
+                    #
+                    # In this case we attempt to re-run discovery and authentication
+                    auth_headers = await self._get_auth_headers(response=response)
+                    request.headers.update(auth_headers)
+                    yield request  # Retry the request
+                except Exception as e:
+                    logger.info("Failed to refresh auth after 401: %s", e)
         return
 
     async def _get_auth_headers(self, response: httpx.Response | None = None) -> dict[str, str]:
