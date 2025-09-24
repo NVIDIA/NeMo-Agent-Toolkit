@@ -193,7 +193,7 @@ class TestUserReportTools:
 
         # Verify the report was deleted
         with pytest.raises(NoSuchKeyError):
-            await object_store.get_object("/reports/test_user/2024-01-01.json")
+            await object_store.get_object("reports/test_user/2024-01-01.json")
 
     async def test_delete_user_report_not_found(self, group):
         """Test delete_user_report when report doesn't exist."""
