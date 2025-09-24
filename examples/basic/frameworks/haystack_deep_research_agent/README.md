@@ -153,7 +153,7 @@ docker run -d --name opensearch -p 9200:9200 -p 9600:9600 \
   opensearchproject/opensearch:2.11.1
 ```
 
-- Run the e2e test (ensure `pytest-asyncio` is installed in your venv):
+- Run the e2e test (ensure `pytest-asyncio` is installed in your virtual environment):
 
 ```bash
 pip install pytest-asyncio  # if not already installed
@@ -206,7 +206,7 @@ You can customize the workflow by:
 
 The workflow demonstrates several key NeMo-Agent-Toolkit patterns:
 
-- **Workflow Registration**: The agent is exposed as a workflow function with a pydantic config
+- **Workflow Registration**: The agent is exposed as a workflow function with a Pydantic config
 - **Builder LLM Integration**: LLMs are defined under top-level `llms:` and accessed via `builder.get_llm_config(...)`
 - **Component Integration**: Haystack components are composed into tools within the workflow
 - **Error Handling**: Robust error handling with fallback behaviors

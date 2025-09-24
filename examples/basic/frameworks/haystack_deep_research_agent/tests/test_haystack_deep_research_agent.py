@@ -13,21 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pyright: reportMissingTypeStubs=false, reportMissingImports=false
-
 import importlib
 import os
 import urllib.error
 import urllib.request
 from pathlib import Path
+
 import pytest
 
 
 def _opensearch_reachable(url: str) -> bool:
     try:
-        with urllib.request.urlopen(
-            f"{url.rstrip('/')}/_cluster/health", timeout=1
-        ) as resp:
+        with urllib.request.urlopen(f"{url.rstrip('/')}/_cluster/health", timeout=1) as resp:
             return 200 <= getattr(resp, "status", 0) < 300
     except Exception:
         return False
@@ -47,13 +44,8 @@ def _opensearch_reachable(url: str) -> bool:
     reason="OpenSearch not reachable on http://localhost:9200; skipping e2e test.",
 )
 async def test_full_workflow_e2e() -> None:
-    config_file = (
-        Path(__file__).resolve().parents[1]
-        / "src"
-        / "aiq_haystack_deep_research_agent"
-        / "configs"
-        / "config.yml"
-    )
+    config_file = (Path(__file__).resolve().parents[1] / "src" / "aiq_haystack_deep_research_agent" / "configs" /
+                   "config.yml")
 
     loader_mod = importlib.import_module("aiq.runtime.loader")
     load_workflow = getattr(loader_mod, "load_workflow")
@@ -67,11 +59,7 @@ async def test_full_workflow_e2e() -> None:
 
 
 def test_config_yaml_loads_and_has_keys() -> None:
-    config_file = (
-        Path(__file__).resolve().parents[1]
-        / "configs"
-        / "config.yml"
-    )
+    config_file = (Path(__file__).resolve().parents[1] / "configs" / "config.yml")
 
     with open(config_file, "r", encoding="utf-8") as f:
         text = f.read()
@@ -80,15 +68,15 @@ def test_config_yaml_loads_and_has_keys() -> None:
     assert "_type: haystack_deep_research_agent" in text
     # key fields expected
     for key in [
-        "llms:",
-        "rag_llm:",
-        "agent_llm:",
-        "workflow:",
-        "max_agent_steps:",
-        "search_top_k:",
-        "rag_top_k:",
-        "opensearch_url:",
-        "index_on_startup:",
-        "data_dir:",
+            "llms:",
+            "rag_llm:",
+            "agent_llm:",
+            "workflow:",
+            "max_agent_steps:",
+            "search_top_k:",
+            "rag_top_k:",
+            "opensearch_url:",
+            "index_on_startup:",
+            "data_dir:",
     ]:
         assert key in text, f"Missing key: {key}"

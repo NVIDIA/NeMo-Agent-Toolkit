@@ -85,6 +85,10 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml",
     ),
     (
+        r"^examples/basic/frameworks/haystack_deep_research_agent/README.md",
+        r"^examples/basic/frameworks/haystack_deep_research_agent/data/bedrock-ug.pdf",
+    ),
+    (
         r"^docs/source/",
         r"^docs/source/_static",
     ),

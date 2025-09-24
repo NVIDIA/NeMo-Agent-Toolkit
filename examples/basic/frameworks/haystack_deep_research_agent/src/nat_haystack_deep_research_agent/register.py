@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-# pyright: reportMissingTypeStubs=false, reportMissingImports=false
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,7 +58,6 @@ async def haystack_deep_research_agent_workflow(config: HaystackDeepResearchWork
     from haystack.components.agents import Agent
     from haystack.dataclasses import ChatMessage
     from haystack.tools import Toolset
-    from haystack.utils import Secret
     from haystack_integrations.components.generators.nvidia import NvidiaChatGenerator
     from haystack_integrations.document_stores.opensearch import OpenSearchDocumentStore
 
@@ -81,11 +79,7 @@ async def haystack_deep_research_agent_workflow(config: HaystackDeepResearchWork
         run_startup_indexing(document_store=document_store, data_dir=config.data_dir, logger=logger)
 
     def _nim_to_haystack_generator(cfg: NIMModelConfig) -> NvidiaChatGenerator:
-        return NvidiaChatGenerator(
-            model=cfg.model_name,
-            api_base_url=cfg.base_url,
-            api_key=Secret.from_env_var("NVIDIA_API_KEY"),
-        )
+        return NvidiaChatGenerator(model=cfg.model_name)
 
     # Instantiate LLMs via builder configs (expecting NIM)
     rag_llm_cfg = builder.get_llm_config("rag_llm")
