@@ -18,6 +18,7 @@ from urllib.parse import urljoin
 from urllib.parse import urlparse
 
 import httpx
+from dataclasses import asdict
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
@@ -112,9 +113,7 @@ class DiscoverOAuth2Endpoints:
             raise RuntimeError("Could not discover OAuth2 endpoints from MCP server")
 
         changed = (self._cached_endpoints is None
-                   or endpoints.authorization_url != self._cached_endpoints.authorization_url
-                   or endpoints.token_url != self._cached_endpoints.token_url
-                   or endpoints.registration_url != self._cached_endpoints.registration_url)
+                   or asdict(endpoints) != asdict(self._cached_endpoints))
         self._cached_endpoints = endpoints
         logger.info("OAuth2 endpoints selected: %s", self._cached_endpoints)
         return self._cached_endpoints, changed
@@ -161,7 +160,7 @@ class DiscoverOAuth2Endpoints:
         async with httpx.AsyncClient(timeout=10.0) as client:
             for url in urls:
                 try:
-                    resp = await client.get(url, headers={"Accept": "application/json"})
+                    resp = await client.get(url, follow_redirects=True, headers={"Accept": "application/json"})
                     if resp.status_code != 200:
                         continue
 
@@ -225,7 +224,6 @@ class DiscoverOAuth2Endpoints:
             urls.append(urljoin(base, f"{path}/.well-known/openid-configuration"))
         urls.append(base_or_issuer.rstrip("/") + "/.well-known/openid-configuration")
         return urls
-
 
 
 class DynamicClientRegistration:
@@ -301,26 +299,28 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         self._auth_code_provider = None
         self._flow_handler = MCPAuthenticationFlowHandler()
 
-    async def discover_and_authenticate(self,
-                                        response: httpx.Response | None = None,
-                                        user_id: str | None = None) -> AuthResult:
+    async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
         """
         Authenticate using MCP OAuth2 flow via NAT framework.
+
+        If response is provided in kwargs (typically from a 401), performs:
         1. Dynamic endpoints discovery (RFC9728 + RFC 8414 + OIDC)
         2. Client registration (RFC7591)
         3. Authentication
-        """
-        await self._discover_and_register(response=response)
-        return await self.authenticate(user_id=user_id)
 
-    async def authenticate(self, user_id: str | None = None) -> AuthResult:
+        Otherwise, performs standard authentication flow.
         """
-        Use NAT's standard OAuth2 flow (OAuth2AuthCodeFlowProvider)
-         - If a valid token is found in the cache, return it
-         - Otherwise, perform the OAuth2 flow
-        """
+        response = kwargs.get('response')
+        if response and response.status_code == 401:
+            await self._discover_and_register(response=response)
+
         user_id = user_id or self.config.default_user_id
         return await self._nat_oauth2_authenticate(user_id=user_id)
+
+    @property
+    def _effective_scopes(self) -> list[str] | None:
+        """Get the effective scopes to be used for the authentication."""
+        return self.config.scopes or self._cached_endpoints.scopes or []
 
     async def _discover_and_register(self, response: httpx.Response | None = None):
         """
@@ -332,7 +332,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         if endpoints_changed:
             logger.info("OAuth2 endpoints: %s", self._cached_endpoints)
             self._cached_credentials = None  # invalidate credentials tied to old AS
-        effective_scopes = self._effective_scopes()
+        effective_scopes = self._effective_scopes
 
         # Client registration
         if not self._cached_credentials:
@@ -347,7 +347,6 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 # Dynamic registration mode requires registration endpoint
                 self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
                 logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
-
 
     async def _nat_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
         """Perform the OAuth2 flow using NAT OAuth2 provider."""
@@ -366,7 +365,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         # Build the OAuth2 provider if not already built
         if self._auth_code_provider is None:
-            scopes = self.config.scopes or endpoints.scopes or []
+            scopes = self._effective_scopes
             oauth2_config = OAuth2AuthCodeFlowProviderConfig(
                 client_id=credentials.client_id,
                 client_secret=credentials.client_secret or "",

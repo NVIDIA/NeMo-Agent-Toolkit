@@ -17,8 +17,6 @@ import typing
 from abc import ABC
 from abc import abstractmethod
 
-import httpx
-
 from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
@@ -55,19 +53,8 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
         """
         return self._config
 
-    async def discover_and_authenticate(self,
-                                        _response: httpx.Response | None = None,
-                                        user_id: str | None = None) -> AuthResult:
-        """
-        Optionally discover authentication endpoints and authenticate the client.
-
-        Default behavior delegates to `authenticate` so providers that don't
-        require discovery don't need to override this method.
-        """
-        return await self.authenticate(user_id=user_id)
-
     @abstractmethod
-    async def authenticate(self, user_id: str | None = None) -> AuthResult:
+    async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
         """
         Perform the authentication process for the client.
 
@@ -75,6 +62,10 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
         target API service, which may include obtaining tokens, refreshing credentials,
         or completing multi-step authentication flows.
 
+        Args:
+            user_id: Optional user identifier for authentication
+            **kwargs: Additional authentication parameters including:
+                - response: Optional HTTP response (typically from a 401) for discovery
         Raises:
             NotImplementedError: Must be implemented by subclasses.
         """

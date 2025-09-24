@@ -15,6 +15,7 @@
 
 from datetime import datetime
 from datetime import timezone
+from typing import Callable
 
 from authlib.integrations.httpx_client import OAuth2Client as AuthlibOAuth2Client
 from pydantic import SecretStr
@@ -22,11 +23,10 @@ from pydantic import SecretStr
 from nat.authentication.interfaces import AuthProviderBase
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from nat.builder.context import Context
+from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BearerTokenCred
-from typing import Callable
-from nat.data_models.authentication import AuthenticatedContext
 
 
 class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConfig]):
@@ -65,10 +65,12 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
 
         return new_auth_result
 
-    def _set_custom_auth_callback(self, auth_callback: Callable[[OAuth2AuthCodeFlowProviderConfig, AuthFlowType], AuthenticatedContext]):
+    def _set_custom_auth_callback(self,
+                                  auth_callback: Callable[[OAuth2AuthCodeFlowProviderConfig, AuthFlowType],
+                                                          AuthenticatedContext]):
         self._auth_callback = auth_callback
 
-    async def authenticate(self, user_id: str | None = None) -> AuthResult:
+    async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
         if user_id is None and hasattr(Context.get(), "metadata") and hasattr(
                 Context.get().metadata, "cookies") and Context.get().metadata.cookies is not None:
             session_id = Context.get().metadata.cookies.get("nat-session", None)

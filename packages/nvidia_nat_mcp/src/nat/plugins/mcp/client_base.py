@@ -83,10 +83,7 @@ class AuthAdapter(httpx.Auth):
     async def _get_auth_headers(self, response: httpx.Response | None = None) -> dict[str, str]:
         """Get authentication headers from the NAT auth provider."""
         try:
-            if response and response.status_code == 401:
-                auth_result = await self.auth_provider.discover_and_authenticate(response=response)
-            else:
-                auth_result = await self.auth_provider.authenticate()
+            auth_result = await self.auth_provider.authenticate(response=response)
             # Check if we have BearerTokenCred
             from nat.data_models.authentication import BearerTokenCred
             if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
