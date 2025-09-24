@@ -158,9 +158,7 @@ def recursive_componentref_discovery(cls: TypedBaseModel, value: typing.Any,
             yield from recursive_componentref_discovery(cls, field_data, field_info.annotation)
     if (decomposed_type.is_union):
         for arg in decomposed_type.args:
-            decomposed_root = DecomposedType(arg).root
-            if decomposed_root is not typing.Annotated and (arg is typing.Any or arg is typing.Annotated or
-                                                            (isinstance(value, decomposed_root))):
+            if arg is typing.Any or DecomposedType(arg).is_instance(value):
                 yield from recursive_componentref_discovery(cls, value, arg)
     else:
         for arg in decomposed_type.args:
