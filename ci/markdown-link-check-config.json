@@ -14,6 +14,9 @@
         },
         {
             "pattern": "^https://www\\.mysql\\.com"
+        },
+        {
+            "pattern": "^https://arize\\.com"
         }
     ]
 }
