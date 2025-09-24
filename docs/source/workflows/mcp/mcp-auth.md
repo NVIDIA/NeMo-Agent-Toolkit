@@ -26,7 +26,7 @@ This is currently a scratch pad for planning MCP auth. It will be rewritten when
 ## Steps for testing MCP auth
 1. Start the MCP server with auth enabled
 ```bash
-nat mcp --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-server-auth.yml
+nat mcp serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-server-auth.yml
 ```
 This starts a protected MCP server on port 9901. This MCP server has a stub token verifier that will always return success without AS introspection.
 

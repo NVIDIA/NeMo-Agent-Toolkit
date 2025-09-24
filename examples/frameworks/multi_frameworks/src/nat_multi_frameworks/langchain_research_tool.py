@@ -50,7 +50,7 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
             "API token must be provided in the configuration or in the environment variable `NVIDIA_API_KEY`")
 
     llm = await builder.get_llm(llm_name=tool_config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    tavily_tool = builder.get_tool(fn_name=tool_config.web_tool, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tavily_tool = await builder.get_tool(fn_name=tool_config.web_tool, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     async def web_search(topic: str) -> list[dict]:
         output = (await tavily_tool.ainvoke(topic))

@@ -64,16 +64,18 @@ async def test_custom_mcp_worker(mcp_nat_config: Config):
     mcp = FastMCP("Test Server")
 
     # Mock out the function registration since we're only testing custom routes
+    from unittest.mock import AsyncMock
+
     mock_builder = Mock(spec=WorkflowBuilder)
 
     # Create a minimal mock workflow with functions
     mock_workflow = Mock()
     mock_workflow.functions = {"test_function": Mock()}  # Simple dict with one mock function
     function_group_mock = Mock()
-    function_group_mock.get_accessible_functions.return_value = {"group1.inner_function": Mock()}
+    function_group_mock.get_accessible_functions = AsyncMock(return_value={"group1.inner_function": Mock()})
     mock_workflow.function_groups = {"group1": function_group_mock}
     mock_workflow.config.workflow.type = "test_workflow"
-    mock_builder.build.return_value = mock_workflow
+    mock_builder.build = AsyncMock(return_value=mock_workflow)
 
     # Mock the register_function_with_mcp so we skip function registration entirely
     with patch('nat.front_ends.mcp.tool_converter.register_function_with_mcp') as mock_register_function:

@@ -264,7 +264,7 @@ class CreateJiraToolConfig(FunctionBaseConfig, name="create_jira_tickets_tool"):
 @register_function(config_type=CreateJiraToolConfig)
 async def create_jira_tickets_tool(config: CreateJiraToolConfig, builder: Builder):
 
-    hitl_approval_fn = builder.get_function(config.hitl_approval_fn)
+    hitl_approval_fn = await builder.get_function(config.hitl_approval_fn)
 
     async def _arun(input_text: str) -> str:
 

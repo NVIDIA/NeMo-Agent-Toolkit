@@ -32,7 +32,7 @@ uv pip install nvidia-nat[mcp]
 ```
 
 ## MCP Client Configuration
-NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allow the workflow to use MCP tools as regular functions.
+NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
 
 Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions in one of two ways:
 - `mcp_client`: A flexible configuration using function groups, that allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
@@ -141,7 +141,6 @@ function_groups:
 ```
 
 ## Example
-
 The following example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers. This configuration shows how to use multiple MCP servers with different transports in the same workflow.
 
 `examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml`:
@@ -174,7 +173,7 @@ To run this example:
 
 1. Start the remote MCP server:
 ```bash
-nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. See the [MCP Server](./mcp-server.md) documentation for more information.
 
@@ -185,7 +184,7 @@ nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date
 
 ## Displaying MCP Tools
 
-The `nat info mcp` command allows you to inspect the tools available from an MCP server before configuring your workflow. This is useful for discovering available tools and understanding their input schemas.
+Use the `nat mcp client` commands to inspect and call tools available from an MCP server before configuring your workflow. This is useful for discovering available tools and understanding their input schemas.
 
 ### List All Tools
 
@@ -193,13 +192,13 @@ To list all tools served by an MCP server:
 
 ```bash
 # For streamable-http transport (default)
-nat info mcp --url http://localhost:9901/mcp
+nat mcp client tool list --url http://localhost:9901/mcp
 
 # For stdio transport
-nat info mcp --transport stdio --command "python" --args "-m mcp_server_time"
+nat mcp client tool list --transport stdio --command "python" --args "-m mcp_server_time"
 
 # For sse transport
-nat info mcp --url http://localhost:9901/sse --transport sse
+nat mcp client tool list --url http://localhost:9901/sse --transport sse
 ```
 
 Sample output:
@@ -217,7 +216,20 @@ react_agent
 To get detailed information about a specific tool, use the `--tool` flag:
 
 ```bash
-nat info mcp --url http://localhost:9901/mcp --tool calculator_multiply
+nat mcp client tool list --url http://localhost:9901/mcp --tool calculator_multiply
+```
+
+### Call a Tool
+
+To call a tool and see its output:
+
+```bash
+# Pass arguments as JSON
+nat mcp client tool call calculator_multiply \
+  --url http://localhost:9901/mcp \
+  --json-args '{"text": "2 * 3"}'
+```
+
 ```
 
 Sample output:
@@ -245,7 +257,10 @@ Input Schema:
 ### Troubleshooting
 
 If you encounter connection issues:
-- Verify the MCP server is running and accessible via the `nat info mcp` command
+- Verify the MCP server is running and accessible via the `nat mcp client ping` command, e.g.:
+  ```bash
+  nat mcp client ping --url http://localhost:9901/mcp
+  ```
 - Check that the transport type matches the server configuration
 - Ensure the URL or command is correct
 - Check network connectivity for remote servers
