@@ -79,6 +79,7 @@ def validate_evaluation_output(eval_output_file: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("require_docker")
 async def test_eval():
     """
     Run the swe-bench evaluator with the golden patches and validate
