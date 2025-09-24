@@ -41,6 +41,7 @@ class OAuth2Endpoints(BaseModel):
     authorization_url: HttpUrl = Field(..., description="OAuth2 authorization endpoint URL")
     token_url: HttpUrl = Field(..., description="OAuth2 token endpoint URL")
     registration_url: HttpUrl | None = Field(default=None, description="OAuth2 client registration endpoint URL")
+    scopes: list[str] | None = Field(default=None, description="OAuth2 scopes to be used for the authentication")
 
 
 class OAuth2Credentials(BaseModel):
@@ -61,7 +62,6 @@ class DiscoverOAuth2Endpoints:
     def __init__(self, config: MCPOAuth2ProviderConfig):
         self.config = config
         self._cached_endpoints: OAuth2Endpoints | None = None
-        self._last_oauth_scopes: list[str] | None = None
         self._authenticated_servers: dict[str, AuthResult] = {}
         self._flow_handler: MCPAuthenticationFlowHandler = MCPAuthenticationFlowHandler()
 
@@ -192,11 +192,11 @@ class DiscoverOAuth2Endpoints:
                     if meta.authorization_endpoint and meta.token_endpoint:
                         logger.info("Discovered OAuth2 endpoints from %s", url)
                         # this is bit of a hack to get the scopes supported by the auth server
-                        self._last_oauth_scopes = meta.scopes_supported
                         return OAuth2Endpoints(
                             authorization_url=str(meta.authorization_endpoint),
                             token_url=str(meta.token_endpoint),
                             registration_url=str(meta.registration_endpoint) if meta.registration_endpoint else None,
+                            scopes=meta.scopes_supported,
                         )
                 except Exception as e:
                     logger.debug("Discovery failed at %s: %s", url, e)
@@ -226,9 +226,6 @@ class DiscoverOAuth2Endpoints:
         urls.append(base_or_issuer.rstrip("/") + "/.well-known/openid-configuration")
         return urls
 
-    def scopes_supported(self) -> list[str] | None:
-        """Get the last OAuth scopes discovered from the AS."""
-        return self._last_oauth_scopes
 
 
 class DynamicClientRegistration:
@@ -351,11 +348,6 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
                 logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
 
-    def _effective_scopes(self) -> list[str] | None:
-        """
-        Prefer caller-provided scopes; otherwise fall back to AS-advertised scopes_supported.
-        """
-        return self.config.scopes or self._discoverer.scopes_supported()
 
     async def _nat_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
         """Perform the OAuth2 flow using NAT OAuth2 provider."""
@@ -374,6 +366,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         # Build the OAuth2 provider if not already built
         if self._auth_code_provider is None:
+            scopes = self.config.scopes or endpoints.scopes or []
             oauth2_config = OAuth2AuthCodeFlowProviderConfig(
                 client_id=credentials.client_id,
                 client_secret=credentials.client_secret or "",
@@ -381,7 +374,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 token_url=str(endpoints.token_url),
                 token_endpoint_auth_method=getattr(self.config, "token_endpoint_auth_method", None),
                 redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
-                scopes=self._effective_scopes() or [],
+                scopes=scopes,
                 use_pkce=bool(self.config.use_pkce),
                 authorization_kwargs={"resource": str(self.config.server_url)})
             self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
