@@ -532,6 +532,11 @@ def mcp_client_tool_list(ctx,
         click.echo("[ERROR] --auth-redirect-uri is required when using --auth-user-id or --auth-scopes", err=True)
         return
 
+    # Auth is current not supported with the direct mode
+    if direct and (auth_redirect_uri or auth_user_id or auth_scopes):
+        click.echo("[ERROR] Auth is currently not supported with the direct mode", err=True)
+        return
+
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
 
