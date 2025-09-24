@@ -176,6 +176,7 @@ async def list_tools_via_function_group(
     try:
         # Ensure the registration side-effects are loaded
         from nat.builder.workflow_builder import WorkflowBuilder
+        from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
         from nat.plugins.mcp.client_impl import MCPClientConfig
         from nat.plugins.mcp.client_impl import MCPServerConfig
     except ImportError:
@@ -204,13 +205,13 @@ async def list_tools_via_function_group(
         # Add auth provider if url is provided and auth_redirect_uri is given (only for streamable-http)
         if url and transport == 'streamable-http' and auth_redirect_uri:
             try:
-                from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
+
                 auth_config = MCPOAuth2ProviderConfig(server_url=url,
                                                       redirect_uri=auth_redirect_uri,
                                                       default_user_id=auth_user_id,
                                                       scopes=auth_scopes or [])
                 # Register the auth provider with a unique name
-                auth_provider_name = f"mcp_oauth2_{hash(url)}_{hash(auth_redirect_uri)}"
+                auth_provider_name = "mcp_oauth2_cli"
                 await builder.add_auth_provider(auth_provider_name, auth_config)
                 # Update the server config to reference the auth provider
                 server_cfg.auth_provider = auth_provider_name
@@ -409,6 +410,15 @@ def mcp_client_command():
     """
     MCP client commands.
     """
+    try:
+        from nat.runtime.loader import PluginTypes
+        from nat.runtime.loader import discover_and_register_plugins
+        discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
+    except ImportError:
+        click.echo(
+            "[WARNING] MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp",
+            err=True)
+        pass
     return None
 
 

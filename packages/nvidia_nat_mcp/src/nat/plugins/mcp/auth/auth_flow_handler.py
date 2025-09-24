@@ -18,9 +18,7 @@ from nat.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEnd
 
 class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
     """
-    Authentication helper for MCP environments. Supports:
-
-      • OAuth 2 Authorization‑Code with optional PKCE
+    Authentication helper for MCP environments.
     """
 
     def __init__(self):
