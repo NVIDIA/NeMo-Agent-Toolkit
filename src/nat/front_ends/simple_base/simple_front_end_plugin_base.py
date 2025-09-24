@@ -35,6 +35,8 @@ class SimpleFrontEndPluginBase(FrontEndBase[FrontEndConfigT], ABC):
 
     async def run(self):
 
+        await self.pre_run()
+
         # Must yield the workflow function otherwise it cleans up
         async with WorkflowBuilder.from_config(config=self.full_config) as builder:
 
