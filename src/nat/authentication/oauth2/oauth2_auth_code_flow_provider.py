@@ -34,7 +34,6 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
     def __init__(self, config: OAuth2AuthCodeFlowProviderConfig):
         super().__init__(config)
         self._authenticated_tokens: dict[str, AuthResult] = {}
-        self._context = Context.get()
         self._auth_callback = None
 
     async def _attempt_token_refresh(self, user_id: str, auth_result: AuthResult) -> AuthResult | None:
@@ -71,6 +70,7 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
         self._auth_callback = auth_callback
 
     async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
+        default_user_id = kwargs.get("default_user_id")
         if user_id is None and hasattr(Context.get(), "metadata") and hasattr(
                 Context.get().metadata, "cookies") and Context.get().metadata.cookies is not None:
             session_id = Context.get().metadata.cookies.get("nat-session", None)
@@ -79,6 +79,7 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
 
             user_id = session_id
 
+        user_id = user_id or default_user_id
         if user_id and user_id in self._authenticated_tokens:
             auth_result = self._authenticated_tokens[user_id]
             if not auth_result.is_expired():
@@ -88,7 +89,7 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
             if refreshed_auth_result:
                 return refreshed_auth_result
 
-        auth_callback = self._auth_callback or self._context.user_auth_callback
+        auth_callback = self._auth_callback or Context.get().user_auth_callback
         if not auth_callback:
             raise RuntimeError("Authentication callback not set on Context.")
 

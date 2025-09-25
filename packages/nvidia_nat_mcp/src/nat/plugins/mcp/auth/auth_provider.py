@@ -14,11 +14,11 @@
 # limitations under the License.
 
 import logging
+from dataclasses import asdict
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
 import httpx
-from dataclasses import asdict
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
@@ -112,8 +112,7 @@ class DiscoverOAuth2Endpoints:
         if endpoints is None:
             raise RuntimeError("Could not discover OAuth2 endpoints from MCP server")
 
-        changed = (self._cached_endpoints is None
-                   or asdict(endpoints) != asdict(self._cached_endpoints))
+        changed = (self._cached_endpoints is None or asdict(endpoints) != asdict(self._cached_endpoints))
         self._cached_endpoints = endpoints
         logger.info("OAuth2 endpoints selected: %s", self._cached_endpoints)
         return self._cached_endpoints, changed
@@ -314,8 +313,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         if response and response.status_code == 401:
             await self._discover_and_register(response=response)
 
-        user_id = user_id or self.config.default_user_id
-        return await self._nat_oauth2_authenticate(user_id=user_id)
+        default_user_id = self.config.default_user_id
+        user_id = user_id
+        return await self._nat_oauth2_authenticate(user_id=user_id, default_user_id=default_user_id)
 
     @property
     def _effective_scopes(self) -> list[str] | None:
@@ -348,7 +348,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
                 logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
 
-    async def _nat_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
+    async def _nat_oauth2_authenticate(self,
+                                       user_id: str | None = None,
+                                       default_user_id: str | None = None) -> AuthResult:
         """Perform the OAuth2 flow using NAT OAuth2 provider."""
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
@@ -380,4 +382,4 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             self._auth_code_provider._set_custom_auth_callback(self._flow_handler.authenticate)
 
         # Auth code provider is responsible for per-user cache + refresh
-        return await self._auth_code_provider.authenticate(user_id=user_id)
+        return await self._auth_code_provider.authenticate(user_id=user_id, default_user_id=default_user_id)

@@ -157,6 +157,34 @@ def print_tool(tool_dict: dict[str, str | None], detail: bool = False) -> None:
         click.echo("-" * 60)
 
 
+def _set_auth_defaults(auth: bool,
+                       url: str | None,
+                       auth_redirect_uri: str | None,
+                       auth_user_id: str | None,
+                       auth_scopes: str | None) -> tuple[str | None, str | None, list[str] | None]:
+    """Set default auth values when --auth flag is used.
+
+    Args:
+        auth: Whether --auth flag was used
+        url: MCP server URL
+        auth_redirect_uri: OAuth2 redirect URI
+        auth_user_id: User ID for authentication
+        auth_scopes: OAuth2 scopes (comma-separated string)
+
+    Returns:
+        Tuple of (auth_redirect_uri, auth_user_id, auth_scopes_list) with defaults applied
+    """
+    if auth:
+        auth_redirect_uri = auth_redirect_uri or "http://localhost:8000/auth/redirect"
+        auth_user_id = auth_user_id or url
+        auth_scopes = auth_scopes or ""
+
+    # Convert comma-separated string to list
+    auth_scopes_list = auth_scopes.split(',') if auth_scopes else None
+
+    return auth_redirect_uri, auth_user_id, auth_scopes_list
+
+
 async def _create_mcp_client_config(
     builder,
     server_cfg,
@@ -468,6 +496,9 @@ def mcp_client_tool_group():
 @click.option('--tool', default=None, help='Get details for a specific tool by name')
 @click.option('--detail', is_flag=True, help='Show full details for all tools')
 @click.option('--json-output', is_flag=True, help='Output tool metadata in JSON format')
+@click.option('--auth',
+              is_flag=True,
+              help='Enable OAuth2 authentication with default settings (streamable-http only, not with --direct)')
 @click.option('--auth-redirect-uri',
               help='OAuth2 redirect URI for authentication (streamable-http only, not with --direct)')
 @click.option('--auth-user-id', help='User ID for authentication (streamable-http only, not with --direct)')
@@ -483,6 +514,7 @@ def mcp_client_tool_list(ctx,
                          tool,
                          detail,
                          json_output,
+                         auth,
                          auth_redirect_uri,
                          auth_user_id,
                          auth_scopes):
@@ -492,6 +524,7 @@ def mcp_client_tool_list(ctx,
     If --tool is provided, always shows full output for that specific tool.
     Use --direct to bypass MCPBuilder and use raw MCP protocol.
     Use --json-output to get structured JSON data instead of formatted text.
+    Use --auth to enable OAuth2 authentication with default settings (streamable-http only, not with --direct).
     Use --auth-redirect-uri to enable OAuth2 authentication for protected MCP servers (streamable-http only, not with --direct).
 
     Args:
@@ -511,8 +544,9 @@ def mcp_client_tool_list(ctx,
         nat mcp client tool list --tool my_tool            # Show details for specific tool
         nat mcp client tool list --json-output             # Get JSON format output
         nat mcp client tool list --direct --url http://... # Use direct protocol with custom URL (no auth)
+        nat mcp client tool list --url https://example.com/mcp/ --auth # With auth using defaults
         nat mcp client tool list --url https://example.com/mcp/ --transport streamable-http \
-            --auth-redirect-uri http://localhost:8000/auth/redirect # With auth
+            --auth-redirect-uri http://localhost:8000/auth/redirect # With custom auth settings
         nat mcp client tool list --url https://example.com/mcp/ --transport streamable-http \
             --auth-redirect-uri http://localhost:8000/auth/redirect --auth-user-id myuser # With auth and user ID
     """
@@ -527,21 +561,13 @@ def mcp_client_tool_list(ctx,
             click.echo("[ERROR] --url is required when using sse or streamable-http client type", err=True)
             return
 
-    # Auth validation: if user_id or scopes provided, require redirect_uri
-    if (auth_user_id or auth_scopes) and not auth_redirect_uri:
-        click.echo("[ERROR] --auth-redirect-uri is required when using --auth-user-id or --auth-scopes", err=True)
-        return
-
-    # Auth is current not supported with the direct mode
-    if direct and (auth_redirect_uri or auth_user_id or auth_scopes):
-        click.echo("[ERROR] Auth is currently not supported with the direct mode", err=True)
-        return
+    # Set auth defaults if --auth flag is used
+    auth_redirect_uri, auth_user_id, auth_scopes_list = _set_auth_defaults(
+        auth, url, auth_redirect_uri, auth_user_id, auth_scopes
+    )
 
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
-
-    # Parse auth scopes
-    auth_scopes_list = auth_scopes.split(',') if auth_scopes else None
 
     if direct:
         tools = asyncio.run(
@@ -866,6 +892,9 @@ async def call_tool_and_print(command: str | None,
 @click.option('--args', help='For stdio: Additional arguments for the command (space-separated)')
 @click.option('--env', help='For stdio: Environment variables in KEY=VALUE format (space-separated)')
 @click.option('--json-args', default=None, help='Pass tool args as a JSON object string')
+@click.option('--auth',
+              is_flag=True,
+              help='Enable OAuth2 authentication with default settings (streamable-http only, not with --direct)')
 @click.option('--auth-redirect-uri',
               help='OAuth2 redirect URI for authentication (streamable-http only, not with --direct)')
 @click.option('--auth-user-id', help='User ID for authentication (streamable-http only, not with --direct)')
@@ -878,6 +907,7 @@ def mcp_client_tool_call(tool_name: str,
                          args: str | None,
                          env: str | None,
                          json_args: str | None,
+                         auth: bool,
                          auth_redirect_uri: str | None,
                          auth_user_id: str | None,
                          auth_scopes: str | None) -> None:
@@ -907,6 +937,8 @@ def mcp_client_tool_call(tool_name: str,
             --json-args '{"query": "NVIDIA"}' # Direct mode (no auth)
         nat mcp client tool call run --transport stdio --command mcp-server \
             --args "--flag1 --flag2" --env "ENV1=V1 ENV2=V2" --json-args '{}'
+        nat mcp client tool call search --url https://example.com/mcp/ --auth \
+            --json-args '{"query": "test"}' # With auth using defaults
         nat mcp client tool call search --url https://example.com/mcp/ \
             --transport streamable-http --json-args '{"query": "test"}' --auth-redirect-uri http://localhost:8000/auth/redirect
         nat mcp client tool call search --url https://example.com/mcp/ \
@@ -920,13 +952,10 @@ def mcp_client_tool_call(tool_name: str,
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
 
-    # Auth validation: if user_id or scopes provided, require redirect_uri
-    if (auth_user_id or auth_scopes) and not auth_redirect_uri:
-        click.echo("[ERROR] --auth-redirect-uri is required when using --auth-user-id or --auth-scopes", err=True)
-        return
-
-    # Parse auth scopes
-    auth_scopes_list = auth_scopes.split(',') if auth_scopes else None
+    # Set auth defaults if --auth flag is used
+    auth_redirect_uri, auth_user_id, auth_scopes_list = _set_auth_defaults(
+        auth, url, auth_redirect_uri, auth_user_id, auth_scopes
+    )
 
     # Parse tool args
     arg_obj: dict[str, Any] = {}
