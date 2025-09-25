@@ -24,7 +24,6 @@ from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from datetime import timedelta
-from typing import Any
 
 import httpx
 
@@ -33,12 +32,13 @@ from mcp.client.sse import sse_client
 from mcp.client.stdio import StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
-from mcp.types import CallToolResult
 from mcp.types import TextContent
 from nat.authentication.interfaces import AuthProviderBase
 from nat.data_models.authentication import AuthReason
 from nat.data_models.authentication import AuthRequest
+from nat.plugins.mcp.exception_handler import format_mcp_error
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
+from nat.plugins.mcp.exceptions import MCPError
 from nat.plugins.mcp.exceptions import MCPToolNotFoundError
 from nat.plugins.mcp.utils import model_from_mcp_schema
 from nat.utils.type_utils import override
@@ -250,7 +250,7 @@ class MCPBaseClient(ABC):
             return await coro()
         except Exception as e:
             if self._reconnect_enabled:
-                logger.info("MCP Client operation failed. Attempting reconnect: %s", e)
+                logger.warning("MCP Client operation failed. Attempting reconnect: %s", e)
                 try:
                     await self._reconnect()
                 except Exception as reconnect_err:
@@ -272,7 +272,7 @@ class MCPBaseClient(ABC):
         try:
             response = await self._with_reconnect(_get_tools)
         except Exception as e:
-            logger.error("Failed to get tools: %s", e)
+            logger.warning("Failed to get tools: %s", e)
             raise
 
         return {
@@ -314,17 +314,11 @@ class MCPBaseClient(ABC):
     @mcp_exception_handler
     async def call_tool(self, tool_name: str, tool_args: dict | None):
 
-        try:
+        async def _call_tool():
+            session = self._session
+            return await session.call_tool(tool_name, tool_args, read_timeout_seconds=self._tool_call_timeout)
 
-            async def _call_tool():
-                session = self._session
-                return await session.call_tool(tool_name, tool_args, read_timeout_seconds=self._tool_call_timeout)
-
-            return await self._with_reconnect(_call_tool)
-
-        except Exception as e:
-            message = f"Call to tool '{tool_name}' failed: {e}"
-            return CallToolResult(content=[TextContent(type="text", text=message)], isError=True)
+        return await self._with_reconnect(_call_tool)
 
 
 class MCPSSEClient(MCPBaseClient):
@@ -513,19 +507,23 @@ class MCPToolClient:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
         """
         logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
+        try:
+            result = await self._parent_client.call_tool(self._tool_name, tool_args)
 
-        result = await self._parent_client.call_tool(self._tool_name, tool_args)
+            output = []
+            for res in result.content:
+                if isinstance(res, TextContent):
+                    output.append(res.text)
+                else:
+                    # Log non-text content for now
+                    logger.warning("Got not-text output from %s of type %s", self.name, type(res))
+            result_str = "\n".join(output)
 
-        output = []
-        for res in result.content:
-            if isinstance(res, TextContent):
-                output.append(res.text)
-            else:
-                # Log non-text content for now
-                logger.warning("Got not-text output from %s of type %s", self.name, type(res))
-        result_str = "\n".join(output)
+            if result.isError:
+                raise RuntimeError(result_str)
 
-        if result.isError:
-            raise RuntimeError(result_str)
+        except MCPError as e:
+            format_mcp_error(e, include_traceback=False)
+            result_str = "Tool call failed: %s" % e.original_exception
 
         return result_str
