@@ -158,10 +158,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
 
         except Exception as ex:
             logger.exception("ReWOO Agent failed with exception: %s", ex)
-            # here, we can implement custom error messages
-            if config.verbose:
-                return ChatResponse.from_string(str(ex))
-            return ChatResponse.from_string("I seem to be having a problem.")
+            raise RuntimeError
 
     if (config.use_openai_api):
         yield FunctionInfo.from_fn(_response_fn, description=config.description)
