@@ -103,7 +103,7 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
         return await run_prompt(input_message)
 
     try:
-        yield FunctionInfo.create(single_fn=_response_fn)
+        yield FunctionInfo.create(single_fn=_response_fn, description=config.description)
     except GeneratorExit:
         logger.debug("Exited early!", exc_info=True)
     finally:
