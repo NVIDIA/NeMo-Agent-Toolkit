@@ -13,18 +13,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # path-check-skip-file
-general:
-  use_uvloop: true
-  front_end:
-    _type: fastapi
-    cors:
-      allow_origins: ["*"]
-    step_adaptor:
-      mode: default
+
+functions:
+  weather_update_tool:
+    _type: nat_adk_demo/weather_update
+    description: "Get the current weather for a specified city"
+  get_city_time_tool:
+    _type: nat_adk_demo/get_city_time_tool
+    transport: "http"
+    mcp_tool_name: get_city_time
+    url: "http://localhost:9901/mcp"
+
+llms:
+  llm:
+    _type: litellm
+    model: gpt-5
+    api_key: ${OPENAI_API_KEY}
+    base_url: ${OPENAI_API_BASE:-https://api.openai.com/v1}
+
+workflow:
+  _type: adk
+  name: adk_demo
+  llm: llm
+  tool_names: [weather_update_tool, get_city_time_tool]
+  description: "To get the current weather and time in a specific city"
+  prompt: "You are a helpful agent who can answer user questions about weather in a city. You also have a sub-agent that can answer questions about the time in a city."
 
 eval:
   general:
-    output_dir: nat_adk_demo/eval_output
+    output:
+      dir: ./.tmp/nat/examples/frameworks/adk_demo/eval/
+      cleanup: true
     dataset:
       _type: json
       file_path: examples/frameworks/adk_demo/data/eval.json
@@ -41,25 +60,3 @@ eval:
       concurrency_spike_analysis:
         enable: true
         spike_threshold: 7
-
-functions:
-  weather_update_tool:
-    _type: nat_adk_demo/weather_update
-    description: "Get the current weather for a specified city"
-  get_city_time_tool:
-    _type: nat_adk_demo/get_city_time_tool
-    transport: "http"
-    mcp_tool_name: get_city_time
-    url: "http://localhost:9901/mcp"
-
-llms:
-  litellm_llm:
-    _type: nat_test_llm
-    response_seq: ["The weather in New York is sunny. The current time is 12:00:00 EDT-0400."]
-    delay_ms: 0
-
-workflow:
-  _type: adk
-  tool_names: [weather_update_tool, get_city_time_tool]
-  llm_name: litellm_llm
-  description: "To get the current weather and time in a specific city"

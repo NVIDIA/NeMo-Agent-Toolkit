@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections.abc import AsyncIterator
-
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
@@ -22,29 +20,17 @@ from nat.llm.litellm_llm import LiteLlmModelConfig
 
 
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
-async def litellm_adk(
-    litellm_config: LiteLlmModelConfig,
-    _builder: Builder,  # pylint: disable=W0613 (_builder not used)
-) -> AsyncIterator["LiteLlm"]:  # type: ignore # noqa: F821 (forward reference of LiteLlm)
+async def litellm_adk(config: LiteLlmModelConfig, _builder: Builder):
     """Create and yield a Google ADK `LiteLlm` client from a NAT `LiteLlmModelConfig`.
 
     Args:
-        litellm_config (LiteLlmModelConfig): The configuration for the LiteLlm model.
+        config (LiteLlmModelConfig): The configuration for the LiteLlm model.
         _builder (Builder): The NAT builder instance.
-
-    Yields:
-        AsyncIterator[LiteLlm]: An async iterator that yields a LiteLlm client.
     """
+    from google.adk.models.lite_llm import LiteLlm
 
-    try:
-        from google.adk.models.lite_llm import LiteLlm
-    except ModuleNotFoundError as e:
-        raise ModuleNotFoundError("Google ADK not installed; pip install google-adk") from e
-
-    llm = LiteLlm(**litellm_config.model_dump(
-        exclude={"type", "max_retries"},
+    yield LiteLlm(**config.model_dump(
+        exclude={"type", "max_retries", "thinking"},
         by_alias=True,
         exclude_none=True,
     ))
-
-    yield llm
