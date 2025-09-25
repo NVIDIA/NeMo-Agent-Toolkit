@@ -1,36 +1,24 @@
 import logging
 
-from pydantic import Field
-
 from nat.builder.builder import Builder
-from nat.builder.function_info import FunctionInfo
+from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_function
-from nat.data_models.function import FunctionBaseConfig
+from nat.agent.react_agent.register import ReActAgentWorkflowConfig, react_agent_workflow
 
 logger = logging.getLogger(__name__)
 
 
-class {{ workflow_class_name }}(FunctionBaseConfig, name="{{ workflow_name }}"):
+class {{ workflow_class_name }}(ReActAgentWorkflowConfig, name="{{ workflow_name }}"):
     """
     {{workflow_description}}
     """
-    # Add your custom configuration parameters here
-    parameter: str = Field(default="default_value", description="Notional description for this parameter")
+    # You can add or override ReAct config parameters here if needed
 
 
-@register_function(config_type={{ workflow_class_name }})
+@register_function(config_type={{ workflow_class_name }}, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def {{ python_safe_workflow_name }}_function(
     config: {{ workflow_class_name }}, builder: Builder
 ):
-    # Implement your function logic here
-    async def _response_fn(input_message: str) -> str:
-        # Process the input_message and generate output
-        output_message = f"Hello from {{ workflow_name }} workflow! You said: {input_message}"
-        return output_message
-
-    try:
-        yield FunctionInfo.create(single_fn=_response_fn)
-    except GeneratorExit:
-        logger.warning("Function exited early!")
-    finally:
-        logger.info("Cleaning up {{ workflow_name }} workflow.")
+    # Delegate to the built-in ReAct agent workflow
+    async for info in react_agent_workflow(config, builder):
+        yield info

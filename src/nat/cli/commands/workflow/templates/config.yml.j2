@@ -11,5 +11,8 @@ general:
     _type: console
 
 workflow:
-  _type: {{workflow_name}}
-  parameter: default_value
+  _type: react_agent
+  workflow_alias: {{workflow_name}}
+  description: "ReAct-based Workflow"
+  llm_name: nim_llm
+  tool_names: []
