@@ -27,17 +27,15 @@ def example_config_class_fixture() -> type:
     return WebQueryToolConfig
 
 
-@pytest.fixture(name="root_example_dir")
-def root_example_dir_fixture() -> Path:
-    result = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True)
-    assert result.returncode == 0, f"Failed to get git root: {result.stderr}"
-    return Path(result.stdout.strip())
+@pytest.fixture(name="root_repo_dir")
+def root_repo_dir_fixture() -> Path:
+    return utils.locate_repo_root()
 
 
 @pytest.fixture(name="simple_web_query_dir")
-def simple_web_query_dir_fixture(root_example_dir: Path) -> Path:
+def simple_web_query_dir_fixture(root_repo_dir: Path) -> Path:
     # This fixture will need to be updated if the example is moved or removed
-    return root_example_dir.joinpath("examples", "getting_started", "simple_web_query")
+    return root_repo_dir.joinpath("examples", "getting_started", "simple_web_query")
 
 
 @pytest.fixture(name="simple_web_query_src_dir")

@@ -15,7 +15,14 @@
 
 import importlib.resources
 import inspect
+import subprocess
 from pathlib import Path
+
+
+def locate_repo_root() -> Path:
+    result = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+    assert result.returncode == 0, f"Failed to get git root: {result.stderr}"
+    return Path(result.stdout.strip())
 
 
 def locate_example_src_dir(example_config_class: type) -> Path:
