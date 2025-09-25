@@ -5350,8 +5350,7 @@ requires-dist = [
     { name = "bs4", specifier = "==0.0.2" },
     { name = "markdown-it-py", specifier = "~=3.0" },
     { name = "nvidia-haystack", specifier = "==0.1.2" },
-    { name = "nvidia-nat", extras = ["langchain", "llama-index"], editable = "." },
-    { name = "nvidia-nat", extras = ["openai"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain", "llama-index", "openai"], editable = "." },
 ]
 
 [[package]]
@@ -6221,7 +6220,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "google-adk", specifier = "~=1.14.1" },
-    { name = "nvidia-nat", editable = "." },
     { name = "nvidia-nat", extras = ["litellm"], editable = "." },
 ]
 
@@ -6238,7 +6236,6 @@ dependencies = [
 requires-dist = [
     { name = "agno", specifier = "~=1.2.3" },
     { name = "google-search-results", specifier = "~=2.4.2" },
-    { name = "nvidia-nat", editable = "." },
     { name = "nvidia-nat", extras = ["openai"], editable = "." },
 ]
 
@@ -6301,7 +6298,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "crewai", specifier = "~=0.193.2" },
-    { name = "nvidia-nat", editable = "." },
     { name = "nvidia-nat", extras = ["litellm"], editable = "." },
 ]
 
@@ -6492,8 +6488,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "nvidia-nat", extras = ["litellm"], editable = "." },
-    { name = "nvidia-nat", extras = ["opentelemetry"], editable = "." },
+    { name = "nvidia-nat", extras = ["litellm", "opentelemetry"], editable = "." },
     { name = "ragaai-catalyst", specifier = ">=2.2.0,<2.3" },
 ]
 
