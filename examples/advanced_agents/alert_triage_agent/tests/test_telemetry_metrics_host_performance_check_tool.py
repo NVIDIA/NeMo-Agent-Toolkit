@@ -97,8 +97,8 @@ async def test_telemetry_metrics_host_performance_check_tool():
     async with WorkflowBuilder() as builder:
         builder.get_llm = mock_builder.get_llm
         await builder.add_function("telemetry_metrics_host_performance_check", config)
-        performance_check_tool = builder.get_tool("telemetry_metrics_host_performance_check",
-                                                  wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        performance_check_tool = await builder.get_tool("telemetry_metrics_host_performance_check",
+                                                        wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
         # Run test cases
         for case in test_cases:

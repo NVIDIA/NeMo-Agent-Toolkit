@@ -80,14 +80,12 @@ def _validate_function_type_compatibility(src_fn: Function,
             f"the input type of the {target_fn.instance_name} function, which is {str(target_input_type)}")
 
 
-def _validate_tool_list_type_compatibility(sequential_executor_config: SequentialExecutorConfig,
-                                           builder: Builder) -> tuple[type, type]:
+async def _validate_tool_list_type_compatibility(sequential_executor_config: SequentialExecutorConfig,
+                                                 builder: Builder) -> tuple[type, type]:
     tool_list = sequential_executor_config.tool_list
     tool_execution_config = sequential_executor_config.tool_execution_config
 
-    function_list: list[Function] = []
-    for function_ref in tool_list:
-        function_list.append(builder.get_function(function_ref))
+    function_list = await builder.get_functions(tool_list)
     if not function_list:
         raise RuntimeError("The function list is empty")
     input_type = function_list[0].input_type
@@ -110,11 +108,12 @@ def _validate_tool_list_type_compatibility(sequential_executor_config: Sequentia
 async def sequential_execution(config: SequentialExecutorConfig, builder: Builder):
     logger.debug(f"Initializing sequential executor with tool list: {config.tool_list}")
 
-    tools: list[BaseTool] = builder.get_tools(tool_names=config.tool_list, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools: list[BaseTool] = await builder.get_tools(tool_names=config.tool_list,
+                                                    wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     tools_dict: dict[str, BaseTool] = {tool.name: tool for tool in tools}
 
     try:
-        input_type, output_type = _validate_tool_list_type_compatibility(config, builder)
+        input_type, output_type = await _validate_tool_list_type_compatibility(config, builder)
     except ValueError as e:
         if config.raise_type_incompatibility:
             logger.error(f"The sequential executor tool list has incompatible types: {e}")

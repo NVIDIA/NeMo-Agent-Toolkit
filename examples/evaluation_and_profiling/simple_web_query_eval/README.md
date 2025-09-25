@@ -86,6 +86,8 @@ The configuration files specified below contain configurations for the NeMo Agen
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
+> **Note**: If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, try setting the `eval.general.max_concurrency` value either in the YAML directly or via the command line with: `--override eval.general.max_concurrency 1`.
+
 #### OpenAI Model Evaluation
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_openai.yml

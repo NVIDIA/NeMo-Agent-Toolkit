@@ -64,13 +64,13 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     # the agent can run any installed tool, simply install the tool and add it to the config file
     # the sample tools provided can easily be copied or changed
-    tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools = await builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     if not tools:
         raise ValueError(f"No tools specified for Tool Calling Agent '{config.llm_name}'")
 
     # convert return_direct FunctionRef objects to BaseTool objects
-    return_direct_tools = builder.get_tools(tool_names=config.return_direct,
-                                            wrapper_type=LLMFrameworkEnum.LANGCHAIN) if config.return_direct else None
+    return_direct_tools = await builder.get_tools(
+        tool_names=config.return_direct, wrapper_type=LLMFrameworkEnum.LANGCHAIN) if config.return_direct else None
 
     # construct the Tool Calling Agent Graph from the configured llm, and tools
     graph: CompiledStateGraph = await ToolCallAgentGraph(llm=llm,

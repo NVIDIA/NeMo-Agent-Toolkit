@@ -125,7 +125,7 @@ async def test_functions_call_functions():
     @register_function(config_type=ChainedFnConfig)
     async def _register(config: ChainedFnConfig, b: Builder):
 
-        other_fn = b.get_function(config.function_name)
+        other_fn = await b.get_function(config.function_name)
 
         async def _inner(some_input: str) -> str:
             return await other_fn.ainvoke(some_input, to_type=str) + "!"

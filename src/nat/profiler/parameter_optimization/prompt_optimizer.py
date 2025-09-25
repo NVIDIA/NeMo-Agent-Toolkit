@@ -151,11 +151,11 @@ async def optimize_prompts(
         if not init_fn_name:
             raise ValueError(
                 "No prompt optimization function configured. Set optimizer.prompt_population_init_function")
-        init_fn = builder.get_function(init_fn_name)
+        init_fn = await builder.get_function(init_fn_name)
 
         recombine_fn = None
         if optimizer_config.prompt.prompt_recombination_function:
-            recombine_fn = builder.get_function(optimizer_config.prompt.prompt_recombination_function)
+            recombine_fn = await builder.get_function(optimizer_config.prompt.prompt_recombination_function)
 
         logger.info(
             "GA Prompt optimization ready: init_fn=%s, recombine_fn=%s",
