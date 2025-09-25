@@ -17,43 +17,30 @@
 from collections.abc import AsyncIterator
 
 from nat.builder.builder import Builder
-from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
 
 
 class WeatherToolConfig(FunctionBaseConfig, name="weather_update"):
-    """Configuration for the weather update tool."""
+    pass
 
 
-@register_function(config_type=WeatherToolConfig, framework_wrappers=[LLMFrameworkEnum.ADK])
-async def weather_update(
-        _tool_config: WeatherToolConfig,  #pylint: disable=unused-argument
-        _builder: Builder,  #pylint: disable=unused-argument
-) -> AsyncIterator[FunctionInfo]:
-    """Register a weather_update(city: str) -> str tool for ADK.
-
-    Yields:
-        FunctionInfo: Descriptor for an async function `_weather_update(city: str) -> str`.
-    """
+@register_function(config_type=WeatherToolConfig)
+async def weather_update(_config: WeatherToolConfig, _builder: Builder) -> AsyncIterator[FunctionInfo]:
 
     async def _weather_update(city: str) -> str:
         """
-        A simple weather updates tool that provides weather information for a specified city.
+        Get the current weather for a specified city.
 
         Args:
-            city (str): The name of the city for which to retrieve the weather information.
+            city (str): The name of the city.
 
         Returns:
-            str: A string containing the weather information for the specified city.
+            str: The current weather for the specified city.
         """
         if city.lower() == "new york":
-            return ("The weather in New York is sunny with a temperature of 25 degrees"
-                    " Celsius (77 degrees Fahrenheit).")
+            return "The weather in New York is sunny with a temperature of 25 degrees Celsius (77 degrees Fahrenheit)."
         return f"Weather information for '{city}' is not available."
 
-    yield FunctionInfo.from_fn(
-        _weather_update,
-        description="Retrieves the current weather report for a specified city.",
-    )
+    yield FunctionInfo.from_fn(_weather_update, description=_weather_update.__doc__)

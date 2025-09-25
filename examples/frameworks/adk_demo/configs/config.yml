@@ -36,15 +36,14 @@ functions:
     url: "http://localhost:9901/mcp"
 
 llms:
-  litellm_llm:
-    _type: litellm
-    model: gpt-5
-    api_key: ${OPENAI_API_KEY}
-    base_url: ${OPENAI_API_BASE:-https://api.openai.com/v1}
-    temperature: 0.0
+  llm:
+    _type: openai
+    model_name: gpt-5
 
 workflow:
   _type: adk
+  name: adk_demo
+  llm: llm
   tool_names: [weather_update_tool, get_city_time_tool]
-  llm_name: litellm_llm
   description: "To get the current weather and time in a specific city"
+  prompt: "You are a helpful agent who can answer user questions about weather in a city. You also have a sub-agent that can answer questions about the time in a city."
