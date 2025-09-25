@@ -33,7 +33,7 @@ class ADKFunctionConfig(FunctionBaseConfig, name="adk"):
     description: str
     prompt: str
     llm: LLMRef
-    tool_names: list[str] = Field(default_factory=list, min_length=1)
+    tool_names: list[str] = Field(default_factory=list)
     workflow_alias: str = Field(default="adk_agent")
     user_id: str = Field(default="nat")
 
