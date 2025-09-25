@@ -18,18 +18,32 @@ import inspect
 from pathlib import Path
 
 
-def locate_example_dir(example_config_class: type) -> importlib.resources.abc.Traversable:
+def locate_example_src_dir(example_config_class: type) -> Path:
     """
-    Locate the example directory for an example's config class.
+    Locate the example src directory for an example's config class.
     """
     package_name = inspect.getmodule(example_config_class).__package__
     return importlib.resources.files(package_name)
 
 
-def locate_example_config(example_config_class: type, config_file: str = "config.yml") -> Path:
+def locate_example_dir(example_config_class: type) -> Path:
+    """
+    Locate the example directory for an example's config class.
+    """
+    src_dir = locate_example_src_dir(example_config_class)
+    example_dir = src_dir.parent.parent
+    return example_dir
+
+
+def locate_example_config(example_config_class: type,
+                          config_file: str = "config.yml",
+                          assert_exists: bool = True) -> Path:
     """
     Locate the example config file for an example's config class, assumes the example contains a 'configs' directory
-    directly under the example directory, or a symlink to it.
     """
-    example_dir = locate_example_dir(example_config_class)
-    return example_dir.joinpath("configs", config_file).absolute()
+    example_dir = locate_example_src_dir(example_config_class)
+    config_path = example_dir.joinpath("configs", config_file).absolute()
+    if assert_exists:
+        assert config_path.exists(), f"Config file {config_path} does not exist"
+
+    return config_path
