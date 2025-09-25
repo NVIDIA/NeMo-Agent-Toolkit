@@ -22,5 +22,6 @@ This module is imported by the NeMo Agent Toolkit runtime to ensure providers ar
 # Import any providers which need to be automatically registered here
 from . import aws_bedrock_llm
 from . import azure_openai_llm
+from . import litellm_llm
 from . import nim_llm
 from . import openai_llm
