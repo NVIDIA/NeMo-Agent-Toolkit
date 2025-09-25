@@ -81,7 +81,9 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
             input_list = list(self.front_end_config.input_query)
             logger.debug("Processing input: %s", self.front_end_config.input_query)
 
-            runner_outputs = await asyncio.gather(*[run_single_query(query) for query in input_list])
+            # Make `return_exceptions=False` explicit; all exceptions are raised instead of being silenced
+            runner_outputs = await asyncio.gather(*[run_single_query(query) for query in input_list],
+                                                  return_exceptions=False)
 
         elif (self.front_end_config.input_file):
 
