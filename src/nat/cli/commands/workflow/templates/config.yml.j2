@@ -10,9 +10,19 @@ general:
   front_end:
     _type: console
 
+functions:
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-8b-instruct
+    temperature: 0.0
+
 workflow:
   _type: react_agent
   workflow_alias: {{workflow_name}}
   description: "ReAct-based Workflow"
   llm_name: nim_llm
-  tool_names: []
+  tool_names: [current_datetime]
