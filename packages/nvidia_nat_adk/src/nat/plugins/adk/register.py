@@ -15,11 +15,8 @@
 
 # pylint: disable=unused-import
 # flake8: noqa
-# isort:skip_file
-# Auto-registration module: importing submodules triggers provider registration via side effects.
-"""Register ADK providers via import side-effects (loaded from the `nat_adk` entry point)."""
 
-# Import any providers which need to be automatically registered here
-
-from . import llm  # pylint: disable=unused-import  # imported for side effects (registration)
-from . import tool_wrapper  # pylint: disable=unused-import  # imported for side effects (registration)
+from . import adk_callback_handler
+from . import agent
+from . import llm
+from . import tool_wrapper
