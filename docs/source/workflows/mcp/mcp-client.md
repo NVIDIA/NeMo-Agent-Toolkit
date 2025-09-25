@@ -233,10 +233,9 @@ nat mcp client tool call calculator_multiply \
 ```
 ### Using Protected MCP Servers
 
-To use a protected MCP server, you need to provide the `--auth-redirect-uri` and `--auth-user-id` flags.
-
+To use a protected MCP server, you need to provide the `--auth` flag:
 ```bash
-nat mcp client tool list --url http://localhost:9901/mcp --auth-redirect-uri http://localhost:8000/auth/redirect --auth-user-id myuser
+nat mcp client tool list --url http://example.com/mcp --auth
 ```
 This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information on MCP authentication, please refer to the [MCP Authentication](./mcp-auth.md) documentation.
 
