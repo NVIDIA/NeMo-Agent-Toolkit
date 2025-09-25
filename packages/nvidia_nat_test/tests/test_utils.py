@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -25,11 +24,6 @@ from nat.test import utils
 def example_config_class_fixture() -> type:
     from nat_simple_web_query.register import WebQueryToolConfig
     return WebQueryToolConfig
-
-
-@pytest.fixture(name="root_repo_dir")
-def root_repo_dir_fixture() -> Path:
-    return utils.locate_repo_root()
 
 
 @pytest.fixture(name="simple_web_query_dir")
