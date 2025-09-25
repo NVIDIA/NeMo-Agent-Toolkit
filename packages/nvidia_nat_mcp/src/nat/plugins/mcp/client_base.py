@@ -36,6 +36,7 @@ from mcp.types import TextContent
 from nat.authentication.interfaces import AuthProviderBase
 from nat.data_models.authentication import AuthReason
 from nat.data_models.authentication import AuthRequest
+from nat.plugins.mcp.exception_handler import convert_to_mcp_error
 from nat.plugins.mcp.exception_handler import format_mcp_error
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
 from nat.plugins.mcp.exceptions import MCPError
@@ -191,6 +192,7 @@ class MCPBaseClient(ABC):
             self._exit_stack = None
 
         self._connection_established = False
+        self._tools = None
 
     @property
     def server_name(self):
@@ -216,7 +218,7 @@ class MCPBaseClient(ABC):
             attempt = 0
             last_error: Exception | None = None
 
-            while attempt < self._reconnect_max_attempts:
+            while attempt in range(0, self._reconnect_max_attempts):
                 attempt += 1
                 try:
                     # Close the existing stack and ClientSession
@@ -227,6 +229,7 @@ class MCPBaseClient(ABC):
                     self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
 
                     self._connection_established = True
+                    self._tools = None
 
                     logger.info("Reconnected to MCP server (%s) on attempt %d", self.server_name, attempt)
                     return
@@ -550,10 +553,11 @@ class MCPToolClient:
             result_str = "\n".join(output)
 
             if result.isError:
-                raise RuntimeError(result_str)
+                mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str), self._parent_client.server_name)
+                raise mcp_error
 
         except MCPError as e:
             format_mcp_error(e, include_traceback=False)
-            result_str = "Tool call failed: %s" % e.original_exception
+            result_str = "MCPToolClient tool call failed: %s" % e.original_exception
 
         return result_str

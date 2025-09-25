@@ -389,12 +389,12 @@ async def test_reconnect_max_backoff_limit():
             with pytest.raises(ConnectionError):
                 await client.get_tools()
 
-                # Backoff should be: [0.2, 0.3, 0.3, 0.3] for 4 attempts (capped at max_backoff)
-                assert len(attempt_times) == 4
-                assert attempt_times[0] == 0.2
-                assert attempt_times[1] == 0.3  # min(0.4, 0.3)
-                assert attempt_times[2] == 0.3  # min(0.6, 0.3)
-                assert attempt_times[3] == 0.3  # min(1.2, 0.3)
+            # Backoff should be: [0.2, 0.3, 0.3, 0.3] for 4 attempts (capped at max_backoff)
+            assert len(attempt_times) == 4
+            assert attempt_times[0] == 0.2
+            assert attempt_times[1] == 0.3  # min(0.4, 0.3)
+            assert attempt_times[2] == 0.3  # min(0.6, 0.3)
+            assert attempt_times[3] == 0.3  # min(1.2, 0.3)
 
 
 async def test_tool_call_timeout_passed_to_session():

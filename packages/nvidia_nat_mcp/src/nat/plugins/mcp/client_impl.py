@@ -97,11 +97,13 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
         default=True,
         description="Whether to enable reconnecting to the MCP server if the connection is lost. \
         Defaults to True.")
-    reconnect_max_attempts: int = Field(default=2, description="Maximum number of reconnect attempts. Defaults to 2.")
+    reconnect_max_attempts: int = Field(default=2,
+                                        ge=0,
+                                        description="Maximum number of reconnect attempts. Defaults to 2.")
     reconnect_initial_backoff: float = Field(
-        default=0.5, description="Initial backoff time for reconnect attempts. Defaults to 0.5 seconds.")
+        default=0.5, ge=0.0, description="Initial backoff time for reconnect attempts. Defaults to 0.5 seconds.")
     reconnect_max_backoff: float = Field(
-        default=50.0, description="Maximum backoff time for reconnect attempts. Defaults to 50 seconds.")
+        default=50.0, ge=0.0, description="Maximum backoff time for reconnect attempts. Defaults to 50 seconds.")
     tool_overrides: dict[str, MCPToolOverrideConfig] | None = Field(
         default=None,
         description="""Optional tool name overrides and description changes.
@@ -113,6 +115,13 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
             calculator_multiply:
               description: "Multiply two numbers"  # alias defaults to original name
         """)
+
+    @model_validator(mode="after")
+    def _validate_reconnect_backoff(self) -> "MCPClientConfig":
+        """Validate reconnect backoff values."""
+        if self.reconnect_max_backoff < self.reconnect_initial_backoff:
+            raise ValueError("reconnect_max_backoff must be greater than or equal to reconnect_initial_backoff")
+        return self
 
 
 @register_function_group(config_type=MCPClientConfig)
