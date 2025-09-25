@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib.resources
-import inspect
 import json
 import logging
 from pathlib import Path
@@ -23,6 +21,7 @@ import pytest
 
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
+from nat.test.utils import locate_example_config
 from nat_swe_bench.config import SweBenchWorkflowConfig
 
 logger = logging.getLogger(__name__)
@@ -86,9 +85,8 @@ async def test_eval():
     1. the workflow_output and
     2. swe_bench evaliation output
     """
-    # Get package dynamically
-    package_name = inspect.getmodule(SweBenchWorkflowConfig).__package__
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "config_gold.yml").absolute()
+    # Get config dynamically
+    config_file: Path = locate_example_config(SweBenchWorkflowConfig, "config_gold.yml")
 
     # Create the configuration object for running the evaluation, single rep using the eval config in config.yml
     # WIP: skip test if eval config is not present

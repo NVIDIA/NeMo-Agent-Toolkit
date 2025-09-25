@@ -15,6 +15,7 @@
 
 import os
 import typing
+from pathlib import Path
 
 import pytest
 
@@ -235,3 +236,9 @@ def restore_environ_fixture():
     for key in list(os.environ.keys()):
         if key not in orig_vars:
             del (os.environ[key])
+
+
+@pytest.fixture(name="root_repo_dir")
+def root_repo_dir_fixture() -> Path:
+    from nat.test.utils import locate_repo_root
+    return locate_repo_root()
