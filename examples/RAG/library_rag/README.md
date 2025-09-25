@@ -1,183 +1,329 @@
 # NVIDIA RAG Python Package Usage Guide
 
 This guide demonstrates how to use a NAT agent with the NVIDIA RAG Python client as a tool.
-## Table of Contents
+# Get Started With NVIDIA RAG Blueprint
 
-- [Installation](#installation)
-- [Setup Dependencies](#setup-dependencies)
-- [API Usage Examples](#api-usage-examples)
-- [Collection Management](#collection-management)
-- [Document Operations](#document-operations)
-- [RAG Queries](#rag-queries)
-- [Search Operations](#search-operations)
-- [Advanced Features](#advanced-features)
-- [Cleanup Operations](#cleanup-operations)
+Use the following documentation to get started with the NVIDIA RAG Blueprint.
 
-## Installation
+- [Obtain an API Key](#obtain-an-api-key)
+- [Interact using native python APIs](#interact-using-native-python-apis)
+- [Deploy With Docker Compose](#deploy-with-docker-compose)
+- [Deploy With Helm Chart](#deploy-with-helm-chart)
+- [Data Ingestion](#data-ingestion)
 
-> **Note**: Python version **3.12 or higher** is supported.
+
+## Obtain an API Key
+
+You need to generate an API key
+to access NIM services, to access models hosted in the NVIDIA API Catalog, and to download models on-premises.
+For more information, refer to [NGC API Keys](https://docs.nvidia.com/ngc/gpu-cloud/ngc-private-registry-user-guide/index.html#ngc-api-keys).
+
+To generate an API key, use the following procedure.
+
+1. Go to https://org.ngc.nvidia.com/setup/api-keys.
+2. Click **+ Generate Personal Key**.
+3. Enter a **Key Name**.
+4. For **Services Included**, select **NGC Catalog** and **Public API Endpoints**.
+5. Click **Generate Personal Key**.
+
+After you generate your key, export your key as an environment variable by using the following code.
+
+```bash
+export NGC_API_KEY="<your-ngc-api-key>"
+```
+
+
+
+## Deploy With Docker Compose
+
+Use these procedures to deploy with Docker Compose for a single node deployment. Alternatively, you can [Deploy With Helm Chart](#deploy-with-helm-chart) to deploy on a Kubernetes cluster.
+
+Developers need to deploy ingestion services and rag services using seperate dedicated docker compose files.
+For both retrieval and ingestion services, by default all the models are deployed on-prem. Follow relevant section below as per your requirement and hardware availability.
+
+- Start the Microservices
+  - [Using on-prem models](#start-using-on-prem-models)
+  - [Using NVIDIA hosted models](#start-using-nvidia-hosted-models)
 
 ### Prerequisites
 
-1. **Install Python >= 3.12 and development headers:**
+1. Install Docker Engine. For more information, see [Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
+
+2. Install Docker Compose. For more information, see [install the Compose plugin](https://docs.docker.com/compose/install/linux/).
+
+   a. Ensure the Docker Compose plugin version is 2.29.1 or later.
+
+   b. After you get the Docker Compose plugin installed, run `docker compose version` to confirm.
+
+3. To pull images required by the blueprint from NGC, you must first authenticate Docker with nvcr.io. Use the NGC API Key you created in [Obtain an API Key](#obtain-an-api-key).
+
    ```bash
-   sudo add-apt-repository ppa:deadsnakes/ppa
-   sudo apt update
-   sudo apt install python3.12
-   sudo apt-get install python3.12-dev
+   export NGC_API_KEY="nvapi-..."
+   echo "${NGC_API_KEY}" | docker login nvcr.io -u '$oauthtoken' --password-stdin
    ```
 
-2. **Install uv:**
-   Follow instructions from [https://docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/)
+4. Some containers with are enabled with GPU acceleration, such as Milvus and NVIDIA NIMS deployed on-prem. To configure Docker for GPU-accelerated containers, [install](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), the NVIDIA Container Toolkit
 
-3. **Create and activate virtual environment:**
+5. Ensure you meet [the hardware requirements if you are deploying models on-prem](./support-matrix.md).
+
+6. Change directory to the library rag example:  ```cd examples/RAG/library_rag```
+
+
+### Start using on-prem models
+
+Use the following procedure to start all containers needed for this blueprint. This launches the ingestion services followed by the rag services and all of its dependent NIMs on-prem.
+
+1. Fulfill the [prerequisites](#prerequisites). Ensure you meet [the hardware requirements](./support-matrix.md).
+
+2. Create a directory to cache the models and export the path to the cache as an environment variable.
+
    ```bash
-   # Create virtual environment
-   uv venv --python=python3.12
-   
-   # Activate virtual environment
-   source .venv/bin/activate
+   mkdir -p ~/.cache/model-cache
+   export MODEL_DIRECTORY=~/.cache/model-cache
    ```
 
-### Installation 
+3. Export all the required environment variables to use on-prem models. Ensure the section `Endpoints for using cloud NIMs` is commented in this file.
 
-```bash
-uv pip install nvidia-rag[all]
-```
+   ```bash
+   source deploy/.env 
+   ```
 
-### Verify Installation
+4. Start all required NIMs.
 
-Check that the package is installed in your virtual environment:
+   Before running the command please ensure the GPU allocation is done appropriately in the deploy/compose/.env. You might need to override them
+   for the hardware you are deploying this blueprint on. The default assumes you are deploying this on a 2XH100 environment.
 
-```bash
-uv pip show nvidia_rag | grep Location
-```
+   ```bash
+   USERID=$(id -u) docker compose -f deploy/nims.yaml up -d
+   ```
 
-The location should be inside your virtual environment at: `<workspace_path>/rag/.venv/lib/python3.12/site-packages`
+   - Wait till the `nemoretriever-ranking-ms`, `nemoretriever-embedding-ms` and `nim-llm-ms`  NIMs are in healthy state before proceeding further.
+
+   - The nemo LLM service may take upto 30 mins to start for the first time as the model is downloaded and cached. The models are downloaded and cached in the path specified by `MODEL_DIRECTORY`. Subsequent deployments will take 2-5 mins to startup based on the GPU profile.
+
+   - The default configuration allocates one GPU (GPU ID 1) to `nim-llm-ms` which defaults to minimum GPUs needed for H100 or B200 profile. If you are deploying the solution on A100, please allocate 2 available GPUs by exporting below env variable before launching:
+     ```bash
+     export LLM_MS_GPU_ID=1,2
+     ```
+
+   - To start just the NIMs specific to rag or ingestion add the `--profile rag` or `--profile ingest` flag to the command.
+
+   - Ensure all the below are running before proceeding further
+
+     ```bash
+     watch -n 2 'docker ps --format "table {{.Names}}\t{{.Status}}"'
+     ```
+
+     ```output
+        NAMES                                   STATUS
+
+        nemoretriever-ranking-ms                Up 14 minutes (healthy)
+        compose-page-elements-1                 Up 14 minutes
+        compose-paddle-1                        Up 14 minutes
+        compose-graphic-elements-1              Up 14 minutes
+        compose-table-structure-1               Up 14 minutes
+        nemoretriever-embedding-ms              Up 14 minutes (healthy)
+        nim-llm-ms                              Up 14 minutes (healthy)
+     ```
 
 
-## Setup Dependencies
+5. Start the vector db containers from the repo root.
+   ```bash
+   docker compose -f deploy/vectordb.yaml up -d
+   ```
 
-### Prerequisites
+   [!TIP]
+   By default GPU accelerated Milvus DB is deployed. You can choose the GPU ID to be allocated using below env variable.
+   ```bash
+   VECTORSTORE_GPU_DEVICE_ID=0
+   ```
 
-Fulfill the [prerequisites](../docs/quickstart.md#prerequisites) to setup Docker on your system.
+   For B200 and A100 GPUs, use Milvus CPU indexing due to known retrieval accuracy issues with Milvus GPU indexing and search. Export following environment variables to disable Milvus GPU ingexing and search.
+   ```bash
+   export APP_VECTORSTORE_ENABLEGPUSEARCH=False
+   export APP_VECTORSTORE_ENABLEGPUINDEX=False
+   ```
 
-### 1. Configure API Key
+6. Start the ingestion containers from the repo root. This pulls the prebuilt containers from NGC and deploys it on your system.
 
-First, obtain an NGC API key by following the steps [here](../docs/quickstart.md#obtain-an-api-key).
+   ```bash
+   docker compose -f deploy/compose/docker-compose-ingestor-server.yaml up -d
+   ```
 
-```python
-import os
-from getpass import getpass
-from dotenv import load_dotenv
+7. Start the rag containers from the repo root. This pulls the prebuilt containers from NGC and deploys it on your system.
 
-# Set your NGC API key
-if not os.environ.get("NGC_API_KEY", "").startswith("nvapi-"):
-    candidate_api_key = getpass("NVAPI Key (starts with nvapi-): ")
-    assert candidate_api_key.startswith("nvapi-"), f"{candidate_api_key[:5]}... is not a valid key"
-    os.environ["NGC_API_KEY"] = candidate_api_key
-```
+   ```bash
+   docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d
+   ```
 
-### 2. Docker Login
+   You can check the status of the rag-server and its dependencies by issuing this curl command
+   ```bash
+   curl -X 'GET' 'http://workstation_ip:8081/v1/health?check_dependencies=true' -H 'accept: application/json'
+   ```
 
-```bash
-echo "${NGC_API_KEY}" | docker login nvcr.io -u '$oauthtoken' --password-stdin
-```
+8. Confirm all the below mentioned containers are running.
 
-### 3. Load Default Configuration
+   ```bash
+   docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
+   ```
 
-```python
-load_dotenv(dotenv_path=".env_library", override=True)
-```
+   *Example Output*
 
-> **💡 Tip:** Override default configurations using `os.environ` in your code. Reimport the `nvidia_rag` package and restart the Nvidia Ingest runtime for changes to take effect.
+   ```output
+   NAMES                                   STATUS
+   compose-nv-ingest-ms-runtime-1          Up 5 minutes (healthy)
+   ingestor-server                         Up 5 minutes
+   compose-redis-1                         Up 5 minutes
+   rag-playground                          Up 9 minutes
+   rag-server                              Up 9 minutes
+   milvus-standalone                       Up 36 minutes
+   milvus-minio                            Up 35 minutes (healthy)
+   milvus-etcd                             Up 35 minutes (healthy)
+   nemoretriever-ranking-ms                Up 38 minutes (healthy)
+   compose-page-elements-1                 Up 38 minutes
+   compose-paddle-1                        Up 38 minutes
+   compose-graphic-elements-1              Up 38 minutes
+   compose-table-structure-1               Up 38 minutes
+   nemoretriever-embedding-ms              Up 38 minutes (healthy)
+   nim-llm-ms                              Up 38 minutes (healthy)
+   ```
 
-### 4. Setup Milvus Vector Database
+9.  Open a web browser and access `http://localhost:8090` to use the RAG Playground. You can use the upload tab to ingest files into the server or follow [the notebooks](../notebooks/) to understand the API usage.
 
-Configure GPU device (default uses GPU indexing):
+10. To stop all running services, after making some [customizations](#next-steps)
+    ```bash
+    docker compose -f deploy/compose/docker-compose-ingestor-server.yaml down
+    docker compose -f deploy/compose/nims.yaml down
+    docker compose -f deploy/compose/docker-compose-rag-server.yaml down
+    docker compose -f deploy/compose/vectordb.yaml down
+    ```
 
-```python
-os.environ["VECTORSTORE_GPU_DEVICE_ID"] = "0"
-```
+**📝 Notes:**
 
-> **Note:** For CPU-only Milvus, follow instructions in [milvus-configuration.md](../docs/milvus-configuration.md).
+1. A single NVIDIA A100-80GB or H100-80GB, B200 GPU can be used to start non-LLM NIMs (nemoretriever-embedding-ms, nemoretriever-ranking-ms, and ingestion services like page-elements, paddle, graphic-elements, and table-structure) for ingestion and RAG workflows. You can control which GPU is used for each service by setting these environment variables in `deploy/compose/.env` file before launching:
+   ```bash
+   EMBEDDING_MS_GPU_ID=0
+   RANKING_MS_GPU_ID=0
+   YOLOX_MS_GPU_ID=0
+   YOLOX_GRAPHICS_MS_GPU_ID=0
+   YOLOX_TABLE_MS_GPU_ID=0
+   PADDLE_MS_GPU_ID=0
+   ```
 
-Start Milvus:
-```bash
-docker compose -f ../deploy/compose/vectordb.yaml up -d
-```
+2. If the NIMs are deployed in a different workstation or outside the nvidia-rag docker network on the same system, replace the host address of the below URLs with workstation IPs.
 
-### 5. Setup NIMs (Neural Inference Microservices)
+   ```bash
+   APP_EMBEDDINGS_SERVERURL="workstation_ip:8000"
+   APP_LLM_SERVERURL="workstation_ip:8000"
+   APP_RANKING_SERVERURL="workstation_ip:8000"
+   PADDLE_GRPC_ENDPOINT="workstation_ip:8001"
+   YOLOX_GRPC_ENDPOINT="workstation_ip:8001"
+   YOLOX_GRAPHIC_ELEMENTS_GRPC_ENDPOINT="workstation_ip:8001"
+   YOLOX_TABLE_STRUCTURE_GRPC_ENDPOINT="workstation_ip:8001"
+   ```
 
-Choose either on-premises or cloud-hosted models:
+3. Due to react limitations, any changes made to below environment variables will require developers to rebuilt the rag containers. This will be fixed in a future release.
 
-#### Option 1: On-Premises Models
+   ```output
+   # Model name for LLM
+   NEXT_PUBLIC_MODEL_NAME: ${APP_LLM_MODELNAME:-meta/llama-3.1-70b-instruct}
+   # Model name for embeddings
+   NEXT_PUBLIC_EMBEDDING_MODEL: ${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-3.2-nv-embedqa-1b-v2}
+   # Model name for reranking
+   NEXT_PUBLIC_RERANKER_MODEL: ${APP_RANKING_MODELNAME:-nvidia/llama-3.2-nv-rerankqa-1b-v2}
+   # URL for rag server container
+   NEXT_PUBLIC_CHAT_BASE_URL: "http://rag-server:8081/v1"
+   # URL for ingestor container
+   NEXT_PUBLIC_VDB_BASE_URL: "http://ingestor-server:8082/v1"
+   ```
 
-Ensure you meet the [hardware requirements](../README.md#hardware-requirements). Default configuration requires 2xH100.
 
-```bash
-# Create model cache directory
-mkdir -p ~/.cache/model-cache
-```
+### Start using nvidia hosted models
 
-```python
-# Configure model directory
-os.environ["MODEL_DIRECTORY"] = os.path.expanduser("~/.cache/model-cache")
+1. Verify that you meet the [prerequisites](#prerequisites).
 
-# Configure GPU IDs for microservices
-os.environ["EMBEDDING_MS_GPU_ID"] = "0"
-os.environ["RANKING_MS_GPU_ID"] = "0" 
-os.environ["YOLOX_MS_GPU_ID"] = "0"
-os.environ["YOLOX_GRAPHICS_MS_GPU_ID"] = "0"
-os.environ["YOLOX_TABLE_MS_GPU_ID"] = "0"
-os.environ["OCR_MS_GPU_ID"] = "0"
-os.environ["LLM_MS_GPU_ID"] = "1"
-```
+2. Open `deploy/.env` and uncomment the section `Endpoints for using cloud NIMs`.
+   Then set the environment variables by executing below command.
+   ```bash
+   source deploy/.env
+   ```
 
-Deploy NIMs (may take time for model downloads):
-```bash
-USERID=$(id -u) docker compose -f ../deploy/compose/nims.yaml up -d
-```
 
-Monitor container status:
-```bash
-docker ps
-```
+   **📝 Note:**
+   When using NVIDIA hosted endpoints, you may encounter rate limiting with larger file ingestions (>10 files).
 
-Ensure all containers are running and healthy:
-- nemoretriever-ranking-ms (healthy)
-- compose-page-elements-1
-- compose-paddle-1  
-- compose-graphic-elements-1
-- compose-table-structure-1
-- nemoretriever-embedding-ms (healthy)
-- nim-llm-ms (healthy)
+3. Start the vector db containers from the repo root.
+   ```bash
+   docker compose -f deploy/vectordb.yaml up -d
+   ```
+   [!NOTE]
+   If you don't have a GPU available, you can switch to CPU-only Milvus by following the instructions in [milvus-configuration.md](./milvus-configuration.md).
 
-#### Option 2: NVIDIA Cloud Models
+   [!TIP]
+   For B200 and A100 GPUs, use Milvus CPU indexing due to known retrieval accuracy issues with Milvus GPU indexing and search. Export following environment variables to disable Milvus GPU ingexing and search.
+   ```bash
+   export APP_VECTORSTORE_ENABLEGPUSEARCH=False
+   export APP_VECTORSTORE_ENABLEGPUINDEX=False
+   ```
 
-```python
-os.environ["APP_LLM_MODELNAME"] = "nvidia/llama-3_3-nemotron-super-49b-v1_5"
-os.environ["APP_EMBEDDINGS_MODELNAME"] = "nvidia/llama-3.2-nv-embedqa-1b-v2"
-os.environ["APP_RANKING_MODELNAME"] = "nvidia/llama-3.2-nv-rerankqa-1b-v2"
-os.environ["APP_EMBEDDINGS_SERVERURL"] = ""
-os.environ["APP_LLM_SERVERURL"] = ""
-os.environ["APP_RANKING_SERVERURL"] = "https://ai.api.nvidia.com/v1/retrieval/nvidia/llama-3_2-nv-rerankqa-1b-v2/reranking/v1"
-os.environ["EMBEDDING_NIM_ENDPOINT"] = "https://integrate.api.nvidia.com/v1"
-os.environ["OCR_HTTP_ENDPOINT"] = "https://ai.api.nvidia.com/v1/cv/baidu/paddleocr"
-os.environ["OCR_INFER_PROTOCOL"] = "http"
-os.environ["YOLOX_HTTP_ENDPOINT"] = "https://ai.api.nvidia.com/v1/cv/nvidia/nemoretriever-page-elements-v2"
-os.environ["YOLOX_INFER_PROTOCOL"] = "http"
-os.environ["YOLOX_GRAPHIC_ELEMENTS_HTTP_ENDPOINT"] = "https://ai.api.nvidia.com/v1/cv/nvidia/nemoretriever-graphic-elements-v1"
-os.environ["YOLOX_GRAPHIC_ELEMENTS_INFER_PROTOCOL"] = "http"
-os.environ["YOLOX_TABLE_STRUCTURE_HTTP_ENDPOINT"] = "https://ai.api.nvidia.com/v1/cv/nvidia/nemoretriever-table-structure-v1"
-os.environ["YOLOX_TABLE_STRUCTURE_INFER_PROTOCOL"] = "http"
-```
+4. Start the ingestion containers from the repo root. This pulls the prebuilt containers from NGC and deploys it on your system.
 
-### 6. Setup NVIDIA Ingest Runtime
+   ```bash
+   docker compose -f deploy/compose/docker-compose-ingestor-server.yaml up -d
+   ```
 
-```bash
-docker compose -f ../deploy/compose/docker-compose-ingestor-server.yaml up nv-ingest-ms-runtime redis -d
-```
+   [!TIP]
+   You can add a `--build` argument in case you have made some code changes or have any requirement of re-building ingestion containers from source code:
+
+   ```bash
+   docker compose -f deploy/compose/docker-compose-ingestor-server.yaml up -d --build
+   ```
+
+5. Start the rag containers from the repo root. This pulls the prebuilt containers from NGC and deploys it on your system.
+
+   ```bash
+   docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d
+   ```
+
+   [!TIP]
+   You can add a `--build` argument in case you have made some code changes or have any requirement of re-building containers from source code:
+
+   ```bash
+   docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d --build
+   ```
+
+   You can check the status of the rag-server and its dependencies by issuing this curl command
+   ```bash
+   curl -X 'GET' 'http://workstation_ip:8081/v1/health?check_dependencies=true' -H 'accept: application/json'
+   ```
+
+6. Confirm all the below mentioned containers are running.
+
+   ```bash
+   docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
+   ```
+
+   *Example Output*
+
+   ```output
+   NAMES                                   STATUS
+   compose-nv-ingest-ms-runtime-1          Up 5 minutes (healthy)
+   ingestor-server                         Up 5 minutes
+   compose-redis-1                         Up 5 minutes
+   rag-playground                          Up 9 minutes
+   rag-server                              Up 9 minutes
+   milvus-standalone                       Up 36 minutes
+   milvus-minio                            Up 35 minutes (healthy)
+   milvus-etcd                             Up 35 minutes (healthy)
+   ```
+
+7. Open a web browser and access `http://localhost:8090` to use the RAG Playground. You can use the upload tab to ingest files into the server or follow [the notebooks](../notebooks/) to understand the API usage.
+
+8. To stop all running services, after making some [customizations](#next-steps)
+    ```bash
+    docker compose -f deploy/compose/docker-compose-ingestor-server.yaml down
+    docker compose -f deploy/compose/docker-compose-rag-server.yaml down
+    docker compose -f deploy/compose/vectordb.yaml down
 
 Open the RAG Playground at localhost:3080, create a new collection and save it. or you can use the API for that, see API Usage examples below:
 
@@ -255,21 +401,10 @@ response = await ingestor.upload_documents(
     blocking=False,
     split_options={"chunk_size": 512, "chunk_overlap": 150},
     filepaths=[
-        "../data/multimodal/woods_frost.docx",
-        "../data/multimodal/multimodal_test.pdf",
+        "examples/RAG/libraary_rag/data/cuda.txt",
     ],
     generate_summary=False,
-    # Optional: Add custom metadata
-    # custom_metadata=[
-    #     {
-    #         "filename": "multimodal_test.pdf",
-    #         "metadata": {"meta_field_1": "multimodal document 1"}
-    #     },
-    #     {
-    #         "filename": "woods_frost.docx", 
-    #         "metadata": {"meta_field_1": "multimodal document 2"}
-    #     }
-    # ]
+    
 )
 print(response)
 ```
