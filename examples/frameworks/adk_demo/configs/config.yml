@@ -37,10 +37,8 @@ functions:
 
 llms:
   llm:
-    _type: litellm
-    model: gpt-5
-    api_key: ${OPENAI_API_KEY}
-    base_url: ${OPENAI_API_BASE:-https://api.openai.com/v1}
+    _type: openai
+    model_name: gpt-5
 
 workflow:
   _type: adk

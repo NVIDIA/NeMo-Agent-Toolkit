@@ -33,18 +33,14 @@ uv pip install -e examples/frameworks/adk_demo
 
 ### Set up API keys
 
-LiteLLM routes to many providers. For OpenAI:
+For this example, an OpenAI API key is required. You can set it as follows:
 ```bash
 export OPENAI_API_KEY="<your_openai_key>"
 # Optional (defaults to https://api.openai.com/v1 if unset)
 export OPENAI_API_BASE="<your_openai_base_url>"
 ```
-For Azure OpenAI, set:
-```bash
-export OPENAI_API_KEY="<your_azure_openai_key>"
-export OPENAI_API_BASE="https://<your-azure-endpoint>/openai"
-```
-You can find LLM provider specific instructions in the LiteLLM documentation. Please set the appropriate environment variables.
+
+Google ADK support within NeMo Agent toolkit currently only supports OpenAI and Azure OpenAI models for tool calling.
 
 ### Set up the MCP Server
 

@@ -46,12 +46,15 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
         config (ADKFunctionConfig): The configuration for the ADK agent function.
         builder (Builder): The NAT builder instance.
     """
+    import logging
 
     from google.adk import Runner
     from google.adk.agents import Agent
     from google.adk.artifacts import InMemoryArtifactService
     from google.adk.sessions import InMemorySessionService
     from google.genai import types
+
+    logging.getLogger("LiteLLM").setLevel(logging.WARNING)
 
     model = await builder.get_llm(config.llm, wrapper_type=LLMFrameworkEnum.ADK)
     tools = await builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.ADK)
