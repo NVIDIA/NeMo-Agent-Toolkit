@@ -93,6 +93,15 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
     server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
     tool_call_timeout: timedelta = Field(
         default=timedelta(seconds=5), description="Timeout (in seconds) for the MCP tool call. Defaults to 5 seconds.")
+    reconnect_enabled: bool = Field(
+        default=True,
+        description="Whether to enable reconnecting to the MCP server if the connection is lost. \
+        Defaults to True.")
+    reconnect_max_attempts: int = Field(default=2, description="Maximum number of reconnect attempts. Defaults to 2.")
+    reconnect_initial_backoff: float = Field(
+        default=0.5, description="Initial backoff time for reconnect attempts. Defaults to 0.5 seconds.")
+    reconnect_max_backoff: float = Field(
+        default=50.0, description="Maximum backoff time for reconnect attempts. Defaults to 50 seconds.")
     tool_overrides: dict[str, MCPToolOverrideConfig] | None = Field(
         default=None,
         description="""Optional tool name overrides and description changes.
@@ -129,13 +138,29 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     if config.server.transport == "stdio":
         if not config.server.command:
             raise ValueError("command is required for stdio transport")
-        client = MCPStdioClient(config.server.command, config.server.args, config.server.env, config.tool_call_timeout)
+        client = MCPStdioClient(config.server.command,
+                                config.server.args,
+                                config.server.env,
+                                config.tool_call_timeout,
+                                reconnect_enabled=config.reconnect_enabled,
+                                reconnect_max_attempts=config.reconnect_max_attempts,
+                                reconnect_initial_backoff=config.reconnect_initial_backoff,
+                                reconnect_max_backoff=config.reconnect_max_backoff)
     elif config.server.transport == "sse":
-        client = MCPSSEClient(str(config.server.url), tool_call_timeout=config.tool_call_timeout)
+        client = MCPSSEClient(str(config.server.url),
+                              tool_call_timeout=config.tool_call_timeout,
+                              reconnect_enabled=config.reconnect_enabled,
+                              reconnect_max_attempts=config.reconnect_max_attempts,
+                              reconnect_initial_backoff=config.reconnect_initial_backoff,
+                              reconnect_max_backoff=config.reconnect_max_backoff)
     elif config.server.transport == "streamable-http":
         client = MCPStreamableHTTPClient(str(config.server.url),
                                          auth_provider=auth_provider,
-                                         tool_call_timeout=config.tool_call_timeout)
+                                         tool_call_timeout=config.tool_call_timeout,
+                                         reconnect_enabled=config.reconnect_enabled,
+                                         reconnect_max_attempts=config.reconnect_max_attempts,
+                                         reconnect_initial_backoff=config.reconnect_initial_backoff,
+                                         reconnect_max_backoff=config.reconnect_max_backoff)
     else:
         raise ValueError(f"Unsupported transport: {config.server.transport}")
 

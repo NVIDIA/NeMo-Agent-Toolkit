@@ -329,8 +329,19 @@ class MCPSSEClient(MCPBaseClient):
       url (str): The url of the MCP server
     """
 
-    def __init__(self, url: str, tool_call_timeout: timedelta = timedelta(seconds=5)):
-        super().__init__("sse", tool_call_timeout=tool_call_timeout)
+    def __init__(self,
+                 url: str,
+                 tool_call_timeout: timedelta = timedelta(seconds=5),
+                 reconnect_enabled: bool = True,
+                 reconnect_max_attempts: int = 2,
+                 reconnect_initial_backoff: float = 0.5,
+                 reconnect_max_backoff: float = 50.0):
+        super().__init__("sse",
+                         tool_call_timeout=tool_call_timeout,
+                         reconnect_enabled=reconnect_enabled,
+                         reconnect_max_attempts=reconnect_max_attempts,
+                         reconnect_initial_backoff=reconnect_initial_backoff,
+                         reconnect_max_backoff=reconnect_max_backoff)
         self._url = url
 
     @property
@@ -369,8 +380,17 @@ class MCPStdioClient(MCPBaseClient):
                  command: str,
                  args: list[str] | None = None,
                  env: dict[str, str] | None = None,
-                 tool_call_timeout: timedelta = timedelta(seconds=5)):
-        super().__init__("stdio", tool_call_timeout=tool_call_timeout)
+                 tool_call_timeout: timedelta = timedelta(seconds=5),
+                 reconnect_enabled: bool = True,
+                 reconnect_max_attempts: int = 2,
+                 reconnect_initial_backoff: float = 0.5,
+                 reconnect_max_backoff: float = 50.0):
+        super().__init__("stdio",
+                         tool_call_timeout=tool_call_timeout,
+                         reconnect_enabled=reconnect_enabled,
+                         reconnect_max_attempts=reconnect_max_attempts,
+                         reconnect_initial_backoff=reconnect_initial_backoff,
+                         reconnect_max_backoff=reconnect_max_backoff)
         self._command = command
         self._args = args
         self._env = env
@@ -417,8 +437,18 @@ class MCPStreamableHTTPClient(MCPBaseClient):
     def __init__(self,
                  url: str,
                  auth_provider: AuthProviderBase | None = None,
-                 tool_call_timeout: timedelta = timedelta(seconds=5)):
-        super().__init__("streamable-http", auth_provider=auth_provider, tool_call_timeout=tool_call_timeout)
+                 tool_call_timeout: timedelta = timedelta(seconds=5),
+                 reconnect_enabled: bool = True,
+                 reconnect_max_attempts: int = 2,
+                 reconnect_initial_backoff: float = 0.5,
+                 reconnect_max_backoff: float = 50.0):
+        super().__init__("streamable-http",
+                         auth_provider=auth_provider,
+                         tool_call_timeout=tool_call_timeout,
+                         reconnect_enabled=reconnect_enabled,
+                         reconnect_max_attempts=reconnect_max_attempts,
+                         reconnect_initial_backoff=reconnect_initial_backoff,
+                         reconnect_max_backoff=reconnect_max_backoff)
         self._url = url
 
     @property
