@@ -22,3 +22,4 @@ from . import embedder
 from . import functions
 from . import memory
 from . import llm
+from . import utils
