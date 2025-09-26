@@ -33,38 +33,10 @@ This starts a protected MCP server on port 9901. This MCP server has a stub toke
 2. Start a container with the example auth server from the MCP repo. This will start the auth server on port 9000.
 ```bash
 docker build -t mcp-sample-as -f examples/MCP/simple_calculator_mcp/deploy_example_as/Dockerfile examples/MCP/simple_calculator_mcp/deploy_example_as/
-docker run -p 9000:9000 --network host mcp-sample-as
+docker run -p 9000:9000 mcp-sample-as
 ```
+This starts the auth server on port 9000.
 
-This starts the auth server on port 9000. Verify availability with:
-```bash
-curl -v http://localhost:9000/.well-known/oauth-authorization-server | jq
-```
-This will result in a JSON response like this:
-```json
-{
-  "issuer": "http://localhost:9000/",
-  "authorization_endpoint": "http://localhost:9000/authorize",
-  "token_endpoint": "http://localhost:9000/token",
-  "registration_endpoint": "http://localhost:9000/register",
-  "scopes_supported": [
-    "user"
-  ],
-  "response_types_supported": [
-    "code"
-  ],
-  "grant_types_supported": [
-    "authorization_code",
-    "refresh_token"
-  ],
-  "token_endpoint_auth_methods_supported": [
-    "client_secret_post"
-  ],
-  "code_challenge_methods_supported": [
-    "S256"
-  ]
-}
-```
 3. Start NAT UI and enable websocket
 
 4. Run the workflow with MCP auth enabled client
