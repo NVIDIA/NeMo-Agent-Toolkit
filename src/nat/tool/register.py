@@ -24,15 +24,8 @@ from . import nvidia_rag
 from . import retriever
 from . import server_tools
 from .code_execution import register
-from .github_tools import create_github_commit
-from .github_tools import create_github_issue
-from .github_tools import create_github_pr
-from .github_tools import get_github_file
-from .github_tools import get_github_issue
-from .github_tools import get_github_pr
-from .github_tools import update_github_issue
-from .mcp import mcp_client_impl
-from .mcp import mcp_tool
+from .github_tools import github_tool
+from .github_tools import github_files_tool
 from .memory_tools import add_memory_tool
 from .memory_tools import delete_memory_tool
 from .memory_tools import get_memory_tool

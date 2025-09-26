@@ -27,6 +27,7 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -67,7 +68,9 @@ class ReWOOAgentGraph(BaseAgent):
                  use_tool_schema: bool = True,
                  callbacks: list[AsyncCallbackHandler] | None = None,
                  detailed_logs: bool = False,
-                 log_response_max_chars: int = 1000):
+                 log_response_max_chars: int = 1000,
+                 tool_call_max_retries: int = 3,
+                 raise_tool_call_error: bool = True):
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
@@ -93,6 +96,8 @@ class ReWOOAgentGraph(BaseAgent):
         self.planner_prompt = planner_prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         self.solver_prompt = solver_prompt
         self.tools_dict = {tool.name: tool for tool in tools}
+        self.tool_call_max_retries = tool_call_max_retries
+        self.raise_tool_call_error = raise_tool_call_error
 
         logger.debug("%s Initialized ReWOO Agent Graph", AGENT_LOG_PREFIX)
 
@@ -268,10 +273,13 @@ class ReWOOAgentGraph(BaseAgent):
             tool_response = await self._call_tool(requested_tool,
                                                   tool_input_parsed,
                                                   RunnableConfig(callbacks=self.callbacks),
-                                                  max_retries=3)
+                                                  max_retries=self.tool_call_max_retries)
 
             if self.detailed_logs:
                 self._log_tool_response(requested_tool.name, tool_input_parsed, str(tool_response))
+
+            if self.raise_tool_call_error and tool_response.status == "error":
+                raise RuntimeError(f"Tool call failed: {tool_response.content}")
 
             intermediate_results[placeholder] = tool_response
             return {"intermediate_results": intermediate_results}
@@ -341,7 +349,7 @@ class ReWOOAgentGraph(BaseAgent):
             logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
             return AgentDecision.END
 
-    async def _build_graph(self, state_schema):
+    async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
         try:
             logger.debug("%s Building and compiling the ReWOO Graph", AGENT_LOG_PREFIX)
 

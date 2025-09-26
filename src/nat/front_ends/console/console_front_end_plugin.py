@@ -55,9 +55,10 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         self.auth_flow_handler = ConsoleAuthenticationFlowHandler()
 
     async def pre_run(self):
-
-        if (not self.front_end_config.input_query and not self.front_end_config.input_file):
-            raise click.UsageError("Must specify either --input_query or --input_file")
+        if (self.front_end_config.input_query is not None and self.front_end_config.input_file is not None):
+            raise click.UsageError("Must specify either --input or --input_file, not both")
+        if (self.front_end_config.input_query is None and self.front_end_config.input_file is None):
+            raise click.UsageError("Must specify either --input or --input_file")
 
     async def run_workflow(self, session_manager: SessionManager):
 
@@ -80,7 +81,9 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
             input_list = list(self.front_end_config.input_query)
             logger.debug("Processing input: %s", self.front_end_config.input_query)
 
-            runner_outputs = await asyncio.gather(*[run_single_query(query) for query in input_list])
+            # Make `return_exceptions=False` explicit; all exceptions are raised instead of being silenced
+            runner_outputs = await asyncio.gather(*[run_single_query(query) for query in input_list],
+                                                  return_exceptions=False)
 
         elif (self.front_end_config.input_file):
 

@@ -20,7 +20,7 @@ from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langgraph.graph.graph import CompiledGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from nat.agent.base import AgentDecision
 from nat.agent.rewoo_agent.agent import NO_INPUT_ERROR_MESSAGE
@@ -86,7 +86,7 @@ def mock_agent(mock_config_rewoo_agent, mock_llm, mock_tool):
 
 async def test_build_graph(mock_rewoo_agent):
     graph = await mock_rewoo_agent.build_graph()
-    assert isinstance(graph, CompiledGraph)
+    assert isinstance(graph, CompiledStateGraph)
     assert list(graph.nodes.keys()) == ['__start__', 'planner', 'executor', 'solver']
     assert graph.builder.edges == {('planner', 'executor'), ('__start__', 'planner'), ('solver', '__end__')}
     assert set(graph.builder.branches.get('executor').get('conditional_edge').ends.keys()) == {
@@ -370,6 +370,78 @@ def test_prompt_validation_with_additional_instructions():
     assert ReWOOAgentGraph.validate_solver_prompt(combined_solver_prompt)
 
 
+# Tests for tool_call_max_retries option
+
+
+def test_rewoo_agent_tool_call_max_retries_initialization(mock_llm, mock_tool):
+    """Test that ReWOO agent initializes with tool_call_max_retries parameter."""
+    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+
+    tools = [mock_tool('test_tool')]
+    planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
+    solver_prompt = ChatPromptTemplate([("system", SOLVER_SYSTEM_PROMPT), ("user", SOLVER_USER_PROMPT)])
+
+    # Test default value
+    agent = ReWOOAgentGraph(llm=mock_llm, planner_prompt=planner_prompt, solver_prompt=solver_prompt, tools=tools)
+    assert agent.tool_call_max_retries == 3
+
+    # Test custom value
+    agent_custom = ReWOOAgentGraph(llm=mock_llm,
+                                   planner_prompt=planner_prompt,
+                                   solver_prompt=solver_prompt,
+                                   tools=tools,
+                                   tool_call_max_retries=5)
+    assert agent_custom.tool_call_max_retries == 5
+
+
+async def test_executor_node_passes_max_retries_to_call_tool(mock_rewoo_agent):
+    """Test that executor_node passes the correct max_retries value to _call_tool."""
+    from unittest.mock import AsyncMock
+
+    # Mock the _call_tool method
+    original_call_tool = mock_rewoo_agent._call_tool
+    mock_rewoo_agent._call_tool = AsyncMock(return_value=ToolMessage(content="success", tool_call_id="mock_tool_A"))
+
+    # Create test state
+    mock_state = ReWOOGraphState(
+        task=HumanMessage(content="Test task"),
+        plan=AIMessage(content="Test plan"),
+        steps=AIMessage(content=[{
+            "plan": "test step", "evidence": {
+                "placeholder": "#E1", "tool": "mock_tool_A", "tool_input": "test input"
+            }
+        }]),
+        intermediate_results={})
+
+    # Execute the node
+    await mock_rewoo_agent.executor_node(mock_state)
+
+    # Verify _call_tool was called with correct max_retries parameter
+    mock_rewoo_agent._call_tool.assert_called_once()
+    call_kwargs = mock_rewoo_agent._call_tool.call_args.kwargs
+    assert 'max_retries' in call_kwargs
+    assert call_kwargs['max_retries'] == mock_rewoo_agent.tool_call_max_retries
+
+    # Restore original method
+    mock_rewoo_agent._call_tool = original_call_tool
+
+
+def test_rewoo_config_tool_call_max_retries():
+    """Test that ReWOOAgentWorkflowConfig includes tool_call_max_retries field."""
+
+    # Test default value
+    config = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm")
+    assert hasattr(config, 'tool_call_max_retries')
+    assert config.tool_call_max_retries == 3
+
+    # Test custom value
+    config_custom = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm", tool_call_max_retries=7)
+    assert config_custom.tool_call_max_retries == 7
+
+
 def test_json_output_parsing_valid_format():
     """Test that the planner can parse valid JSON output correctly."""
     import json
@@ -595,3 +667,197 @@ def test_configuration_integration_with_additional_instructions():
     assert hasattr(config_both, 'additional_solver_instructions')
     assert config_both.additional_planner_instructions == "Plan carefully."
     assert config_both.additional_solver_instructions == "Solve thoroughly."
+
+
+# Tests for raise_tool_call_error option
+
+
+def test_rewoo_config_raise_tool_call_error():
+    """Test that ReWOOAgentWorkflowConfig includes raise_tool_call_error field with correct default."""
+
+    # Test default value
+    config = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm")
+    assert hasattr(config, 'raise_tool_call_error')
+    assert config.raise_tool_call_error is True
+
+    # Test custom value (False)
+    config_false = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm", raise_tool_call_error=False)
+    assert config_false.raise_tool_call_error is False
+
+    # Test custom value (True explicitly)
+    config_true = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm", raise_tool_call_error=True)
+    assert config_true.raise_tool_call_error is True
+
+
+def test_rewoo_agent_raise_tool_call_error_initialization(mock_llm, mock_tool):
+    """Test that ReWOO agent initializes with raise_tool_call_error parameter."""
+    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+
+    tools = [mock_tool('test_tool')]
+    planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
+    solver_prompt = ChatPromptTemplate([("system", SOLVER_SYSTEM_PROMPT), ("user", SOLVER_USER_PROMPT)])
+
+    # Test default value (True)
+    agent = ReWOOAgentGraph(llm=mock_llm, planner_prompt=planner_prompt, solver_prompt=solver_prompt, tools=tools)
+    assert agent.raise_tool_call_error is True
+
+    # Test custom value (False)
+    agent_false = ReWOOAgentGraph(llm=mock_llm,
+                                  planner_prompt=planner_prompt,
+                                  solver_prompt=solver_prompt,
+                                  tools=tools,
+                                  raise_tool_call_error=False)
+    assert agent_false.raise_tool_call_error is False
+
+    # Test custom value (True explicitly)
+    agent_true = ReWOOAgentGraph(llm=mock_llm,
+                                 planner_prompt=planner_prompt,
+                                 solver_prompt=solver_prompt,
+                                 tools=tools,
+                                 raise_tool_call_error=True)
+    assert agent_true.raise_tool_call_error is True
+
+
+async def test_executor_node_raise_tool_call_error_true_behavior(mock_llm, mock_tool):
+    """Test that executor_node raises RuntimeError when raise_tool_call_error=True and tool fails."""
+    from unittest.mock import AsyncMock
+
+    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+
+    # Create a mock tool that will fail
+    failing_tool = mock_tool('failing_tool')
+    tools = [failing_tool]
+    planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
+    solver_prompt = ChatPromptTemplate([("system", SOLVER_SYSTEM_PROMPT), ("user", SOLVER_USER_PROMPT)])
+
+    # Create agent with raise_tool_call_error=True (default)
+    agent = ReWOOAgentGraph(llm=mock_llm,
+                            planner_prompt=planner_prompt,
+                            solver_prompt=solver_prompt,
+                            tools=tools,
+                            raise_tool_call_error=True)
+
+    # Mock _call_tool to return an error status
+    error_tool_message = ToolMessage(content="Tool call failed after all retry attempts. Last error: Connection failed",
+                                     tool_call_id="failing_tool",
+                                     status="error")
+    agent._call_tool = AsyncMock(return_value=error_tool_message)
+
+    # Create test state
+    mock_state = ReWOOGraphState(
+        task=HumanMessage(content="Test task"),
+        plan=AIMessage(content="Test plan"),
+        steps=AIMessage(content=[{
+            "plan": "test step", "evidence": {
+                "placeholder": "#E1", "tool": "failing_tool", "tool_input": "test input"
+            }
+        }]),
+        intermediate_results={})
+
+    # Should raise RuntimeError when tool fails and raise_tool_call_error=True
+    with pytest.raises(RuntimeError, match="Tool call failed"):
+        await agent.executor_node(mock_state)
+
+
+async def test_executor_node_raise_tool_call_error_false_behavior(mock_llm, mock_tool):
+    """Test that executor_node continues with error message when raise_tool_call_error=False and tool fails."""
+    from unittest.mock import AsyncMock
+
+    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+
+    # Create a mock tool that will fail
+    failing_tool = mock_tool('failing_tool')
+    tools = [failing_tool]
+    planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
+    solver_prompt = ChatPromptTemplate([("system", SOLVER_SYSTEM_PROMPT), ("user", SOLVER_USER_PROMPT)])
+
+    # Create agent with raise_tool_call_error=False
+    agent = ReWOOAgentGraph(llm=mock_llm,
+                            planner_prompt=planner_prompt,
+                            solver_prompt=solver_prompt,
+                            tools=tools,
+                            raise_tool_call_error=False)
+
+    # Mock _call_tool to return an error status
+    error_message = "Tool call failed after all retry attempts. Last error: Connection failed"
+    error_tool_message = ToolMessage(content=error_message, tool_call_id="failing_tool", status="error")
+    agent._call_tool = AsyncMock(return_value=error_tool_message)
+
+    # Create test state
+    mock_state = ReWOOGraphState(
+        task=HumanMessage(content="Test task"),
+        plan=AIMessage(content="Test plan"),
+        steps=AIMessage(content=[{
+            "plan": "test step", "evidence": {
+                "placeholder": "#E1", "tool": "failing_tool", "tool_input": "test input"
+            }
+        }]),
+        intermediate_results={})
+
+    # Should not raise exception when tool fails and raise_tool_call_error=False
+    result = await agent.executor_node(mock_state)
+
+    # Should return intermediate_results with the error message
+    assert isinstance(result, dict)
+    assert "intermediate_results" in result
+    assert "#E1" in result["intermediate_results"]
+    assert result["intermediate_results"]["#E1"].content == error_message
+    assert result["intermediate_results"]["#E1"].status == "error"
+
+
+async def test_executor_node_raise_tool_call_error_success_case(mock_llm, mock_tool):
+    """Test that executor_node behaves normally when tool succeeds, regardless of raise_tool_call_error setting."""
+    from unittest.mock import AsyncMock
+
+    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+
+    # Create a mock tool that will succeed
+    success_tool = mock_tool('success_tool')
+    tools = [success_tool]
+    planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
+    solver_prompt = ChatPromptTemplate([("system", SOLVER_SYSTEM_PROMPT), ("user", SOLVER_USER_PROMPT)])
+
+    # Test with both True and False settings
+    for raise_error_setting in [True, False]:
+        agent = ReWOOAgentGraph(llm=mock_llm,
+                                planner_prompt=planner_prompt,
+                                solver_prompt=solver_prompt,
+                                tools=tools,
+                                raise_tool_call_error=raise_error_setting)
+
+        # Mock _call_tool to return a successful response (no status field means success)
+        success_tool_message = ToolMessage(content="Success result", tool_call_id="success_tool")
+        agent._call_tool = AsyncMock(return_value=success_tool_message)
+
+        # Create test state
+        mock_state = ReWOOGraphState(task=HumanMessage(content="Test task"),
+                                     plan=AIMessage(content="Test plan"),
+                                     steps=AIMessage(content=[{
+                                         "plan": "test step",
+                                         "evidence": {
+                                             "placeholder": "#E1", "tool": "success_tool", "tool_input": "test input"
+                                         }
+                                     }]),
+                                     intermediate_results={})
+
+        # Should work normally for successful tool calls regardless of setting
+        result = await agent.executor_node(mock_state)
+
+        assert isinstance(result, dict)
+        assert "intermediate_results" in result
+        assert "#E1" in result["intermediate_results"]
+        assert result["intermediate_results"]["#E1"].content == "Success result"
+        assert (not hasattr(result["intermediate_results"]["#E1"], 'status')
+                or result["intermediate_results"]["#E1"].status != "error")

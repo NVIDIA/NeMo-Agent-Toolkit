@@ -57,7 +57,18 @@ With NeMo Agent toolkit, you can move quickly, experiment freely, and ensure rel
 
 ## 🚀 Installation
 
-Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11 or 3.12 installed on your system.
+Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11, 3.12, or 3.13 installed on your system.
+
+### Supported Platforms
+
+| Operating System | Architecture | Python Version | Supported |
+|------------------|--------------|---------------|-----------|
+| Linux | x86_64 | 3.11, 3.12, 3.13 | ✅ Tested, Validated in CI |
+| Linux | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested, Validated in CI |
+| macOS | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
+| macOS | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested |
+| Windows | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
+| Windows | aarch64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
 
 ### Stable Version
 
@@ -67,10 +78,10 @@ To install the latest stable version of NeMo Agent Toolkit, run the following co
 pip install nvidia-nat
 ```
 
-NeMo Agent Toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain plugin, run the following:
+NeMo Agent Toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain/LangGraph plugin, run the following:
 
 ```bash
-pip install nvidia-nat[langchain] # For LangChain
+pip install nvidia-nat[langchain]
 ```
 
 Or for all optional dependencies:
@@ -156,9 +167,9 @@ The following diagram illustrates the key components of NeMo Agent toolkit and h
 
 ## 🛣️ Roadmap
 
-- [ ] Integrate with [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel) for continuous model improvement from production data.
+- [x] Integrate with [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel) for continuous model improvement from production data.
 - [ ] Add support for [Google ADK](https://google.github.io/adk-docs/) framework.
-- [ ] Add an agent optimizer to auto-tune hyperparameters and prompts to maximize performance.
+- [x] Add an agent optimizer to auto-tune hyperparameters and prompts to maximize performance.
 - [ ] MCP authorization and streamable HTTP support.
 - [ ] Integration with [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) to secure any function in an agent workflow.
 - [ ] End-to-end acceleration using intelligent integrations with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo).

@@ -34,15 +34,19 @@ stages:
   - upload
 
 variables:
-  UV_CACHE_DIR: .uv-cache
-  BUILD_NAT_COMPAT: "true"
-  GIT_SUBMODULE_STRATEGY: recursive
-  GIT_SUBMODULE_FORCE_HTTPS: "true"
   BUILD_AIQ_COMPAT: "true"
+  BUILD_NAT_COMPAT: "true"
+  GIT_SUBMODULE_FORCE_HTTPS: "true"
+  GIT_SUBMODULE_STRATEGY: recursive
+  MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+  NAT_CI_MYSQL_HOST: "mysql"
+  NAT_CI_REDIS_HOST: "redis"
+  NAT_CI_S3_HOST: "minio"
+  UV_CACHE_DIR: .uv-cache
   WORKSPACE_TMP: "${CI_PROJECT_DIR}/.tmp"
 
 default:
-  image: ghcr.io/astral-sh/uv:python3.12-bookworm
+  image: ghcr.io/astral-sh/uv:python3.13-bookworm
   cache:
     - key: $CI_COMMIT_REF_SLUG
       paths:
@@ -71,6 +75,15 @@ check:style:
 
 test:python_tests:
   stage: test
+  services:
+    - name: minio/minio:RELEASE.2025-07-18T21-56-31Z
+      alias: minio
+      command: ["server", "/data", "--console-address", ":9001"]
+    - mysql:9.3
+    - name: arizephoenix/phoenix:latest
+      alias: phoenix
+    - redis:7-alpine
+
   script:
     - echo "Running tests"
     - ./ci/scripts/gitlab/tests.sh

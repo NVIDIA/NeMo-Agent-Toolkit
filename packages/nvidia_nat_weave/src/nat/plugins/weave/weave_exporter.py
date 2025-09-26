@@ -124,7 +124,7 @@ class WeaveExporter(SpanExporter[Span, Span]):
         # Extract parent call if applicable
         parent_call = None
 
-        # If we have an existing Weave call from another framework (e.g., LangChain),
+        # If we have an existing Weave call from another framework (e.g., LangChain/LangGraph),
         # use it as the parent
         if existing_call is not None:
             parent_call = existing_call

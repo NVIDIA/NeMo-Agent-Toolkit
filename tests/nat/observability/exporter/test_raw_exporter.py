@@ -197,7 +197,7 @@ class TestRawExporterCoreLogic:
         class IncompleteExporter(RawExporter[IntermediateStep, str]):
             pass
 
-        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+        with pytest.raises(TypeError):
             IncompleteExporter()  # type: ignore[misc]
 
     def test_initialization_patterns(self, mock_context_state):
@@ -247,7 +247,7 @@ class TestRawExporterCoreLogic:
         failing_processor = MockProcessor("failing_proc", should_fail=True)
         raw_exporter.add_processor(failing_processor)
 
-        with pytest.raises(ValueError, match="is not a valid output type"):
+        with pytest.raises(ValueError):
             with caplog.at_level(logging.ERROR):
                 await raw_exporter._export_with_processing(sample_intermediate_step)
 

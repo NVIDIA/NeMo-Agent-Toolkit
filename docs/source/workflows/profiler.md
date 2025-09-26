@@ -34,9 +34,14 @@ Will allow for features such as offline-replay or simulation of workflow runs wi
 
 The NeMo Agent toolkit profiler requires additional dependencies not installed by default.
 
-Install these dependencies by running the following command:
+Install these dependencies by running the following command from the root directory of the NeMo Agent toolkit repository:
 ```bash
-uv pip install -e .[profiling]
+uv pip install -e ".[profiling]"
+```
+
+If you are installing from a package, you need to install the `nvidia-nat[profiling]` package by running the following command:
+```bash
+uv pip install nvidia-nat[profiling]
 ```
 
 ## Current Profiler Architecture
@@ -44,8 +49,8 @@ The NeMo Agent toolkit Profiler can be broken into the following components:
 
 ### Profiler Decorators and Callbacks
 - `src/nat/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
-- `src/nat/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent toolkit usage stats queue. We currently support callback handlers for LangChain,
-LLama Index, CrewAI, and Semantic Kernel.
+- `src/nat/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent toolkit usage stats queue. We currently support callback handlers for LangChain/LangGraph,
+LlamaIndex, CrewAI, Google ADK, and Semantic Kernel.
 
 ### Profiler Runner
 

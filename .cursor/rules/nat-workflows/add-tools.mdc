@@ -70,7 +70,7 @@ workflow:
 
 ### Installing Web Search Dependencies
 ```bash
-# Install LangChain integration for web search tools
+# Install LangChain/LangGraph integration for web search tools
 uv pip install -e '.[langchain]'
 ```
 

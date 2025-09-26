@@ -73,6 +73,8 @@ functions:
 
 ### Configurable Options:
 
+* `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReWOO agent is configured as a workflow and need to expose a customized name as a tool.
+
 * `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
@@ -87,13 +89,19 @@ functions:
 
 * `solver_prompt`: Optional. Allows us to override the solver prompt for the ReWOO agent. The prompt must have variables for plan and task.
 
+* `tool_call_max_retries`: Defaults to 3. The number of retries before raising a tool call error.
+
 * `max_history`:  Defaults to 15. Maximum number of messages to keep in the conversation history.
+
+* `log_response_max_chars`: Defaults to 1000. Maximum number of characters to display in logs when logging tool responses.
 
 * `use_openai_api`: Defaults to False. If set to True, the ReWOO agent will output in OpenAI API spec. If set to False, strings will be used.
 
 * `additional_planner_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base planner prompt.
 
 * `additional_solver_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base solver prompt.
+
+* `raise_tool_call_error`: Defaults to True. Whether to raise a exception immediately if a tool call fails. If set to False, the tool call error message will be included in the tool response and passed to the next tool.
 
 
 ## **Step-by-Step Breakdown of a ReWOO Agent**

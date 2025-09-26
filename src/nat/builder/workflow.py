@@ -20,6 +20,7 @@ from typing import Any
 from nat.builder.context import ContextState
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.builder.function_base import FunctionBase
 from nat.builder.function_base import InputT
 from nat.builder.function_base import SingleOutputT
@@ -44,6 +45,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                  config: Config,
                  entry_fn: Function[InputT, StreamingOutputT, SingleOutputT],
                  functions: dict[str, Function] | None = None,
+                 function_groups: dict[str, FunctionGroup] | None = None,
                  llms: dict[str, LLMProviderInfo] | None = None,
                  embeddings: dict[str, EmbedderProviderInfo] | None = None,
                  memory: dict[str, MemoryEditor] | None = None,
@@ -59,6 +61,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
 
         self.config = config
         self.functions = functions or {}
+        self.function_groups = function_groups or {}
         self.llms = llms or {}
         self.embeddings = embeddings or {}
         self.memory = memory or {}
@@ -126,6 +129,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                       config: Config,
                       entry_fn: Function[InputT, StreamingOutputT, SingleOutputT],
                       functions: dict[str, Function] | None = None,
+                      function_groups: dict[str, FunctionGroup] | None = None,
                       llms: dict[str, LLMProviderInfo] | None = None,
                       embeddings: dict[str, EmbedderProviderInfo] | None = None,
                       memory: dict[str, MemoryEditor] | None = None,
@@ -145,6 +149,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         return WorkflowImpl(config=config,
                             entry_fn=entry_fn,
                             functions=functions,
+                            function_groups=function_groups,
                             llms=llms,
                             embeddings=embeddings,
                             memory=memory,

@@ -449,10 +449,14 @@ class EvaluationRun:
         from nat.runtime.loader import load_config
 
         # Load and override the config
-        if self.config.override:
+        config = None
+        if isinstance(self.config.config_file, BaseModel):
+            config = self.config.config_file
+        elif self.config.override:
             config = self.apply_overrides()
         else:
             config = load_config(self.config.config_file)
+
         self.eval_config = config.eval
         workflow_alias = self._get_workflow_alias(config.workflow.type)
         logger.debug("Loaded %s evaluation configuration: %s", workflow_alias, self.eval_config)
@@ -516,7 +520,8 @@ class EvaluationRun:
                     await self.run_workflow_remote()
                 elif not self.config.skip_workflow:
                     if session_manager is None:
-                        session_manager = SessionManager(eval_workflow.build(),
+                        workflow = await eval_workflow.build()
+                        session_manager = SessionManager(workflow,
                                                          max_concurrency=self.eval_config.general.max_concurrency)
                     await self.run_workflow_local(session_manager)
 

@@ -78,10 +78,13 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
                 if all(isinstance(m, BaseMessage) for m in messages):
                     new_messages = [system_message, *list(messages)]
                     return FunctionArgumentWrapper(new_messages, *args, **kwargs)
-                raise ValueError(
-                    "Unsupported sequence element types for LanguageModelInput; expected Sequence[BaseMessage].")
-            else:
-                return FunctionArgumentWrapper(messages, *args, **kwargs)
+            raise ValueError(f"Unsupported message type: {type(messages)}")
+
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
         client = patch_with_thinking(
@@ -96,12 +99,6 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
                 ],
             ))
 
-    if isinstance(llm_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
     return client
 
 
@@ -110,7 +107,11 @@ async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, _builder: Bui
 
     from langchain_aws import ChatBedrockConverse
 
-    client = ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))
+    client = ChatBedrockConverse(**llm_config.model_dump(
+        exclude={"type", "context_size", "thinking"},
+        by_alias=True,
+        exclude_none=True,
+    ))
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -120,7 +121,7 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     from langchain_openai import AzureChatOpenAI
 
-    client = AzureChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+    client = AzureChatOpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -132,7 +133,7 @@ async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
 
     # prefer max_completion_tokens over max_tokens
     client = ChatNVIDIA(
-        **llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True),
+        **llm_config.model_dump(exclude={"type", "max_tokens", "thinking"}, by_alias=True, exclude_none=True),
         max_completion_tokens=llm_config.max_tokens,
     )
 
@@ -145,6 +146,11 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
     from langchain_openai import ChatOpenAI
 
     # If stream_usage is specified, it will override the default value of True.
-    client = ChatOpenAI(stream_usage=True, **llm_config.model_dump(exclude={"type"}, by_alias=True))
+    client = ChatOpenAI(stream_usage=True,
+                        **llm_config.model_dump(
+                            exclude={"type", "thinking"},
+                            by_alias=True,
+                            exclude_none=True,
+                        ))
 
     yield _patch_llm_based_on_config(client, llm_config)

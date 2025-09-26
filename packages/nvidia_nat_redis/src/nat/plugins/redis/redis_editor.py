@@ -171,17 +171,12 @@ class RedisEditor(MemoryEditor):
             for i, doc in enumerate(results.docs):
                 try:
                     logger.debug("Processing result %d/%d", i + 1, len(results.docs))
-                    # Get the document data from the correct attribute
-                    memory_data = {
-                        "conversation": getattr(doc, 'conversation', []),
-                        "user_id": getattr(doc, 'user_id', user_id),
-                        "tags": getattr(doc, 'tags', []),
-                        "metadata": getattr(doc, 'metadata', {}),
-                        "memory": getattr(doc, 'memory', "")
-                    }
                     logger.debug("Similarity score: %d", getattr(doc, 'score', 0))
-                    logger.debug("Extracted data for result %d: %s", i + 1, memory_data)
-                    memory_item = self._create_memory_item(memory_data, user_id)
+
+                    # Get the full document data
+                    full_doc = await self._client.json().get(doc.id)
+                    logger.debug("Extracted data for result %d: %s", i + 1, full_doc)
+                    memory_item = self._create_memory_item(dict(full_doc), user_id)
                     memories.append(memory_item)
                     logger.debug("Successfully created MemoryItem for result %d", i + 1)
                 except Exception as e:

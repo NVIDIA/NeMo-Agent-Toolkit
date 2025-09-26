@@ -17,6 +17,7 @@ import asyncio
 import inspect
 import logging
 import typing
+from collections.abc import Sequence
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -24,11 +25,13 @@ from unittest.mock import MagicMock
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
 from nat.cli.type_registry import GlobalTypeRegistry
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
@@ -37,6 +40,7 @@ from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.memory.interfaces import MemoryEditor
 from nat.object_store.interfaces import ObjectStore
 from nat.runtime.loader import PluginTypes
 from nat.runtime.loader import discover_and_register_plugins
@@ -55,6 +59,10 @@ class MockBuilder(Builder):
 
     def mock_function(self, name: str, mock_response: typing.Any):
         """Add a mock function that returns a fixed response."""
+        self._mocks[name] = mock_response
+
+    def mock_function_group(self, name: str, mock_response: typing.Any):
+        """Add a mock function group that returns a fixed response."""
         self._mocks[name] = mock_response
 
     def mock_llm(self, name: str, mock_response: typing.Any):
@@ -125,7 +133,7 @@ class MockBuilder(Builder):
         """Mock implementation - not used in tool testing."""
         raise NotImplementedError("Mock implementation does not support add_function")
 
-    def get_function(self, name: str) -> Function:
+    async def get_function(self, name: str) -> Function:
         """Return a mock function if one is configured."""
         if name in self._mocks:
             mock_fn = AsyncMock()
@@ -136,6 +144,22 @@ class MockBuilder(Builder):
     def get_function_config(self, name: str) -> FunctionBaseConfig:
         """Mock implementation."""
         return FunctionBaseConfig()
+
+    async def add_function_group(self, name: str, config: FunctionGroupBaseConfig) -> FunctionGroup:
+        """Mock implementation - not used in tool testing."""
+        raise NotImplementedError("Mock implementation does not support add_function_group")
+
+    async def get_function_group(self, name: str) -> FunctionGroup:
+        """Return a mock function group if one is configured."""
+        if name in self._mocks:
+            mock_fn_group = MagicMock(spec=FunctionGroup)
+            mock_fn_group.ainvoke = AsyncMock(return_value=self._mocks[name])
+            return mock_fn_group
+        raise ValueError(f"Function group '{name}' not mocked. Use mock_function_group() to add it.")
+
+    def get_function_group_config(self, name: str) -> FunctionGroupBaseConfig:
+        """Mock implementation."""
+        return FunctionGroupBaseConfig()
 
     async def set_workflow(self, config: FunctionBaseConfig) -> Function:
         """Mock implementation."""
@@ -153,7 +177,11 @@ class MockBuilder(Builder):
         """Mock implementation."""
         return FunctionBaseConfig()
 
-    def get_tool(self, fn_name: str, wrapper_type):
+    async def get_tools(self, tool_names: Sequence[str], wrapper_type) -> list[typing.Any]:
+        """Mock implementation."""
+        return []
+
+    async def get_tool(self, fn_name: str, wrapper_type) -> typing.Any:
         """Mock implementation."""
         pass
 
@@ -193,11 +221,10 @@ class MockBuilder(Builder):
         """Mock implementation."""
         return EmbedderBaseConfig()
 
-    async def add_memory_client(self, name: str, config) -> None:
-        """Mock implementation."""
-        pass
+    async def add_memory_client(self, name: str, config) -> MemoryEditor:
+        return MagicMock(spec=MemoryEditor)
 
-    def get_memory_client(self, memory_name: str):
+    async def get_memory_client(self, memory_name: str) -> MemoryEditor:
         """Return a mock memory client if one is configured."""
         key = f"memory_{memory_name}"
         if key in self._mocks:
@@ -228,9 +255,9 @@ class MockBuilder(Builder):
         """Mock implementation."""
         return RetrieverBaseConfig()
 
-    async def add_object_store(self, name: str, config: ObjectStoreBaseConfig) -> None:
+    async def add_object_store(self, name: str, config: ObjectStoreBaseConfig) -> ObjectStore:
         """Mock implementation for object store."""
-        pass
+        return MagicMock(spec=ObjectStore)
 
     async def get_object_store_client(self, object_store_name: str) -> ObjectStore:
         """Return a mock object store client if one is configured."""
@@ -255,6 +282,10 @@ class MockBuilder(Builder):
         return mock_user
 
     def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
+        """Mock implementation."""
+        return FunctionDependencies()
+
+    def get_function_group_dependencies(self, fn_name: str) -> FunctionDependencies:
         """Mock implementation."""
         return FunctionDependencies()
 

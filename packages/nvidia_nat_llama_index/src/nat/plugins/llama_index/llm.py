@@ -46,6 +46,12 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
             new_messages = [ChatMessage(role="system", content=self.system_prompt)] + list(messages)
             return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
         client = patch_with_thinking(
             client,
@@ -59,12 +65,6 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
                 ],
             ))
 
-    if isinstance(llm_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
     return client
 
 
@@ -74,7 +74,7 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
     from llama_index.llms.bedrock import Bedrock
 
     # LlamaIndex uses context_size instead of max_tokens
-    llm = Bedrock(**llm_config.model_dump(exclude={"type", "top_p"}, by_alias=True), )
+    llm = Bedrock(**llm_config.model_dump(exclude={"type", "top_p", "thinking"}, by_alias=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -84,7 +84,7 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
 
     from llama_index.llms.azure_openai import AzureOpenAI
 
-    llm = AzureOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+    llm = AzureOpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -94,7 +94,7 @@ async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
 
     from llama_index.llms.nvidia import NVIDIA
 
-    llm = NVIDIA(**llm_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
+    llm = NVIDIA(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -104,6 +104,6 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from llama_index.llms.openai import OpenAI
 
-    llm = OpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
+    llm = OpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)

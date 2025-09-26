@@ -14,9 +14,6 @@
 # limitations under the License.
 
 
-general:
-  use_uvloop: true
-
 llms:
   nim_llm:
     _type: nim
@@ -43,6 +40,7 @@ workflow:
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 2
+  use_openai_api: true
 
 eval:
   general:

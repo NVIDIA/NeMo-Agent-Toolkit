@@ -59,6 +59,7 @@ class ReActGraphState(BaseModel):
     messages: list[BaseMessage] = Field(default_factory=list)  # input and output of the ReAct Agent
     agent_scratchpad: list[AgentAction] = Field(default_factory=list)  # agent thoughts / intermediate steps
     tool_responses: list[BaseMessage] = Field(default_factory=list)  # the responses from any tool calls
+    final_answer: str | None = Field(default=None)  # the final answer from the ReAct Agent
 
 
 class ReActAgentGraph(DualNodeAgent):
@@ -204,6 +205,7 @@ class ReActAgentGraph(DualNodeAgent):
                         # this is where we handle the final output of the Agent, we can clean-up/format/postprocess here
                         # the final answer goes in the "messages" state channel
                         state.messages += [AIMessage(content=final_answer)]
+                        state.final_answer = final_answer
                     else:
                         # the agent wants to call a tool, ensure the thoughts are preserved for the next agentic cycle
                         agent_output.log = output_message.content
@@ -242,10 +244,9 @@ class ReActAgentGraph(DualNodeAgent):
     async def conditional_edge(self, state: ReActGraphState):
         try:
             logger.debug("%s Starting the ReAct Conditional Edge", AGENT_LOG_PREFIX)
-            if len(state.messages) > 1:
-                # the ReAct Agent has finished executing, the last agent output was AgentFinish
-                last_message_content = str(state.messages[-1].content)
-                logger.debug("%s Final answer:\n%s", AGENT_LOG_PREFIX, last_message_content)
+            if state.final_answer:
+                # the ReAct Agent has finished executing
+                logger.debug("%s Final answer:\n%s", AGENT_LOG_PREFIX, state.final_answer)
                 return AgentDecision.END
             # else the agent wants to call a tool
             agent_output = state.agent_scratchpad[-1]
@@ -360,7 +361,7 @@ class ReActAgentGraph(DualNodeAgent):
         if errors:
             error_text = "\n".join(errors)
             logger.error("%s %s", AGENT_LOG_PREFIX, error_text)
-            raise ValueError(error_text)
+            return False
         return True
 
 

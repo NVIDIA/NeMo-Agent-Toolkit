@@ -353,7 +353,7 @@ class DecomposedType:
             True if the current type is an instance of the specified instance, False otherwise
         """
 
-        return isinstance(instance, self.root)
+        return isinstance(instance, self.get_base_type().root)
 
     def get_pydantic_schema(self,
                             converters: list[collections.abc.Callable] | None = None) -> type[BaseModel] | type[None]:
@@ -468,6 +468,10 @@ class DecomposedType:
         except TypeError:
             # Handle generic types that can't use issubclass
             pass
+
+        # Check direct equality (works for both regular and generic types)
+        if source_type == target_type:
+            return True
 
         # Check if source outputs list[T] and target expects T
         source_decomposed = DecomposedType(source_type)

@@ -19,6 +19,14 @@ limitations under the License.
 
 Each NVIDIA NeMo Agent toolkit example demonstrates a particular feature or use case of the NeMo Agent toolkit library. Most of these contain a custom [workflow](../docs/source/tutorials/index.md) along with a set of custom tools ([functions](../docs/source/workflows/functions/index.md) in NeMo Agent toolkit). These examples can be used as a starting off point for creating your own custom workflows and tools. Each example contains a `README.md` file that explains the use case along with instructions on how to run the example.
 
+## Examples Repository
+In addition the examples in this repository, there are examples in the [NeMo-Agent-Toolkit-Examples](https://github.com/NVIDIA/NeMo-Agent-Toolkit-Examples) repository.
+
+The difference between the examples in this repository and the NeMo-Agent-Toolkit-Examples repository is that the examples in this repository are maintained, tested, and updated with each release of the NeMo Agent toolkit. These examples have high quality standards and demonstrate a capability of the NeMo Agent toolkit.
+
+The examples in the NeMo-Agent-Toolkit-Examples repository are community contributed and are tied to a specific version of the NeMo Agent toolkit, and do not need to demonstrate a specific capability of the library.
+
+
 ## Table of Contents
 
 - [Installation and Setup](#installation-and-setup)
@@ -26,6 +34,7 @@ Each NVIDIA NeMo Agent toolkit example demonstrates a particular feature or use 
   - [Getting Started](#getting-started)
   - [Agents](#agents)
   - [Advanced Agents](#advanced-agents)
+  - [Control Flow](#control-flow)
   - [Custom Functions](#custom-functions)
   - [Evaluation and Profiling](#evaluation-and-profiling)
   - [Frameworks](#frameworks)
@@ -64,6 +73,9 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`alert_triage_agent`](advanced_agents/alert_triage_agent/README.md)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization
 - **[`profiler_agent`](advanced_agents/profiler_agent/README.md)**: Performance profiling agent for analyzing NeMo Agent toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
 
+### Control Flow
+- **[`sequential_executor`](control_flow/sequential_executor/README.md)**: Linear tool execution pipeline that chains multiple functions together where each function's output becomes the input for the next function, with optional type compatibility checking and error handling
+
 ### Custom Functions
 - **[`automated_description_generation`](custom_functions/automated_description_generation/README.md)**: Intelligent system that automatically generates descriptions for vector database collections by sampling and summarizing documents
 - **[`plot_charts`](custom_functions/plot_charts/README.md)**: Multi-agent chart plotting system that routes requests to create different chart types (line, bar, etc.) from data
@@ -76,7 +88,7 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 
 ### Frameworks
 - **[`agno_personal_finance`](frameworks/agno_personal_finance/README.md)**: Personal finance planning agent built with Agno framework that researches and creates tailored financial plans
-- **[`multi_frameworks`](frameworks/multi_frameworks/README.md)**: Supervisor agent coordinating LangChain, LlamaIndex, and Haystack agents for research, RAG, and chitchat tasks
+- **[`multi_frameworks`](frameworks/multi_frameworks/README.md)**: Supervisor agent coordinating LangChain/LangGraph, LlamaIndex, and Haystack agents for research, RAG, and chitchat tasks
 - **[`semantic_kernel_demo`](frameworks/semantic_kernel_demo/README.md)**: Multi-agent travel planning system using Microsoft Semantic Kernel with specialized agents for itinerary creation, budget management, and report formatting, including long-term memory for user preferences
 
 ### Front Ends
@@ -94,7 +106,7 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`simple_calculator_mcp`](MCP/simple_calculator_mcp/README.md)**: Demonstrates Model Context Protocol support using the basic simple calculator example
 
 ### Notebooks
-- **[`first_search_agent`](notebooks/first_search_agent/)**: Demonstrates how to bring an existing agent from a framework like LangChain into this toolkit
+- **[`first_search_agent`](notebooks/first_search_agent/)**: Demonstrates how to bring an existing agent from a framework like LangChain/LangGraph into this toolkit
 - **[`retail_sales_agent`](notebooks/retail_sales_agent/)**: A simple retail agent that showcases how to incrementally add tools and agents to build a multi-agent system
 
 ### Object Store

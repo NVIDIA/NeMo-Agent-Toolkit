@@ -36,7 +36,7 @@ NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on 
 
 ## Key Features
 
-- [**Framework Agnostic:**](./quick-start/installing.md#framework-integrations) NeMo Agent toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), and [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
+- [**Framework Agnostic:**](./quick-start/installing.md#framework-integrations) NeMo Agent toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), [Google ADK](https://github.com/google/adk-python), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
 
 - [**Reusability:**](./extend/sharing-components.md) Every agent, tool, and agentic workflow in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
 
@@ -85,6 +85,7 @@ Workflow Configuration <./workflows/workflow-configuration.md>
 ./workflows/embedders.md
 ./workflows/retrievers.md
 Functions <./workflows/functions/index.md>
+./workflows/function-groups.md
 ./workflows/mcp/index.md
 Evaluate Workflows <./workflows/evaluate.md>
 Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
@@ -107,6 +108,7 @@ Object Store <./store-and-retrieve/object-store.md>
 :caption: Extend
 
 Writing Custom Functions <./extend/functions.md>
+Writing Custom Function Groups <./extend/function-groups.md>
 Extending the NeMo Agent Toolkit Using Plugins <./extend/plugins.md>
 Sharing Components <./extend/sharing-components.md>
 Adding a Custom Evaluator <./extend/custom-evaluator.md>
@@ -134,6 +136,7 @@ Command Line Interface (CLI) <./reference/cli.md>
 Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
+Optimizer <./reference/optimizer.md>
 Test Time Compute <./reference/test-time-compute.md>
 Troubleshooting <./troubleshooting.md>
 ```

@@ -17,13 +17,14 @@ from typing import Literal
 
 from pydantic import Field
 
+from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 from nat.data_models.front_end import FrontEndBaseConfig
 
 
 class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     """MCP front end configuration.
 
-    A simple MCP (Modular Communication Protocol) front end for NeMo Agent toolkit.
+    A simple MCP (Model Context Protocol) front end for NeMo Agent toolkit.
     """
 
     name: str = Field(default="NeMo Agent Toolkit MCP",
@@ -39,3 +40,6 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
         description="Transport type for the MCP server (default: streamable-http, backwards compatible with sse)")
     runner_class: str | None = Field(
         default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")
+
+    server_auth: OAuth2ResourceServerConfig | None = Field(
+        default=None, description=("OAuth 2.0 Resource Server configuration for token verification."))

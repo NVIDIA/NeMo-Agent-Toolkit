@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from contextlib import asynccontextmanager
 
 import pytest
@@ -32,7 +33,10 @@ async def fixture_mysql_server(fail_missing: bool):
     """Fixture to safely skip MySQL based tests if MySQL is not running"""
     try:
         import aiomysql
-        conn = await aiomysql.connect(host='127.0.0.1', port=3306, user='root', password='my-secret-pw')
+        conn = await aiomysql.connect(host=os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1'),
+                                      port=3306,
+                                      user='root',
+                                      password=os.environ.get('MYSQL_ROOT_PASSWORD', 'my-secret-pw'))
         yield
         conn.close()
     except ImportError:
@@ -54,6 +58,9 @@ class TestMySQLObjectStore(ObjectStoreTests):
         async with WorkflowBuilder() as builder:
             await builder.add_object_store(
                 "object_store_name",
-                MySQLObjectStoreClientConfig(bucket_name="test", username="root", password="my-secret-pw"))
+                MySQLObjectStoreClientConfig(host=os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1'),
+                                             bucket_name="test",
+                                             username="root",
+                                             password=os.environ.get('MYSQL_ROOT_PASSWORD', 'my-secret-pw')))
 
             yield await builder.get_object_store_client("object_store_name")

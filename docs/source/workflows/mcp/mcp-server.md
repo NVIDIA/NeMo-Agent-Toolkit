@@ -19,29 +19,29 @@ limitations under the License.
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-This guide will cover how to use NeMo Agent toolkit as an MCP Server to publish tools using MCP. For more information on how to use NeMo Agent toolkit as an MCP Client, refer to the [MCP Client](./mcp-client.md) documentation.
+This guide will cover how to use NeMo Agent toolkit as an MCP Server to publish tools using MCP. For more information on how to use NeMo Agent toolkit as an MCP Host with one or more MCP Clients, refer to the [MCP Client](./mcp-client.md) documentation.
 
 ## MCP Server Usage
 
-The `nat mcp` command can be used to start an MCP server that publishes the functions from your workflow as MCP tools.
+The `nat mcp serve` command can be used to start an MCP server that publishes the functions from your workflow as MCP tools.
 
 To start an MCP server publishing all tools from your workflow, run the following command:
 
 ```bash
-nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 
 This will load the workflow configuration from the specified file, start an MCP server on the default host (localhost) and port (9901), and publish all tools from the workflow as MCP tools. The MCP server is available at `http://localhost:9901/mcp` using streamable-http transport.
 
 You can also use the `sse` (Server-Sent Events) transport for backwards compatibility via the `--transport` flag for example:
 ```bash
-nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml --transport sse
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --transport sse
 ```
 With this configuration, the MCP server is available at `http://localhost:9901/sse` using SSE transport.
 
 You can optionally specify the server settings using the following flags:
 ```bash
-nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml \
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml \
   --host 0.0.0.0 \
   --port 9901 \
   --name "My MCP Server"
@@ -51,7 +51,7 @@ nat mcp --config_file examples/getting_started/simple_calculator/configs/config.
 You can specify a filter to only publish a subset of tools from the workflow.
 
 ```bash
-nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml \
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml \
   --tool_names calculator_multiply \
   --tool_names calculator_divide \
   --tool_names calculator_subtract \
@@ -60,10 +60,12 @@ nat mcp --config_file examples/getting_started/simple_calculator/configs/config.
 
 ## Displaying MCP Tools published by an MCP server
 
-To list the tools published by the MCP server you can use the `nat info mcp` command. This command acts as a MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
+To list the tools published by the MCP server you can use the `nat mcp client tool list` command. This command acts as an MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
+
+**Note:** The `nat mcp client` commands require the `nvidia-nat-mcp` package. If you encounter an error about missing MCP client functionality, install it with `uv pip install nvidia-nat[mcp]`.
 
 ```bash
-nat info mcp
+nat mcp client tool list
 ```
 
 Sample output:
@@ -74,10 +76,48 @@ calculator_divide
 calculator_subtract
 ```
 
+### Debug route for listing tools (no MCP client required)
+You can also inspect the tools exposed by the MCP server without an MCP client by using the debug route:
+
+```bash
+curl -s http://localhost:9901/debug/tools/list | jq
+```
+
+This returns a JSON list of tools with names and descriptions.
+
+You can request one or more specific tools by name. The `name` parameter accepts repeated values or a comma‑separated list. When `name` is provided, detailed schemas are returned by default:
+
+```bash
+# Single tool (detailed by default)
+curl -s "http://localhost:9901/debug/tools/list?name=calculator_multiply" | jq
+
+# Multiple tools (detailed by default)
+curl -s "http://localhost:9901/debug/tools/list?name=calculator_multiply&name=calculator_divide" | jq
+
+# Comma-separated list (equivalent)
+curl -s "http://localhost:9901/debug/tools/list?name=calculator_multiply,calculator_divide" | jq
+```
+
+The response includes the tool's name, description, and its input schema by default. For tools that accept a chat‑style input, the schema is simplified as a single `query` string parameter to match the exposed MCP interface.
+
+You can control the amount of detail using the `detail` query parameter:
+
+- When requesting specific tool(s) with `name`, detailed schema is returned by default. Pass `detail=false` to suppress schemas:
+
+```bash
+curl -s "http://localhost:9901/debug/tools/list?name=calculator_multiply&detail=false" | jq
+```
+
+- When listing all tools (without `name`), the default output is simplified. Pass `detail=true` to include schemas for each tool:
+
+```bash
+curl -s "http://localhost:9901/debug/tools/list?detail=true" | jq
+```
+
 To get more information about a specific tool, use the `--detail` flag or the `--tool` flag followed by the tool name.
 
 ```bash
-nat info mcp --tool calculator_multiply
+nat mcp client tool list --tool calculator_multiply
 ```
 
 Sample output:
@@ -153,7 +193,7 @@ In this example, the `calculator_multiply`, `calculator_inequality`, `calculator
 
 
 ## Verifying MCP Server Health
-You can verify the health of the MCP using the `/health` route or the `nat info mcp ping` command.
+You can verify the health of the MCP using the `/health` route or the `nat mcp client ping` command.
 
 ### Using the `/health` route
 The MCP server exposes a `/health` route that can be used to verify the health of the MCP server.
@@ -171,10 +211,10 @@ Sample output:
 }
 ```
 
-### Using the `nat info mcp ping` command
-You can also test if an MCP server is responsive and healthy using the `nat info mcp ping` command:
+### Using the `nat mcp client ping` command
+You can also test if an MCP server is responsive and healthy using the `nat mcp client ping` command:
 ```bash
-nat info mcp ping --url http://localhost:9901/mcp
+nat mcp client ping --url http://localhost:9901/mcp
 ```
 
 Sample output:

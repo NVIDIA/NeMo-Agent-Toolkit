@@ -35,7 +35,7 @@ functions:
     chunk_size: 512
 ```
 
-However, the workflow is unaware of some related technologies, such as LangChain, if you run:
+However, the workflow is unaware of some related technologies, such as LangChain/LangGraph, if you run:
 ```bash
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "How do I trace only specific parts of my LangChain application?"
 ```

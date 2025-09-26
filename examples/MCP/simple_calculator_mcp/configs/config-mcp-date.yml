@@ -18,8 +18,6 @@
 # on the specified URL. streamable-http is the recommended transport for HTTP-based
 # connections, but sse is also supported for backwards compatibility.
 
-general:
-  use_uvloop: true
 
 functions:
   calculator_multiply:
@@ -30,6 +28,7 @@ functions:
     _type: nat_simple_calculator/calculator_divide
   mcp_time_tool:
     _type: mcp_tool_wrapper
+    transport: sse
     url: "http://localhost:8080/sse"
     mcp_tool_name: get_current_time
     description: "Returns the current date and time from the MCP server"

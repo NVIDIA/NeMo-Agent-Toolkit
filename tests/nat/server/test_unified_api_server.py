@@ -15,7 +15,10 @@
 
 import datetime
 import json
+import os
 import re
+from collections.abc import Mapping
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -61,6 +64,7 @@ from nat.data_models.interactive import MultipleChoiceOption
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from nat.front_ends.fastapi.message_validator import MessageValidator
 from nat.runtime.loader import load_config
+from nat.runtime.session import SessionManager
 
 
 class AppConfig(BaseModel):
@@ -284,11 +288,13 @@ system_interaction_multiple_choice_dropdown_message = {
 }
 
 
-@pytest.fixture(scope="session", name="config")
-def server_config(file_path: str = "tests/nat/server/config.yml") -> BaseModel:
+@pytest.fixture(name="config")
+def server_config(restore_environ, file_path: str = "tests/nat/server/config.yml") -> BaseModel:
     data = None
     with open(file_path, "r", encoding="utf-8") as file:
         data = yaml.safe_load(file)
+
+    os.environ["NAT_CONFIG_FILE"] = file_path
     return Config(**data)
 
 
@@ -305,7 +311,7 @@ async def client_fixture(config):
             yield client
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_generate_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests generate endpoint to verify it responds successfully."""
@@ -314,7 +320,7 @@ async def test_generate_endpoint(client: httpx.AsyncClient, config: Config):
     assert response.status_code == 200
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_generate_stream_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests generate stream endpoint to verify it responds successfully."""
@@ -323,7 +329,7 @@ async def test_generate_stream_endpoint(client: httpx.AsyncClient, config: Confi
     assert response.status_code == 200
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests chat endpoint to verify it responds successfully."""
@@ -334,7 +340,7 @@ async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
     assert isinstance(validated_response, ChatResponse)
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests chat stream endpoint to verify it responds successfully."""
@@ -349,23 +355,45 @@ async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
     assert isinstance(validated_response, ChatResponseChunk)
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_user_attributes_from_http_request(client: httpx.AsyncClient, config: Config):
     """Tests setting user attributes from HTTP request."""
     input_message = {"input_message": f"{config.app.input}"}
     headers = {"Header-Test": "application/json"}
     query_params = {"param1": "value1"}
-    response = await client.post(
-        f"{config.endpoint.generate}",
-        json=input_message,
-        headers=headers,
-        params=query_params,
-    )
-    nat_context = Context.get()
-    assert nat_context.metadata.headers['header-test'] == headers["Header-Test"]
-    assert nat_context.metadata.query_params['param1'] == query_params["param1"]
+
+    # Capture the metadata that gets set during the request
+    actual_headers: list[Mapping[str, str] | None] = [None]
+    actual_query_params: list[Mapping[str, str] | None] = [None]
+
+    # Store reference to original method before patching
+    original_method = SessionManager.set_metadata_from_http_request
+
+    def mock_set_metadata_from_http_request(self, request):
+        """Mock the metadata setting to capture what would be set."""
+        original_method(self, request)
+        actual_headers[0] = Context.get().metadata.headers
+        actual_query_params[0] = Context.get().metadata.query_params
+
+    # Patch the method to capture metadata
+    with patch("nat.runtime.session.SessionManager.set_metadata_from_http_request",
+               mock_set_metadata_from_http_request):
+        response = await client.post(
+            f"{config.endpoint.generate}",
+            json=input_message,
+            headers=headers,
+            params=query_params,
+        )
+
     assert response.status_code == 200
+
+    # Verify the metadata was captured correctly
+    assert actual_headers[0] is not None
+    assert actual_query_params[0] is not None
+
+    assert actual_headers[0]["header-test"] == headers["Header-Test"]
+    assert actual_query_params[0]["param1"] == query_params["param1"]
 
 
 async def test_valid_user_message():

@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 @register_adapter(trace_source_model=NIMTraceSource)
 def convert_langchain_nim(trace_source: TraceContainer) -> DFWESRecord:
-    """Convert a LangChain Nim trace source to a DFWESRecord.
+    """Convert a LangChain/LangGraph Nim trace source to a DFWESRecord.
 
     Args:
         trace_source (TraceContainer): The trace source to convert

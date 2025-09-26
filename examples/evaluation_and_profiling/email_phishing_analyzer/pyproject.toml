@@ -16,7 +16,7 @@ dependencies = [
   "networkx~=3.4",
   "openinference-instrumentation-langchain==0.1.29",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "Simple Phishing Email Analyzer NeMo Agent toolkit example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
