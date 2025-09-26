@@ -1,3 +1,18 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import asyncio
 import secrets
 import webbrowser
@@ -19,6 +34,8 @@ from nat.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEnd
 class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
     """
     Authentication helper for MCP environments.
+    A separate flow handler is needed because MCP tool discovery happens before the default auth_callback is available.
+    It is used to handle the OAuth2 authorization code flow only during startup.
     """
 
     def __init__(self):
@@ -28,9 +45,10 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
         self._server_lock = asyncio.Lock()
         self._oauth_client: AsyncOAuth2Client | None = None
 
-
     async def authenticate(self, config: AuthProviderBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
-        # TODO EE: Need to add context support for environment once server loads.
+        """
+        Handle the OAuth2 authorization code flow.
+        """
         if method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE:
             if (not isinstance(config, OAuth2AuthCodeFlowProviderConfig)):
                 raise ValueError("Requested OAuth2 Authorization Code Flow but passed invalid config")
@@ -38,7 +56,6 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
             return await self._handle_oauth2_auth_code_flow(config)
 
         raise NotImplementedError(f"Auth method “{method}” not supported.")
-
 
     async def _handle_oauth2_auth_code_flow(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
         state = secrets.token_urlsafe(16)
