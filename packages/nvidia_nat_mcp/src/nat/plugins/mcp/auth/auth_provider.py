@@ -15,6 +15,7 @@
 
 import logging
 from dataclasses import asdict
+from typing import Callable
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
@@ -22,8 +23,6 @@ import httpx
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
-from pydantic import SecretStr
-from typing import Callable
 
 from mcp.shared.auth import OAuthClientInformationFull
 from mcp.shared.auth import OAuthClientMetadata
@@ -171,7 +170,7 @@ class DiscoverOAuth2Endpoints:
                     if "application/json" not in content_type:
                         logger.info(
                             "Discovery endpoint %s returned non-JSON content type: %s. "
-                            "This may indicate the endpoint doesn't support OAuth discovery or requires authentication.",
+                            "This may indicate the endpoint doesn't support discovery or requires authentication.",
                             url,
                             content_type)
                         # If it's HTML, log a more helpful message
@@ -280,7 +279,6 @@ class DynamicClientRegistration:
         return OAuth2Credentials(client_id=info.client_id, client_secret=info.client_secret)
 
 
-from nat.plugins.mcp.auth.auth_flow_handler import MCPAuthenticationFlowHandler
 
 
 class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
@@ -373,10 +371,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         endpoints = self._cached_endpoints
         credentials = self._cached_credentials
 
-        # strip "/mcp" or "/mcp/" from the server url
-        resource = str(self.config.server_url).rstrip("/mcp").rstrip("/mcp/")
-
-        # Build the OAuth2 provider if not already built
+         # Build the OAuth2 provider if not already built
         if self._auth_code_provider is None:
             scopes = self._effective_scopes
             oauth2_config = OAuth2AuthCodeFlowProviderConfig(

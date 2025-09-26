@@ -70,7 +70,6 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
             # Has credentials but will discover URLs from MCP server
             pass
 
-
         # Invalid configuration
         else:
             raise ValueError("Must provide either: "

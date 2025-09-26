@@ -210,7 +210,7 @@ async def _create_mcp_client_config(
             server_cfg.auth_provider = auth_provider_name
         except ImportError:
             click.echo(
-                "[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat[mcp]",
+                "[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package.",
                 err=True,
             )
 
@@ -463,11 +463,8 @@ def mcp_client_command():
         from nat.runtime.loader import discover_and_register_plugins
         discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
     except ImportError:
-        click.echo(
-            "[WARNING] MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp",
-            err=True)
+        click.echo("[WARNING] MCP client functionality requires nvidia-nat-mcp package.", err=True)
         pass
-    return None
 
 
 @mcp_client_command.group(name="tool", invoke_without_command=False, help="Inspect and call MCP tools.")
@@ -524,8 +521,8 @@ def mcp_client_tool_list(ctx,
     If --tool is provided, always shows full output for that specific tool.
     Use --direct to bypass MCPBuilder and use raw MCP protocol.
     Use --json-output to get structured JSON data instead of formatted text.
-    Use --auth to enable OAuth2 authentication with default settings (streamable-http only, not with --direct).
-    Use --auth-redirect-uri to enable OAuth2 authentication for protected MCP servers (streamable-http only, not with --direct).
+    Use --auth to enable auth with default settings (streamable-http only, not with --direct).
+    Use --auth-redirect-uri to enable auth for protected MCP servers (streamable-http only, not with --direct).
 
     Args:
         ctx (click.Context): Click context object for command invocation
@@ -534,7 +531,7 @@ def mcp_client_tool_list(ctx,
         tool (str | None): Optional specific tool name to retrieve detailed info for
         detail (bool): Whether to show full details (description + schema) for all tools
         json_output (bool): Whether to output tool metadata in JSON format instead of text
-        auth_redirect_uri (str | None): OAuth2 redirect URI for authentication (required for auth, streamable-http only, not with --direct)
+        auth_redirect_uri (str | None): redirect URI for auth (streamable-http only, not with --direct)
         auth_user_id (str | None): User ID for authentication (streamable-http only, not with --direct)
         auth_scopes (str | None): OAuth2 scopes (comma-separated, streamable-http only, not with --direct)
 
@@ -645,8 +642,7 @@ def mcp_client_ping(url: str,
         nat mcp client ping --url http://custom-server:9901/mcp # Ping custom server
         nat mcp client ping --timeout 10                      # Use 10 second timeout
         nat mcp client ping --json-output                     # Get JSON format output
-        nat mcp client ping --url https://example.com/mcp/ --transport streamable-http --auth-redirect-uri http://localhost:8000/auth/redirect # With auth
-        nat mcp client ping --url https://example.com/mcp/ --transport streamable-http --auth-redirect-uri http://localhost:8000/auth/redirect --auth-user-id myuser # With auth and user ID
+        nat mcp client ping --url https://example.com/mcp/ --transport streamable-http --auth # With auth
     """
     # Validate combinations similar to list command
     if not validate_transport_cli_args(transport, command, args, env):
@@ -859,9 +855,7 @@ async def call_tool_and_print(command: str | None,
                                                             auth_user_id,
                                                             auth_scopes)
             except ImportError:
-                click.echo(
-                    "[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat[mcp]",
-                    err=True)
+                click.echo("[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package.", err=True)
 
         group = await builder.add_function_group("mcp_client", group_cfg)
         fns = await group.get_accessible_functions()
@@ -940,7 +934,7 @@ def mcp_client_tool_call(tool_name: str,
         nat mcp client tool call search --url https://example.com/mcp/ --auth \
             --json-args '{"query": "test"}' # With auth using defaults
         nat mcp client tool call search --url https://example.com/mcp/ \
-            --transport streamable-http --json-args '{"query": "test"}' --auth-redirect-uri http://localhost:8000/auth/redirect
+            --transport streamable-http --json-args '{"query": "test"}' --auth
         nat mcp client tool call search --url https://example.com/mcp/ \
             --transport streamable-http --json-args '{"query": "test"}' --auth-redirect-uri http://localhost:8000/auth/redirect --auth-user-id myuser
     """
