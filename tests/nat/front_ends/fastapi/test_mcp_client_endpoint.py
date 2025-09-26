@@ -51,7 +51,7 @@ class _GroupInstanceStub:
 
     def __init__(self, client: _ClientStub, functions_map: dict[str, _FnStub]):
         # Reuse the pre-established client session on the group, like runtime
-        self._mcp_client = client
+        self.mcp_client = client
         self._functions_map = functions_map
 
     async def get_accessible_functions(self) -> dict[str, _FnStub]:

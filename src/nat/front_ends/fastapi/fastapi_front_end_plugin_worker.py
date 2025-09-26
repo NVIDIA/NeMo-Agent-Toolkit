@@ -37,6 +37,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from starlette.websockets import WebSocket
 
+from nat.builder.function import Function
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -1117,97 +1118,101 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 # Find MCP client function groups
                 for group_name, configured_group in function_groups.items():
-                    if configured_group.config.type == "mcp_client":
-                        from nat.plugins.mcp.client_impl import MCPClientConfig
+                    if configured_group.config.type != "mcp_client":
+                        continue
 
-                        config = configured_group.config
-                        assert isinstance(config, MCPClientConfig)
+                    from nat.plugins.mcp.client_impl import MCPClientConfig
 
-                        # Reuse the existing MCP client session stored on the function group instance
-                        group_instance = configured_group.instance
-                        client = getattr(group_instance, "_mcp_client", None)
-                        if client is None:
-                            raise RuntimeError(f"MCP client not found for group {group_name}")
+                    config = configured_group.config
+                    assert isinstance(config, MCPClientConfig)
+
+                    # Reuse the existing MCP client session stored on the function group instance
+                    group_instance = configured_group.instance
+
+                    client = group_instance.mcp_client
+                    if client is None:
+                        raise RuntimeError(f"MCP client not found for group {group_name}")
+
+                    try:
+                        session_healthy = False
+                        server_tools: dict[str, Any] = {}
 
                         try:
-                            session_healthy = False
-                            server_tools: dict[str, Any] = {}
-
-                            try:
-                                server_tools = await client.get_tools()
-                                session_healthy = True
-                            except Exception as e:
-                                logger.warning(f"Failed to connect to MCP server {client.server_name}: {e}")
-                                session_healthy = False
-
-                            # Get workflow function group configuration (configured client-side tools)
-                            configured_short_names: set[str] = set()
-                            configured_full_to_fn: dict[str, Any] = {}
-                            try:
-                                accessible_functions = await group_instance.get_accessible_functions()
-                                configured_full_to_fn = accessible_functions
-                                configured_short_names = {
-                                    name.split('.', 1)[1] if '.' in name else name
-                                    for name in accessible_functions.keys()
-                                }
-                            except Exception as e:
-                                logger.warning(f"Failed to get accessible functions for group {group_name}: {e}")
-
-                            # Build alias->original mapping from overrides
-                            alias_to_original: dict[str, str] = {}
-                            try:
-                                overrides = getattr(config, "tool_overrides", None) or {}
-                                for orig_name, override in overrides.items():
-                                    alias = getattr(override, "alias", None)
-                                    if alias:
-                                        alias_to_original[alias] = orig_name
-                            except Exception:
-                                pass
-
-                            # Create tool info list (always return configured tools; mark availability)
-                            tools_info: list[dict[str, Any]] = []
-                            available_count = 0
-                            for fn_short in sorted(configured_short_names):
-                                orig_name = alias_to_original.get(fn_short, fn_short)
-                                available = session_healthy and (orig_name in server_tools)
-                                if available:
-                                    available_count += 1
-
-                                # Prefer the workflow function description (includes overrides)
-                                full_name = f"{group_name}.{fn_short}"
-                                wf_fn = configured_full_to_fn.get(full_name)
-                                description = getattr(
-                                    wf_fn, "description",
-                                    None) or (server_tools[orig_name].description if available else "")
-
-                                tools_info.append(
-                                    MCPToolInfo(name=fn_short,
-                                                description=description or "",
-                                                server=client.server_name,
-                                                available=available).dict())
-
-                            mcp_clients_info.append({
-                                "function_group": group_name,
-                                "server": client.server_name,
-                                "transport": config.server.transport,
-                                "session_healthy": session_healthy,
-                                "tools": tools_info,
-                                "total_tools": len(configured_short_names),
-                                "available_tools": available_count
-                            })
-
+                            server_tools = await client.get_tools()
+                            session_healthy = True
                         except Exception as e:
-                            logger.error(f"Error processing MCP client {group_name}: {e}")
-                            mcp_clients_info.append({
-                                "function_group": group_name,
-                                "server": "unknown",
-                                "transport": config.server.transport if config.server else "unknown",
-                                "session_healthy": False,
-                                "error": str(e),
-                                "tools": [],
-                                "total_tools": 0,
-                                "workflow_tools": 0
-                            })
+                            logger.exception(f"Failed to connect to MCP server {client.server_name}: {e}")
+                            session_healthy = False
+
+                        # Get workflow function group configuration (configured client-side tools)
+                        configured_short_names: set[str] = set()
+                        configured_full_to_fn: dict[str, Function] = {}
+                        try:
+                            # Pass a no-op filter function to bypass any default filtering that might check
+                            # health status, preventing potential infinite recursion during health status checks.
+                            async def pass_through_filter(fn):
+                                return fn
+
+                            accessible_functions = await group_instance.get_accessible_functions(
+                                filter_fn=pass_through_filter)
+                            configured_full_to_fn = accessible_functions
+                            configured_short_names = {name.split('.', 1)[1] for name in accessible_functions.keys()}
+                        except Exception as e:
+                            logger.exception(f"Failed to get accessible functions for group {group_name}: {e}")
+
+                        # Build alias->original mapping from overrides
+                        alias_to_original: dict[str, str] = {}
+                        try:
+                            if config.tool_overrides is not None:
+                                for orig_name, override in config.tool_overrides.items():
+                                    if override.alias is not None:
+                                        alias_to_original[override.alias] = orig_name
+                        except Exception:
+                            pass
+
+                        # Create tool info list (always return configured tools; mark availability)
+                        tools_info: list[dict[str, Any]] = []
+                        available_count = 0
+                        for wf_fn, fn_short in zip(configured_full_to_fn.values(), configured_short_names):
+                            orig_name = alias_to_original.get(fn_short, fn_short)
+                            available = session_healthy and (orig_name in server_tools)
+                            if available:
+                                available_count += 1
+
+                            description = (server_tools[orig_name].description
+                                           if available else None) or wf_fn.description or ""
+
+                            tools_info.append(
+                                MCPToolInfo(name=fn_short,
+                                            description=description or "",
+                                            server=client.server_name,
+                                            available=available).model_dump())
+
+                        # Sort tools_info by name to maintain consistent ordering
+                        tools_info.sort(key=lambda x: x['name'])
+
+                        mcp_clients_info.append({
+                            "function_group": group_name,
+                            "server": client.server_name,
+                            "transport": config.server.transport,
+                            "session_healthy": session_healthy,
+                            "tools": tools_info,
+                            "total_tools": len(configured_short_names),
+                            "available_tools": available_count
+                        })
+
+                    except Exception as e:
+                        logger.error(f"Error processing MCP client {group_name}: {e}")
+                        mcp_clients_info.append({
+                            "function_group": group_name,
+                            "server": "unknown",
+                            "transport": config.server.transport if config.server else "unknown",
+                            "session_healthy": False,
+                            "error": str(e),
+                            "tools": [],
+                            "total_tools": 0,
+                            "workflow_tools": 0
+                        })
 
                 return MCPClientToolListResponse(mcp_clients=mcp_clients_info)
 

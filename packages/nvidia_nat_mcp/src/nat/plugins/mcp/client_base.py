@@ -264,7 +264,7 @@ class MCPBaseClient(ABC):
             raise
 
     @mcp_exception_handler
-    async def get_tools(self):
+    async def get_tools(self) -> dict[str, "MCPToolClient"]:
         """
         Retrieve a dictionary of all tools served by the MCP server.
         Uses unauthenticated session for discovery.
