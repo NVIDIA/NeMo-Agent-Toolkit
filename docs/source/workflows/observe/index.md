@@ -103,14 +103,15 @@ The `tracing` section contains one or more tracing providers. Each provider has 
 
 Each exporter has its own detailed configuration guide with complete setup instructions and examples:
 
-- **[W&B Weave](https://wandb.ai/site/weave/)** - See [Observing with W&B Weave](./observe-workflow-with-weave.md)
-- **[Phoenix](https://phoenix.arize.com/)** - See [Observing with Phoenix](./observe-workflow-with-phoenix.md)
+- **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
+- **[Dynatrace](https://dyantrace.com/)** - See [Observing with Dynatrace](./observe-workflow-with-dynatrace.md)
 - **[Galileo](https://galileo.ai/)** - See [Observing with Galileo](./observe-workflow-with-galileo.md)
 - **[Langfuse](https://langfuse.com/)** - OTLP-compatible observability platform
 - **[LangSmith](https://www.langchain.com/langsmith)** - LangChain's observability platform
 - **[Patronus](https://www.patronus.ai/)** - AI evaluation and monitoring platform
-- **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
+- **[Phoenix](https://phoenix.arize.com/)** - See [Observing with Phoenix](./observe-workflow-with-phoenix.md)
 - **[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)** - See [Observing with OTel Collector](./observe-workflow-with-otel-collector.md)
+- **[W&B Weave](https://wandb.ai/site/weave/)** - See [Observing with W&B Weave](./observe-workflow-with-weave.md)
 - **File Export** - Built-in file-based tracing for local development and debugging
 - **Custom Exporters** - See [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
 
