@@ -280,7 +280,7 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
 
 - Path: `/mcp/client/tool/list`
 - Method: `GET`
-- Purpose: Returns tools configured in each `mcp_client` function group, indicates whether each tool is available on the connected MCP server, and includes group/session metadata.
+- Purpose: Returns tools configured in each `mcp_client` function group, indicates whether each tool is available on the connected MCP server, and includes metadata about the function group and HTTP session.
 
 ### Sample Output
 
