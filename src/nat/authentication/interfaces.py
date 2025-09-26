@@ -64,8 +64,7 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
 
         Args:
             user_id: Optional user identifier for authentication
-            **kwargs: Additional authentication parameters including:
-                - response: Optional HTTP response (typically from a 401) for discovery
+            kwargs: Additional authentication parameters for example: http response (typically from a 401)
         Raises:
             NotImplementedError: Must be implemented by subclasses.
         """
@@ -75,7 +74,7 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
 
 class FlowHandlerBase(ABC):
     """
-    Handles front-end specifc flows for authentication clients.
+    Handles front-end specific flows for authentication clients.
 
     Each front end will define a FlowHandler that will implement the authenticate method.
 
