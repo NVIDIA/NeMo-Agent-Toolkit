@@ -62,25 +62,12 @@ async def _test_full_workflow(config_file: str, question: str, expected_answer: 
     assert expected_answer in result.lower(), f"Expected '{expected_answer}' in '{result}'"
 
 
-@pytest.mark.slow
-@pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key")
-@pytest.mark.parametrize("config_file",
-                         [
-                             os.path.join(AGENTS_DIR, "react/configs/config.yml"),
-                             os.path.join(AGENTS_DIR, "react/configs/config-reasoning.yml")
-                         ],
-                         ids=["standard", "reasoning"])
-async def test_react_full_workflow(config_file: str, question: str, answer: str):
-    await _test_full_workflow(config_file, question, answer)
-
-
 @pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")
 @pytest.mark.integration
 @pytest.mark.parametrize("rewoo_question, rewoo_answer", [(i, i) for i in range(4)],
                          ids=[f"qa_{i+1}" for i in range(4)],
                          indirect=True)
-async def test_full_workflow(rewoo_question: str, rewoo_answer: str):
+async def test_rewoo_full_workflow(rewoo_question: str, rewoo_answer: str):
     config_file = os.path.join(AGENTS_DIR, "rewoo/configs/config.yml")
     await _test_full_workflow(config_file, rewoo_question, rewoo_answer)
 
@@ -88,11 +75,15 @@ async def test_full_workflow(rewoo_question: str, rewoo_answer: str):
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-@pytest.mark.parametrize("config_file",
-                         [
-                             os.path.join(AGENTS_DIR, "tool_calling/configs/config.yml"),
-                             os.path.join(AGENTS_DIR, "tool_calling/configs/config-reasoning.yml")
-                         ],
-                         ids=["standard", "reasoning"])
-async def test_tool_calling_full_workflow(config_file: str, question: str, answer: str):
+@pytest.mark.parametrize(
+    "config_file",
+    [
+        os.path.join(AGENTS_DIR, "mixture_of_agents/configs/config.yml"),
+        os.path.join(AGENTS_DIR, "react/configs/config.yml"),
+        os.path.join(AGENTS_DIR, "react/configs/config-reasoning.yml"),
+        os.path.join(AGENTS_DIR, "tool_calling/configs/config.yml"),
+        os.path.join(AGENTS_DIR, "tool_calling/configs/config-reasoning.yml"),
+    ],
+    ids=["mixture_of_agents", "react", "react-reasoning", "tool_calling", "tool_calling-reasoning"])
+async def test_agent_full_workflow(config_file: str, question: str, answer: str):
     await _test_full_workflow(config_file, question, answer)
