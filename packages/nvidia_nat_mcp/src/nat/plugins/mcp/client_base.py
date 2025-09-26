@@ -20,8 +20,8 @@ import json
 import logging
 from abc import ABC
 from abc import abstractmethod
-from collections.abc import Callable
 from collections.abc import AsyncGenerator
+from collections.abc import Callable
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -38,8 +38,6 @@ from mcp.types import TextContent
 from nat.authentication.interfaces import AuthenticatedContext
 from nat.authentication.interfaces import AuthFlowType
 from nat.authentication.interfaces import AuthProviderBase
-from nat.data_models.authentication import AuthReason
-from nat.data_models.authentication import AuthRequest
 from nat.plugins.mcp.exception_handler import convert_to_mcp_error
 from nat.plugins.mcp.exception_handler import format_mcp_error
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
@@ -355,8 +353,10 @@ class MCPBaseClient(ABC):
 
         async def _call_tool():
             session = self._session
-            return await session.send_request(req, mcp_types.CallToolResult,
+            return await session.send_request(req,
+                                              mcp_types.CallToolResult,
                                               request_read_timeout_seconds=self._tool_call_timeout)
+
         return await self._with_reconnect(_call_tool)
 
     @mcp_exception_handler
@@ -624,7 +624,8 @@ class MCPToolClient:
                 result_str = "\n".join(output)
 
                 if result.isError:
-                    mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str), self._parent_client.server_name)
+                    mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str),
+                                                               self._parent_client.server_name)
                     raise mcp_error
 
         except MCPError as e:
