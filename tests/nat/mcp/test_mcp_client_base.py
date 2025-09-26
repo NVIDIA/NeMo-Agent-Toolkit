@@ -30,6 +30,7 @@ from nat.plugins.mcp.client_base import MCPBaseClient
 from nat.plugins.mcp.client_base import MCPSSEClient
 from nat.plugins.mcp.client_base import MCPStdioClient
 from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
+from nat.plugins.mcp.exceptions import MCPConnectionError
 
 
 def _create_test_mcp_server(port: int) -> FastMCP:
@@ -255,7 +256,7 @@ async def test_reconnect_disabled_no_retry():
 
     async with client:
         # Should not retry when reconnect is disabled
-        with pytest.raises(ConnectionError):
+        with pytest.raises(MCPConnectionError):
             await client.get_tools()
 
         # Connection should only be attempted once (during __aenter__)
@@ -311,7 +312,7 @@ async def test_reconnect_max_attempts_exceeded():
     client.list_tools_side_effect = always_fail
 
     async with client:
-        with pytest.raises(ConnectionError):
+        with pytest.raises(MCPConnectionError):
             await client.get_tools()
 
 
@@ -386,7 +387,7 @@ async def test_reconnect_max_backoff_limit():
 
     with patch('asyncio.sleep', mock_sleep):
         async with client:
-            with pytest.raises(ConnectionError):
+            with pytest.raises(MCPConnectionError):
                 await client.get_tools()
 
             # Backoff should be: [0.2, 0.3, 0.3, 0.3] for 4 attempts (capped at max_backoff)
