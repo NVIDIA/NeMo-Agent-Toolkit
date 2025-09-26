@@ -1183,7 +1183,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             if available:
                                 available_count += 1
 
-                            # Prefer tool override description, then workflow function description, then server description
+                            # Prefer tool override description, then workflow function description,
+                            # then server description
                             description = ""
                             if fn_short in override_configs and override_configs[fn_short].description:
                                 description = override_configs[fn_short].description
