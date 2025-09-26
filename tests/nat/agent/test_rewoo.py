@@ -36,6 +36,11 @@ async def test_state_schema():
     assert isinstance(state.task, HumanMessage)
     assert isinstance(state.plan, AIMessage)
     assert isinstance(state.steps, AIMessage)
+    # New fields for parallel execution
+    assert isinstance(state.evidence_map, dict)
+    assert isinstance(state.execution_levels, list)
+    assert isinstance(state.current_level, int)
+    assert state.current_level == 0
     assert isinstance(state.intermediate_results, dict)
     assert isinstance(state.result, AIMessage)
 
@@ -109,24 +114,48 @@ def _create_step_info(plan: str, placeholder: str, tool: str, tool_input: str | 
     return {"plan": plan, "evidence": {"placeholder": placeholder, "tool": tool, "tool_input": tool_input}}
 
 
+def _create_mock_state_with_parallel_data(steps: list, intermediate_results: dict = None) -> ReWOOGraphState:
+    """
+    Create a mock ReWOOGraphState with proper evidence_map and execution_levels for testing parallel execution.
+    """
+    if intermediate_results is None:
+        intermediate_results = {}
+
+    # Parse dependencies and create execution levels like the agent does
+    evidence_map, execution_levels = ReWOOAgentGraph._parse_planner_dependencies(steps)
+
+    return ReWOOGraphState(
+        task=HumanMessage(content="This is a task"),
+        plan=AIMessage(content="This is the plan"),
+        steps=AIMessage(content=steps),
+        evidence_map=evidence_map,
+        execution_levels=execution_levels,
+        current_level=0,
+        intermediate_results=intermediate_results
+    )
+
+
 async def test_conditional_edge_decisions(mock_rewoo_agent):
-    mock_state = ReWOOGraphState(task=HumanMessage(content="This is a task"),
-                                 plan=AIMessage(content="This is the plan"),
-                                 steps=AIMessage(content=[
-                                     _create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2"),
-                                     _create_step_info("step2", "#E2", "mock_tool_B", "arg3, arg4"),
-                                     _create_step_info("step3", "#E3", "mock_tool_A", "arg5, arg6")
-                                 ]))
+    # Create steps without dependencies (parallel execution)
+    steps = [
+        _create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2"),
+        _create_step_info("step2", "#E2", "mock_tool_B", "arg3, arg4"),
+        _create_step_info("step3", "#E3", "mock_tool_A", "arg5, arg6")
+    ]
+
+    # Initially no results - should continue with execution
+    mock_state = _create_mock_state_with_parallel_data(steps)
     decision = await mock_rewoo_agent.conditional_edge(mock_state)
     assert decision == AgentDecision.TOOL
 
+    # Partially completed level - should continue with execution
     mock_state.intermediate_results = {
         '#E1': ToolMessage(content="result1", tool_call_id="mock_tool_A")
-    }  # Added tool_call_id)}
+    }
     decision = await mock_rewoo_agent.conditional_edge(mock_state)
     assert decision == AgentDecision.TOOL
 
-    # Now all the steps have been executed and generated intermediate results
+    # All steps in current level completed - should end
     mock_state.intermediate_results = {
         '#E1': ToolMessage(content="result1", tool_call_id="mock_tool_A"),
         '#E2': ToolMessage(content="result2", tool_call_id="mock_tool_B"),
@@ -138,14 +167,15 @@ async def test_conditional_edge_decisions(mock_rewoo_agent):
 
 async def test_executor_node_with_not_configured_tool(mock_rewoo_agent):
     tool_not_configured = 'Tool not configured'
-    mock_state = ReWOOGraphState(
-        task=HumanMessage(content="This is a task"),
-        plan=AIMessage(content="This is the plan"),
-        steps=AIMessage(content=[
-            _create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2"),
-            _create_step_info("step2", "#E2", tool_not_configured, "arg3, arg4")
-        ]),
-        intermediate_results={"#E1": ToolMessage(content="result1", tool_call_id="mock_tool_A")})
+    steps = [
+        _create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2"),
+        _create_step_info("step2", "#E2", tool_not_configured, "arg3, arg4")
+    ]
+
+    # Create state with first tool already completed, second tool not configured
+    intermediate_results = {"#E1": ToolMessage(content="result1", tool_call_id="mock_tool_A")}
+    mock_state = _create_mock_state_with_parallel_data(steps, intermediate_results)
+
     state = await mock_rewoo_agent.executor_node(mock_state)
     assert isinstance(state, dict)
     configured_tool_names = ['mock_tool_A', 'mock_tool_B']
@@ -157,93 +187,94 @@ async def test_executor_node_parse_input(mock_rewoo_agent):
     from nat.agent.base import AGENT_LOG_PREFIX
     with patch('nat.agent.rewoo_agent.agent.logger.debug') as mock_logger_debug:
         # Test with dict as tool input
-        mock_state = ReWOOGraphState(
-            task=HumanMessage(content="This is a task"),
-            plan=AIMessage(content="This is the plan"),
-            steps=AIMessage(content=[
-                _create_step_info(
-                    "step1",
-                    "#E1",
-                    "mock_tool_A", {
-                        "query": "What is the capital of France?", "input_metadata": {
-                            "entities": ["France", "Paris"]
-                        }
-                    })
-            ]),
-            intermediate_results={})
+        steps = [_create_step_info(
+            "step1",
+            "#E1",
+            "mock_tool_A", {
+                "query": "What is the capital of France?", "input_metadata": {
+                    "entities": ["France", "Paris"]
+                }
+            })]
+        mock_state = _create_mock_state_with_parallel_data(steps)
         await mock_rewoo_agent.executor_node(mock_state)
-        mock_logger_debug.assert_any_call("%s Tool input is already a dictionary. Use the tool input as is.",
-                                          AGENT_LOG_PREFIX)
+        mock_logger_debug.assert_any_call(
+            "%s Tool input is already a dictionary. Use the tool input as is.",
+            AGENT_LOG_PREFIX)
 
         # Test with valid JSON as tool input
-        mock_state = ReWOOGraphState(
-            task=HumanMessage(content="This is a task"),
-            plan=AIMessage(content="This is the plan"),
-            steps=AIMessage(content=[
-                _create_step_info(
-                    "step1",
-                    "#E1",
-                    "mock_tool_A",
-                    '{"query": "What is the capital of France?", "input_metadata": {"entities": ["France", "Paris"]}}')
-            ]),
-            intermediate_results={})
+        steps = [_create_step_info(
+            "step1",
+            "#E1",
+            "mock_tool_A",
+            '{"query": "What is the capital of France?", "input_metadata": {"entities": ["France", "Paris"]}}'
+        )]
+        mock_state = _create_mock_state_with_parallel_data(steps)
         await mock_rewoo_agent.executor_node(mock_state)
         mock_logger_debug.assert_any_call("%s Successfully parsed structured tool input", AGENT_LOG_PREFIX)
 
         # Test with string with single quote as tool input
-        mock_state.steps = AIMessage(
-            content=[_create_step_info("step1", "#E1", "mock_tool_A", "{'arg1': 'arg_1', 'arg2': 'arg_2'}")])
-        mock_state.intermediate_results = {}
+        steps = [_create_step_info("step1", "#E1", "mock_tool_A", "{'arg1': 'arg_1', 'arg2': 'arg_2'}")]
+        mock_state = _create_mock_state_with_parallel_data(steps)
         await mock_rewoo_agent.executor_node(mock_state)
         mock_logger_debug.assert_any_call(
             "%s Successfully parsed structured tool input after replacing single quotes with double quotes",
             AGENT_LOG_PREFIX)
 
         # Test with string that cannot be parsed as a JSON as tool input
-        mock_state.steps = AIMessage(content=[_create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2")])
-        mock_state.intermediate_results = {}
+        steps = [_create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2")]
+        mock_state = _create_mock_state_with_parallel_data(steps)
         await mock_rewoo_agent.executor_node(mock_state)
-        mock_logger_debug.assert_any_call("%s Unable to parse structured tool input. Using raw tool input as is.",
-                                          AGENT_LOG_PREFIX)
+        mock_logger_debug.assert_any_call(
+            "%s Unable to parse structured tool input. Using raw tool input as is.",
+            AGENT_LOG_PREFIX)
 
 
 async def test_executor_node_handle_input_types(mock_rewoo_agent):
     # mock_tool returns the input query as is.
     # The executor_node should maintain the output type the same as the input type.
 
-    mock_state = ReWOOGraphState(task=HumanMessage(content="This is a task"),
-                                 plan=AIMessage(content="This is the plan"),
-                                 steps=AIMessage(content=[
-                                     _create_step_info("step1", "#E1", "mock_tool_A", "This is a string query"),
-                                     _create_step_info("step2", "#E2", "mock_tool_B", "arg3, arg4")
-                                 ]),
-                                 intermediate_results={})
-    await mock_rewoo_agent.executor_node(mock_state)
+    # Test with string inputs (parallel execution - both tools run at once)
+    steps = [
+        _create_step_info("step1", "#E1", "mock_tool_A", "This is a string query"),
+        _create_step_info("step2", "#E2", "mock_tool_B", "arg3, arg4")
+    ]
+    mock_state = _create_mock_state_with_parallel_data(steps)
+
+    result = await mock_rewoo_agent.executor_node(mock_state)
+    # Update state with results
+    mock_state.intermediate_results.update(result["intermediate_results"])
+
     assert isinstance(mock_state.intermediate_results["#E1"].content, str)
-    # Call executor node again to make sure the intermediate result is correctly processed in the next step
-    await mock_rewoo_agent.executor_node(mock_state)
     assert isinstance(mock_state.intermediate_results["#E2"].content, str)
 
-    mock_state = ReWOOGraphState(
-        task=HumanMessage(content="This is a task"),
-        plan=AIMessage(content="This is the plan"),
-        steps=AIMessage(content=[
-            _create_step_info("step1",
-                              "#E1",
-                              "mock_tool_A", {"query": {
-                                  "data": "This is a dict query", "metadata": {
-                                      "key": "value"
-                                  }
-                              }}),
-            _create_step_info("step2", "#E2", "mock_tool_B", {"query": "#E1"})
-        ]),
-        intermediate_results={})
-    await mock_rewoo_agent.executor_node(mock_state)
-    # The actual behavior is that dict input is converted to list and stored as list content in ToolMessage
+    # Test with dict inputs and dependencies
+    steps = [
+        _create_step_info("step1", "#E1", "mock_tool_A", {"query": {
+            "data": "This is a dict query", "metadata": {"key": "value"}
+        }}),
+        _create_step_info("step2", "#E2", "mock_tool_B", {"query": "#E1"})
+    ]
+    mock_state = _create_mock_state_with_parallel_data(steps)
+
+    # First execution - should run #E1 only (no dependencies)
+    result = await mock_rewoo_agent.executor_node(mock_state)
+    mock_state.intermediate_results.update(result["intermediate_results"])
     assert isinstance(mock_state.intermediate_results["#E1"].content, list)
-    # Call executor node again to make sure the intermediate result is correctly processed in the next step
-    await mock_rewoo_agent.executor_node(mock_state)
-    assert isinstance(mock_state.intermediate_results["#E2"].content, list)
+
+    # Second execution - level 0 is complete, should move to level 1
+    result = await mock_rewoo_agent.executor_node(mock_state)
+    if "current_level" in result:
+        mock_state.current_level = result["current_level"]
+    
+    # Third execution - now execute level 1 (#E2)
+    result = await mock_rewoo_agent.executor_node(mock_state)
+    if "intermediate_results" in result:
+        mock_state.intermediate_results.update(result["intermediate_results"])
+        assert isinstance(mock_state.intermediate_results["#E2"].content, list)
+    else:
+        # If no intermediate_results returned, #E2 should already be there
+        assert "#E2" in mock_state.intermediate_results
+        assert isinstance(mock_state.intermediate_results["#E2"].content, list)
 
 
 async def test_executor_node_should_not_be_invoked_after_all_steps_executed(mock_rewoo_agent):
@@ -406,15 +437,12 @@ async def test_executor_node_passes_max_retries_to_call_tool(mock_rewoo_agent):
     mock_rewoo_agent._call_tool = AsyncMock(return_value=ToolMessage(content="success", tool_call_id="mock_tool_A"))
 
     # Create test state
-    mock_state = ReWOOGraphState(
-        task=HumanMessage(content="Test task"),
-        plan=AIMessage(content="Test plan"),
-        steps=AIMessage(content=[{
-            "plan": "test step", "evidence": {
-                "placeholder": "#E1", "tool": "mock_tool_A", "tool_input": "test input"
-            }
-        }]),
-        intermediate_results={})
+    steps = [{
+        "plan": "test step", "evidence": {
+            "placeholder": "#E1", "tool": "mock_tool_A", "tool_input": "test input"
+        }
+    }]
+    mock_state = _create_mock_state_with_parallel_data(steps)
 
     # Execute the node
     await mock_rewoo_agent.executor_node(mock_state)
@@ -750,15 +778,12 @@ async def test_executor_node_raise_tool_call_error_true_behavior(mock_llm, mock_
     agent._call_tool = AsyncMock(return_value=error_tool_message)
 
     # Create test state
-    mock_state = ReWOOGraphState(
-        task=HumanMessage(content="Test task"),
-        plan=AIMessage(content="Test plan"),
-        steps=AIMessage(content=[{
-            "plan": "test step", "evidence": {
-                "placeholder": "#E1", "tool": "failing_tool", "tool_input": "test input"
-            }
-        }]),
-        intermediate_results={})
+    steps = [{
+        "plan": "test step", "evidence": {
+            "placeholder": "#E1", "tool": "failing_tool", "tool_input": "test input"
+        }
+    }]
+    mock_state = _create_mock_state_with_parallel_data(steps)
 
     # Should raise RuntimeError when tool fails and raise_tool_call_error=True
     with pytest.raises(RuntimeError, match="Tool call failed"):
@@ -793,15 +818,12 @@ async def test_executor_node_raise_tool_call_error_false_behavior(mock_llm, mock
     agent._call_tool = AsyncMock(return_value=error_tool_message)
 
     # Create test state
-    mock_state = ReWOOGraphState(
-        task=HumanMessage(content="Test task"),
-        plan=AIMessage(content="Test plan"),
-        steps=AIMessage(content=[{
-            "plan": "test step", "evidence": {
-                "placeholder": "#E1", "tool": "failing_tool", "tool_input": "test input"
-            }
-        }]),
-        intermediate_results={})
+    steps = [{
+        "plan": "test step", "evidence": {
+            "placeholder": "#E1", "tool": "failing_tool", "tool_input": "test input"
+        }
+    }]
+    mock_state = _create_mock_state_with_parallel_data(steps)
 
     # Should not raise exception when tool fails and raise_tool_call_error=False
     result = await agent.executor_node(mock_state)
@@ -842,15 +864,13 @@ async def test_executor_node_raise_tool_call_error_success_case(mock_llm, mock_t
         agent._call_tool = AsyncMock(return_value=success_tool_message)
 
         # Create test state
-        mock_state = ReWOOGraphState(task=HumanMessage(content="Test task"),
-                                     plan=AIMessage(content="Test plan"),
-                                     steps=AIMessage(content=[{
-                                         "plan": "test step",
-                                         "evidence": {
-                                             "placeholder": "#E1", "tool": "success_tool", "tool_input": "test input"
-                                         }
-                                     }]),
-                                     intermediate_results={})
+        steps = [{
+            "plan": "test step",
+            "evidence": {
+                "placeholder": "#E1", "tool": "success_tool", "tool_input": "test input"
+            }
+        }]
+        mock_state = _create_mock_state_with_parallel_data(steps)
 
         # Should work normally for successful tool calls regardless of setting
         result = await agent.executor_node(mock_state)
@@ -861,3 +881,136 @@ async def test_executor_node_raise_tool_call_error_success_case(mock_llm, mock_t
         assert result["intermediate_results"]["#E1"].content == "Success result"
         assert (not hasattr(result["intermediate_results"]["#E1"], 'status')
                 or result["intermediate_results"]["#E1"].status != "error")
+
+
+# Tests for new parallel execution functionality
+
+def test_dependency_parsing_sequential():
+    """Test dependency parsing for sequential execution."""
+    steps = [
+        _create_step_info("step1", "#E1", "tool_A", "input1"),
+        _create_step_info("step2", "#E2", "tool_B", "#E1"),
+        _create_step_info("step3", "#E3", "tool_C", "#E2")
+    ]
+
+    evidence_map, execution_levels = ReWOOAgentGraph._parse_planner_dependencies(steps)
+
+    # Should have 3 levels for sequential execution
+    assert len(execution_levels) == 3
+    assert execution_levels[0] == ["#E1"]
+    assert execution_levels[1] == ["#E2"]
+    assert execution_levels[2] == ["#E3"]
+
+    # Check evidence map
+    assert len(evidence_map) == 3
+    assert "#E1" in evidence_map
+    assert "#E2" in evidence_map
+    assert "#E3" in evidence_map
+
+
+def test_dependency_parsing_parallel():
+    """Test dependency parsing for parallel execution."""
+    steps = [
+        _create_step_info("step1", "#E1", "tool_A", "input1"),
+        _create_step_info("step2", "#E2", "tool_B", "input2"),
+        _create_step_info("step3", "#E3", "tool_C", {"combine": ["#E1", "#E2"]})
+    ]
+
+    evidence_map, execution_levels = ReWOOAgentGraph._parse_planner_dependencies(steps)
+
+    # Should have 2 levels: E1 and E2 in parallel, then E3
+    assert len(execution_levels) == 2
+    assert set(execution_levels[0]) == {"#E1", "#E2"}
+    assert execution_levels[1] == ["#E3"]
+
+    # Check evidence map
+    assert len(evidence_map) == 3
+
+
+def test_dependency_parsing_complex():
+    """Test dependency parsing for complex dependency graph."""
+    steps = [
+        _create_step_info("step1", "#E1", "tool_A", "input1"),
+        _create_step_info("step2", "#E2", "tool_B", "input2"),
+        _create_step_info("step3", "#E3", "tool_C", "#E1"),
+        _create_step_info("step4", "#E4", "tool_D", "#E2"),
+        _create_step_info("step5", "#E5", "tool_E", {"inputs": ["#E3", "#E4"]})
+    ]
+
+    evidence_map, execution_levels = ReWOOAgentGraph._parse_planner_dependencies(steps)
+
+    # Should have 3 levels: [E1,E2], [E3,E4], [E5]
+    assert len(execution_levels) == 3
+    assert set(execution_levels[0]) == {"#E1", "#E2"}
+    assert set(execution_levels[1]) == {"#E3", "#E4"}
+    assert execution_levels[2] == ["#E5"]
+
+
+def test_dependency_parsing_circular_error():
+    """Test that circular dependencies are detected."""
+    steps = [
+        _create_step_info("step1", "#E1", "tool_A", "#E2"),
+        _create_step_info("step2", "#E2", "tool_B", "#E1")
+    ]
+
+    with pytest.raises(ValueError, match="Circular dependency detected"):
+        ReWOOAgentGraph._parse_planner_dependencies(steps)
+
+
+def test_get_current_level_status():
+    """Test the _get_current_level_status method."""
+    steps = [
+        _create_step_info("step1", "#E1", "tool_A", "input1"),
+        _create_step_info("step2", "#E2", "tool_B", "input2")
+    ]
+
+    state = _create_mock_state_with_parallel_data(steps)
+
+    # Initially at level 0, not complete
+    current_level, level_complete = ReWOOAgentGraph._get_current_level_status(state)
+    assert current_level == 0
+    assert level_complete is False
+
+    # Add one result - still not complete
+    state.intermediate_results["#E1"] = ToolMessage(content="result1", tool_call_id="tool_A")
+    current_level, level_complete = ReWOOAgentGraph._get_current_level_status(state)
+    assert current_level == 0
+    assert level_complete is False
+
+    # Add second result - now complete
+    state.intermediate_results["#E2"] = ToolMessage(content="result2", tool_call_id="tool_B")
+    current_level, level_complete = ReWOOAgentGraph._get_current_level_status(state)
+    assert current_level == 0
+    assert level_complete is True
+
+    # Move to next level (beyond available levels)
+    state.current_level = 1
+    current_level, level_complete = ReWOOAgentGraph._get_current_level_status(state)
+    assert current_level == -1
+    assert level_complete is True
+
+
+async def test_parallel_execution_flow(mock_rewoo_agent):
+    """Test the full parallel execution flow."""
+    # Create steps that can be executed in parallel
+    steps = [
+        _create_step_info("step1", "#E1", "mock_tool_A", "input1"),
+        _create_step_info("step2", "#E2", "mock_tool_B", "input2")
+    ]
+
+    state = _create_mock_state_with_parallel_data(steps)
+
+    # Execute first time - should process both tools in parallel
+    result = await mock_rewoo_agent.executor_node(state)
+
+    # Should return intermediate results for both tools
+    assert "intermediate_results" in result
+    assert "#E1" in result["intermediate_results"]
+    assert "#E2" in result["intermediate_results"]
+
+    # Update state with results
+    state.intermediate_results.update(result["intermediate_results"])
+
+    # Check conditional edge - should be END now
+    decision = await mock_rewoo_agent.conditional_edge(state)
+    assert decision == AgentDecision.END

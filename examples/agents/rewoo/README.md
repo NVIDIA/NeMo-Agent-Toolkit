@@ -49,8 +49,8 @@ The ReWOO agent uses a unique three-node graph architecture that separates plann
 
 **Workflow Overview:**
 - **Start**: The agent begins processing with user input
-- **Planner Node**: Creates a complete execution plan with all necessary steps upfront
-- **Executor Node**: Executes tools according to the plan, looping until all steps are completed
+- **Planner Node**: Creates a complete execution plan with all necessary steps upfront. Plans are parsed into a Dependency Graph for parallel execution. 
+- **Executor Node**: Executes tools according to the plan. Non-dependent tool calls are executed in parallel at each level.
 - **Solver Node**: Takes all execution results and generates the final answer
 - **End**: Process completes with the final response
 

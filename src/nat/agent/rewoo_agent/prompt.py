@@ -18,11 +18,11 @@ For the following task, make plans that can solve the problem step by step. For 
 which external tool together with tool input to retrieve evidence. You can store the evidence into a \
 placeholder #E that can be called by later tools. (Plan, #E1, Plan, #E2, Plan, ...)
 
-You may ask the human to the following tools:
+The following tools and respective requirements are available to you:
 
 {tools}
 
-The tools should be one of the following: [{tool_names}]
+The tool calls you make should be one of the following: [{tool_names}]
 
 You are not required to use all the tools listed. Choose only the ones that best fit the needs of each plan step.
 
@@ -35,16 +35,13 @@ exactly two keys:
 2. "evidence": An object representing the external tool call associated with that plan step. This object must have the
 following keys:
 
-   -"placeholder": A string that identifies the evidence placeholder (e.g., "#E1", "#E2", etc.). The numbering should
+   -"placeholder": A string that identifies the evidence placeholder ("#E1", "#E2", ...). The numbering should
                    be sequential based on the order of steps.
 
    -"tool": A string specifying the name of the external tool used.
 
    -"tool_input": The input to the tool. This can be a string, array, or object, depending on the requirements of the
-                  tool.
-
-Do not include any additional keys or characters in your output, and do not wrap your response with markdown formatting.
-Your output must be strictly valid JSON.
+                  tool. Be careful about type assumptions because the output of former tools might contain noise.
 
 Important instructions:
 
@@ -58,27 +55,27 @@ Here is an example of how a valid JSON output should look:
 
 [
   \'{{
-    "plan": "Calculate the result of 2023 minus 25.",
+    "plan": "Find Alex's schedule on Sep 25, 2025",
     "evidence": \'{{
       "placeholder": "#E1",
-      "tool": "calculator_subtract",
-      "tool_input": [2023, 25]
+      "tool": "search_calendar",
+      "tool_input": ("Alex", "09/25/2025")
     }}\'
   }}\',
   \'{{
-    "plan": "Retrieve the year represented by the result stored in #E1.",
+    "plan": "Find Bill's schedule on sep 25, 2025",
     "evidence": \'{{
       "placeholder": "#E2",
-      "tool": "haystack_chitchat_agent",
-      "tool_input": "Response with the result number contained in #E1"
+      "tool": "search_calendar",
+      "tool_input": ("Bill", "09/25/2025")
     }}\'
   }}\',
   \'{{
-    "plan": "Search for the CEO of Golden State Warriors in the year stored in #E2.",
+    "plan": "Suggest a time for 1-hour meeting given Alex's and Bill's schedule.",
     "evidence": \'{{
       "placeholder": "#E3",
-      "tool": "internet_search",
-      "tool_input": "Who was the CEO of Golden State Warriors in the year #E2?"
+      "tool": "llm_chat",
+      "tool_input": "Find a common 1-hour time slot for Alex and Bill given their schedules. Alex's schedule: #E1; Bill's schedule: #E2?"
     }}\'
   }}\'
 ]
@@ -94,7 +91,7 @@ task: {task}
 """
 
 SOLVER_SYSTEM_PROMPT = """
-Solve the following task or problem. To solve the problem, we have made step-by-step Plan and \
+Solve the following task or problem. To solve the problem, we have made some Plans ahead and \
 retrieved corresponding Evidence to each Plan. Use them with caution since long evidence might \
 contain irrelevant information.
 

@@ -16,9 +16,9 @@ limitations under the License.
 -->
 
 # ReWOO Agent
-The ReWOO (Reasoning WithOut Observation) agent is an advanced AI system that decouples reasoning from observations to improve efficiency in augmented language models. Based on the [ReWOO paper](https://arxiv.org/abs/2305.18323), this agent separates the planning and execution phases to reduce token consumption and improve performance.
+The ReWOO (Reasoning WithOut Observation) agent is an advanced agent paradigm that decouples reasoning from observations to improve efficiency in augmented language models. Based on the [ReWOO paper](https://arxiv.org/abs/2305.18323), this agent separates the planning and execution phases to reduce token consumption and improve performance.
 
-The ReWOO agent's implementation follows the paper's methodology of decoupling reasoning from observations, which leads to more efficient tool usage and better performance in complex reasoning tasks.
+The ReWOO agent's implementation follows the paper's methodology of decoupling reasoning from observations, which leads to more efficient tool usage and better token effciency for reasoning tasks.
 
 
 ## Features
@@ -161,14 +161,10 @@ The ReWOO agent uses two distinct prompts:
 ## Limitations
 ReWOO agents, while efficient, come with several limitations:
 
-* Sequential Execution: ReWOO agents execute steps sequentially, which means they cannot take advantage of parallel execution opportunities. This can lead to longer execution times for tasks that could be parallelized.
-
 * Planning Overhead: The initial planning phase requires the agent to think through the entire task before starting execution. This can be inefficient for simple tasks that could be solved with fewer steps.
 
 * Limited Adaptability: Since the plan is created upfront, the agent cannot easily adapt to unexpected tool failures or new information that might require a different approach.
 
 * Complex Planning Requirements: The planning phase requires the agent to have a good understanding of all available tools and their capabilities. Poor tool descriptions or complex tool interactions can lead to suboptimal plans.
 
-* Memory Constraints: The agent needs to maintain the entire plan and all intermediate results in memory, which could be challenging for very long or complex tasks.
-
-In summary, ReWOO agents are most effective for tasks that benefit from upfront planning and where token efficiency is important. They may not be the best choice for tasks requiring high adaptability or parallel execution.
+In summary, ReWOO agents are most effective for tasks that benefit from upfront planning (relatively stable workflow) and where token efficiency is important. They may not be the best choice for tasks requiring high adaptability and uncertainty of tool outputs.
