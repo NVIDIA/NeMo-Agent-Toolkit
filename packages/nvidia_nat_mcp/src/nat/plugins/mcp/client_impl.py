@@ -93,7 +93,8 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
     """
     server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
     tool_call_timeout: timedelta = Field(
-        default=timedelta(seconds=60), description="Timeout (in seconds) for the MCP tool call. Defaults to 60 seconds.")
+        default=timedelta(seconds=60),
+        description="Timeout (in seconds) for the MCP tool call. Defaults to 60 seconds.")
     reconnect_enabled: bool = Field(
         default=True,
         description="Whether to enable reconnecting to the MCP server if the connection is lost. \
