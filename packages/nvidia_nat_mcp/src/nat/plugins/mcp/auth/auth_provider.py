@@ -327,9 +327,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         return await self._nat_oauth2_authenticate(user_id=user_id)
 
     @property
-    def _effective_scopes(self) -> list[str] | None:
+    def _effective_scopes(self) -> list[str]:
         """Get the effective scopes to be used for the authentication."""
-        return self.config.scopes or self._cached_endpoints.scopes or []
+        return self.config.scopes or (self._cached_endpoints.scopes if self._cached_endpoints else []) or []
 
     async def _discover_and_register(self, response: httpx.Response | None = None):
         """
