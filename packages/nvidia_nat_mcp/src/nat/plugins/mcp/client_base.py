@@ -92,7 +92,7 @@ class AuthAdapter(httpx.Auth):
                 body = json.loads(request.content.decode('utf-8'))
                 # Check if it's a JSON-RPC request with method "tools/call"
                 if (isinstance(body, dict) and body.get("method") == "tools/call"):
-                    session_id = body.get("params", {}).get("session_id")
+                    session_id = body.get("params").get("_meta").get("session_id")
                     return session_id
         except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
             # If we can't parse the body, assume it's not a tool call
@@ -242,9 +242,11 @@ class MCPBaseClient(ABC):
         if not self._session:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
 
-        params = mcp_types.CallToolRequestParams(name=tool_name, arguments=args)
-        if session_id:
-            params["_meta"] = {"session_id": session_id}
+        params = mcp_types.CallToolRequestParams(name=tool_name,
+                                                 arguments=args,
+                                                 **{"_meta": {
+                                                     "session_id": session_id
+                                                 }})
         req = mcp_types.ClientRequest(mcp_types.CallToolRequest(params=params))
         return await self._session.send_request(req, mcp_types.CallToolResult)
 
@@ -393,7 +395,7 @@ class MCPToolClient:
         self._session = session
         self._tool_name = tool_name
         self._tool_description = tool_description
-        self._input_schema = (model_from_mcp_schema(self._tool_name, tool_inqput_schema) if tool_input_schema else None)
+        self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
         self._parent_client = parent_client
 
     @property
