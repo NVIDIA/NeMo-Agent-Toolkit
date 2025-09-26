@@ -387,7 +387,8 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
             # Use MCP-specific authentication method if available
             if hasattr(self._auth_code_provider, "_set_custom_auth_callback"):
-                self._auth_code_provider._set_custom_auth_callback(self._auth_callback or self._flow_handler.authenticate)
+                self._auth_code_provider._set_custom_auth_callback(self._auth_callback
+                                                                   or self._flow_handler.authenticate)
 
         # Auth code provider is responsible for per-user cache + refresh
         return await self._auth_code_provider.authenticate(user_id=user_id)
