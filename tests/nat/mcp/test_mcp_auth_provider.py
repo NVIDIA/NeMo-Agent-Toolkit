@@ -120,10 +120,11 @@ class TestDiscoverOAuth2Endpoints:
                     registration_url="https://auth.example.com/register",  # type: ignore
                 )
 
-                # Create a mock response with WWW-Authenticate header
+                # Create a mock 401 response with WWW-Authenticate header
                 mock_response = AsyncMock()
+                mock_response.status_code = 401
                 mock_response.headers = {
-                    'www-authenticate':
+                    'WWW-Authenticate':
                         'Bearer realm="api", resource_metadata="https://auth.example.com/.well-known/oauth-protected-resource"'
                 }
 
@@ -686,7 +687,7 @@ class TestMCPOAuth2Provider:
 
     async def test_authenticate_retry_after_401_clears_auth_code_provider(self,
                                                                           mock_config_with_credentials,
-                                                                          mock_endpoints):  # noqa: E501
+                                                                          mock_endpoints):
         """Test that authentication works correctly with auth code provider."""
         provider = MCPOAuth2Provider(mock_config_with_credentials)
 

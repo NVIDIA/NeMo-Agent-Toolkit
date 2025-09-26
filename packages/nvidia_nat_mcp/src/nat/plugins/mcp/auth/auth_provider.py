@@ -15,7 +15,6 @@
 
 import logging
 from collections.abc import Awaitable
-from dataclasses import asdict
 from typing import Callable
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -116,7 +115,7 @@ class DiscoverOAuth2Endpoints:
         if endpoints is None:
             raise RuntimeError("Could not discover OAuth2 endpoints from MCP server")
 
-        changed = (self._cached_endpoints is None or asdict(endpoints) != asdict(self._cached_endpoints))
+        changed = (self._cached_endpoints is None or endpoints.model_dump() != self._cached_endpoints.model_dump())
         self._cached_endpoints = endpoints
         logger.info("OAuth2 endpoints selected: %s", self._cached_endpoints)
         return self._cached_endpoints, changed
@@ -343,6 +342,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         if endpoints_changed:
             logger.info("OAuth2 endpoints: %s", self._cached_endpoints)
             self._cached_credentials = None  # invalidate credentials tied to old AS
+            self._auth_code_provider = None
         effective_scopes = self._effective_scopes
 
         # Client registration
