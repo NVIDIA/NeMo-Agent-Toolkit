@@ -1101,6 +1101,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             server_name: str
             session_healthy: bool
             in_workflow: bool
+            available: bool
 
         class MCPClientToolListResponse(BaseModel):
             mcp_clients: list[dict[str, Any]]
@@ -1132,7 +1133,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                         try:
                             session_healthy = False
-                            server_tools = {}
+                            server_tools: dict[str, Any] = {}
 
                             try:
                                 server_tools = await client.get_tools()
@@ -1141,26 +1142,53 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                 logger.warning(f"Failed to connect to MCP server {client.server_name}: {e}")
                                 session_healthy = False
 
-                            # Get workflow function group configuration
-                            workflow_functions = set()
+                            # Get workflow function group configuration (configured client-side tools)
+                            configured_short_names: set[str] = set()
+                            configured_full_to_fn: dict[str, Any] = {}
                             try:
                                 accessible_functions = await group_instance.get_accessible_functions()
-                                workflow_functions = {
+                                configured_full_to_fn = accessible_functions
+                                configured_short_names = {
                                     name.split('.', 1)[1] if '.' in name else name
                                     for name in accessible_functions.keys()
                                 }
                             except Exception as e:
                                 logger.warning(f"Failed to get accessible functions for group {group_name}: {e}")
 
-                            # Create tool info list
-                            tools_info = []
-                            for tool_name, tool in server_tools.items():
+                            # Build alias->original mapping from overrides
+                            alias_to_original: dict[str, str] = {}
+                            try:
+                                overrides = getattr(config, "tool_overrides", None) or {}
+                                for orig_name, override in overrides.items():
+                                    alias = getattr(override, "alias", None)
+                                    if alias:
+                                        alias_to_original[alias] = orig_name
+                            except Exception:
+                                pass
+
+                            # Create tool info list (always return configured tools; mark availability)
+                            tools_info: list[dict[str, Any]] = []
+                            available_count = 0
+                            for fn_short in sorted(configured_short_names):
+                                orig_name = alias_to_original.get(fn_short, fn_short)
+                                available = session_healthy and (orig_name in server_tools)
+                                if available:
+                                    available_count += 1
+
+                                # Prefer the workflow function description (includes overrides)
+                                full_name = f"{group_name}.{fn_short}"
+                                wf_fn = configured_full_to_fn.get(full_name)
+                                description = getattr(
+                                    wf_fn, "description",
+                                    None) or (server_tools[orig_name].description if available else "")
+
                                 tools_info.append(
-                                    MCPToolInfo(name=tool_name,
-                                                description=tool.description or "",
+                                    MCPToolInfo(name=fn_short,
+                                                description=description or "",
                                                 server_name=client.server_name,
                                                 session_healthy=session_healthy,
-                                                in_workflow=tool_name in workflow_functions).dict())
+                                                in_workflow=True,
+                                                available=available).dict())
 
                             mcp_clients_info.append({
                                 "function_group_name": group_name,
@@ -1168,8 +1196,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                 "transport": config.server.transport,
                                 "session_healthy": session_healthy,
                                 "tools": tools_info,
-                                "total_tools": len(server_tools),
-                                "workflow_tools": len([t for t in tools_info if t["in_workflow"]])
+                                "total_tools": len(configured_short_names),
+                                "available_tools": available_count
                             })
 
                         except Exception as e:
