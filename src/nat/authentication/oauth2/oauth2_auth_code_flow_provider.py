@@ -70,7 +70,6 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
         self._auth_callback = auth_callback
 
     async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
-        default_user_id = kwargs.get("default_user_id")
         if user_id is None and hasattr(Context.get(), "metadata") and hasattr(
                 Context.get().metadata, "cookies") and Context.get().metadata.cookies is not None:
             session_id = Context.get().metadata.cookies.get("nat-session", None)
@@ -79,7 +78,6 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
 
             user_id = session_id
 
-        user_id = user_id or default_user_id
         if user_id and user_id in self._authenticated_tokens:
             auth_result = self._authenticated_tokens[user_id]
             if not auth_result.is_expired():

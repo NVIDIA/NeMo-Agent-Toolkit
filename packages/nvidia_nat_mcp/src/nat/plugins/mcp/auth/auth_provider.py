@@ -313,9 +313,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         if response and response.status_code == 401:
             await self._discover_and_register(response=response)
 
-        default_user_id = self.config.default_user_id
-        user_id = user_id
-        return await self._nat_oauth2_authenticate(user_id=user_id, default_user_id=default_user_id)
+        return await self._nat_oauth2_authenticate(user_id=user_id)
 
     @property
     def _effective_scopes(self) -> list[str] | None:
@@ -349,8 +347,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
 
     async def _nat_oauth2_authenticate(self,
-                                       user_id: str | None = None,
-                                       default_user_id: str | None = None) -> AuthResult:
+                                       user_id: str | None = None) -> AuthResult:
         """Perform the OAuth2 flow using NAT OAuth2 provider."""
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
@@ -382,4 +379,4 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             self._auth_code_provider._set_custom_auth_callback(self._flow_handler.authenticate)
 
         # Auth code provider is responsible for per-user cache + refresh
-        return await self._auth_code_provider.authenticate(user_id=user_id, default_user_id=default_user_id)
+        return await self._auth_code_provider.authenticate(user_id=user_id)

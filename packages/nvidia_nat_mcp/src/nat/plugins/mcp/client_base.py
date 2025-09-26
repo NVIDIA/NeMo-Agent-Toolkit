@@ -105,7 +105,7 @@ class AuthAdapter(httpx.Auth):
         """Get authentication headers from the NAT auth provider."""
         try:
             session_id = None
-            if request and self._get_session_id_from_tool_call_request(request):
+            if request:
                 session_id = self._get_session_id_from_tool_call_request(request)
 
             user_id = session_id or self.auth_provider.config.default_user_id
