@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from abc import ABC
 from abc import abstractmethod
@@ -58,7 +59,7 @@ class AuthAdapter(httpx.Auth):
                 # Get auth headers from the NAT auth provider:
                 # 1. If discovery is yet to done this will return None and request will be sent without auth header.
                 # 2. If discovery is done, this will return the auth header from cache if the token is still valid
-                auth_headers = await self._get_auth_headers(response=None)
+                auth_headers = await self._get_auth_headers(request=request, response=None)
                 request.headers.update(auth_headers)
             except Exception as e:
                 logger.info("Failed to get auth headers: %s", e)
@@ -76,17 +77,40 @@ class AuthAdapter(httpx.Auth):
                     # 4. The auth headers are revoked
                     # 5. Auth config on the MCP server has changed
                     # In this case we attempt to re-run discovery and authentication
-                    auth_headers = await self._get_auth_headers(response=response)
+                    auth_headers = await self._get_auth_headers(request=request, response=response)
                     request.headers.update(auth_headers)
                     yield request  # Retry the request
                 except Exception as e:
                     logger.info("Failed to refresh auth after 401: %s", e)
         return
 
-    async def _get_auth_headers(self, response: httpx.Response | None = None) -> dict[str, str]:
+    def _get_session_id_from_tool_call_request(self, request: httpx.Request) -> str | None:
+        """Check if this is a tool call request based on the request body."""
+        try:
+            # Check if the request body contains a tool call
+            if request.content:
+                body = json.loads(request.content.decode('utf-8'))
+                # Check if it's a JSON-RPC request with method "tools/call"
+                if (isinstance(body, dict) and body.get("method") == "tools/call"):
+                    session_id = body.get("params", {}).get("session_id")
+                    return session_id
+        except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
+            # If we can't parse the body, assume it's not a tool call
+            pass
+        return None
+
+    async def _get_auth_headers(self,
+                                request: httpx.Request | None = None,
+                                response: httpx.Response | None = None) -> dict[str, str]:
         """Get authentication headers from the NAT auth provider."""
         try:
-            auth_result = await self.auth_provider.authenticate(response=response)
+            session_id = None
+            if request and self._get_session_id_from_tool_call_request(request):
+                session_id = self._get_session_id_from_tool_call_request(request)
+
+            user_id = session_id or self.auth_provider.config.default_user_id
+            auth_result = await self.auth_provider.authenticate(user_id=user_id, response=response)
+
             # Check if we have BearerTokenCred
             from nat.data_models.authentication import BearerTokenCred
             if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
@@ -210,6 +234,19 @@ class MCPBaseClient(ABC):
         if not tool:
             raise MCPToolNotFoundError(tool_name, self.server_name)
         return tool
+
+    @mcp_exception_handler
+    async def call_tool_with_meta(self, tool_name: str, args: dict, session_id: str):
+        from mcp import types as mcp_types
+
+        if not self._session:
+            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
+
+        params = mcp_types.CallToolRequestParams(name=tool_name, arguments=args)
+        if session_id:
+            params["_meta"] = {"session_id": session_id}
+        req = mcp_types.ClientRequest(mcp_types.CallToolRequest(params=params))
+        return await self._session.send_request(req, mcp_types.CallToolResult)
 
     @mcp_exception_handler
     async def call_tool(self, tool_name: str, tool_args: dict | None):
@@ -356,7 +393,7 @@ class MCPToolClient:
         self._session = session
         self._tool_name = tool_name
         self._tool_description = tool_description
-        self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
+        self._input_schema = (model_from_mcp_schema(self._tool_name, tool_inqput_schema) if tool_input_schema else None)
         self._parent_client = parent_client
 
     @property
@@ -395,8 +432,27 @@ class MCPToolClient:
         """
         if self._session is None:
             raise RuntimeError("No session available for tool call")
-        logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
-        result = await self._session.call_tool(self._tool_name, tool_args)
+
+        # Extract session_id from context and prepare for injection into request extensions
+        session_id = None
+        try:
+            from nat.builder.context import Context as _Ctx
+            try:
+                cookies = getattr(_Ctx.get().metadata, "cookies", None)
+                if cookies:
+                    session_id = cookies.get("nat-session")
+            except Exception:
+                session_id = None
+            # remember to remove this log - TODO
+            logger.info("[MCP] Tool call session check: session_id=%s", session_id)
+        except Exception:
+            pass
+
+        logger.info("Calling tool %s with arguments %s for session %s", self._tool_name, tool_args, session_id)
+        if session_id:
+            result = await self._parent_client.call_tool_with_meta(self._tool_name, tool_args, session_id)
+        else:
+            result = await self._session.call_tool(self._tool_name, tool_args)
 
         output = []
 
