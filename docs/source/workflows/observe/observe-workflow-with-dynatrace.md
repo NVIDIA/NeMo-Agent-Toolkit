@@ -99,14 +99,18 @@ general:
 
 ## Step 7: Run the workflow
 
-As workflows run, spans are sent to the OTel Collector which in turn exports them based on the exporter you configured to Dynatrace. 
+From the root directory of the NeMo Agent toolkit library, install dependencies and run the pre-configured `simple_web_query` example.
 
-In the example below, the [Simple LangSmith-Documentation Agent workflow](https://github.com/NVIDIA/NeMo-Agent-Toolkit/tree/release/1.2/examples/getting_started/simple_web_query) was used.
-
+**Example:**
 ```bash
+# Install the workflow and plugins
 uv pip install -e examples/getting_started/simple_web_query
+
+# Run the workflow with Phoenix telemetry settings
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?" 
 ```
+
+As the workflow runs, telemetry data will start showing up in Dynatrace.
 
 ## Step 8: View spans
 
