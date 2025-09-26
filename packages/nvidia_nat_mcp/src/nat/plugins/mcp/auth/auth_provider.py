@@ -213,13 +213,13 @@ class DiscoverOAuth2Endpoints:
         path = (p.path or "").rstrip("/")
         urls: list[str] = []
         if path:
-            # this is the sprecified by the MCP spec
+            # this is the specified by the MCP spec
             urls.append(urljoin(base, f".well-known/oauth-protected-resource{path}"))
             # this is fallback for backward compatibility
             urls.append(urljoin(base, f"{path}/.well-known/oauth-authorization-server"))
         urls.append(urljoin(base, "/.well-known/oauth-authorization-server"))
         if path:
-            # this is the sprecified by the MCP spec
+            # this is the specified by the MCP spec
             urls.append(urljoin(base, f".well-known/openid-configuration{path}"))
             # this is fallback for backward compatibility
             urls.append(urljoin(base, f"{path}/.well-known/openid-configuration"))

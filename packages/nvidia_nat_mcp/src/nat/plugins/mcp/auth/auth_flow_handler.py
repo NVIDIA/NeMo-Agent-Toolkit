@@ -55,7 +55,7 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
 
             return await self._handle_oauth2_auth_code_flow(config)
 
-        raise NotImplementedError(f"Auth method “{method}” not supported.")
+        raise NotImplementedError(f'Auth method “{method}” not supported')
 
     async def _handle_oauth2_auth_code_flow(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
         state = secrets.token_urlsafe(16)
