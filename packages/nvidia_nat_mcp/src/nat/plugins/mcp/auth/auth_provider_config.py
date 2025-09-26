@@ -50,9 +50,6 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     # Advanced options
     use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
 
-    # Temporary config parameter (should be removed before merging)
-    use_tmp_oauth2_provider: bool = Field(default=False, description="Use the temporary OAuth2 provider")
-
     default_user_id: str | None = Field(default=None, description="Default user ID for authentication")
     allow_default_user_id_for_tool_calls: bool = Field(default=True, description="Allow default user ID for tool calls")
 
