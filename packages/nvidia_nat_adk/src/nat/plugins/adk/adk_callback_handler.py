@@ -20,8 +20,6 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-import litellm
-
 from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStepPayload
@@ -60,6 +58,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
         Monkey-patch the relevant Google ADK methods with usage-stat collection logic.
         Assumes the 'google-adk' library is installed.
         """
+        import litellm
 
         if getattr(self, "_instrumented", False):
             logger.debug("ADKProfilerHandler already instrumented; skipping.")
@@ -89,6 +88,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
         Add an explicit unpatch to avoid side-effects across tests/process lifetime.
         """
         try:
+            import litellm
             from google.adk.tools.function_tool import FunctionTool
             if self._original_tool_call:
                 FunctionTool.run_async = self._original_tool_call
@@ -140,12 +140,17 @@ class ADKProfilerHandler(BaseProfilerCallback):
                     usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
                 )
 
+                # Store the UUID to ensure the END event uses the same ID
+                step_uuid = stats.UUID
                 self.step_manager.push_intermediate_step(stats)
 
                 with self._lock:
                     self.last_call_ts = now
 
                 # Call the original _use(...)
+                if original_func is None:
+                    raise RuntimeError(
+                        "Original tool function is None - instrumentation may not have been set up correctly")
                 result = await original_func(base_tool_instance, *args, **kwargs)
                 now = time.time()
                 # Post-call usage stats - safely extract kwargs args if present
@@ -163,6 +168,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
                     ),
                     metadata=TraceMetadata(tool_outputs={"result": str(result)}),
                     usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
+                    UUID=step_uuid,  # Use the same UUID as the START event
                 )
 
                 self.step_manager.push_intermediate_step(usage_stat)
@@ -236,9 +242,13 @@ class ADKProfilerHandler(BaseProfilerCallback):
                 ),
             )
 
+            # Store the UUID to ensure the END event uses the same ID
+            step_uuid = input_stats.UUID
             self.step_manager.push_intermediate_step(input_stats)
 
             # Call the original litellm.acompletion(...)
+            if original_func is None:
+                raise RuntimeError("Original LLM function is None - instrumentation may not have been set up correctly")
             output = await original_func(*args, **kwargs)
 
             model_output = ""
@@ -284,6 +294,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
                     num_llm_calls=1,
                     seconds_between_calls=seconds_between_calls,
                 ),
+                UUID=step_uuid,  # Use the same UUID as the START event
             )
 
             self.step_manager.push_intermediate_step(output_stats)

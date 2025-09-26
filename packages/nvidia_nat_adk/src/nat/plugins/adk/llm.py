@@ -13,38 +13,96 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections.abc import AsyncIterator
+import logging
+import os
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
+from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.openai_llm import OpenAIModelConfig
+
+logger = logging.getLogger(__name__)
+
+
+@register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
+async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
+    """Create and yield a Google ADK `AzureOpenAI` client from a NAT `AzureOpenAIModelConfig`.
+
+    Args:
+        config (AzureOpenAIModelConfig): The configuration for the AzureOpenAI model.
+        _builder (Builder): The NAT builder instance.
+    """
+    from google.adk.models.lite_llm import LiteLlm
+
+    config_dict = config.model_dump(
+        exclude={"type", "max_retries", "thinking", "azure_endpoint", "azure_deployment", "model_name", "model"},
+        by_alias=True,
+        exclude_none=True,
+    )
+    if config.azure_endpoint:
+        config_dict["api_base"] = config.azure_endpoint
+
+    yield LiteLlm(f"azure/{config.azure_deployment}", **config_dict)
 
 
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
-async def litellm_adk(
-    litellm_config: LiteLlmModelConfig,
-    _builder: Builder,  # pylint: disable=W0613 (_builder not used)
-) -> AsyncIterator["LiteLlm"]:  # type: ignore # noqa: F821 (forward reference of LiteLlm)
-    """Create and yield a Google ADK `LiteLlm` client from a NAT `LiteLlmModelConfig`.
-
-    Args:
-        litellm_config (LiteLlmModelConfig): The configuration for the LiteLlm model.
-        _builder (Builder): The NAT builder instance.
-
-    Yields:
-        AsyncIterator[LiteLlm]: An async iterator that yields a LiteLlm client.
-    """
-
-    try:
-        from google.adk.models.lite_llm import LiteLlm
-    except ModuleNotFoundError as e:
-        raise ModuleNotFoundError("Google ADK not installed; pip install google-adk") from e
-
-    llm = LiteLlm(**litellm_config.model_dump(
-        exclude={"type", "max_retries"},
+async def litellm_adk(litellm_config: LiteLlmModelConfig, _builder: Builder):
+    from google.adk.models.lite_llm import LiteLlm
+    yield LiteLlm(**litellm_config.model_dump(
+        exclude={"type", "max_retries", "thinking"},
         by_alias=True,
         exclude_none=True,
     ))
 
-    yield llm
+
+@register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
+async def nim_adk(config: NIMModelConfig, _builder: Builder):
+    """Create and yield a Google ADK `NIM` client from a NAT `NIMModelConfig`.
+
+    Args:
+        config (NIMModelConfig): The configuration for the NIM model.
+        _builder (Builder): The NAT builder instance.
+    """
+    import litellm
+    from google.adk.models.lite_llm import LiteLlm
+
+    logger.warning("NIMs do not currently support tools with ADK. Tools will be ignored.")
+    litellm.add_function_to_prompt = True
+    litellm.drop_params = True
+
+    if (api_key := os.getenv("NVIDIA_API_KEY", None)) is not None:
+        os.environ["NVIDIA_NIM_API_KEY"] = api_key
+
+    config_dict = config.model_dump(
+        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url"},
+        by_alias=True,
+        exclude_none=True,
+    )
+    if config.base_url:
+        config_dict["api_base"] = config.base_url
+
+    yield LiteLlm(f"nvidia_nim/{config.model_name}", **config_dict)
+
+
+@register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
+async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
+    """Create and yield a Google ADK `OpenAI` client from a NAT `OpenAIModelConfig`.
+
+    Args:
+        config (OpenAIModelConfig): The configuration for the OpenAI model.
+        _builder (Builder): The NAT builder instance.
+    """
+    from google.adk.models.lite_llm import LiteLlm
+
+    config_dict = config.model_dump(
+        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url"},
+        by_alias=True,
+        exclude_none=True,
+    )
+    if config.base_url:
+        config_dict["api_base"] = config.base_url
+
+    yield LiteLlm(config.model_name, **config_dict)

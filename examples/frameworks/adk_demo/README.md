@@ -25,31 +25,25 @@ If you have not already done so, follow the instructions in the [Install Guide](
 
 ### Install this Workflow
 
-From the root directory of the NAT library, run the following commands:
+From the root directory of the NAT library, run the following command:
 
 ```bash
-uv pip install -e '.[adk]' --prerelease=allow
 uv pip install -e examples/frameworks/adk_demo
 ```
 
 ### Set up API keys
 
-LiteLLM routes to many providers. For OpenAI:
+For this example, an OpenAI API key is required. You can set it as follows:
 ```bash
 export OPENAI_API_KEY="<your_openai_key>"
 # Optional (defaults to https://api.openai.com/v1 if unset)
-export OPENAI_API_BASE="${OPENAI_API_BASE:-https://api.openai.com/v1}"
+export OPENAI_API_BASE="<your_openai_base_url>"
 ```
-For Azure OpenAI, set:
-```bash
-export OPENAI_API_KEY="<your_azure_openai_key>"
-export OPENAI_API_BASE="https://<your-azure-endpoint>/openai"
-```
-You can find LLM provider specific instructions in the LiteLLM documentation. Please set the appropriate environment variables.
 
-### Run the Workflow
+Google ADK support within NeMo Agent toolkit currently only supports OpenAI and Azure OpenAI models for tool calling.
 
-#### Set up the MCP server
+### Set up the MCP Server
+
 This example also demonstrates how NAT can interact with MCP servers on behalf of ADK.
 
 First run the MCP server with this command.
@@ -58,31 +52,36 @@ First run the MCP server with this command.
 nat mcp serve --config_file examples/frameworks/adk_demo/configs/config.yml --host 0.0.0.0 --port 9901 --name "My MCP Server"
 ```
 
+## Run the Workflow
+
 Then run the workflow with the NAT CLI
 
 ```bash
 nat run --config_file examples/frameworks/adk_demo/configs/config.yml --input "What is the weather and time in New York today?"
 ```
 
-### Expected output
+### Expected Output
 
 ```console
-(.venv)
-[12:44] BASH_$
- > nat run --config_file examples/frameworks/adk_demo/configs/config.yml --input "What is the weather and time in New York today?"
-12:44:06 - LiteLLM:INFO: cost_calculator.py:588 - selected model name for cost calculation: openai/gpt-4.1-2025-04-14
-2025.09.19_12:44:06 || INFO     || LiteLLM:588 :: selected model name for cost calculation: openai/gpt-4.1-2025-04-14
-selected model name for cost calculation: openai/gpt-4.1-2025-04-14
-2025.09.19_12:44:06 || INFO     || nat.front_ends.console.console_front_end_plugin:96 ::
---------------------------------------------------
-Workflow Result:
-['Today in New York:\n- The weather is sunny with a temperature of 25°C (77°F).\n- The current time is 3:44 PM (EDT).']
---------------------------------------------------
+<snipped for brevity>
+
+Configuration Summary:
+--------------------
+Workflow Type: adk
+Number of Functions: 2
+Number of Function Groups: 0
+Number of LLMs: 1
+Number of Embedders: 0
+Number of Memory: 0
+Number of Object Stores: 0
+Number of Retrievers: 0
+Number of TTC Strategies: 0
+Number of Authentication Providers: 0
+
+<snipped for brevity>
 
 --------------------------------------------------
 Workflow Result:
-['Today in New York:\n- The weather is sunny with a temperature of 25°C (77°F).\n- The current time is 3:44 PM (EDT).']
+['Here’s the latest for New York:\n- Weather: Sunny, around 25°C (77°F)\n- Time: 2025-09-25 12:27:26 EDT (UTC-4)']
 --------------------------------------------------
-
-(.venv)
 ```

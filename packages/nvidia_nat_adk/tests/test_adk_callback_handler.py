@@ -61,29 +61,28 @@ def test_adk_profiler_handler_initialization(handler, mock_context):
     assert hasattr(handler, 'last_call_ts')
 
 
-@patch('nat.plugins.adk.adk_callback_handler.litellm')
-def test_instrument_patches_litellm(mock_litellm, handler):
+@patch('litellm.acompletion')
+def test_instrument_patches_litellm(mock_acompletion, handler):
     """Test that instrument method patches litellm.acompletion."""
     # Setup mock
-    mock_original_acompletion = AsyncMock()
-    mock_litellm.acompletion = mock_original_acompletion
+    mock_acompletion.return_value = AsyncMock()
 
     # Call instrument
     handler.instrument()
 
     # Verify original was saved
-    assert handler._original_llm_call == mock_original_acompletion
+    assert handler._original_llm_call == mock_acompletion
 
-    # Verify litellm.acompletion was replaced
-    assert mock_litellm.acompletion != mock_original_acompletion
+    # Verify litellm.acompletion was replaced (by checking it's been wrapped)
+    import litellm
+    assert litellm.acompletion != mock_acompletion
 
 
-@patch('nat.plugins.adk.adk_callback_handler.litellm')
+@patch('litellm.acompletion')
 @pytest.mark.asyncio
-async def test_llm_call_monkey_patch(mock_litellm, handler, mock_context):
+async def test_llm_call_monkey_patch(mock_acompletion, handler, mock_context):
     """Test the LLM call monkey patch functionality."""
     # Setup mocks
-    mock_original_acompletion = AsyncMock()
     mock_response = MagicMock()
     mock_response.choices = [MagicMock(message=MagicMock(content="Test response"))]
     mock_response.model_extra = {
@@ -93,13 +92,12 @@ async def test_llm_call_monkey_patch(mock_litellm, handler, mock_context):
             }))
     }
     mock_response.choices[0].model_dump.return_value = {"role": "assistant", "content": "Test response"}
-    mock_original_acompletion.return_value = mock_response
-
-    mock_litellm.acompletion = mock_original_acompletion
+    mock_acompletion.return_value = mock_response
 
     # Instrument and get the wrapped function
     handler.instrument()
-    wrapped_func = mock_litellm.acompletion
+    import litellm
+    wrapped_func = litellm.acompletion
 
     # Prepare test arguments
     test_kwargs = {'model': 'gpt-3.5-turbo', 'messages': [{'content': 'Hello, world!'}]}
@@ -108,7 +106,7 @@ async def test_llm_call_monkey_patch(mock_litellm, handler, mock_context):
     result = await wrapped_func(**test_kwargs)
 
     # Verify original function was called
-    mock_original_acompletion.assert_called_once_with(**test_kwargs)
+    mock_acompletion.assert_called_once_with(**test_kwargs)
 
     # Verify intermediate steps were pushed (start and end events)
     assert mock_context.push_intermediate_step.call_count == 2
@@ -229,12 +227,11 @@ async def test_tool_use_monkey_patch_tool_name_error(handler, mock_context):
     assert start_call.name == ""  # Empty due to error
 
 
-@patch('nat.plugins.adk.adk_callback_handler.litellm')
+@patch('litellm.acompletion')
 @pytest.mark.asyncio
-async def test_llm_call_monkey_patch_with_multiple_messages(mock_litellm, handler, mock_context):
+async def test_llm_call_monkey_patch_with_multiple_messages(mock_acompletion, handler, mock_context):
     """Test LLM call monkey patch with multiple messages."""
     # Setup mocks
-    mock_original_acompletion = AsyncMock()
     mock_response = MagicMock()
     mock_response.choices = [
         MagicMock(message=MagicMock(content="Response 1")), MagicMock(message=MagicMock(content="Response 2"))
@@ -246,11 +243,11 @@ async def test_llm_call_monkey_patch_with_multiple_messages(mock_litellm, handle
             }))
     }
     mock_response.choices[0].model_dump.return_value = {"role": "assistant", "content": "Response 1"}
-    mock_original_acompletion.return_value = mock_response
+    mock_acompletion.return_value = mock_response
 
-    mock_litellm.acompletion = mock_original_acompletion
     handler.instrument()
-    wrapped_func = mock_litellm.acompletion
+    import litellm
+    wrapped_func = litellm.acompletion
 
     # Test with multiple messages
     test_kwargs = {
