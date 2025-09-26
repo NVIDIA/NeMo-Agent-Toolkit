@@ -4,11 +4,11 @@ general:
 
 functions:
   rag_tool:
-    _type: rag_library_mode
+    _type: rag_lib
     base_url: "http://localhost:19530"
-    vdb_top_k: 10
-    reranker_top_k: 100
-    collection_names: ["cuda_docs"]
+    vdb_top_k: 20
+    reranker_top_k: 10
+    collection_names: ["test_library"]
     topic: Retrieve relevant documents from the database relevant to the query
 
 

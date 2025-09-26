@@ -17,7 +17,7 @@ from IPython.display import display, Image, Markdown
 logger = logging.getLogger(__name__)
 
 
-class RagLibraryModeFunctionConfig(FunctionBaseConfig, name="rag_library_mode"):
+class RagLibFunctionConfig(FunctionBaseConfig, name="rag_lib"):
     """
     This tool retrieves relevant documents for a given user query. The input query is mapped to the most appropriate
     Milvus collection database. This will return relevant documents from the selected collection.
@@ -30,9 +30,9 @@ class RagLibraryModeFunctionConfig(FunctionBaseConfig, name="rag_library_mode"):
     
 
 
-@register_function(config_type=RagLibraryModeFunctionConfig)
-async def rag_library_mode_function(
-    config: RagLibraryModeFunctionConfig, builder: Builder
+@register_function(config_type=RagLibFunctionConfig)
+async def rag_lib_function(
+    config: RagLibFunctionConfig, builder: Builder
 ):
 
     def parse_search_citations(citations):
@@ -54,14 +54,6 @@ async def rag_library_mode_function(
         # Process the input_message and generate output
 
         rag = NvidiaRAG()
-        ingestor = NvidiaRAGIngestor()
-
-        # Just to debug
-        response = ingestor.get_documents(
-        collection_name=config.collection_names,
-        vdb_endpoint=config.base_url,
-        )
-        logger.info(f"***** {response}")
         
         return parse_search_citations(rag.search(
             query=f"{query}",
@@ -75,4 +67,4 @@ async def rag_library_mode_function(
     except GeneratorExit:
         logger.warning("Function exited early!")
     finally:
-        logger.info("Cleaning up rag_library_mode workflow.")
+        logger.info("Cleaning up rag_lib_mode workflow.")
