@@ -454,6 +454,7 @@ class MCPToolClient:
             raise RuntimeError("No session available for tool call")
 
         # Extract context information
+        session_id = None
         try:
             from nat.builder.context import Context as _Ctx
 
@@ -469,9 +470,8 @@ class MCPToolClient:
             if cookies:
                 session_id = cookies.get("nat-session")
         except Exception:
-            session_id = None
+            pass
 
-        logger.info("Calling tool %s with arguments %s for session %s", self._tool_name, tool_args, session_id)
         if session_id:
             result = await self._parent_client.call_tool_with_meta(self._tool_name, tool_args, session_id)
         else:
