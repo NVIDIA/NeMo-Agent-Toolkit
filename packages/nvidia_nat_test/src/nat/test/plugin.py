@@ -14,8 +14,12 @@
 # limitations under the License.
 
 import os
+import typing
 
 import pytest
+
+if typing.TYPE_CHECKING:
+    from docker.client import DockerClient
 
 
 def pytest_addoption(parser: pytest.Parser):
@@ -201,6 +205,21 @@ def azure_openai_keys_fixture(fail_missing: bool):
         reason="Azure integration tests require the `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` environment "
         "variable to be defined.",
         fail_missing=fail_missing)
+
+
+@pytest.fixture(name="require_docker", scope='session')
+def require_docker_fixture(fail_missing: bool) -> "DockerClient":
+    """
+    Use for integration tests that require Docker to be running.
+    """
+    try:
+        from docker.client import DockerClient
+        yield DockerClient()
+    except Exception as e:
+        reason = f"Unable to connect to Docker daemon: {e}"
+        if fail_missing:
+            raise RuntimeError(reason) from e
+        pytest.skip(reason=reason)
 
 
 @pytest.fixture(name="restore_environ")

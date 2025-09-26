@@ -101,8 +101,8 @@ def validate_trajectory_accuracy(trajectory_output_file: Path):
         f"The 'average_score' is less than {trajectory_score_min}"
 
 
-@pytest.mark.skip(reason="Failing accuracy checks, need to verify/update")
 @pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_eval():
     """
     1. nat-eval writes the workflow output to workflow_output.json
@@ -124,9 +124,11 @@ async def test_eval():
         skip_workflow=False,
         skip_completed_entries=False,
         endpoint=None,
-        endpoint_timeout=300,
+        endpoint_timeout=30,
         reps=1,
+        override=(('eval.general.max_concurrency', '1'), ),
     )
+
     # Run evaluation
     eval_runner = EvaluationRun(config=config)
     output = await eval_runner.run_and_evaluate()
