@@ -1118,7 +1118,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 # Find MCP client function groups
                 for group_name, configured_group in function_groups.items():
-                    if configured_group.config._type == "mcp_client":
+                    if configured_group.config.type == "mcp_client":
                         from nat.plugins.mcp.client_base import MCPSSEClient
                         from nat.plugins.mcp.client_base import MCPStdioClient
                         from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
