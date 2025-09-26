@@ -13,16 +13,18 @@ general:
 functions:
   current_datetime:
     _type: current_datetime
+  {{python_safe_workflow_name}}_echo:
+    _type: {{python_safe_workflow_name}}_echo
+    prefix: "Hello:"
 
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-8b-instruct
+    model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
 
 workflow:
   _type: react_agent
-  workflow_alias: {{workflow_name}}
-  description: "ReAct-based Workflow"
   llm_name: nim_llm
-  tool_names: [current_datetime]
+  tool_names: [current_datetime, {{python_safe_workflow_name}}_echo]
+  parse_agent_response_max_retries: 3
