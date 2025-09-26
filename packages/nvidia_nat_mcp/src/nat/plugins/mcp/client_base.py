@@ -129,7 +129,7 @@ class AuthAdapter(httpx.Auth):
                 token = auth_result.credentials[0].token.get_secret_value()
                 return {"Authorization": f"Bearer {token}"}
             else:
-                logger.warning("Auth provider did not return BearerTokenCred")
+                logger.info("Auth provider did not return BearerTokenCred")
                 return {}
         except Exception as e:
             logger.warning("Failed to get auth token: %s", e)
@@ -157,6 +157,7 @@ class MCPBaseClient(ABC):
         self._initial_connection = False
 
         # Convert auth provider to AuthAdapter
+        self._auth_provider = auth_provider
         self._httpx_auth = AuthAdapter(auth_provider) if auth_provider else None
 
     @property
@@ -246,6 +247,11 @@ class MCPBaseClient(ABC):
         if not tool:
             raise MCPToolNotFoundError(tool_name, self.server_name)
         return tool
+
+    def set_user_auth_callback(self, auth_callback: Callable[[AuthFlowType], AuthenticatedContext]):
+        """Set the user authentication callback."""
+        if self._auth_provider and hasattr(self._auth_provider, "_set_custom_auth_callback"):
+            self._auth_provider._set_custom_auth_callback(auth_callback)
 
     @mcp_exception_handler
     async def call_tool_with_meta(self, tool_name: str, args: dict, session_id: str):
@@ -447,20 +453,23 @@ class MCPToolClient:
         if self._session is None:
             raise RuntimeError("No session available for tool call")
 
-        # Extract session_id from context and prepare for injection into request extensions
-        session_id = None
+        # Extract context information
         try:
             from nat.builder.context import Context as _Ctx
-            try:
-                cookies = getattr(_Ctx.get().metadata, "cookies", None)
-                if cookies:
-                    session_id = cookies.get("nat-session")
-            except Exception:
-                session_id = None
-            # remember to remove this log - TODO
-            logger.info("[MCP] Tool call session check: session_id=%s", session_id)
+
+            # get auth callback (for example: WebSocketAuthenticationFlowHandler). this is lazily set in the client
+            # on first tool call
+            auth_callback = _Ctx.get().user_auth_callback
+            if auth_callback and self._parent_client:
+                # set custom auth callback
+                self._parent_client.set_user_auth_callback(auth_callback)
+
+            # get session id from context, authentication is done per-websocket session for tool calls
+            cookies = getattr(_Ctx.get().metadata, "cookies", None)
+            if cookies:
+                session_id = cookies.get("nat-session")
         except Exception:
-            pass
+            session_id = None
 
         logger.info("Calling tool %s with arguments %s for session %s", self._tool_name, tool_args, session_id)
         if session_id:

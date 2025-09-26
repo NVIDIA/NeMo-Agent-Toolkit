@@ -23,11 +23,14 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
 from pydantic import SecretStr
+from typing import Callable
 
 from mcp.shared.auth import OAuthClientInformationFull
 from mcp.shared.auth import OAuthClientMetadata
 from mcp.shared.auth import OAuthMetadata
 from mcp.shared.auth import ProtectedResourceMetadata
+from nat.authentication.interfaces import AuthenticatedContext
+from nat.authentication.interfaces import AuthFlowType
 from nat.authentication.interfaces import AuthProviderBase
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from nat.data_models.authentication import AuthResult
@@ -298,6 +301,18 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         self._auth_code_provider = None
         self._flow_handler = MCPAuthenticationFlowHandler()
 
+        self._auth_callback = None
+
+    def _set_custom_auth_callback(self,
+                                  auth_callback: Callable[[OAuth2AuthCodeFlowProviderConfig, AuthFlowType],
+                                                          AuthenticatedContext]):
+        """Set the custom authentication callback."""
+        if not self._auth_callback:
+            logger.info("Using custom authentication callback")
+            self._auth_callback = auth_callback
+            if self._auth_code_provider:
+                self._auth_code_provider._set_custom_auth_callback(self._auth_callback)
+
     async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
         """
         Authenticate using MCP OAuth2 flow via NAT framework.
@@ -346,8 +361,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
                 logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
 
-    async def _nat_oauth2_authenticate(self,
-                                       user_id: str | None = None) -> AuthResult:
+    async def _nat_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
         """Perform the OAuth2 flow using NAT OAuth2 provider."""
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
@@ -376,7 +390,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 use_pkce=bool(self.config.use_pkce),
                 authorization_kwargs={"resource": str(self.config.server_url)})
             self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
-            self._auth_code_provider._set_custom_auth_callback(self._flow_handler.authenticate)
+            self._auth_code_provider._set_custom_auth_callback(self._auth_callback or self._flow_handler.authenticate)
 
         # Auth code provider is responsible for per-user cache + refresh
         return await self._auth_code_provider.authenticate(user_id=user_id)

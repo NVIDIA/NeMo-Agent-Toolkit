@@ -60,6 +60,9 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     def validate_auth_config(self):
         """Validate authentication configuration for MCP-specific options."""
 
+        # if default_user_id is not provided, use the server_url as the default user id
+        if not self.default_user_id:
+            self.default_user_id = str(self.server_url)
         # Dynamic registration + MCP discovery
         if self.enable_dynamic_registration and not self.client_id:
             # Pure dynamic registration - no explicit credentials needed
@@ -70,9 +73,6 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
             # Has credentials but will discover URLs from MCP server
             pass
 
-        # if default_user_id is not provided, use the server_url as the default user id
-        if not self.default_user_id:
-            self.default_user_id = str(self.server_url)
 
         # Invalid configuration
         else:
