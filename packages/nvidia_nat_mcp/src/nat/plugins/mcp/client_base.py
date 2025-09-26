@@ -339,25 +339,21 @@ class MCPBaseClient(ABC):
 
     @mcp_exception_handler
     async def call_tool_with_meta(self, tool_name: str, args: dict, session_id: str):
-        from mcp import types as mcp_types
+        from mcp.types import CallToolRequest
+        from mcp.types import CallToolRequestParams
+        from mcp.types import CallToolResult
+        from mcp.types import ClientRequest
 
         if not self._session:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
 
-        params = mcp_types.CallToolRequestParams(name=tool_name,
-                                                 arguments=args,
-                                                 **{"_meta": {
-                                                     "session_id": session_id
-                                                 }})
-        req = mcp_types.ClientRequest(mcp_types.CallToolRequest(params=params))
+        async def _call_tool_with_meta():
+            params = CallToolRequestParams(name=tool_name, arguments=args, **{"_meta": {"session_id": session_id}})
+            req = ClientRequest(CallToolRequest(params=params))
+            # don't pass request_read_timeout_seconds for the time being
+            return await self._session.send_request(req, CallToolResult)
 
-        async def _call_tool():
-            session = self._session
-            return await session.send_request(req,
-                                              mcp_types.CallToolResult,
-                                              request_read_timeout_seconds=self._tool_call_timeout)
-
-        return await self._with_reconnect(_call_tool)
+        return await self._with_reconnect(_call_tool_with_meta)
 
     @mcp_exception_handler
     async def call_tool(self, tool_name: str, tool_args: dict | None):
