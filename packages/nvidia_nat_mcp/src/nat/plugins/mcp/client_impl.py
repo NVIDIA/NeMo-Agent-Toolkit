@@ -179,6 +179,13 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     group = FunctionGroup(config=config)
 
     async with client:
+        # Expose the live MCP client on the function group instance so other components (e.g., HTTP endpoints)
+        # can reuse the already-established session instead of creating a new client per request.
+        # These attributes are intentionally internal/private to avoid API surface commitments.
+        setattr(group, "_mcp_client", client)
+        setattr(group, "_mcp_client_server_name", client.server_name)
+        setattr(group, "_mcp_client_transport", client.transport)
+
         all_tools = await client.get_tools()
         tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
 
@@ -194,12 +201,24 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             # Create the tool function
             tool_fn = mcp_tool_function(tool)
 
+            # Normalize optional typing for linter/type-checker compatibility
+            single_fn = tool_fn.single_fn
+            if single_fn is None:
+                # Should not happen because mcp_tool_function always sets a single_fn
+                logger.warning("Skipping tool %s because single_fn is None", function_name)
+                continue
+
+            input_schema = tool_fn.input_schema
+            # Convert NoneType sentinel to None for FunctionGroup.add_function signature
+            if input_schema is type(None):  # noqa: E721
+                input_schema = None
+
             # Add to group
             logger.info("Adding tool %s to group", function_name)
             group.add_function(name=function_name,
                                description=description,
-                               fn=tool_fn.single_fn,
-                               input_schema=tool_fn.input_schema,
+                               fn=single_fn,
+                               input_schema=input_schema,
                                converters=tool_fn.converters)
 
         yield group

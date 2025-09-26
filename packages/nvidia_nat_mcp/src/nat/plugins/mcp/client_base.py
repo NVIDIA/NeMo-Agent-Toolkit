@@ -25,6 +25,7 @@ from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from datetime import timedelta
 
+import anyio
 import httpx
 
 from mcp import ClientSession
@@ -262,6 +263,7 @@ class MCPBaseClient(ABC):
                 return await coro()
             raise
 
+    @mcp_exception_handler
     async def get_tools(self):
         """
         Retrieve a dictionary of all tools served by the MCP server.
@@ -270,7 +272,16 @@ class MCPBaseClient(ABC):
 
         async def _get_tools():
             session = self._session
-            return await session.list_tools()
+            try:
+                # Add timeout to the list_tools call.
+                # This is needed because MCP SDK does not support timeout for list_tools()
+                with anyio.fail_after(self._tool_call_timeout.total_seconds()):
+                    tools = await session.list_tools()
+            except TimeoutError as e:
+                from nat.plugins.mcp.exceptions import MCPTimeoutError
+                raise MCPTimeoutError(self.server_name, e)
+
+            return tools
 
         try:
             response = await self._with_reconnect(_get_tools)

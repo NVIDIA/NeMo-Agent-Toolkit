@@ -1119,47 +1119,24 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 # Find MCP client function groups
                 for group_name, configured_group in function_groups.items():
                     if configured_group.config.type == "mcp_client":
-                        from nat.plugins.mcp.client_base import MCPSSEClient
-                        from nat.plugins.mcp.client_base import MCPStdioClient
-                        from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
                         from nat.plugins.mcp.client_impl import MCPClientConfig
 
                         config = configured_group.config
                         assert isinstance(config, MCPClientConfig)
 
-                        # Create the appropriate client based on transport
-                        client = None
+                        # Reuse the existing MCP client session stored on the function group instance
+                        group_instance = configured_group.instance
+                        client = getattr(group_instance, "_mcp_client", None)
+                        if client is None:
+                            raise RuntimeError(f"MCP client not found for group {group_name}")
+
                         try:
-                            if config.server.transport == "stdio":
-                                client = MCPStdioClient(config.server.command,
-                                                        config.server.args,
-                                                        config.server.env,
-                                                        config.tool_call_timeout)
-                            elif config.server.transport == "sse":
-                                client = MCPSSEClient(str(config.server.url),
-                                                      tool_call_timeout=config.tool_call_timeout)
-                            elif config.server.transport == "streamable-http":
-                                # Resolve auth provider if specified
-                                auth_provider = None
-                                if config.server.auth_provider:
-                                    auth_provider = await builder.get_auth_provider(config.server.auth_provider)
-
-                                client = MCPStreamableHTTPClient(str(config.server.url),
-                                                                 auth_provider=auth_provider,
-                                                                 tool_call_timeout=config.tool_call_timeout)
-
-                            if client is None:
-                                continue
-
-                            # Test session health and get tools
                             session_healthy = False
                             server_tools = {}
 
                             try:
-                                async with client:
-                                    # Try to get tools to test session health
-                                    server_tools = await client.get_tools()
-                                    session_healthy = True
+                                server_tools = await client.get_tools()
+                                session_healthy = True
                             except Exception as e:
                                 logger.warning(f"Failed to connect to MCP server {client.server_name}: {e}")
                                 session_healthy = False
@@ -1167,9 +1144,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             # Get workflow function group configuration
                             workflow_functions = set()
                             try:
-                                group_instance = configured_group.instance
                                 accessible_functions = await group_instance.get_accessible_functions()
-                                # Extract just the tool names (remove group prefix)
                                 workflow_functions = {
                                     name.split('.', 1)[1] if '.' in name else name
                                     for name in accessible_functions.keys()
@@ -1188,7 +1163,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                 in_workflow=tool_name in workflow_functions).dict())
 
                             mcp_clients_info.append({
-                                "group_name": group_name,
+                                "function_group_name": group_name,
                                 "server_name": client.server_name,
                                 "transport": config.server.transport,
                                 "session_healthy": session_healthy,
@@ -1200,7 +1175,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         except Exception as e:
                             logger.error(f"Error processing MCP client {group_name}: {e}")
                             mcp_clients_info.append({
-                                "group_name": group_name,
+                                "function_group_name": group_name,
                                 "server_name": "unknown",
                                 "transport": config.server.transport if config.server else "unknown",
                                 "session_healthy": False,
@@ -1230,7 +1205,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         "application/json": {
                             "example": {
                                 "mcp_clients": [{
-                                    "group_name": "mcp_tools",
+                                    "function_group_name": "mcp_tools",
                                     "server_name": "streamable-http:http://localhost:9901/mcp",
                                     "transport": "streamable-http",
                                     "session_healthy": True,
