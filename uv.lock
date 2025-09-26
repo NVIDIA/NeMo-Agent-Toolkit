@@ -627,22 +627,6 @@ wheels = [
 ]
 
 [[package]]
-name = "auth0-python"
-version = "4.13.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "cryptography" },
-    { name = "pyjwt" },
-    { name = "requests" },
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4f/87/3c54624c8fe121a68d36dd9f9158fa6878e4be378487b8f787ddc2fa2f3d/auth0_python-4.13.0.tar.gz", hash = "sha256:72f58bd26b078e3b493e4d24928cc75fa41842aae35cef488ed6f8db0fb701fb", size = 76115, upload-time = "2025-09-17T19:26:31.643Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/01/3f52cf8ee6aa6e62f48020703ac3c67cf8a36ddc927dfde54b42c59a6e00/auth0_python-4.13.0-py3-none-any.whl", hash = "sha256:8e3266fcfc2e3cc4f477e01f964c0a6c9a3563653a2feb226355bc825cd4932c", size = 142088, upload-time = "2025-09-17T19:26:29.689Z" },
-]
-
-[[package]]
 name = "authlib"
 version = "1.6.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1439,35 +1423,39 @@ toml = [
 
 [[package]]
 name = "crewai"
-version = "0.95.0"
+version = "0.193.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "appdirs" },
-    { name = "auth0-python" },
     { name = "blinker" },
     { name = "chromadb" },
     { name = "click" },
     { name = "instructor" },
     { name = "json-repair" },
+    { name = "json5" },
     { name = "jsonref" },
     { name = "litellm" },
+    { name = "onnxruntime" },
     { name = "openai" },
     { name = "openpyxl" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
     { name = "pdfplumber" },
+    { name = "portalocker" },
     { name = "pydantic" },
+    { name = "pyjwt" },
     { name = "python-dotenv" },
     { name = "pyvis" },
     { name = "regex" },
+    { name = "tokenizers" },
     { name = "tomli" },
     { name = "tomli-w" },
     { name = "uv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/62/4e/325fd0032b065dfbdeb2a366ac6d1e35b2e5b4530eb4f3f15f84f7aad406/crewai-0.95.0.tar.gz", hash = "sha256:31c7c6405e7658f177fac82c47b208d2a9c4bc82ddcc622ba2dc8c6e9963eb17", size = 7753264, upload-time = "2025-01-04T19:41:41.222Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/ac/329d62f5abfb24ffb096c041469ba24190feca1d5651084d5c332939b33f/crewai-0.193.2.tar.gz", hash = "sha256:239f1d299bbf493e76778434f6476604b585e1f228e2c75d39983a39a1522275", size = 6563484, upload-time = "2025-09-20T21:09:16.553Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/fc/286f4af720bccd0337bcb6af61fb68018d45187a0f985419dd7e42af86c4/crewai-0.95.0-py3-none-any.whl", hash = "sha256:e8d65d74a5ca43e1a353d32cca1fe56a06846bf08419bf2bf270e5007379f787", size = 211939, upload-time = "2025-01-04T19:41:37.085Z" },
+    { url = "https://files.pythonhosted.org/packages/9b/81/699782ddfe3c18f6954355f4ec53d73d9c88a88bc5433f590163549a0fbf/crewai-0.193.2-py3-none-any.whl", hash = "sha256:cad4d6a5f32e902a390ca3fc84698839e7720c1ae7acdba002da9a18405a01c8", size = 431559, upload-time = "2025-09-20T21:09:08.676Z" },
 ]
 
 [[package]]
@@ -3410,11 +3398,11 @@ wheels = [
 
 [[package]]
 name = "json-repair"
-version = "0.50.1"
+version = "0.25.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/91/71/6d57ed93e43e98cdd124e82ab6231c6817f06a10743e7ae4bc6f66d03a02/json_repair-0.50.1.tar.gz", hash = "sha256:4ee69bc4be7330fbb90a3f19e890852c5fe1ceacec5ed1d2c25cdeeebdfaec76", size = 34864, upload-time = "2025-09-06T05:43:34.331Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/cb/50b0bbc3e504ef875aea0062cdc108077e4923fb8c1209c70c80dc043933/json_repair-0.25.2.tar.gz", hash = "sha256:161a56d7e6bbfd4cad3a614087e3e0dbd0e10d402dd20dc7db418432428cb32b", size = 20458, upload-time = "2024-06-27T16:26:15.492Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/be/b1e05740d9c6f333dab67910f3894e2e2416c1ef00f9f7e20a327ab1f396/json_repair-0.50.1-py3-none-any.whl", hash = "sha256:9b78358bb7572a6e0b8effe7a8bd8cb959a3e311144842b1d2363fe39e2f13c5", size = 26020, upload-time = "2025-09-06T05:43:32.718Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/43/ac6691c7b5aa7191c964a04ae926d2bb06d9297dba1f2287df5b85cb3715/json_repair-0.25.2-py3-none-any.whl", hash = "sha256:51d67295c3184b6c41a3572689661c6128cef6cfc9fb04db63130709adfc5bf0", size = 12740, upload-time = "2024-06-27T16:26:13.823Z" },
 ]
 
 [[package]]
@@ -4125,7 +4113,7 @@ wheels = [
 
 [[package]]
 name = "litellm"
-version = "1.63.14"
+version = "1.74.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -4140,9 +4128,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "tokenizers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/6a/a1a93c8419b59d0a40f59dc7300d67f45cd33a246367b09365dd7771568b/litellm-1.63.14.tar.gz", hash = "sha256:9cffe19d8140c33a2f777c5b2e8b8175ffe03979aac341b8538d6e6d143bd640", size = 6641535, upload-time = "2025-03-22T05:49:52.892Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6d/5d/646bebdb4769d77e6a018b9152c9ccf17afe15d0f88974f338d3f2ee7c15/litellm-1.74.9.tar.gz", hash = "sha256:4a32eff70342e1aee4d1cbf2de2a6ed64a7c39d86345c58d4401036af018b7de", size = 9660510, upload-time = "2025-07-28T16:42:39.297Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/0c/149ae51e16d0836d6ddc9aec03a110960227046860dfc68bd3746a23cdf5/litellm-1.63.14-py3-none-any.whl", hash = "sha256:d4c469f5990e142cc23dfa06c3fddd627001928e4df43682001f453af6a1fb51", size = 6964658, upload-time = "2025-03-22T05:49:49.924Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/e4/f1546746049c99c6b8b247e2f34485b9eae36faa9322b84e2a17262e6712/litellm-1.74.9-py3-none-any.whl", hash = "sha256:ab8f8a6e4d8689d3c7c4f9c3bbc7e46212cc3ebc74ddd0f3c0c921bb459c9874", size = 8740449, upload-time = "2025-07-28T16:42:36.8Z" },
 ]
 
 [[package]]
@@ -4900,7 +4888,7 @@ name = "milvus-lite"
 version = "2.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "tqdm" },
+    { name = "tqdm", marker = "sys_platform != 'win32'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a9/b2/acc5024c8e8b6a0b034670b8e8af306ebd633ede777dcbf557eac4785937/milvus_lite-2.5.1-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:6b014453200ba977be37ba660cb2d021030375fa6a35bc53c2e1d92980a0c512", size = 27934713, upload-time = "2025-06-30T04:23:37.028Z" },
@@ -5258,16 +5246,13 @@ requires-dist = [
 name = "nat-agno-personal-finance"
 source = { editable = "examples/frameworks/agno_personal_finance" }
 dependencies = [
-    { name = "litellm" },
-    { name = "nvidia-nat", extra = ["agno"] },
-    { name = "openai" },
+    { name = "nvidia-nat", extra = ["agno", "litellm", "openai"] },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "litellm", specifier = "~=1.63.14" },
     { name = "nvidia-nat", extras = ["agno"], editable = "." },
-    { name = "openai", specifier = "~=1.106" },
+    { name = "nvidia-nat", extras = ["litellm", "openai"], editable = "." },
 ]
 
 [[package]]
@@ -5356,8 +5341,7 @@ dependencies = [
     { name = "bs4" },
     { name = "markdown-it-py" },
     { name = "nvidia-haystack" },
-    { name = "nvidia-nat", extra = ["langchain", "llama-index"] },
-    { name = "openai" },
+    { name = "nvidia-nat", extra = ["langchain", "llama-index", "openai"] },
 ]
 
 [package.metadata]
@@ -5366,8 +5350,7 @@ requires-dist = [
     { name = "bs4", specifier = "==0.0.2" },
     { name = "markdown-it-py", specifier = "~=3.0" },
     { name = "nvidia-haystack", specifier = "==0.1.2" },
-    { name = "nvidia-nat", extras = ["langchain", "llama-index"], editable = "." },
-    { name = "openai", specifier = "~=1.106" },
+    { name = "nvidia-nat", extras = ["langchain", "llama-index", "openai"], editable = "." },
 ]
 
 [[package]]
@@ -6022,6 +6005,9 @@ ingestion = [
 langchain = [
     { name = "nvidia-nat-langchain" },
 ]
+litellm = [
+    { name = "litellm" },
+]
 llama-index = [
     { name = "nvidia-nat-llama-index" },
 ]
@@ -6033,6 +6019,9 @@ mem0ai = [
 ]
 mysql = [
     { name = "nvidia-nat-mysql" },
+]
+openai = [
+    { name = "openai" },
 ]
 opentelemetry = [
     { name = "nvidia-nat-opentelemetry" },
@@ -6114,6 +6103,7 @@ requires-dist = [
     { name = "httpx", specifier = "~=0.27" },
     { name = "jinja2", specifier = "~=3.1" },
     { name = "jsonpath-ng", specifier = "~=1.7" },
+    { name = "litellm", marker = "extra == 'litellm'", specifier = "==1.74.9" },
     { name = "mcp", specifier = "~=1.13" },
     { name = "nat-adk-demo", marker = "extra == 'examples'", editable = "examples/frameworks/adk_demo" },
     { name = "nat-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/frameworks/agno_personal_finance" },
@@ -6170,6 +6160,7 @@ requires-dist = [
     { name = "nvidia-nat-weave", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_weave" },
     { name = "nvidia-nat-weave", marker = "extra == 'weave'", editable = "packages/nvidia_nat_weave" },
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/nvidia_nat_zep_cloud" },
+    { name = "openai", marker = "extra == 'openai'", specifier = "~=1.106" },
     { name = "openinference-semantic-conventions", specifier = "~=0.1.14" },
     { name = "openpyxl", specifier = "~=3.1" },
     { name = "optuna", specifier = "~=4.4.0" },
@@ -6186,7 +6177,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.34" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["all", "adk", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "gunicorn", "async-endpoints"]
+provides-extras = ["all", "adk", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "gunicorn", "async-endpoints", "litellm", "openai"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -6223,15 +6214,13 @@ name = "nvidia-nat-adk"
 source = { editable = "packages/nvidia_nat_adk" }
 dependencies = [
     { name = "google-adk" },
-    { name = "litellm" },
-    { name = "nvidia-nat" },
+    { name = "nvidia-nat", extra = ["litellm"] },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "google-adk", specifier = "~=1.6" },
-    { name = "litellm", specifier = ">=1.63,<1.74" },
-    { name = "nvidia-nat", editable = "." },
+    { name = "google-adk", specifier = "~=1.14.1" },
+    { name = "nvidia-nat", extras = ["litellm"], editable = "." },
 ]
 
 [[package]]
@@ -6240,16 +6229,14 @@ source = { editable = "packages/nvidia_nat_agno" }
 dependencies = [
     { name = "agno" },
     { name = "google-search-results" },
-    { name = "nvidia-nat" },
-    { name = "openai" },
+    { name = "nvidia-nat", extra = ["openai"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "agno", specifier = "~=1.2.3" },
     { name = "google-search-results", specifier = "~=2.4.2" },
-    { name = "nvidia-nat", editable = "." },
-    { name = "openai", specifier = "~=1.106" },
+    { name = "nvidia-nat", extras = ["openai"], editable = "." },
 ]
 
 [[package]]
@@ -6257,6 +6244,7 @@ name = "nvidia-nat-all"
 source = { editable = "packages/nvidia_nat_all" }
 dependencies = [
     { name = "nvidia-nat", extra = ["async-endpoints", "gunicorn"] },
+    { name = "nvidia-nat-adk" },
     { name = "nvidia-nat-agno" },
     { name = "nvidia-nat-crewai" },
     { name = "nvidia-nat-ingestion" },
@@ -6279,6 +6267,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "nvidia-nat", extras = ["async-endpoints", "gunicorn"], editable = "." },
+    { name = "nvidia-nat-adk", editable = "packages/nvidia_nat_adk" },
     { name = "nvidia-nat-agno", editable = "packages/nvidia_nat_agno" },
     { name = "nvidia-nat-crewai", editable = "packages/nvidia_nat_crewai" },
     { name = "nvidia-nat-ingestion", editable = "packages/nvidia_nat_ingestion" },
@@ -6303,13 +6292,13 @@ name = "nvidia-nat-crewai"
 source = { editable = "packages/nvidia_nat_crewai" }
 dependencies = [
     { name = "crewai" },
-    { name = "nvidia-nat" },
+    { name = "nvidia-nat", extra = ["litellm"] },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "crewai", specifier = "~=0.95.0" },
-    { name = "nvidia-nat", editable = "." },
+    { name = "crewai", specifier = "~=0.193.2" },
+    { name = "nvidia-nat", extras = ["litellm"], editable = "." },
 ]
 
 [[package]]
@@ -6493,13 +6482,13 @@ requires-dist = [
 name = "nvidia-nat-ragaai"
 source = { editable = "packages/nvidia_nat_ragaai" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["opentelemetry"] },
+    { name = "nvidia-nat", extra = ["litellm", "opentelemetry"] },
     { name = "ragaai-catalyst" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "nvidia-nat", extras = ["opentelemetry"], editable = "." },
+    { name = "nvidia-nat", extras = ["litellm", "opentelemetry"], editable = "." },
     { name = "ragaai-catalyst", specifier = ">=2.2.0,<2.3" },
 ]
 
@@ -6616,7 +6605,7 @@ wheels = [
 
 [[package]]
 name = "onnxruntime"
-version = "1.22.1"
+version = "1.22.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coloredlogs" },
@@ -6629,20 +6618,20 @@ dependencies = [
     { name = "sympy" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/82/ff/4a1a6747e039ef29a8d4ee4510060e9a805982b6da906a3da2306b7a3be6/onnxruntime-1.22.1-cp311-cp311-macosx_13_0_universal2.whl", hash = "sha256:f4581bccb786da68725d8eac7c63a8f31a89116b8761ff8b4989dc58b61d49a0", size = 34324148, upload-time = "2025-07-10T19:15:26.584Z" },
-    { url = "https://files.pythonhosted.org/packages/0b/05/9f1929723f1cca8c9fb1b2b97ac54ce61362c7201434d38053ea36ee4225/onnxruntime-1.22.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7ae7526cf10f93454beb0f751e78e5cb7619e3b92f9fc3bd51aa6f3b7a8977e5", size = 14473779, upload-time = "2025-07-10T19:15:30.183Z" },
-    { url = "https://files.pythonhosted.org/packages/59/f3/c93eb4167d4f36ea947930f82850231f7ce0900cb00e1a53dc4995b60479/onnxruntime-1.22.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f6effa1299ac549a05c784d50292e3378dbbf010346ded67400193b09ddc2f04", size = 16460799, upload-time = "2025-07-10T19:15:33.005Z" },
-    { url = "https://files.pythonhosted.org/packages/a8/01/e536397b03e4462d3260aee5387e6f606c8fa9d2b20b1728f988c3c72891/onnxruntime-1.22.1-cp311-cp311-win_amd64.whl", hash = "sha256:f28a42bb322b4ca6d255531bb334a2b3e21f172e37c1741bd5e66bc4b7b61f03", size = 12689881, upload-time = "2025-07-10T19:15:35.501Z" },
-    { url = "https://files.pythonhosted.org/packages/48/70/ca2a4d38a5deccd98caa145581becb20c53684f451e89eb3a39915620066/onnxruntime-1.22.1-cp312-cp312-macosx_13_0_universal2.whl", hash = "sha256:a938d11c0dc811badf78e435daa3899d9af38abee950d87f3ab7430eb5b3cf5a", size = 34342883, upload-time = "2025-07-10T19:15:38.223Z" },
-    { url = "https://files.pythonhosted.org/packages/29/e5/00b099b4d4f6223b610421080d0eed9327ef9986785c9141819bbba0d396/onnxruntime-1.22.1-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:984cea2a02fcc5dfea44ade9aca9fe0f7a8a2cd6f77c258fc4388238618f3928", size = 14473861, upload-time = "2025-07-10T19:15:42.911Z" },
-    { url = "https://files.pythonhosted.org/packages/0a/50/519828a5292a6ccd8d5cd6d2f72c6b36ea528a2ef68eca69647732539ffa/onnxruntime-1.22.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:2d39a530aff1ec8d02e365f35e503193991417788641b184f5b1e8c9a6d5ce8d", size = 16475713, upload-time = "2025-07-10T19:15:45.452Z" },
-    { url = "https://files.pythonhosted.org/packages/5d/54/7139d463bb0a312890c9a5db87d7815d4a8cce9e6f5f28d04f0b55fcb160/onnxruntime-1.22.1-cp312-cp312-win_amd64.whl", hash = "sha256:6a64291d57ea966a245f749eb970f4fa05a64d26672e05a83fdb5db6b7d62f87", size = 12690910, upload-time = "2025-07-10T19:15:47.478Z" },
-    { url = "https://files.pythonhosted.org/packages/e0/39/77cefa829740bd830915095d8408dce6d731b244e24b1f64fe3df9f18e86/onnxruntime-1.22.1-cp313-cp313-macosx_13_0_universal2.whl", hash = "sha256:d29c7d87b6cbed8fecfd09dca471832384d12a69e1ab873e5effbb94adc3e966", size = 34342026, upload-time = "2025-07-10T19:15:50.266Z" },
-    { url = "https://files.pythonhosted.org/packages/d2/a6/444291524cb52875b5de980a6e918072514df63a57a7120bf9dfae3aeed1/onnxruntime-1.22.1-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:460487d83b7056ba98f1f7bac80287224c31d8149b15712b0d6f5078fcc33d0f", size = 14474014, upload-time = "2025-07-10T19:15:53.991Z" },
-    { url = "https://files.pythonhosted.org/packages/87/9d/45a995437879c18beff26eacc2322f4227224d04c6ac3254dce2e8950190/onnxruntime-1.22.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b0c37070268ba4e02a1a9d28560cd00cd1e94f0d4f275cbef283854f861a65fa", size = 16475427, upload-time = "2025-07-10T19:15:56.067Z" },
-    { url = "https://files.pythonhosted.org/packages/4c/06/9c765e66ad32a7e709ce4cb6b95d7eaa9cb4d92a6e11ea97c20ffecaf765/onnxruntime-1.22.1-cp313-cp313-win_amd64.whl", hash = "sha256:70980d729145a36a05f74b573435531f55ef9503bcda81fc6c3d6b9306199982", size = 12690841, upload-time = "2025-07-10T19:15:58.337Z" },
-    { url = "https://files.pythonhosted.org/packages/52/8c/02af24ee1c8dce4e6c14a1642a7a56cebe323d2fa01d9a360a638f7e4b75/onnxruntime-1.22.1-cp313-cp313t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:33a7980bbc4b7f446bac26c3785652fe8730ed02617d765399e89ac7d44e0f7d", size = 14479333, upload-time = "2025-07-10T19:16:00.544Z" },
-    { url = "https://files.pythonhosted.org/packages/5d/15/d75fd66aba116ce3732bb1050401394c5ec52074c4f7ee18db8838dd4667/onnxruntime-1.22.1-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6e7e823624b015ea879d976cbef8bfaed2f7e2cc233d7506860a76dd37f8f381", size = 16477261, upload-time = "2025-07-10T19:16:03.226Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/08/c008711d1b92ff1272f4fea0fbee57723171f161d42e5c680625535280af/onnxruntime-1.22.0-cp311-cp311-macosx_13_0_universal2.whl", hash = "sha256:8d6725c5b9a681d8fe72f2960c191a96c256367887d076b08466f52b4e0991df", size = 34282151, upload-time = "2025-05-09T20:25:59.246Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/8b/22989f6b59bc4ad1324f07a945c80b9ab825f0a581ad7a6064b93716d9b7/onnxruntime-1.22.0-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:fef17d665a917866d1f68f09edc98223b9a27e6cb167dec69da4c66484ad12fd", size = 14446302, upload-time = "2025-05-09T20:25:44.299Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/d5/aa83d084d05bc8f6cf8b74b499c77431ffd6b7075c761ec48ec0c161a47f/onnxruntime-1.22.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b978aa63a9a22095479c38371a9b359d4c15173cbb164eaad5f2cd27d666aa65", size = 16393496, upload-time = "2025-05-09T20:26:11.588Z" },
+    { url = "https://files.pythonhosted.org/packages/89/a5/1c6c10322201566015183b52ef011dfa932f5dd1b278de8d75c3b948411d/onnxruntime-1.22.0-cp311-cp311-win_amd64.whl", hash = "sha256:03d3ef7fb11adf154149d6e767e21057e0e577b947dd3f66190b212528e1db31", size = 12691517, upload-time = "2025-05-12T21:26:13.354Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/de/9162872c6e502e9ac8c99a98a8738b2fab408123d11de55022ac4f92562a/onnxruntime-1.22.0-cp312-cp312-macosx_13_0_universal2.whl", hash = "sha256:f3c0380f53c1e72a41b3f4d6af2ccc01df2c17844072233442c3a7e74851ab97", size = 34298046, upload-time = "2025-05-09T20:26:02.399Z" },
+    { url = "https://files.pythonhosted.org/packages/03/79/36f910cd9fc96b444b0e728bba14607016079786adf032dae61f7c63b4aa/onnxruntime-1.22.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c8601128eaef79b636152aea76ae6981b7c9fc81a618f584c15d78d42b310f1c", size = 14443220, upload-time = "2025-05-09T20:25:47.078Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/60/16d219b8868cc8e8e51a68519873bdb9f5f24af080b62e917a13fff9989b/onnxruntime-1.22.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6964a975731afc19dc3418fad8d4e08c48920144ff590149429a5ebe0d15fb3c", size = 16406377, upload-time = "2025-05-09T20:26:14.478Z" },
+    { url = "https://files.pythonhosted.org/packages/36/b4/3f1c71ce1d3d21078a6a74c5483bfa2b07e41a8d2b8fb1e9993e6a26d8d3/onnxruntime-1.22.0-cp312-cp312-win_amd64.whl", hash = "sha256:c0d534a43d1264d1273c2d4f00a5a588fa98d21117a3345b7104fa0bbcaadb9a", size = 12692233, upload-time = "2025-05-12T21:26:16.963Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/65/5cb5018d5b0b7cba820d2c4a1d1b02d40df538d49138ba36a509457e4df6/onnxruntime-1.22.0-cp313-cp313-macosx_13_0_universal2.whl", hash = "sha256:fe7c051236aae16d8e2e9ffbfc1e115a0cc2450e873a9c4cb75c0cc96c1dae07", size = 34298715, upload-time = "2025-05-09T20:26:05.634Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/89/1dfe1b368831d1256b90b95cb8d11da8ab769febd5c8833ec85ec1f79d21/onnxruntime-1.22.0-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:6a6bbed10bc5e770c04d422893d3045b81acbbadc9fb759a2cd1ca00993da919", size = 14443266, upload-time = "2025-05-09T20:25:49.479Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/70/342514ade3a33ad9dd505dcee96ff1f0e7be6d0e6e9c911fe0f1505abf42/onnxruntime-1.22.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9fe45ee3e756300fccfd8d61b91129a121d3d80e9d38e01f03ff1295badc32b8", size = 16406707, upload-time = "2025-05-09T20:26:17.454Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/89/2f64e250945fa87140fb917ba377d6d0e9122e029c8512f389a9b7f953f4/onnxruntime-1.22.0-cp313-cp313-win_amd64.whl", hash = "sha256:5a31d84ef82b4b05d794a4ce8ba37b0d9deb768fd580e36e17b39e0b4840253b", size = 12691777, upload-time = "2025-05-12T21:26:20.19Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/48/d61d5f1ed098161edd88c56cbac49207d7b7b149e613d2cd7e33176c63b3/onnxruntime-1.22.0-cp313-cp313t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0a2ac5bd9205d831541db4e508e586e764a74f14efdd3f89af7fd20e1bf4a1ed", size = 14454003, upload-time = "2025-05-09T20:25:52.287Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/16/873b955beda7bada5b0d798d3a601b2ff210e44ad5169f6d405b93892103/onnxruntime-1.22.0-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:64845709f9e8a2809e8e009bc4c8f73b788cee9c6619b7d9930344eae4c9cd36", size = 16427482, upload-time = "2025-05-09T20:26:20.376Z" },
 ]
 
 [[package]]
@@ -7561,14 +7550,14 @@ wheels = [
 
 [[package]]
 name = "portalocker"
-version = "3.2.0"
+version = "2.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pywin32", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5e/77/65b857a69ed876e1951e88aaba60f5ce6120c33703f7cb61a3c894b8c1b6/portalocker-3.2.0.tar.gz", hash = "sha256:1f3002956a54a8c3730586c5c77bf18fae4149e07eaf1c29fc3faf4d5a3f89ac", size = 95644, upload-time = "2025-06-14T13:20:40.03Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/f8/969e6f280201b40b31bcb62843c619f343dcc351dff83a5891530c9dd60e/portalocker-2.7.0.tar.gz", hash = "sha256:032e81d534a88ec1736d03f780ba073f047a06c478b06e2937486f334e955c51", size = 20183, upload-time = "2023-01-18T23:36:14.436Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4b/a6/38c8e2f318bf67d338f4d629e93b0b4b9af331f455f0390ea8ce4a099b26/portalocker-3.2.0-py3-none-any.whl", hash = "sha256:3cdc5f565312224bc570c49337bd21428bba0ef363bbcf58b9ef4a9f11779968", size = 22424, upload-time = "2025-06-14T13:20:38.083Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/df/d4f711d168524f5aebd7fb30969eaa31e3048cf8979688cde3b08f6e5eb8/portalocker-2.7.0-py2.py3-none-any.whl", hash = "sha256:a07c5b4f3985c3cf4798369631fb7011adb498e2a46d8440efc75a8f29a0f983", size = 15502, upload-time = "2023-01-18T23:36:12.849Z" },
 ]
 
 [[package]]

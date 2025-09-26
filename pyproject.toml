@@ -141,6 +141,14 @@ async_endpoints = [
   "sqlalchemy[asyncio]~=2.0",
 ]
 
+# specific versions of shared packages within optional subpackages
+litellm = [
+  "litellm==1.74.9"
+]
+openai = [
+  "openai~=1.106"
+]
+
 [tool.uv]
 config-settings = { editable_mode = "compat" }
 
