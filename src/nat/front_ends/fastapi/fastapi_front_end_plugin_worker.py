@@ -1098,9 +1098,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         class MCPToolInfo(BaseModel):
             name: str
             description: str
-            server_name: str
-            session_healthy: bool
-            in_workflow: bool
+            server: str
             available: bool
 
         class MCPClientToolListResponse(BaseModel):
@@ -1185,14 +1183,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                 tools_info.append(
                                     MCPToolInfo(name=fn_short,
                                                 description=description or "",
-                                                server_name=client.server_name,
-                                                session_healthy=session_healthy,
-                                                in_workflow=True,
+                                                server=client.server_name,
                                                 available=available).dict())
 
                             mcp_clients_info.append({
-                                "function_group_name": group_name,
-                                "server_name": client.server_name,
+                                "function_group": group_name,
+                                "server": client.server_name,
                                 "transport": config.server.transport,
                                 "session_healthy": session_healthy,
                                 "tools": tools_info,
@@ -1203,8 +1199,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         except Exception as e:
                             logger.error(f"Error processing MCP client {group_name}: {e}")
                             mcp_clients_info.append({
-                                "function_group_name": group_name,
-                                "server_name": "unknown",
+                                "function_group": group_name,
+                                "server": "unknown",
                                 "transport": config.server.transport if config.server else "unknown",
                                 "session_healthy": False,
                                 "error": str(e),
@@ -1233,19 +1229,18 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         "application/json": {
                             "example": {
                                 "mcp_clients": [{
-                                    "function_group_name": "mcp_tools",
-                                    "server_name": "streamable-http:http://localhost:9901/mcp",
+                                    "function_group": "mcp_tools",
+                                    "server": "streamable-http:http://localhost:9901/mcp",
                                     "transport": "streamable-http",
                                     "session_healthy": True,
                                     "tools": [{
                                         "name": "tool_a",
                                         "description": "Tool A description",
-                                        "server_name": "streamable-http:http://localhost:9901/mcp",
-                                        "session_healthy": True,
-                                        "in_workflow": True
+                                        "server": "streamable-http:http://localhost:9901/mcp",
+                                        "available": True
                                     }],
                                     "total_tools": 1,
-                                    "workflow_tools": 1
+                                    "available_tools": 1
                                 }]
                             }
                         }
