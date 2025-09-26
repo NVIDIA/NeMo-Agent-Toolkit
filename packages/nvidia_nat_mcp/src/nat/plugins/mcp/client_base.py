@@ -356,7 +356,7 @@ class MCPBaseClient(ABC):
         async def _call_tool():
             session = self._session
             return await session.send_request(req, mcp_types.CallToolResult,
-                                              read_timeout_seconds=self._tool_call_timeout)
+                                              request_read_timeout_seconds=self._tool_call_timeout)
         return await self._with_reconnect(_call_tool)
 
     @mcp_exception_handler
