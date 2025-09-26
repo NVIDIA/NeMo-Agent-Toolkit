@@ -30,6 +30,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.runtime.loader import load_workflow
 from nat.test.utils import locate_example_config
+from nat.test.utils import run_workflow
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +96,4 @@ async def test_token_usage_tool(df_path: Path):
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_full_workflow():
     config_file: Path = locate_example_config(ProfilerAgentConfig)
-
-    async with load_workflow(config_file) as workflow:
-        async with workflow.run("Is the product of 33 * 4 greater than the current hour of the day?") as runner:
-            result = await runner.result(to_type=str)
-
-    assert "yes" in result.lower()
+    await run_workflow(config_file, "Is the product of 33 * 4 greater than the current hour of the day?", "yes")

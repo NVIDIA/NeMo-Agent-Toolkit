@@ -19,7 +19,7 @@ import os
 
 import pytest
 
-from nat.runtime.loader import load_workflow
+from nat.test.utils import run_workflow
 
 logger = logging.getLogger(__name__)
 
@@ -54,14 +54,6 @@ def rewoo_answer_fixture(request: pytest.FixtureRequest, rewoo_data: list[dict])
     return rewoo_data[request.param]["answer"].lower()
 
 
-async def _test_full_workflow(config_file: str, question: str, expected_answer: str):
-    async with load_workflow(config_file) as workflow:
-        async with workflow.run(question) as runner:
-            result = await runner.result(to_type=str)
-
-    assert expected_answer in result.lower(), f"Expected '{expected_answer}' in '{result}'"
-
-
 @pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")
 @pytest.mark.integration
 @pytest.mark.parametrize("rewoo_question, rewoo_answer", [(i, i) for i in range(4)],
@@ -69,7 +61,7 @@ async def _test_full_workflow(config_file: str, question: str, expected_answer: 
                          indirect=True)
 async def test_rewoo_full_workflow(rewoo_question: str, rewoo_answer: str):
     config_file = os.path.join(AGENTS_DIR, "rewoo/configs/config.yml")
-    await _test_full_workflow(config_file, rewoo_question, rewoo_answer)
+    await run_workflow(config_file, rewoo_question, rewoo_answer)
 
 
 @pytest.mark.slow
@@ -86,4 +78,4 @@ async def test_rewoo_full_workflow(rewoo_question: str, rewoo_answer: str):
     ],
     ids=["mixture_of_agents", "react", "react-reasoning", "tool_calling", "tool_calling-reasoning"])
 async def test_agent_full_workflow(config_file: str, question: str, answer: str):
-    await _test_full_workflow(config_file, question, answer)
+    await run_workflow(config_file, question, answer)

@@ -54,3 +54,18 @@ def locate_example_config(example_config_class: type,
         assert config_path.exists(), f"Config file {config_path} does not exist"
 
     return config_path
+
+
+async def run_workflow(config_file: str,
+                       question: str,
+                       expected_answer: str,
+                       assert_expected_answer: bool = True) -> str:
+    from nat.runtime.loader import load_workflow
+    async with load_workflow(config_file) as workflow:
+        async with workflow.run(question) as runner:
+            result = await runner.result(to_type=str)
+
+    if assert_expected_answer:
+        assert expected_answer in result.lower(), f"Expected '{expected_answer}' in '{result}'"
+
+    return result
