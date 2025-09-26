@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nat-simple-auth-mcp"
+version = "0.1.0"
+description = "Simple MCP Authentication Example for NeMo Agent Toolkit"
+authors = [
+    {name = "NVIDIA Corporation", email = "info@nvidia.com"}
+]
+license = {text = "Apache-2.0"}
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "nvidia-nat-mcp",
+]
+
+[project.urls]
+Homepage = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
+Repository = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
+Documentation = "https://docs.nvidia.com/nemo-agent-toolkit/"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nat_simple_mcp_auth*"]
