@@ -27,7 +27,7 @@
 # uv pip install mcp-server-time
 
 # Sample usage:
-# 
+# nat run --config_file config-mcp-auth-jira.yml --input "What is jira ticket AIQ-1935 about"
 
 function_groups:
   mcp_jira:
@@ -53,7 +53,7 @@ llms:
 workflow:
   _type: react_agent
   tool_names:
-    - mcp_mass_jira
+    - mcp_jira
   llm_name: nim_llm
   verbose: true
   retry_parsing_errors: true
