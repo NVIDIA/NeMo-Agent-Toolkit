@@ -104,7 +104,7 @@ The `tracing` section contains one or more tracing providers. Each provider has 
 Each exporter has its own detailed configuration guide with complete setup instructions and examples:
 
 - **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
-- **[Dynatrace](https://dyantrace.com/)** - See [Observing with Dynatrace](./observe-workflow-with-dynatrace.md)
+- **[Dynatrace](https://dynatrace.com/)** - See [Observing with Dynatrace](./observe-workflow-with-dynatrace.md)
 - **[Galileo](https://galileo.ai/)** - See [Observing with Galileo](./observe-workflow-with-galileo.md)
 - **[Langfuse](https://langfuse.com/)** - OTLP-compatible observability platform
 - **[LangSmith](https://www.langchain.com/langsmith)** - LangChain's observability platform
