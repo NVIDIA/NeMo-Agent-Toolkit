@@ -633,8 +633,8 @@ def mcp_client_ping(url: str,
         url (str): MCP server URL to ping (default: http://localhost:9901/mcp)
         timeout (int): Timeout in seconds for the ping request (default: 60)
         json_output (bool): Whether to output the result in JSON format
-        auth_redirect_uri (str | None): OAuth2 redirect URI for authentication (required for auth, streamable-http only, not with --direct)
-        auth_user_id (str | None): User ID for authentication (streamable-http only, not with --direct)
+        auth_redirect_uri (str | None): redirect URI for auth (streamable-http only, not with --direct)
+        auth_user_id (str | None): User ID for auth (streamable-http only, not with --direct)
         auth_scopes (str | None): OAuth2 scopes (comma-separated, streamable-http only, not with --direct)
 
     Examples:
@@ -921,7 +921,7 @@ def mcp_client_tool_call(tool_name: str,
         args (str | None): For ``stdio`` transport, space-separated command arguments.
         env (str | None): For ``stdio`` transport, space-separated ``KEY=VALUE`` pairs.
         json_args (str | None): JSON object string with tool arguments (e.g. '{"q": "hello"}').
-        auth_redirect_uri (str | None): OAuth2 redirect URI for authentication (required for auth, streamable-http only, not with --direct)
+        auth_redirect_uri (str | None): redirect URI for auth (streamable-http only, not with --direct)
         auth_user_id (str | None): User ID for authentication (streamable-http only, not with --direct)
         auth_scopes (str | None): OAuth2 scopes (comma-separated, streamable-http only, not with --direct)
 
@@ -935,8 +935,6 @@ def mcp_client_tool_call(tool_name: str,
             --json-args '{"query": "test"}' # With auth using defaults
         nat mcp client tool call search --url https://example.com/mcp/ \
             --transport streamable-http --json-args '{"query": "test"}' --auth
-        nat mcp client tool call search --url https://example.com/mcp/ \
-            --transport streamable-http --json-args '{"query": "test"}' --auth-redirect-uri http://localhost:8000/auth/redirect --auth-user-id myuser
     """
     # Validate transport args
     if not validate_transport_cli_args(transport, command, args, env):

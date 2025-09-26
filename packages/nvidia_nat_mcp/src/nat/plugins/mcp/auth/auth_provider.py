@@ -279,8 +279,6 @@ class DynamicClientRegistration:
         return OAuth2Credentials(client_id=info.client_id, client_secret=info.client_secret)
 
 
-
-
 class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
     """MCP OAuth2 authentication provider that delegates to NAT framework."""
 
@@ -371,7 +369,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         endpoints = self._cached_endpoints
         credentials = self._cached_credentials
 
-         # Build the OAuth2 provider if not already built
+        # Build the OAuth2 provider if not already built
         if self._auth_code_provider is None:
             scopes = self._effective_scopes
             oauth2_config = OAuth2AuthCodeFlowProviderConfig(
