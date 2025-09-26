@@ -19,12 +19,10 @@ limitations under the License.
 
 This example demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that require authentication. You'll authenticate with protected MCP services and access secured tools through OAuth2 flows.
 
-For more detailed information about MCP authentication, refer to the [MCP Authentication Guide](../../../docs/source/workflows/mcp/mcp-auth.md).
-
 ## Prerequisites
 
 1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
-2. **MCP Server**: Access to an MCP server that requires authentication (e.g., corporate JIRA system)
+2. **MCP Server**: Access to an MCP server that requires authentication (e.g., corporate Jira system)
 
 **Note**: If you installed NeMo Agent toolkit from source, MCP client functionality is already included. If you installed from PyPI, you may need to install the MCP client package separately with `uv pip install nvidia-nat[mcp]`.
 
