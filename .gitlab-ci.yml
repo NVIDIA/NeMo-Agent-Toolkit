@@ -83,6 +83,12 @@ test:python_tests:
     - name: arizephoenix/phoenix:latest
       alias: phoenix
     - redis:7-alpine
+    - name: quay.io/coreos/etcd:v3.5.5
+      alias: etcd
+      command: ["etcd", "--advertise-client-urls", "http://0.0.0.0:2379", "--listen-client-urls", "http://0.0.0.0:2379"]
+    - name: milvusdb/milvus:v2.3.1
+      alias: milvus
+      command: ["milvus", "run", "standalone"]
 
   script:
     - echo "Running tests"
