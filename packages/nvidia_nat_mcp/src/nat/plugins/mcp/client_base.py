@@ -353,9 +353,9 @@ class MCPBaseClient(ABC):
             # We will increase the timeout to 5 minutes if the tool call timeout is less than 5 min and
             # auth is enabled.
             if self._auth_provider and self._tool_call_timeout.total_seconds() < 300:
-                timeout = 300
+                timeout = timedelta(seconds=300)
             else:
-                timeout = self._tool_call_timeout.total_seconds()
+                timeout = self._tool_call_timeout
             return await self._session.send_request(req, CallToolResult, request_read_timeout_seconds=timeout)
 
         return await self._with_reconnect(_call_tool_with_meta)
