@@ -350,8 +350,13 @@ class MCPBaseClient(ABC):
         async def _call_tool_with_meta():
             params = CallToolRequestParams(name=tool_name, arguments=args, **{"_meta": {"session_id": session_id}})
             req = ClientRequest(CallToolRequest(params=params))
-            # don't pass request_read_timeout_seconds for the time being
-            return await self._session.send_request(req, CallToolResult)
+            # We will increase the timeout to 5 minutes if the tool call timeout is less than 5 min and
+            # auth is enabled.
+            if self._auth_provider and self._tool_call_timeout.total_seconds() < 300:
+                timeout = 300
+            else:
+                timeout = self._tool_call_timeout.total_seconds()
+            return await self._session.send_request(req, CallToolResult, request_read_timeout_seconds=timeout)
 
         return await self._with_reconnect(_call_tool_with_meta)
 
@@ -620,8 +625,7 @@ class MCPToolClient:
             result_str = "\n".join(output)
 
             if result.isError:
-                mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str),
-                                                           self._parent_client.server_name)
+                mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str), self._parent_client.server_name)
                 raise mcp_error
 
         except MCPError as e:
