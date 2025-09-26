@@ -115,9 +115,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             return str(output_message.content)
         except Exception as ex:
             logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
-            if config.verbose:
-                return str(ex)
-            return "I seem to be having a problem."
+            raise RuntimeError
 
     try:
         yield FunctionInfo.from_fn(_response_fn, description=config.description)

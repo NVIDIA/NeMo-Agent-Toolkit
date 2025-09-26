@@ -159,7 +159,8 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
                 return result
             except Exception as e:
-                logger.error("Error with ainvoke in function with input: %s. Error: %s", value, e)
+                err_msg = f"Error: {e}" if str(e).strip() else ""
+                logger.error("Error with ainvoke in function with input: %s. %s", value, err_msg)
                 raise
 
     @typing.final

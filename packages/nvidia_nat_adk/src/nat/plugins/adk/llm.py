@@ -20,6 +20,7 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
+from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 
@@ -45,6 +46,16 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
         config_dict["api_base"] = config.azure_endpoint
 
     yield LiteLlm(f"azure/{config.azure_deployment}", **config_dict)
+
+
+@register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
+async def litellm_adk(litellm_config: LiteLlmModelConfig, _builder: Builder):
+    from google.adk.models.lite_llm import LiteLlm
+    yield LiteLlm(**litellm_config.model_dump(
+        exclude={"type", "max_retries", "thinking"},
+        by_alias=True,
+        exclude_none=True,
+    ))
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
