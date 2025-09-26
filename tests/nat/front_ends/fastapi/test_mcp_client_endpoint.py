@@ -54,7 +54,7 @@ class _GroupInstanceStub:
         self.mcp_client = client
         self._functions_map = functions_map
 
-    async def get_accessible_functions(self) -> dict[str, _FnStub]:
+    async def get_accessible_functions(self, filter_fn=None) -> dict[str, _FnStub]:
         return self._functions_map
 
 

@@ -1160,13 +1160,17 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         except Exception as e:
                             logger.exception(f"Failed to get accessible functions for group {group_name}: {e}")
 
-                        # Build alias->original mapping from overrides
+                        # Build alias->original mapping and override configs from overrides
                         alias_to_original: dict[str, str] = {}
+                        override_configs: dict[str, Any] = {}
                         try:
                             if config.tool_overrides is not None:
                                 for orig_name, override in config.tool_overrides.items():
                                     if override.alias is not None:
                                         alias_to_original[override.alias] = orig_name
+                                        override_configs[override.alias] = override
+                                    else:
+                                        override_configs[orig_name] = override
                         except Exception:
                             pass
 
@@ -1179,8 +1183,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             if available:
                                 available_count += 1
 
-                            description = (server_tools[orig_name].description
-                                           if available else None) or wf_fn.description or ""
+                            # Prefer tool override description, then workflow function description, then server description
+                            description = ""
+                            if fn_short in override_configs and override_configs[fn_short].description:
+                                description = override_configs[fn_short].description
+                            elif wf_fn.description:
+                                description = wf_fn.description
+                            elif available and orig_name in server_tools:
+                                description = server_tools[orig_name].description or ""
 
                             tools_info.append(
                                 MCPToolInfo(name=fn_short,
