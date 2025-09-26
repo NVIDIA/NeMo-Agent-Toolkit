@@ -14,10 +14,10 @@
 # limitations under the License.
 
 import asyncio
+import logging
 import secrets
 import webbrowser
 
-import click
 import pkce
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from fastapi import FastAPI
@@ -30,12 +30,22 @@ from nat.front_ends.console.authentication_flow_handler import ConsoleAuthentica
 from nat.front_ends.console.authentication_flow_handler import _FlowState
 from nat.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
 
+logger = logging.getLogger(__name__)
+
 
 class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
     """
     Authentication helper for MCP environments.
-    A separate flow handler is needed because MCP tool discovery happens before the default auth_callback is available.
-    It is used to handle the OAuth2 authorization code flow only during startup.
+
+    This handler is specifically designed for MCP tool discovery scenarios where
+    authentication needs to happen before the default auth_callback is available
+    in the Context. It handles OAuth2 authorization code flow during MCP client
+    startup and tool discovery phases.
+
+    Key differences from console handler:
+    - Only supports OAuth2 Authorization Code flow (no HTTP Basic)
+    - Optimized for MCP tool discovery workflows
+    - Designed for single-use authentication during startup
     """
 
     def __init__(self):
@@ -47,17 +57,37 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
 
     async def authenticate(self, config: AuthProviderBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
         """
-        Handle the OAuth2 authorization code flow.
+        Handle the OAuth2 authorization code flow for MCP environments.
+
+        Args:
+            config: OAuth2 configuration for MCP server
+            method: Authentication method (only OAUTH2_AUTHORIZATION_CODE supported)
+
+        Returns:
+            AuthenticatedContext with Bearer token for MCP server access
+
+        Raises:
+            ValueError: If config is invalid for MCP use case
+            NotImplementedError: If method is not OAuth2 Authorization Code
         """
+        logger.info("Starting MCP authentication flow")
+
         if method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE:
-            if (not isinstance(config, OAuth2AuthCodeFlowProviderConfig)):
+            if not isinstance(config, OAuth2AuthCodeFlowProviderConfig):
                 raise ValueError("Requested OAuth2 Authorization Code Flow but passed invalid config")
 
+            # MCP-specific validation
+            if not config.redirect_uri:
+                raise ValueError("MCP authentication requires redirect_uri to be configured")
+
+            logger.info("MCP authentication configured for server: %s", getattr(config, 'server_url', 'unknown'))
             return await self._handle_oauth2_auth_code_flow(config)
 
-        raise NotImplementedError(f'Auth method “{method}” not supported')
+        raise NotImplementedError(f'Auth method "{method}" not supported for MCP environments')
 
     async def _handle_oauth2_auth_code_flow(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
+        logger.info("Starting MCP OAuth2 authorization code flow")
+
         state = secrets.token_urlsafe(16)
         flow_state = _FlowState()
         client = self.construct_oauth_client(cfg)
@@ -70,6 +100,7 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
             verifier, challenge = pkce.generate_pkce_pair()
             flow_state.verifier = verifier
             flow_state.challenge = challenge
+            logger.debug("PKCE enabled for MCP authentication")
 
         auth_url, _ = client.create_authorization_url(
             cfg.authorization_url,
@@ -86,13 +117,19 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
             await self._start_redirect_server()
             self._flows[state] = flow_state
 
-        click.echo("Your browser has been opened for authentication.")
+        logger.info("MCP authentication: Your browser has been opened for authentication.")
+        logger.info("This will authenticate you with the MCP server for tool discovery.")
         webbrowser.open(auth_url)
 
+        # Use default timeout for MCP tool discovery
+        timeout = 300
+
         try:
-            token = await asyncio.wait_for(flow_state.future, timeout=300)
-        except asyncio.TimeoutError:
-            raise RuntimeError("Authentication timed out (5 min).")
+            token = await asyncio.wait_for(flow_state.future, timeout=timeout)
+            logger.info("MCP authentication successful, token obtained")
+        except asyncio.TimeoutError as exc:
+            logger.error("MCP authentication timed out")
+            raise RuntimeError(f"MCP authentication timed out ({timeout} seconds). Please try again.") from exc
         finally:
             async with self._server_lock:
                 self._flows.pop(state, None)
@@ -101,6 +138,7 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
         return AuthenticatedContext(
             headers={"Authorization": f"Bearer {token['access_token']}"},
             metadata={
-                "expires_at": token.get("expires_at"), "raw_token": token
+                "expires_at": token.get("expires_at"),
+                "raw_token": token,
             },
         )

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from collections.abc import Awaitable
 from dataclasses import asdict
 from typing import Callable
 from urllib.parse import urljoin
@@ -66,6 +67,7 @@ class DiscoverOAuth2Endpoints:
         self.config = config
         self._cached_endpoints: OAuth2Endpoints | None = None
         self._authenticated_servers: dict[str, AuthResult] = {}
+
         self._flow_handler: MCPAuthenticationFlowHandler = MCPAuthenticationFlowHandler()
 
     async def discover(self, response: httpx.Response | None = None) -> tuple[OAuth2Endpoints, bool]:
@@ -301,7 +303,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
     def _set_custom_auth_callback(self,
                                   auth_callback: Callable[[OAuth2AuthCodeFlowProviderConfig, AuthFlowType],
-                                                          AuthenticatedContext]):
+                                                          Awaitable[AuthenticatedContext]]):
         """Set the custom authentication callback."""
         if not self._auth_callback:
             logger.info("Using custom authentication callback")
@@ -358,9 +360,8 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
 
     async def _nat_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
-        """Perform the OAuth2 flow using NAT OAuth2 provider."""
+        """Perform the OAuth2 flow using MCP-specific authentication flow handler."""
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
-        from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 
         if not self._cached_endpoints or not self._cached_credentials:
             # if discovery is yet to to be done return empty auth result
@@ -383,7 +384,10 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 use_pkce=bool(self.config.use_pkce),
                 authorization_kwargs={"resource": str(self.config.server_url)})
             self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
-            self._auth_code_provider._set_custom_auth_callback(self._auth_callback or self._flow_handler.authenticate)
+
+            # Use MCP-specific authentication method if available
+            if hasattr(self._auth_code_provider, "_set_custom_auth_callback"):
+                self._auth_code_provider._set_custom_auth_callback(self._auth_callback or self._flow_handler.authenticate)
 
         # Auth code provider is responsible for per-user cache + refresh
         return await self._auth_code_provider.authenticate(user_id=user_id)
