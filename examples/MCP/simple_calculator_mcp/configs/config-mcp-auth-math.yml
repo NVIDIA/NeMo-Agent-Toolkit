@@ -22,7 +22,7 @@ function_groups:
     _type: mcp_client
     server:
       transport: streamable-http
-      auth_provider: mcp_oauth2_dynamic
+      auth_provider: mcp_oauth2_math
       url: "http://localhost:9901/mcp"
     include:
       - calculator_multiply
@@ -31,7 +31,7 @@ function_groups:
       - calculator_subtract
 
 authentication:
-  mcp_oauth2_dynamic:
+  mcp_oauth2_math:
     _type: mcp_oauth2
     server_url: http://localhost:9901
     redirect_uri: http://localhost:8000/auth/redirect
