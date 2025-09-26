@@ -29,6 +29,7 @@ dependencies = [
   "jinja2~=3.1",
   "jsonpath-ng~=1.7",
   "mcp~=1.13",
+  "nat-simple-auth-mcp",
   "nest-asyncio~=1.6", # refer to https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/770 for details
   "networkx~=3.4",
   # langchain-aws pins numpy to 1.* for Python <3.12 -- remove once package is updated
@@ -122,6 +123,7 @@ examples = [
   "nat_simple_rag",
   "nat_swe_bench",
   "nat_user_report",
+  "
 ]
 
 # Optional dependency needed when use_gunicorn is set to true
@@ -205,6 +207,7 @@ nat_simple_web_query = { path = "examples/getting_started/simple_web_query", edi
 nat_simple_web_query_eval = { path = "examples/evaluation_and_profiling/simple_web_query_eval", editable = true }
 nat_swe_bench = { path = "examples/evaluation_and_profiling/swe_bench", editable = true }
 nat_user_report = { path = "examples/object_store/user_report", editable = true }
+nat-simple-auth-mcp = { path = "examples/MCP/simple_auth_mcp", editable = true }
 
 
 [tool.uv.workspace]
