@@ -123,7 +123,6 @@ examples = [
   "nat_simple_rag",
   "nat_swe_bench",
   "nat_user_report",
-  "
 ]
 
 # Optional dependency needed when use_gunicorn is set to true
