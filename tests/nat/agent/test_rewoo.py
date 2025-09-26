@@ -124,15 +124,13 @@ def _create_mock_state_with_parallel_data(steps: list, intermediate_results: dic
     # Parse dependencies and create execution levels like the agent does
     evidence_map, execution_levels = ReWOOAgentGraph._parse_planner_dependencies(steps)
 
-    return ReWOOGraphState(
-        task=HumanMessage(content="This is a task"),
-        plan=AIMessage(content="This is the plan"),
-        steps=AIMessage(content=steps),
-        evidence_map=evidence_map,
-        execution_levels=execution_levels,
-        current_level=0,
-        intermediate_results=intermediate_results
-    )
+    return ReWOOGraphState(task=HumanMessage(content="This is a task"),
+                           plan=AIMessage(content="This is the plan"),
+                           steps=AIMessage(content=steps),
+                           evidence_map=evidence_map,
+                           execution_levels=execution_levels,
+                           current_level=0,
+                           intermediate_results=intermediate_results)
 
 
 async def test_conditional_edge_decisions(mock_rewoo_agent):
@@ -149,9 +147,7 @@ async def test_conditional_edge_decisions(mock_rewoo_agent):
     assert decision == AgentDecision.TOOL
 
     # Partially completed level - should continue with execution
-    mock_state.intermediate_results = {
-        '#E1': ToolMessage(content="result1", tool_call_id="mock_tool_A")
-    }
+    mock_state.intermediate_results = {'#E1': ToolMessage(content="result1", tool_call_id="mock_tool_A")}
     decision = await mock_rewoo_agent.conditional_edge(mock_state)
     assert decision == AgentDecision.TOOL
 
@@ -187,27 +183,29 @@ async def test_executor_node_parse_input(mock_rewoo_agent):
     from nat.agent.base import AGENT_LOG_PREFIX
     with patch('nat.agent.rewoo_agent.agent.logger.debug') as mock_logger_debug:
         # Test with dict as tool input
-        steps = [_create_step_info(
-            "step1",
-            "#E1",
-            "mock_tool_A", {
-                "query": "What is the capital of France?", "input_metadata": {
-                    "entities": ["France", "Paris"]
-                }
-            })]
+        steps = [
+            _create_step_info(
+                "step1",
+                "#E1",
+                "mock_tool_A", {
+                    "query": "What is the capital of France?", "input_metadata": {
+                        "entities": ["France", "Paris"]
+                    }
+                })
+        ]
         mock_state = _create_mock_state_with_parallel_data(steps)
         await mock_rewoo_agent.executor_node(mock_state)
-        mock_logger_debug.assert_any_call(
-            "%s Tool input is already a dictionary. Use the tool input as is.",
-            AGENT_LOG_PREFIX)
+        mock_logger_debug.assert_any_call("%s Tool input is already a dictionary. Use the tool input as is.",
+                                          AGENT_LOG_PREFIX)
 
         # Test with valid JSON as tool input
-        steps = [_create_step_info(
-            "step1",
-            "#E1",
-            "mock_tool_A",
-            '{"query": "What is the capital of France?", "input_metadata": {"entities": ["France", "Paris"]}}'
-        )]
+        steps = [
+            _create_step_info(
+                "step1",
+                "#E1",
+                "mock_tool_A",
+                '{"query": "What is the capital of France?", "input_metadata": {"entities": ["France", "Paris"]}}')
+        ]
         mock_state = _create_mock_state_with_parallel_data(steps)
         await mock_rewoo_agent.executor_node(mock_state)
         mock_logger_debug.assert_any_call("%s Successfully parsed structured tool input", AGENT_LOG_PREFIX)
@@ -224,9 +222,8 @@ async def test_executor_node_parse_input(mock_rewoo_agent):
         steps = [_create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2")]
         mock_state = _create_mock_state_with_parallel_data(steps)
         await mock_rewoo_agent.executor_node(mock_state)
-        mock_logger_debug.assert_any_call(
-            "%s Unable to parse structured tool input. Using raw tool input as is.",
-            AGENT_LOG_PREFIX)
+        mock_logger_debug.assert_any_call("%s Unable to parse structured tool input. Using raw tool input as is.",
+                                          AGENT_LOG_PREFIX)
 
 
 async def test_executor_node_handle_input_types(mock_rewoo_agent):
@@ -249,9 +246,13 @@ async def test_executor_node_handle_input_types(mock_rewoo_agent):
 
     # Test with dict inputs and dependencies
     steps = [
-        _create_step_info("step1", "#E1", "mock_tool_A", {"query": {
-            "data": "This is a dict query", "metadata": {"key": "value"}
-        }}),
+        _create_step_info("step1",
+                          "#E1",
+                          "mock_tool_A", {"query": {
+                              "data": "This is a dict query", "metadata": {
+                                  "key": "value"
+                              }
+                          }}),
         _create_step_info("step2", "#E2", "mock_tool_B", {"query": "#E1"})
     ]
     mock_state = _create_mock_state_with_parallel_data(steps)
@@ -265,7 +266,7 @@ async def test_executor_node_handle_input_types(mock_rewoo_agent):
     result = await mock_rewoo_agent.executor_node(mock_state)
     if "current_level" in result:
         mock_state.current_level = result["current_level"]
-    
+
     # Third execution - now execute level 1 (#E2)
     result = await mock_rewoo_agent.executor_node(mock_state)
     if "intermediate_results" in result:
@@ -865,8 +866,7 @@ async def test_executor_node_raise_tool_call_error_success_case(mock_llm, mock_t
 
         # Create test state
         steps = [{
-            "plan": "test step",
-            "evidence": {
+            "plan": "test step", "evidence": {
                 "placeholder": "#E1", "tool": "success_tool", "tool_input": "test input"
             }
         }]
@@ -884,6 +884,7 @@ async def test_executor_node_raise_tool_call_error_success_case(mock_llm, mock_t
 
 
 # Tests for new parallel execution functionality
+
 
 def test_dependency_parsing_sequential():
     """Test dependency parsing for sequential execution."""
@@ -948,10 +949,7 @@ def test_dependency_parsing_complex():
 
 def test_dependency_parsing_circular_error():
     """Test that circular dependencies are detected."""
-    steps = [
-        _create_step_info("step1", "#E1", "tool_A", "#E2"),
-        _create_step_info("step2", "#E2", "tool_B", "#E1")
-    ]
+    steps = [_create_step_info("step1", "#E1", "tool_A", "#E2"), _create_step_info("step2", "#E2", "tool_B", "#E1")]
 
     with pytest.raises(ValueError, match="Circular dependency detected"):
         ReWOOAgentGraph._parse_planner_dependencies(steps)
@@ -960,8 +958,7 @@ def test_dependency_parsing_circular_error():
 def test_get_current_level_status():
     """Test the _get_current_level_status method."""
     steps = [
-        _create_step_info("step1", "#E1", "tool_A", "input1"),
-        _create_step_info("step2", "#E2", "tool_B", "input2")
+        _create_step_info("step1", "#E1", "tool_A", "input1"), _create_step_info("step2", "#E2", "tool_B", "input2")
     ]
 
     state = _create_mock_state_with_parallel_data(steps)

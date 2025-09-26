@@ -18,7 +18,7 @@ limitations under the License.
 # ReWOO Agent
 The ReWOO (Reasoning WithOut Observation) agent is an advanced agent paradigm that decouples reasoning from observations to improve efficiency in augmented language models. Based on the [ReWOO paper](https://arxiv.org/abs/2305.18323), this agent separates the planning and execution phases to reduce token consumption and improve performance.
 
-The ReWOO agent's implementation follows the paper's methodology of decoupling reasoning from observations, which leads to more efficient tool usage and better token effciency for reasoning tasks.
+The ReWOO agent's implementation follows the paper's methodology of decoupling reasoning from observations, which leads to more efficient tool usage and better token efficiency for reasoning tasks.
 
 
 ## Features

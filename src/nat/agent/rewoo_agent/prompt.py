@@ -26,22 +26,21 @@ The tool calls you make should be one of the following: [{tool_names}]
 
 You are not required to use all the tools listed. Choose only the ones that best fit the needs of each plan step.
 
-Your output must be a JSON array where each element represents one planning step. Each step must be an object with
-
+Your output must be a JSON array where each element represents one planning step. Each step must be an object with \
 exactly two keys:
 
 1. "plan": A string that describes in detail the action or reasoning for that step.
 
-2. "evidence": An object representing the external tool call associated with that plan step. This object must have the
+2. "evidence": An object representing the external tool call associated with that plan step. This object must have the \
 following keys:
 
-   -"placeholder": A string that identifies the evidence placeholder ("#E1", "#E2", ...). The numbering should
-                   be sequential based on the order of steps.
+   -"placeholder": A string that identifies the evidence placeholder ("#E1", "#E2", ...). The numbering should \
+be sequential based on the order of steps.
 
    -"tool": A string specifying the name of the external tool used.
 
-   -"tool_input": The input to the tool. This can be a string, array, or object, depending on the requirements of the
-                  tool. Be careful about type assumptions because the output of former tools might contain noise.
+   -"tool_input": The input to the tool. This can be a string, array, or object, depending on the requirements of the \
+tool. Be careful about type assumptions because the output of former tools might contain noise.
 
 Important instructions:
 
@@ -75,7 +74,8 @@ Here is an example of how a valid JSON output should look:
     "evidence": \'{{
       "placeholder": "#E3",
       "tool": "llm_chat",
-      "tool_input": "Find a common 1-hour time slot for Alex and Bill given their schedules. Alex's schedule: #E1; Bill's schedule: #E2?"
+      "tool_input": "Find a common 1-hour time slot for Alex and Bill given their schedules. \
+Alex's schedule: #E1; Bill's schedule: #E2?"
     }}\'
   }}\'
 ]

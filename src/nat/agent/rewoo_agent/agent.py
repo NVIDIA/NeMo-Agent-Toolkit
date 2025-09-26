@@ -18,7 +18,9 @@ import json
 import logging
 import re
 from json import JSONDecodeError
-from typing import List, Tuple, Dict
+from typing import Dict
+from typing import List
+from typing import Tuple
 
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
@@ -87,27 +89,20 @@ class ReWOOAgentGraph(BaseAgent):
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
-        tool_names = ",".join([
-            tool.name for tool in tools[:-1]
-        ]) + ',' + tools[-1].name  # prevent trailing ","
+        tool_names = ",".join([tool.name for tool in tools[:-1]]) + ',' + tools[-1].name  # prevent trailing ","
         if not use_tool_schema:
             tool_names_and_descriptions = "\n".join(
-                [f"{tool.name}: {tool.description}" for tool in tools[:-1]]
-            ) + "\n" + f"{tools[-1].name}: {tools[-1].description}"  # prevent trailing "\n"
+                [f"{tool.name}: {tool.description}"
+                 for tool in tools[:-1]]) + "\n" + f"{tools[-1].name}: {tools[-1].description}"  # prevent trailing "\n"
         else:
-            logger.debug(
-                "%s Adding the tools' input schema to the tools' description",
-                AGENT_LOG_PREFIX)
+            logger.debug("%s Adding the tools' input schema to the tools' description", AGENT_LOG_PREFIX)
             tool_names_and_descriptions = "\n".join([
                 f"{tool.name}: {tool.description}. {INPUT_SCHEMA_MESSAGE.format(schema=tool.input_schema.model_fields)}"
                 for tool in tools[:-1]
-            ]) + "\n" + (
-                f"{tools[-1].name}: {tools[-1].description}. "
-                f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}"
-            )
+            ]) + "\n" + (f"{tools[-1].name}: {tools[-1].description}. "
+                         f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
 
-        self.planner_prompt = planner_prompt.partial(
-            tools=tool_names_and_descriptions, tool_names=tool_names)
+        self.planner_prompt = planner_prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         self.solver_prompt = solver_prompt
         self.tools_dict = {tool.name: tool for tool in tools}
         self.tool_call_max_retries = tool_call_max_retries
@@ -119,8 +114,7 @@ class ReWOOAgentGraph(BaseAgent):
         try:
             return self.tools_dict.get(tool_name)
         except Exception as ex:
-            logger.error("%s Unable to find tool with the name %s\n%s",
-                         AGENT_LOG_PREFIX, tool_name, ex)
+            logger.error("%s Unable to find tool with the name %s\n%s", AGENT_LOG_PREFIX, tool_name, ex)
             raise
 
     @staticmethod
@@ -128,7 +122,7 @@ class ReWOOAgentGraph(BaseAgent):
         """
         Get the current execution level and whether it's complete.
         :param state: The ReWOO graph state.
-        :return: Tuple of (current_level, is_complete). 
+        :return: Tuple of (current_level, is_complete).
                 level -1 means all execution is complete.
         :rtype: tuple[int, bool]
         """
@@ -143,8 +137,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         # Check if current level is complete
         current_level_placeholders = state.execution_levels[current_level]
-        level_complete = all(placeholder in state.intermediate_results
-                             for placeholder in current_level_placeholders)
+        level_complete = all(placeholder in state.intermediate_results for placeholder in current_level_placeholders)
 
         return current_level, level_complete
 
@@ -154,15 +147,12 @@ class ReWOOAgentGraph(BaseAgent):
         try:
             steps = json.loads(planner_output)
         except json.JSONDecodeError as ex:
-            raise ValueError(
-                f"The output of planner is invalid JSON format: {planner_output}"
-            ) from ex
+            raise ValueError(f"The output of planner is invalid JSON format: {planner_output}") from ex
 
         return AIMessage(content=steps)
 
     @staticmethod
-    def _parse_planner_dependencies(
-            steps: List[Dict]) -> Tuple[Dict[str, Dict], List[List[str]]]:
+    def _parse_planner_dependencies(steps: List[Dict]) -> Tuple[Dict[str, Dict], List[List[str]]]:
         """
         Parse planner steps to identify dependencies and create execution levels for parallel processing.
         This creates a dependency map and identifies which evidence placeholders can be executed in parallel.
@@ -185,10 +175,7 @@ class ReWOOAgentGraph(BaseAgent):
 
             if placeholder:
                 # Store the complete step info for this evidence
-                evidences[placeholder] = {
-                    "plan": step.get("plan", ""),
-                    "evidence": evidence_info
-                }
+                evidences[placeholder] = {"plan": step.get("plan", ""), "evidence": evidence_info}
 
         # Second pass: find dependencies now that we have all placeholders
         for step in steps:
@@ -215,14 +202,10 @@ class ReWOOAgentGraph(BaseAgent):
 
         while remaining:
             # Find items with no dependencies (can be executed in parallel)
-            ready = [
-                placeholder for placeholder, deps in remaining.items()
-                if not deps
-            ]
+            ready = [placeholder for placeholder, deps in remaining.items() if not deps]
 
             if not ready:
-                raise ValueError(
-                    "Circular dependency detected in planner output")
+                raise ValueError("Circular dependency detected in planner output")
 
             levels.append(ready)
 
@@ -231,16 +214,13 @@ class ReWOOAgentGraph(BaseAgent):
                 remaining.pop(placeholder)
 
             # Remove completed items from other dependencies
-            for placeholder in remaining:
-                remaining[placeholder] = [
-                    dep for dep in remaining[placeholder] if dep not in ready
-                ]
+            for placeholder in remaining.items():
+                remaining[placeholder] = [dep for dep in remaining[placeholder] if dep not in ready]
 
         return evidences, levels
 
     @staticmethod
-    def _replace_placeholder(placeholder: str, tool_input: str | dict,
-                             tool_output: str | dict) -> str | dict:
+    def _replace_placeholder(placeholder: str, tool_input: str | dict, tool_output: str | dict) -> str | dict:
 
         # Replace the placeholders in the tool input with the previous tool output
         if isinstance(tool_input, dict):
@@ -250,8 +230,7 @@ class ReWOOAgentGraph(BaseAgent):
                         tool_input[key] = tool_output
                     elif placeholder in value:
                         # If the placeholder is part of the value, replace it with the stringified output
-                        tool_input[key] = value.replace(
-                            placeholder, str(tool_output))
+                        tool_input[key] = value.replace(placeholder, str(tool_output))
 
         elif isinstance(tool_input, str):
             tool_input = tool_input.replace(placeholder, str(tool_output))
@@ -265,9 +244,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         # If the input is already a dictionary, return it as is
         if isinstance(tool_input, dict):
-            logger.debug(
-                "%s Tool input is already a dictionary. Use the tool input as is.",
-                AGENT_LOG_PREFIX)
+            logger.debug("%s Tool input is already a dictionary. Use the tool input as is.", AGENT_LOG_PREFIX)
             return tool_input
 
         # If the input is a string, attempt to parse it as JSON
@@ -275,8 +252,7 @@ class ReWOOAgentGraph(BaseAgent):
             tool_input = tool_input.strip()
             # If the input is already a valid JSON string, load it
             tool_input_parsed = json.loads(tool_input)
-            logger.debug("%s Successfully parsed structured tool input",
-                         AGENT_LOG_PREFIX)
+            logger.debug("%s Successfully parsed structured tool input", AGENT_LOG_PREFIX)
 
         except JSONDecodeError:
             try:
@@ -290,30 +266,24 @@ class ReWOOAgentGraph(BaseAgent):
             except JSONDecodeError:
                 # If it still fails, fall back to using the input as a raw string
                 tool_input_parsed = tool_input
-                logger.debug(
-                    "%s Unable to parse structured tool input. Using raw tool input as is.",
-                    AGENT_LOG_PREFIX)
+                logger.debug("%s Unable to parse structured tool input. Using raw tool input as is.", AGENT_LOG_PREFIX)
 
         return tool_input_parsed
 
     async def planner_node(self, state: ReWOOGraphState):
         try:
-            logger.debug("%s Starting the ReWOO Planner Node",
-                         AGENT_LOG_PREFIX)
+            logger.debug("%s Starting the ReWOO Planner Node", AGENT_LOG_PREFIX)
 
             planner = self.planner_prompt | self.llm
             task = str(state.task.content)
             if not task:
-                logger.error(
-                    "%s No task provided to the ReWOO Agent. Please provide a valid task.",
-                    AGENT_LOG_PREFIX)
+                logger.error("%s No task provided to the ReWOO Agent. Please provide a valid task.", AGENT_LOG_PREFIX)
                 return {"result": NO_INPUT_ERROR_MESSAGE}
             chat_history = self._get_chat_history(state.messages)
             plan = await self._stream_llm(
                 planner,
                 {
-                    "task": task,
-                    "chat_history": chat_history
+                    "task": task, "chat_history": chat_history
                 },
                 RunnableConfig(callbacks=self.callbacks)  # type: ignore
             )
@@ -321,16 +291,12 @@ class ReWOOAgentGraph(BaseAgent):
             steps = self._parse_planner_output(str(plan.content))
 
             # Parse dependencies and create execution levels for parallel processing
-            evidence_map, execution_levels = self._parse_planner_dependencies(
-                steps.content)
+            evidence_map, execution_levels = self._parse_planner_dependencies(steps.content)
 
             if self.detailed_logs:
-                agent_response_log_message = AGENT_CALL_LOG_MESSAGE % (
-                    task, str(plan.content))
-                logger.info("ReWOO agent planner output: %s",
-                            agent_response_log_message)
-                logger.info("ReWOO agent execution levels: %s",
-                            execution_levels)
+                agent_response_log_message = AGENT_CALL_LOG_MESSAGE % (task, str(plan.content))
+                logger.info("ReWOO agent planner output: %s", agent_response_log_message)
+                logger.info("ReWOO agent execution levels: %s", execution_levels)
 
             return {
                 "plan": plan,
@@ -341,47 +307,37 @@ class ReWOOAgentGraph(BaseAgent):
             }
 
         except Exception as ex:
-            logger.error("%s Failed to call planner_node: %s",
-                         AGENT_LOG_PREFIX, ex)
+            logger.error("%s Failed to call planner_node: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     async def executor_node(self, state: ReWOOGraphState):
         """
         Execute tools in parallel for the current dependency level.
-        
+
         This replaces the sequential execution with parallel execution of tools
         that have no dependencies between them.
         """
         try:
-            logger.debug("%s Starting the ReWOO Executor Node",
-                         AGENT_LOG_PREFIX)
+            logger.debug("%s Starting the ReWOO Executor Node", AGENT_LOG_PREFIX)
 
-            current_level, level_complete = self._get_current_level_status(
-                state)
+            current_level, level_complete = self._get_current_level_status(state)
 
             # Should not be invoked if all levels are complete
             if current_level < 0:
-                logger.error(
-                    "%s ReWOO Executor invoked after all levels complete",
-                    AGENT_LOG_PREFIX)
-                raise RuntimeError(
-                    "ReWOO Executor invoked after all levels complete")
+                logger.error("%s ReWOO Executor invoked after all levels complete", AGENT_LOG_PREFIX)
+                raise RuntimeError("ReWOO Executor invoked after all levels complete")
 
             # If current level is already complete, move to next level
             if level_complete:
                 new_level = current_level + 1
-                logger.debug("%s Level %s complete, moving to level %s",
-                             AGENT_LOG_PREFIX, current_level, new_level)
+                logger.debug("%s Level %s complete, moving to level %s", AGENT_LOG_PREFIX, current_level, new_level)
                 return {"current_level": new_level}
 
             # Get placeholders for current level
             current_level_placeholders = state.execution_levels[current_level]
 
             # Filter to only placeholders not yet completed
-            pending_placeholders = [
-                p for p in current_level_placeholders
-                if p not in state.intermediate_results
-            ]
+            pending_placeholders = [p for p in current_level_placeholders if p not in state.intermediate_results]
 
             if not pending_placeholders:
                 # All placeholders in this level are done, move to next level
@@ -389,15 +345,16 @@ class ReWOOAgentGraph(BaseAgent):
                 return {"current_level": new_level}
 
             logger.debug("%s Executing level %s with %s tools in parallel: %s",
-                         AGENT_LOG_PREFIX, current_level,
-                         len(pending_placeholders), pending_placeholders)
+                         AGENT_LOG_PREFIX,
+                         current_level,
+                         len(pending_placeholders),
+                         pending_placeholders)
 
             # Execute all tools in current level in parallel
             tasks = []
             for placeholder in pending_placeholders:
                 step_info = state.evidence_map[placeholder]
-                task = self._execute_single_tool(placeholder, step_info,
-                                                 state.intermediate_results)
+                task = self._execute_single_tool(placeholder, step_info, state.intermediate_results)
                 tasks.append(task)
 
             # Wait for all tasks in current level to complete
@@ -410,12 +367,11 @@ class ReWOOAgentGraph(BaseAgent):
                 placeholder = pending_placeholders[i]
 
                 if isinstance(result, Exception):
-                    logger.error("%s Tool execution failed for %s: %s",
-                                 AGENT_LOG_PREFIX, placeholder, result)
+                    logger.error("%s Tool execution failed for %s: %s", AGENT_LOG_PREFIX, placeholder, result)
                     # Create error tool message
                     error_message = f"Tool execution failed: {str(result)}"
-                    updated_intermediate_results[placeholder] = ToolMessage(
-                        content=error_message, tool_call_id=placeholder)
+                    updated_intermediate_results[placeholder] = ToolMessage(content=error_message,
+                                                                            tool_call_id=placeholder)
                     if self.raise_tool_call_error:
                         raise result
                 else:
@@ -423,19 +379,20 @@ class ReWOOAgentGraph(BaseAgent):
 
             if self.detailed_logs:
                 logger.info("%s Completed level %s with %s tools",
-                            AGENT_LOG_PREFIX, current_level,
+                            AGENT_LOG_PREFIX,
+                            current_level,
                             len(pending_placeholders))
 
             return {"intermediate_results": updated_intermediate_results}
 
         except Exception as ex:
-            logger.error("%s Failed to call executor_node: %s",
-                         AGENT_LOG_PREFIX, ex)
+            logger.error("%s Failed to call executor_node: %s", AGENT_LOG_PREFIX, ex)
             raise
 
-    async def _execute_single_tool(
-            self, placeholder: str, step_info: Dict,
-            intermediate_results: Dict[str, ToolMessage]) -> ToolMessage:
+    async def _execute_single_tool(self,
+                                   placeholder: str,
+                                   step_info: Dict,
+                                   intermediate_results: Dict[str, ToolMessage]) -> ToolMessage:
         """
         Execute a single tool with proper placeholder replacement.
 
@@ -456,8 +413,7 @@ class ReWOOAgentGraph(BaseAgent):
                 _tool_output_content = _tool_output_content[0]
                 assert isinstance(_tool_output_content, dict)
 
-            tool_input = self._replace_placeholder(_placeholder, tool_input,
-                                                   _tool_output_content)
+            tool_input = self._replace_placeholder(_placeholder, tool_input, _tool_output_content)
 
         # Get the requested tool
         requested_tool = self._get_tool(tool_name)
@@ -465,33 +421,27 @@ class ReWOOAgentGraph(BaseAgent):
             configured_tool_names = list(self.tools_dict.keys())
             logger.warning(
                 "%s ReWOO Agent wants to call tool %s. In the ReWOO Agent's configuration within the config file,"
-                "there is no tool with that name: %s", AGENT_LOG_PREFIX,
-                tool_name, configured_tool_names)
+                "there is no tool with that name: %s",
+                AGENT_LOG_PREFIX,
+                tool_name,
+                configured_tool_names)
 
-            return ToolMessage(content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(
-                tool_name=tool_name, tools=configured_tool_names),
+            return ToolMessage(content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=tool_name,
+                                                                           tools=configured_tool_names),
                                tool_call_id=placeholder)
 
         if self.detailed_logs:
-            logger.debug("%s Calling tool %s with input: %s", AGENT_LOG_PREFIX,
-                         requested_tool.name, tool_input)
+            logger.debug("%s Calling tool %s with input: %s", AGENT_LOG_PREFIX, requested_tool.name, tool_input)
 
         # Parse and execute the tool
         tool_input_parsed = self._parse_tool_input(tool_input)
-        tool_response = await self._call_tool(
-            requested_tool,
-            tool_input_parsed,
-            RunnableConfig(callbacks=self.callbacks),
-            max_retries=self.tool_call_max_retries)
+        tool_response = await self._call_tool(requested_tool,
+                                              tool_input_parsed,
+                                              RunnableConfig(callbacks=self.callbacks),
+                                              max_retries=self.tool_call_max_retries)
 
         if self.detailed_logs:
-            self._log_tool_response(requested_tool.name, tool_input_parsed,
-                                    str(tool_response))
-
-        # Check if tool call failed and should raise error
-        if (hasattr(tool_response, 'status') and tool_response.status == "error" 
-            and self.raise_tool_call_error):
-            raise RuntimeError(f"Tool call failed: {tool_response.content}")
+            self._log_tool_response(requested_tool.name, tool_input_parsed, str(tool_response))
 
         return tool_response
 
@@ -508,22 +458,19 @@ class ReWOOAgentGraph(BaseAgent):
 
                 # Replace placeholders in tool input with actual results
                 final_tool_input = original_tool_input
-                for _placeholder, _tool_output in state.intermediate_results.items(
-                ):
+                for _placeholder, _tool_output in state.intermediate_results.items():
                     _tool_output_content = _tool_output.content
                     # If the content is a list, get the first element which should be a dict
                     if isinstance(_tool_output_content, list):
                         _tool_output_content = _tool_output_content[0]
                         assert isinstance(_tool_output_content, dict)
 
-                    final_tool_input = self._replace_placeholder(
-                        _placeholder, final_tool_input, _tool_output_content)
+                    final_tool_input = self._replace_placeholder(_placeholder, final_tool_input, _tool_output_content)
 
                 # Get the final result for this placeholder
                 final_result = ""
                 if placeholder in state.intermediate_results:
-                    result_content = state.intermediate_results[
-                        placeholder].content
+                    result_content = state.intermediate_results[placeholder].content
                     if isinstance(result_content, list):
                         result_content = result_content[0]
                         if isinstance(result_content, dict):
@@ -534,69 +481,58 @@ class ReWOOAgentGraph(BaseAgent):
                         final_result = str(result_content)
 
                 step_plan = step_info.get("plan", "")
-                plan += f"Plan: {step_plan}\n{placeholder} = {tool_name}[{final_tool_input}]\nResult: {final_result}\n\n"
+                plan += f"Plan: {step_plan}\n{placeholder} = \
+                    {tool_name}[{final_tool_input}]\nResult: {final_result}\n\n"
 
             task = str(state.task.content)
             solver_prompt = self.solver_prompt.partial(plan=plan)
             solver = solver_prompt | self.llm
 
-            output_message = await self._stream_llm(
-                solver, {"task": task},
-                RunnableConfig(callbacks=self.callbacks))  # type: ignore
+            output_message = await self._stream_llm(solver, {"task": task},
+                                                    RunnableConfig(callbacks=self.callbacks))  # type: ignore
 
             if self.detailed_logs:
-                solver_output_log_message = AGENT_CALL_LOG_MESSAGE % (
-                    task, str(output_message.content))
-                logger.info("ReWOO agent solver output: %s",
-                            solver_output_log_message)
+                solver_output_log_message = AGENT_CALL_LOG_MESSAGE % (task, str(output_message.content))
+                logger.info("ReWOO agent solver output: %s", solver_output_log_message)
 
             return {"result": output_message}
 
         except Exception as ex:
-            logger.error("%s Failed to call solver_node: %s", AGENT_LOG_PREFIX,
-                         ex)
+            logger.error("%s Failed to call solver_node: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     async def conditional_edge(self, state: ReWOOGraphState):
         try:
-            logger.debug("%s Starting the ReWOO Conditional Edge",
-                         AGENT_LOG_PREFIX)
+            logger.debug("%s Starting the ReWOO Conditional Edge", AGENT_LOG_PREFIX)
 
-            current_level, level_complete = self._get_current_level_status(
-                state)
+            current_level, level_complete = self._get_current_level_status(state)
 
             # If all levels are complete, move to solver
             if current_level == -1:
-                logger.debug(
-                    "%s All execution levels complete, moving to solver",
-                    AGENT_LOG_PREFIX)
+                logger.debug("%s All execution levels complete, moving to solver", AGENT_LOG_PREFIX)
                 return AgentDecision.END
 
             # If current level is complete, check if there are more levels
             if level_complete:
                 next_level = current_level + 1
                 if next_level >= len(state.execution_levels):
-                    logger.debug(
-                        "%s All execution levels complete, moving to solver",
-                        AGENT_LOG_PREFIX)
+                    logger.debug("%s All execution levels complete, moving to solver", AGENT_LOG_PREFIX)
                     return AgentDecision.END
 
-            logger.debug(
-                "%s Continuing with executor (level %s, complete: %s)",
-                AGENT_LOG_PREFIX, current_level, level_complete)
+            logger.debug("%s Continuing with executor (level %s, complete: %s)",
+                         AGENT_LOG_PREFIX,
+                         current_level,
+                         level_complete)
             return AgentDecision.TOOL
 
         except Exception as ex:
-            logger.exception(
-                "%s Failed to determine whether agent is calling a tool: %s",
-                AGENT_LOG_PREFIX, ex)
+            logger.exception("%s Failed to determine whether agent is calling a tool: %s", AGENT_LOG_PREFIX, ex)
             logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
             return AgentDecision.END
 
     async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
         try:
-            logger.debug("%s Building and compiling the ReWOO Graph",
-                         AGENT_LOG_PREFIX)
+            logger.debug("%s Building and compiling the ReWOO Graph", AGENT_LOG_PREFIX)
 
             graph = StateGraph(state_schema)
             graph.add_node("planner", self.planner_node)
@@ -604,36 +540,28 @@ class ReWOOAgentGraph(BaseAgent):
             graph.add_node("solver", self.solver_node)
 
             graph.add_edge("planner", "executor")
-            conditional_edge_possible_outputs = {
-                AgentDecision.TOOL: "executor",
-                AgentDecision.END: "solver"
-            }
-            graph.add_conditional_edges("executor", self.conditional_edge,
-                                        conditional_edge_possible_outputs)
+            conditional_edge_possible_outputs = {AgentDecision.TOOL: "executor", AgentDecision.END: "solver"}
+            graph.add_conditional_edges("executor", self.conditional_edge, conditional_edge_possible_outputs)
 
             graph.set_entry_point("planner")
             graph.set_finish_point("solver")
 
             self.graph = graph.compile()
-            logger.debug("%s ReWOO Graph built and compiled successfully",
-                         AGENT_LOG_PREFIX)
+            logger.debug("%s ReWOO Graph built and compiled successfully", AGENT_LOG_PREFIX)
 
             return self.graph
 
         except Exception as ex:
-            logger.error("%s Failed to build ReWOO Graph: %s",
-                         AGENT_LOG_PREFIX, ex)
+            logger.error("%s Failed to build ReWOO Graph: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     async def build_graph(self):
         try:
             await self._build_graph(state_schema=ReWOOGraphState)
-            logger.debug("%s ReWOO Graph built and compiled successfully",
-                         AGENT_LOG_PREFIX)
+            logger.debug("%s ReWOO Graph built and compiled successfully", AGENT_LOG_PREFIX)
             return self.graph
         except Exception as ex:
-            logger.error("%s Failed to build ReWOO Graph: %s",
-                         AGENT_LOG_PREFIX, ex)
+            logger.error("%s Failed to build ReWOO Graph: %s", AGENT_LOG_PREFIX, ex)
             raise
 
     @staticmethod
@@ -642,10 +570,8 @@ class ReWOOAgentGraph(BaseAgent):
         if not planner_prompt:
             errors.append("The planner prompt cannot be empty.")
         required_prompt_variables = {
-            "{tools}":
-            "The planner prompt must contain {tools} so the planner agent knows about configured tools.",
-            "{tool_names}":
-            "The planner prompt must contain {tool_names} so the planner agent knows tool names."
+            "{tools}": "The planner prompt must contain {tools} so the planner agent knows about configured tools.",
+            "{tool_names}": "The planner prompt must contain {tool_names} so the planner agent knows tool names."
         }
         for variable_name, error_message in required_prompt_variables.items():
             if variable_name not in planner_prompt:
