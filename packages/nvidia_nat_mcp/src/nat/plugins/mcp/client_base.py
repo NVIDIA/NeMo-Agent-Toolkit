@@ -610,19 +610,19 @@ class MCPToolClient:
                 logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
                 result = await self._session.call_tool(self._tool_name, tool_args)
 
-                output = []
-                for res in result.content:
-                    if isinstance(res, TextContent):
-                        output.append(res.text)
-                    else:
-                        # Log non-text content for now
-                        logger.warning("Got not-text output from %s of type %s", self.name, type(res))
-                result_str = "\n".join(output)
+            output = []
+            for res in result.content:
+                if isinstance(res, TextContent):
+                    output.append(res.text)
+                else:
+                    # Log non-text content for now
+                    logger.warning("Got not-text output from %s of type %s", self.name, type(res))
+            result_str = "\n".join(output)
 
-                if result.isError:
-                    mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str),
-                                                               self._parent_client.server_name)
-                    raise mcp_error
+            if result.isError:
+                mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str),
+                                                           self._parent_client.server_name)
+                raise mcp_error
 
         except MCPError as e:
             format_mcp_error(e, include_traceback=False)
