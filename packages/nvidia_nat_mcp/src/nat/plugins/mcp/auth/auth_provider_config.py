@@ -54,6 +54,7 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     use_tmp_oauth2_provider: bool = Field(default=False, description="Use the temporary OAuth2 provider")
 
     default_user_id: str | None = Field(default=None, description="Default user ID for authentication")
+    allow_default_user_id_for_tool_calls: bool = Field(default=True, description="Allow default user ID for tool calls")
 
     @model_validator(mode="after")
     def validate_auth_config(self):
@@ -68,6 +69,10 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
         elif self.client_id and self.client_secret:
             # Has credentials but will discover URLs from MCP server
             pass
+
+        # if default_user_id is not provided, use the server_url as the default user id
+        if not self.default_user_id:
+            self.default_user_id = str(self.server_url)
 
         # Invalid configuration
         else:

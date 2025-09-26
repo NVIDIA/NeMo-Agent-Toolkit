@@ -84,8 +84,10 @@ class AuthAdapter(httpx.Auth):
                     logger.info("Failed to refresh auth after 401: %s", e)
         return
 
-    def _get_session_id_from_tool_call_request(self, request: httpx.Request) -> str | None:
-        """Check if this is a tool call request based on the request body."""
+    def _get_session_id_from_tool_call_request(self, request: httpx.Request) -> tuple[str | None, bool]:
+        """Check if this is a tool call request based on the request body.
+        Return the session id if it exists and a boolean indicating if it is a tool call request
+        """
         try:
             # Check if the request body contains a tool call
             if request.content:
@@ -93,11 +95,11 @@ class AuthAdapter(httpx.Auth):
                 # Check if it's a JSON-RPC request with method "tools/call"
                 if (isinstance(body, dict) and body.get("method") == "tools/call"):
                     session_id = body.get("params").get("_meta").get("session_id")
-                    return session_id
+                    return session_id, True
         except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
             # If we can't parse the body, assume it's not a tool call
             pass
-        return None
+        return None, False
 
     async def _get_auth_headers(self,
                                 request: httpx.Request | None = None,
@@ -105,10 +107,20 @@ class AuthAdapter(httpx.Auth):
         """Get authentication headers from the NAT auth provider."""
         try:
             session_id = None
+            is_tool_call = False
             if request:
-                session_id = self._get_session_id_from_tool_call_request(request)
+                session_id, is_tool_call = self._get_session_id_from_tool_call_request(request)
 
-            user_id = session_id or self.auth_provider.config.default_user_id
+            if is_tool_call:
+                # Tool call requests should use the session id if it exists, default user id can be used if allowed
+                if self.auth_provider.config.allow_default_user_id_for_tool_calls:
+                    user_id = session_id or self.auth_provider.config.default_user_id
+                else:
+                    user_id = session_id
+            else:
+                # Non-tool call requests should use the session id if it exists and fallback to default user id
+                user_id = session_id or self.auth_provider.config.default_user_id
+
             auth_result = await self.auth_provider.authenticate(user_id=user_id, response=response)
 
             # Check if we have BearerTokenCred
