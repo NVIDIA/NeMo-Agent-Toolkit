@@ -531,6 +531,7 @@ def mcp_client_tool_list(ctx,
         tool (str | None): Optional specific tool name to retrieve detailed info for
         detail (bool): Whether to show full details (description + schema) for all tools
         json_output (bool): Whether to output tool metadata in JSON format instead of text
+        auth (bool): Whether to enable OAuth2 authentication (streamable-http only, not with --direct)
         auth_redirect_uri (str | None): redirect URI for auth (streamable-http only, not with --direct)
         auth_user_id (str | None): User ID for authentication (streamable-http only, not with --direct)
         auth_scopes (str | None): OAuth2 scopes (comma-separated, streamable-http only, not with --direct)
