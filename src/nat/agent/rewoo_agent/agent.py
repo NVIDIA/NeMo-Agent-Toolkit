@@ -214,9 +214,10 @@ class ReWOOAgentGraph(BaseAgent):
                 remaining.pop(placeholder)
 
             # Remove completed items from other dependencies
-            for placeholder in remaining.items():
-                remaining[placeholder] = [dep for dep in remaining[placeholder] if dep not in ready]
-
+            # for placeholder in remaining.items():
+            #     remaining[placeholder] = [dep for dep in remaining[placeholder] if dep not in ready]
+            for ph, deps in list(remaining.items()):
+                remaining[ph] = [dep for dep in deps if dep not in ready]
         return evidences, levels
 
     @staticmethod
@@ -376,6 +377,11 @@ class ReWOOAgentGraph(BaseAgent):
                         raise result
                 else:
                     updated_intermediate_results[placeholder] = result
+                    # Check if the ToolMessage has error status and raise_tool_call_error is True
+                    if (isinstance(result, ToolMessage) and hasattr(result, 'status') and result.status == "error"
+                            and self.raise_tool_call_error):
+                        logger.error("%s Tool call failed for %s: %s", AGENT_LOG_PREFIX, placeholder, result.content)
+                        raise RuntimeError(f"Tool call failed: {result.content}")
 
             if self.detailed_logs:
                 logger.info("%s Completed level %s with %s tools",
