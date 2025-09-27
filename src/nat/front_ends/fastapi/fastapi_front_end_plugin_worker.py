@@ -37,6 +37,9 @@ from pydantic import BaseModel
 from pydantic import Field
 from starlette.websockets import WebSocket
 
+import httpx
+from authlib.common.errors import AuthlibBaseError as OAuthError
+
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -1071,8 +1074,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                code_verifier=verifier,
                                                state=state)
                 flow_state.future.set_result(res)
+            except OAuthError as e:
+                flow_state.future.set_exception(
+                    RuntimeError(f"Authorization server rejected request: {e.error} ({e.description})"))
+            except httpx.HTTPError as e:
+                flow_state.future.set_exception(RuntimeError(f"Network error during token fetch: {e}"))
             except Exception as e:
-                flow_state.future.set_exception(e)
+                flow_state.future.set_exception(RuntimeError(f"Authentication failed: {e}"))
 
             return HTMLResponse(content=AUTH_REDIRECT_SUCCESS_HTML,
                                 status_code=200,

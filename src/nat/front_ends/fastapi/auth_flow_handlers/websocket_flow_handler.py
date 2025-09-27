@@ -21,8 +21,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field
 
+import httpx
 import pkce
 from authlib.integrations.httpx_client import AsyncOAuth2Client
+from authlib.common.errors import AuthlibBaseError as OAuthError
 
 from nat.authentication.interfaces import FlowHandlerBase
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
@@ -61,14 +63,50 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
 
         raise NotImplementedError(f"Authentication method '{method}' is not supported by the websocket frontend.")
 
-    def create_oauth_client(self, config: OAuth2AuthCodeFlowProviderConfig):
-        return AsyncOAuth2Client(client_id=config.client_id,
-                                 client_secret=config.client_secret,
-                                 redirect_uri=config.redirect_uri,
-                                 scope=" ".join(config.scopes) if config.scopes else None,
-                                 token_endpoint=config.token_url,
-                                 code_challenge_method='S256' if config.use_pkce else None,
-                                 token_endpoint_auth_method=config.token_endpoint_auth_method)
+    def create_oauth_client(self, config: OAuth2AuthCodeFlowProviderConfig) -> AsyncOAuth2Client:
+        try:
+            return AsyncOAuth2Client(client_id=config.client_id,
+                                     client_secret=config.client_secret,
+                                     redirect_uri=config.redirect_uri,
+                                     scope=" ".join(config.scopes) if config.scopes else None,
+                                     token_endpoint=config.token_url,
+                                     code_challenge_method='S256' if config.use_pkce else None,
+                                     token_endpoint_auth_method=config.token_endpoint_auth_method)
+        except (OAuthError, ValueError, TypeError) as e:
+            raise RuntimeError(f"Invalid OAuth2 configuration: {e}") from e
+        except Exception as e:
+            raise RuntimeError(f"Failed to create OAuth2 client: {e}") from e
+
+    def _create_authorization_url(self,
+                                  client: AsyncOAuth2Client,
+                                  config: OAuth2AuthCodeFlowProviderConfig,
+                                  state: str,
+                                  verifier: str = None,
+                                  challenge: str = None) -> str:
+        """
+        Create OAuth authorization URL with proper error handling.
+
+        Args:
+            client: The OAuth2 client instance
+            config: OAuth2 configuration
+            state: OAuth state parameter
+            verifier: PKCE verifier (if using PKCE)
+            challenge: PKCE challenge (if using PKCE)
+
+        Returns:
+            The authorization URL
+        """
+        try:
+            authorization_url, _ = client.create_authorization_url(
+                config.authorization_url,
+                state=state,
+                code_verifier=verifier if config.use_pkce else None,
+                code_challenge=challenge if config.use_pkce else None,
+                **(config.authorization_kwargs or {})
+            )
+            return authorization_url
+        except (OAuthError, ValueError, TypeError) as e:
+            raise RuntimeError(f"Error creating OAuth authorization URL: {e}") from e
 
     async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
 
@@ -82,21 +120,19 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
             flow_state.verifier = verifier
             flow_state.challenge = challenge
 
-        authorization_url, _ = flow_state.client.create_authorization_url(
-            config.authorization_url,
-            state=state,
-            code_verifier=flow_state.verifier if config.use_pkce else None,
-            code_challenge=flow_state.challenge if config.use_pkce else None,
-            **(config.authorization_kwargs or {})
-        )
+        authorization_url = self._create_authorization_url(client=flow_state.client,
+                                                           config=config,
+                                                           state=state,
+                                                           verifier=flow_state.verifier,
+                                                           challenge=flow_state.challenge)
 
         await self._add_flow_cb(state, flow_state)
         await self._web_socket_message_handler.create_websocket_message(_HumanPromptOAuthConsent(text=authorization_url)
                                                                         )
         try:
             token = await asyncio.wait_for(flow_state.future, timeout=300)
-        except asyncio.TimeoutError:
-            raise RuntimeError("Authentication flow timed out after 5 minutes.")
+        except asyncio.TimeoutError as exc:
+            raise RuntimeError("Authentication flow timed out after 5 minutes.") from exc
         finally:
 
             await self._remove_flow_cb(state)

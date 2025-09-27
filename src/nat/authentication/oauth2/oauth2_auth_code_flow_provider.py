@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from datetime import datetime
 from datetime import timezone
 
+import httpx
 from authlib.integrations.httpx_client import OAuth2Client as AuthlibOAuth2Client
 from pydantic import SecretStr
 
@@ -25,6 +27,8 @@ from nat.builder.context import Context
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BearerTokenCred
+
+logger = logging.getLogger(__name__)
 
 
 class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConfig]):
@@ -39,26 +43,30 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
         if not isinstance(refresh_token, str):
             return None
 
-        with AuthlibOAuth2Client(
-                client_id=self.config.client_id,
-                client_secret=self.config.client_secret,
-        ) as client:
-            try:
+        try:
+            with AuthlibOAuth2Client(
+                    client_id=self.config.client_id,
+                    client_secret=self.config.client_secret,
+            ) as client:
                 new_token_data = client.refresh_token(self.config.token_url, refresh_token=refresh_token)
-            except Exception:
-                # On any failure, we'll fall back to the full auth flow.
-                return None
 
-        expires_at_ts = new_token_data.get("expires_at")
-        new_expires_at = datetime.fromtimestamp(expires_at_ts, tz=timezone.utc) if expires_at_ts else None
+            expires_at_ts = new_token_data.get("expires_at")
+            new_expires_at = datetime.fromtimestamp(expires_at_ts, tz=timezone.utc) if expires_at_ts else None
 
-        new_auth_result = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr(new_token_data["access_token"]))],
-            token_expires_at=new_expires_at,
-            raw=new_token_data,
-        )
+            new_auth_result = AuthResult(
+                credentials=[BearerTokenCred(token=SecretStr(new_token_data["access_token"]))],
+                token_expires_at=new_expires_at,
+                raw=new_token_data,
+            )
 
-        self._authenticated_tokens[user_id] = new_auth_result
+            self._authenticated_tokens[user_id] = new_auth_result
+        except httpx.HTTPStatusError:
+            return None
+        except httpx.RequestError:
+            return None
+        except Exception:
+            # On any other failure, we'll fall back to the full auth flow.
+            return None
 
         return new_auth_result
 
