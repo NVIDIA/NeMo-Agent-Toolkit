@@ -23,8 +23,8 @@ from dataclasses import field
 import click
 import httpx
 import pkce
-from authlib.integrations.httpx_client import AsyncOAuth2Client
 from authlib.common.errors import AuthlibBaseError as OAuthError
+from authlib.integrations.httpx_client import AsyncOAuth2Client
 from fastapi import FastAPI
 from fastapi import Request
 
@@ -241,10 +241,13 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             except OAuthError as e:
                 flow_state.future.set_exception(
                     RuntimeError(f"Authorization server rejected request: {e.error} ({e.description})"))
+                return "Authentication failed: Authorization server rejected the request. You may close this tab."
             except httpx.HTTPError as e:
                 flow_state.future.set_exception(RuntimeError(f"Network error during token fetch: {e}"))
+                return "Authentication failed: Network error occurred. You may close this tab."
             except Exception as e:
                 flow_state.future.set_exception(RuntimeError(f"Authentication failed: {e}"))
+                return "Authentication failed: An unexpected error occurred. You may close this tab."
             return "Authentication successful – you may close this tab."
 
         return app
