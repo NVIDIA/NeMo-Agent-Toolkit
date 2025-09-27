@@ -179,8 +179,8 @@ def _set_auth_defaults(auth: bool,
         auth_user_id = auth_user_id or url
         auth_scopes = auth_scopes or ""
 
-    # Convert comma-separated string to list
-    auth_scopes_list = auth_scopes.split(',') if auth_scopes else None
+    # Convert comma-separated string to list, stripping whitespace
+    auth_scopes_list = [scope.strip() for scope in auth_scopes.split(',')] if auth_scopes else None
 
     return auth_redirect_uri, auth_user_id, auth_scopes_list
 
@@ -656,8 +656,8 @@ def mcp_client_ping(url: str,
         click.echo("[ERROR] --auth-redirect-uri is required when using --auth-user-id or --auth-scopes", err=True)
         return
 
-    # Parse auth scopes
-    auth_scopes_list = auth_scopes.split(',') if auth_scopes else None
+    # Parse auth scopes, stripping whitespace
+    auth_scopes_list = [scope.strip() for scope in auth_scopes.split(',')] if auth_scopes else None
 
     result = asyncio.run(
         ping_mcp_server(url,
