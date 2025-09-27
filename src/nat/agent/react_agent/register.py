@@ -99,7 +99,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     # the agent can run any installed tool, simply install the tool and add it to the config file
     # the sample tool provided can easily be copied or changed
-    tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools = await builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     if not tools:
         raise ValueError(f"No tools specified for ReAct Agent '{config.llm_name}'")
     # configure callbacks, for sending intermediate steps
@@ -118,6 +118,17 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         normalize_tool_input_quotes=config.normalize_tool_input_quotes).build_graph()
 
     async def _response_fn(input_message: ChatRequest) -> ChatResponse:
+        """
+        Main workflow entry function for the ReAct Agent.
+
+        This function invokes the ReAct Agent Graph and returns the response.
+
+        Args:
+            input_message (ChatRequest): The input message to process
+
+        Returns:
+            ChatResponse: The response from the agent or error message
+        """
         try:
             # initialize the starting state with the user query
             messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in input_message.messages],
@@ -141,11 +152,8 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             return ChatResponse.from_string(str(output_message.content))
 
         except Exception as ex:
-            logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
-            # here, we can implement custom error messages
-            if config.verbose:
-                return ChatResponse.from_string(str(ex))
-            return ChatResponse.from_string("I seem to be having a problem.")
+            logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, str(ex))
+            raise RuntimeError
 
     if (config.use_openai_api):
         yield FunctionInfo.from_fn(_response_fn, description=config.description)

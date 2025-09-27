@@ -80,27 +80,27 @@ async with WorkflowBuilder() as builder:
     await builder.add_function_group("my", MyGroupConfig(include=["greet"]))
 
     # Able to reference the function directly by its fully qualified name
-    greet = builder.get_function("my.greet")
+    greet = await builder.get_function("my.greet")
     print(await greet.ainvoke("World"))
 
-    my_group = builder.get_function_group("my")
+    my_group = await builder.get_function_group("my")
 
     # Get all accessible functions in the function group.
     # If the function group is configured to:
     # - include some functions, this will return only the included functions.
     # - not include or exclude any function, this will return all functions in the group.
     # - exclude some functions, this will return all functions in the group except the excluded functions.
-    accessible_functions = my_group.get_accessible_functions()
+    accessible_functions = await my_group.get_accessible_functions()
     
     # Get all functions in the group.
     # This will return all functions in the group, regardless of whether they are included or excluded.
-    all_functions = my_group.get_all_functions()
+    all_functions = await my_group.get_all_functions()
 
     # Or only the included functions (which have also been registered globally as ordinary functions)
-    included_functions = my_group.get_included_functions()
+    included_functions = await my_group.get_included_functions()
 
     # Or only the excluded functions
-    excluded_functions = my_group.get_excluded_functions()
+    excluded_functions = await my_group.get_excluded_functions()
 ```
 
 ## Input Schemas
@@ -140,7 +140,7 @@ from collections.abc import Sequence
 @register_function_group(config_type=MyGroupConfig)
 async def build_my_group(config: MyGroupConfig, _builder: Builder):
     # Define a group-level filter
-    def admin_filter(function_names: Sequence[str]) -> Sequence[str]:
+    async def admin_filter(function_names: Sequence[str]) -> Sequence[str]:
         # Only include admin functions in production
         if config.environment == "production":
             return [name for name in function_names if name.startswith("admin_")]
@@ -169,7 +169,7 @@ async def build_my_group(config: MyGroupConfig, _builder: Builder):
     group = FunctionGroup(config=config, instance_name="my")
     
     # Define per-function filter
-    def debug_only(name: str) -> bool:
+    async def debug_only(name: str) -> bool:
         return config.debug_mode  # Only include if debug mode is enabled
     
     async def debug_fn(message: str) -> str:
@@ -202,13 +202,13 @@ class FilteredGroupConfig(FunctionGroupBaseConfig, name="filtered_group"):
 @register_function_group(config_type=FilteredGroupConfig)
 async def build_filtered_group(config: FilteredGroupConfig, _builder: Builder):
     # Group filter: only production-ready functions in production
-    def env_filter(names: Sequence[str]) -> Sequence[str]:
+    async def env_filter(names: Sequence[str]) -> Sequence[str]:
         if config.environment == "production":
             return [name for name in names if not name.startswith("test_")]
         return names
     
     # Per-function filter: exclude experimental features
-    def stable_only(name: str) -> bool:
+    async def stable_only(name: str) -> bool:
         return not name.endswith("_experimental")
     
     group = FunctionGroup(config=config, filter_fn=env_filter)

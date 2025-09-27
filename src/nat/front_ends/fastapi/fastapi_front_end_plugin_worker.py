@@ -240,14 +240,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
 
-        await self.add_default_route(app, SessionManager(builder.build()))
-        await self.add_evaluate_route(app, SessionManager(builder.build()))
+        await self.add_default_route(app, SessionManager(await builder.build()))
+        await self.add_evaluate_route(app, SessionManager(await builder.build()))
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
 
         for ep in self.front_end_config.endpoints:
 
-            entry_workflow = builder.build(entry_function=ep.function_name)
+            entry_workflow = await builder.build(entry_function=ep.function_name)
 
             await self.add_route(app, endpoint=ep, session_manager=SessionManager(entry_workflow))
 

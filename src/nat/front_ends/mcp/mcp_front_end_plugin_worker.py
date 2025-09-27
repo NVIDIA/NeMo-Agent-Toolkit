@@ -86,7 +86,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
         """
         pass
 
-    def _get_all_functions(self, workflow: Workflow) -> dict[str, Function]:
+    async def _get_all_functions(self, workflow: Workflow) -> dict[str, Function]:
         """Get all functions from the workflow.
 
         Args:
@@ -100,7 +100,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
         # Extract all functions from the workflow
         functions.update(workflow.functions)
         for function_group in workflow.function_groups.values():
-            functions.update(function_group.get_accessible_functions())
+            functions.update(await function_group.get_accessible_functions())
 
         if workflow.config.workflow.workflow_alias:
             functions[workflow.config.workflow.workflow_alias] = workflow
@@ -223,10 +223,10 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
         self._setup_health_endpoint(mcp)
 
         # Build the workflow and register all functions with MCP
-        workflow = builder.build()
+        workflow = await builder.build()
 
         # Get all functions from the workflow
-        functions = self._get_all_functions(workflow)
+        functions = await self._get_all_functions(workflow)
 
         # Filter functions based on tool_names if provided
         if self.front_end_config.tool_names:

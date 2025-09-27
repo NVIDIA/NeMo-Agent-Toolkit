@@ -86,7 +86,7 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
                           "This error can be resolved by installing nvidia-nat-langchain.")
 
     # Get the augmented function's description
-    augmented_function = builder.get_function(config.augmented_fn)
+    augmented_function = await builder.get_function(config.augmented_fn)
 
     # For now, we rely on runtime checking for type conversion
 
@@ -105,7 +105,7 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
     tool_list = "Tool: Description\n"
 
     for tool in function_used_tools:
-        tool_impl = builder.get_function(tool)
+        tool_impl = await builder.get_function(tool)
         tool_list += f"- {tool}: {tool_impl.description if hasattr(tool_impl, 'description') else ''}\n"
 
     # Draft the reasoning prompt for the augmented function

@@ -27,7 +27,8 @@ from nat_agno_personal_finance.agno_personal_finance_function import AgnoPersona
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
+@pytest.mark.usefixtures("serp_api_key", "openai_api_key")
 async def test_full_workflow():
 
     package_name = inspect.getmodule(AgnoPersonalFinanceFunctionConfig).__package__

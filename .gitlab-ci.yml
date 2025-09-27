@@ -76,11 +76,14 @@ check:style:
 test:python_tests:
   stage: test
   services:
-    - mysql:9.3
     - name: minio/minio:RELEASE.2025-07-18T21-56-31Z
       alias: minio
       command: ["server", "/data", "--console-address", ":9001"]
+    - mysql:9.3
+    - name: arizephoenix/phoenix:latest
+      alias: phoenix
     - redis:7-alpine
+
   script:
     - echo "Running tests"
     - ./ci/scripts/gitlab/tests.sh

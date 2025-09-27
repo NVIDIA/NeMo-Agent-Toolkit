@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 class MultiFrameworksWorkflowConfig(FunctionBaseConfig, name="multi_frameworks"):
     # Add your custom configuration parameters here
-    llm: LLMRef = "nim_llm"
+    llm: LLMRef = LLMRef("nim_llm")
     data_dir: str = "/home/coder/dev/ai-query-engine/examples/frameworks/multi_frameworks/data/"
     research_tool: FunctionRef
     rag_tool: FunctionRef
@@ -57,9 +57,9 @@ async def multi_frameworks_workflow(config: MultiFrameworksWorkflowConfig, build
     logger.info("workflow config = %s", config)
 
     llm = await builder.get_llm(llm_name=config.llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    research_tool = builder.get_tool(fn_name=config.research_tool, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    rag_tool = builder.get_tool(fn_name=config.rag_tool, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    chitchat_agent = builder.get_tool(fn_name=config.chitchat_agent, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    research_tool = await builder.get_tool(fn_name=config.research_tool, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    rag_tool = await builder.get_tool(fn_name=config.rag_tool, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    chitchat_agent = await builder.get_tool(fn_name=config.chitchat_agent, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     chat_hist = ChatMessageHistory()
 

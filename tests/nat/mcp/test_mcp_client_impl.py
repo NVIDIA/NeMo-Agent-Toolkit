@@ -121,7 +121,7 @@ async def test_mcp_client_function_group_includes_respected():
         mock_builder = MagicMock(spec=WorkflowBuilder)
 
         async with mcp_client_function_group(client_cfg, mock_builder) as group:
-            accessible = group.get_accessible_functions()
+            accessible = await group.get_accessible_functions()
             assert set(accessible.keys()) == {"mcp_client.fake_tool_1"}
 
 
@@ -140,7 +140,7 @@ async def test_mcp_client_function_group_applies_overrides():
         mock_builder = MagicMock(spec=WorkflowBuilder)
 
         async with mcp_client_function_group(client_cfg, mock_builder) as group:
-            accessible = group.get_accessible_functions()
+            accessible = await group.get_accessible_functions()
             assert set(accessible.keys()) == {"mcp_client.alias_raw"}
             assert accessible["mcp_client.alias_raw"].description == "new desc"
 
@@ -156,5 +156,5 @@ async def test_mcp_client_function_group_no_include_exposes_all():
         mock_builder = MagicMock(spec=WorkflowBuilder)
 
         async with mcp_client_function_group(client_cfg, mock_builder) as group:
-            accessible = group.get_accessible_functions()
+            accessible = await group.get_accessible_functions()
             assert set(accessible.keys()) == {"mcp_client.a", "mcp_client.b"}

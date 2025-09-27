@@ -35,7 +35,7 @@ This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with Mo
 ## Key Features
 
 - **MCP Client Integration:** Demonstrates how to use NeMo Agent toolkit as an MCP client to connect to remote MCP servers and access distributed tools like advanced mathematical operations as well as date and time services.
-- **MCP Server Publishing:** Shows how to publish NeMo Agent toolkit functions as MCP services using the `nat mcp` command, making calculator tools available to other AI systems through the standardized MCP protocol.
+- **MCP Server Publishing:** Shows how to publish NeMo Agent toolkit functions as MCP services using the `nat mcp serve` command, making calculator tools available to other AI systems through the standardized MCP protocol.
 - **Distributed AI Tool Networks:** Enables building networks of interconnected AI tools where different capabilities can be hosted on separate systems and accessed remotely through MCP.
 - **Cross-System Interoperability:** Demonstrates integration with the broader MCP ecosystem, allowing NeMo Agent toolkit workflows to both consume and provide tools in a standardized manner.
 - **Remote Tool Access:** Shows how to securely connect to external data sources and tools through the MCP protocol while maintaining security and access control.
@@ -79,7 +79,7 @@ uv pip install -e examples/MCP/simple_calculator_mcp
 You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../../docs/source/workflows/mcp/mcp-client.md).
 
 ### NeMo Agent toolkit as an MCP Server
-You can publish the simple calculator tools via MCP using the `nat mcp` command. Details are provided in the [MCP Server Guide](../../../docs/source/workflows/mcp/mcp-server.md).
+You can publish the simple calculator tools via MCP using the `nat mcp serve` command. Details are provided in the [MCP Server Guide](../../../docs/source/workflows/mcp/mcp-server.md).
 
 ## Configuration Examples
 | Configuration File | MCP Server Type | Transport | Available Tools |
@@ -98,7 +98,7 @@ You can publish the simple calculator tools via MCP using the `nat mcp` command.
    ```
 
 **Math Server Example:**
-1. **Start the MCP server**: Use `nat mcp --config_file ./examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
+1. **Start the MCP server**: Use `nat mcp serve --config_file ./examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
 2. **Run the workflow**:
    ```bash
    nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "What is the product of 2 * 4?"
@@ -107,7 +107,7 @@ You can publish the simple calculator tools via MCP using the `nat mcp` command.
 **Combined Example:**
 1. **Start both MCP servers**: Keep both servers running simultaneously:
    - **Docker container MCP server**: Follow the setup instructions in [README](./deploy_external_mcp/README.md) to start the containerized time server on port 8080
-   - **NeMo Agent Toolkit MCP server**: Use `nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
+   - **NeMo Agent Toolkit MCP server**: Use `nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
 2. **Run the workflow**:
    ```bash
    nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-combined.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
@@ -116,7 +116,7 @@ You can publish the simple calculator tools via MCP using the `nat mcp` command.
 **Combined Example with STDIO:**
 1. **Start the MCP math server**:
    ```bash
-   nat mcp --config_file examples/getting_started/simple_calculator/configs/config.yml
+   nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
    ```
    This starts the MCP server on port 9901 with endpoint `/mcp`.
 2. **Run the workflow**:

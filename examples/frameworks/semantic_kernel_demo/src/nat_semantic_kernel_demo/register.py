@@ -72,7 +72,7 @@ async def semantic_kernel_travel_planning_workflow(config: SKTravelPlanningWorkf
 
     kernel.add_service(chat_service)
 
-    tools = builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
+    tools = await builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
 
     # Zip config.tool names and tools for kernel add plugin
     for tool_name, tool in zip(config.tool_names, tools):
