@@ -120,7 +120,7 @@ The ReWOO agent is configured through the `config.yml` file. The following confi
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Make a joke comparing Elon and Zuckburg's birthdays?"
+nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Make a joke comparing Elon and Mark Zuckerberg's birthdays?"
 ```
 
 **Expected Workflow Output**
@@ -130,7 +130,7 @@ nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Make a j
 - ReWOO agent output:
 ------------------------------
 [AGENT]
-Agent input: Make a joke comparing Elon and Zuckburg's birthdays?
+Agent input: Make a joke comparing Elon and Mark Zuckerberg's birthdays?
 Agent's thoughts: 
 [
   {
@@ -201,7 +201,7 @@ content='After comparing the birthdays of Elon Musk and Mark Zuckerberg, I found
 2025-09-27 20:12:24,472 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent solver output: 
 ------------------------------
 [AGENT]
-Agent input: Make a joke comparing Elon and Zuckburg's birthdays?
+Agent input: Make a joke comparing Elon and Mark Zuckerberg's birthdays?
 Agent's thoughts: 
 Why did Elon Musk and Mark Zuckerberg go to therapy together? Because Elon was feeling a little "spacey" and Mark was having a "facebook" identity crisis... but in the end, they just realized they were born to be different - 13 years and 44 days apart, to be exact!
 ------------------------------
@@ -233,7 +233,7 @@ Once the server is running, you can make HTTP requests to interact with the work
 curl --request POST \
   --url http://localhost:8000/generate \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "Make a joke comparing Elon and Zuckburg's birthdays?"}'
+  --data '{"input_message": "Make a joke comparing Elon and Mark Zuckerberg's birthdays?"}'
 ```
 
 #### Streaming Requests
@@ -244,7 +244,7 @@ curl --request POST \
 curl --request POST \
   --url http://localhost:8000/generate/stream \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "Make a joke comparing Elon and Zuckburg's birthdays?"}'
+  --data '{"input_message": "Make a joke comparing Elon and Mark Zuckerberg's birthdays?"}'
 ```
 ---
 
