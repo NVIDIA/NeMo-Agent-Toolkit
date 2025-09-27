@@ -127,7 +127,7 @@ class ReWOOAgentGraph(BaseAgent):
         :rtype: tuple[int, bool]
         """
         if not state.execution_levels:
-            raise RuntimeError('No execution levels found in ReWOOGraphState')
+            return -1, True
 
         current_level = state.current_level
 
