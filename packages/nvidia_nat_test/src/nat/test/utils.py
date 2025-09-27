@@ -16,7 +16,11 @@
 import importlib.resources
 import inspect
 import subprocess
+import typing
 from pathlib import Path
+
+if typing.TYPE_CHECKING:
+    from nat.utils.type_utils import StrPath
 
 
 def locate_repo_root() -> Path:
@@ -56,7 +60,7 @@ def locate_example_config(example_config_class: type,
     return config_path
 
 
-async def run_workflow(config_file: str,
+async def run_workflow(config_file: "StrPath",
                        question: str,
                        expected_answer: str,
                        assert_expected_answer: bool = True) -> str:

@@ -55,8 +55,7 @@ def require_phoenix_server(fail_missing: bool = False):
     import requests
     try:
         response = requests.get("http://localhost:6006/v1/traces", timeout=5)
-        if response.status_code != 200:
-            raise ConnectionError(f"Unexpected status code: {response.status_code}")
+        response.raise_for_status()
     except Exception as e:
         reason = f"Unable to connect to Phoenix server at http://localhost:6006/v1/traces: {e}"
         if fail_missing:

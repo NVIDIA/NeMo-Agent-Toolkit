@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import subprocess
 import typing
 from pathlib import Path
 
@@ -242,3 +243,91 @@ def restore_environ_fixture():
 def root_repo_dir_fixture() -> Path:
     from nat.test.utils import locate_repo_root
     return locate_repo_root()
+
+
+def _test_url(url: str, fail_missing: bool, failure_reason: str, timeout: int = 5) -> bool:
+    import requests
+    try:
+        response = requests.get(url, timeout=timeout)
+        response.raise_for_status()
+        return True
+    except:
+        if fail_missing:
+            raise RuntimeError(failure_reason)
+        pytest.skip(reason=failure_reason)
+
+
+@pytest.fixture(name="require_etcd", scope="session")
+def require_etcd_fixture(fail_missing: bool = False) -> bool:
+    """
+    To run these tests, an etcd server must be running
+    """
+    host = os.getenv("NAT_CI_ETCD_HOST", "localhost")
+    port = os.getenv("NAT_CI_ETCD_PORT", "2379")
+    health_url = f"http://{host}:{port}/health"
+    return _test_url(url=health_url,
+                     fail_missing=fail_missing,
+                     failure_reason=f"Unable to connect to etcd server at {health_url}")
+
+
+@pytest.fixture(name="require_milvus", scope="session")
+def require_milvus_fixture(require_etcd: bool, fail_missing: bool = False) -> bool:
+    """
+    To run these tests, a Milvus server must be running
+    """
+    host = os.getenv("NAT_CI_MILVUS_HOST", "localhost")
+    port = os.getenv("NAT_CI_MILVUS_PORT", "19530")
+    uri = f"http://{host}:{port}"
+    try:
+        from pymilvus import MilvusClient
+        MilvusClient(uri=uri)
+
+        return True
+    except:
+        reason = f"Unable to connect to Milvus server at {uri}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="populate_milvus", scope="session")
+def populate_milvus_fixture(require_milvus: bool, root_repo_dir: Path):
+    """
+    Populate Milvus with some test data.
+    """
+    populate_script = root_repo_dir / "scripts/langchain_web_ingest.py"
+
+    # Ingest default cuda docs
+    subprocess.run(["python", str(populate_script)], check=True)
+
+    # Ingest MCP docs
+    subprocess.run([
+        "python",
+        str(populate_script),
+        "--urls",
+        "https://github.com/modelcontextprotocol/python-sdk",
+        "--urls",
+        "https://modelcontextprotocol.io/introduction",
+        "--urls",
+        "https://modelcontextprotocol.io/quickstart/server",
+        "--urls",
+        "https://modelcontextprotocol.io/quickstart/client",
+        "--urls",
+        "https://modelcontextprotocol.io/examples",
+        "--urls",
+        "https://modelcontextprotocol.io/docs/concepts/architecture",
+        "--collection_name",
+        "mcp_docs"
+    ],
+                   check=True)
+
+    # Ingest some wikipedia docs
+    subprocess.run([
+        "python",
+        str(populate_script),
+        "--urls",
+        "https://en.wikipedia.org/wiki/Aardvark",
+        "--collection_name",
+        "wikipedia_docs"
+    ],
+                   check=True)
