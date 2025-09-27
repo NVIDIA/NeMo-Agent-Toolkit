@@ -21,10 +21,12 @@ import logging
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import AsyncGenerator
+from collections.abc import Callable
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from datetime import timedelta
 
+import anyio
 import httpx
 
 from mcp import ClientSession
@@ -33,9 +35,9 @@ from mcp.client.stdio import StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
+from nat.authentication.interfaces import AuthenticatedContext
+from nat.authentication.interfaces import AuthFlowType
 from nat.authentication.interfaces import AuthProviderBase
-from nat.data_models.authentication import AuthReason
-from nat.data_models.authentication import AuthRequest
 from nat.plugins.mcp.exception_handler import convert_to_mcp_error
 from nat.plugins.mcp.exception_handler import format_mcp_error
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
@@ -53,74 +55,89 @@ class AuthAdapter(httpx.Auth):
     Converts AuthProviderBase to httpx.Auth interface for dynamic token management.
     """
 
-    def __init__(self, auth_provider: AuthProviderBase, auth_for_tool_calls_only: bool = False):
+    def __init__(self, auth_provider: AuthProviderBase):
         self.auth_provider = auth_provider
-        self.auth_for_tool_calls_only = auth_for_tool_calls_only
+        # each adapter instance has its own lock to avoid unnecessary delays for multiple clients
+        self._lock = anyio.Lock()
 
     async def async_auth_flow(self, request: httpx.Request) -> AsyncGenerator[httpx.Request, httpx.Response]:
         """Add authentication headers to the request using NAT auth provider."""
-        # Check if we should only auth tool calls, Is this needed?
-        if self.auth_for_tool_calls_only and not self._is_tool_call_request(request):
-            # Skip auth for non-tool calls
-            yield request
-            return
-
-        try:
-            # Get fresh auth headers from the NAT auth provider
-            auth_headers = await self._get_auth_headers(reason=AuthReason.NORMAL)
-            request.headers.update(auth_headers)
-        except Exception as e:
-            logger.info("Failed to get auth headers: %s", e)
-            # Continue without auth headers if auth fails
-
-        response = yield request
-
-        # Handle 401 responses by retrying with fresh auth
-        if response.status_code == 401:
+        async with self._lock:
             try:
-                # Get fresh auth headers with 401 context
-                auth_headers = await self._get_auth_headers(reason=AuthReason.RETRY_AFTER_401, response=response)
+                # Get auth headers from the NAT auth provider:
+                # 1. If discovery is yet to done this will return None and request will be sent without auth header.
+                # 2. If discovery is done, this will return the auth header from cache if the token is still valid
+                auth_headers = await self._get_auth_headers(request=request, response=None)
                 request.headers.update(auth_headers)
-                yield request  # Retry the request
             except Exception as e:
-                logger.info("Failed to refresh auth after 401: %s", e)
+                logger.info("Failed to get auth headers: %s", e)
+                # Continue without auth headers if auth fails
+
+            response = yield request
+
+            # Handle 401 responses by retrying with fresh auth
+            if response.status_code == 401:
+                try:
+                    # 401 can happen if:
+                    # 1. The request was sent without auth header
+                    # 2. The auth headers are invalid
+                    # 3. The auth headers are expired
+                    # 4. The auth headers are revoked
+                    # 5. Auth config on the MCP server has changed
+                    # In this case we attempt to re-run discovery and authentication
+                    auth_headers = await self._get_auth_headers(request=request, response=response)
+                    request.headers.update(auth_headers)
+                    yield request  # Retry the request
+                except Exception as e:
+                    logger.info("Failed to refresh auth after 401: %s", e)
         return
 
-    def _is_tool_call_request(self, request: httpx.Request) -> bool:
-        """Check if this is a tool call request based on the request body."""
+    def _get_session_id_from_tool_call_request(self, request: httpx.Request) -> tuple[str | None, bool]:
+        """Check if this is a tool call request based on the request body.
+        Return the session id if it exists and a boolean indicating if it is a tool call request
+        """
         try:
             # Check if the request body contains a tool call
             if request.content:
                 body = json.loads(request.content.decode('utf-8'))
                 # Check if it's a JSON-RPC request with method "tools/call"
                 if (isinstance(body, dict) and body.get("method") == "tools/call"):
-                    return True
+                    session_id = body.get("params").get("_meta").get("session_id")
+                    return session_id, True
         except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
             # If we can't parse the body, assume it's not a tool call
             pass
-        return False
+        return None, False
 
-    async def _get_auth_headers(self, reason: AuthReason, response: httpx.Response | None = None) -> dict[str, str]:
+    async def _get_auth_headers(self,
+                                request: httpx.Request | None = None,
+                                response: httpx.Response | None = None) -> dict[str, str]:
         """Get authentication headers from the NAT auth provider."""
-        # Build auth request
-        www_authenticate = response.headers.get("WWW-Authenticate", None) if response else None
-        auth_request = AuthRequest(
-            reason=reason,
-            www_authenticate=www_authenticate,
-        )
         try:
-            # Mutating the config is not thread-safe, so we need to lock here
-            # Is mutating the config the only way to pass the auth request to the auth provider? This needs
-            # to be re-visited.
-            self.auth_provider.config.auth_request = auth_request
-            auth_result = await self.auth_provider.authenticate()
+            session_id = None
+            is_tool_call = False
+            if request:
+                session_id, is_tool_call = self._get_session_id_from_tool_call_request(request)
+
+            if is_tool_call:
+                # Tool call requests should use the session id if it exists, default user id can be used if allowed
+                if self.auth_provider.config.allow_default_user_id_for_tool_calls:
+                    user_id = session_id or self.auth_provider.config.default_user_id
+                else:
+                    user_id = session_id
+            else:
+                # Non-tool call requests should use the session id if it exists and fallback to default user id
+                user_id = session_id or self.auth_provider.config.default_user_id
+
+            auth_result = await self.auth_provider.authenticate(user_id=user_id, response=response)
+
             # Check if we have BearerTokenCred
             from nat.data_models.authentication import BearerTokenCred
             if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
                 token = auth_result.credentials[0].token.get_secret_value()
                 return {"Authorization": f"Bearer {token}"}
             else:
-                logger.warning("Auth provider did not return BearerTokenCred")
+                logger.info("Auth provider did not return BearerTokenCred")
                 return {}
         except Exception as e:
             logger.warning("Failed to get auth token: %s", e)
@@ -155,6 +172,7 @@ class MCPBaseClient(ABC):
         self._initial_connection = False
 
         # Convert auth provider to AuthAdapter
+        self._auth_provider = auth_provider
         self._httpx_auth = AuthAdapter(auth_provider) if auth_provider else None
 
         self._tool_call_timeout = tool_call_timeout
@@ -313,6 +331,34 @@ class MCPBaseClient(ABC):
         if not tool:
             raise MCPToolNotFoundError(tool_name, self.server_name)
         return tool
+
+    def set_user_auth_callback(self, auth_callback: Callable[[AuthFlowType], AuthenticatedContext]):
+        """Set the user authentication callback."""
+        if self._auth_provider and hasattr(self._auth_provider, "_set_custom_auth_callback"):
+            self._auth_provider._set_custom_auth_callback(auth_callback)
+
+    @mcp_exception_handler
+    async def call_tool_with_meta(self, tool_name: str, args: dict, session_id: str):
+        from mcp.types import CallToolRequest
+        from mcp.types import CallToolRequestParams
+        from mcp.types import CallToolResult
+        from mcp.types import ClientRequest
+
+        if not self._session:
+            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
+
+        async def _call_tool_with_meta():
+            params = CallToolRequestParams(name=tool_name, arguments=args, **{"_meta": {"session_id": session_id}})
+            req = ClientRequest(CallToolRequest(params=params))
+            # We will increase the timeout to 5 minutes if the tool call timeout is less than 5 min and
+            # auth is enabled.
+            if self._auth_provider and self._tool_call_timeout.total_seconds() < 300:
+                timeout = timedelta(seconds=300)
+            else:
+                timeout = self._tool_call_timeout
+            return await self._session.send_request(req, CallToolResult, request_read_timeout_seconds=timeout)
+
+        return await self._with_reconnect(_call_tool_with_meta)
 
     @mcp_exception_handler
     async def call_tool(self, tool_name: str, tool_args: dict | None):
@@ -539,9 +585,35 @@ class MCPToolClient:
         Args:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
         """
-        logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
+        if self._session is None:
+            raise RuntimeError("No session available for tool call")
+
+        # Extract context information
+        session_id = None
         try:
-            result = await self._parent_client.call_tool(self._tool_name, tool_args)
+            from nat.builder.context import Context as _Ctx
+
+            # get auth callback (for example: WebSocketAuthenticationFlowHandler). this is lazily set in the client
+            # on first tool call
+            auth_callback = _Ctx.get().user_auth_callback
+            if auth_callback and self._parent_client:
+                # set custom auth callback
+                self._parent_client.set_user_auth_callback(auth_callback)
+
+            # get session id from context, authentication is done per-websocket session for tool calls
+            cookies = getattr(_Ctx.get().metadata, "cookies", None)
+            if cookies:
+                session_id = cookies.get("nat-session")
+        except Exception:
+            pass
+
+        try:
+            if session_id:
+                logger.info("Calling tool %s with arguments %s for a user session", self._tool_name, tool_args)
+                result = await self._parent_client.call_tool_with_meta(self._tool_name, tool_args, session_id)
+            else:
+                logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
+                result = await self._session.call_tool(self._tool_name, tool_args)
 
             output = []
             for res in result.content:

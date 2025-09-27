@@ -19,8 +19,6 @@ from unittest.mock import patch
 import pytest
 from pydantic import SecretStr
 
-from nat.data_models.authentication import AuthReason
-from nat.data_models.authentication import AuthRequest
 from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BearerTokenCred
 from nat.plugins.mcp.auth.auth_provider import DiscoverOAuth2Endpoints
@@ -78,22 +76,6 @@ def mock_credentials() -> OAuth2Credentials:
     )
 
 
-@pytest.fixture
-def mock_config_with_auth_request() -> MCPOAuth2ProviderConfig:
-    """Create a mock config with auth request for testing."""
-    return MCPOAuth2ProviderConfig(
-        server_url="https://example.com/mcp",  # type: ignore
-        redirect_uri="https://example.com/callback",  # type: ignore
-        client_name="Test Client",
-        enable_dynamic_registration=True,
-        auth_request=AuthRequest(
-            reason=AuthReason.RETRY_AFTER_401,
-            www_authenticate=
-            'Bearer realm="api", resource_metadata="https://auth.example.com/.well-known/oauth-protected-resource"',
-        ),
-    )
-
-
 # --------------------------------------------------------------------------- #
 # DiscoverOAuth2Endpoints Tests
 # --------------------------------------------------------------------------- #
@@ -114,7 +96,7 @@ class TestDiscoverOAuth2Endpoints:
         discoverer._cached_endpoints = cached_endpoints
 
         # Test normal request returns cached endpoints
-        endpoints, changed = await discoverer.discover(reason=AuthReason.NORMAL, www_authenticate=None)
+        endpoints, changed = await discoverer.discover(response=None)
 
         assert endpoints == cached_endpoints
         assert changed is False
@@ -138,10 +120,15 @@ class TestDiscoverOAuth2Endpoints:
                     registration_url="https://auth.example.com/register",  # type: ignore
                 )
 
-                endpoints, changed = await discoverer.discover(
-                    reason=AuthReason.RETRY_AFTER_401,
-                    www_authenticate='Bearer realm="api", resource_metadata="https://auth.example.com/.well-known/oauth-protected-resource"'
-                )
+                # Create a mock 401 response with WWW-Authenticate header
+                mock_response = AsyncMock()
+                mock_response.status_code = 401
+                mock_response.headers = {
+                    'WWW-Authenticate':
+                        'Bearer realm="api", resource_metadata="https://auth.example.com/.well-known/oauth-protected-resource"'
+                }
+
+                endpoints, changed = await discoverer.discover(response=mock_response)
 
                 assert endpoints is not None
                 assert changed is True
@@ -156,7 +143,7 @@ class TestDiscoverOAuth2Endpoints:
                 token_url="https://auth.example.com/token",  # type: ignore
             )
 
-            endpoints, changed = await discoverer.discover(reason=AuthReason.NORMAL, www_authenticate=None)
+            endpoints, changed = await discoverer.discover(response=None)
 
             assert endpoints is not None
             assert changed is True
@@ -204,9 +191,11 @@ class TestDiscoverOAuth2Endpoints:
         # Test with path
         urls = discoverer._build_path_aware_discovery_urls("https://auth.example.com/api/v1")
         expected = [
-            "https://auth.example.com/.well-known/oauth-authorization-server/api/v1",
+            "https://auth.example.com/.well-known/oauth-protected-resource/api/v1",
+            "https://auth.example.com/api/v1/.well-known/oauth-authorization-server",
             "https://auth.example.com/.well-known/oauth-authorization-server",
             "https://auth.example.com/.well-known/openid-configuration/api/v1",
+            "https://auth.example.com/api/v1/.well-known/openid-configuration",
             "https://auth.example.com/api/v1/.well-known/openid-configuration",
         ]
         assert urls == expected
@@ -315,40 +304,9 @@ class TestMCPOAuth2Provider:
         assert result.token_expires_at is None
         assert result.raw == {}
 
-    async def test_authenticate_uses_config_auth_request(self, mock_config_with_auth_request):
-        """Test that authenticate uses auth request from config."""
-        provider = MCPOAuth2Provider(mock_config_with_auth_request)
-
-        # Mock the discovery and registration process
-        with patch.object(provider._discoverer, 'discover') as mock_discover:
-            mock_discover.return_value = (
-                OAuth2Endpoints(
-                    authorization_url="https://auth.example.com/authorize",  # type: ignore
-                    token_url="https://auth.example.com/token",  # type: ignore
-                    registration_url="https://auth.example.com/register",  # type: ignore
-                ),
-                True)
-
-            with patch.object(provider._registrar, 'register') as mock_register:
-                mock_register.return_value = OAuth2Credentials(client_id="test_client_id",
-                                                               client_secret="test_client_secret")
-
-                with patch.object(provider, '_perform_oauth2_flow') as mock_flow:
-                    mock_flow.return_value = AuthResult(credentials=[], token_expires_at=None, raw={})
-
-                    result = await provider.authenticate(user_id="test_user")
-
-                    # Should use the auth request from config
-                    assert result.credentials == []
-                    mock_discover.assert_called_once()
-                    mock_register.assert_called_once()
-
     async def test_authenticate_with_manual_credentials(self, mock_config_with_credentials, mock_endpoints):
         """Test authentication with pre-registered credentials."""
-        # Add auth request to config
-        config = mock_config_with_credentials.model_copy(
-            update={'auth_request': AuthRequest(reason=AuthReason.RETRY_AFTER_401, )})
-        provider = MCPOAuth2Provider(config)
+        provider = MCPOAuth2Provider(mock_config_with_credentials)
 
         # Mock the discovery process
         with patch.object(provider._discoverer, 'discover') as mock_discover:
@@ -361,20 +319,19 @@ class TestMCPOAuth2Provider:
                 raw={},
             )
 
-            with patch.object(provider, '_perform_oauth2_flow') as mock_flow:
+            with patch.object(provider, '_nat_oauth2_authenticate') as mock_flow:
                 mock_flow.return_value = mock_auth_result
 
                 result = await provider.authenticate(user_id="test_user")
 
                 assert result == mock_auth_result
-                mock_discover.assert_called_once()
+                # Discovery is not called in normal authentication flow (only on 401 responses)
+                mock_discover.assert_not_called()
                 mock_flow.assert_called_once()
 
     async def test_authenticate_with_dynamic_registration(self, mock_config, mock_endpoints, mock_credentials):
         """Test authentication with dynamic client registration."""
-        # Add auth request to config
-        config = mock_config.model_copy(update={'auth_request': AuthRequest(reason=AuthReason.RETRY_AFTER_401, )})
-        provider = MCPOAuth2Provider(config)
+        provider = MCPOAuth2Provider(mock_config)
 
         # Mock the discovery process
         with patch.object(provider._discoverer, 'discover') as mock_discover:
@@ -391,14 +348,15 @@ class TestMCPOAuth2Provider:
                     raw={},
                 )
 
-                with patch.object(provider, '_perform_oauth2_flow') as mock_flow:
+                with patch.object(provider, '_nat_oauth2_authenticate') as mock_flow:
                     mock_flow.return_value = mock_auth_result
 
                     result = await provider.authenticate(user_id="test_user")
 
                     assert result == mock_auth_result
-                    mock_discover.assert_called_once()
-                    mock_register.assert_called_once_with(mock_endpoints, None)
+                    # Discovery is not called in normal authentication flow (only on 401 responses)
+                    mock_discover.assert_not_called()
+                    mock_register.assert_not_called()
                     mock_flow.assert_called_once()
 
     async def test_authenticate_dynamic_registration_disabled(self, mock_endpoints):
@@ -409,7 +367,6 @@ class TestMCPOAuth2Provider:
             client_id="test_client_id",
             client_secret="test_client_secret",
             enable_dynamic_registration=False,
-            auth_request=AuthRequest(reason=AuthReason.RETRY_AFTER_401, ),
         )
         provider = MCPOAuth2Provider(config)
 
@@ -417,7 +374,7 @@ class TestMCPOAuth2Provider:
         with patch.object(provider._discoverer, 'discover') as mock_discover:
             mock_discover.return_value = (mock_endpoints, True)
 
-            with patch.object(provider, '_perform_oauth2_flow') as mock_flow:
+            with patch.object(provider, '_nat_oauth2_authenticate') as mock_flow:
                 mock_auth_result = AuthResult(credentials=[], token_expires_at=None, raw={})
                 mock_flow.return_value = mock_auth_result
 
@@ -425,7 +382,8 @@ class TestMCPOAuth2Provider:
                 result = await provider.authenticate(user_id="test_user")
 
                 assert result == mock_auth_result
-                mock_discover.assert_called_once()
+                # Discovery is not called in normal authentication flow (only on 401 responses)
+                mock_discover.assert_not_called()
                 mock_flow.assert_called_once()
 
     async def test_effective_scopes_uses_config_scopes(self):
@@ -438,7 +396,7 @@ class TestMCPOAuth2Provider:
         )
         provider = MCPOAuth2Provider(config)
 
-        scopes = provider._effective_scopes()
+        scopes = provider._effective_scopes
         assert scopes == ["read", "write"]
 
     async def test_effective_scopes_falls_back_to_discovered(self, mock_config):
@@ -446,46 +404,20 @@ class TestMCPOAuth2Provider:
         provider = MCPOAuth2Provider(mock_config)
 
         # Mock discovered scopes
-        provider._discoverer._last_oauth_scopes = ["discovered_scope"]
+        provider._cached_endpoints = OAuth2Endpoints(
+            authorization_url="https://auth.example.com/authorize",  # type: ignore
+            token_url="https://auth.example.com/token",  # type: ignore
+            scopes=["discovered_scope"])
 
-        scopes = provider._effective_scopes()
+        scopes = provider._effective_scopes
         assert scopes == ["discovered_scope"]
 
-    async def test_effective_scopes_returns_none_when_none_available(self, mock_config):
-        """Test that effective scopes returns None when no scopes available."""
+    async def test_effective_scopes_returns_empty_when_none_available(self, mock_config):
+        """Test that effective scopes returns empty list when no scopes available."""
         provider = MCPOAuth2Provider(mock_config)
 
-        scopes = provider._effective_scopes()
-        assert scopes is None
-
-    async def test_perform_oauth2_flow_requires_discovery(self):
-        """Test that OAuth2 flow requires discovery to be completed first."""
-        config = MCPOAuth2ProviderConfig(
-            server_url="https://example.com/mcp",  # type: ignore
-            redirect_uri="https://example.com/callback",  # type: ignore
-            enable_dynamic_registration=True,
-        )
-        provider = MCPOAuth2Provider(config)
-
-        with pytest.raises(RuntimeError, match="OAuth2 flow called before discovery"):
-            await provider._perform_oauth2_flow()
-
-    async def test_perform_oauth2_flow_prevents_retry_after_401(self, mock_endpoints, mock_credentials):
-        """Test that OAuth2 flow prevents being called for RETRY_AFTER_401."""
-        config = MCPOAuth2ProviderConfig(
-            server_url="https://example.com/mcp",  # type: ignore
-            redirect_uri="https://example.com/callback",  # type: ignore
-            enable_dynamic_registration=True,
-        )
-        provider = MCPOAuth2Provider(config)
-
-        provider._cached_endpoints = mock_endpoints
-        provider._cached_credentials = mock_credentials
-
-        auth_request = AuthRequest(reason=AuthReason.RETRY_AFTER_401, )
-
-        with pytest.raises(RuntimeError, match="should not be called for RETRY_AFTER_401"):
-            await provider._perform_oauth2_flow(auth_request=auth_request)
+        scopes = provider._effective_scopes
+        assert scopes == []
 
     async def test_fetch_pr_issuer_success(self, mock_config):
         """Test successful protected resource issuer fetching."""
@@ -536,6 +468,7 @@ class TestMCPOAuth2Provider:
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
             mock_resp.status_code = 200
+            mock_resp.headers = {"content-type": "application/json"}
             mock_resp.aread.return_value = (b'{"issuer": "https://auth.example.com", '
                                             b'"authorization_endpoint": "https://auth.example.com/authorize", '
                                             b'"token_endpoint": "https://auth.example.com/token", '
@@ -615,27 +548,6 @@ class TestMCPOAuth2Provider:
 
             assert endpoints is None
 
-    def test_scopes_supported(self, mock_config):
-        """Test getting supported scopes."""
-        discoverer = DiscoverOAuth2Endpoints(mock_config)
-
-        # Test with no scopes
-        assert discoverer.scopes_supported() is None
-
-        # Test with scopes
-        discoverer._last_oauth_scopes = ["read", "write"]
-        assert discoverer.scopes_supported() == ["read", "write"]
-
-    async def test_register_network_error(self, mock_config, mock_endpoints):
-        """Test registration with network error."""
-        registrar = DynamicClientRegistration(mock_config)
-
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.post.side_effect = Exception("Network error")
-
-            with pytest.raises(Exception, match="Network error"):
-                await registrar.register(mock_endpoints, None)
-
     async def test_register_with_scopes(self, mock_config, mock_endpoints):
         """Test registration with scopes."""
         registrar = DynamicClientRegistration(mock_config)
@@ -674,55 +586,6 @@ class TestMCPOAuth2Provider:
             request_data = call_args[1]['json']
             assert request_data['token_endpoint_auth_method'] == 'none'
 
-    async def test_build_oauth2_delegate_success(self, mock_config, mock_endpoints, mock_credentials):
-        """Test successful OAuth2 delegate building."""
-        provider = MCPOAuth2Provider(mock_config)
-        provider._cached_endpoints = mock_endpoints
-        provider._cached_credentials = mock_credentials
-
-        with patch('nat.authentication.oauth2.oauth2_auth_code_flow_provider.OAuth2AuthCodeFlowProvider'
-                   ) as mock_oauth2_provider:  # noqa: E501
-            mock_oauth2_provider.return_value = AsyncMock()
-
-            await provider._build_oauth2_delegate()
-
-            assert provider._auth_code_provider is not None
-            mock_oauth2_provider.assert_called_once()
-
-    async def test_build_oauth2_delegate_with_pkce(self, mock_config, mock_endpoints, mock_credentials):
-        """Test OAuth2 delegate building with PKCE enabled."""
-        config = mock_config.model_copy(update={'use_pkce': True})
-        provider = MCPOAuth2Provider(config)
-        provider._cached_endpoints = mock_endpoints
-        provider._cached_credentials = mock_credentials
-
-        with patch('nat.authentication.oauth2.oauth2_auth_code_flow_provider.OAuth2AuthCodeFlowProvider'
-                   ) as mock_oauth2_provider:  # noqa: E501
-            mock_oauth2_provider.return_value = AsyncMock()
-
-            await provider._build_oauth2_delegate()
-
-            # Verify PKCE was enabled in the config
-            call_args = mock_oauth2_provider.call_args[0][0]
-            assert call_args.use_pkce is True
-
-    async def test_build_oauth2_delegate_with_custom_auth_method(self, mock_config, mock_endpoints, mock_credentials):
-        """Test OAuth2 delegate building with custom token endpoint auth method."""
-        config = mock_config.model_copy(update={'token_endpoint_auth_method': 'none'})
-        provider = MCPOAuth2Provider(config)
-        provider._cached_endpoints = mock_endpoints
-        provider._cached_credentials = mock_credentials
-
-        with patch('nat.authentication.oauth2.oauth2_auth_code_flow_provider.OAuth2AuthCodeFlowProvider'
-                   ) as mock_oauth2_provider:  # noqa: E501
-            mock_oauth2_provider.return_value = AsyncMock()
-
-            await provider._build_oauth2_delegate()
-
-            # Verify custom auth method was used
-            call_args = mock_oauth2_provider.call_args[0][0]
-            assert call_args.token_endpoint_auth_method == 'none'
-
     async def test_discover_and_register_with_endpoints_changed(self, mock_config):
         """Test discover and register when endpoints change."""
         provider = MCPOAuth2Provider(mock_config)
@@ -741,8 +604,7 @@ class TestMCPOAuth2Provider:
                 mock_register.return_value = OAuth2Credentials(client_id="test_client_id",
                                                                client_secret="test_client_secret")
 
-                auth_request = AuthRequest(reason=AuthReason.RETRY_AFTER_401)
-                await provider._discover_and_register(auth_request)
+                await provider._discover_and_register(response=None)
 
                 # Should call register because endpoints changed
                 mock_register.assert_called_once()
@@ -762,8 +624,7 @@ class TestMCPOAuth2Provider:
                 ),
                 True)
 
-            auth_request = AuthRequest(reason=AuthReason.RETRY_AFTER_401)
-            await provider._discover_and_register(auth_request)
+            await provider._discover_and_register(response=None)
 
             # Should use manual credentials, not register
             assert provider._cached_credentials is not None
@@ -787,23 +648,19 @@ class TestMCPOAuth2Provider:
                 mock_register.return_value = OAuth2Credentials(client_id="test_client_id",
                                                                client_secret="test_client_secret")
 
-                auth_request = AuthRequest(reason=AuthReason.RETRY_AFTER_401)
-                await provider._discover_and_register(auth_request)
+                await provider._discover_and_register(response=None)
 
                 # Should still call register (it will use fallback URL)
                 mock_register.assert_called_once()
 
     async def test_authenticate_with_user_id_propagation(self, mock_config_with_credentials, mock_endpoints):
         """Test that user_id is properly propagated in auth request."""
-        config = mock_config_with_credentials.model_copy(update={
-            'auth_request': AuthRequest(reason=AuthReason.RETRY_AFTER_401, www_authenticate="Bearer realm=api")
-        })
-        provider = MCPOAuth2Provider(config)
+        provider = MCPOAuth2Provider(mock_config_with_credentials)
 
         with patch.object(provider._discoverer, 'discover') as mock_discover:
             mock_discover.return_value = (mock_endpoints, True)
 
-            with patch.object(provider, '_perform_oauth2_flow') as mock_flow:
+            with patch.object(provider, '_nat_oauth2_authenticate') as mock_flow:
                 mock_flow.return_value = AuthResult(credentials=[], token_expires_at=None, raw={})
 
                 # Call with different user_id
@@ -811,22 +668,15 @@ class TestMCPOAuth2Provider:
 
                 # Verify the flow was called
                 mock_flow.assert_called_once()
-                # Check if the call was made with keyword arguments
-                if mock_flow.call_args and mock_flow.call_args.kwargs:
-                    auth_request = mock_flow.call_args.kwargs.get('auth_request')
-                    if auth_request:
-                        assert auth_request.user_id == "new_user"
 
     async def test_authenticate_without_user_id_in_request(self, mock_config_with_credentials, mock_endpoints):
         """Test authentication when user_id is not in the original request."""
-        config = mock_config_with_credentials.model_copy(
-            update={'auth_request': AuthRequest(reason=AuthReason.RETRY_AFTER_401)})
-        provider = MCPOAuth2Provider(config)
+        provider = MCPOAuth2Provider(mock_config_with_credentials)
 
         with patch.object(provider._discoverer, 'discover') as mock_discover:
             mock_discover.return_value = (mock_endpoints, True)
 
-            with patch.object(provider, '_perform_oauth2_flow') as mock_flow:
+            with patch.object(provider, '_nat_oauth2_authenticate') as mock_flow:
                 mock_flow.return_value = AuthResult(credentials=[], token_expires_at=None, raw={})
 
                 # Call with user_id
@@ -834,19 +684,12 @@ class TestMCPOAuth2Provider:
 
                 # Verify the flow was called
                 mock_flow.assert_called_once()
-                # Check if the call was made with keyword arguments
-                if mock_flow.call_args and mock_flow.call_args.kwargs:
-                    auth_request = mock_flow.call_args.kwargs.get('auth_request')
-                    if auth_request:
-                        assert auth_request.user_id == "test_user"
 
     async def test_authenticate_retry_after_401_clears_auth_code_provider(self,
                                                                           mock_config_with_credentials,
-                                                                          mock_endpoints):  # noqa: E501
-        """Test that RETRY_AFTER_401 clears the auth code provider."""
-        config = mock_config_with_credentials.model_copy(
-            update={'auth_request': AuthRequest(reason=AuthReason.RETRY_AFTER_401)})
-        provider = MCPOAuth2Provider(config)
+                                                                          mock_endpoints):
+        """Test that authentication works correctly with auth code provider."""
+        provider = MCPOAuth2Provider(mock_config_with_credentials)
 
         # Set up a mock auth code provider
         provider._auth_code_provider = AsyncMock()
@@ -854,35 +697,44 @@ class TestMCPOAuth2Provider:
         with patch.object(provider._discoverer, 'discover') as mock_discover:
             mock_discover.return_value = (mock_endpoints, True)
 
-            with patch.object(provider, '_perform_oauth2_flow') as mock_flow:
+            with patch.object(provider, '_nat_oauth2_authenticate') as mock_flow:
                 mock_flow.return_value = AuthResult(credentials=[], token_expires_at=None, raw={})
 
-                await provider.authenticate(user_id="test_user")
+                result = await provider.authenticate(user_id="test_user")
 
-                # Auth code provider should be cleared
-                assert provider._auth_code_provider is None
+                # Verify authentication completed successfully
+                assert result.credentials == []
+                assert result.token_expires_at is None
+                assert result.raw == {}
+                mock_flow.assert_called_once()
 
     async def test_effective_scopes_with_config_scopes(self, mock_config):
         """Test effective scopes when config has scopes."""
         config = mock_config.model_copy(update={'scopes': ['config_scope']})
         provider = MCPOAuth2Provider(config)
 
-        scopes = provider._effective_scopes()
+        scopes = provider._effective_scopes
         assert scopes == ['config_scope']
 
     async def test_effective_scopes_with_discovered_scopes(self, mock_config):
         """Test effective scopes when using discovered scopes."""
         provider = MCPOAuth2Provider(mock_config)
-        provider._discoverer._last_oauth_scopes = ['discovered_scope']
+        provider._cached_endpoints = OAuth2Endpoints(
+            authorization_url="https://auth.example.com/authorize",  # type: ignore
+            token_url="https://auth.example.com/token",  # type: ignore
+            scopes=['discovered_scope'])
 
-        scopes = provider._effective_scopes()
+        scopes = provider._effective_scopes
         assert scopes == ['discovered_scope']
 
     async def test_effective_scopes_config_overrides_discovered(self, mock_config):
         """Test that config scopes override discovered scopes."""
         config = mock_config.model_copy(update={'scopes': ['config_scope']})
         provider = MCPOAuth2Provider(config)
-        provider._discoverer._last_oauth_scopes = ['discovered_scope']
+        provider._cached_endpoints = OAuth2Endpoints(
+            authorization_url="https://auth.example.com/authorize",  # type: ignore
+            token_url="https://auth.example.com/token",  # type: ignore
+            scopes=['discovered_scope'])
 
-        scopes = provider._effective_scopes()
+        scopes = provider._effective_scopes
         assert scopes == ['config_scope']  # Config should take precedence

@@ -22,7 +22,7 @@ function_groups:
     _type: mcp_client
     server:
       transport: streamable-http
-      auth_provider: static_oauth2
+      auth_provider: mcp_oauth2_math
       url: "http://localhost:9901/mcp"
     include:
       - calculator_multiply
@@ -31,19 +31,10 @@ function_groups:
       - calculator_subtract
 
 authentication:
-  static_oauth2:
-    _type: oauth2_auth_code_flow
+  mcp_oauth2_math:
+    _type: mcp_oauth2
+    server_url: http://localhost:9901
     redirect_uri: http://localhost:8000/auth/redirect
-    authorization_url: http://localhost:5001/oauth/authorize
-    token_url: http://localhost:5001/oauth/token
-    token_endpoint_auth_method: client_secret_post
-    client_id: ${MCP_CLIENT_ID}
-    client_secret: ${MCP_CLIENT_SECRET}
-    scopes:
-      - openid
-      - profile
-      - email
-    use_pkce: false
 
 llms:
   nim_llm:
@@ -51,19 +42,12 @@ llms:
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
     max_tokens: 1024
-  openai_llm:
-    _type: openai
-    model_name: gpt-3.5-turbo
-    max_tokens: 2000
 
 workflow:
   _type: react_agent
   tool_names:
-    - calculator_multiply
-    - calculator_inequality
-    - calculator_divide
-    - calculator_subtract
     - current_datetime_local
+    - mcp_protected_math
   llm_name: nim_llm
   verbose: true
   retry_parsing_errors: true
