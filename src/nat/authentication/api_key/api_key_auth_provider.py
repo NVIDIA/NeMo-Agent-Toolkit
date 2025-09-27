@@ -80,7 +80,7 @@ class APIKeyAuthProvider(AuthProviderBase[APIKeyAuthProviderConfig]):
 
         raise ValueError(f"Unsupported header auth scheme: {header_auth_scheme}")
 
-    async def authenticate(self, user_id: str | None = None) -> AuthResult | None:
+    async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult | None:
         """
         Authenticate the user using the API key credentials.
 

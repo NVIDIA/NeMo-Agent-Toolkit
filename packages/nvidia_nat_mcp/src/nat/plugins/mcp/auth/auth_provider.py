@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import logging
+from collections.abc import Awaitable
+from typing import Callable
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
@@ -26,10 +28,12 @@ from mcp.shared.auth import OAuthClientInformationFull
 from mcp.shared.auth import OAuthClientMetadata
 from mcp.shared.auth import OAuthMetadata
 from mcp.shared.auth import ProtectedResourceMetadata
+from nat.authentication.interfaces import AuthenticatedContext
+from nat.authentication.interfaces import AuthFlowType
 from nat.authentication.interfaces import AuthProviderBase
-from nat.data_models.authentication import AuthReason
-from nat.data_models.authentication import AuthRequest
+from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from nat.data_models.authentication import AuthResult
+from nat.plugins.mcp.auth.auth_flow_handler import MCPAuthenticationFlowHandler
 from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
 
 logger = logging.getLogger(__name__)
@@ -40,6 +44,7 @@ class OAuth2Endpoints(BaseModel):
     authorization_url: HttpUrl = Field(..., description="OAuth2 authorization endpoint URL")
     token_url: HttpUrl = Field(..., description="OAuth2 token endpoint URL")
     registration_url: HttpUrl | None = Field(default=None, description="OAuth2 client registration endpoint URL")
+    scopes: list[str] | None = Field(default=None, description="OAuth2 scopes to be used for the authentication")
 
 
 class OAuth2Credentials(BaseModel):
@@ -60,9 +65,11 @@ class DiscoverOAuth2Endpoints:
     def __init__(self, config: MCPOAuth2ProviderConfig):
         self.config = config
         self._cached_endpoints: OAuth2Endpoints | None = None
-        self._last_oauth_scopes: list[str] | None = None
+        self._authenticated_servers: dict[str, AuthResult] = {}
 
-    async def discover(self, reason: AuthReason, www_authenticate: str | None) -> tuple[OAuth2Endpoints, bool]:
+        self._flow_handler: MCPAuthenticationFlowHandler = MCPAuthenticationFlowHandler()
+
+    async def discover(self, response: httpx.Response | None = None) -> tuple[OAuth2Endpoints, bool]:
         """
         Discover OAuth2 endpoints from MCP server.
 
@@ -73,21 +80,24 @@ class DiscoverOAuth2Endpoints:
         Returns:
             A tuple of OAuth2Endpoints and a boolean indicating if the endpoints have changed.
         """
+        is_401_retry = response is not None and response.status_code == 401
         # Fast path: reuse cache when not a 401 retry
-        if reason != AuthReason.RETRY_AFTER_401 and self._cached_endpoints is not None:
+        if not is_401_retry and self._cached_endpoints is not None:
             return self._cached_endpoints, False
 
         issuer: str = str(self.config.server_url)  # default to server URL
         endpoints: OAuth2Endpoints | None = None
 
         # 1) 401 hint (RFC 9728) if present
-        if reason == AuthReason.RETRY_AFTER_401 and www_authenticate:
-            hint_url = self._extract_from_www_authenticate_header(www_authenticate)
-            if hint_url:
-                logger.info("Using RFC 9728 resource_metadata hint: %s", hint_url)
-                issuer_hint = await self._fetch_pr_issuer(hint_url)
-                if issuer_hint:
-                    issuer = issuer_hint
+        if is_401_retry and response:
+            www_authenticate = response.headers.get("WWW-Authenticate")
+            if www_authenticate:
+                hint_url = self._extract_from_www_authenticate_header(www_authenticate)
+                if hint_url:
+                    logger.info("Using RFC 9728 resource_metadata hint: %s", hint_url)
+                    issuer_hint = await self._fetch_pr_issuer(hint_url)
+                    if issuer_hint:
+                        issuer = issuer_hint
 
         # 2) Try RS protected resource well-known if we still only have default issuer
         if issuer == str(self.config.server_url):
@@ -105,10 +115,7 @@ class DiscoverOAuth2Endpoints:
         if endpoints is None:
             raise RuntimeError("Could not discover OAuth2 endpoints from MCP server")
 
-        changed = (self._cached_endpoints is None
-                   or endpoints.authorization_url != self._cached_endpoints.authorization_url
-                   or endpoints.token_url != self._cached_endpoints.token_url
-                   or endpoints.registration_url != self._cached_endpoints.registration_url)
+        changed = (self._cached_endpoints is None or endpoints.model_dump() != self._cached_endpoints.model_dump())
         self._cached_endpoints = endpoints
         logger.info("OAuth2 endpoints selected: %s", self._cached_endpoints)
         return self._cached_endpoints, changed
@@ -155,10 +162,29 @@ class DiscoverOAuth2Endpoints:
         async with httpx.AsyncClient(timeout=10.0) as client:
             for url in urls:
                 try:
-                    resp = await client.get(url, headers={"Accept": "application/json"})
+                    resp = await client.get(url, follow_redirects=True, headers={"Accept": "application/json"})
                     if resp.status_code != 200:
                         continue
+
+                    # Check content type before attempting JSON parsing
+                    content_type = resp.headers.get("content-type", "").lower()
+                    if "application/json" not in content_type:
+                        logger.info(
+                            "Discovery endpoint %s returned non-JSON content type: %s. "
+                            "This may indicate the endpoint doesn't support discovery or requires authentication.",
+                            url,
+                            content_type)
+                        # If it's HTML, log a more helpful message
+                        if "text/html" in content_type:
+                            logger.info("The endpoint appears to be returning an HTML page instead of OAuth metadata. "
+                                        "This often means:")
+                            logger.info("1. The OAuth discovery endpoint doesn't exist at this URL")
+                            logger.info("2. The server requires authentication before providing discovery metadata")
+                            logger.info("3. The URL is pointing to a web application instead of an OAuth server")
+                        continue
+
                     body = await resp.aread()
+
                     try:
                         meta = OAuthMetadata.model_validate_json(body)
                     except Exception as e:
@@ -167,14 +193,18 @@ class DiscoverOAuth2Endpoints:
                     if meta.authorization_endpoint and meta.token_endpoint:
                         logger.info("Discovered OAuth2 endpoints from %s", url)
                         # this is bit of a hack to get the scopes supported by the auth server
-                        self._last_oauth_scopes = meta.scopes_supported
                         return OAuth2Endpoints(
                             authorization_url=str(meta.authorization_endpoint),
                             token_url=str(meta.token_endpoint),
                             registration_url=str(meta.registration_endpoint) if meta.registration_endpoint else None,
+                            scopes=meta.scopes_supported,
                         )
                 except Exception as e:
                     logger.debug("Discovery failed at %s: %s", url, e)
+
+        # If we get here, all discovery URLs failed
+        logger.info("OAuth discovery failed for all attempted URLs.")
+        logger.info("Attempted URLs: %s", urls)
         return None
 
     def _build_path_aware_discovery_urls(self, base_or_issuer: str) -> list[str]:
@@ -184,16 +214,18 @@ class DiscoverOAuth2Endpoints:
         path = (p.path or "").rstrip("/")
         urls: list[str] = []
         if path:
-            urls.append(urljoin(base, f"/.well-known/oauth-authorization-server{path}"))
+            # this is the specified by the MCP spec
+            urls.append(urljoin(base, f".well-known/oauth-protected-resource{path}"))
+            # this is fallback for backward compatibility
+            urls.append(urljoin(base, f"{path}/.well-known/oauth-authorization-server"))
         urls.append(urljoin(base, "/.well-known/oauth-authorization-server"))
         if path:
-            urls.append(urljoin(base, f"/.well-known/openid-configuration{path}"))
+            # this is the specified by the MCP spec
+            urls.append(urljoin(base, f".well-known/openid-configuration{path}"))
+            # this is fallback for backward compatibility
+            urls.append(urljoin(base, f"{path}/.well-known/openid-configuration"))
         urls.append(base_or_issuer.rstrip("/") + "/.well-known/openid-configuration")
         return urls
-
-    def scopes_supported(self) -> list[str] | None:
-        """Get the last OAuth scopes discovered from the AS."""
-        return self._last_oauth_scopes
 
 
 class DynamicClientRegistration:
@@ -264,51 +296,54 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         # For the OAuth2 flow
         self._auth_code_provider = None
+        self._flow_handler = MCPAuthenticationFlowHandler()
 
-    async def authenticate(self, user_id: str | None = None) -> AuthResult:
+        self._auth_callback = None
+
+    def _set_custom_auth_callback(self,
+                                  auth_callback: Callable[[OAuth2AuthCodeFlowProviderConfig, AuthFlowType],
+                                                          Awaitable[AuthenticatedContext]]):
+        """Set the custom authentication callback."""
+        if not self._auth_callback:
+            logger.info("Using custom authentication callback")
+            self._auth_callback = auth_callback
+            if self._auth_code_provider:
+                self._auth_code_provider._set_custom_auth_callback(self._auth_callback)
+
+    async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
         """
         Authenticate using MCP OAuth2 flow via NAT framework.
+
+        If response is provided in kwargs (typically from a 401), performs:
         1. Dynamic endpoints discovery (RFC9728 + RFC 8414 + OIDC)
         2. Client registration (RFC7591)
-        3. Use NAT's standard OAuth2 flow (OAuth2AuthCodeFlowProvider)
+        3. Authentication
+
+        Otherwise, performs standard authentication flow.
         """
-        auth_request = self.config.auth_request
-        if not auth_request:
-            auth_request = AuthRequest(reason=AuthReason.NORMAL)
+        response = kwargs.get('response')
+        if response and response.status_code == 401:
+            await self._discover_and_register(response=response)
 
-        if auth_request.reason != AuthReason.RETRY_AFTER_401:
-            # auth provider is expected to be setup via 401, till that time we return empty auth result
-            if not self._auth_code_provider:
-                return AuthResult(credentials=[], token_expires_at=None, raw={})
+        return await self._nat_oauth2_authenticate(user_id=user_id)
 
-        await self._discover_and_register(auth_request)
-        # Use NAT's standard OAuth2 flow
-        if auth_request.reason == AuthReason.RETRY_AFTER_401:
-            # force fresh delegate (clears in-mem token cache)
-            self._auth_code_provider = None
-            # preserve other fields, just normalize reason & inject user_id
-            auth_request = auth_request.model_copy(update={
-                "reason": AuthReason.NORMAL, "user_id": user_id, "www_authenticate": None
-            })
-        # back-compat: propagate user_id if provided but not set in the request
-        elif user_id is not None and auth_request.user_id is None:
-            auth_request = auth_request.model_copy(update={"user_id": user_id})
+    @property
+    def _effective_scopes(self) -> list[str]:
+        """Get the effective scopes to be used for the authentication."""
+        return self.config.scopes or (self._cached_endpoints.scopes if self._cached_endpoints else []) or []
 
-        # Perform the OAuth2 flow without lock
-        return await self._perform_oauth2_flow(auth_request=auth_request)
-
-    async def _discover_and_register(self, auth_request: AuthRequest):
+    async def _discover_and_register(self, response: httpx.Response | None = None):
         """
         Discover OAuth2 endpoints and register an OAuth2 client with the Authorization Server
         using OIDC client registration.
         """
         # Discover OAuth2 endpoints
-        self._cached_endpoints, endpoints_changed = await self._discoverer.discover(reason=auth_request.reason,
-                                                                                    www_authenticate=auth_request.www_authenticate)
+        self._cached_endpoints, endpoints_changed = await self._discoverer.discover(response=response)
         if endpoints_changed:
             logger.info("OAuth2 endpoints: %s", self._cached_endpoints)
             self._cached_credentials = None  # invalidate credentials tied to old AS
-        effective_scopes = self._effective_scopes()
+            self._auth_code_provider = None
+        effective_scopes = self._effective_scopes
 
         # Client registration
         if not self._cached_credentials:
@@ -324,21 +359,20 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
                 logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
 
-    def _effective_scopes(self) -> list[str] | None:
-        """
-        Prefer caller-provided scopes; otherwise fall back to AS-advertised scopes_supported.
-        """
-        return self.config.scopes or self._discoverer.scopes_supported()
-
-    async def _build_oauth2_delegate(self):
-        """Build NAT OAuth2 provider and delegate auth token acquisition and refresh to it"""
+    async def _nat_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
+        """Perform the OAuth2 flow using MCP-specific authentication flow handler."""
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
-        from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+
+        if not self._cached_endpoints or not self._cached_credentials:
+            # if discovery is yet to to be done return empty auth result
+            return AuthResult(credentials=[], token_expires_at=None, raw={})
 
         endpoints = self._cached_endpoints
         credentials = self._cached_credentials
 
+        # Build the OAuth2 provider if not already built
         if self._auth_code_provider is None:
+            scopes = self._effective_scopes
             oauth2_config = OAuth2AuthCodeFlowProviderConfig(
                 client_id=credentials.client_id,
                 client_secret=credentials.client_secret or "",
@@ -346,22 +380,15 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 token_url=str(endpoints.token_url),
                 token_endpoint_auth_method=getattr(self.config, "token_endpoint_auth_method", None),
                 redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
-                scopes=self._effective_scopes() or [],
+                scopes=scopes,
                 use_pkce=bool(self.config.use_pkce),
-            )
-
+                authorization_kwargs={"resource": str(self.config.server_url)})
             self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
 
-    async def _perform_oauth2_flow(self, auth_request: AuthRequest | None = None) -> AuthResult:
-        """Perform the OAuth2 flow using NAT OAuth2 provider."""
-        # This helper is only for non-401 flows
-        if auth_request and auth_request.reason == AuthReason.RETRY_AFTER_401:
-            raise RuntimeError("_perform_oauth2_flow should not be called for RETRY_AFTER_401")
+            # Use MCP-specific authentication method if available
+            if hasattr(self._auth_code_provider, "_set_custom_auth_callback"):
+                self._auth_code_provider._set_custom_auth_callback(self._auth_callback
+                                                                   or self._flow_handler.authenticate)
 
-        if not self._cached_endpoints or not self._cached_credentials:
-            raise RuntimeError("OAuth2 flow called before discovery/registration")
-
-        # (Re)build the delegate if needed
-        await self._build_oauth2_delegate()
-        # Let the delegate handle per-user cache + refresh
-        return await self._auth_code_provider.authenticate()
+        # Auth code provider is responsible for per-user cache + refresh
+        return await self._auth_code_provider.authenticate(user_id=user_id)

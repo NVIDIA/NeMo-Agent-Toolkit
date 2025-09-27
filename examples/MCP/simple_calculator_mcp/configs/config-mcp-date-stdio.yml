@@ -26,7 +26,6 @@
 # on your local machine. For example, if you are using pip, you can install it with:
 # uv pip install mcp-server-time
 
-
 function_groups:
   mcp_time:
     _type: mcp_client
@@ -50,7 +49,6 @@ function_groups:
       - calculator_inequality
       - calculator_divide
       - calculator_subtract
-
 
 llms:
   nim_llm:
