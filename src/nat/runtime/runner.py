@@ -194,9 +194,9 @@ class Runner:
                                             metadata=end_metadata,
                                             data=StreamEventData(output=result)))
 
-            event_stream = self._context_state.event_stream.get()
-            if event_stream:
-                event_stream.on_complete()
+                event_stream = self._context_state.event_stream.get()
+                if event_stream:
+                    event_stream.on_complete()
 
             self._state = RunnerState.COMPLETED
 
