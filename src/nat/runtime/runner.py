@@ -178,10 +178,7 @@ class Runner:
                                             name=workflow_name,
                                             metadata=start_metadata))
 
-                if to_type is None:
-                    result = await self._entry_fn.ainvoke(self._input_message)
-                else:
-                    result = await self._entry_fn.ainvoke(self._input_message, to_type=to_type)
+                result = await self._entry_fn.ainvoke(self._input_message, to_type=to_type)  # type: ignore
 
                 # Emit WORKFLOW_END with output
                 end_metadata = TraceMetadata(
@@ -211,10 +208,6 @@ class Runner:
             if event_stream:
                 event_stream.on_complete()
             self._state = RunnerState.FAILED
-            if token_run_id is not None:
-                self._context_state.workflow_run_id.reset(token_run_id)
-            if token_trace_id is not None:
-                self._context_state.workflow_trace_id.reset(token_trace_id)
             raise
         finally:
             if token_run_id is not None:
@@ -299,10 +292,6 @@ class Runner:
             if event_stream:
                 event_stream.on_complete()
             self._state = RunnerState.FAILED
-            if token_run_id is not None:
-                self._context_state.workflow_run_id.reset(token_run_id)
-            if token_trace_id is not None:
-                self._context_state.workflow_trace_id.reset(token_trace_id)
             raise
         finally:
             if token_run_id is not None:
