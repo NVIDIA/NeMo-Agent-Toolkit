@@ -1,6 +1,23 @@
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # Observing a Workflow with Dynatrace
 
-This guide shows how to stream OpenTelemetry (OTel) traces from your NeMo Agent toolkit workflows to the [OpenTelemetry Protocol (OTLP) ingest API](https://docs.dynatrace.com/docs/discover-dynatrace/references/dynatrace-api/environment-api/opentelemetry), which in turn provides the ability to have full visibility into the performance of AI/LLM models and agent interactions​. 
+This guide shows how to stream OpenTelemetry (OTel) traces from your NVIDIA NeMo Agent toolkit workflows to the [OpenTelemetry Protocol (OTLP) ingest API](https://docs.dynatrace.com/docs/discover-dynatrace/references/dynatrace-api/environment-api/opentelemetry), which in turn provides the ability to have full visibility into the performance of AI/LLM models and agent interactions​. 
 
 In this guide, you will learn how to:
 * Deploy a [Dynatrace OpenTelemetry Collector](https://docs.dynatrace.com/docs/ingest-from/opentelemetry/collector) with a configuration that exports traces into Dynatrace
@@ -66,22 +83,22 @@ There are many ways to deploy an [OTel Collector](https://docs.dynatrace.com/doc
 ```bash
 docker run -d -v $(pwd)/otelcollectorconfig.yaml:/etc/otelcol/config.yaml \ 
 -p 4318:4318 \ 
-dynatrace/dynatrace-otel-collector:0.34.0 
+dynatrace/dynatrace-otel-collector:latest
 ```
 
 Once running, the collector endpoint is: `http://localhost:4318`. 
 
-## Step 5: Install the NeMo Agent toolkit OpenTelemetry Subpackages
+## Step 5: Install the NVIDIA NeMo Agent toolkit OpenTelemetry Subpackages
 
 ```bash
 # Install all optional telemetry extras
 uv pip install -e '.[telemetry]'
 
-# Install specific telemetry extras
+# Install specific telemetry extras required for Dynatrace
 uv pip install -e '.[opentelemetry]'
 ```
 
-## Step 6: Modify NeMo Agent toolkit Workflow Configuration
+## Step 6: Modify NVIDIA NeMo Agent toolkit Workflow Configuration
 
 Update your workflow configuration file to include the telemetry settings.
 
@@ -93,20 +110,20 @@ general:
       otelcollector:
         _type: otelcollector
         # The endpoint where you have deployed the otel collector
-        endpoint: http://0.0.0.0:4318/v1/traces
+        endpoint: http://localhost:4318/v1/traces
         project: your_project_name
 ```
 
 ## Step 7: Run the workflow
 
-From the root directory of the NeMo Agent toolkit library, install dependencies and run the pre-configured `simple_web_query` example.
+From the root directory of the NVIDIA NeMo Agent toolkit library, install dependencies and run the pre-configured `simple_web_query` example.
 
 **Example:**
 ```bash
 # Install the workflow and plugins
 uv pip install -e examples/getting_started/simple_web_query
 
-# Run the workflow with Phoenix telemetry settings
+# Run the workflow with OTel/Dynatrace telemetry settings
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?" 
 ```
 
