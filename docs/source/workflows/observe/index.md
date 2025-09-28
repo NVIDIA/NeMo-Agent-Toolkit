@@ -41,8 +41,11 @@ The core observability features (console and file logging) are included by defau
 # Install all optional telemetry extras
 uv pip install -e '.[telemetry]'
 
-# Install OpenTelemetry extras
+# Install specific telemetry extras
 uv pip install -e '.[opentelemetry]'
+uv pip install -e '.[phoenix]'
+uv pip install -e '.[weave]'
+uv pip install -e '.[ragaai]'
 ```
 
 ## Configurable Components
@@ -98,26 +101,21 @@ The `tracing` section contains one or more tracing providers. Each provider has 
 
 ### Available Tracing Exporters
 
-Each exporter has its own detailed configuration guide with complete setup instructions. For complete configuration examples and setup instructions, refer to the individual guides linked below or check the `examples/observability/` directory.
+Each exporter has its own detailed configuration guide with complete setup instructions and examples:
 
-* Built-in:
-  - **File Export** - file-based tracing for local development and debugging
+- **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
+- **Custom Exporters** - See [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
+- **[Dynatrace](https://dynatrace.com/)** - See [Observing with Dynatrace](./observe-workflow-with-dynatrace.md)
+- **File Export** - Built-in file-based tracing for local development and debugging
+- **[Galileo](https://galileo.ai/)** - See [Observing with Galileo](./observe-workflow-with-galileo.md)
+- **[Langfuse](https://langfuse.com/)** - OTLP-compatible observability platform
+- **[LangSmith](https://www.langchain.com/langsmith)** - LangChain's observability platform
+- **[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)** - See [Observing with OTel Collector](./observe-workflow-with-otel-collector.md)
+- **[Patronus](https://www.patronus.ai/)** - AI evaluation and monitoring platform
+- **[Phoenix](https://phoenix.arize.com/)** - See [Observing with Phoenix](./observe-workflow-with-phoenix.md)
+- **[W&B Weave](https://wandb.ai/site/weave/)** - See [Observing with W&B Weave](./observe-workflow-with-weave.md)
 
-* Custom Exporters:
-  - See [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
-
-* OpenTelemetry:
-  - See [Observing with OTel Collector](./observe-workflow-with-otel-collector.md) with [OpenTelemetry Collectors](https://opentelemetry.io/docs/collector/).
-
-* Observability Platforms:
-  - **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
-  - **[Dynatrace](https://dynatrace.com/)** - See [Observing with Dynatrace](./observe-workflow-with-dynatrace.md)
-  - **[Galileo](https://galileo.ai/)** - See [Observing with Galileo](./observe-workflow-with-galileo.md)
-  - **[Langfuse](https://langfuse.com/)** - OTLP-compatible observability platform
-  - **[LangSmith](https://www.langchain.com/langsmith)** - LangChain's observability platform
-  - **[Patronus](https://www.patronus.ai/)** - AI evaluation and monitoring platform
-  - **[Phoenix](https://phoenix.arize.com/)** - See [Observing with Phoenix](./observe-workflow-with-phoenix.md)
-  - **[W&B Weave](https://wandb.ai/site/weave/)** - See [Observing with W&B Weave](./observe-workflow-with-weave.md)
+For complete configuration examples and setup instructions, refer to the individual guides linked above or check the `examples/observability/` directory.
 
 ### NeMo Agent Toolkit Observability Components
 
