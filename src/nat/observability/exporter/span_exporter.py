@@ -126,6 +126,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         parent_span = None
         span_ctx = None
+        workflow_trace_id = self._context_state.workflow_trace_id.get()
 
         # Look up the parent span to establish hierarchy
         # event.parent_id is the UUID of the last START step with a different UUID from current step
@@ -141,6 +142,9 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
             parent_span = parent_span.model_copy() if isinstance(parent_span, Span) else None
             if parent_span and parent_span.context:
                 span_ctx = SpanContext(trace_id=parent_span.context.trace_id)
+        # No parent: adopt workflow trace id if available to keep all spans in the same trace
+        if span_ctx is None and workflow_trace_id:
+            span_ctx = SpanContext(trace_id=workflow_trace_id)
 
         # Extract start/end times from the step
         # By convention, `span_event_timestamp` is the time we started, `event_timestamp` is the time we ended.
@@ -154,23 +158,39 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         else:
             sub_span_name = f"{event.payload.event_type}"
 
+        # Prefer parent/context trace id for attribute, else workflow trace id
+        _attr_trace_id = None
+        if span_ctx is not None:
+            _attr_trace_id = span_ctx.trace_id
+        elif parent_span and parent_span.context:
+            _attr_trace_id = parent_span.context.trace_id
+        elif workflow_trace_id:
+            _attr_trace_id = workflow_trace_id
+
+        attributes = {
+            f"{self._span_prefix}.event_type":
+                event.payload.event_type.value,
+            f"{self._span_prefix}.function.id":
+                event.function_ancestry.function_id if event.function_ancestry else "unknown",
+            f"{self._span_prefix}.function.name":
+                event.function_ancestry.function_name if event.function_ancestry else "unknown",
+            f"{self._span_prefix}.subspan.name":
+                event.payload.name or "",
+            f"{self._span_prefix}.event_timestamp":
+                event.event_timestamp,
+            f"{self._span_prefix}.framework":
+                event.payload.framework.value if event.payload.framework else "unknown",
+            f"{self._span_prefix}.conversation.id":
+                self._context_state.conversation_id.get() or "unknown",
+            f"{self._span_prefix}.workflow.run_id":
+                self._context_state.workflow_run_id.get() or "unknown",
+            f"{self._span_prefix}.workflow.trace_id": (f"{_attr_trace_id:032x}" if _attr_trace_id else "unknown"),
+        }
+
         sub_span = Span(name=sub_span_name,
                         parent=parent_span,
                         context=span_ctx,
-                        attributes={
-                            f"{self._span_prefix}.event_type":
-                                event.payload.event_type.value,
-                            f"{self._span_prefix}.function.id":
-                                event.function_ancestry.function_id if event.function_ancestry else "unknown",
-                            f"{self._span_prefix}.function.name":
-                                event.function_ancestry.function_name if event.function_ancestry else "unknown",
-                            f"{self._span_prefix}.subspan.name":
-                                event.payload.name or "",
-                            f"{self._span_prefix}.event_timestamp":
-                                event.event_timestamp,
-                            f"{self._span_prefix}.framework":
-                                event.payload.framework.value if event.payload.framework else "unknown",
-                        },
+                        attributes=attributes,
                         start_time=start_ns)
 
         span_kind = event_type_to_span_kind(event.event_type)

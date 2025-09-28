@@ -86,8 +86,15 @@ class OtelSpan(Span):
         self._name = name
         # Create a new SpanContext if none provided or if Context is provided
         if context is None or isinstance(context, Context):
-            trace_id = uuid.uuid4().int & ((1 << 128) - 1)
-            span_id = uuid.uuid4().int & ((1 << 64) - 1)
+            # Generate non-zero IDs per OTel spec
+            while True:
+                trace_id = uuid.uuid4().int & ((1 << 128) - 1)
+                if trace_id != 0:
+                    break
+            while True:
+                span_id = uuid.uuid4().int & ((1 << 64) - 1)
+                if span_id != 0:
+                    break
             self._context = SpanContext(
                 trace_id=trace_id,
                 span_id=span_id,

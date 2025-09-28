@@ -128,10 +128,57 @@ class SpanStatus(BaseModel):
     message: str | None = Field(default=None, description="The status message of the span.")
 
 
+def _generate_nonzero_trace_id() -> int:
+    """Generate a non-zero 128-bit trace ID."""
+    while True:
+        value = uuid.uuid4().int & ((1 << 128) - 1)
+        if value != 0:
+            return value
+
+
+def _generate_nonzero_span_id() -> int:
+    """Generate a non-zero 64-bit span ID."""
+    while True:
+        value = uuid.uuid4().int & ((1 << 64) - 1)
+        if value != 0:
+            return value
+
+
 class SpanContext(BaseModel):
-    trace_id: int = Field(default_factory=lambda: uuid.uuid4().int, description="The 128-bit trace ID of the span.")
-    span_id: int = Field(default_factory=lambda: uuid.uuid4().int & ((1 << 64) - 1),
-                         description="The 64-bit span ID of the span.")
+    trace_id: int = Field(default_factory=_generate_nonzero_trace_id,
+                          description="The OTel-syle 128-bit trace ID of the span.")
+    span_id: int = Field(default_factory=_generate_nonzero_span_id,
+                         description="The OTel-syle 64-bit span ID of the span.")
+
+    @field_validator("trace_id", mode="before")
+    @classmethod
+    def _validate_trace_id(cls, v: int | str | None) -> int:
+        """Ensure trace_id is within 128-bit range and non-zero; regenerate if invalid."""
+        if v is None:
+            return _generate_nonzero_trace_id()
+        try:
+            value = int(v)
+        except Exception:
+            return _generate_nonzero_trace_id()
+        value = value & ((1 << 128) - 1)
+        if value == 0:
+            return _generate_nonzero_trace_id()
+        return value
+
+    @field_validator("span_id", mode="before")
+    @classmethod
+    def _validate_span_id(cls, v: int | str | None) -> int:
+        """Ensure span_id is within 64-bit range and non-zero; regenerate if invalid."""
+        if v is None:
+            return _generate_nonzero_span_id()
+        try:
+            value = int(v)
+        except Exception:
+            return _generate_nonzero_span_id()
+        value = value & ((1 << 64) - 1)
+        if value == 0:
+            return _generate_nonzero_span_id()
+        return value
 
 
 class Span(BaseModel):
