@@ -81,8 +81,8 @@ service:
 There are many ways to deploy an [OTel Collector](https://docs.dynatrace.com/docs/ingest-from/opentelemetry/collector/deployment) but for this example, an OTel Collector is created using Docker with the configuration from the previous step into a file named `otelcollectorconfig.yaml` with the [Dynatrace distribution of the OpenTelemetry Collector](https://docs.dynatrace.com/docs/ingest-from/opentelemetry/collector).  
 
 ```bash
-docker run -d -v $(pwd)/otelcollectorconfig.yaml:/etc/otelcol/config.yaml \ 
--p 4318:4318 \ 
+docker run -d -v $(pwd)/otelcollectorconfig.yaml:/etc/otelcol/config.yaml \
+-p 4318:4318 \
 dynatrace/dynatrace-otel-collector:latest
 ```
 
