@@ -194,6 +194,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             webbrowser.open(auth_url)
         except Exception as e:
             logger.warning("Browser open failed: %s", e)
+            raise RuntimeError(f"Browser open failed: {e}") from e
 
         # Wait for the redirect to land
         try:
