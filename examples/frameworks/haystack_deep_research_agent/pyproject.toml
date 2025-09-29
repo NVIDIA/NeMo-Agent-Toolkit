@@ -3,7 +3,7 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
-root = "../../../.."
+root = "../../.."
 
 [project]
 name = "nat_haystack_deep_research_agent"
@@ -22,7 +22,7 @@ description = "Haystack Deep Research Agent workflow for NVIDIA NeMo Agent Toolk
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-nvidia-nat = { path = "../../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'nat.components']
 nat_haystack_deep_research_agent = "nat_haystack_deep_research_agent.register"

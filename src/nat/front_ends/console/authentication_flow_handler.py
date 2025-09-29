@@ -14,13 +14,16 @@
 # limitations under the License.
 
 import asyncio
+import logging
 import secrets
 import webbrowser
 from dataclasses import dataclass
 from dataclasses import field
 
 import click
+import httpx
 import pkce
+from authlib.common.errors import AuthlibBaseError as OAuthError
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from fastapi import FastAPI
 from fastapi import Request
@@ -31,6 +34,8 @@ from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
+
+logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------- #
@@ -87,17 +92,53 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         """
         Separated for easy overriding in tests (to inject ASGITransport).
         """
-        client = AsyncOAuth2Client(
-            client_id=cfg.client_id,
-            client_secret=cfg.client_secret,
-            redirect_uri=cfg.redirect_uri,
-            scope=" ".join(cfg.scopes) if cfg.scopes else None,
-            token_endpoint=cfg.token_url,
-            token_endpoint_auth_method=cfg.token_endpoint_auth_method,
-            code_challenge_method="S256" if cfg.use_pkce else None,
-        )
-        self._oauth_client = client
-        return client
+        try:
+            client = AsyncOAuth2Client(
+                client_id=cfg.client_id,
+                client_secret=cfg.client_secret,
+                redirect_uri=cfg.redirect_uri,
+                scope=" ".join(cfg.scopes) if cfg.scopes else None,
+                token_endpoint=cfg.token_url,
+                token_endpoint_auth_method=cfg.token_endpoint_auth_method,
+                code_challenge_method="S256" if cfg.use_pkce else None,
+            )
+            self._oauth_client = client
+            return client
+        except (OAuthError, ValueError, TypeError) as e:
+            raise RuntimeError(f"Invalid OAuth2 configuration: {e}") from e
+        except Exception as e:
+            raise RuntimeError(f"Failed to create OAuth2 client: {e}") from e
+
+    def _create_authorization_url(self,
+                                  client: AsyncOAuth2Client,
+                                  config: OAuth2AuthCodeFlowProviderConfig,
+                                  state: str,
+                                  verifier: str | None = None,
+                                  challenge: str | None = None) -> str:
+        """
+        Create OAuth authorization URL with proper error handling.
+
+        Args:
+            client: The OAuth2 client instance
+            config: OAuth2 configuration
+            state: OAuth state parameter
+            verifier: PKCE verifier (if using PKCE)
+            challenge: PKCE challenge (if using PKCE)
+
+        Returns:
+            The authorization URL
+        """
+        try:
+            auth_url, _ = client.create_authorization_url(
+                config.authorization_url,
+                state=state,
+                code_verifier=verifier if config.use_pkce else None,
+                code_challenge=challenge if config.use_pkce else None,
+                **(config.authorization_kwargs or {})
+            )
+            return auth_url
+        except (OAuthError, ValueError, TypeError) as e:
+            raise RuntimeError(f"Error creating OAuth authorization URL: {e}") from e
 
     # --------------------------- HTTP Basic ------------------------------ #
     @staticmethod
@@ -131,13 +172,12 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             flow_state.verifier = verifier
             flow_state.challenge = challenge
 
-        auth_url, _ = client.create_authorization_url(
-            cfg.authorization_url,
-            state=state,
-            code_verifier=flow_state.verifier if cfg.use_pkce else None,
-            code_challenge=flow_state.challenge if cfg.use_pkce else None,
-            **(cfg.authorization_kwargs or {})
-        )
+        # Create authorization URL using helper function
+        auth_url = self._create_authorization_url(client=client,
+                                                  config=cfg,
+                                                  state=state,
+                                                  verifier=flow_state.verifier,
+                                                  challenge=flow_state.challenge)
 
         # Register flow + maybe spin up redirect handler
         async with self._server_lock:
@@ -149,14 +189,18 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             self._flows[state] = flow_state
             self._active_flows += 1
 
-        click.echo("Your browser has been opened for authentication.")
-        webbrowser.open(auth_url)
+        try:
+            webbrowser.open(auth_url)
+            click.echo("Your browser has been opened for authentication.")
+        except Exception as e:
+            logger.error("Browser open failed: %s", e)
+            raise RuntimeError(f"Browser open failed: {e}") from e
 
         # Wait for the redirect to land
         try:
             token = await asyncio.wait_for(flow_state.future, timeout=300)
-        except asyncio.TimeoutError:
-            raise RuntimeError("Authentication timed out (5 min).")
+        except asyncio.TimeoutError as exc:
+            raise RuntimeError("Authentication timed out (5 min).") from exc
         finally:
             async with self._server_lock:
                 self._flows.pop(state, None)
@@ -175,9 +219,9 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
     # --------------- redirect server / in‑process app -------------------- #
     async def _build_redirect_app(self) -> FastAPI:
         """
-        * If cfg.run_redirect_local_server == True → start a uvicorn server (old behaviour).
-        * Else → only build the FastAPI app and save it to `self._redirect_app`
-                 for in‑process testing with ASGITransport.
+        * If cfg.run_redirect_local_server == True → start a local server.
+        * Else → only build the redirect app and save it to `self._redirect_app`
+                 for in‑process testing.
         """
         app = FastAPI()
 
@@ -195,8 +239,16 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
                     state=state,
                 )
                 flow_state.future.set_result(token)
-            except Exception as exc:  # noqa: BLE001
-                flow_state.future.set_exception(exc)
+            except OAuthError as e:
+                flow_state.future.set_exception(
+                    RuntimeError(f"Authorization server rejected request: {e.error} ({e.description})"))
+                return "Authentication failed: Authorization server rejected the request. You may close this tab."
+            except httpx.HTTPError as e:
+                flow_state.future.set_exception(RuntimeError(f"Network error during token fetch: {e}"))
+                return "Authentication failed: Network error occurred. You may close this tab."
+            except Exception as e:
+                flow_state.future.set_exception(RuntimeError(f"Authentication failed: {e}"))
+                return "Authentication failed: An unexpected error occurred. You may close this tab."
             return "Authentication successful – you may close this tab."
 
         return app
@@ -213,7 +265,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
 
             asyncio.create_task(self._server_controller.start_server(host="localhost", port=8000))
 
-            # Give uvicorn a moment to bind sockets before we return
+            # Give the server a moment to bind sockets before we return
             await asyncio.sleep(0.3)
         except Exception as exc:  # noqa: BLE001
             raise RuntimeError(f"Failed to start redirect server: {exc}") from exc
@@ -227,7 +279,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
     @property
     def redirect_app(self) -> FastAPI | None:
         """
-        In “test‑mode” (run_redirect_local_server=False) the in‑memory FastAPI
-        app is exposed so you can mount it on `httpx.ASGITransport`.
+        In test mode (run_redirect_local_server=False) the in‑memory redirect
+        app is exposed for testing purposes.
         """
         return self._redirect_app

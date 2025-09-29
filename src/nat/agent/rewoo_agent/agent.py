@@ -65,9 +65,11 @@ class ReWOOGraphState(BaseModel):
 
 
 class ReWOOAgentGraph(BaseAgent):
-    """Configurable LangGraph ReWOO Agent. A ReWOO Agent performs reasoning by interacting with other objects or tools
-    and utilizes their outputs to make decisions. Supports retrying on output parsing errors. Argument
-    "detailed_logs" toggles logging of inputs, outputs, and intermediate steps."""
+    """Configurable ReWOO Agent.
+
+    Args:
+        detailed_logs: Toggles logging of inputs, outputs, and intermediate steps.
+    """
 
     def __init__(self,
                  llm: BaseChatModel,
