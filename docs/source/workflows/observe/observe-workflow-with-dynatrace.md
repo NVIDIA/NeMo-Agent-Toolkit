@@ -88,14 +88,14 @@ dynatrace/dynatrace-otel-collector:latest
 
 Once running, the collector endpoint is: `http://localhost:4318`. 
 
-## Step 5: Install the NVIDIA NeMo Agent toolkit OpenTelemetry Subpackages
+## Step 5: Install the NeMo Agent toolkit OpenTelemetry Subpackages
 
 ```bash
 # Install specific telemetry extras required for Dynatrace
 uv pip install -e '.[opentelemetry]'
 ```
 
-## Step 6: Modify NVIDIA NeMo Agent toolkit Workflow Configuration
+## Step 6: Modify NeMo Agent toolkit Workflow Configuration
 
 Update your workflow configuration file to include the telemetry settings.
 
@@ -113,7 +113,7 @@ general:
 
 ## Step 7: Run the workflow
 
-From the root directory of the NVIDIA NeMo Agent toolkit library, install dependencies and run the pre-configured `simple_web_query` example.
+From the root directory of the NeMo Agent toolkit library, install dependencies and run the pre-configured `simple_web_query` example.
 
 **Example:**
 ```bash
@@ -132,5 +132,5 @@ View the exported traces within the [Dynatrace Distributed Tracing App](https://
 
 
 <div align="left">
-  <img src="../../_static/dynatrace-trace.png" width="800">
+  <img alt="Dynatrace trace screenshot" src="../../_static/dynatrace-trace.png" width="800">
 </div>
