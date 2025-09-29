@@ -21,10 +21,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field
 
-import httpx
 import pkce
-from authlib.integrations.httpx_client import AsyncOAuth2Client
 from authlib.common.errors import AuthlibBaseError as OAuthError
+from authlib.integrations.httpx_client import AsyncOAuth2Client
 
 from nat.authentication.interfaces import FlowHandlerBase
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig

@@ -15,14 +15,15 @@
 
 import secrets
 import string
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs
+from urllib.parse import urlparse
 
 import httpx
 import pytest
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from httpx import ASGITransport
-
 from mock_oauth2_server import MockOAuth2Server
+
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 
 
@@ -513,7 +514,8 @@ async def test_authorization_code_security_handling(mock_server,
 
         # Check for error in the response
         assert "detail" in result, f"Expected error detail in response for {test_case}"
-        assert expected_error_detail in result["detail"], f"Expected {expected_error_detail} in error detail for {test_case}"
+        assert expected_error_detail in result["detail"], (
+            f"Expected {expected_error_detail} in error detail for {test_case}")
 
     elif setup_behavior == "reuse_authorization_code":
         # Test code reuse - use a code twice
@@ -563,7 +565,8 @@ async def test_authorization_code_security_handling(mock_server,
 
         # Check for error in the response
         assert "detail" in result, f"Expected error detail in response for {test_case}"
-        assert expected_error_detail in result["detail"], f"Expected {expected_error_detail} in error detail for {test_case}"
+        assert expected_error_detail in result["detail"], (
+            f"Expected {expected_error_detail} in error detail for {test_case}")
 
     elif setup_behavior == "use_invalid_client":
         # Test with invalid client credentials
@@ -585,7 +588,8 @@ async def test_authorization_code_security_handling(mock_server,
 
         # Check for error in the response
         assert "detail" in result, f"Expected error detail in response for {test_case}"
-        assert expected_error_detail in result["detail"], f"Expected {expected_error_detail} in error detail for {test_case}"
+        assert expected_error_detail in result["detail"], (
+            f"Expected {expected_error_detail} in error detail for {test_case}")
 
     elif setup_behavior == "use_expired_code":
         # Test with expired code
@@ -632,7 +636,8 @@ async def test_authorization_code_security_handling(mock_server,
 
         # Check for error in the response
         assert "detail" in result, f"Expected error detail in response for {test_case}"
-        assert expected_error_detail in result["detail"], f"Expected {expected_error_detail} in error detail for {test_case}"
+        assert expected_error_detail in result["detail"], (
+            f"Expected {expected_error_detail} in error detail for {test_case}")
 
 
 # --------------------------------------------------------------------------- #

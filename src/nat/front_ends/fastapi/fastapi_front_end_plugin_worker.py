@@ -25,6 +25,8 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import httpx
+from authlib.common.errors import AuthlibBaseError as OAuthError
 from fastapi import Body
 from fastapi import FastAPI
 from fastapi import Request
@@ -36,9 +38,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from pydantic import Field
 from starlette.websockets import WebSocket
-
-import httpx
-from authlib.common.errors import AuthlibBaseError as OAuthError
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
