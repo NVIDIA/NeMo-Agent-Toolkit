@@ -189,11 +189,11 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             self._flows[state] = flow_state
             self._active_flows += 1
 
-        click.echo("Your browser has been opened for authentication.")
         try:
             webbrowser.open(auth_url)
+            click.echo("Your browser has been opened for authentication.")
         except Exception as e:
-            logger.warning("Browser open failed: %s", e)
+            logger.error("Browser open failed: %s", e)
             raise RuntimeError(f"Browser open failed: {e}") from e
 
         # Wait for the redirect to land
