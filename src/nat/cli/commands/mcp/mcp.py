@@ -297,7 +297,7 @@ async def list_tools_via_function_group(
             if fn is not None:
                 tools.append(to_tool_entry(full, fn))
         else:
-            for full, fn in fns.items():
+            for full, fn in (await fns).items():
                 tools.append(to_tool_entry(full, fn))
 
     return tools
