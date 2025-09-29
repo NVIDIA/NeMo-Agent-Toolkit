@@ -56,7 +56,8 @@ class MCPServerConfig(BaseModel):
     env: dict[str, str] | None = Field(default=None, description="Environment variables for the stdio process")
 
     # Authentication configuration
-    auth_provider: AuthenticationRef | None = Field(default=None, description="Reference to authentication provider")
+    auth_provider: str | AuthenticationRef | None = Field(default=None,
+                                                          description="Reference to authentication provider")
 
     @model_validator(mode="after")
     def validate_model(self):
@@ -92,7 +93,8 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
     """
     server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
     tool_call_timeout: timedelta = Field(
-        default=timedelta(seconds=5), description="Timeout (in seconds) for the MCP tool call. Defaults to 5 seconds.")
+        default=timedelta(seconds=60),
+        description="Timeout (in seconds) for the MCP tool call. Defaults to 60 seconds.")
     reconnect_enabled: bool = Field(
         default=True,
         description="Whether to enable reconnecting to the MCP server if the connection is lost. \
