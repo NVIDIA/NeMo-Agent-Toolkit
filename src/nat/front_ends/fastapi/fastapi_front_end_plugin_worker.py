@@ -25,6 +25,8 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import httpx
+from authlib.common.errors import AuthlibBaseError as OAuthError
 from fastapi import Body
 from fastapi import FastAPI
 from fastapi import Request
@@ -1071,8 +1073,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                code_verifier=verifier,
                                                state=state)
                 flow_state.future.set_result(res)
+            except OAuthError as e:
+                flow_state.future.set_exception(
+                    RuntimeError(f"Authorization server rejected request: {e.error} ({e.description})"))
+            except httpx.HTTPError as e:
+                flow_state.future.set_exception(RuntimeError(f"Network error during token fetch: {e}"))
             except Exception as e:
-                flow_state.future.set_exception(e)
+                flow_state.future.set_exception(RuntimeError(f"Authentication failed: {e}"))
 
             return HTMLResponse(content=AUTH_REDIRECT_SUCCESS_HTML,
                                 status_code=200,
