@@ -27,7 +27,14 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key", "populate_milvus")
-async def test_full_workflow():
+async def test_full_workflow(milvus_uri: str) -> None:
+    from pydantic import HttpUrl
+
+    from nat.runtime.loader import load_config
+
     config_file: Path = locate_example_config(AutomatedDescriptionMilvusWorkflow)
+    config = load_config(config_file)
+    config.retrievers['retriever'].uri = HttpUrl(url=milvus_uri)
+
     # Unfortunately the workflow itself returns inconsistent results
-    await run_workflow(config_file, "List 5 subspecies of Aardvark?", "Aardvark")
+    await run_workflow(None, "List 5 subspecies of Aardvark?", "Aardvark", config=config)
