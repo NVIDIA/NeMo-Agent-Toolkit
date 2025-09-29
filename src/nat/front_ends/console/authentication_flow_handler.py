@@ -113,8 +113,8 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
                                   client: AsyncOAuth2Client,
                                   config: OAuth2AuthCodeFlowProviderConfig,
                                   state: str,
-                                  verifier: str = None,
-                                  challenge: str = None) -> str:
+                                  verifier: str | None = None,
+                                  challenge: str | None = None) -> str:
         """
         Create OAuth authorization URL with proper error handling.
 
