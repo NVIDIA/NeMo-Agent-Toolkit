@@ -610,7 +610,8 @@ class MCPToolClient:
 
         if not session_id:
             # use default user id if allowed
-            if self._parent_client.auth_provider and self._parent_client.auth_provider.config.allow_default_user_id_for_tool_calls:
+            if self._parent_client.auth_provider and \
+                self._parent_client.auth_provider.config.allow_default_user_id_for_tool_calls:
                 session_id = self._parent_client.auth_provider.config.default_user_id
         return session_id
 
