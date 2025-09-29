@@ -158,7 +158,7 @@ function_groups:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
 
-workflows:
+workflow:
   _type: react_agent
   tool_names:
     - mcp_time
