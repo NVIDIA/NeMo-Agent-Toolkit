@@ -126,9 +126,6 @@ class AuthAdapter(httpx.Auth):
                 # Non-tool call requests should use the session id if it exists and fallback to default user id
                 user_id = session_id or self.auth_provider.config.default_user_id
 
-            if not user_id:
-                raise RuntimeError("User is not authorized to call the tool")
-
             auth_result = await self.auth_provider.authenticate(user_id=user_id, response=response)
 
             # Check if we have BearerTokenCred
@@ -183,6 +180,10 @@ class MCPBaseClient(ABC):
         self._reconnect_initial_backoff = reconnect_initial_backoff
         self._reconnect_max_backoff = reconnect_max_backoff
         self._reconnect_lock: asyncio.Lock = asyncio.Lock()
+
+    @property
+    def auth_provider(self) -> AuthProviderBase | None:
+        return self._auth_provider
 
     @property
     def transport(self) -> str:
@@ -599,8 +600,8 @@ class MCPToolClient:
 
         if not session_id:
             # use default user id if allowed
-            if self._parent_client._auth_provider and self._parent_client._auth_provider.config.allow_default_user_id_for_tool_calls:
-                session_id = self._parent_client._auth_provider.config.default_user_id
+            if self._parent_client.auth_provider and self._parent_client.auth_provider.config.allow_default_user_id_for_tool_calls:
+                session_id = self._parent_client.auth_provider.config.default_user_id
         return session_id
 
     async def acall(self, tool_args: dict) -> str:
@@ -621,7 +622,7 @@ class MCPToolClient:
 
         try:
             # if auth is enabled and session id is not available return user is not authorized to call the tool
-            if self._parent_client._auth_provider and not session_id:
+            if self._parent_client.auth_provider and not session_id:
                 result_str = "User is not authorized to call the tool"
                 mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str), self._parent_client.server_name)
                 raise mcp_error
