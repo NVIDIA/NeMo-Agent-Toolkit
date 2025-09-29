@@ -166,8 +166,8 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^\./retail_sales_agent/data/",
     ),
     (
-        r"^examples/basic/frameworks/haystack_deep_research_agent/README.md",
-        r"^examples/basic/frameworks/haystack_deep_research_agent/data/bedrock-ug.pdf",
+        r"^examples/frameworks/haystack_deep_research_agent/README.md",
+        r"^examples/frameworks/haystack_deep_research_agent/data/bedrock-ug.pdf",
     ),
     # ignore generated files
     (
