@@ -81,7 +81,7 @@ service:
 There are many ways to deploy an [OTel Collector](https://docs.dynatrace.com/docs/ingest-from/opentelemetry/collector/deployment) but for this example, an OTel Collector is created using Docker with the configuration from the previous step into a file named `otelcollectorconfig.yaml` with the [Dynatrace distribution of the OpenTelemetry Collector](https://docs.dynatrace.com/docs/ingest-from/opentelemetry/collector).  
 
 ```bash
-docker run -d -v $(pwd)/otelcollectorconfig.yaml:/etc/otelcol/config.yaml \
+docker run -d -v "$(pwd)"/otelcollectorconfig.yaml:/etc/otelcol/config.yaml \
 -p 4318:4318 \
 dynatrace/dynatrace-otel-collector:latest
 ```
@@ -91,9 +91,6 @@ Once running, the collector endpoint is: `http://localhost:4318`.
 ## Step 5: Install the NVIDIA NeMo Agent toolkit OpenTelemetry Subpackages
 
 ```bash
-# Install all optional telemetry extras
-uv pip install -e '.[telemetry]'
-
 # Install specific telemetry extras required for Dynatrace
 uv pip install -e '.[opentelemetry]'
 ```
