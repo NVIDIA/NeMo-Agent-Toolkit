@@ -124,8 +124,7 @@ class ReWOOAgentGraph(BaseAgent):
         """
         Get the current execution level and whether it's complete.
         :param state: The ReWOO graph state.
-        :return: Tuple of (current_level, is_complete).
-                level -1 means all execution is complete.
+        :return: Tuple of (current_level, is_complete). Level -1 means all execution is complete.
         :rtype: tuple[int, bool]
         """
         if not state.execution_levels:
