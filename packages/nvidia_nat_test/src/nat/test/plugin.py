@@ -270,8 +270,8 @@ def require_etcd_fixture(fail_missing: bool = False) -> bool:
                      failure_reason=f"Unable to connect to etcd server at {health_url}")
 
 
-@pytest.fixture(name="require_milvus", scope="session")
-def require_milvus_fixture(require_etcd: bool, fail_missing: bool = False) -> bool:
+@pytest.fixture(name="milvus_uri", scope="session")
+def milvus_uri_fixture(require_etcd: bool, fail_missing: bool = False) -> str:
     """
     To run these tests, a Milvus server must be running
     """
@@ -282,7 +282,7 @@ def require_milvus_fixture(require_etcd: bool, fail_missing: bool = False) -> bo
         from pymilvus import MilvusClient
         MilvusClient(uri=uri)
 
-        return True
+        return uri
     except:
         reason = f"Unable to connect to Milvus server at {uri}"
         if fail_missing:
@@ -291,19 +291,21 @@ def require_milvus_fixture(require_etcd: bool, fail_missing: bool = False) -> bo
 
 
 @pytest.fixture(name="populate_milvus", scope="session")
-def populate_milvus_fixture(require_milvus: bool, root_repo_dir: Path):
+def populate_milvus_fixture(milvus_uri: str, root_repo_dir: Path):
     """
     Populate Milvus with some test data.
     """
     populate_script = root_repo_dir / "scripts/langchain_web_ingest.py"
 
     # Ingest default cuda docs
-    subprocess.run(["python", str(populate_script)], check=True)
+    subprocess.run(["python", str(populate_script), "--milvus_uri", milvus_uri], check=True)
 
     # Ingest MCP docs
     subprocess.run([
         "python",
         str(populate_script),
+        "--milvus_uri",
+        milvus_uri,
         "--urls",
         "https://github.com/modelcontextprotocol/python-sdk",
         "--urls",
@@ -325,6 +327,8 @@ def populate_milvus_fixture(require_milvus: bool, root_repo_dir: Path):
     subprocess.run([
         "python",
         str(populate_script),
+        "--milvus_uri",
+        milvus_uri,
         "--urls",
         "https://en.wikipedia.org/wiki/Aardvark",
         "--collection_name",
