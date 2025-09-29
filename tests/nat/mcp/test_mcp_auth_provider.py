@@ -294,6 +294,16 @@ class TestDynamicClientRegistration:
 class TestMCPOAuth2Provider:
     """Test the MCPOAuth2Provider class."""
 
+    async def test_authenticate_requires_user_id_raises(self, mock_config):
+        """authenticate must be called with user_id; otherwise it raises."""
+        provider = MCPOAuth2Provider(mock_config)
+
+        with pytest.raises(RuntimeError, match="User is not authorized to call the tool"):
+            await provider.authenticate()
+
+        with pytest.raises(RuntimeError, match="User is not authorized to call the tool"):
+            await provider.authenticate(user_id=None)
+
     async def test_authenticate_normal_request_returns_empty_when_no_provider(self, mock_config):
         """Test that normal requests return empty auth result when no provider is set up."""
         provider = MCPOAuth2Provider(mock_config)
