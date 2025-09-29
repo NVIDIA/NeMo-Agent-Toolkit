@@ -20,6 +20,7 @@ import typing
 from pathlib import Path
 
 if typing.TYPE_CHECKING:
+    from nat.data_models.config import Config
     from nat.utils.type_utils import StrPath
 
 
@@ -60,12 +61,23 @@ def locate_example_config(example_config_class: type,
     return config_path
 
 
-async def run_workflow(config_file: "StrPath",
-                       question: str,
-                       expected_answer: str,
-                       assert_expected_answer: bool = True) -> str:
-    from nat.runtime.loader import load_workflow
-    async with load_workflow(config_file) as workflow:
+async def run_workflow(
+    config_file: "StrPath | None",
+    question: str,
+    expected_answer: str,
+    assert_expected_answer: bool = True,
+    config: "Config | None" = None,
+) -> str:
+    from nat.builder.workflow_builder import WorkflowBuilder
+    from nat.runtime.loader import load_config
+    from nat.runtime.session import SessionManager
+
+    if config is None:
+        assert config_file is not None, "Either config_file or config must be provided"
+        config = load_config(config_file)
+
+    async with WorkflowBuilder.from_config(config=config) as workflow_builder:
+        workflow = SessionManager(await workflow_builder.build())
         async with workflow.run(question) as runner:
             result = await runner.result(to_type=str)
 
