@@ -49,13 +49,13 @@ You can publish the simple calculator tools via MCP using the `nat mcp serve` co
 NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
 
 Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions in one of two ways:
-- `mcp_client`: A flexible configuration using function groups, that allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. `config-mcp-date-stdio.yml` example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers.
-- `mcp_tool_wrapper`: A simple configuration that allows you wrap a single MCP tool as a NeMo Agent toolkit function. `config-mcp-math.yml` example demonstrates how to use the `mcp_tool_wrapper` function group with a remote MCP server.
+- `mcp_client`: A flexible configuration using function groups, that allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. `config-mcp-client.yml` example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers.
+- `mcp_tool_wrapper`: A simple configuration that allows you wrap a single MCP tool as a NeMo Agent toolkit function. `config-mcp-tool-wrapper.yml` example demonstrates how to use the `mcp_tool_wrapper` function group with a remote MCP server.
 
 ### Running the example
-The `config-mcp-date-stdio.yml` example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers. This configuration shows how to use multiple MCP servers with different transports in the same workflow.
+The `config-mcp-client.yml` example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers. This configuration shows how to use multiple MCP servers with different transports in the same workflow.
 
-`examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml`:
+`examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml`:
 ```yaml
 function_groups:
   mcp_time:
@@ -91,5 +91,5 @@ This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable
 
 2. Run the workflow:
 ```bash
-nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```

@@ -143,7 +143,7 @@ function_groups:
 ## Example
 The following example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers. This configuration shows how to use multiple MCP servers with different transports in the same workflow.
 
-`examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml`:
+`examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml`:
 ```yaml
 function_groups:
   mcp_time:
@@ -179,7 +179,7 @@ This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable
 
 2. Run the workflow:
 ```bash
-nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 ## Displaying MCP Tools via CLI
@@ -275,7 +275,7 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
 
 2. Start the workflow (MCP client) with FastAPI on port 8080:
    ```bash
-   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --port 8080
+   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --port 8080
    ```
 
 3. Call the endpoint and pretty-print the response:
