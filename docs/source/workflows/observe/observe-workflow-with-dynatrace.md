@@ -37,7 +37,7 @@ Dynatrace APIs use token based authentication. To generate an access token:
 1. Select these [required scopes for the OTLP API](https://docs.dynatrace.com/docs/shortlink/otel-getstarted-otlpexport#authentication-export-to-activegate):
     * `openTelemetryTrace.ingest`
     * `metrics.ingest`
-    * `Logs.ingest`
+    * `logs.ingest`
 1. Select Generate token.
 1. Copy the generated token to the clipboard. Store the token in a password manager for future use and for the configuration below.
 
