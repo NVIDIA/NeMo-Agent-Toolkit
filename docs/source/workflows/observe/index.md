@@ -117,7 +117,7 @@ Each exporter has its own detailed configuration guide with complete setup instr
 
 For complete configuration examples and setup instructions, refer to the individual guides linked above or check the `examples/observability/` directory.
 
-### NeMo Agent Toolkit Observability Components
+### NeMo Agent toolkit Observability Components
 
 The NeMo Agent toolkit observability system uses a generic, plugin-based architecture built on the Subject-Observer pattern. The system consists of several key components working together to provide comprehensive workflow monitoring:
 
@@ -158,6 +158,7 @@ For complete information about developing and integrating custom telemetry expor
 :caption: Observe Workflows
 
 Observing with Catalyst <./observe-workflow-with-catalyst.md>
+Observing with Dynatrace <./observe-workflow-with-dynatrace.md>
 Observing with Galileo <./observe-workflow-with-galileo.md>
 Observing with OTEL Collector <./observe-workflow-with-otel-collector.md>
 Observing with Phoenix <./observe-workflow-with-phoenix.md>
