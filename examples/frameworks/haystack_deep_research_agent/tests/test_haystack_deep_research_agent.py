@@ -61,7 +61,7 @@ async def test_full_workflow_e2e() -> None:
 def test_config_yaml_loads_and_has_keys() -> None:
     config_file = (Path(__file__).resolve().parents[1] / "configs" / "config.yml")
 
-    with open(config_file, "r", encoding="utf-8") as f:
+    with open(config_file, encoding="utf-8") as f:
         text = f.read()
 
     assert "workflow:" in text

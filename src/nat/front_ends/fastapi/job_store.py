@@ -370,7 +370,7 @@ class JobStore(DaskClientMixin):
                 # Convert BaseModel to JSON string for storage
                 output = output.model_dump_json(round_trip=True)
 
-            if isinstance(output, (dict, list)):
+            if isinstance(output, dict | list):
                 # Convert dict or list to JSON string for storage
                 output = json.dumps(output)
 
@@ -555,7 +555,7 @@ class JobStore(DaskClientMixin):
                         logger.exception("Failed to expire %s", job_id)
 
                 await session.execute(
-                    (update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True)))
+                    update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True))
 
 
 def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool = True) -> "Engine | AsyncEngine":

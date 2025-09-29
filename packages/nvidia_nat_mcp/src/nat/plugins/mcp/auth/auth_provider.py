@@ -15,7 +15,7 @@
 
 import logging
 from collections.abc import Awaitable
-from typing import Callable
+from collections.abc import Callable
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 

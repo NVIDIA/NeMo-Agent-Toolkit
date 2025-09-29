@@ -204,7 +204,7 @@ class SweBenchEvaluator:
         # if report file is not present, return empty EvalOutput
         avg_score = 0.0
         if report_file.exists():
-            with open(report_file, "r", encoding="utf-8") as f:
+            with open(report_file, encoding="utf-8") as f:
                 report = json.load(f)
                 resolved_instances = report.get("resolved_instances", 0)
                 total_instances = report.get("total_instances", 0)

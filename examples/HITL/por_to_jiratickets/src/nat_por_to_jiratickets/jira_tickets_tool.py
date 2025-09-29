@@ -37,7 +37,7 @@ def get_epics_tool(root_path: str) -> str:
     """
     filename = root_path + "epics_tasks.json"
     try:
-        with open(filename, 'r', encoding='utf-8') as json_file:
+        with open(filename, encoding='utf-8') as json_file:
             data = json.load(json_file)
             logger.debug("Data successfully loaded from %s", filename)
     except Exception as e:

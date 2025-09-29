@@ -94,7 +94,7 @@ def extract_primary_exception(exceptions: list[Exception]) -> Exception:
     """
     # Prioritize connection errors
     for exc in exceptions:
-        if isinstance(exc, (httpx.ConnectError, ConnectionError)):
+        if isinstance(exc, httpx.ConnectError | ConnectionError):
             return exc
 
     # Then timeout errors

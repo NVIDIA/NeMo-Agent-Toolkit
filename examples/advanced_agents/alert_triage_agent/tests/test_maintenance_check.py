@@ -44,7 +44,7 @@ def test_load_maintenance_data():
     package_name = inspect.getmodule(AlertTriageAgentWorkflowConfig).__package__
     config_file: Path = importlib.resources.files(package_name).joinpath("configs",
                                                                          "config_offline_mode.yml").absolute()
-    with open(config_file, "r") as file:
+    with open(config_file) as file:
         config = yaml.safe_load(file)
         maintenance_data_path = config["functions"]["maintenance_check"]["static_data_path"]
     maintenance_data_path_abs = importlib.resources.files(package_name).joinpath("../../../../../",

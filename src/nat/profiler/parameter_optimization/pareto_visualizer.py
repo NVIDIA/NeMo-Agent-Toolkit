@@ -324,7 +324,7 @@ def create_pareto_visualization(data_source: optuna.Study | Path | pd.DataFrame,
     if hasattr(data_source, 'trials_dataframe'):
         # Optuna study object
         trials_df, pareto_trials_df = load_trials_from_study(data_source)
-    elif isinstance(data_source, (str, Path)):
+    elif isinstance(data_source, str | Path):
         # CSV file path
         trials_df, pareto_trials_df = load_trials_from_csv(Path(data_source), metric_names, directions)
     elif isinstance(data_source, pd.DataFrame):

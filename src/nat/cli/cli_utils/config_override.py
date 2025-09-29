@@ -84,7 +84,7 @@ class LayeredConfig:
                     if lower_value not in ['true', 'false']:
                         raise ValueError(f"Boolean value must be 'true' or 'false', got '{value}'")
                     value = lower_value == 'true'
-                elif isinstance(original_value, (int, float)):
+                elif isinstance(original_value, int | float):
                     value = type(original_value)(value)
                 elif isinstance(original_value, list):
                     value = [v.strip() for v in value.split(',')]

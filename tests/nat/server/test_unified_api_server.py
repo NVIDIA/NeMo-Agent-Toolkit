@@ -291,7 +291,7 @@ system_interaction_multiple_choice_dropdown_message = {
 @pytest.fixture(name="config")
 def server_config(restore_environ, file_path: str = "tests/nat/server/config.yml") -> BaseModel:
     data = None
-    with open(file_path, "r", encoding="utf-8") as file:
+    with open(file_path, encoding="utf-8") as file:
         data = yaml.safe_load(file)
 
     os.environ["NAT_CONFIG_FILE"] = file_path
@@ -461,12 +461,12 @@ async def test_invalid_websocket_message():
 nat_response_payload_output_test = ResponsePayloadOutput(payload="TEST")
 nat_chat_response_test = ChatResponse(id="default",
                                       object="default",
-                                      created=datetime.datetime.now(datetime.timezone.utc),
+                                      created=datetime.datetime.now(datetime.UTC),
                                       choices=[Choice(message=ChoiceMessage(), index=0)],
                                       usage=None)
 nat_chat_response_chunk_test = ChatResponseChunk(id="default",
                                                  choices=[Choice(message=ChoiceMessage(), index=0)],
-                                                 created=datetime.datetime.now(datetime.timezone.utc))
+                                                 created=datetime.datetime.now(datetime.UTC))
 nat_response_intermediate_step_test = ResponseIntermediateStep(id="default", name="default", payload="default")
 
 validated_response_data_models = [

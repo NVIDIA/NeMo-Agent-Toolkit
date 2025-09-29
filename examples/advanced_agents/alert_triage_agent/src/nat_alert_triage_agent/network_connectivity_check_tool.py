@@ -60,7 +60,7 @@ def _check_service_banner(host: str, port: int = 80, connect_timeout: float = 10
         # 4) Decode what we got (ignore any non‑UTF8 bytes)
         return buffer.decode('utf-8', errors='ignore')
 
-    except (socket.timeout, ConnectionRefusedError, OSError):
+    except (TimeoutError, ConnectionRefusedError, OSError):
         # timed out or could not connect
         return ''
 
