@@ -620,7 +620,7 @@ class MCPToolClient:
             session_id = None
 
         try:
-            # if auth is enabled and session id is not available resturn user is not authorized to call the tool
+            # if auth is enabled and session id is not available return user is not authorized to call the tool
             if self._parent_client._auth_provider and not session_id:
                 result_str = "User is not authorized to call the tool"
                 mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str), self._parent_client.server_name)
