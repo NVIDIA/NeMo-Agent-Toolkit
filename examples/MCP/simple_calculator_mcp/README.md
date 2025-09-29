@@ -87,7 +87,7 @@ To run this example:
 ```bash
 nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
-This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. See the [MCP Server](./mcp-server.md) documentation for more information.
+This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. See the [MCP Server](../../../docs/source/workflows/mcp/mcp-server.md) documentation for more information.
 
 2. Run the workflow:
 ```bash
