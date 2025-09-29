@@ -70,6 +70,6 @@ async def run_workflow(config_file: "StrPath",
             result = await runner.result(to_type=str)
 
     if assert_expected_answer:
-        assert expected_answer in result.lower(), f"Expected '{expected_answer}' in '{result}'"
+        assert expected_answer.lower() in result.lower(), f"Expected '{expected_answer}' in '{result}'"
 
     return result
