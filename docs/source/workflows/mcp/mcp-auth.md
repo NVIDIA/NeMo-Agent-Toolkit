@@ -118,6 +118,34 @@ nat mcp client tool list --url http://example.com/mcp --auth
 ```
 This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, see the [MCP Client](./mcp-client.md) documentation.
 
+## Flow Diagrams
+
+### Single-User Flow
+
+```{mermaid}
+graph LR
+  U[User\n(default-user-id)] --> H[MCP Host\n(NAT Workflow)]
+  H --> C[MCP Client\n(default-user-id)]
+  C --> S[MCP Server\n(Protected Jira Service)]
+```
+
+### Multi-User Flow
+
+```{mermaid}
+graph LR
+  U0[User\n(default-user-id)] --> H2[MCP Host\n(NAT Workflow)]
+  U1[User\n(UI-User-Lily)] --> H2
+  U2[User\n(UI-User-Hibiscus)] --> H2
+
+  H2 --> C0[MCP Client\n(default-user-id)]
+  H2 --> C1[MCP Client\n(UI-User-Lily)]
+  H2 --> C2[MCP Client\n(UI-User-Hibiscus)]
+
+  C0 --> S2[MCP Server]
+  C1 --> S2
+  C2 --> S2
+```
+
 ### Troubleshooting
 1. If setup fails, the user identified by `default_user_id` did not complete the authentication flow through the pop-up UI, or the user did not authorize the workflow to access the MCP server.
 2. If you encounter an error like "User is not authorized to call the tool", it means that:
