@@ -40,7 +40,7 @@ def answer_fixture() -> str:
 @pytest.fixture(name="rewoo_data", scope="module")
 def rewoo_data_fixture() -> list[dict]:
     data_path = os.path.join(AGENTS_DIR, "data/rewoo.json")
-    with open(data_path, "r", encoding="utf-8") as f:
+    with open(data_path, encoding="utf-8") as f:
         return json.load(f)
 
 

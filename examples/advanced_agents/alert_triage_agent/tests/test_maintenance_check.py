@@ -40,7 +40,7 @@ from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 def test_load_maintenance_data(root_repo_dir: Path):
     # Load paths from config like in test_utils.py
     config_file: Path = locate_example_config(AlertTriageAgentWorkflowConfig, "config_offline_mode.yml")
-    with open(config_file, "r", encoding="utf-8") as file:
+    with open(config_file, encoding="utf-8") as file:
         config = yaml.safe_load(file)
         maintenance_data_path = config["functions"]["maintenance_check"]["static_data_path"]
     maintenance_data_path_abs = root_repo_dir.joinpath(maintenance_data_path).absolute()
