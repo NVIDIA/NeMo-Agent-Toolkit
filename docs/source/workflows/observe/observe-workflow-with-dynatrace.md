@@ -26,7 +26,7 @@ In this guide, you will learn how to:
 
 ## Step 1: Dynatrace Account
 
-You will need access to your Dynatrace environment.  If you don’t have one you can simply [signup to get started](https://www.dynatrace.com/signup/)
+You will need access to your Dynatrace environment.  If you don’t have one you can sign up to get one at https://www.dynatrace.com/signup/.
 
 ## Step 2: Dynatrace API Token
 
