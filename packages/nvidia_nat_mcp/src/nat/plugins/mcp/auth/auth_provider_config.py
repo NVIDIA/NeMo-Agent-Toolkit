@@ -18,6 +18,7 @@ from pydantic import HttpUrl
 from pydantic import model_validator
 
 from nat.authentication.interfaces import AuthProviderBaseConfig
+from nat.data_models.component_ref import ObjectStoreRef
 
 
 class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
@@ -52,6 +53,13 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
 
     default_user_id: str | None = Field(default=None, description="Default user ID for authentication")
     allow_default_user_id_for_tool_calls: bool = Field(default=True, description="Allow default user ID for tool calls")
+
+    # Token storage configuration
+    token_storage_object_store: ObjectStoreRef | None = Field(
+        default=None,
+        description="Reference to object store for secure token storage. If None, uses in-memory storage.")
+    use_legacy_token_storage: bool = Field(
+        default=False, description="Use legacy unencrypted in-memory token storage (not recommended for production)")
 
     @model_validator(mode="after")
     def validate_auth_config(self):

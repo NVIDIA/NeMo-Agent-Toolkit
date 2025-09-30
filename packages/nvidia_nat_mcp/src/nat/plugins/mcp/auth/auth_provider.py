@@ -23,6 +23,7 @@ import httpx
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import TypeAdapter
 
 from mcp.shared.auth import OAuthClientInformationFull
 from mcp.shared.auth import OAuthClientMetadata
@@ -65,7 +66,6 @@ class DiscoverOAuth2Endpoints:
     def __init__(self, config: MCPOAuth2ProviderConfig):
         self.config = config
         self._cached_endpoints: OAuth2Endpoints | None = None
-        self._authenticated_servers: dict[str, AuthResult] = {}
 
         self._flow_handler: MCPAuthenticationFlowHandler = MCPAuthenticationFlowHandler()
 
@@ -192,11 +192,13 @@ class DiscoverOAuth2Endpoints:
                         continue
                     if meta.authorization_endpoint and meta.token_endpoint:
                         logger.info("Discovered OAuth2 endpoints from %s", url)
-                        # this is bit of a hack to get the scopes supported by the auth server
+                        # Convert AnyHttpUrl to HttpUrl using TypeAdapter
+                        http_url_adapter = TypeAdapter(HttpUrl)
                         return OAuth2Endpoints(
-                            authorization_url=str(meta.authorization_endpoint),
-                            token_url=str(meta.token_endpoint),
-                            registration_url=str(meta.registration_endpoint) if meta.registration_endpoint else None,
+                            authorization_url=http_url_adapter.validate_python(str(meta.authorization_endpoint)),
+                            token_url=http_url_adapter.validate_python(str(meta.token_endpoint)),
+                            registration_url=http_url_adapter.validate_python(str(meta.registration_endpoint))
+                            if meta.registration_endpoint else None,
                             scopes=meta.scopes_supported,
                         )
                 except Exception as e:
@@ -283,8 +285,9 @@ class DynamicClientRegistration:
 class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
     """MCP OAuth2 authentication provider that delegates to NAT framework."""
 
-    def __init__(self, config: MCPOAuth2ProviderConfig):
+    def __init__(self, config: MCPOAuth2ProviderConfig, builder=None):
         super().__init__(config)
+        self._builder = builder
 
         # Discovery
         self._discoverer = DiscoverOAuth2Endpoints(config)
@@ -300,6 +303,22 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         self._auth_callback = None
 
+        # Initialize token storage
+        self._token_storage = None
+        self._token_storage_object_store_ref = None
+
+        if self.config.use_legacy_token_storage:
+            logger.warning("Using legacy unencrypted token storage (not recommended for production)")
+            from .token_storage import LegacyInMemoryTokenStorage
+            self._token_storage = LegacyInMemoryTokenStorage()
+        elif self.config.token_storage_object_store:
+            # Store ref, will be resolved later when builder context is available
+            self._token_storage_object_store_ref = self.config.token_storage_object_store
+        else:
+            # Default: use in-memory token storage
+            from .token_storage import InMemoryTokenStorage
+            self._token_storage = InMemoryTokenStorage()
+
     def _set_custom_auth_callback(self,
                                   auth_callback: Callable[[OAuth2AuthCodeFlowProviderConfig, AuthFlowType],
                                                           Awaitable[AuthenticatedContext]]):
@@ -308,7 +327,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             logger.info("Using custom authentication callback")
             self._auth_callback = auth_callback
             if self._auth_code_provider:
-                self._auth_code_provider._set_custom_auth_callback(self._auth_callback)
+                self._auth_code_provider._set_custom_auth_callback(self._auth_callback)  # type: ignore[arg-type]
 
     async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
         """
@@ -370,6 +389,21 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         endpoints = self._cached_endpoints
         credentials = self._cached_credentials
 
+        # Resolve object store reference if needed
+        if self._token_storage_object_store_ref and not self._token_storage:
+            try:
+                if not self._builder:
+                    raise RuntimeError("Builder not available for resolving object store")
+                object_store = await self._builder.get_object_store_client(self._token_storage_object_store_ref)
+                from .token_storage import ObjectStoreTokenStorage
+                self._token_storage = ObjectStoreTokenStorage(object_store)
+                logger.info("Initialized token storage with configured object store")
+            except Exception as e:
+                logger.warning(f"Failed to resolve object store for token storage: {e}. "
+                               "Falling back to in-memory storage.")
+                from .token_storage import InMemoryTokenStorage
+                self._token_storage = InMemoryTokenStorage()
+
         # Build the OAuth2 provider if not already built
         if self._auth_code_provider is None:
             scopes = self._effective_scopes
@@ -383,12 +417,12 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 scopes=scopes,
                 use_pkce=bool(self.config.use_pkce),
                 authorization_kwargs={"resource": str(self.config.server_url)})
-            self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config)
+            self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config, token_storage=self._token_storage)
 
             # Use MCP-specific authentication method if available
             if hasattr(self._auth_code_provider, "_set_custom_auth_callback"):
-                self._auth_code_provider._set_custom_auth_callback(self._auth_callback
-                                                                   or self._flow_handler.authenticate)
+                callback = self._auth_callback or self._flow_handler.authenticate
+                self._auth_code_provider._set_custom_auth_callback(callback)  # type: ignore[arg-type]
 
         # Auth code provider is responsible for per-user cache + refresh
         return await self._auth_code_provider.authenticate(user_id=user_id)
