@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with Dynatrace
 
-This guide shows how to stream OpenTelemetry (OTel) traces from your NVIDIA NeMo Agent toolkit workflows to the [OpenTelemetry Protocol (OTLP) ingest API](https://docs.dynatrace.com/docs/discover-dynatrace/references/dynatrace-api/environment-api/opentelemetry), which in turn provides the ability to have full visibility into the performance of AI/LLM models and agent interactions​. 
+This guide shows how to stream OpenTelemetry (OTel) traces from your NVIDIA NeMo Agent toolkit workflows to the [OpenTelemetry Protocol (OTLP) ingest API](https://docs.dynatrace.com/docs/discover-dynatrace/references/dynatrace-api/environment-api/opentelemetry), which in turn provides the ability to have full visibility into the performance of LLMs and agent interactions​. 
 
 In this guide, you will learn how to:
 * Deploy a [Dynatrace OpenTelemetry Collector](https://docs.dynatrace.com/docs/ingest-from/opentelemetry/collector) with a configuration that exports traces into Dynatrace
@@ -120,7 +120,7 @@ From the root directory of the NeMo Agent toolkit library, install dependencies 
 # Install the workflow and plugins
 uv pip install -e examples/getting_started/simple_web_query
 
-# Run the workflow with OTel/Dynatrace telemetry settings
+# Run the workflow with OTel+Dynatrace telemetry settings
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?" 
 ```
 
