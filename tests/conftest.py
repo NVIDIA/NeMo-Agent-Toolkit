@@ -64,9 +64,9 @@ if typing.TYPE_CHECKING:
     from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
-@pytest.fixture(name="project_dir")
-def project_dir_fixture():
-    return PROJECT_DIR
+@pytest.fixture(name="project_dir", scope='session')
+def project_dir_fixture(root_repo_dir: Path) -> str:
+    return str(root_repo_dir)
 
 
 @pytest.fixture(name="test_data_dir")

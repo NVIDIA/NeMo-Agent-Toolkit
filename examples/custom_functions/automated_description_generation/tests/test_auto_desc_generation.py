@@ -18,24 +18,23 @@ from pathlib import Path
 
 import pytest
 
-from nat.runtime.loader import load_workflow
 from nat.test.utils import locate_example_config
-from nat_multi_frameworks.register import MultiFrameworksWorkflowConfig
+from nat.test.utils import run_workflow
+from nat_automated_description_generation.register import AutomatedDescriptionMilvusWorkflow
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.usefixtures("nvidia_api_key")
 @pytest.mark.integration
-async def test_full_workflow():
+@pytest.mark.usefixtures("nvidia_api_key", "populate_milvus")
+async def test_full_workflow(milvus_uri: str) -> None:
+    from pydantic import HttpUrl
 
-    config_file: Path = locate_example_config(MultiFrameworksWorkflowConfig)
+    from nat.runtime.loader import load_config
 
-    async with load_workflow(config_file) as workflow:
+    config_file: Path = locate_example_config(AutomatedDescriptionMilvusWorkflow)
+    config = load_config(config_file)
+    config.retrievers['retriever'].uri = HttpUrl(url=milvus_uri)
 
-        async with workflow.run("tell me about this workflow") as runner:
-
-            result = await runner.result(to_type=str)
-
-        result = result.lower()
-        assert "workflow" in result
+    # Unfortunately the workflow itself returns inconsistent results
+    await run_workflow(None, "List 5 subspecies of Aardvark?", "Aardvark", config=config)

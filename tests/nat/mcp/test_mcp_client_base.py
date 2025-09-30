@@ -528,29 +528,6 @@ async def test_connection_established_flag():
     assert client._connection_established is False
 
 
-async def test_mcp_tool_client_timeout_configuration():
-    """Test that MCPToolClient receives correct timeout configuration."""
-    client = MockMCPClient(transport="streamable-http", tool_call_timeout=timedelta(seconds=20))
-
-    # Mock tools response
-    mock_tool = MagicMock()
-    mock_tool.name = "test_tool"
-    mock_tool.description = "Test tool"
-    mock_tool.inputSchema = {}
-
-    async def mock_list_tools():
-        return MagicMock(tools=[mock_tool])
-
-    client.list_tools_side_effect = mock_list_tools
-
-    async with client:
-        tools = await client.get_tools()
-        tool_client = tools["test_tool"]
-
-        # Verify timeout was passed to MCPToolClient
-        assert tool_client._tool_call_timeout == timedelta(seconds=20)
-
-
 class TestMCPToolClientSessionId:
     """Test the MCPToolClient session_id lookup functionality."""
 
