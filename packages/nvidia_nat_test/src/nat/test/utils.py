@@ -62,11 +62,12 @@ def locate_example_config(example_config_class: type,
 
 
 async def run_workflow(
-    config_file: "StrPath | None",
+    *,
+    config: "Config | None" = None,
+    config_file: "StrPath | None" = None,
     question: str,
     expected_answer: str,
     assert_expected_answer: bool = True,
-    config: "Config | None" = None,
 ) -> str:
     from nat.builder.workflow_builder import WorkflowBuilder
     from nat.runtime.loader import load_config
