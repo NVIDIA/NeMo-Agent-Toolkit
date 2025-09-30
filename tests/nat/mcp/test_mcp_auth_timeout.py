@@ -12,19 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Unit tests for MCP authentication timeout features.
 
-Tests the smart timeout selection that:
-- Uses short timeout (60s) when auth token is cached
-- Uses long timeout (300s) when authentication may be needed
-- Prevents reconnection during active authentication flows
-"""
-
-import asyncio
+from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
-from datetime import timezone
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
@@ -147,7 +138,7 @@ async def test_has_cached_auth_token_with_expired_token():
 
     # Create mock OAuth2 provider with expired token
     mock_oauth_provider = MagicMock()
-    expired_time = datetime.now(timezone.utc)  # Already expired
+    expired_time = datetime.now(UTC)  # Already expired
     mock_auth_result = AuthResult(credentials=[BearerTokenCred(token=SecretStr("test_token"))],
                                   token_expires_at=expired_time,
                                   raw={})
@@ -193,7 +184,7 @@ async def test_has_cached_auth_token_multiple_tokens_one_valid():
 
     # Create mock OAuth2 provider with one expired and one valid token
     mock_oauth_provider = MagicMock()
-    expired_time = datetime.now(timezone.utc)
+    expired_time = datetime.now(UTC)
     expired_result = AuthResult(credentials=[BearerTokenCred(token=SecretStr("expired_token"))],
                                 token_expires_at=expired_time,
                                 raw={})
@@ -350,7 +341,7 @@ async def test_with_reconnect_timeout_during_auth_no_reconnect():
         client._reconnect = mock_reconnect
 
         async def timeout_operation():
-            raise asyncio.TimeoutError("Auth timeout")
+            raise TimeoutError("Auth timeout")
 
         # Should raise RuntimeError about auth timeout, not reconnect
         with pytest.raises(RuntimeError, match="Authentication timed out"):
@@ -429,7 +420,7 @@ async def test_with_reconnect_timeout_not_during_auth_does_reconnect():
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise asyncio.TimeoutError("Network timeout")
+                raise TimeoutError("Network timeout")
             return "success"
 
         # Should reconnect and succeed
