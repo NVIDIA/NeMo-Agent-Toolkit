@@ -15,6 +15,7 @@
 
 import logging
 import sys
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -40,15 +41,24 @@ def src_dir_fixture(text_file_ingest_dir: Path) -> Path:
     return src_dir
 
 
-@pytest.fixture(scope="session", autouse=True)
-def add_src_dir_to_path_fixture(src_dir: Path) -> Path:
+@pytest.fixture(name="add_src_dir_to_path", scope="session")
+def add_src_dir_to_path_fixture(src_dir: Path) -> Generator[str]:
     # Since this is a documentation guide, it is not installed by default, so we need to manually append it to the path
-    abs_src_dir = src_dir.absolute()
-    if str(abs_src_dir) not in sys.path:
-        sys.path.append(str(abs_src_dir))
-    return abs_src_dir
+    abs_src_dir = str(src_dir.absolute())
+    if abs_src_dir not in sys.path:
+        added = True
+        sys.path.append(abs_src_dir)
+    else:
+        added = False
+
+    yield abs_src_dir
+
+    if added:
+        sys.path.remove(abs_src_dir)
 
 
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key", "add_src_dir_to_path")
 def test_text_file_ingest_full_workflow():
     from text_file_ingest.text_file_ingest_function import TextFileIngestFunctionConfig
     config_file = locate_example_config(TextFileIngestFunctionConfig)
