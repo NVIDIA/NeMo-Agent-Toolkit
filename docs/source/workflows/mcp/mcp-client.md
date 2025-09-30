@@ -69,6 +69,11 @@ The function group can be directly referenced in the workflow configuration and 
 
 The `mcp_client` function group supports the following configuration options:
 
+**Note**: You can get the complete list of configuration options and their schemas by running:
+```bash
+nat info components -t function_groups -q mcp_client
+```
+
 ##### Server Configuration
 
 - `server.transport`: Transport type (`stdio`, `sse`, or `streamable-http`). See [Transport Configuration](#transport-configuration) for details.
