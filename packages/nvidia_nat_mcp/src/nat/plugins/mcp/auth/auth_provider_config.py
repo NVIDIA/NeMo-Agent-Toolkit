@@ -18,7 +18,6 @@ from pydantic import HttpUrl
 from pydantic import model_validator
 
 from nat.authentication.interfaces import AuthProviderBaseConfig
-from nat.data_models.authentication import AuthRequest
 
 
 class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
@@ -51,12 +50,16 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     # Advanced options
     use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
 
-    auth_request: AuthRequest | None = Field(default=None, description="Auth request for authentication (metadata)")
+    default_user_id: str | None = Field(default=None, description="Default user ID for authentication")
+    allow_default_user_id_for_tool_calls: bool = Field(default=True, description="Allow default user ID for tool calls")
 
     @model_validator(mode="after")
     def validate_auth_config(self):
         """Validate authentication configuration for MCP-specific options."""
 
+        # if default_user_id is not provided, use the server_url as the default user id
+        if not self.default_user_id:
+            self.default_user_id = str(self.server_url)
         # Dynamic registration + MCP discovery
         if self.enable_dynamic_registration and not self.client_id:
             # Pure dynamic registration - no explicit credentials needed

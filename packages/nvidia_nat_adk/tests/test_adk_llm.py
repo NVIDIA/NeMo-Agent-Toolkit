@@ -18,8 +18,8 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.llm.litellm_llm import LiteLlmModelConfig
-from nat.plugins.adk.llm import litellm_adk
+from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.adk.llm import openai_adk
 
 # ----------------------------
 # Test Fixtures and Helpers
@@ -35,16 +35,16 @@ def mock_builder():
 @pytest.fixture
 def litellm_config():
     """Sample LiteLLM configuration for testing."""
-    return LiteLlmModelConfig(model_name="gpt-3.5-turbo",
-                              temperature=0.7,
-                              api_key="test-api-key",
-                              base_url="https://api.openai.com/v1")
+    return OpenAIModelConfig(model_name="gpt-3.5-turbo",
+                             temperature=0.7,
+                             api_key="test-api-key",
+                             base_url="https://api.openai.com/v1")
 
 
 @pytest.fixture
 def minimal_litellm_config():
     """Minimal LiteLLM configuration for testing."""
-    return LiteLlmModelConfig(model_name="gpt-4")
+    return OpenAIModelConfig(model_name="gpt-4")
 
 
 # ----------------------------
@@ -60,15 +60,15 @@ async def test_litellm_adk_with_full_config(mock_litellm_class, litellm_config, 
     mock_litellm_class.return_value = mock_llm_instance
 
     # Use async context manager (not async for)
-    async with litellm_adk(litellm_config, mock_builder) as llm:
+    async with openai_adk(litellm_config, mock_builder) as llm:
         result_llm = llm
 
     # Verify LiteLlm was instantiated with correct parameters
-    mock_litellm_class.assert_called_once_with(top_p=1.0,
+    mock_litellm_class.assert_called_once_with('gpt-3.5-turbo',
+                                               top_p=1.0,
                                                temperature=0.7,
                                                api_key='test-api-key',
-                                               api_base='https://api.openai.com/v1',
-                                               model='gpt-3.5-turbo')
+                                               api_base='https://api.openai.com/v1')
 
     # Verify the returned LLM instance
     assert result_llm == mock_llm_instance
@@ -82,17 +82,11 @@ async def test_litellm_adk_with_minimal_config(mock_litellm_class, minimal_litel
     mock_litellm_class.return_value = mock_llm_instance
 
     # Use async context manager (not async for)
-    async with litellm_adk(minimal_litellm_config, mock_builder) as llm:
+    async with openai_adk(minimal_litellm_config, mock_builder) as llm:
         result_llm = llm
 
     # Verify LiteLlm was instantiated with default values for missing fields
-    mock_litellm_class.assert_called_once_with(
-        top_p=1.0,
-        temperature=0.0,
-        model='gpt-4'
-        # api_key=None,  # Not provided in minimal config
-        # api_base=None  # Not provided in minimal config
-    )
+    mock_litellm_class.assert_called_once_with('gpt-4', top_p=1.0, temperature=0.0)
 
     # Verify the returned LLM instance
     assert result_llm == mock_llm_instance
@@ -102,7 +96,7 @@ async def test_litellm_adk_with_minimal_config(mock_litellm_class, minimal_litel
 @pytest.mark.asyncio
 async def test_litellm_adk_config_exclusion(mock_litellm_class, mock_builder):
     """Test that 'type' field is excluded from config when creating LiteLlm."""
-    config_with_type = LiteLlmModelConfig(model_name="gpt-3.5-turbo", temperature=0.5)
+    config_with_type = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.5)
     # Manually add a 'type' field to test exclusion
     config_with_type.__dict__['type'] = 'test_type'
 
@@ -110,18 +104,19 @@ async def test_litellm_adk_config_exclusion(mock_litellm_class, mock_builder):
     mock_litellm_class.return_value = mock_llm_instance
 
     # Use async context manager (not async for)
-    async with litellm_adk(config_with_type, mock_builder) as llm:
+    async with openai_adk(config_with_type, mock_builder) as llm:
         result_llm = llm
 
     # Verify LiteLlm was called (the exact parameters depend on model_dump implementation)
     mock_litellm_class.assert_called_once()
+    call_args = mock_litellm_class.call_args[0]
     call_kwargs = mock_litellm_class.call_args[1]
 
     # Verify that 'type' is not passed to LiteLlm constructor
     assert 'type' not in call_kwargs
 
     # Verify expected parameters are present
-    assert call_kwargs['model'] == "gpt-3.5-turbo"
+    assert call_args[0] == "gpt-3.5-turbo"  # model name as first positional arg
     assert call_kwargs['temperature'] == 0.5
 
     # Verify the returned LLM instance
@@ -136,7 +131,7 @@ async def test_litellm_adk_is_generator(mock_litellm_class, litellm_config, mock
     mock_litellm_class.return_value = mock_llm_instance
 
     # Get the context manager
-    context_manager = litellm_adk(litellm_config, mock_builder)
+    context_manager = openai_adk(litellm_config, mock_builder)
 
     # Verify it's an async context manager
     assert hasattr(context_manager, '__aenter__')
@@ -153,21 +148,21 @@ async def test_litellm_adk_is_generator(mock_litellm_class, litellm_config, mock
 @pytest.mark.asyncio
 async def test_litellm_adk_decorator_registration():
     """Test that the litellm_adk function is properly decorated."""
-    from nat.plugins.adk.llm import litellm_adk
+    from nat.plugins.adk.llm import openai_adk
 
     # Verify the function has the expected attributes from the decorator
     # Note: This test verifies the decorator was applied, but the exact attributes
     # depend on the implementation of register_llm_client decorator
-    assert callable(litellm_adk)
+    assert callable(openai_adk)
 
     # The function should return a context manager when called (due to decorator)
     from unittest.mock import MagicMock
 
-    from nat.llm.litellm_llm import LiteLlmModelConfig
+    from nat.llm.openai_llm import OpenAIModelConfig
 
-    config = LiteLlmModelConfig(model_name="test")
+    config = OpenAIModelConfig(model_name="test")
     builder = MagicMock()
-    result = litellm_adk(config, builder)
+    result = openai_adk(config, builder)
 
     # It should be an async context manager
     assert hasattr(result, '__aenter__')

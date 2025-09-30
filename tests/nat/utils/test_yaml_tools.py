@@ -151,7 +151,7 @@ def test_yaml_dump():
         temp_file_path = temp_file.name
 
     try:
-        with open(temp_file_path, 'r', encoding='utf-8') as f:
+        with open(temp_file_path, encoding='utf-8') as f:
             content = f.read()
             assert "key1: value1" in content
             assert "key2: value2" in content

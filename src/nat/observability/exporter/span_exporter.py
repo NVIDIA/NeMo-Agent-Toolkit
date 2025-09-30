@@ -252,7 +252,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         end_metadata = event.payload.metadata or {}
 
-        if not isinstance(end_metadata, (dict, TraceMetadata)):
+        if not isinstance(end_metadata, dict | TraceMetadata):
             logger.warning("Invalid metadata type for step %s", event.UUID)
             return
 

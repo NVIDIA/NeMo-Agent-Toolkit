@@ -56,7 +56,7 @@ Before using this workflow, ensure you have:
 
 ## Installation and Usage
 
-Follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NVIDIA NeMo Agent Toolkit.
+Follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NVIDIA NeMo Agent Toolkit.
 
 ### Step 1: Set Your API Keys
 
@@ -77,7 +77,7 @@ docker run -d --name opensearch -p 9200:9200 -p 9600:9600 \
 ### Step 3: Install the Workflow
 
 ```bash
-uv pip install -e examples/basic/frameworks/haystack_deep_research_agent
+uv pip install -e examples/frameworks/haystack_deep_research_agent
 ```
 
 ### Step 4: Add Sample Documents (Optional)
@@ -90,13 +90,13 @@ Place documents in the example `data/` directory to enable RAG (PDF, TXT, or MD)
 ```bash
 # Example: Download a sample PDF
 wget "https://docs.aws.amazon.com/pdfs/bedrock/latest/userguide/bedrock-ug.pdf" \
-  -O examples/basic/frameworks/haystack_deep_research_agent/data/bedrock-ug.pdf
+  -O examples/frameworks/haystack_deep_research_agent/data/bedrock-ug.pdf
 ```
 
 ### Step 5: Run the Workflow
 
 ```bash
-nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the latest updates on the Artemis moon mission?"
+nat run --config_file=examples/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the latest updates on the Artemis moon mission?"
 ```
 
 ## Example Queries
@@ -107,26 +107,26 @@ Here are some example queries you can try:
 
 ```bash
 # Current events
-nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the latest developments in AI research for 2024?"
+nat run --config_file=examples/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the latest developments in AI research for 2024?"
 
 # Technology news
-nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the new features in the latest Python release?"
+nat run --config_file=examples/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the new features in the latest Python release?"
 ```
 
 **RAG Examples (if you have documents indexed):**
 
 ```bash
 # Document-specific queries
-nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the key features of AWS Bedrock?"
+nat run --config_file=examples/frameworks/haystack_deep_research_agent/configs/config.yml --input "What are the key features of AWS Bedrock?"
 
 # Mixed queries (will use both web search and RAG)
-nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "How does AWS Bedrock compare to other AI platforms in 2024?"
+nat run --config_file=examples/frameworks/haystack_deep_research_agent/configs/config.yml --input "How does AWS Bedrock compare to other AI platforms in 2024?"
 ```
 
 **Web Search + RAG Examples:**
 
 ```bash
-nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/configs/config.yml --input "Is panna (heavy cream) needed on carbonara? Check online the recipe and compare it with the one from our internal dataset."
+nat run --config_file=examples/frameworks/haystack_deep_research_agent/configs/config.yml --input "Is panna (heavy cream) needed on carbonara? Check online the recipe and compare it with the one from our internal dataset."
 ```
 
 ## Testing
@@ -137,7 +137,7 @@ nat run --config_file=examples/basic/frameworks/haystack_deep_research_agent/con
 
 ```bash
 # In your virtual environment
-pytest -q examples/basic/frameworks/haystack_deep_research_agent/tests -k config_yaml_loads_and_has_keys
+pytest -q examples/frameworks/haystack_deep_research_agent/tests -k config_yaml_loads_and_has_keys
 ```
 
 ### End-to-end test (requires keys + OpenSearch)
@@ -159,7 +159,7 @@ docker run -d --name opensearch -p 9200:9200 -p 9600:9600 \
 pip install pytest-asyncio  # if not already installed
 export NVIDIA_API_KEY=<YOUR_KEY>
 export SERPERDEV_API_KEY=<YOUR_KEY>
-pytest -q examples/basic/frameworks/haystack_deep_research_agent/tests -k full_workflow_e2e
+pytest -q examples/frameworks/haystack_deep_research_agent/tests -k full_workflow_e2e
 ```
 
 ## Configuration

@@ -56,7 +56,7 @@ if typing.TYPE_CHECKING:
     from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
 
 
-class UserManagerHolder():
+class UserManagerHolder:
 
     def __init__(self, context: Context) -> None:
         self._context = context

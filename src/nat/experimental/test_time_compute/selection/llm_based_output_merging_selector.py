@@ -71,7 +71,7 @@ class LLMBasedOutputMergingSelector(StrategyBase):
             raise ImportError("langchain-core is not installed. Please install it to use SingleShotMultiPlanPlanner.\n"
                               "This error can be resolved by installing nvidia-nat-langchain.")
 
-        from typing import Callable
+        from collections.abc import Callable
 
         from pydantic import BaseModel
 

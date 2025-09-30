@@ -224,7 +224,7 @@ def sample_custom_parser(file_path: Path, difficulty: str = "") -> EvalInput:
     """
     Test implementation of a custom dataset parser that:
     """
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding='utf-8') as f:
         data = json.load(f)
 
     # Extract questions array from the nested structure

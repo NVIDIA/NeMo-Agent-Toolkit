@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 from langchain.output_parsers import ResponseSchema
 from langchain.output_parsers import StructuredOutputParser

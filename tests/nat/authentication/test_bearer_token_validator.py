@@ -240,7 +240,6 @@ def validator_both():
 
 
 # ========= JWT path =========
-@pytest.mark.asyncio
 async def test_jwt_happy_path_via_discovery(rsa_private_pem):
     # Create a minimal validator with no audience or scope requirements
     validator = BearerTokenValidator(
@@ -259,15 +258,29 @@ async def test_jwt_happy_path_via_discovery(rsa_private_pem):
     assert res.issuer == ISSUER
 
 
-@pytest.mark.asyncio
 async def test_jwt_wrong_audience_rejected(validator_with_jwks, rsa_private_pem):
     token = _make_jwt(rsa_private_pem, exp_offset_secs=300, audience="other-aud", scopes=SCOPES)
     res = await validator_with_jwks.verify(token)
     assert res.active is False
 
 
+async def test_jwt_insufficient_scopes_rejected(validator_with_jwks, rsa_private_pem):
+    """Test that JWT tokens with insufficient scopes are rejected."""
+    # Create JWT with only "read" scope when validator requires ["read", "write"]
+    token = _make_jwt(rsa_private_pem, exp_offset_secs=300, scopes=["read"], audience=AUDIENCE)
+    res = await validator_with_jwks.verify(token)
+    assert res.active is False
+
+
+async def test_jwt_expired_token_rejected(validator_with_jwks, rsa_private_pem):
+    """Test that expired JWT tokens are rejected."""
+    # Create JWT that expired 60 seconds ago
+    token = _make_jwt(rsa_private_pem, exp_offset_secs=-60, scopes=SCOPES, audience=AUDIENCE)
+    res = await validator_with_jwks.verify(token)
+    assert res.active is False
+
+
 # ========= Opaque path =========
-@pytest.mark.asyncio
 async def test_opaque_happy_path(validator_opaque):
     now = int(time.time())
     _MockAsyncOAuth2Client.response = {
@@ -292,7 +305,6 @@ async def test_opaque_happy_path(validator_opaque):
     assert set(res.scopes or []) == set(SCOPES)
 
 
-@pytest.mark.asyncio
 async def test_opaque_missing_scope_rejected(validator_opaque):
     now = int(time.time())
     _MockAsyncOAuth2Client.response = {
@@ -309,15 +321,30 @@ async def test_opaque_missing_scope_rejected(validator_opaque):
     assert res.active is False
 
 
+async def test_opaque_expired_token_rejected(validator_opaque):
+    """Test that expired opaque tokens are rejected."""
+    now = int(time.time())
+    _MockAsyncOAuth2Client.response = {
+        "active": True,
+        "client_id": "client-abc",
+        "token_type": "access_token",
+        "exp": now - 600,  # expired 10 minutes ago
+        "aud": [AUDIENCE],
+        "iss": ISSUER,
+        "scope": "read write",
+    }
+    token = "opaque-expired-token"
+    res = await validator_opaque.verify(token)
+    assert res.active is False
+
+
 # ========= Routing tests =========
-@pytest.mark.asyncio
 async def test_routing_uses_jwt_when_three_segments(validator_both, rsa_private_pem):
     jwt_token = _make_jwt(rsa_private_pem, exp_offset_secs=300, scopes=SCOPES)
     res = await validator_both.verify(jwt_token)
     assert res.active is True  # verified via JWKS/JWT path
 
 
-@pytest.mark.asyncio
 async def test_routing_uses_opaque_when_non_jwt(validator_both):
     now = int(time.time())
     _MockAsyncOAuth2Client.response = {

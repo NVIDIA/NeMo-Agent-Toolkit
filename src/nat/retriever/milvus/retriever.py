@@ -214,7 +214,7 @@ def _wrap_milvus_results(res: list[Hit], content_field: str):
 
 
 def _wrap_milvus_single_results(res: Hit | dict, content_field: str) -> Document:
-    if not isinstance(res, (Hit, dict)):
+    if not isinstance(res, Hit | dict):
         raise ValueError(f"Milvus search returned object of type {type(res)}. Expected 'Hit' or 'dict'.")
 
     if isinstance(res, Hit):

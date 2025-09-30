@@ -156,3 +156,43 @@ async def test_oauth2_flow_in_process(monkeypatch, mock_server):
     # internal cleanup
     assert handler._active_flows == 0
     assert not handler._flows
+
+
+# --------------------------------------------------------------------------- #
+# Error Recovery Tests                                                        #
+# --------------------------------------------------------------------------- #
+async def test_console_oauth2_flow_error_handling(monkeypatch, mock_server):
+    """Test that Console flow does NOT convert OAuth client creation errors to RuntimeError (inconsistent behavior)."""
+
+    # Create a handler that will fail during OAuth client construction
+    class _FailingTestHandler(ConsoleAuthenticationFlowHandler):
+
+        def __init__(self):
+            super().__init__()
+
+        def construct_oauth_client(self, cfg):
+            # Force a failure during OAuth client creation
+            raise ValueError("Invalid OAuth client configuration")
+
+    cfg = OAuth2AuthCodeFlowProviderConfig(
+        client_id="test_client",
+        client_secret="test_secret",
+        authorization_url="http://testserver/oauth/authorize",
+        token_url="http://testserver/oauth/token",
+        scopes=["read"],
+        use_pkce=True,
+        redirect_uri="http://localhost:8000/auth/redirect",
+    )
+
+    handler = _FailingTestHandler()
+
+    monkeypatch.setattr("webbrowser.open", lambda *_: None, raising=True)  # Don't actually open browser
+    monkeypatch.setattr("click.echo", lambda *_: None, raising=True)  # silence CLI
+
+    # Assert that ValueError is raised (NOT converted to RuntimeError - demonstrates inconsistent error handling)
+    with pytest.raises(ValueError) as exc_info:
+        await handler.authenticate(cfg, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
+
+    # Verify the error message contains the original exception information
+    error_message = str(exc_info.value)
+    assert "Invalid OAuth client configuration" in error_message

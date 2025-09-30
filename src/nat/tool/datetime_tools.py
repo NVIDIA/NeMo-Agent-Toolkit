@@ -72,7 +72,7 @@ async def current_datetime(_config: CurrentTimeToolConfig, _builder: Builder):
         timezone_obj = _get_timezone_obj(headers)
 
         now = datetime.datetime.now(timezone_obj)
-        now_machine_readable = now.strftime(("%Y-%m-%d %H:%M:%S %z"))
+        now_machine_readable = now.strftime("%Y-%m-%d %H:%M:%S %z")
 
         # Returns the current time in machine readable format with timezone offset.
         return f"The current time of day is {now_machine_readable}"

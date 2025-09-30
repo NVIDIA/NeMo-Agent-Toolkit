@@ -143,12 +143,15 @@ def test_mcp_client_tool_list_direct_fetcher_called(mock_fetcher, mock_tools):
     assert result.exit_code == 0
     assert "tool_a" in result.output and "tool_b" in result.output
     assert mock_fetcher.await_args is not None
-    args, _kwargs = mock_fetcher.await_args
-    # Positional args: (command, url, tool, transport, args, env)
-    assert args[0] is None
-    assert args[1] == "http://localhost:9901/mcp"
-    assert args[2] is None
-    assert args[3] == "streamable-http"
+    args, kwargs = mock_fetcher.await_args
+    # Check positional args: (command, url)
+    assert args[0] is None  # command
+    assert args[1] == "http://localhost:9901/mcp"  # url
+    # Check keyword args
+    assert kwargs['tool_name'] is None
+    assert kwargs['transport'] == "streamable-http"
+    assert kwargs['args'] == []
+    assert kwargs['env'] is None
 
 
 def test_mcp_client_tool_call_invalid_json_args():
@@ -510,7 +513,7 @@ def test_ping_mcp_server_timeout(monkeypatch, transport):
         except Exception:
             pass
         # Simulate asyncio.wait_for timing out
-        raise asyncio.TimeoutError
+        raise TimeoutError
 
     monkeypatch.setattr("nat.cli.commands.mcp.mcp.asyncio.wait_for", _raise_timeout)
     res = asyncio.run(ping_mcp_server(url="http://u", timeout=0, transport=transport))
@@ -659,7 +662,7 @@ def test_call_tool_and_print_group_success(monkeypatch):
 
     class _Group:
 
-        def get_accessible_functions(self):
+        async def get_accessible_functions(self):
             return {"mcp_client.echo": _Fn()}
 
     fake_builder_mod = ModuleType("nat.builder.workflow_builder")
@@ -710,7 +713,7 @@ def test_call_tool_and_print_group_tool_not_found(monkeypatch):
 
     class _Group:
 
-        def get_accessible_functions(self):
+        async def get_accessible_functions(self):
             return {"mcp_client.other": object()}
 
     fake_builder_mod = ModuleType("nat.builder.workflow_builder")

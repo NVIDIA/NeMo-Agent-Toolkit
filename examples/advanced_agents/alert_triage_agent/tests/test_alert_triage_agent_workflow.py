@@ -33,7 +33,7 @@ async def test_full_workflow(root_repo_dir: Path):
 
     config_file: Path = locate_example_config(AlertTriageAgentWorkflowConfig, "config_offline_mode.yml")
 
-    with open(config_file, "r", encoding="utf-8") as file:
+    with open(config_file, encoding="utf-8") as file:
         config = yaml.safe_load(file)
         input_filepath = config["eval"]["general"]["dataset"]["file_path"]
 
@@ -42,7 +42,7 @@ async def test_full_workflow(root_repo_dir: Path):
     assert input_filepath_abs.exists(), f"Input data file {input_filepath_abs} does not exist"
 
     # Load input data
-    with open(input_filepath_abs, 'r', encoding="utf-8") as f:
+    with open(input_filepath_abs, encoding="utf-8") as f:
         input_data = json.load(f)
 
     input_data = input_data[0]  # Limit to first row for testing

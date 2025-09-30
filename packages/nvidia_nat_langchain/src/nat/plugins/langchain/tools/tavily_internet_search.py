@@ -41,21 +41,24 @@ async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, bu
     # Refer to create_customize_workflow.md for instructions of getting the API key
 
     async def _tavily_internet_search(question: str) -> str:
+        """This tool retrieves relevant contexts from web search (using Tavily) for the given question.
+
+        Args:
+            question (str): The question to be answered.
+
+        Returns:
+            str: The web search results.
+        """
         # Search the web and get the requested amount of results
         tavily_search = TavilySearch(max_results=tool_config.max_results)
-        tool_results = await tavily_search.ainvoke({'query': question})
-        search_docs = tool_results['results']
+        search_docs = await tavily_search.ainvoke({'query': question})
         # Format
         web_search_results = "\n\n---\n\n".join(
-            [f'<Document href="{doc["url"]}"/>\n{doc["content"]}\n</Document>' for doc in search_docs])
+            [f'<Document href="{doc["url"]}"/>\n{doc["content"]}\n</Document>' for doc in search_docs["results"]])
         return web_search_results
 
     # Create a Generic NAT tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
         _tavily_internet_search,
-        description=("""This tool retrieves relevant contexts from web search (using Tavily) for the given question.
-
-                        Args:
-                            question (str): The question to be answered.
-                    """),
+        description=_tavily_internet_search.__doc__,
     )
