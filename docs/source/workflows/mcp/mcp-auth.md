@@ -18,13 +18,13 @@ limitations under the License.
 # MCP Authentication for the NVIDIA NeMo Agent toolkit
 MCP provides authorization capabilities at the transport level, enabling MCP clients to make requests to restricted MCP servers on behalf of resource owners. The NVIDIA NeMo Agent toolkit provides a set of built-in authentication providers for accessing servers that require authentication. The `mcp_oauth2` provider is the default authentication provider in the NeMo Agent toolkit for MCP servers. It conforms to the [MCP OAuth2](https://modelcontextprotocol.io/specification/draft/basic/authorization) specification.
 
-## Authentication Capabilities
+## Supported Capabilities
 NeMo Agent toolkit MCP authentication provides the capabilities required to access protected MCP servers:
 - Dynamic endpoint discovery using the procedures defined in [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728), [RFC 8414](https://www.rfc-editor.org/rfc/rfc8414), and [OpenID Connect](https://openid.net/specs/openid-connect-core-1_0.html)
 - Client registration using the procedures defined in [RFC 7591](https://www.rfc-editor.org/rfc/rfc7591)
 - Authentication using the procedures defined in the [OAuth2 specification](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13)
 
-## Authentication Providers
+## Configuring an Auth Provider
 `mcp_oauth2` is a built-in authentication provider in the NeMo Agent toolkit that implements the MCP OAuth2 specification. It is used to authenticate with MCP servers that require authentication.
 Sample configuration:
 ```yaml
@@ -47,7 +47,7 @@ To view all configuration options for the `mcp_oauth2` authentication provider, 
  nat info components -t auth_provider -q mcp_oauth2
 ```
 
-## MCP Client Configuration for Authentication
+## Referencing Auth Providers in Clients
 The authentication provider is referenced by name via the `auth_provider` parameter in the MCP client configuration.
 ```yaml
 function_groups:
@@ -59,11 +59,11 @@ function_groups:
       auth_provider: auth_provider_mcp
 ```
 
-## Supported Modes
+## Limitations & Supported Transports
 - MCP Authentication is only supported for `streamable-http` transport. It is not supported for local `stdio` transport or for `sse` transport.
 - Authentication configuration is only available with `mcp_client` style configuration, not with `mcp_tool_wrapper` style configuration.
 
-## MCP Authentication Example Workflow
+## Example Workflow
 The MCP Authentication Example Workflow, `examples/MCP/simple_auth_mcp/README.md`, provides an example of how to use the `mcp_oauth2` authentication provider to authenticate with a MCP server.
 ### Example Configuration
 ```yaml
