@@ -29,6 +29,7 @@ dependencies = [
   "llama-index-embeddings-openai~=0.3.1",
   "llama-index-llms-azure-openai~=0.3.2",
   "llama-index-llms-bedrock~=0.3.8",
+  "llama-index-llms-litellm~=0.5.1",
   "llama-index-llms-nvidia~=0.3.1",
   "llama-index-llms-openai~=0.3.42",
   "llama-index-readers-file~=0.4.4",
