@@ -188,3 +188,6 @@ Sample output:
 Server at http://localhost:9901/mcp is healthy (response time: 4.35ms)
 ```
 This is useful for health checks and monitoring.
+
+## Limitations
+NAT workflows are capable of connecting to protected MCP servers via the MCP Client auth provider. But the NeMo Agent toolkit MCP front-end does not provide auth support natively. So the MCP server launched via the `nat mcp serve` command will function as an unprotected MCP server.
