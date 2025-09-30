@@ -192,4 +192,4 @@ This is useful for health checks and monitoring.
 ## Limitations
 - The `nat mcp serve` command currently starts an MCP server without built-in authentication. This is a temporary limitation; server-side authentication is planned for a future release.
 - NAT workflows can still connect to protected third-party MCP servers via the MCP client auth provider.
-- Recommendation: run `nat mcp serve` behind a trusted network or an authenticating reverse proxy (HTTPS with OAuth2/JWT or mTLS), and avoid exposing it directly to the public Internet.
+- Recommendation: run `nat mcp serve` behind a trusted network or an authenticating reverse proxy (HTTPS with OAuth2, JWT or mTLS), and avoid exposing it directly to the public Internet.
