@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
-import importlib.resources
-import inspect
 import json
 import logging
 from pathlib import Path
@@ -24,6 +21,7 @@ import pytest
 import yaml
 
 from nat.runtime.loader import load_workflow
+from nat.test.utils import locate_example_config
 from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
@@ -31,18 +29,17 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_full_workflow():
+async def test_full_workflow(root_repo_dir: Path):
 
-    package_name = inspect.getmodule(AlertTriageAgentWorkflowConfig).__package__
-
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs",
-                                                                         "config_offline_mode.yml").absolute()
+    config_file: Path = locate_example_config(AlertTriageAgentWorkflowConfig, "config_offline_mode.yml")
 
     with open(config_file, encoding="utf-8") as file:
         config = yaml.safe_load(file)
         input_filepath = config["eval"]["general"]["dataset"]["file_path"]
 
-    input_filepath_abs = importlib.resources.files(package_name).joinpath("../../../../../", input_filepath).absolute()
+    input_filepath_abs = root_repo_dir.joinpath(input_filepath).absolute()
+
+    assert input_filepath_abs.exists(), f"Input data file {input_filepath_abs} does not exist"
 
     # Load input data
     with open(input_filepath_abs, encoding="utf-8") as f:

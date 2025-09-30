@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 
 try:
+    from nat_profiler_agent.register import ProfilerAgentConfig
     from nat_profiler_agent.tool.flow_chart import FlowChartConfig
     from nat_profiler_agent.tool.token_usage import TokenUsageConfig
     PROFILER_AGENT_AVAILABLE = True
@@ -27,6 +28,8 @@ except ImportError:
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
+from nat.test.utils import locate_example_config
+from nat.test.utils import run_workflow
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +54,7 @@ def require_phoenix_server(fail_missing: bool = False):
     import requests
     try:
         response = requests.get("http://localhost:6006/v1/traces", timeout=5)
-        if response.status_code != 200:
-            raise ConnectionError(f"Unexpected status code: {response.status_code}")
+        response.raise_for_status()
     except Exception as e:
         reason = f"Unable to connect to Phoenix server at http://localhost:6006/v1/traces: {e}"
         if fail_missing:
@@ -86,3 +88,10 @@ async def test_token_usage_tool(df_path: Path):
         token_usage_info = result.trace_id_to_token_usage.popitem()[1]
         assert (token_usage_info.token_usage_detail_chart_path is not None
                 and Path(token_usage_info.token_usage_detail_chart_path).exists())
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_full_workflow():
+    config_file: Path = locate_example_config(ProfilerAgentConfig)
+    await run_workflow(config_file, "Is the product of 33 * 4 greater than the current hour of the day?", "yes")
