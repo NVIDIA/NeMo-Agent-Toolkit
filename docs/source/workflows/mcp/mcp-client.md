@@ -71,7 +71,7 @@ The `mcp_client` function group supports the following configuration options:
 
 **Note**: You can get the complete list of configuration options and their schemas by running:
 ```bash
-nat info components -t function_groups -q mcp_client
+nat info components -t function_group -q mcp_client
 ```
 
 ##### Server Configuration
