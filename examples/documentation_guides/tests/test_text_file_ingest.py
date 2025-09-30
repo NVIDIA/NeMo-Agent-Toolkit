@@ -59,7 +59,9 @@ def add_src_dir_to_path_fixture(src_dir: Path) -> Generator[str]:
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key", "add_src_dir_to_path")
-def test_text_file_ingest_full_workflow():
+async def test_text_file_ingest_full_workflow():
     from text_file_ingest.text_file_ingest_function import TextFileIngestFunctionConfig
     config_file = locate_example_config(TextFileIngestFunctionConfig)
-    run_workflow(config_file, "What does DOCA GPUNetIO do to remove the CPU from the critical path?", "GPUDirect")
+    await run_workflow(config_file=config_file,
+                       question="What does DOCA GPUNetIO do to remove the CPU from the critical path?",
+                       expected_answer="GPUDirect")
