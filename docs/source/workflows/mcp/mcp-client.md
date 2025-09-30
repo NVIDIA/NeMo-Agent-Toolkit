@@ -111,8 +111,8 @@ function_groups:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
       auth_provider: "mcp_oauth2"  # Optional authentication
-    tool_call_timeout: "60"  # 1 minute for tool calls
-    auth_flow_timeout: "300"  # 5 minutes for auth flow
+    tool_call_timeout: 60  # 1 minute for tool calls
+    auth_flow_timeout: 300  # 5 minutes for auth flow
     reconnect_enabled: true
     reconnect_max_attempts: 3
     reconnect_initial_backoff: 1.0

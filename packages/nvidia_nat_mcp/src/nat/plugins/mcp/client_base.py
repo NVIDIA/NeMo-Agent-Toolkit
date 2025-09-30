@@ -295,7 +295,7 @@ class MCPBaseClient(ABC):
             # Check if error happened during active authentication flow
             if self._httpx_auth and self._httpx_auth.is_authenticating:
                 # Provide specific error message for authentication timeouts
-                if isinstance(e, asyncio.TimeoutError):
+                if isinstance(e, TimeoutError):
                     logger.error("Timeout during user authentication flow - user may have abandoned authentication")
                     raise RuntimeError(
                         "Authentication timed out. User did not complete authentication in browser within "
