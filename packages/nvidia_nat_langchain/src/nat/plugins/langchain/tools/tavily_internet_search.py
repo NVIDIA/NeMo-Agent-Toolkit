@@ -43,7 +43,8 @@ async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, bu
     async def _tavily_internet_search(question: str) -> str:
         # Search the web and get the requested amount of results
         tavily_search = TavilySearch(max_results=tool_config.max_results)
-        search_docs = await tavily_search.ainvoke({'query': question})
+        tool_results = await tavily_search.ainvoke({'query': question})
+        search_docs = tool_results['results']
         # Format
         web_search_results = "\n\n---\n\n".join(
             [f'<Document href="{doc["url"]}"/>\n{doc["content"]}\n</Document>' for doc in search_docs])
