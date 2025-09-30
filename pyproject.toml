@@ -311,6 +311,8 @@ select = [
   "I",
   # Enable partial pylint support
   "PL",
+  # Enable pyupgrade support
+  "UP"
 ]
 
 extend-ignore = [

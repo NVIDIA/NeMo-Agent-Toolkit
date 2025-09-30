@@ -105,10 +105,10 @@ class WebSocketMessageHandler:
                 if (isinstance(validated_message, WebSocketUserMessage)):
                     await self.process_workflow_request(validated_message)
 
-                elif isinstance(validated_message,
-                                (WebSocketSystemResponseTokenMessage,
-                                 WebSocketSystemIntermediateStepMessage,
-                                 WebSocketSystemInteractionMessage)):
+                elif isinstance(
+                        validated_message,
+                        WebSocketSystemResponseTokenMessage | WebSocketSystemIntermediateStepMessage
+                        | WebSocketSystemInteractionMessage):
                     # These messages are already handled by self.create_websocket_message(data_model=value, …)
                     # No further processing is needed here.
                     pass

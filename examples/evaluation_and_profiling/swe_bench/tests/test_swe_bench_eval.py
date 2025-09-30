@@ -38,7 +38,7 @@ def validate_workflow_output(workflow_output_file: Path):
 
     # Read and validate the workflow_output.json file
     try:
-        with open(workflow_output_file, "r", encoding="utf-8") as f:
+        with open(workflow_output_file, encoding="utf-8") as f:
             result_json = json.load(f)
     except json.JSONDecodeError:
         pytest.fail("Failed to parse workflow_output.json as valid JSON")
@@ -64,7 +64,7 @@ def validate_evaluation_output(eval_output_file: Path):
     # Ensure the file exists
     assert eval_output_file and eval_output_file.exists(), \
         f"The {eval_output_file} file was not created"
-    with open(eval_output_file, "r", encoding="utf-8") as f:
+    with open(eval_output_file, encoding="utf-8") as f:
         result = f.read()
         # load the json file
         try:

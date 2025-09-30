@@ -14,9 +14,9 @@
 # limitations under the License.
 
 import logging
+from collections.abc import Callable
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
-from typing import Callable
 
 import httpx
 from authlib.integrations.httpx_client import OAuth2Client as AuthlibOAuth2Client
@@ -52,8 +52,8 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
             ) as client:
                 new_token_data = client.refresh_token(self.config.token_url, refresh_token=refresh_token)
 
-            expires_at_ts = new_token_data.get("expires_at")
-            new_expires_at = datetime.fromtimestamp(expires_at_ts, tz=timezone.utc) if expires_at_ts else None
+                expires_at_ts = new_token_data.get("expires_at")
+                new_expires_at = datetime.fromtimestamp(expires_at_ts, tz=UTC) if expires_at_ts else None
 
             new_auth_result = AuthResult(
                 credentials=[BearerTokenCred(token=SecretStr(new_token_data["access_token"]))],

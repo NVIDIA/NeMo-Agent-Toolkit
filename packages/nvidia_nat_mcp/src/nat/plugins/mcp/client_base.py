@@ -281,7 +281,7 @@ class MCPBaseClient(ABC):
             raise
 
     @mcp_exception_handler
-    async def get_tools(self) -> dict[str, "MCPToolClient"]:
+    async def get_tools(self) -> dict[str, MCPToolClient]:
         """
         Retrieve a dictionary of all tools served by the MCP server.
         Uses unauthenticated session for discovery.
@@ -546,7 +546,7 @@ class MCPToolClient:
 
     def __init__(self,
                  session: ClientSession,
-                 parent_client: "MCPBaseClient",
+                 parent_client: MCPBaseClient,
                  tool_name: str,
                  tool_description: str | None,
                  tool_input_schema: dict | None = None,
@@ -640,6 +640,6 @@ class MCPToolClient:
 
         except MCPError as e:
             format_mcp_error(e, include_traceback=False)
-            result_str = "MCPToolClient tool call failed: %s" % e.original_exception
+            result_str = f"MCPToolClient tool call failed: {e.original_exception}"
 
         return result_str

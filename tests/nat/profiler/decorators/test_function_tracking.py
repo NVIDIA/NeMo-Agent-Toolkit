@@ -86,8 +86,7 @@ async def test_sync_generator(reactive_stream: Subject):
 
     @track_function
     def number_generator(n):
-        for i in range(n):
-            yield i
+        yield from range(n)
 
     nums = list(number_generator(3))
     assert nums == [0, 1, 2]
@@ -334,8 +333,7 @@ class TestTrackUnregisteredFunction:
 
         @track_unregistered_function
         def count_up_to(n: int) -> Generator[int, None, None]:
-            for i in range(n):
-                yield i
+            yield from range(n)
 
         results = list(count_up_to(3))
 

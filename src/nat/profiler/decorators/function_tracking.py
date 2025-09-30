@@ -40,10 +40,10 @@ def _serialize_data(obj: Any) -> Any:
 
     if isinstance(obj, dict):
         return {str(k): _serialize_data(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple, set)):
+    if isinstance(obj, list | tuple | set):
         return [_serialize_data(item) for item in obj]
 
-    if isinstance(obj, (str, int, float, bool, type(None))):
+    if isinstance(obj, str | int | float | bool | type(None)):
         return obj
 
     # Fallback

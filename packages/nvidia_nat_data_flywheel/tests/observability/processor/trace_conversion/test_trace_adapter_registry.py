@@ -611,10 +611,8 @@ class TestTraceAdapterRegistryEdgeCases:
     def test_complex_return_type_annotation(self):
         """Test registration with complex return type annotations."""
 
-        from typing import Optional
-
         @register_adapter(MockSourceTypeA)
-        def convert_with_optional(trace: TraceContainer) -> Optional[MockTargetType1]:
+        def convert_with_optional(trace: TraceContainer) -> MockTargetType1 | None:
             return MockTargetType1(target_id="test", converted_data={}, source_info="A")
 
         # Should register successfully

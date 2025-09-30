@@ -175,7 +175,7 @@ async def test_optimize_prompts_happy_path_with_recombine(tmp_path: Path):
     assert ckpt_path.exists()
 
     # Final JSON structure contains our prompt param with [prompt, purpose]
-    with open(final_path, "r", encoding="utf-8") as f:
+    with open(final_path, encoding="utf-8") as f:
         best_prompts = json.load(f)
     assert "prompt_param" in best_prompts
     val = best_prompts["prompt_param"]

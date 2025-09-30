@@ -175,7 +175,7 @@ def create_function_wrapper(
                 # Handle different result types for proper formatting
                 if isinstance(result, str):
                     return result
-                if isinstance(result, (dict, list)):
+                if isinstance(result, dict | list):
                     return json.dumps(result, default=str)
                 return str(result)
             except Exception as e:

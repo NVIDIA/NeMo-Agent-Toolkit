@@ -443,7 +443,7 @@ async def ping_mcp_server(url: str,
         # Apply timeout to the entire ping operation
         return await asyncio.wait_for(_ping_operation(), timeout=timeout)
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return MCPPingResult(url=url,
                              status="unhealthy",
                              response_time_ms=None,

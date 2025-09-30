@@ -17,7 +17,6 @@
 
 import argparse
 import datetime
-import io
 import logging
 import os
 import re
@@ -90,7 +89,7 @@ def replace_current_year(line, start, end):
     # first turn a simple regex into double (if applicable). then update years
     res = CheckSimple.sub(r"Copyright (c) \1-\1, NVIDIA CORPORATION", line)
 
-    res = CheckDouble.sub(r"Copyright (c) {:04d}-{:04d}, NVIDIA CORPORATION".format(start, end), res)
+    res = CheckDouble.sub(rf"Copyright (c) {start:04d}-{end:04d}, NVIDIA CORPORATION", res)
     return res
 
 
@@ -137,7 +136,7 @@ def check_copyright(f,
     cr_found = False
     apache_lic_found = not verify_apache_v2
     year_matched = False
-    with io.open(f, "r", encoding="utf-8") as file:
+    with open(f, encoding="utf-8") as file:
         lines = file.readlines()
     for line in lines:
         line_num += 1
@@ -213,7 +212,7 @@ def check_copyright(f,
             logger.info("File: %s. Changing line(s) %s", f, ', '.join(str(x[1]) for x in errs if x[-1] is not None))
             for _, line_num, __, replacement in errs_update:
                 lines[line_num - 1] = replacement
-            with io.open(f, "w", encoding="utf-8") as out_file:
+            with open(f, "w", encoding="utf-8") as out_file:
                 for new_line in lines:
                     out_file.write(new_line)
 

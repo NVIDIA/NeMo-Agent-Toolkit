@@ -52,7 +52,7 @@ def validate_yaml(ctx, param, value):
     if value is None:
         return None
 
-    with open(value, 'r', encoding="utf-8") as f:
+    with open(value, encoding="utf-8") as f:
         yaml.safe_load(f)
 
     return value
