@@ -71,8 +71,8 @@ class ReWOOAgentWorkflowConfig(AgentBaseConfig, name="rewoo_agent"):
 
 @register_function(config_type=ReWOOAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builder):
-    from langchain.schema import BaseMessage
     from langchain_core.messages import trim_messages
+    from langchain_core.messages.base import BaseMessage
     from langchain_core.messages.human import HumanMessage
     from langchain_core.prompts import ChatPromptTemplate
     from langgraph.graph.state import CompiledStateGraph
@@ -154,6 +154,9 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
             # get and return the output from the state
             state = ReWOOGraphState(**state)
             output_message = state.result.content
+            # Ensure output_message is a string
+            if isinstance(output_message, list | dict):
+                output_message = str(output_message)
             return ChatResponse.from_string(output_message)
 
         except Exception as ex:

@@ -132,11 +132,8 @@ class AuthAdapter(httpx.Auth):
                 session_id, is_tool_call = self._get_session_id_from_tool_call_request(request)
 
             if is_tool_call:
-                # Tool call requests should use the session id if it exists, default user id can be used if allowed
-                if self.auth_provider.config.allow_default_user_id_for_tool_calls:
-                    user_id = session_id or self.auth_provider.config.default_user_id
-                else:
-                    user_id = session_id
+                # Tool call requests should use the session id
+                user_id = session_id
             else:
                 # Non-tool call requests should use the session id if it exists and fallback to default user id
                 user_id = session_id or self.auth_provider.config.default_user_id
@@ -203,6 +200,10 @@ class MCPBaseClient(ABC):
         self._reconnect_initial_backoff = reconnect_initial_backoff
         self._reconnect_max_backoff = reconnect_max_backoff
         self._reconnect_lock: asyncio.Lock = asyncio.Lock()
+
+    @property
+    def auth_provider(self) -> AuthProviderBase | None:
+        return self._auth_provider
 
     @property
     def transport(self) -> str:
@@ -355,7 +356,7 @@ class MCPBaseClient(ABC):
             return self._tool_call_timeout
 
     @mcp_exception_handler
-    async def get_tools(self) -> dict[str, "MCPToolClient"]:
+    async def get_tools(self) -> dict[str, MCPToolClient]:
         """
         Retrieve a dictionary of all tools served by the MCP server.
         Uses unauthenticated session for discovery.
@@ -621,7 +622,7 @@ class MCPToolClient:
 
     def __init__(self,
                  session: ClientSession,
-                 parent_client: "MCPBaseClient",
+                 parent_client: MCPBaseClient,
                  tool_name: str,
                  tool_description: str | None,
                  tool_input_schema: dict | None = None):
@@ -661,6 +662,32 @@ class MCPToolClient:
         """
         self._tool_description = description
 
+    def _get_session_id(self) -> str | None:
+        """
+        Get the session id from the context.
+        """
+        from nat.builder.context import Context as _Ctx
+
+        # get auth callback (for example: WebSocketAuthenticationFlowHandler). this is lazily set in the client
+        # on first tool call
+        auth_callback = _Ctx.get().user_auth_callback
+        if auth_callback and self._parent_client:
+            # set custom auth callback
+            self._parent_client.set_user_auth_callback(auth_callback)
+
+        # get session id from context, authentication is done per-websocket session for tool calls
+        session_id = None
+        cookies = getattr(_Ctx.get().metadata, "cookies", None)
+        if cookies:
+            session_id = cookies.get("nat-session")
+
+        if not session_id:
+            # use default user id if allowed
+            if self._parent_client.auth_provider and \
+                self._parent_client.auth_provider.config.allow_default_user_id_for_tool_calls:
+                session_id = self._parent_client.auth_provider.config.default_user_id
+        return session_id
+
     async def acall(self, tool_args: dict) -> str:
         """
         Call the MCP tool with the provided arguments.
@@ -672,25 +699,18 @@ class MCPToolClient:
             raise RuntimeError("No session available for tool call")
 
         # Extract context information
-        session_id = None
         try:
-            from nat.builder.context import Context as _Ctx
-
-            # get auth callback (for example: WebSocketAuthenticationFlowHandler). this is lazily set in the client
-            # on first tool call
-            auth_callback = _Ctx.get().user_auth_callback
-            if auth_callback and self._parent_client:
-                # set custom auth callback
-                self._parent_client.set_user_auth_callback(auth_callback)
-
-            # get session id from context, authentication is done per-websocket session for tool calls
-            cookies = getattr(_Ctx.get().metadata, "cookies", None)
-            if cookies:
-                session_id = cookies.get("nat-session")
+            session_id = self._get_session_id()
         except Exception:
-            pass
+            session_id = None
 
         try:
+            # if auth is enabled and session id is not available return user is not authorized to call the tool
+            if self._parent_client.auth_provider and not session_id:
+                result_str = "User is not authorized to call the tool"
+                mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str), self._parent_client.server_name)
+                raise mcp_error
+
             if session_id:
                 logger.info("Calling tool %s with arguments %s for a user session", self._tool_name, tool_args)
                 result = await self._parent_client.call_tool_with_meta(self._tool_name, tool_args, session_id)
@@ -713,6 +733,6 @@ class MCPToolClient:
 
         except MCPError as e:
             format_mcp_error(e, include_traceback=False)
-            result_str = "MCPToolClient tool call failed: %s" % e.original_exception
+            result_str = f"MCPToolClient tool call failed: {e.original_exception}"
 
         return result_str

@@ -49,7 +49,7 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
     if not secret_key or not public_key:
         raise ValueError("secret and public keys are required for langfuse")
 
-    credentials = f"{public_key}:{secret_key}".encode("utf-8")
+    credentials = f"{public_key}:{secret_key}".encode()
     auth_header = base64.b64encode(credentials).decode("utf-8")
     headers = {"Authorization": f"Basic {auth_header}"}
 

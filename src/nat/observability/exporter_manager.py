@@ -184,7 +184,7 @@ class ExporterManager:
             try:
                 await asyncio.wait_for(asyncio.gather(*cleanup_tasks, return_exceptions=True),
                                        timeout=self._shutdown_timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("Some isolated exporters did not clean up within timeout")
 
         self._active_isolated_exporters.clear()
@@ -301,7 +301,7 @@ class ExporterManager:
             try:
                 task.cancel()
                 await asyncio.wait_for(task, timeout=self._shutdown_timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("Exporter '%s' task did not shut down in time and may be stuck.", name)
                 stuck_tasks.append(name)
             except asyncio.CancelledError:

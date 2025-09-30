@@ -127,7 +127,7 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
         try:
             token = await asyncio.wait_for(flow_state.future, timeout=timeout)
             logger.info("MCP authentication successful, token obtained")
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             logger.error("MCP authentication timed out")
             raise RuntimeError(f"MCP authentication timed out ({timeout} seconds). Please try again.") from exc
         finally:

@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import optuna
@@ -41,8 +40,8 @@ def pick_trial(
     study: Study,
     mode: str = "harmonic",
     *,
-    weights: Optional[Sequence[float]] = None,
-    ref_point: Optional[Sequence[float]] = None,
+    weights: Sequence[float] | None = None,
+    ref_point: Sequence[float] | None = None,
     eps: float = 1e-12,
 ) -> optuna.trial.FrozenTrial:
     """

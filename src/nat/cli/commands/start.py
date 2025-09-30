@@ -111,7 +111,7 @@ class StartCommandGroup(click.Group):
             elif (issubclass(decomposed_type.root, Path)):
                 param_type = click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path)
 
-            elif (issubclass(decomposed_type.root, (list, tuple, set))):
+            elif (issubclass(decomposed_type.root, list | tuple | set)):
                 if (len(decomposed_type.args) == 1):
                     inner = DecomposedType(decomposed_type.args[0])
                     # Support containers of Literal values -> multiple Choice

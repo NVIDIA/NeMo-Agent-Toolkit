@@ -199,7 +199,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         # Wait for the redirect to land
         try:
             token = await asyncio.wait_for(flow_state.future, timeout=300)
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             raise RuntimeError("Authentication timed out (5 min).") from exc
         finally:
             async with self._server_lock:

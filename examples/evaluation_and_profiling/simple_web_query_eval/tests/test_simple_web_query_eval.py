@@ -38,7 +38,7 @@ def validate_workflow_output(workflow_output_file: Path):
 
     # Read and validate the workflow_output.json file
     try:
-        with open(workflow_output_file, "r", encoding="utf-8") as f:
+        with open(workflow_output_file, encoding="utf-8") as f:
             result_json = json.load(f)
     except json.JSONDecodeError:
         pytest.fail("Failed to parse workflow_output.json as valid JSON")
@@ -62,7 +62,7 @@ def validate_rag_accuracy(rag_metric_output_file: Path, score: float):
     # Ensure the ile exists
     assert rag_metric_output_file and rag_metric_output_file.exists(), \
         f"The {rag_metric_output_file} was not created"
-    with open(rag_metric_output_file, "r", encoding="utf-8") as f:
+    with open(rag_metric_output_file, encoding="utf-8") as f:
         result = f.read()
         # load the json file
         try:
@@ -87,7 +87,7 @@ def validate_trajectory_accuracy(trajectory_output_file: Path):
     assert trajectory_output_file and trajectory_output_file.exists(), "The trajectory_output.json file was not created"
 
     trajectory_score_min = 0.1
-    with open(trajectory_output_file, "r", encoding="utf-8") as f:
+    with open(trajectory_output_file, encoding="utf-8") as f:
         result = f.read()
         # load the json file
         try:

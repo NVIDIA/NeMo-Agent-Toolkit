@@ -280,7 +280,7 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
         A list of PathInfo objects.
     """
     paths = []
-    with open(filename, "r", encoding="utf-8") as f:
+    with open(filename, encoding="utf-8") as f:
         section: list[str] = []
         in_skipped_section: bool = False
         skip_next_line: bool = False

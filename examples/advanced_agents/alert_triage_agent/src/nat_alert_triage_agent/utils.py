@@ -103,7 +103,7 @@ def preload_offline_data(offline_data_path: str | None, benign_fallback_data_pat
     _DATA_CACHE['offline_data'] = pd.read_csv(offline_data_path)
     logger.info("Preloaded test data from: %s", offline_data_path)
 
-    with open(benign_fallback_data_path, "r", encoding="utf-8") as f:
+    with open(benign_fallback_data_path, encoding="utf-8") as f:
         _DATA_CACHE['benign_fallback_offline_data'] = json.load(f)
     logger.info("Preloaded benign fallback data from: %s", benign_fallback_data_path)
 

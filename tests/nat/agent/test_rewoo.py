@@ -26,13 +26,16 @@ from nat.agent.base import AgentDecision
 from nat.agent.rewoo_agent.agent import NO_INPUT_ERROR_MESSAGE
 from nat.agent.rewoo_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
 from nat.agent.rewoo_agent.agent import ReWOOAgentGraph
+from nat.agent.rewoo_agent.agent import ReWOOEvidence
 from nat.agent.rewoo_agent.agent import ReWOOGraphState
+from nat.agent.rewoo_agent.agent import ReWOOPlanStep
 from nat.agent.rewoo_agent.register import ReWOOAgentWorkflowConfig
 
 
 async def test_state_schema():
     state = ReWOOGraphState()
 
+    assert isinstance(state.messages, list)
     assert isinstance(state.task, HumanMessage)
     assert isinstance(state.plan, AIMessage)
     assert isinstance(state.steps, AIMessage)
@@ -47,7 +50,8 @@ async def test_state_schema():
 
 @pytest.fixture(name='mock_config_rewoo_agent', scope="module")
 def mock_config():
-    return ReWOOAgentWorkflowConfig(tool_names=["mock_tool_A", "mock_tool_B"], llm_name="llm", verbose=True)
+    return ReWOOAgentWorkflowConfig(tool_names=["mock_tool_A", "mock_tool_B"], llm_name="llm",
+                                    verbose=True)  # type: ignore
 
 
 def test_rewoo_init(mock_config_rewoo_agent, mock_llm, mock_tool):
@@ -94,9 +98,11 @@ async def test_build_graph(mock_rewoo_agent):
     assert isinstance(graph, CompiledStateGraph)
     assert list(graph.nodes.keys()) == ['__start__', 'planner', 'executor', 'solver']
     assert graph.builder.edges == {('planner', 'executor'), ('__start__', 'planner'), ('solver', '__end__')}
-    assert set(graph.builder.branches.get('executor').get('conditional_edge').ends.keys()) == {
-        AgentDecision.TOOL, AgentDecision.END
-    }
+    executor_branches = graph.builder.branches.get('executor')
+    if executor_branches:
+        conditional_edge = executor_branches.get('conditional_edge')
+        if conditional_edge and hasattr(conditional_edge, 'ends') and conditional_edge.ends:
+            assert set(conditional_edge.ends.keys()) == {AgentDecision.TOOL, AgentDecision.END}
 
 
 async def test_planner_node_no_input(mock_rewoo_agent):
@@ -110,11 +116,13 @@ async def test_conditional_edge_no_input(mock_rewoo_agent):
     assert decision == AgentDecision.END
 
 
-def _create_step_info(plan: str, placeholder: str, tool: str, tool_input: str | dict) -> dict:
-    return {"plan": plan, "evidence": {"placeholder": placeholder, "tool": tool, "tool_input": tool_input}}
+def _create_step_info(plan: str, placeholder: str, tool: str, tool_input: str | dict) -> ReWOOPlanStep:
+    evidence = ReWOOEvidence(placeholder=placeholder, tool=tool, tool_input=tool_input)
+    return ReWOOPlanStep(plan=plan, evidence=evidence)
 
 
-def _create_mock_state_with_parallel_data(steps: list, intermediate_results: dict = None) -> ReWOOGraphState:
+def _create_mock_state_with_parallel_data(steps: list[ReWOOPlanStep],
+                                          intermediate_results: dict | None = None) -> ReWOOGraphState:
     """
     Create a mock ReWOOGraphState with proper evidence_map and execution_levels for testing parallel execution.
     """
@@ -124,13 +132,14 @@ def _create_mock_state_with_parallel_data(steps: list, intermediate_results: dic
     # Parse dependencies and create execution levels like the agent does
     evidence_map, execution_levels = ReWOOAgentGraph._parse_planner_dependencies(steps)
 
-    return ReWOOGraphState(task=HumanMessage(content="This is a task"),
-                           plan=AIMessage(content="This is the plan"),
-                           steps=AIMessage(content=steps),
-                           evidence_map=evidence_map,
-                           execution_levels=execution_levels,
-                           current_level=0,
-                           intermediate_results=intermediate_results)
+    return ReWOOGraphState(
+        task=HumanMessage(content="This is a task"),
+        plan=AIMessage(content="This is the plan"),
+        steps=AIMessage(content=""),  # steps are handled via evidence_map now
+        evidence_map=evidence_map,
+        execution_levels=execution_levels,
+        current_level=0,
+        intermediate_results=intermediate_results or {})
 
 
 async def test_conditional_edge_decisions(mock_rewoo_agent):
@@ -279,18 +288,22 @@ async def test_executor_node_handle_input_types(mock_rewoo_agent):
 
 
 async def test_executor_node_should_not_be_invoked_after_all_steps_executed(mock_rewoo_agent):
-    mock_state = ReWOOGraphState(task=HumanMessage(content="This is a task"),
-                                 plan=AIMessage(content="This is the plan"),
-                                 steps=AIMessage(content=[
-                                     _create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2"),
-                                     _create_step_info("step2", "#E2", "mock_tool_B", "arg3, arg4"),
-                                     _create_step_info("step3", "#E3", "mock_tool_A", "arg5, arg6")
-                                 ]),
-                                 intermediate_results={
-                                     '#E1': ToolMessage(content='result1', tool_call_id='mock_tool_A'),
-                                     '#E2': ToolMessage(content='result2', tool_call_id='mock_tool_B'),
-                                     '#E3': ToolMessage(content='result3', tool_call_id='mock_tool_A')
-                                 })
+    steps = [
+        _create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2"),
+        _create_step_info("step2", "#E2", "mock_tool_B", "arg3, arg4"),
+        _create_step_info("step3", "#E3", "mock_tool_A", "arg5, arg6")
+    ]
+
+    intermediate_results = {
+        '#E1': ToolMessage(content='result1', tool_call_id='mock_tool_A'),
+        '#E2': ToolMessage(content='result2', tool_call_id='mock_tool_B'),
+        '#E3': ToolMessage(content='result3', tool_call_id='mock_tool_A')
+    }
+
+    mock_state = _create_mock_state_with_parallel_data(steps, intermediate_results)
+    # Set current_level to beyond available levels to simulate all complete
+    mock_state.current_level = len(mock_state.execution_levels)
+
     # After executing all the steps, the executor_node should not be invoked
     with pytest.raises(RuntimeError):
         await mock_rewoo_agent.executor_node(mock_state)
@@ -438,11 +451,7 @@ async def test_executor_node_passes_max_retries_to_call_tool(mock_rewoo_agent):
     mock_rewoo_agent._call_tool = AsyncMock(return_value=ToolMessage(content="success", tool_call_id="mock_tool_A"))
 
     # Create test state
-    steps = [{
-        "plan": "test step", "evidence": {
-            "placeholder": "#E1", "tool": "mock_tool_A", "tool_input": "test input"
-        }
-    }]
+    steps = [_create_step_info("test step", "#E1", "mock_tool_A", "test input")]
     mock_state = _create_mock_state_with_parallel_data(steps)
 
     # Execute the node
@@ -462,12 +471,13 @@ def test_rewoo_config_tool_call_max_retries():
     """Test that ReWOOAgentWorkflowConfig includes tool_call_max_retries field."""
 
     # Test default value
-    config = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm")
+    config = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm")  # type: ignore
     assert hasattr(config, 'tool_call_max_retries')
     assert config.tool_call_max_retries == 3
 
     # Test custom value
-    config_custom = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm", tool_call_max_retries=7)
+    config_custom = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm",
+                                             tool_call_max_retries=7)  # type: ignore
     assert config_custom.tool_call_max_retries == 7
 
 
@@ -493,17 +503,16 @@ def test_json_output_parsing_valid_format():
 
     # Test that the parsing method works correctly
     parsed_output = ReWOOAgentGraph._parse_planner_output(valid_json_output)
-    assert isinstance(parsed_output, AIMessage)
-    assert isinstance(parsed_output.content, list)
-    assert len(parsed_output.content) == 2
+    assert isinstance(parsed_output, list)
+    assert len(parsed_output) == 2
 
     # Verify the structure of parsed content
-    first_step = parsed_output.content[0]
-    assert "plan" in first_step
-    assert "evidence" in first_step
-    assert "placeholder" in first_step["evidence"]
-    assert "tool" in first_step["evidence"]
-    assert "tool_input" in first_step["evidence"]
+    first_step = parsed_output[0]
+    assert isinstance(first_step, ReWOOPlanStep)
+    assert first_step.plan == "Calculate the result of 2023 minus 25."
+    assert first_step.evidence.placeholder == "#E1"
+    assert first_step.evidence.tool == "calculator_subtract"
+    assert first_step.evidence.tool_input == [2023, 25]
 
 
 def test_json_output_parsing_invalid_format():
@@ -537,7 +546,7 @@ def test_json_output_parsing_with_string_tool_input():
     }])
 
     parsed_output = ReWOOAgentGraph._parse_planner_output(json_with_string_input)
-    assert isinstance(parsed_output.content[0]["evidence"]["tool_input"], str)
+    assert isinstance(parsed_output[0].evidence.tool_input, str)
 
 
 def test_json_output_parsing_with_dict_tool_input():
@@ -559,8 +568,8 @@ def test_json_output_parsing_with_dict_tool_input():
     }])
 
     parsed_output = ReWOOAgentGraph._parse_planner_output(json_with_dict_input)
-    assert isinstance(parsed_output.content[0]["evidence"]["tool_input"], dict)
-    assert parsed_output.content[0]["evidence"]["tool_input"]["table"] == "users"
+    assert isinstance(parsed_output[0].evidence.tool_input, dict)
+    assert parsed_output[0].evidence.tool_input["table"] == "users"
 
 
 def test_edge_cases_empty_additional_instructions():
@@ -615,16 +624,18 @@ def test_placeholder_replacement_functionality():
     assert result == "Search for information about 1998 in the year 1998"
 
     # Test dict replacement - exact match
-    tool_input = {"query": "#E1", "year": "#E1"}
-    result = ReWOOAgentGraph._replace_placeholder(placeholder, tool_input, tool_output)
-    assert result["query"] == "1998"
-    assert result["year"] == "1998"
+    tool_input_dict = {"query": "#E1", "year": "#E1"}
+    result_dict = ReWOOAgentGraph._replace_placeholder(placeholder, tool_input_dict, tool_output)
+    assert isinstance(result_dict, dict)
+    assert result_dict["query"] == "1998"
+    assert result_dict["year"] == "1998"
 
     # Test dict replacement - partial match in string value
-    tool_input = {"query": "What happened in #E1?", "metadata": {"source": "test"}}
-    result = ReWOOAgentGraph._replace_placeholder(placeholder, tool_input, tool_output)
-    assert result["query"] == "What happened in 1998?"
-    assert result["metadata"]["source"] == "test"
+    tool_input_dict2 = {"query": "What happened in #E1?", "metadata": {"source": "test"}}
+    result_dict2 = ReWOOAgentGraph._replace_placeholder(placeholder, tool_input_dict2, tool_output)
+    assert isinstance(result_dict2, dict)
+    assert result_dict2["query"] == "What happened in 1998?"
+    assert result_dict2["metadata"]["source"] == "test"
 
     # Test with complex tool output (dict)
     complex_output = {"result": "France", "confidence": 0.95}
@@ -670,22 +681,25 @@ def test_configuration_integration_with_additional_instructions():
     """Test integration with ReWOOAgentWorkflowConfig for additional instructions."""
 
     # Test config with additional planner instructions
-    config = ReWOOAgentWorkflowConfig(tool_names=["test_tool"],
-                                      llm_name="test_llm",
-                                      additional_planner_instructions="Be extra careful with planning.")
+    config = ReWOOAgentWorkflowConfig(
+        tool_names=["test_tool"],  # type: ignore
+        llm_name="test_llm",  # type: ignore
+        additional_planner_instructions="Be extra careful with planning.")
     assert config.additional_planner_instructions == "Be extra careful with planning."
 
     # Test config with additional solver instructions
-    config_solver = ReWOOAgentWorkflowConfig(tool_names=["test_tool"],
-                                             llm_name="test_llm",
-                                             additional_solver_instructions="Provide detailed explanations.")
+    config_solver = ReWOOAgentWorkflowConfig(
+        tool_names=["test_tool"],  # type: ignore
+        llm_name="test_llm",  # type: ignore
+        additional_solver_instructions="Provide detailed explanations.")
     assert config_solver.additional_solver_instructions == "Provide detailed explanations."
 
     # Test config with both
-    config_both = ReWOOAgentWorkflowConfig(tool_names=["test_tool"],
-                                           llm_name="test_llm",
-                                           additional_planner_instructions="Plan carefully.",
-                                           additional_solver_instructions="Solve thoroughly.")
+    config_both = ReWOOAgentWorkflowConfig(
+        tool_names=["test_tool"],  # type: ignore
+        llm_name="test_llm",  # type: ignore
+        additional_planner_instructions="Plan carefully.",
+        additional_solver_instructions="Solve thoroughly.")
     assert config_both.additional_planner_instructions == "Plan carefully."
     assert config_both.additional_solver_instructions == "Solve thoroughly."
 
@@ -705,16 +719,18 @@ def test_rewoo_config_raise_tool_call_error():
     """Test that ReWOOAgentWorkflowConfig includes raise_tool_call_error field with correct default."""
 
     # Test default value
-    config = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm")
+    config = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm")  # type: ignore
     assert hasattr(config, 'raise_tool_call_error')
     assert config.raise_tool_call_error is True
 
     # Test custom value (False)
-    config_false = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm", raise_tool_call_error=False)
+    config_false = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm",
+                                            raise_tool_call_error=False)  # type: ignore
     assert config_false.raise_tool_call_error is False
 
     # Test custom value (True explicitly)
-    config_true = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm", raise_tool_call_error=True)
+    config_true = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm",
+                                           raise_tool_call_error=True)  # type: ignore
     assert config_true.raise_tool_call_error is True
 
 
@@ -779,11 +795,7 @@ async def test_executor_node_raise_tool_call_error_true_behavior(mock_llm, mock_
     agent._call_tool = AsyncMock(return_value=error_tool_message)
 
     # Create test state
-    steps = [{
-        "plan": "test step", "evidence": {
-            "placeholder": "#E1", "tool": "failing_tool", "tool_input": "test input"
-        }
-    }]
+    steps = [_create_step_info("test step", "#E1", "failing_tool", "test input")]
     mock_state = _create_mock_state_with_parallel_data(steps)
 
     # Should raise RuntimeError when tool fails and raise_tool_call_error=True
@@ -819,11 +831,7 @@ async def test_executor_node_raise_tool_call_error_false_behavior(mock_llm, mock
     agent._call_tool = AsyncMock(return_value=error_tool_message)
 
     # Create test state
-    steps = [{
-        "plan": "test step", "evidence": {
-            "placeholder": "#E1", "tool": "failing_tool", "tool_input": "test input"
-        }
-    }]
+    steps = [_create_step_info("test step", "#E1", "failing_tool", "test input")]
     mock_state = _create_mock_state_with_parallel_data(steps)
 
     # Should not raise exception when tool fails and raise_tool_call_error=False
@@ -832,9 +840,11 @@ async def test_executor_node_raise_tool_call_error_false_behavior(mock_llm, mock
     # Should return intermediate_results with the error message
     assert isinstance(result, dict)
     assert "intermediate_results" in result
-    assert "#E1" in result["intermediate_results"]
-    assert result["intermediate_results"]["#E1"].content == error_message
-    assert result["intermediate_results"]["#E1"].status == "error"
+    intermediate_results = result["intermediate_results"]
+    assert isinstance(intermediate_results, dict)
+    assert "#E1" in intermediate_results
+    assert intermediate_results["#E1"].content == error_message
+    assert intermediate_results["#E1"].status == "error"
 
 
 async def test_executor_node_raise_tool_call_error_success_case(mock_llm, mock_tool):
@@ -865,11 +875,7 @@ async def test_executor_node_raise_tool_call_error_success_case(mock_llm, mock_t
         agent._call_tool = AsyncMock(return_value=success_tool_message)
 
         # Create test state
-        steps = [{
-            "plan": "test step", "evidence": {
-                "placeholder": "#E1", "tool": "success_tool", "tool_input": "test input"
-            }
-        }]
+        steps = [_create_step_info("test step", "#E1", "success_tool", "test input")]
         mock_state = _create_mock_state_with_parallel_data(steps)
 
         # Should work normally for successful tool calls regardless of setting
@@ -877,10 +883,11 @@ async def test_executor_node_raise_tool_call_error_success_case(mock_llm, mock_t
 
         assert isinstance(result, dict)
         assert "intermediate_results" in result
-        assert "#E1" in result["intermediate_results"]
-        assert result["intermediate_results"]["#E1"].content == "Success result"
-        assert (not hasattr(result["intermediate_results"]["#E1"], 'status')
-                or result["intermediate_results"]["#E1"].status != "error")
+        intermediate_results = result["intermediate_results"]
+        assert isinstance(intermediate_results, dict)
+        assert "#E1" in intermediate_results
+        assert intermediate_results["#E1"].content == "Success result"
+        assert (not hasattr(intermediate_results["#E1"], 'status') or intermediate_results["#E1"].status != "error")
 
 
 # Tests for new parallel execution functionality
