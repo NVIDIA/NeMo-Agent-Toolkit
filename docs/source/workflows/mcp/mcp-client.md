@@ -65,6 +65,61 @@ The function group supports filtering via the `include` and `exclude` parameters
 
 The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers. See [Function Groups](../function-groups.md) for more information about function group capabilities.
 
+#### Configuration Options
+
+The `mcp_client` function group supports the following configuration options:
+
+##### Server Configuration
+
+- `server.transport`: Transport type (`stdio`, `sse`, or `streamable-http`). See [Transport Configuration](#transport-configuration) for details.
+- `server.url`: URL of the MCP server (required for `sse` and `streamable-http` transports)
+- `server.command`: Command to run for `stdio` transport (such as `python` or `docker`)
+- `server.args`: Arguments for the stdio command
+- `server.env`: Environment variables for the stdio process
+- `server.auth_provider`: Reference to authentication provider for protected MCP servers (only supported with `streamable-http` transport)
+
+##### Timeout Configuration
+
+- `tool_call_timeout`: Timeout for MCP tool calls. Defaults to `60` seconds
+- `auth_flow_timeout`: Timeout for interactive authentication flow. Defaults to `300` seconds
+
+##### Reconnection Configuration
+
+- `reconnect_enabled`: Whether to enable reconnecting to the MCP server if the connection is lost. Defaults to `true`.
+- `reconnect_max_attempts`: Maximum number of reconnect attempts. Defaults to `2`.
+- `reconnect_initial_backoff`: Initial backoff time for reconnect attempts. Defaults to `0.5` seconds.
+- `reconnect_max_backoff`: Maximum backoff time for reconnect attempts. Defaults to `50.0` seconds.
+
+##### Tool Customization
+
+- `tool_overrides`: Optional overrides for tool names and descriptions. Each entry can specify:
+  - `alias`: Override the tool name (function name in the workflow)
+  - `description`: Override the tool description
+
+Example with all options:
+
+```yaml
+function_groups:
+  mcp_tools:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "http://localhost:9901/mcp"
+      auth_provider: "mcp_oauth2"  # Optional authentication
+    tool_call_timeout: "60"  # 1 minute for tool calls
+    auth_flow_timeout: "300"  # 5 minutes for auth flow
+    reconnect_enabled: true
+    reconnect_max_attempts: 3
+    reconnect_initial_backoff: 1.0
+    reconnect_max_backoff: 60.0
+    tool_overrides:
+      calculator_add:
+        alias: "add_numbers"
+        description: "Add two numbers together"
+      calculator_multiply:
+        description: "Multiply two numbers"  # Keeps original name
+```
+
 ### `mcp_tool_wrapper` Configuration
 ```yaml
 functions:
