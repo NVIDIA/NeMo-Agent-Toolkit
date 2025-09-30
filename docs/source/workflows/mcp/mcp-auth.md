@@ -39,7 +39,7 @@ authentication:
 Configuration options:
 - `server_url`: The URL of the MCP server that requires authentication.
 - `redirect_uri`: The redirect URI for the OAuth2 flow.
-- `default_user_id`: The user ID for setting discovering and adding tools to the workflow at startup. The `default_user_id` can be any string and is used as the key to cache the user's information. It defaults to the `server_url` if not provided.
+- `default_user_id`: The user ID for discovering and adding tools to the workflow at startup. The `default_user_id` can be any string and is used as the key to cache the user's information. It defaults to the `server_url` if not provided.
 - `allow_default_user_id_for_tool_calls`: Whether to allow the default user ID for tool calls. This is typically enabled for single-user workflows, for example, a workflow that is launched using the `nat run` CLI command. For multi-user workflows, this should be disabled to avoid accidental tool calls by unauthorized users.
 
 To view all configuration options for the `mcp_oauth2` authentication provider, run the following command:
@@ -170,8 +170,11 @@ This will use the `mcp_oauth2` authentication provider to authenticate the user.
 - Scope OAuth2 tokens to the minimum required permissions.
 
 ## Troubleshooting
-1. If setup fails, the user identified by `default_user_id` did not complete the authentication flow through the pop-up UI, or the user did not authorize the workflow to access the MCP server.
-2. If you encounter an error like "User is not authorized to call the tool", it means that:
+1.  **Setup fails** - This can happen if:
+- The user identified by `default_user_id` did not complete the authentication flow through the pop-up UI, or
+- The user did not authorize the workflow to access the MCP server
+
+2. **Tool calls fail** - This can happen if:
 - The workflow was not accessed in `WebSocket` mode, or
 - The user did not complete the authentication flow through the `WebSocket` UI, or
 - The user is not authorized to call the tool
