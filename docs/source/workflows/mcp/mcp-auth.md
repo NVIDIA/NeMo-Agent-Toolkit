@@ -40,7 +40,7 @@ Configuration options:
 - `server_url`: The URL of the MCP server that requires authentication.
 - `redirect_uri`: The redirect URI for the OAuth2 flow.
 - `default_user_id`: The user ID for setting discovering and adding tools to the workflow at startup. The `default_user_id` can be any string and is used as the key to cache the user's information. It defaults to the `server_url` if not provided.
-- `allow_default_user_id_for_tool_calls`: Whether to allow the default user ID for tool calls. This is typically enabled for single-user workflows, for example, a workflow that is launched using the `nat run` CLIcommand. For multi-user workflows, this should be disabled to avoid accidental tool calls by unauthorized users.
+- `allow_default_user_id_for_tool_calls`: Whether to allow the default user ID for tool calls. This is typically enabled for single-user workflows, for example, a workflow that is launched using the `nat run` CLI command. For multi-user workflows, this should be disabled to avoid accidental tool calls by unauthorized users.
 
 To view all configuration options for the `mcp_oauth2` authentication provider, run the following command:
 ```bash
@@ -96,6 +96,13 @@ authentication:
 ### Running the Workflow in Single-User Mode (CLI)
 In this mode, the `default_user_id` is used for authentication during setup and for subsequent tool calls.
 
+```{mermaid}
+flowchart LR
+  U[User<br/>default-user-id] --> H[MCP Host<br/>NAT Workflow]
+  H --> C[MCP Client<br/>default-user-id]
+  C --> S[MCP Server<br/>Protected Jira Service]
+```
+
 Set the environment variables to access the protected MCP server:
 ```bash
 export CORPORATE_MCP_JIRA_URL="https://your-jira-server.com/mcp"
@@ -110,6 +117,21 @@ nat run --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.
 ### Running the Workflow in Multi-User Mode (FastAPI)
 In this mode the workflow is served via a FastAPI frontend. Multiple users can access the workflow concurrently using a UI with `WebSocket` mode enabled.
 
+```{mermaid}
+flowchart LR
+  U0[User<br/>default-user-id] --> H2[MCP Host<br/>NAT Workflow]
+  U1[User<br/>UI-User-1] --> H2
+  U2[User<br/>UI-User-2] --> H2
+
+  H2 --> C0[MCP Client<br/>default-user-id]
+  H2 --> C1[MCP Client<br/>UI-User-1]
+  H2 --> C2[MCP Client<br/>UI-User-2]
+
+  C0 --> S2[MCP Server]
+  C1 --> S2
+  C2 --> S2
+```
+
 1. Set the environment variables to access the protected MCP server:
 ```bash
 export CORPORATE_MCP_JIRA_URL="https://your-jira-server.com/mcp"
@@ -120,7 +142,7 @@ export ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS=false
 ```bash
 nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.yml
 ```
-At this point, a consent window is displayed to the user. The user must authorize the workflow to access the MCP server. This user's information is cached as the default user ID. The `default users` credentials are only used for the initial setup and for populating the tools in the workflow or agent prompt at startup.
+At this point, a consent window is displayed to the user. The user must authorize the workflow to access the MCP server. This user's information is cached as the default user ID. The `default_user_id` credentials are only used for the initial setup and for populating the tools in the workflow or agent prompt at startup.
 
 Subsequent tool calls can be disabled for the default user ID by setting `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration. This is recommended for multi-user workflows to avoid accidental tool calls by unauthorized users.
 
@@ -141,34 +163,6 @@ MCP client CLI can be used to display and call MCP tools on a remote MCP server.
 nat mcp client tool list --url http://example.com/mcp --auth
 ```
 This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, see the [MCP Client](./mcp-client.md) documentation.
-
-## Flow Diagrams
-
-### Single-User Flow
-
-```{mermaid}
-graph LR
-  U[User\n(default-user-id)] --> H[MCP Host\n(NAT Workflow)]
-  H --> C[MCP Client\n(default-user-id)]
-  C --> S[MCP Server\n(Protected Jira Service)]
-```
-
-### Multi-User Flow
-
-```{mermaid}
-graph LR
-  U0[User\n(default-user-id)] --> H2[MCP Host\n(NAT Workflow)]
-  U1[User\n(UI-User-Lily)] --> H2
-  U2[User\n(UI-User-Hibiscus)] --> H2
-
-  H2 --> C0[MCP Client\n(default-user-id)]
-  H2 --> C1[MCP Client\n(UI-User-Lily)]
-  H2 --> C2[MCP Client\n(UI-User-Hibiscus)]
-
-  C0 --> S2[MCP Server]
-  C1 --> S2
-  C2 --> S2
-```
 
 ## Security Considerations
 - The `default_user_id` is used to cache the authenticating user during setup and optionally for tool calls. It is recommended to set `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration for multi-user workflows to avoid accidental tool calls by unauthorized users.
