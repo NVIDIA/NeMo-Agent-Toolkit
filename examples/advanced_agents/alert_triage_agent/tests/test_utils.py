@@ -284,4 +284,3 @@ async def test_run_ansible_playbook_various(status, rc, events, stdout, expected
         assert result["task_results"] == expected_tasks(events or [])
         if not events:
             assert result["raw_output"] == expected_raw
-            assert result["raw_output"] == expected_raw

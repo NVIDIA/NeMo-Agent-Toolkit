@@ -60,4 +60,3 @@ async def test_full_workflow(root_repo_dir: Path):
 
     # Check that rows with hosts not under maintenance contain root cause categorization
     assert "root cause category" in result.lower()
-    assert "root cause category" in result.lower()
