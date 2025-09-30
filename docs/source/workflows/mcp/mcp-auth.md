@@ -34,7 +34,7 @@ authentication:
     server_url: "http://localhost:9901/mcp"
     redirect_uri: http://localhost:8000/auth/redirect
     default_user_id: ${NAT_USER_ID}
-    allow_default_user_id_for_tool_calls: true
+    allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 Configuration options:
 - `server_url`: The URL of the MCP server that requires authentication.
@@ -47,6 +47,16 @@ To view all configuration options for the `mcp_oauth2` authentication provider, 
  nat info components -t auth_provider -q mcp_oauth2
 ```
 
+### Environment Variables
+Some configuration values are commonly provided through environment variables:
+- `NAT_USER_ID`: Used as `default_user_id` to cache the authenticating user during setup and optionally for tool calls. Defaults to the `server_url` if not provided.
+- `ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS`: Controls whether the default user can invoke tools. Defaults to `true` if not provided.
+
+Set them for your current shell:
+```bash
+export NAT_USER_ID="dev-user"
+export ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS=true
+```
 ## Referencing Auth Providers in Clients
 The authentication provider is referenced by name via the `auth_provider` parameter in the MCP client configuration.
 ```yaml
@@ -85,6 +95,14 @@ authentication:
 ```
 ### Running the Workflow in Single-User Mode (CLI)
 In this mode, the `default_user_id` is used for authentication during setup and for subsequent tool calls.
+
+Set the environment variables to access the protected MCP server:
+```bash
+export CORPORATE_MCP_JIRA_URL="https://your-jira-server.com/mcp"
+export NAT_USER_ID="dev-user"
+export ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS=true
+```
+Then run the workflow:
 ```bash
 nat run --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.yml --input "What is Jira ticket AIQ-1935 about"
 ```
@@ -92,7 +110,13 @@ nat run --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.
 ### Running the Workflow in Multi-User Mode (FastAPI)
 In this mode the workflow is served via a FastAPI frontend. Multiple users can access the workflow concurrently using a UI with `WebSocket` mode enabled.
 
-1. **Start the workflow**:
+1. Set the environment variables to access the protected MCP server:
+```bash
+export CORPORATE_MCP_JIRA_URL="https://your-jira-server.com/mcp"
+export NAT_USER_ID="dev-user"
+export ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS=false
+```
+2. **Start the workflow**:
 ```bash
 nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.yml
 ```
@@ -100,12 +124,12 @@ At this point, a consent window is displayed to the user. The user must authoriz
 
 Subsequent tool calls can be disabled for the default user ID by setting `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration. This is recommended for multi-user workflows to avoid accidental tool calls by unauthorized users.
 
-2. **Start the UI**:
-- Start the UI by following the instructions in the [User Interface](../../../docs/source/workflows/ui/index.md) documentation.
-- Connect to `http://localhost:3000`
+3. **Start the UI**:
+- Start the UI by following the instructions in the [User Interface](../../quick-start/launching-ui.md) documentation.
+- Connect to  the UI at `http://localhost:3000`
 - Ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out.
 
-3. **Send the input to the workflow via the UI**:
+4. **Send the input to the workflow via the UI**:
 ```text
 What is ticket AIQ-1935 about
 ```
@@ -146,7 +170,12 @@ graph LR
   C2 --> S2
 ```
 
-### Troubleshooting
+## Security Considerations
+- The `default_user_id` is used to cache the authenticating user during setup and optionally for tool calls. It is recommended to set `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration for multi-user workflows to avoid accidental tool calls by unauthorized users.
+- Use HTTPS redirect URIs in production environments.
+- Scope OAuth2 tokens to the minimum required permissions.
+
+## Troubleshooting
 1. If setup fails, the user identified by `default_user_id` did not complete the authentication flow through the pop-up UI, or the user did not authorize the workflow to access the MCP server.
 2. If you encounter an error like "User is not authorized to call the tool", it means that:
 - The workflow was not accessed in `WebSocket` mode, or

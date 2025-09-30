@@ -237,7 +237,7 @@ To use a protected MCP server, you need to provide the `--auth` flag:
 ```bash
 nat mcp client tool list --url http://example.com/mcp --auth
 ```
-This will use the `mcp_oauth2` authentication provider to authenticate the user.
+This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, see the [MCP Authentication](./mcp-auth.md) documentation.
 
 Sample output:
 ```text
