@@ -19,6 +19,8 @@ limitations under the License.
 
 This example demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that require authentication. You'll authenticate with protected MCP services and access secured tools through OAuth2 flows.
 
+It is recommended to read the [MCP Authentication](../../../docs/source/workflows/mcp/mcp-auth.md) documentation first.
+
 ## Prerequisites
 
 1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
