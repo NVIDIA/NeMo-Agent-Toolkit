@@ -36,10 +36,11 @@ authentication:
     default_user_id: ${NAT_USER_ID}
     allow_default_user_id_for_tool_calls: true
 ```
+Configuration options:
 - `server_url`: The URL of the MCP server that requires authentication.
 - `redirect_uri`: The redirect URI for the OAuth2 flow.
-- `default_user_id`: The user ID for setting discovering and adding tools to the workflow at startup.
-- `allow_default_user_id_for_tool_calls`: Whether to allow the default user ID for tool calls. This is typically enabled for single-user workflows, for example, a workflow that is launched using the `nat run` command. For multi-user workflows, this should be disabled.
+- `default_user_id`: The user ID for setting discovering and adding tools to the workflow at startup. The `default_user_id` can be any string and is used as the key to cache the user's information. It defaults to the `server_url` if not provided.
+- `allow_default_user_id_for_tool_calls`: Whether to allow the default user ID for tool calls. This is typically enabled for single-user workflows, for example, a workflow that is launched using the `nat run` CLIcommand. For multi-user workflows, this should be disabled to avoid accidental tool calls by unauthorized users.
 
 To view all configuration options for the `mcp_oauth2` authentication provider, run the following command:
 ```bash
@@ -55,7 +56,7 @@ function_groups:
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
-    auth_provider: auth_provider_mcp
+      auth_provider: auth_provider_mcp
 ```
 
 ## Supported Modes
@@ -83,19 +84,21 @@ authentication:
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 ### Running the Workflow in Single-User Mode (CLI)
-In this mode, the `default_user_id` is used for authentication during setup and tool calls. The `default_user_id` can be any string and is used as the key to cache the user's information. It defaults to the `server_url` if not provided.
+In this mode, the `default_user_id` is used for authentication during setup and for subsequent tool calls.
 ```bash
 nat run --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.yml --input "What is Jira ticket AIQ-1935 about"
 ```
 
 ### Running the Workflow in Multi-User Mode (FastAPI)
-In this mode, the `default_user_id` is used for authentication during setup. Subsequent tool calls require each user to authenticate separately through the `WebSocket` UI.
+In this mode the workflow is served via a FastAPI frontend. Multiple users can access the workflow concurrently using a UI with `WebSocket` mode enabled.
 
 1. **Start the workflow**:
 ```bash
 nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.yml
 ```
-At this point, a consent window is displayed to the user. The user must authorize the workflow to access the MCP server. This user's information is cached as the default user ID. Subsequent tool calls can be disabled for the default user ID by setting `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration.
+At this point, a consent window is displayed to the user. The user must authorize the workflow to access the MCP server. This user's information is cached as the default user ID. The `default users` credentials are only used for the initial setup and for populating the tools in the workflow or agent prompt at startup.
+
+Subsequent tool calls can be disabled for the default user ID by setting `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration. This is recommended for multi-user workflows to avoid accidental tool calls by unauthorized users.
 
 2. **Start the UI**:
 - Start the UI by following the instructions in the [User Interface](../../../docs/source/workflows/ui/index.md) documentation.
@@ -106,7 +109,7 @@ At this point, a consent window is displayed to the user. The user must authoriz
 ```text
 What is ticket AIQ-1935 about
 ```
-At this point, a consent window is displayed again. The user must authorize the workflow to access the MCP server and call the tool. This user's information is cached separately using the `WebSocket` session cookie as the user ID.
+At this point, a consent window is displayed again. The `UI` user must authorize the workflow to access the MCP server and call the tool. This user's information is cached separately using the `WebSocket` session cookie as the user ID.
 
 ## Displaying Protected MCP Tools via CLI
 MCP client CLI can be used to display and call MCP tools on a remote MCP server. To use a protected MCP server, you need to provide the `--auth` flag:
