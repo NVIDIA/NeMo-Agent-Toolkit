@@ -62,7 +62,4 @@ def test_locate_example_config(example_config_class: type,
     else:
         config_path = utils.locate_example_config(example_config_class, config_file_name, assert_exists)
         assert config_path == expected_config_path
-        if exists:
-            assert config_path.exists()
-        else:
-            assert not config_path.exists()
+        assert (exists == config_path.exists())
