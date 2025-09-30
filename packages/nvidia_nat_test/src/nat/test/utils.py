@@ -25,7 +25,7 @@ if typing.TYPE_CHECKING:
 
 
 def locate_repo_root() -> Path:
-    result = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+    result = subprocess.run(["git", "rev-parse", "--show-toplevel"], check=False, capture_output=True, text=True)
     assert result.returncode == 0, f"Failed to get git root: {result.stderr}"
     return Path(result.stdout.strip())
 

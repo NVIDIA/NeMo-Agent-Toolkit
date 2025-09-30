@@ -245,29 +245,26 @@ def root_repo_dir_fixture() -> Path:
     return locate_repo_root()
 
 
-def _test_url(url: str, fail_missing: bool, failure_reason: str, timeout: int = 5) -> bool:
-    import requests
-    try:
-        response = requests.get(url, timeout=timeout)
-        response.raise_for_status()
-        return True
-    except:
-        if fail_missing:
-            raise RuntimeError(failure_reason)
-        pytest.skip(reason=failure_reason)
-
-
 @pytest.fixture(name="require_etcd", scope="session")
 def require_etcd_fixture(fail_missing: bool = False) -> bool:
     """
     To run these tests, an etcd server must be running
     """
+    import requests
+
     host = os.getenv("NAT_CI_ETCD_HOST", "localhost")
     port = os.getenv("NAT_CI_ETCD_PORT", "2379")
     health_url = f"http://{host}:{port}/health"
-    return _test_url(url=health_url,
-                     fail_missing=fail_missing,
-                     failure_reason=f"Unable to connect to etcd server at {health_url}")
+
+    try:
+        response = requests.get(health_url, timeout=5)
+        response.raise_for_status()
+        return True
+    except:  # noqa: E722
+        failure_reason = f"Unable to connect to etcd server at {health_url}"
+        if fail_missing:
+            raise RuntimeError(failure_reason)
+        pytest.skip(reason=failure_reason)
 
 
 @pytest.fixture(name="milvus_uri", scope="session")
@@ -283,7 +280,7 @@ def milvus_uri_fixture(require_etcd: bool, fail_missing: bool = False) -> str:
         MilvusClient(uri=uri)
 
         return uri
-    except:
+    except:  # noqa: E722
         reason = f"Unable to connect to Milvus server at {uri}"
         if fail_missing:
             raise RuntimeError(reason)

@@ -28,7 +28,6 @@ except ImportError:
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.runtime.loader import load_workflow
 from nat.test.utils import locate_example_config
 from nat.test.utils import run_workflow
 

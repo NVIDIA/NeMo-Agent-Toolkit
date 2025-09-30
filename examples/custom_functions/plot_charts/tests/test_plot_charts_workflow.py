@@ -17,10 +17,10 @@ import logging
 from pathlib import Path
 
 import pytest
-from nat.test.utils import locate_example_config
-from nat_plot_charts.register import PlotChartsWorkflowConfig
 
 from nat.runtime.loader import load_workflow
+from nat.test.utils import locate_example_config
+from nat_plot_charts.register import PlotChartsWorkflowConfig
 
 logger = logging.getLogger(__name__)
 
