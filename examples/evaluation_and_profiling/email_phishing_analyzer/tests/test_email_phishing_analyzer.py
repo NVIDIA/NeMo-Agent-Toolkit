@@ -20,17 +20,15 @@ import pytest
 
 from nat.test.utils import locate_example_config
 from nat.test.utils import run_workflow
-from nat_email_phishing_analyzer.register import EmailPhishingAnalyzerConfig
 
 logger = logging.getLogger(__name__)
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_full_workflow(milvus_uri: str) -> None:
-    from pydantic import HttpUrl
-
+async def test_run_full_workflow():
     from nat.runtime.loader import load_config
+    from nat_email_phishing_analyzer.register import EmailPhishingAnalyzerConfig
 
     config_file: Path = locate_example_config(EmailPhishingAnalyzerConfig)
     config = load_config(config_file)
@@ -43,3 +41,15 @@ async def test_full_workflow(milvus_uri: str) -> None:
             "account. Please provide your account and routing numbers so we can complete the transaction. Thank you, "
             "[Your Company]"),
         expected_answer="likely")
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key", "require_nest_asyncio")
+async def test_optimize_full_workflow():
+    from nat.data_models.optimizer import OptimizerRunConfig
+    from nat.profiler.parameter_optimization.optimizer_runtime import optimize_config
+    from nat_email_phishing_analyzer.register import EmailPhishingAnalyzerConfig
+
+    config_file: Path = locate_example_config(EmailPhishingAnalyzerConfig, "config_optimizer.yml")
+    config = OptimizerRunConfig(config_file=config_file, dataset=None)
+    await optimize_config(config)

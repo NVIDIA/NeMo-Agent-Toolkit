@@ -332,3 +332,13 @@ def populate_milvus_fixture(milvus_uri: str, root_repo_dir: Path):
         "wikipedia_docs"
     ],
                    check=True)
+
+
+@pytest.fixture(name="require_nest_asyncio", scope="session")
+def require_nest_asyncio_fixture():
+    """
+    Some tests require nest_asyncio to be installed to allow nested event loops, calling nest_asyncio.apply() more than
+    once is a no-op so it's safe to call this fixture even if one of our dependencies already called it.
+    """
+    import nest_asyncio
+    nest_asyncio.apply()
