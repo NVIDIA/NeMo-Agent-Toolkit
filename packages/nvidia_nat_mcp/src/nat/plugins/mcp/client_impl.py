@@ -139,6 +139,10 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
     tool_call_timeout: timedelta = Field(
         default=timedelta(seconds=60),
         description="Timeout (in seconds) for the MCP tool call. Defaults to 60 seconds.")
+    auth_flow_timeout: timedelta = Field(
+        default=timedelta(seconds=300),
+        description="Timeout (in seconds) for the MCP auth flow. When the tool call requires interactive \
+        authentication, this timeout is used. Defaults to 300 seconds.")
     reconnect_enabled: bool = Field(
         default=True,
         description="Whether to enable reconnecting to the MCP server if the connection is lost. \
@@ -196,7 +200,8 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
         client = MCPStdioClient(config.server.command,
                                 config.server.args,
                                 config.server.env,
-                                config.tool_call_timeout,
+                                tool_call_timeout=config.tool_call_timeout,
+                                auth_flow_timeout=config.auth_flow_timeout,
                                 reconnect_enabled=config.reconnect_enabled,
                                 reconnect_max_attempts=config.reconnect_max_attempts,
                                 reconnect_initial_backoff=config.reconnect_initial_backoff,
@@ -204,6 +209,7 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     elif config.server.transport == "sse":
         client = MCPSSEClient(str(config.server.url),
                               tool_call_timeout=config.tool_call_timeout,
+                              auth_flow_timeout=config.auth_flow_timeout,
                               reconnect_enabled=config.reconnect_enabled,
                               reconnect_max_attempts=config.reconnect_max_attempts,
                               reconnect_initial_backoff=config.reconnect_initial_backoff,
@@ -212,6 +218,7 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
         client = MCPStreamableHTTPClient(str(config.server.url),
                                          auth_provider=auth_provider,
                                          tool_call_timeout=config.tool_call_timeout,
+                                         auth_flow_timeout=config.auth_flow_timeout,
                                          reconnect_enabled=config.reconnect_enabled,
                                          reconnect_max_attempts=config.reconnect_max_attempts,
                                          reconnect_initial_backoff=config.reconnect_initial_backoff,
