@@ -30,6 +30,8 @@ MCP client functionality requires the `nvidia-nat-mcp` package. Install it with:
 ```bash
 uv pip install nvidia-nat[mcp]
 ```
+## Accessing Protected MCP Servers
+NeMo Agent toolkit can access protected MCP servers via the MCP client auth provider. For more information, see the [MCP Authentication](./mcp-auth.md) documentation.
 
 ## MCP Client Configuration
 NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
