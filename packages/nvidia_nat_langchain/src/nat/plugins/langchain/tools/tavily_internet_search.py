@@ -33,7 +33,7 @@ class TavilyInternetSearchToolConfig(FunctionBaseConfig, name="tavily_internet_s
 async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, builder: Builder):
     import os
 
-    from langchain_community.tools import TavilySearchResults
+    from langchain_tavily import TavilySearch
 
     if not os.environ.get("TAVILY_API_KEY"):
         os.environ["TAVILY_API_KEY"] = tool_config.api_key
@@ -42,7 +42,7 @@ async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, bu
 
     async def _tavily_internet_search(question: str) -> str:
         # Search the web and get the requested amount of results
-        tavily_search = TavilySearchResults(max_results=tool_config.max_results)
+        tavily_search = TavilySearch(max_results=tool_config.max_results)
         search_docs = await tavily_search.ainvoke({'query': question})
         # Format
         web_search_results = "\n\n---\n\n".join(
