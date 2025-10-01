@@ -215,6 +215,12 @@ class VannaManager:
                 "VannaManager: Cannot create instance without required configuration"
             )
 
+        # Assertions to help type checker understand these are not None
+        assert self.vanna_llm_config is not None
+        assert self.vanna_embedder_config is not None
+        assert self.vector_store_path is not None
+        assert self.db_connection_string is not None
+
         logger.info(f"VannaManager: Creating instance for {self.config_key}")
         logger.debug(f"VannaManager: Vector store path: {self.vector_store_path}")
         logger.debug(f"VannaManager: Database connection: {self.db_connection_string}")
