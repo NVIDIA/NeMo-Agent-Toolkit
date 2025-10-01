@@ -44,10 +44,10 @@ CONVERTED_NOTEBOOK_FILES=$(find ${EXPORT_DIR} -type f  -name "*.md")
 vale ${DOC_FILES} ${CONVERTED_NOTEBOOK_FILES}
 RETVAL=$?
 
-if [[ ${PRESERVE_TMP: -0} -eq 1 ]]; then
+if [[ "${PRESERVE_TMP}" == "1" ]]; then
     echo "Preserving temporary directory: ${EXPORT_DIR}"
 else
-    rm -rf ${EXPORT_DIR}
+    rm -rf "${EXPORT_DIR}"
 fi
 
 exit $RETVAL
