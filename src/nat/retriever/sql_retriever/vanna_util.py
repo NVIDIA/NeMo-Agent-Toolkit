@@ -183,11 +183,14 @@ class ElasticVectorStore(VannaBase):
         
         self.es_client = Elasticsearch(self.url, **client_kwargs)
         
-        # Test connection
-        if not self.es_client.ping():
-            raise ConnectionError(f"Could not connect to Elasticsearch at {self.url}")
-        
-        logger.info(f"Successfully connected to Elasticsearch at {self.url}")
+        # Test connection (try but don't fail if ping doesn't work)
+        try:
+            if self.es_client.ping():
+                logger.info(f"Successfully connected to Elasticsearch at {self.url}")
+            else:
+                logger.warning(f"Elasticsearch ping failed, but will try to proceed at {self.url}")
+        except Exception as e:
+            logger.warning(f"Elasticsearch ping check failed ({e}), but will try to proceed")
     
     def _create_index_if_not_exists(self):
         """Create the Elasticsearch index with appropriate mappings if it doesn't exist."""
@@ -471,6 +474,53 @@ class ElasticVectorStore(VannaBase):
         except Exception as e:
             logger.error(f"Error removing training data {id}: {e}")
             return False
+    
+    def generate_embedding(self, data: str, **kwargs) -> list[float]:
+        """
+        Generate embedding for given data (required by Vanna base class).
+        
+        Args:
+            data: Text to generate embedding for
+            **kwargs: Additional parameters
+            
+        Returns:
+            Embedding vector
+        """
+        return self._generate_embedding(data)
+    
+    def get_training_data(self, **kwargs) -> list:
+        """
+        Get all training data from the vector store (required by Vanna base class).
+        
+        Args:
+            **kwargs: Additional parameters
+            
+        Returns:
+            List of training data entries
+        """
+        try:
+            # Query all documents
+            query = {
+                "query": {"match_all": {}},
+                "size": 10000  # Adjust based on expected data size
+            }
+            
+            response = self.es_client.search(index=self.index_name, body=query)
+            
+            training_data = []
+            for hit in response["hits"]["hits"]:
+                source = hit["_source"]
+                training_data.append({
+                    "id": hit["_id"],
+                    "type": source.get("type"),
+                    "text": source.get("text"),
+                    "metadata": source.get("metadata", {})
+                })
+            
+            return training_data
+        except Exception as e:
+            logger.error(f"Error getting training data: {e}")
+            return []
 
 
 class ElasticNIMVanna(ElasticVectorStore, NIMCustomLLM):
