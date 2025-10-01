@@ -17,10 +17,9 @@ import asyncio
 import json
 import logging
 import textwrap
+from collections.abc import Awaitable
+from collections.abc import Callable
 from typing import Any
-from typing import Awaitable
-from typing import Callable
-from typing import List
 
 from agno.tools import tool
 
@@ -133,7 +132,7 @@ async def process_result(result: Any, name: str) -> str:
 
 def execute_agno_tool(name: str,
                       coroutine_fn: Callable[..., Awaitable[Any]],
-                      required_fields: List[str],
+                      required_fields: list[str],
                       loop: asyncio.AbstractEventLoop,
                       **kwargs: Any) -> Any:
     """
@@ -145,7 +144,7 @@ def execute_agno_tool(name: str,
         The name of the tool
     coroutine_fn : Callable
         The async function to invoke
-    required_fields : List[str]
+    required_fields : list[str]
         List of required fields for validation
     loop : asyncio.AbstractEventLoop
         The event loop to use for async execution

@@ -50,7 +50,7 @@ def test_hashable_base_model_write_json_schema(tmp_path: Path):
     assert schema_path.exists()
     assert schema_path.is_file()
 
-    with open(schema_path, "r", encoding="utf-8") as f:
+    with open(schema_path, encoding="utf-8") as f:
         schema = json.load(f)
         assert schema == ԊashableTĕstModel.generate_json_schema()
 

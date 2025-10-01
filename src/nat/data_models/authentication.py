@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import typing
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
 from enum import Enum
 
 import httpx
@@ -166,13 +166,7 @@ class BearerTokenCred(_CredBase):
 
 
 Credential = typing.Annotated[
-    typing.Union[
-        HeaderCred,
-        QueryCred,
-        CookieCred,
-        BasicAuthCred,
-        BearerTokenCred,
-    ],
+    HeaderCred | QueryCred | CookieCred | BasicAuthCred | BearerTokenCred,
     Field(discriminator="kind"),
 ]
 
@@ -213,7 +207,7 @@ class AuthResult(BaseModel):
         """
         Checks if the authentication token has expired.
         """
-        return bool(self.token_expires_at and datetime.now(timezone.utc) >= self.token_expires_at)
+        return bool(self.token_expires_at and datetime.now(UTC) >= self.token_expires_at)
 
     def as_requests_kwargs(self) -> dict[str, typing.Any]:
         """

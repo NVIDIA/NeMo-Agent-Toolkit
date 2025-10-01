@@ -310,7 +310,7 @@ def patch_with_retry(
         descriptor = inspect.getattr_static(cls, name)
 
         # Skip dunders, privates and all descriptors we must not wrap
-        if (name.startswith("_") or isinstance(descriptor, (property, staticmethod, classmethod))):
+        if (name.startswith("_") or isinstance(descriptor, property | staticmethod | classmethod)):
             continue
 
         original = descriptor.__func__ if isinstance(descriptor, types.MethodType) else descriptor

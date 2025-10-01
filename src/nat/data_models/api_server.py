@@ -273,7 +273,7 @@ class ChatResponse(ResponseBaseModelOutput):
         if model is None:
             model = ""
         if created is None:
-            created = datetime.datetime.now(datetime.timezone.utc)
+            created = datetime.datetime.now(datetime.UTC)
 
         return ChatResponse(id=id_,
                             object=object_,
@@ -317,7 +317,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
         if id_ is None:
             id_ = str(uuid.uuid4())
         if created is None:
-            created = datetime.datetime.now(datetime.timezone.utc)
+            created = datetime.datetime.now(datetime.UTC)
         if model is None:
             model = ""
         if object_ is None:
@@ -343,7 +343,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
         if id_ is None:
             id_ = str(uuid.uuid4())
         if created is None:
-            created = datetime.datetime.now(datetime.timezone.utc)
+            created = datetime.datetime.now(datetime.UTC)
         if model is None:
             model = ""
 
@@ -485,7 +485,7 @@ class WebSocketUserMessage(BaseModel):
     security: Security = Security()
     error: Error = Error()
     schema_version: str = "1.0.0"
-    timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
 
 class WebSocketUserInteractionResponseMessage(BaseModel):
@@ -501,7 +501,7 @@ class WebSocketUserInteractionResponseMessage(BaseModel):
     security: Security = Security()
     error: Error = Error()
     schema_version: str = "1.0.0"
-    timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
 
 class SystemIntermediateStepContent(BaseModel):
@@ -527,7 +527,7 @@ class WebSocketSystemIntermediateStepMessage(BaseModel):
     conversation_id: str | None = None
     content: SystemIntermediateStepContent
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
 
 class SystemResponseContent(BaseModel):
@@ -551,7 +551,7 @@ class WebSocketSystemResponseTokenMessage(BaseModel):
     conversation_id: str | None = None
     content: SystemResponseContent | Error | GenerateResponse
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
     @field_validator("content")
     @classmethod
@@ -560,7 +560,7 @@ class WebSocketSystemResponseTokenMessage(BaseModel):
             raise ValueError(f"Field: content must be 'Error' when type is {WebSocketMessageType.ERROR_MESSAGE}")
 
         if info.data.get("type") == WebSocketMessageType.RESPONSE_MESSAGE and not isinstance(
-                value, (SystemResponseContent, GenerateResponse)):
+                value, SystemResponseContent | GenerateResponse):
             raise ValueError(
                 f"Field: content must be 'SystemResponseContent' when type is {WebSocketMessageType.RESPONSE_MESSAGE}")
         return value
@@ -582,7 +582,7 @@ class WebSocketSystemInteractionMessage(BaseModel):
     conversation_id: str | None = None
     content: HumanPrompt
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
 
 # ======== GenerateResponse Converters ========

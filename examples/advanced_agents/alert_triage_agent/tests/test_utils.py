@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
-import importlib.resources
-import inspect
 from pathlib import Path
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -26,6 +23,7 @@ import pytest
 import yaml
 
 from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.test.utils import locate_example_config
 from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 from nat_alert_triage_agent.utils import _DATA_CACHE
 from nat_alert_triage_agent.utils import _LLM_CACHE
@@ -87,23 +85,20 @@ async def test_get_llm():
     assert _LLM_CACHE[(llm_name_2, wrapper_type)] is llms[(llm_name_2, wrapper_type)]
 
 
-def test_preload_offline_data():
+def test_preload_offline_data(root_repo_dir: Path):
     # Clear the data cache before test
     _DATA_CACHE.clear()
     _DATA_CACHE.update({'offline_data': None, 'benign_fallback_offline_data': None})
 
     # Load paths from config
-    package_name = inspect.getmodule(AlertTriageAgentWorkflowConfig).__package__
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs",
-                                                                         "config_offline_mode.yml").absolute()
-    with open(config_file, "r") as file:
+    config_file: Path = locate_example_config(AlertTriageAgentWorkflowConfig, "config_offline_mode.yml")
+    with open(config_file, encoding="utf-8") as file:
         config = yaml.safe_load(file)
         offline_data_path = config["workflow"]["offline_data_path"]
         benign_fallback_data_path = config["workflow"]["benign_fallback_data_path"]
-    offline_data_path_abs = importlib.resources.files(package_name).joinpath("../../../../../",
-                                                                             offline_data_path).absolute()
-    benign_fallback_data_path_abs = importlib.resources.files(package_name).joinpath(
-        "../../../../../", benign_fallback_data_path).absolute()
+
+    offline_data_path_abs = root_repo_dir.joinpath(offline_data_path).absolute()
+    benign_fallback_data_path_abs = root_repo_dir.joinpath(benign_fallback_data_path).absolute()
 
     # Test successful loading with actual test files
     preload_offline_data(offline_data_path_abs, benign_fallback_data_path_abs)

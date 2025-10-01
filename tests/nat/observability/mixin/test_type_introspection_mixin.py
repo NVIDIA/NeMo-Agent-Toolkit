@@ -417,11 +417,10 @@ class TestUnionTypes:
 
     def test_union_input_detection(self):
         """Test detection of union input types"""
-        from typing import Union
 
         class UnionInputClass(TypeIntrospectionMixin):
 
-            async def process(self, item: Union[str, int]) -> str:
+            async def process(self, item: str | int) -> str:
                 return str(item)
 
         instance = UnionInputClass()
@@ -433,11 +432,10 @@ class TestUnionTypes:
 
     def test_union_output_detection(self):
         """Test detection of union output types"""
-        from typing import Union
 
         class UnionOutputClass(TypeIntrospectionMixin):
 
-            async def process(self, item: str) -> Union[int, float]:
+            async def process(self, item: str) -> int | float:
                 return len(item) if len(item) > 5 else float(len(item))
 
         instance = UnionOutputClass()
@@ -484,13 +482,12 @@ class TestRecursiveTypeVarResolution:
 
     def test_deeply_nested_generics(self):
         """Test recursive resolution of deeply nested generic types"""
-        from typing import Optional
 
         NestedT = TypeVar('NestedT')
 
         class DeepGeneric(TypeIntrospectionMixin, Generic[NestedT]):
 
-            async def process(self, item: dict[str, list[Optional[NestedT]]]) -> list[dict[str, NestedT]]:
+            async def process(self, item: dict[str, list[NestedT | None]]) -> list[dict[str, NestedT]]:
                 # This is a test method, the implementation doesn't need to be perfect
                 return [{"result": val} for val in item.get("data", []) if val is not None]
 

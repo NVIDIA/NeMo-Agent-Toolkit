@@ -59,6 +59,8 @@ class AuthAdapter(httpx.Auth):
         self.auth_provider = auth_provider
         # each adapter instance has its own lock to avoid unnecessary delays for multiple clients
         self._lock = anyio.Lock()
+        # Track whether we're currently in an interactive authentication flow
+        self.is_authenticating = False
 
     async def async_auth_flow(self, request: httpx.Request) -> AsyncGenerator[httpx.Request, httpx.Response]:
         """Add authentication headers to the request using NAT auth provider."""
@@ -85,11 +87,21 @@ class AuthAdapter(httpx.Auth):
                     # 4. The auth headers are revoked
                     # 5. Auth config on the MCP server has changed
                     # In this case we attempt to re-run discovery and authentication
+
+                    # Signal that we're entering interactive auth flow
+                    self.is_authenticating = True
+                    logger.debug("Starting authentication flow due to 401 response")
+
                     auth_headers = await self._get_auth_headers(request=request, response=response)
                     request.headers.update(auth_headers)
                     yield request  # Retry the request
                 except Exception as e:
                     logger.info("Failed to refresh auth after 401: %s", e)
+                    raise
+                finally:
+                    # Signal that auth flow is complete
+                    self.is_authenticating = False
+                    logger.debug("Authentication flow completed")
         return
 
     def _get_session_id_from_tool_call_request(self, request: httpx.Request) -> tuple[str | None, bool]:
@@ -120,11 +132,8 @@ class AuthAdapter(httpx.Auth):
                 session_id, is_tool_call = self._get_session_id_from_tool_call_request(request)
 
             if is_tool_call:
-                # Tool call requests should use the session id if it exists, default user id can be used if allowed
-                if self.auth_provider.config.allow_default_user_id_for_tool_calls:
-                    user_id = session_id or self.auth_provider.config.default_user_id
-                else:
-                    user_id = session_id
+                # Tool call requests should use the session id
+                user_id = session_id
             else:
                 # Non-tool call requests should use the session id if it exists and fallback to default user id
                 user_id = session_id or self.auth_provider.config.default_user_id
@@ -151,12 +160,19 @@ class MCPBaseClient(ABC):
     Args:
         transport (str): The type of client to use ('sse', 'stdio', or 'streamable-http')
         auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
+        tool_call_timeout (timedelta): Timeout for tool calls when authentication is not required
+        auth_flow_timeout (timedelta): Extended timeout for tool calls that may require interactive authentication
+        reconnect_enabled (bool): Whether to automatically reconnect on connection failures
+        reconnect_max_attempts (int): Maximum number of reconnection attempts
+        reconnect_initial_backoff (float): Initial backoff delay in seconds for reconnection attempts
+        reconnect_max_backoff (float): Maximum backoff delay in seconds for reconnection attempts
     """
 
     def __init__(self,
                  transport: str = 'streamable-http',
                  auth_provider: AuthProviderBase | None = None,
-                 tool_call_timeout: timedelta = timedelta(seconds=5),
+                 tool_call_timeout: timedelta = timedelta(seconds=60),
+                 auth_flow_timeout: timedelta = timedelta(seconds=300),
                  reconnect_enabled: bool = True,
                  reconnect_max_attempts: int = 2,
                  reconnect_initial_backoff: float = 0.5,
@@ -176,6 +192,7 @@ class MCPBaseClient(ABC):
         self._httpx_auth = AuthAdapter(auth_provider) if auth_provider else None
 
         self._tool_call_timeout = tool_call_timeout
+        self._auth_flow_timeout = auth_flow_timeout
 
         # Reconnect configuration
         self._reconnect_enabled = reconnect_enabled
@@ -183,6 +200,10 @@ class MCPBaseClient(ABC):
         self._reconnect_initial_backoff = reconnect_initial_backoff
         self._reconnect_max_backoff = reconnect_max_backoff
         self._reconnect_lock: asyncio.Lock = asyncio.Lock()
+
+    @property
+    def auth_provider(self) -> AuthProviderBase | None:
+        return self._auth_provider
 
     @property
     def transport(self) -> str:
@@ -266,12 +287,25 @@ class MCPBaseClient(ABC):
     async def _with_reconnect(self, coro):
         """
         Execute an awaited operation, reconnecting once on errors.
+        Does not reconnect if the error occurs during an active authentication flow.
         """
         try:
             return await coro()
         except Exception as e:
+            # Check if error happened during active authentication flow
+            if self._httpx_auth and self._httpx_auth.is_authenticating:
+                # Provide specific error message for authentication timeouts
+                if isinstance(e, TimeoutError):
+                    logger.error("Timeout during user authentication flow - user may have abandoned authentication")
+                    raise RuntimeError(
+                        "Authentication timed out. User did not complete authentication in browser within "
+                        f"{self._auth_flow_timeout.total_seconds()} seconds.") from e
+                else:
+                    logger.error("Error during authentication flow: %s", e)
+                    raise
+
+            # Normal error - attempt reconnect if enabled
             if self._reconnect_enabled:
-                logger.warning("MCP Client operation failed. Attempting reconnect: %s", e)
                 try:
                     await self._reconnect()
                 except Exception as reconnect_err:
@@ -280,7 +314,49 @@ class MCPBaseClient(ABC):
                 return await coro()
             raise
 
-    async def get_tools(self):
+    async def _has_cached_auth_token(self) -> bool:
+        """
+        Check if we have a cached, non-expired authentication token.
+
+        Returns:
+            bool: True if we have a valid cached token, False if authentication may be needed
+        """
+        if not self._auth_provider:
+            return True  # No auth needed
+
+        try:
+            # Check if OAuth2 provider has tokens cached
+            if hasattr(self._auth_provider, '_auth_code_provider'):
+                provider = self._auth_provider._auth_code_provider
+                if provider and hasattr(provider, '_authenticated_tokens'):
+                    # Check if we have at least one non-expired token
+                    for auth_result in provider._authenticated_tokens.values():
+                        if not auth_result.is_expired():
+                            return True
+
+            return False
+        except Exception:
+            # If we can't check, assume we need auth to be safe
+            return False
+
+    async def _get_tool_call_timeout(self) -> timedelta:
+        """
+        Determine the appropriate timeout for a tool call based on authentication state.
+
+        Returns:
+            timedelta: auth_flow_timeout if authentication may be needed, tool_call_timeout otherwise
+        """
+        if self._auth_provider:
+            has_token = await self._has_cached_auth_token()
+            timeout = self._tool_call_timeout if has_token else self._auth_flow_timeout
+            if not has_token:
+                logger.debug("Using extended timeout (%s) for potential interactive authentication", timeout)
+            return timeout
+        else:
+            return self._tool_call_timeout
+
+    @mcp_exception_handler
+    async def get_tools(self) -> dict[str, MCPToolClient]:
         """
         Retrieve a dictionary of all tools served by the MCP server.
         Uses unauthenticated session for discovery.
@@ -288,7 +364,16 @@ class MCPBaseClient(ABC):
 
         async def _get_tools():
             session = self._session
-            return await session.list_tools()
+            try:
+                # Add timeout to the list_tools call.
+                # This is needed because MCP SDK does not support timeout for list_tools()
+                with anyio.fail_after(self._tool_call_timeout.total_seconds()):
+                    tools = await session.list_tools()
+            except TimeoutError as e:
+                from nat.plugins.mcp.exceptions import MCPTimeoutError
+                raise MCPTimeoutError(self.server_name, e)
+
+            return tools
 
         try:
             response = await self._with_reconnect(_get_tools)
@@ -302,8 +387,7 @@ class MCPBaseClient(ABC):
                               tool_name=tool.name,
                               tool_description=tool.description,
                               tool_input_schema=tool.inputSchema,
-                              parent_client=self,
-                              tool_call_timeout=self._tool_call_timeout)
+                              parent_client=self)
             for tool in response.tools
         }
 
@@ -350,12 +434,7 @@ class MCPBaseClient(ABC):
         async def _call_tool_with_meta():
             params = CallToolRequestParams(name=tool_name, arguments=args, **{"_meta": {"session_id": session_id}})
             req = ClientRequest(CallToolRequest(params=params))
-            # We will increase the timeout to 5 minutes if the tool call timeout is less than 5 min and
-            # auth is enabled.
-            if self._auth_provider and self._tool_call_timeout.total_seconds() < 300:
-                timeout = timedelta(seconds=300)
-            else:
-                timeout = self._tool_call_timeout
+            timeout = await self._get_tool_call_timeout()
             return await self._session.send_request(req, CallToolResult, request_read_timeout_seconds=timeout)
 
         return await self._with_reconnect(_call_tool_with_meta)
@@ -365,7 +444,8 @@ class MCPBaseClient(ABC):
 
         async def _call_tool():
             session = self._session
-            return await session.call_tool(tool_name, tool_args, read_timeout_seconds=self._tool_call_timeout)
+            timeout = await self._get_tool_call_timeout()
+            return await session.call_tool(tool_name, tool_args, read_timeout_seconds=timeout)
 
         return await self._with_reconnect(_call_tool)
 
@@ -380,13 +460,15 @@ class MCPSSEClient(MCPBaseClient):
 
     def __init__(self,
                  url: str,
-                 tool_call_timeout: timedelta = timedelta(seconds=5),
+                 tool_call_timeout: timedelta = timedelta(seconds=60),
+                 auth_flow_timeout: timedelta = timedelta(seconds=300),
                  reconnect_enabled: bool = True,
                  reconnect_max_attempts: int = 2,
                  reconnect_initial_backoff: float = 0.5,
                  reconnect_max_backoff: float = 50.0):
         super().__init__("sse",
                          tool_call_timeout=tool_call_timeout,
+                         auth_flow_timeout=auth_flow_timeout,
                          reconnect_enabled=reconnect_enabled,
                          reconnect_max_attempts=reconnect_max_attempts,
                          reconnect_initial_backoff=reconnect_initial_backoff,
@@ -429,13 +511,15 @@ class MCPStdioClient(MCPBaseClient):
                  command: str,
                  args: list[str] | None = None,
                  env: dict[str, str] | None = None,
-                 tool_call_timeout: timedelta = timedelta(seconds=5),
+                 tool_call_timeout: timedelta = timedelta(seconds=60),
+                 auth_flow_timeout: timedelta = timedelta(seconds=300),
                  reconnect_enabled: bool = True,
                  reconnect_max_attempts: int = 2,
                  reconnect_initial_backoff: float = 0.5,
                  reconnect_max_backoff: float = 50.0):
         super().__init__("stdio",
                          tool_call_timeout=tool_call_timeout,
+                         auth_flow_timeout=auth_flow_timeout,
                          reconnect_enabled=reconnect_enabled,
                          reconnect_max_attempts=reconnect_max_attempts,
                          reconnect_initial_backoff=reconnect_initial_backoff,
@@ -486,7 +570,8 @@ class MCPStreamableHTTPClient(MCPBaseClient):
     def __init__(self,
                  url: str,
                  auth_provider: AuthProviderBase | None = None,
-                 tool_call_timeout: timedelta = timedelta(seconds=5),
+                 tool_call_timeout: timedelta = timedelta(seconds=60),
+                 auth_flow_timeout: timedelta = timedelta(seconds=300),
                  reconnect_enabled: bool = True,
                  reconnect_max_attempts: int = 2,
                  reconnect_initial_backoff: float = 0.5,
@@ -494,6 +579,7 @@ class MCPStreamableHTTPClient(MCPBaseClient):
         super().__init__("streamable-http",
                          auth_provider=auth_provider,
                          tool_call_timeout=tool_call_timeout,
+                         auth_flow_timeout=auth_flow_timeout,
                          reconnect_enabled=reconnect_enabled,
                          reconnect_max_attempts=reconnect_max_attempts,
                          reconnect_initial_backoff=reconnect_initial_backoff,
@@ -536,17 +622,15 @@ class MCPToolClient:
 
     def __init__(self,
                  session: ClientSession,
-                 parent_client: "MCPBaseClient",
+                 parent_client: MCPBaseClient,
                  tool_name: str,
                  tool_description: str | None,
-                 tool_input_schema: dict | None = None,
-                 tool_call_timeout: timedelta = timedelta(seconds=5)):
+                 tool_input_schema: dict | None = None):
         self._session = session
         self._tool_name = tool_name
         self._tool_description = tool_description
         self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
         self._parent_client = parent_client
-        self._tool_call_timeout = tool_call_timeout
 
         if self._parent_client is None:
             raise RuntimeError("MCPToolClient initialized without a parent client.")
@@ -578,6 +662,32 @@ class MCPToolClient:
         """
         self._tool_description = description
 
+    def _get_session_id(self) -> str | None:
+        """
+        Get the session id from the context.
+        """
+        from nat.builder.context import Context as _Ctx
+
+        # get auth callback (for example: WebSocketAuthenticationFlowHandler). this is lazily set in the client
+        # on first tool call
+        auth_callback = _Ctx.get().user_auth_callback
+        if auth_callback and self._parent_client:
+            # set custom auth callback
+            self._parent_client.set_user_auth_callback(auth_callback)
+
+        # get session id from context, authentication is done per-websocket session for tool calls
+        session_id = None
+        cookies = getattr(_Ctx.get().metadata, "cookies", None)
+        if cookies:
+            session_id = cookies.get("nat-session")
+
+        if not session_id:
+            # use default user id if allowed
+            if self._parent_client.auth_provider and \
+                self._parent_client.auth_provider.config.allow_default_user_id_for_tool_calls:
+                session_id = self._parent_client.auth_provider.config.default_user_id
+        return session_id
+
     async def acall(self, tool_args: dict) -> str:
         """
         Call the MCP tool with the provided arguments.
@@ -589,31 +699,24 @@ class MCPToolClient:
             raise RuntimeError("No session available for tool call")
 
         # Extract context information
-        session_id = None
         try:
-            from nat.builder.context import Context as _Ctx
-
-            # get auth callback (for example: WebSocketAuthenticationFlowHandler). this is lazily set in the client
-            # on first tool call
-            auth_callback = _Ctx.get().user_auth_callback
-            if auth_callback and self._parent_client:
-                # set custom auth callback
-                self._parent_client.set_user_auth_callback(auth_callback)
-
-            # get session id from context, authentication is done per-websocket session for tool calls
-            cookies = getattr(_Ctx.get().metadata, "cookies", None)
-            if cookies:
-                session_id = cookies.get("nat-session")
+            session_id = self._get_session_id()
         except Exception:
-            pass
+            session_id = None
 
         try:
+            # if auth is enabled and session id is not available return user is not authorized to call the tool
+            if self._parent_client.auth_provider and not session_id:
+                result_str = "User is not authorized to call the tool"
+                mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str), self._parent_client.server_name)
+                raise mcp_error
+
             if session_id:
                 logger.info("Calling tool %s with arguments %s for a user session", self._tool_name, tool_args)
                 result = await self._parent_client.call_tool_with_meta(self._tool_name, tool_args, session_id)
             else:
                 logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
-                result = await self._session.call_tool(self._tool_name, tool_args)
+                result = await self._parent_client.call_tool(self._tool_name, tool_args)
 
             output = []
             for res in result.content:
@@ -630,6 +733,6 @@ class MCPToolClient:
 
         except MCPError as e:
             format_mcp_error(e, include_traceback=False)
-            result_str = "MCPToolClient tool call failed: %s" % e.original_exception
+            result_str = f"MCPToolClient tool call failed: {e.original_exception}"
 
         return result_str

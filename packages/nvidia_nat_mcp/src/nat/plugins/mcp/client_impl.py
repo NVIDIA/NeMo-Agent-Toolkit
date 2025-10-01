@@ -32,6 +32,50 @@ from nat.plugins.mcp.tool import mcp_tool_function
 logger = logging.getLogger(__name__)
 
 
+class MCPFunctionGroup(FunctionGroup):
+    """
+    A specialized FunctionGroup for MCP clients that includes MCP-specific attributes
+    with proper type safety.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # MCP client attributes with proper typing
+        self._mcp_client = None  # Will be set to the actual MCP client instance
+        self._mcp_client_server_name: str | None = None
+        self._mcp_client_transport: str | None = None
+
+    @property
+    def mcp_client(self):
+        """Get the MCP client instance."""
+        return self._mcp_client
+
+    @mcp_client.setter
+    def mcp_client(self, client):
+        """Set the MCP client instance."""
+        self._mcp_client = client
+
+    @property
+    def mcp_client_server_name(self) -> str | None:
+        """Get the MCP client server name."""
+        return self._mcp_client_server_name
+
+    @mcp_client_server_name.setter
+    def mcp_client_server_name(self, server_name: str | None):
+        """Set the MCP client server name."""
+        self._mcp_client_server_name = server_name
+
+    @property
+    def mcp_client_transport(self) -> str | None:
+        """Get the MCP client transport type."""
+        return self._mcp_client_transport
+
+    @mcp_client_transport.setter
+    def mcp_client_transport(self, transport: str | None):
+        """Set the MCP client transport type."""
+        self._mcp_client_transport = transport
+
+
 class MCPToolOverrideConfig(BaseModel):
     """
     Configuration for overriding tool properties when exposing from MCP server.
@@ -95,6 +139,10 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
     tool_call_timeout: timedelta = Field(
         default=timedelta(seconds=60),
         description="Timeout (in seconds) for the MCP tool call. Defaults to 60 seconds.")
+    auth_flow_timeout: timedelta = Field(
+        default=timedelta(seconds=300),
+        description="Timeout (in seconds) for the MCP auth flow. When the tool call requires interactive \
+        authentication, this timeout is used. Defaults to 300 seconds.")
     reconnect_enabled: bool = Field(
         default=True,
         description="Whether to enable reconnecting to the MCP server if the connection is lost. \
@@ -152,7 +200,8 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
         client = MCPStdioClient(config.server.command,
                                 config.server.args,
                                 config.server.env,
-                                config.tool_call_timeout,
+                                tool_call_timeout=config.tool_call_timeout,
+                                auth_flow_timeout=config.auth_flow_timeout,
                                 reconnect_enabled=config.reconnect_enabled,
                                 reconnect_max_attempts=config.reconnect_max_attempts,
                                 reconnect_initial_backoff=config.reconnect_initial_backoff,
@@ -160,6 +209,7 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     elif config.server.transport == "sse":
         client = MCPSSEClient(str(config.server.url),
                               tool_call_timeout=config.tool_call_timeout,
+                              auth_flow_timeout=config.auth_flow_timeout,
                               reconnect_enabled=config.reconnect_enabled,
                               reconnect_max_attempts=config.reconnect_max_attempts,
                               reconnect_initial_backoff=config.reconnect_initial_backoff,
@@ -168,6 +218,7 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
         client = MCPStreamableHTTPClient(str(config.server.url),
                                          auth_provider=auth_provider,
                                          tool_call_timeout=config.tool_call_timeout,
+                                         auth_flow_timeout=config.auth_flow_timeout,
                                          reconnect_enabled=config.reconnect_enabled,
                                          reconnect_max_attempts=config.reconnect_max_attempts,
                                          reconnect_initial_backoff=config.reconnect_initial_backoff,
@@ -177,10 +228,16 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
 
     logger.info("Configured to use MCP server at %s", client.server_name)
 
-    # Create the function group
-    group = FunctionGroup(config=config)
+    # Create the MCP function group
+    group = MCPFunctionGroup(config=config)
 
     async with client:
+        # Expose the live MCP client on the function group instance so other components (e.g., HTTP endpoints)
+        # can reuse the already-established session instead of creating a new client per request.
+        group.mcp_client = client
+        group.mcp_client_server_name = client.server_name
+        group.mcp_client_transport = client.transport
+
         all_tools = await client.get_tools()
         tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
 
@@ -196,12 +253,24 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             # Create the tool function
             tool_fn = mcp_tool_function(tool)
 
+            # Normalize optional typing for linter/type-checker compatibility
+            single_fn = tool_fn.single_fn
+            if single_fn is None:
+                # Should not happen because mcp_tool_function always sets a single_fn
+                logger.warning("Skipping tool %s because single_fn is None", function_name)
+                continue
+
+            input_schema = tool_fn.input_schema
+            # Convert NoneType sentinel to None for FunctionGroup.add_function signature
+            if input_schema is type(None):  # noqa: E721
+                input_schema = None
+
             # Add to group
             logger.info("Adding tool %s to group", function_name)
             group.add_function(name=function_name,
                                description=description,
-                               fn=tool_fn.single_fn,
-                               input_schema=tool_fn.input_schema,
+                               fn=single_fn,
+                               input_schema=input_schema,
                                converters=tool_fn.converters)
 
         yield group
