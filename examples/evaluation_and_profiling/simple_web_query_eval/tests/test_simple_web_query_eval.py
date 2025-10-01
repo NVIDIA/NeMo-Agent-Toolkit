@@ -19,7 +19,6 @@ from pathlib import Path
 
 import pytest
 
-import nat_simple_web_query_eval
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
 from nat.test.utils import locate_example_config
@@ -110,6 +109,8 @@ async def test_eval():
        a. the rag accuracy metric
        b. the trajectory score (if present)
     """
+    import nat_simple_web_query_eval
+
     # Get config dynamically
     config_file: Path = locate_example_config(nat_simple_web_query_eval, "eval_config.yml")
 
