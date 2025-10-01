@@ -168,6 +168,7 @@ This will use the `mcp_oauth2` authentication provider to authenticate the user.
 - The `default_user_id` is used to cache the authenticating user during setup and optionally for tool calls. It is recommended to set `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration for multi-user workflows to avoid accidental tool calls by unauthorized users.
 - Use HTTPS redirect URIs in production environments.
 - Scope OAuth2 tokens to the minimum required permissions.
+- For production deployments, configure [secure token storage](./mcp-auth-token-storage.md) using an external object store (S3, MySQL, or Redis) with encryption enabled.
 
 ## Troubleshooting
 1.  **Setup fails** - This can happen if:
@@ -178,3 +179,8 @@ This will use the `mcp_oauth2` authentication provider to authenticate the user.
 - The workflow was not accessed in `WebSocket` mode, or
 - The user did not complete the authentication flow through the `WebSocket` UI, or
 - The user is not authorized to call the tool
+
+## Related Documentation
+- [Secure Token Storage](./mcp-auth-token-storage.md) - Learn about configuring secure token storage for MCP authentication
+- [MCP Client](./mcp-client.md) - Connect to and use tools from remote MCP servers
+- [Object Store Documentation](../../store-and-retrieve/object-store.md) - Configure object stores for persistent token storage
