@@ -35,7 +35,7 @@ async def test_session_sets_trace_id_from_headers(header_case: str):
 
     if header_case == "traceparent":
         headers = [
-            (b"traceparent", f"00-{trace_id_hex}-{span_id_hex}-01".encode("utf-8")),
+            (b"traceparent", f"00-{trace_id_hex}-{span_id_hex}-01".encode()),
         ]
     else:
         headers = [
