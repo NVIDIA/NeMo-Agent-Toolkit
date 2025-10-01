@@ -336,10 +336,6 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         Otherwise, performs standard authentication flow.
         """
-        if not user_id:
-            # MCP tool calls cannot be made without an authorized user
-            raise RuntimeError("User is not authorized to call the tool")
-
         response = kwargs.get('response')
         if response and response.status_code == 401:
             await self._discover_and_register(response=response)

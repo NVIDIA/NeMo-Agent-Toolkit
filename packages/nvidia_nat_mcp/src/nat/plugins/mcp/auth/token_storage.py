@@ -13,11 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 from abc import ABC
 from abc import abstractmethod
 
 from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import BasicAuthCred
+from nat.data_models.authentication import BearerTokenCred
+from nat.data_models.authentication import CookieCred
+from nat.data_models.authentication import HeaderCred
+from nat.data_models.authentication import QueryCred
 from nat.data_models.object_store import NoSuchKeyError
 from nat.object_store.interfaces import ObjectStore
 from nat.object_store.models import ObjectStoreItem
@@ -116,8 +122,21 @@ class ObjectStoreTokenStorage(TokenStorageBase):
         """
         key = self._get_key(user_id)
 
-        # Serialize the AuthResult to JSON
-        data = auth_result.model_dump_json().encode('utf-8')
+        # Serialize the AuthResult to JSON with secrets exposed
+        # SecretStr values are masked by default, so we need to expose them manually
+        # Create a serializable dict with exposed secrets
+        auth_dict = auth_result.model_dump(mode='json')
+        # Manually expose SecretStr values in credentials
+        for i, cred_obj in enumerate(auth_result.credentials):
+            if isinstance(cred_obj, BearerTokenCred):
+                auth_dict['credentials'][i]['token'] = cred_obj.token.get_secret_value()
+            elif isinstance(cred_obj, BasicAuthCred):
+                auth_dict['credentials'][i]['username'] = cred_obj.username.get_secret_value()
+                auth_dict['credentials'][i]['password'] = cred_obj.password.get_secret_value()
+            elif isinstance(cred_obj, (HeaderCred, QueryCred, CookieCred)):
+                auth_dict['credentials'][i]['value'] = cred_obj.value.get_secret_value()
+
+        data = json.dumps(auth_dict).encode('utf-8')
 
         # Prepare metadata
         metadata = {}
@@ -129,7 +148,6 @@ class ObjectStoreTokenStorage(TokenStorageBase):
 
         # Store using upsert to handle both new and existing tokens
         await self._object_store.upsert_object(key, item)
-        logger.debug(f"Stored authentication token for user: {user_id}")
 
     async def retrieve(self, user_id: str) -> AuthResult | None:
         """
@@ -147,10 +165,11 @@ class ObjectStoreTokenStorage(TokenStorageBase):
             item = await self._object_store.get_object(key)
             # Deserialize the AuthResult from JSON
             auth_result = AuthResult.model_validate_json(item.data)
-            logger.debug(f"Retrieved authentication token for user: {user_id}")
             return auth_result
         except NoSuchKeyError:
-            logger.debug(f"No authentication token found for user: {user_id}")
+            return None
+        except Exception as e:
+            logger.error(f"Error deserializing token for user {user_id}: {e}", exc_info=True)
             return None
 
     async def delete(self, user_id: str) -> None:
@@ -164,10 +183,9 @@ class ObjectStoreTokenStorage(TokenStorageBase):
 
         try:
             await self._object_store.delete_object(key)
-            logger.debug(f"Deleted authentication token for user: {user_id}")
         except NoSuchKeyError:
             # Token doesn't exist, which is fine for delete operations
-            logger.debug(f"No authentication token to delete for user: {user_id}")
+            pass
 
     async def clear_all(self) -> None:
         """
@@ -239,4 +257,3 @@ class InMemoryTokenStorage(TokenStorageBase):
         """
         # For in-memory storage, we can access the internal storage
         self._object_store._store.clear()
-        logger.debug("Cleared all authentication tokens from memory")
