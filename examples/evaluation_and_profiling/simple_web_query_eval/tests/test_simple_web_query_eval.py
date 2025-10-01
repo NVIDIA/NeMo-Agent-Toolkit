@@ -22,33 +22,9 @@ import pytest
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
 from nat.test.utils import locate_example_config
+from nat.test.utils import validate_workflow_output
 
 logger = logging.getLogger(__name__)
-
-
-def validate_workflow_output(workflow_output_file: Path):
-    """
-    Validate the contents of the workflow output file.
-    WIP: output format should be published as a schema and this validation should be done against that schema.
-    """
-    # Ensure the workflow_output.json file was created
-    assert workflow_output_file.exists(), "The workflow_output.json file was not created"
-
-    # Read and validate the workflow_output.json file
-    try:
-        with open(workflow_output_file, encoding="utf-8") as f:
-            result_json = json.load(f)
-    except json.JSONDecodeError:
-        pytest.fail("Failed to parse workflow_output.json as valid JSON")
-
-    assert isinstance(result_json, list), "The workflow_output.json file is not a list"
-    assert len(result_json) > 0, "The workflow_output.json file is empty"
-    assert isinstance(result_json[0], dict), "The workflow_output.json file is not a list of dictionaries"
-
-    # Ensure required keys exist
-    required_keys = ["id", "question", "answer", "generated_answer", "intermediate_steps"]
-    for key in required_keys:
-        assert all(item.get(key) for item in result_json), f"The '{key}' key is missing in workflow_output.json"
 
 
 def validate_rag_accuracy(rag_metric_output_file: Path, score: float):
