@@ -1,0 +1,163 @@
+# Sample training data for SQL Retriever testing
+# This file demonstrates the format for training Vanna with MySQL examples
+
+ddl:
+  - |
+    CREATE TABLE customers (
+        customer_id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) UNIQUE,
+        city VARCHAR(50),
+        country VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  
+  - |
+    CREATE TABLE products (
+        product_id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(100) NOT NULL,
+        category VARCHAR(50),
+        price DECIMAL(10, 2),
+        stock_quantity INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  
+  - |
+    CREATE TABLE orders (
+        order_id INT PRIMARY KEY AUTO_INCREMENT,
+        customer_id INT,
+        order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        total_amount DECIMAL(10, 2),
+        status VARCHAR(20),
+        FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+    );
+  
+  - |
+    CREATE TABLE order_items (
+        order_item_id INT PRIMARY KEY AUTO_INCREMENT,
+        order_id INT,
+        product_id INT,
+        quantity INT NOT NULL,
+        unit_price DECIMAL(10, 2),
+        FOREIGN KEY (order_id) REFERENCES orders(order_id),
+        FOREIGN KEY (product_id) REFERENCES products(product_id)
+    );
+
+documentation:
+  - |
+    Database Schema Overview:
+    
+    The database contains a simple e-commerce schema with four main tables:
+    
+    1. customers: Stores customer information including name, email, and location
+    2. products: Contains product catalog with pricing and inventory
+    3. orders: Tracks customer orders with status and total amount
+    4. order_items: Line items for each order with quantity and pricing
+    
+    Relationships:
+    - orders.customer_id → customers.customer_id
+    - order_items.order_id → orders.order_id
+    - order_items.product_id → products.product_id
+  
+  - |
+    Common Query Patterns:
+    
+    - To calculate revenue: SUM(order_items.quantity * order_items.unit_price)
+    - To find top customers: GROUP BY customer_id and order by total spent
+    - To check inventory: products.stock_quantity
+    - To analyze sales trends: GROUP BY DATE(orders.order_date)
+
+sql:
+  - question: "What are the top 10 best-selling products by quantity?"
+    sql: |
+      SELECT 
+          p.name,
+          p.category,
+          SUM(oi.quantity) as total_quantity_sold,
+          COUNT(DISTINCT oi.order_id) as number_of_orders
+      FROM products p
+      JOIN order_items oi ON p.product_id = oi.product_id
+      GROUP BY p.product_id, p.name, p.category
+      ORDER BY total_quantity_sold DESC
+      LIMIT 10;
+  
+  - question: "Which customers have placed the most orders?"
+    sql: |
+      SELECT 
+          c.name,
+          c.email,
+          c.city,
+          c.country,
+          COUNT(o.order_id) as total_orders,
+          SUM(o.total_amount) as total_spent
+      FROM customers c
+      JOIN orders o ON c.customer_id = o.customer_id
+      GROUP BY c.customer_id, c.name, c.email, c.city, c.country
+      ORDER BY total_orders DESC
+      LIMIT 10;
+  
+  - question: "Show monthly revenue for this year"
+    sql: |
+      SELECT 
+          DATE_FORMAT(o.order_date, '%Y-%m') as month,
+          SUM(oi.quantity * oi.unit_price) as revenue,
+          COUNT(DISTINCT o.order_id) as orders_count
+      FROM orders o
+      JOIN order_items oi ON o.order_id = oi.order_id
+      WHERE YEAR(o.order_date) = YEAR(CURRENT_DATE)
+      GROUP BY DATE_FORMAT(o.order_date, '%Y-%m')
+      ORDER BY month DESC;
+  
+  - question: "Which product categories generate the most revenue?"
+    sql: |
+      SELECT 
+          p.category,
+          SUM(oi.quantity * oi.unit_price) as total_revenue,
+          COUNT(DISTINCT oi.order_id) as orders_count,
+          COUNT(DISTINCT p.product_id) as products_count
+      FROM products p
+      JOIN order_items oi ON p.product_id = oi.product_id
+      GROUP BY p.category
+      ORDER BY total_revenue DESC;
+  
+  - question: "Show products that are low on inventory"
+    sql: |
+      SELECT 
+          p.name,
+          p.category,
+          p.stock_quantity,
+          p.price,
+          CASE 
+              WHEN p.stock_quantity = 0 THEN 'Out of Stock'
+              WHEN p.stock_quantity < 10 THEN 'Low Stock'
+              ELSE 'In Stock'
+          END as stock_status
+      FROM products p
+      WHERE p.stock_quantity < 20
+      ORDER BY p.stock_quantity ASC;
+  
+  - question: "What is the average order value?"
+    sql: |
+      SELECT 
+          AVG(o.total_amount) as average_order_value,
+          MIN(o.total_amount) as min_order_value,
+          MAX(o.total_amount) as max_order_value,
+          COUNT(o.order_id) as total_orders
+      FROM orders o;
+  
+  - question: "Show customer order frequency and lifetime value"
+    sql: |
+      SELECT 
+          c.name,
+          c.city,
+          c.country,
+          COUNT(o.order_id) as total_orders,
+          SUM(o.total_amount) as lifetime_value,
+          AVG(o.total_amount) as avg_order_value,
+          MAX(o.order_date) as last_order_date
+      FROM customers c
+      JOIN orders o ON c.customer_id = o.customer_id
+      GROUP BY c.customer_id, c.name, c.city, c.country
+      ORDER BY lifetime_value DESC
+      LIMIT 20;
+
