@@ -57,8 +57,8 @@ class SQLRetriever(Retriever):
         vector_store_path: str,
         db_connection_string: str,
         db_type: str = "sqlite",
-        training_data_path: str = None,
-        nvidia_api_key: str = None,
+        training_data_path: str | None = None,
+        nvidia_api_key: str | None = None,
         max_results: int = 100,
         **kwargs,
     ):
@@ -95,8 +95,8 @@ class SQLRetriever(Retriever):
             vector_store_path=vector_store_path,
             db_connection_string=db_connection_string,
             db_type=db_type,
-            training_data_path=training_data_path,
-            nvidia_api_key=nvidia_api_key,
+            training_data_path=training_data_path,  # type: ignore[arg-type]
+            nvidia_api_key=nvidia_api_key,  # type: ignore[arg-type]
         )
 
         logger.info(
@@ -151,16 +151,18 @@ class SQLRetriever(Retriever):
 
             if df.empty:
                 logger.warning(f"No results found for query: {query}")
+                empty_metadata: dict[str, Any] = {
+                    "row_count": 0,
+                    "columns": [],
+                    "query": query,
+                }
+                if return_sql:
+                    empty_metadata["sql"] = sql
                 return RetrieverOutput(
                     results=[
                         Document(
                             page_content=json.dumps([]),
-                            metadata={
-                                "sql": sql if return_sql else None,
-                                "row_count": 0,
-                                "columns": [],
-                                "query": query,
-                            },
+                            metadata=empty_metadata,
                         )
                     ]
                 )
@@ -185,7 +187,7 @@ class SQLRetriever(Retriever):
             raise RetrieverError(f"Failed to retrieve data from SQL database: {e}") from e
 
     def _dataframe_to_documents(
-        self, df: pd.DataFrame, sql: str = None, query: str = None
+        self, df: pd.DataFrame, sql: str | None = None, query: str | None = None
     ) -> RetrieverOutput:
         """
         Convert a pandas DataFrame to RetrieverOutput format.
@@ -200,17 +202,20 @@ class SQLRetriever(Retriever):
         """
         # Convert DataFrame to JSON
         results_json = df.to_json(orient="records")
-        results_list = json.loads(results_json)
+        if results_json is None:
+            results_list = []
+        else:
+            results_list = json.loads(results_json)
 
         # Create metadata
-        metadata = {
+        metadata: dict[str, Any] = {
             "row_count": len(df),
             "columns": df.columns.tolist(),
         }
 
-        if sql:
+        if sql is not None:
             metadata["sql"] = sql
-        if query:
+        if query is not None:
             metadata["query"] = query
 
         # Create a single document containing all results

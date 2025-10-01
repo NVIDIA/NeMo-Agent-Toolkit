@@ -334,7 +334,7 @@ def chunk_documentation(text: str, max_chars: int = 1500) -> list:
     return final_chunks
 
 
-def init_vanna(vn, training_data_path: str = None):
+def init_vanna(vn, training_data_path: str | None = None):
     """
     Initialize and train a Vanna instance for SQL generation using configurable training data.
 

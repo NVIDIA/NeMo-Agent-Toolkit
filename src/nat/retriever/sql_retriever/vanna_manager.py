@@ -62,11 +62,11 @@ class VannaManager:
         config_key: str,
         vanna_llm_config=None,
         vanna_embedder_config=None,
-        vector_store_path: str = None,
-        db_connection_string: str = None,
+        vector_store_path: str | None = None,
+        db_connection_string: str | None = None,
         db_type: str = "sqlite",
-        training_data_path: str = None,
-        nvidia_api_key: str = None,
+        training_data_path: str | None = None,
+        nvidia_api_key: str | None = None,
     ):
         """
         Initialize the VannaManager and create Vanna instance immediately if all config is provided.
@@ -132,11 +132,11 @@ class VannaManager:
         self,
         vanna_llm_config=None,
         vanna_embedder_config=None,
-        vector_store_path: str = None,
-        db_connection_string: str = None,
-        db_type: str = None,
-        training_data_path: str = None,
-        nvidia_api_key: str = None,
+        vector_store_path: str | None = None,
+        db_connection_string: str | None = None,
+        db_type: str | None = None,
+        training_data_path: str | None = None,
+        nvidia_api_key: str | None = None,
     ) -> NIMVanna:
         """
         Get the Vanna instance. If not created during init, create it now with provided parameters.
@@ -178,7 +178,7 @@ class VannaManager:
 
                 # Show vector store status for pre-initialized instances
                 try:
-                    if os.path.exists(self.vector_store_path):
+                    if self.vector_store_path and os.path.exists(self.vector_store_path):
                         list_of_folders = [
                             d
                             for d in os.listdir(self.vector_store_path)
@@ -202,6 +202,19 @@ class VannaManager:
         """
         Create a new Vanna instance using the stored configuration.
         """
+        # Type guards - these should never be None at this point due to earlier checks
+        if not all(
+            [
+                self.vanna_llm_config,
+                self.vanna_embedder_config,
+                self.vector_store_path,
+                self.db_connection_string,
+            ]
+        ):
+            raise RuntimeError(
+                "VannaManager: Cannot create instance without required configuration"
+            )
+
         logger.info(f"VannaManager: Creating instance for {self.config_key}")
         logger.debug(f"VannaManager: Vector store path: {self.vector_store_path}")
         logger.debug(f"VannaManager: Database connection: {self.db_connection_string}")
@@ -337,6 +350,11 @@ class VannaManager:
         logger.debug("VannaManager: Checking if vector store needs initialization...")
         logger.debug(f"VannaManager: Vector store path: {self.vector_store_path}")
 
+        # Type guard - vector_store_path should be set at this point
+        if self.vector_store_path is None:
+            logger.warning("VannaManager: Vector store path is None, assuming initialization needed")
+            return True
+
         try:
             if not os.path.exists(self.vector_store_path):
                 logger.debug(
@@ -423,8 +441,8 @@ class VannaManager:
         vector_store_path: str,
         db_connection_string: str,
         db_type: str = "sqlite",
-        training_data_path: str = None,
-        nvidia_api_key: str = None,
+        training_data_path: str | None = None,
+        nvidia_api_key: str | None = None,
     ):
         """
         Class method to create a VannaManager with full configuration.
