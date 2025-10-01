@@ -28,7 +28,7 @@ This guide will cover how to use a NeMo Agent toolkit workflow as a MCP host wit
 MCP client functionality requires the `nvidia-nat-mcp` package. Install it with:
 
 ```bash
-uv pip install 'nvidia-nat[mcp]'
+uv pip install "nvidia-nat[mcp]"
 ```
 ## Accessing Protected MCP Servers
 NeMo Agent toolkit can access protected MCP servers via the MCP client auth provider. For more information, see the [MCP Authentication](./mcp-auth.md) documentation.

@@ -81,13 +81,13 @@ pip install nvidia-nat
 NeMo Agent Toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain/LangGraph plugin, run the following:
 
 ```bash
-pip install 'nvidia-nat[langchain]'
+pip install "nvidia-nat[langchain]"
 ```
 
 Or for all optional dependencies:
 
 ```bash
-pip install 'nvidia-nat[all]'
+pip install "nvidia-nat[all]"
 ```
 
 The full list of optional dependencies can be found [here](./docs/source/quick-start/installing.md#framework-integrations).

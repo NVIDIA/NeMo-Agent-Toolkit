@@ -41,7 +41,7 @@ uv pip install -e ".[profiling]"
 
 If you are installing from a package, you need to install the `nvidia-nat[profiling]` package by running the following command:
 ```bash
-uv pip install 'nvidia-nat[profiling]'
+uv pip install "nvidia-nat[profiling]"
 ```
 
 ## Current Profiler Architecture

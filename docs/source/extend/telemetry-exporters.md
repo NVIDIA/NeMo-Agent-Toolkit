@@ -412,7 +412,7 @@ class CustomSpanExporter(SpanExporter[Span, dict]):
 > **Note**: OpenTelemetry exporters require the `nvidia-nat-opentelemetry` subpackage. Install it with:
 
 > ```bash
-> pip install 'nvidia-nat[opentelemetry]'
+> pip install "nvidia-nat[opentelemetry]"
 > ```
 
 For most OTLP-compatible services, use the pre-built `OTLPSpanAdapterExporter`:
