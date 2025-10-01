@@ -43,13 +43,21 @@ async def test_run_full_workflow():
         expected_answer="likely")
 
 
+@pytest.mark.skip(reason="This test gets rate limited potentially issue #842 and does not complete")
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key", "require_nest_asyncio")
-async def test_optimize_full_workflow():
+async def test_optimize_full_workflow(capsys):
+    from nat.data_models.config import Config
     from nat.data_models.optimizer import OptimizerRunConfig
     from nat.profiler.parameter_optimization.optimizer_runtime import optimize_config
     from nat_email_phishing_analyzer.register import EmailPhishingAnalyzerConfig
 
     config_file: Path = locate_example_config(EmailPhishingAnalyzerConfig, "config_optimizer.yml")
-    config = OptimizerRunConfig(config_file=config_file, dataset=None)
-    await optimize_config(config)
+    config = OptimizerRunConfig(config_file=config_file,
+                                dataset=None,
+                                override=(('eval.general.max_concurrency', '1'), ('optimizer.numeric.n_trials', '1')))
+    optimized_config = await optimize_config(config)
+    assert isinstance(optimized_config, Config)
+    captured_output = capsys.readouterr()
+
+    assert "All optimization phases complete" in captured_output.out
