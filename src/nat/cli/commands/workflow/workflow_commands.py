@@ -224,7 +224,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         files_to_render = {
             'pyproject.toml.j2': new_workflow_dir / 'pyproject.toml',
             'register.py.j2': base_dir / 'register.py',
-            'workflow.py.j2': base_dir / f'{package_name}_function.py',
+            'workflow.py.j2': base_dir / f'{python_safe_workflow_name}_function.py',
             '__init__.py.j2': base_dir / '__init__.py',
             'config.yml.j2': configs_dir / 'config.yml',
         }
