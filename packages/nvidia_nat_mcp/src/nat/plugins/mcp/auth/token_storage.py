@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-import warnings
 from abc import ABC
 from abc import abstractmethod
 
@@ -241,68 +240,3 @@ class InMemoryTokenStorage(TokenStorageBase):
         # For in-memory storage, we can access the internal storage
         self._object_store._store.clear()
         logger.debug("Cleared all authentication tokens from memory")
-
-
-class LegacyInMemoryTokenStorage(TokenStorageBase):
-    """
-    Legacy unencrypted in-memory token storage.
-
-    This implementation provides backward compatibility with the original
-    plain dictionary-based token storage. It is not recommended for production
-    use due to lack of encryption and security features.
-
-    .. deprecated::
-        Use InMemoryTokenStorage or ObjectStoreTokenStorage instead.
-    """
-
-    def __init__(self):
-        """
-        Initialize the legacy token storage with a deprecation warning.
-        """
-        warnings.warn(
-            "LegacyInMemoryTokenStorage is deprecated and not recommended for production use. "
-            "Consider using InMemoryTokenStorage or configuring an object store backend.",
-            DeprecationWarning,
-            stacklevel=2)
-        self._tokens: dict[str, AuthResult] = {}
-        logger.warning("Using legacy unencrypted in-memory token storage (not recommended for production)")
-
-    async def store(self, user_id: str, auth_result: AuthResult) -> None:
-        """
-        Store an authentication result in the dictionary.
-
-        Args:
-            user_id: The unique identifier for the user
-            auth_result: The authentication result to store
-        """
-        self._tokens[user_id] = auth_result
-        logger.debug(f"Stored authentication token for user: {user_id}")
-
-    async def retrieve(self, user_id: str) -> AuthResult | None:
-        """
-        Retrieve an authentication result from the dictionary.
-
-        Args:
-            user_id: The unique identifier for the user
-
-        Returns:
-            The authentication result if found, None otherwise
-        """
-        return self._tokens.get(user_id)
-
-    async def delete(self, user_id: str) -> None:
-        """
-        Delete an authentication result from the dictionary.
-
-        Args:
-            user_id: The unique identifier for the user
-        """
-        self._tokens.pop(user_id, None)
-        logger.debug(f"Deleted authentication token for user: {user_id}")
-
-    async def clear_all(self) -> None:
-        """
-        Clear all stored authentication results from the dictionary.
-        """
-        self._tokens.clear()
-        logger.debug("Cleared all authentication tokens")

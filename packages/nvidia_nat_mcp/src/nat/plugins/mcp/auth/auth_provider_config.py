@@ -58,8 +58,6 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     token_storage_object_store: ObjectStoreRef | None = Field(
         default=None,
         description="Reference to object store for secure token storage. If None, uses in-memory storage.")
-    use_legacy_token_storage: bool = Field(
-        default=False, description="Use legacy unencrypted in-memory token storage (not recommended for production)")
 
     @model_validator(mode="after")
     def validate_auth_config(self):

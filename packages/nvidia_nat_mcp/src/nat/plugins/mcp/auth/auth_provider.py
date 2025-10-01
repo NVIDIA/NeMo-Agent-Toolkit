@@ -307,11 +307,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         self._token_storage = None
         self._token_storage_object_store_ref = None
 
-        if self.config.use_legacy_token_storage:
-            logger.warning("Using legacy unencrypted token storage (not recommended for production)")
-            from .token_storage import LegacyInMemoryTokenStorage
-            self._token_storage = LegacyInMemoryTokenStorage()
-        elif self.config.token_storage_object_store:
+        if self.config.token_storage_object_store:
             # Store ref, will be resolved later when builder context is available
             self._token_storage_object_store_ref = self.config.token_storage_object_store
         else:
