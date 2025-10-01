@@ -62,7 +62,7 @@ nat mcp serve --config_file examples/getting_started/simple_calculator/configs/c
 
 To list the tools published by the MCP server you can use the `nat mcp client tool list` command. This command acts as an MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
 
-**Note:** The `nat mcp client` commands require the `nvidia-nat-mcp` package. If you encounter an error about missing MCP client functionality, install it with `uv pip install nvidia-nat[mcp]`.
+**Note:** The `nat mcp client` commands require the `nvidia-nat-mcp` package. If you encounter an error about missing MCP client functionality, install it with `uv pip install "nvidia-nat[mcp]"`.
 
 ```bash
 nat mcp client tool list
@@ -188,3 +188,8 @@ Sample output:
 Server at http://localhost:9901/mcp is healthy (response time: 4.35ms)
 ```
 This is useful for health checks and monitoring.
+
+## Limitations
+- The `nat mcp serve` command currently starts an MCP server without built-in authentication. This is a temporary limitation; server-side authentication is planned for a future release.
+- NAT workflows can still connect to protected third-party MCP servers via the MCP client auth provider.
+- Recommendation: run `nat mcp serve` behind a trusted network or an authenticating reverse proxy (HTTPS with OAuth2, JWT or mTLS), and avoid exposing it directly to the public Internet.

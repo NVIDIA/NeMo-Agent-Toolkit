@@ -34,7 +34,7 @@ uv pip install -e '.[profiling]'
 
 If you are installing from a package, you can install the sub-package by running the following command:
 ```bash
-uv pip install nvidia-nat[profiling]
+uv pip install "nvidia-nat[profiling]"
 ```
 
 ## Evaluating a Workflow

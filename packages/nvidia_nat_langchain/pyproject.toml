@@ -23,6 +23,7 @@ dependencies = [
   "nvidia-nat~=1.4",
   "langchain-aws~=0.2.31",
   "langchain-core~=0.3.75",
+  "langchain-litellm~=0.2.3",
   "langchain-milvus~=0.2.1",
   "langchain-nvidia-ai-endpoints~=0.3.17",
   "langchain-openai~=0.3.32",
