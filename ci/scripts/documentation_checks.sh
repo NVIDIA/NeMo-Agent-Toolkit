@@ -17,8 +17,26 @@
 set +e
 
 # Intentionally excluding CHANGELOG.md as it immutable
-DOC_FILES=$(git ls-files "*.md" "*.rst" | grep -v -E '^(CHANGELOG|LICENSE)\.md$' | grep -v -E '^nv_internal/')
+DOC_FILES=$(git ls-files "*.md" "*.rst" | grep -v -E '^(CHANGELOG|LICENSE)\.md$')
+NOTEBOOK_FILES=$(git ls-files "*.ipynb")
 
-vale ${DOC_FILES}
+if [[ -v ${WORKSPACE_TMP} ]]; then
+    MKTEMP_ARGS=""
+else
+    MKTEMP_ARGS="--tmpdir=${WORKSPACE_TMP}"
+fi
+
+EXPORT_DIR=$(mktemp -d ${MKTEMP_ARGS} nat_converted_notebooks.XXXXXX)
+jupyter nbconvert -y --log-level=WARN --to markdown --output-dir ${EXPORT_DIR} ${NOTEBOOK_FILES}
+CONVERTED_NOTEBOOK_FILES=$(find ${EXPORT_DIR} -type f  -name "*.md")
+
+vale ${DOC_FILES} ${CONVERTED_NOTEBOOK_FILES}
 RETVAL=$?
+
+if [[ ${PRESERVE_TMP: -0} -eq 1 ]]; then
+    echo "Preserving temporary directory: ${EXPORT_DIR}"
+else
+    rm -rf ${EXPORT_DIR}
+fi
+
 exit $RETVAL
