@@ -305,11 +305,12 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         # Initialize token storage
         self._token_storage = None
-        self._token_storage_object_store_ref = None
+        self._token_storage_object_store_name = None
 
         if self.config.token_storage_object_store:
-            # Store ref, will be resolved later when builder context is available
-            self._token_storage_object_store_ref = self.config.token_storage_object_store
+            # Store object store name, will be resolved later when builder context is available
+            self._token_storage_object_store_name = self.config.token_storage_object_store
+            logger.info(f"Configured to use object store '{self._token_storage_object_store_name}' for token storage")
         else:
             # Default: use in-memory token storage
             from .token_storage import InMemoryTokenStorage
@@ -386,17 +387,18 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         credentials = self._cached_credentials
 
         # Resolve object store reference if needed
-        if self._token_storage_object_store_ref and not self._token_storage:
+        if self._token_storage_object_store_name and not self._token_storage:
             try:
                 if not self._builder:
                     raise RuntimeError("Builder not available for resolving object store")
-                object_store = await self._builder.get_object_store_client(self._token_storage_object_store_ref)
+                object_store = await self._builder.get_object_store_client(self._token_storage_object_store_name)
                 from .token_storage import ObjectStoreTokenStorage
                 self._token_storage = ObjectStoreTokenStorage(object_store)
-                logger.info("Initialized token storage with configured object store")
+                logger.info(f"Initialized token storage with object store '{self._token_storage_object_store_name}'")
             except Exception as e:
-                logger.warning(f"Failed to resolve object store for token storage: {e}. "
-                               "Falling back to in-memory storage.")
+                logger.warning(
+                    f"Failed to resolve object store '{self._token_storage_object_store_name}' for token storage: {e}. "
+                    "Falling back to in-memory storage.")
                 from .token_storage import InMemoryTokenStorage
                 self._token_storage = InMemoryTokenStorage()
 

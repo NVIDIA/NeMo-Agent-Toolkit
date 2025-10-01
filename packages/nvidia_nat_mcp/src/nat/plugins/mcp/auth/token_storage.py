@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import json
 import logging
 from abc import ABC
@@ -104,13 +105,18 @@ class ObjectStoreTokenStorage(TokenStorageBase):
         """
         Generate the object store key for a user's token.
 
+        Uses SHA256 hash to ensure the key is S3-compatible and doesn't
+        contain special characters like "://" that are invalid in object keys.
+
         Args:
             user_id: The user identifier
 
         Returns:
             The object store key
         """
-        return f"tokens/{user_id}"
+        # Hash the user_id to create an S3-safe key
+        user_hash = hashlib.sha256(user_id.encode('utf-8')).hexdigest()
+        return f"tokens/{user_hash}"
 
     async def store(self, user_id: str, auth_result: AuthResult) -> None:
         """
@@ -133,7 +139,7 @@ class ObjectStoreTokenStorage(TokenStorageBase):
             elif isinstance(cred_obj, BasicAuthCred):
                 auth_dict['credentials'][i]['username'] = cred_obj.username.get_secret_value()
                 auth_dict['credentials'][i]['password'] = cred_obj.password.get_secret_value()
-            elif isinstance(cred_obj, (HeaderCred, QueryCred, CookieCred)):
+            elif isinstance(cred_obj, HeaderCred | QueryCred | CookieCred):
                 auth_dict['credentials'][i]['value'] = cred_obj.value.get_secret_value()
 
         data = json.dumps(auth_dict).encode('utf-8')
