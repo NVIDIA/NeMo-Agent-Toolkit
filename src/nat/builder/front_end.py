@@ -37,7 +37,7 @@ class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
 
         super().__init__()
 
-        self._full_config: "Config" = full_config
+        self._full_config: Config = full_config
         self._front_end_config: FrontEndConfigT = typing.cast(FrontEndConfigT, full_config.general.front_end)
 
     @property

@@ -99,6 +99,7 @@ def add_text(text: str, blocks: list[dict], plain_text: list[str]) -> None:
 
 
 def build_messages(junit_data: dict[str, typing.Any], coverage_data: str) -> ReportMessages:
+    branch_name = os.environ.get("CI_COMMIT_BRANCH", "unknown")
     num_errors = junit_data['num_errors']
     num_failures = junit_data['num_failures']
 
@@ -107,7 +108,7 @@ def build_messages(junit_data: dict[str, typing.Any], coverage_data: str) -> Rep
     plain_text = []
     blocks = []
 
-    summary_line = f"Nightly CI/CD Test Results for {date.today()}"
+    summary_line = f"Nightly CI/CD Test Results for `{branch_name}` - {date.today()}"
     plain_text.append(summary_line + "\n")
 
     num_errors_and_failures = num_errors + num_failures

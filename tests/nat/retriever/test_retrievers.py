@@ -104,7 +104,7 @@ class CustomMilvusClient:
             assert isinstance(output_fields, list)
             assert len(output_fields) > 0
         if timeout:
-            assert isinstance(timeout, (float, int))
+            assert isinstance(timeout, float | int)
         assert isinstance(search_params, dict)
         assert isinstance(anns_field, str)
         to_return = min(limit, 4)

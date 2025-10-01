@@ -28,8 +28,10 @@ This guide will cover how to use a NeMo Agent toolkit workflow as a MCP host wit
 MCP client functionality requires the `nvidia-nat-mcp` package. Install it with:
 
 ```bash
-uv pip install nvidia-nat[mcp]
+uv pip install "nvidia-nat[mcp]"
 ```
+## Accessing Protected MCP Servers
+NeMo Agent toolkit can access protected MCP servers via the MCP client auth provider. For more information, see the [MCP Authentication](./mcp-auth.md) documentation.
 
 ## MCP Client Configuration
 NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
@@ -64,6 +66,66 @@ You can use the `mcp_client` function group to connect to an MCP server, dynamic
 The function group supports filtering via the `include` and `exclude` parameters. You can also optionally override the tool name and description defined by the MCP server via the `tool_overrides` parameter.
 
 The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers. See [Function Groups](../function-groups.md) for more information about function group capabilities.
+
+#### Configuration Options
+
+The `mcp_client` function group supports the following configuration options:
+
+**Note**: You can get the complete list of configuration options and their schemas by running:
+```bash
+nat info components -t function_group -q mcp_client
+```
+
+##### Server Configuration
+
+- `server.transport`: Transport type (`stdio`, `sse`, or `streamable-http`). See [Transport Configuration](#transport-configuration) for details.
+- `server.url`: URL of the MCP server (required for `sse` and `streamable-http` transports)
+- `server.command`: Command to run for `stdio` transport (such as `python` or `docker`)
+- `server.args`: Arguments for the stdio command
+- `server.env`: Environment variables for the stdio process
+- `server.auth_provider`: Reference to authentication provider for protected MCP servers (only supported with `streamable-http` transport)
+
+##### Timeout Configuration
+
+- `tool_call_timeout`: Timeout for MCP tool calls. Defaults to `60` seconds
+- `auth_flow_timeout`: Timeout for interactive authentication flow. Defaults to `300` seconds
+
+##### Reconnection Configuration
+
+- `reconnect_enabled`: Whether to enable reconnecting to the MCP server if the connection is lost. Defaults to `true`.
+- `reconnect_max_attempts`: Maximum number of reconnect attempts. Defaults to `2`.
+- `reconnect_initial_backoff`: Initial backoff time for reconnect attempts. Defaults to `0.5` seconds.
+- `reconnect_max_backoff`: Maximum backoff time for reconnect attempts. Defaults to `50.0` seconds.
+
+##### Tool Customization
+
+- `tool_overrides`: Optional overrides for tool names and descriptions. Each entry can specify:
+  - `alias`: Override the tool name (function name in the workflow)
+  - `description`: Override the tool description
+
+Example with all options:
+
+```yaml
+function_groups:
+  mcp_tools:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "http://localhost:9901/mcp"
+      auth_provider: "mcp_oauth2"  # Optional authentication
+    tool_call_timeout: 60  # 1 minute for tool calls
+    auth_flow_timeout: 300  # 5 minutes for auth flow
+    reconnect_enabled: true
+    reconnect_max_attempts: 3
+    reconnect_initial_backoff: 1.0
+    reconnect_max_backoff: 60.0
+    tool_overrides:
+      calculator_add:
+        alias: "add_numbers"
+        description: "Add two numbers together"
+      calculator_multiply:
+        description: "Multiply two numbers"  # Keeps original name
+```
 
 ### `mcp_tool_wrapper` Configuration
 ```yaml
@@ -143,7 +205,7 @@ function_groups:
 ## Example
 The following example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers. This configuration shows how to use multiple MCP servers with different transports in the same workflow.
 
-`examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml`:
+`examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml`:
 ```yaml
 function_groups:
   mcp_time:
@@ -158,7 +220,7 @@ function_groups:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
 
-workflows:
+workflow:
   _type: react_agent
   tool_names:
     - mcp_time
@@ -179,7 +241,7 @@ This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable
 
 2. Run the workflow:
 ```bash
-nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 ## Displaying MCP Tools via CLI
@@ -200,6 +262,7 @@ nat mcp client tool list --transport stdio --command "python" --args "-m mcp_ser
 # For sse transport
 nat mcp client tool list --url http://localhost:9901/sse --transport sse
 ```
+For SSE transport, ensure the MCP server is started with the `--transport sse` flag. The transport type on the client and server needs to match for MCP communication to work. The default transport type is `streamable-http`.
 
 Sample output:
 ```text
@@ -237,7 +300,7 @@ To use a protected MCP server, you need to provide the `--auth` flag:
 ```bash
 nat mcp client tool list --url http://example.com/mcp --auth
 ```
-This will use the `mcp_oauth2` authentication provider to authenticate the user.
+This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, see the [MCP Authentication](./mcp-auth.md) documentation.
 
 Sample output:
 ```text
@@ -275,7 +338,7 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
 
 2. Start the workflow (MCP client) with FastAPI on port 8080:
    ```bash
-   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --port 8080
+   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --port 8080
    ```
 
 3. Call the endpoint and pretty-print the response:

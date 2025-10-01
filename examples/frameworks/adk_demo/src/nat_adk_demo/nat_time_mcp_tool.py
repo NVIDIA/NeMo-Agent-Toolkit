@@ -19,6 +19,7 @@ from collections.abc import AsyncIterator
 from zoneinfo import ZoneInfo
 
 from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
@@ -30,7 +31,7 @@ class TimeMCPToolConfig(FunctionBaseConfig, name="get_city_time_tool"):
     """Configuration for the get_city_time tool."""
 
 
-@register_function(config_type=TimeMCPToolConfig)
+@register_function(config_type=TimeMCPToolConfig, framework_wrappers=[LLMFrameworkEnum.ADK])
 async def get_city_time(_config: TimeMCPToolConfig, _builder: Builder) -> AsyncIterator[FunctionInfo]:
     """
     Register a get_city_time(city: str) -> str tool for ADK.

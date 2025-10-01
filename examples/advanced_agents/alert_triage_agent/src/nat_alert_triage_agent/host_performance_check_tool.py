@@ -103,8 +103,8 @@ async def _parse_stdout_lines(config, builder, stdout_lines) -> str:
 
         response = await utils.llm_ainvoke(config=config, builder=builder, user_prompt=prompt)
     except Exception as e:
-        response = ('{{"error": "Failed to parse stdout from the playbook run.", '
-                    '"exception": "{}", "raw_response": "{}"}}').format(str(e), response)
+        response = ('{"error": "Failed to parse stdout from the playbook run.", '
+                    f'"exception": "{str(e)}", "raw_response": "{response}"}}')
     return response
 
 

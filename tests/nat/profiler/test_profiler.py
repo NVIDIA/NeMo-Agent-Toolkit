@@ -224,7 +224,7 @@ async def test_average_workflow_runtime(minimal_eval_config):
     metrics_path = os.path.join(minimal_eval_config.general.output_dir, "inference_optimization.json")
     assert os.path.exists(metrics_path), "ProfilerRunner did not produce an simple_inference_metrics.json file."
 
-    with open(metrics_path, "r", encoding="utf-8") as f:
+    with open(metrics_path, encoding="utf-8") as f:
         metrics = json.load(f)
 
     # Grab the 90/95/99 intervals object for workflow run time
@@ -297,7 +297,7 @@ async def test_average_llm_latency(minimal_eval_config):
     metrics_path = os.path.join(minimal_eval_config.general.output_dir, "inference_optimization.json")
     assert os.path.exists(metrics_path), "ProfilerRunner did not produce an simple_inference_metrics.json file."
 
-    with open(metrics_path, "r", encoding="utf-8") as f:
+    with open(metrics_path, encoding="utf-8") as f:
         metrics = json.load(f)
 
     llm_stats = metrics["confidence_intervals"].get("llm_latency_confidence_intervals", {})

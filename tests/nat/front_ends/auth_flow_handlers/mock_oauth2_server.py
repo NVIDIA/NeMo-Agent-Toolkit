@@ -21,9 +21,9 @@ import string
 import threading
 import time
 from dataclasses import dataclass
+from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
-from datetime import timezone
 
 import uvicorn
 from fastapi import FastAPI
@@ -206,7 +206,7 @@ class MockOAuth2Server:
                 redirect_uri=redirect_uri,
                 scope=scope,
                 state=state,
-                expires_at=(datetime.now(timezone.utc) + timedelta(minutes=10)).timestamp(),
+                expires_at=(datetime.now(UTC) + timedelta(minutes=10)).timestamp(),
                 code_challenge=code_challenge,
                 code_challenge_method=code_challenge_method,
             )
@@ -235,7 +235,7 @@ class MockOAuth2Server:
                 client_id=client_id,
                 scope=scope,
                 interval=interval,
-                expires_at=(datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp(),
+                expires_at=(datetime.now(UTC) + timedelta(minutes=5)).timestamp(),
             )
             return {
                 "device_code": dc,

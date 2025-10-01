@@ -13,19 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:22.04
+from pathlib import Path
 
-# Install Python and pip
-RUN apt-get update && apt-get upgrade -y && apt install -y python3 python3-pip
+import pytest
 
-# Install MCP proxy and tools
-RUN pip3 install uv uvenv
 
-RUN pip3 install "mcp==1.5.0"
-RUN pip3 install "mcp-proxy==0.5.1"
+@pytest.fixture(name="doc_guides_dir", scope="session")
+def doc_guides_dir_fixture() -> Path:
+    cur_dir = Path(__file__).absolute().parent
+    return cur_dir.parent
 
-# Create directory for scripts
-RUN mkdir /scripts
 
-# Set the entrypoint to run the MCP proxy
-ENTRYPOINT [ "mcp-proxy", "--pass-environment"]
+@pytest.fixture(name="workflows_dir", scope="session")
+def workflows_dir_fixture(doc_guides_dir: Path) -> Path:
+    return doc_guides_dir / "workflows"

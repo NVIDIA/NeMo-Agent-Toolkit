@@ -513,7 +513,7 @@ def test_ping_mcp_server_timeout(monkeypatch, transport):
         except Exception:
             pass
         # Simulate asyncio.wait_for timing out
-        raise asyncio.TimeoutError
+        raise TimeoutError
 
     monkeypatch.setattr("nat.cli.commands.mcp.mcp.asyncio.wait_for", _raise_timeout)
     res = asyncio.run(ping_mcp_server(url="http://u", timeout=0, transport=transport))

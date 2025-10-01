@@ -74,8 +74,7 @@ def test_sync_generator_logs_and_yields(caplog):
 
     @experimental
     def gen(n):
-        for i in range(n):
-            yield i
+        yield from range(n)
 
     # iterate first time
     out = list(gen(3))

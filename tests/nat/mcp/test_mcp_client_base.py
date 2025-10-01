@@ -528,27 +528,180 @@ async def test_connection_established_flag():
     assert client._connection_established is False
 
 
-async def test_mcp_tool_client_timeout_configuration():
-    """Test that MCPToolClient receives correct timeout configuration."""
-    client = MockMCPClient(transport="streamable-http", tool_call_timeout=timedelta(seconds=20))
+class TestMCPToolClientSessionId:
+    """Test the MCPToolClient session_id lookup functionality."""
 
-    # Mock tools response
-    mock_tool = MagicMock()
-    mock_tool.name = "test_tool"
-    mock_tool.description = "Test tool"
-    mock_tool.inputSchema = {}
+    def test_get_session_id_from_cookies(self):
+        """Test that session_id is correctly extracted from cookies."""
+        from nat.builder.context import Context as _Ctx
+        from nat.plugins.mcp.client_base import MCPToolClient
 
-    async def mock_list_tools():
-        return MagicMock(tools=[mock_tool])
+        # Create mock objects
+        mock_session = MagicMock()
+        mock_parent_client = MagicMock()
+        mock_parent_client.auth_provider = None
 
-    client.list_tools_side_effect = mock_list_tools
+        # Create MCPToolClient instance
+        tool_client = MCPToolClient(session=mock_session,
+                                    parent_client=mock_parent_client,
+                                    tool_name="test_tool",
+                                    tool_description="Test tool")
 
-    async with client:
-        tools = await client.get_tools()
-        tool_client = tools["test_tool"]
+        # Mock the context with cookies containing session_id
+        mock_metadata = MagicMock()
+        mock_metadata.cookies = {"nat-session": "test-session-123"}
 
-        # Verify timeout was passed to MCPToolClient
-        assert tool_client._tool_call_timeout == timedelta(seconds=20)
+        with patch.object(_Ctx, 'get') as mock_ctx_get:
+            mock_ctx_get.return_value.metadata = mock_metadata
+
+            session_id = tool_client._get_session_id()
+
+            assert session_id == "test-session-123"
+
+    def test_get_session_id_no_cookies(self):
+        """Test that None is returned when no cookies are present."""
+        from nat.builder.context import Context as _Ctx
+        from nat.plugins.mcp.client_base import MCPToolClient
+
+        # Create mock objects
+        mock_session = MagicMock()
+        mock_parent_client = MagicMock()
+        mock_parent_client.auth_provider = None
+
+        # Create MCPToolClient instance
+        tool_client = MCPToolClient(session=mock_session,
+                                    parent_client=mock_parent_client,
+                                    tool_name="test_tool",
+                                    tool_description="Test tool")
+
+        # Mock the context with no cookies
+        mock_metadata = MagicMock()
+        mock_metadata.cookies = None
+
+        with patch.object(_Ctx, 'get') as mock_ctx_get:
+            mock_ctx_get.return_value.metadata = mock_metadata
+
+            session_id = tool_client._get_session_id()
+
+            assert session_id is None
+
+    def test_get_session_id_no_nat_session_cookie(self):
+        """Test that None is returned when cookies exist but no nat-session cookie."""
+        from nat.builder.context import Context as _Ctx
+        from nat.plugins.mcp.client_base import MCPToolClient
+
+        # Create mock objects
+        mock_session = MagicMock()
+        mock_parent_client = MagicMock()
+        mock_parent_client.auth_provider = None
+
+        # Create MCPToolClient instance
+        tool_client = MCPToolClient(session=mock_session,
+                                    parent_client=mock_parent_client,
+                                    tool_name="test_tool",
+                                    tool_description="Test tool")
+
+        # Mock the context with cookies but no nat-session
+        mock_metadata = MagicMock()
+        mock_metadata.cookies = {"other-cookie": "value"}
+
+        with patch.object(_Ctx, 'get') as mock_ctx_get:
+            mock_ctx_get.return_value.metadata = mock_metadata
+
+            session_id = tool_client._get_session_id()
+
+            assert session_id is None
+
+    def test_get_session_id_fallback_to_default_user_id_when_allowed(self):
+        """Test that default_user_id is used when allow_default_user_id_for_tool_calls is True."""
+        from nat.builder.context import Context as _Ctx
+        from nat.plugins.mcp.client_base import MCPToolClient
+
+        # Create mock objects
+        mock_session = MagicMock()
+        mock_parent_client = MagicMock()
+        mock_auth_provider = MagicMock()
+        mock_auth_config = MagicMock()
+        mock_auth_config.allow_default_user_id_for_tool_calls = True
+        mock_auth_config.default_user_id = "default-user-123"
+        mock_auth_provider.config = mock_auth_config
+        mock_parent_client.auth_provider = mock_auth_provider
+
+        # Create MCPToolClient instance
+        tool_client = MCPToolClient(session=mock_session,
+                                    parent_client=mock_parent_client,
+                                    tool_name="test_tool",
+                                    tool_description="Test tool")
+
+        # Mock the context with no cookies
+        mock_metadata = MagicMock()
+        mock_metadata.cookies = None
+
+        with patch.object(_Ctx, 'get') as mock_ctx_get:
+            mock_ctx_get.return_value.metadata = mock_metadata
+
+            session_id = tool_client._get_session_id()
+
+            assert session_id == "default-user-123"
+
+    def test_get_session_id_no_fallback_when_not_allowed(self):
+        """Test that None is returned when allow_default_user_id_for_tool_calls is False."""
+        from nat.builder.context import Context as _Ctx
+        from nat.plugins.mcp.client_base import MCPToolClient
+
+        # Create mock objects
+        mock_session = MagicMock()
+        mock_parent_client = MagicMock()
+        mock_auth_provider = MagicMock()
+        mock_auth_config = MagicMock()
+        mock_auth_config.allow_default_user_id_for_tool_calls = False
+        mock_auth_config.default_user_id = "default-user-123"
+        mock_auth_provider.config = mock_auth_config
+        mock_parent_client.auth_provider = mock_auth_provider
+
+        # Create MCPToolClient instance
+        tool_client = MCPToolClient(session=mock_session,
+                                    parent_client=mock_parent_client,
+                                    tool_name="test_tool",
+                                    tool_description="Test tool")
+
+        # Mock the context with no cookies
+        mock_metadata = MagicMock()
+        mock_metadata.cookies = None
+
+        with patch.object(_Ctx, 'get') as mock_ctx_get:
+            mock_ctx_get.return_value.metadata = mock_metadata
+
+            session_id = tool_client._get_session_id()
+
+            assert session_id is None
+
+    def test_get_session_id_no_auth_provider(self):
+        """Test that None is returned when no auth provider is configured."""
+        from nat.builder.context import Context as _Ctx
+        from nat.plugins.mcp.client_base import MCPToolClient
+
+        # Create mock objects
+        mock_session = MagicMock()
+        mock_parent_client = MagicMock()
+        mock_parent_client.auth_provider = None
+
+        # Create MCPToolClient instance
+        tool_client = MCPToolClient(session=mock_session,
+                                    parent_client=mock_parent_client,
+                                    tool_name="test_tool",
+                                    tool_description="Test tool")
+
+        # Mock the context with no cookies
+        mock_metadata = MagicMock()
+        mock_metadata.cookies = None
+
+        with patch.object(_Ctx, 'get') as mock_ctx_get:
+            mock_ctx_get.return_value.metadata = mock_metadata
+
+            session_id = tool_client._get_session_id()
+
+            assert session_id is None
 
 
 if __name__ == "__main__":

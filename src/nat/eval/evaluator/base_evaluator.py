@@ -71,7 +71,7 @@ class BaseEvaluator(ABC):
             TqdmPositionRegistry.release(tqdm_position)
 
         # Compute average if possible
-        numeric_scores = [item.score for item in output_items if isinstance(item.score, (int, float))]
+        numeric_scores = [item.score for item in output_items if isinstance(item.score, int | float)]
         avg_score = round(sum(numeric_scores) / len(numeric_scores), 2) if numeric_scores else None
 
         return EvalOutput(average_score=avg_score, eval_output_items=output_items)

@@ -18,9 +18,7 @@ import json
 import logging
 import re
 from json import JSONDecodeError
-from typing import Dict
-from typing import List
-from typing import Tuple
+from typing import Any
 
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
@@ -47,6 +45,17 @@ from nat.agent.base import BaseAgent
 logger = logging.getLogger(__name__)
 
 
+class ReWOOEvidence(BaseModel):
+    placeholder: str
+    tool: str
+    tool_input: Any
+
+
+class ReWOOPlanStep(BaseModel):
+    plan: str
+    evidence: ReWOOEvidence
+
+
 class ReWOOGraphState(BaseModel):
     """State schema for the ReWOO Agent Graph"""
     messages: list[BaseMessage] = Field(default_factory=list)  # input and output of the ReWOO Agent
@@ -56,8 +65,8 @@ class ReWOOGraphState(BaseModel):
     steps: AIMessage = Field(
         default_factory=lambda: AIMessage(content=""))  # the steps to solve the task, parsed from the plan
     # New fields for parallel execution support
-    evidence_map: Dict[str, Dict] = Field(default_factory=dict)  # mapping from placeholders to step info
-    execution_levels: List[List[str]] = Field(default_factory=list)  # levels for parallel execution
+    evidence_map: dict[str, ReWOOPlanStep] = Field(default_factory=dict)  # mapping from placeholders to step info
+    execution_levels: list[list[str]] = Field(default_factory=list)  # levels for parallel execution
     current_level: int = Field(default=0)  # current execution level
     intermediate_results: dict[str, ToolMessage] = Field(default_factory=dict)  # the intermediate results of each step
     result: AIMessage = Field(
@@ -91,18 +100,15 @@ class ReWOOAgentGraph(BaseAgent):
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
-        tool_names = ",".join([tool.name for tool in tools[:-1]]) + ',' + tools[-1].name  # prevent trailing ","
-        if not use_tool_schema:
-            tool_names_and_descriptions = "\n".join(
-                [f"{tool.name}: {tool.description}"
-                 for tool in tools[:-1]]) + "\n" + f"{tools[-1].name}: {tools[-1].description}"  # prevent trailing "\n"
-        else:
-            logger.debug("%s Adding the tools' input schema to the tools' description", AGENT_LOG_PREFIX)
-            tool_names_and_descriptions = "\n".join([
-                f"{tool.name}: {tool.description}. {INPUT_SCHEMA_MESSAGE.format(schema=tool.input_schema.model_fields)}"
-                for tool in tools[:-1]
-            ]) + "\n" + (f"{tools[-1].name}: {tools[-1].description}. "
-                         f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
+
+        def describe_tool(tool: BaseTool) -> str:
+            description = f"{tool.name}: {tool.description}"
+            if use_tool_schema:
+                description += f". {INPUT_SCHEMA_MESSAGE.format(schema=tool.input_schema.model_fields)}"
+            return description
+
+        tool_names = ",".join(tool.name for tool in tools)
+        tool_names_and_descriptions = "\n".join(describe_tool(tool) for tool in tools)
 
         self.planner_prompt = planner_prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         self.solver_prompt = solver_prompt
@@ -123,9 +129,12 @@ class ReWOOAgentGraph(BaseAgent):
     def _get_current_level_status(state: ReWOOGraphState) -> tuple[int, bool]:
         """
         Get the current execution level and whether it's complete.
-        :param state: The ReWOO graph state.
-        :return: Tuple of (current_level, is_complete). Level -1 means all execution is complete.
-        :rtype: tuple[int, bool]
+
+        Args:
+            state: The ReWOO graph state.
+
+        Returns:
+            tuple of (current_level, is_complete). Level -1 means all execution is complete.
         """
         if not state.execution_levels:
             return -1, True
@@ -143,63 +152,43 @@ class ReWOOAgentGraph(BaseAgent):
         return current_level, level_complete
 
     @staticmethod
-    def _parse_planner_output(planner_output: str) -> AIMessage:
+    def _parse_planner_output(planner_output: str) -> list[ReWOOPlanStep]:
 
         try:
-            steps = json.loads(planner_output)
-        except json.JSONDecodeError as ex:
+            return [ReWOOPlanStep(**step) for step in json.loads(planner_output)]
+        except Exception as ex:
             raise ValueError(f"The output of planner is invalid JSON format: {planner_output}") from ex
 
-        return AIMessage(content=steps)
-
     @staticmethod
-    def _parse_planner_dependencies(steps: List[Dict]) -> Tuple[Dict[str, Dict], List[List[str]]]:
+    def _parse_planner_dependencies(steps: list[ReWOOPlanStep]) -> tuple[dict[str, ReWOOPlanStep], list[list[str]]]:
         """
         Parse planner steps to identify dependencies and create execution levels for parallel processing.
         This creates a dependency map and identifies which evidence placeholders can be executed in parallel.
 
-        :param steps: List of plan steps from the planner.
-        :type steps: List[Dict]
-        :return: A mapping from evidence placeholders to step info and execution levels for parallel processing.
-        :rtype: Tuple[Dict[str, Dict], List[List[str]]]
+        Args:
+            steps: list of plan steps from the planner.
+
+        Returns:
+            A mapping from evidence placeholders to step info and execution levels for parallel processing.
         """
-        evidences = {}
-        dependence = {}
-
         # First pass: collect all evidence placeholders and their info
-        for step in steps:
-            if "evidence" not in step:
-                continue
-
-            evidence_info = step["evidence"]
-            placeholder = evidence_info.get("placeholder", "")
-
-            if placeholder:
-                # Store the complete step info for this evidence
-                evidences[placeholder] = {"plan": step.get("plan", ""), "evidence": evidence_info}
+        evidences: dict[str, ReWOOPlanStep] = {
+            step.evidence.placeholder: step
+            for step in steps if step.evidence and step.evidence.placeholder
+        }
 
         # Second pass: find dependencies now that we have all placeholders
-        for step in steps:
-            if "evidence" not in step:
-                continue
-
-            evidence_info = step["evidence"]
-            placeholder = evidence_info.get("placeholder", "")
-            tool_input = evidence_info.get("tool_input", "")
-
-            if placeholder:
-                # Find dependencies by looking for other placeholders in tool_input
-                dependence[placeholder] = []
-
-                # Convert tool_input to string to search for placeholders
-                tool_input_str = str(tool_input)
-                for var in re.findall(r"#E\d+", tool_input_str):
-                    if var in evidences and var != placeholder:
-                        dependence[placeholder].append(var)
+        dependencies = {
+            step.evidence.placeholder: [
+                var for var in re.findall(r"#E\d+", str(step.evidence.tool_input))
+                if var in evidences and var != step.evidence.placeholder
+            ]
+            for step in steps if step.evidence and step.evidence.placeholder
+        }
 
         # Create execution levels using topological sort
-        levels = []
-        remaining = dict(dependence)
+        levels: list[list[str]] = []
+        remaining = dict(dependencies)
 
         while remaining:
             # Find items with no dependencies (can be executed in parallel)
@@ -215,10 +204,8 @@ class ReWOOAgentGraph(BaseAgent):
                 remaining.pop(placeholder)
 
             # Remove completed items from other dependencies
-            # for placeholder in remaining.items():
-            #     remaining[placeholder] = [dep for dep in remaining[placeholder] if dep not in ready]
             for ph, deps in list(remaining.items()):
-                remaining[ph] = [dep for dep in deps if dep not in ready]
+                remaining[ph] = list(set(deps) - set(ready))
         return evidences, levels
 
     @staticmethod
@@ -239,6 +226,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         else:
             assert False, f"Unexpected type for tool_input: {type(tool_input)}"
+
         return tool_input
 
     @staticmethod
@@ -293,7 +281,7 @@ class ReWOOAgentGraph(BaseAgent):
             steps = self._parse_planner_output(str(plan.content))
 
             # Parse dependencies and create execution levels for parallel processing
-            evidence_map, execution_levels = self._parse_planner_dependencies(steps.content)
+            evidence_map, execution_levels = self._parse_planner_dependencies(steps)
 
             if self.detailed_logs:
                 agent_response_log_message = AGENT_CALL_LOG_MESSAGE % (task, str(plan.content))
@@ -302,10 +290,9 @@ class ReWOOAgentGraph(BaseAgent):
 
             return {
                 "plan": plan,
-                "steps": steps,
                 "evidence_map": evidence_map,
                 "execution_levels": execution_levels,
-                "current_level": 0
+                "current_level": 0,
             }
 
         except Exception as ex:
@@ -339,7 +326,7 @@ class ReWOOAgentGraph(BaseAgent):
             current_level_placeholders = state.execution_levels[current_level]
 
             # Filter to only placeholders not yet completed
-            pending_placeholders = [p for p in current_level_placeholders if p not in state.intermediate_results]
+            pending_placeholders = list(set(current_level_placeholders) - set(state.intermediate_results.keys()))
 
             if not pending_placeholders:
                 # All placeholders in this level are done, move to next level
@@ -365,10 +352,8 @@ class ReWOOAgentGraph(BaseAgent):
             # Process results and update intermediate_results
             updated_intermediate_results = dict(state.intermediate_results)
 
-            for i, result in enumerate(results):
-                placeholder = pending_placeholders[i]
-
-                if isinstance(result, Exception):
+            for placeholder, result in zip(pending_placeholders, results):
+                if isinstance(result, BaseException):
                     logger.error("%s Tool execution failed for %s: %s", AGENT_LOG_PREFIX, placeholder, result)
                     # Create error tool message
                     error_message = f"Tool execution failed: {str(result)}"
@@ -398,29 +383,32 @@ class ReWOOAgentGraph(BaseAgent):
 
     async def _execute_single_tool(self,
                                    placeholder: str,
-                                   step_info: Dict,
-                                   intermediate_results: Dict[str, ToolMessage]) -> ToolMessage:
+                                   step_info: ReWOOPlanStep,
+                                   intermediate_results: dict[str, ToolMessage]) -> ToolMessage:
         """
         Execute a single tool with proper placeholder replacement.
 
-        :param placeholder: The evidence placeholder (e.g., "#E1").
-        :param step_info: Step information containing tool and tool_input.
-        :param intermediate_results: Current intermediate results for placeholder replacement.
-        :return: ToolMessage with the tool execution result.
+        Args:
+            placeholder: The evidence placeholder (e.g., "#E1").
+            step_info: Step information containing tool and tool_input.
+            intermediate_results: Current intermediate results for placeholder replacement.
+
+        Returns:
+            ToolMessage with the tool execution result.
         """
-        evidence_info = step_info["evidence"]
-        tool_name = evidence_info.get("tool", "")
-        tool_input = evidence_info.get("tool_input", "")
+        evidence_info = step_info.evidence
+        tool_name = evidence_info.tool
+        tool_input = evidence_info.tool_input
 
         # Replace placeholders in tool input with previous results
-        for _placeholder, _tool_output in intermediate_results.items():
-            _tool_output_content = _tool_output.content
+        for ph_key, tool_output in intermediate_results.items():
+            tool_output_content = tool_output.content
             # If the content is a list, get the first element which should be a dict
-            if isinstance(_tool_output_content, list):
-                _tool_output_content = _tool_output_content[0]
-                assert isinstance(_tool_output_content, dict)
+            if isinstance(tool_output_content, list):
+                tool_output_content = tool_output_content[0]
+                assert isinstance(tool_output_content, dict)
 
-            tool_input = self._replace_placeholder(_placeholder, tool_input, _tool_output_content)
+            tool_input = self._replace_placeholder(ph_key, tool_input, tool_output_content)
 
         # Get the requested tool
         requested_tool = self._get_tool(tool_name)
@@ -442,10 +430,11 @@ class ReWOOAgentGraph(BaseAgent):
 
         # Parse and execute the tool
         tool_input_parsed = self._parse_tool_input(tool_input)
-        tool_response = await self._call_tool(requested_tool,
-                                              tool_input_parsed,
-                                              RunnableConfig(callbacks=self.callbacks),
-                                              max_retries=self.tool_call_max_retries)
+        tool_response = await self._call_tool(
+            requested_tool,
+            tool_input_parsed,
+            RunnableConfig(callbacks=self.callbacks),  # type: ignore
+            max_retries=self.tool_call_max_retries)
 
         if self.detailed_logs:
             self._log_tool_response(requested_tool.name, tool_input_parsed, str(tool_response))
@@ -459,20 +448,20 @@ class ReWOOAgentGraph(BaseAgent):
             plan = ""
             # Add the tool outputs of each step to the plan using evidence_map
             for placeholder, step_info in state.evidence_map.items():
-                evidence_info = step_info["evidence"]
-                original_tool_input = evidence_info.get("tool_input", "")
-                tool_name = evidence_info.get("tool", "")
+                evidence_info = step_info.evidence
+                original_tool_input = evidence_info.tool_input
+                tool_name = evidence_info.tool
 
                 # Replace placeholders in tool input with actual results
                 final_tool_input = original_tool_input
-                for _placeholder, _tool_output in state.intermediate_results.items():
-                    _tool_output_content = _tool_output.content
+                for ph_key, tool_output in state.intermediate_results.items():
+                    tool_output_content = tool_output.content
                     # If the content is a list, get the first element which should be a dict
-                    if isinstance(_tool_output_content, list):
-                        _tool_output_content = _tool_output_content[0]
-                        assert isinstance(_tool_output_content, dict)
+                    if isinstance(tool_output_content, list):
+                        tool_output_content = tool_output_content[0]
+                        assert isinstance(tool_output_content, dict)
 
-                    final_tool_input = self._replace_placeholder(_placeholder, final_tool_input, _tool_output_content)
+                    final_tool_input = self._replace_placeholder(ph_key, final_tool_input, tool_output_content)
 
                 # Get the final result for this placeholder
                 final_result = ""
@@ -482,14 +471,15 @@ class ReWOOAgentGraph(BaseAgent):
                         result_content = result_content[0]
                         if isinstance(result_content, dict):
                             final_result = str(result_content)
-                        else:
-                            final_result = str(result_content)
                     else:
                         final_result = str(result_content)
 
-                step_plan = step_info.get("plan", "")
-                plan += f"Plan: {step_plan}\n{placeholder} = \
-                    {tool_name}[{final_tool_input}]\nResult: {final_result}\n\n"
+                step_plan = step_info.plan
+                plan += '\n'.join([
+                    f"Plan: {step_plan}",
+                    f"{placeholder} = {tool_name}[{final_tool_input}",
+                    f"Result: {final_result}\n\n"
+                ])
 
             task = str(state.task.content)
             solver_prompt = self.solver_prompt.partial(plan=plan)
@@ -547,8 +537,10 @@ class ReWOOAgentGraph(BaseAgent):
             graph.add_node("solver", self.solver_node)
 
             graph.add_edge("planner", "executor")
-            conditional_edge_possible_outputs = {AgentDecision.TOOL: "executor", AgentDecision.END: "solver"}
-            graph.add_conditional_edges("executor", self.conditional_edge, conditional_edge_possible_outputs)
+            graph.add_conditional_edges("executor",
+                                        self.conditional_edge, {
+                                            AgentDecision.TOOL: "executor", AgentDecision.END: "solver"
+                                        })
 
             graph.set_entry_point("planner")
             graph.set_finish_point("solver")

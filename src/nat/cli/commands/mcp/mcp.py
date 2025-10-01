@@ -297,7 +297,7 @@ async def list_tools_via_function_group(
             if fn is not None:
                 tools.append(to_tool_entry(full, fn))
         else:
-            for full, fn in (await fns).items():
+            for full, fn in fns.items():
                 tools.append(to_tool_entry(full, fn))
 
     return tools
@@ -443,7 +443,7 @@ async def ping_mcp_server(url: str,
         # Apply timeout to the entire ping operation
         return await asyncio.wait_for(_ping_operation(), timeout=timeout)
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return MCPPingResult(url=url,
                              status="unhealthy",
                              response_time_ms=None,

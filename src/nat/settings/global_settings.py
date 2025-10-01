@@ -124,7 +124,7 @@ class Settings(HashableBaseModel):
                 if (short_names[key.local_name] == 1):
                     type_list.append((key.local_name, key.config_type))
 
-            return typing.Union[tuple(typing.Annotated[x_type, Tag(x_id)] for x_id, x_type in type_list)]
+            return typing.Union[*tuple(typing.Annotated[x_type, Tag(x_id)] for x_id, x_type in type_list)]
 
         RegistryHandlerAnnotation = dict[
             str,
@@ -169,7 +169,7 @@ class Settings(HashableBaseModel):
         if (not os.path.exists(configuration_file)):
             loaded_config = {}
         else:
-            with open(file_path, mode="r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 try:
                     loaded_config = json.load(f)
                 except Exception as e:

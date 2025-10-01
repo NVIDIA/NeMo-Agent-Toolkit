@@ -241,7 +241,7 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
             try:
                 await asyncio.wait_for(self._shutdown_complete_event.wait(), timeout=self._shutdown_timeout)
                 logger.debug("Shutdown completion detected via event")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("Shutdown completion timeout exceeded (%s seconds)", self._shutdown_timeout)
             return
 

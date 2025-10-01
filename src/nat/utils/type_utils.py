@@ -250,7 +250,7 @@ class DecomposedType:
         remaining_args = tuple(arg for arg in self.args if arg is not types.NoneType)
 
         if (len(remaining_args) > 1):
-            return DecomposedType(typing.Union[remaining_args])
+            return DecomposedType(typing.Union[*remaining_args])
         if (len(remaining_args) == 1):
             return DecomposedType(remaining_args[0])
 
