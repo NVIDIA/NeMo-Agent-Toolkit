@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import functools
 import logging
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator
+from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager as AsyncContextManager
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
@@ -71,15 +72,13 @@ def set_framework_profiler_handler(
             if LLMFrameworkEnum.LANGCHAIN in frameworks:
                 # Always set a fresh handler in the current context so callbacks
                 # route to the active run. Only register the hook once globally.
-                from nat.profiler.callbacks.langchain_callback_handler import \
-                    LangchainProfilerHandler
+                from nat.profiler.callbacks.langchain_callback_handler import LangchainProfilerHandler
 
                 handler = LangchainProfilerHandler()
                 callback_handler_var.set(handler)
 
                 if not _library_instrumented["langchain"]:
-                    from langchain_core.tracers.context import \
-                        register_configure_hook
+                    from langchain_core.tracers.context import register_configure_hook
                     register_configure_hook(callback_handler_var, inheritable=True)
                     _library_instrumented["langchain"] = True
                     logger.debug("LangChain/LangGraph callback hook registered")
@@ -88,16 +87,14 @@ def set_framework_profiler_handler(
                 from llama_index.core import Settings
                 from llama_index.core.callbacks import CallbackManager
 
-                from nat.profiler.callbacks.llama_index_callback_handler import \
-                    LlamaIndexProfilerHandler
+                from nat.profiler.callbacks.llama_index_callback_handler import LlamaIndexProfilerHandler
 
                 handler = LlamaIndexProfilerHandler()
                 Settings.callback_manager = CallbackManager([handler])
                 logger.debug("LlamaIndex callback handler registered")
 
             if LLMFrameworkEnum.CREWAI in frameworks and not _library_instrumented["crewai"]:
-                from nat.plugins.crewai.crewai_callback_handler import \
-                    CrewAIProfilerHandler
+                from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
 
                 handler = CrewAIProfilerHandler()
                 handler.instrument()
@@ -105,8 +102,7 @@ def set_framework_profiler_handler(
                 logger.debug("CrewAI callback handler registered")
 
             if LLMFrameworkEnum.SEMANTIC_KERNEL in frameworks and not _library_instrumented["semantic_kernel"]:
-                from nat.profiler.callbacks.semantic_kernel_callback_handler import \
-                    SemanticKernelProfilerHandler
+                from nat.profiler.callbacks.semantic_kernel_callback_handler import SemanticKernelProfilerHandler
 
                 handler = SemanticKernelProfilerHandler(workflow_llms=workflow_llms)
                 handler.instrument()
@@ -114,8 +110,7 @@ def set_framework_profiler_handler(
                 logger.debug("SemanticKernel callback handler registered")
 
             if LLMFrameworkEnum.AGNO in frameworks and not _library_instrumented["agno"]:
-                from nat.profiler.callbacks.agno_callback_handler import \
-                    AgnoProfilerHandler
+                from nat.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
 
                 handler = AgnoProfilerHandler()
                 handler.instrument()
@@ -124,8 +119,7 @@ def set_framework_profiler_handler(
 
             if LLMFrameworkEnum.ADK in frameworks and not _library_instrumented["adk"]:
                 try:
-                    from nat.plugins.adk.adk_callback_handler import \
-                        ADKProfilerHandler
+                    from nat.plugins.adk.adk_callback_handler import ADKProfilerHandler
                 except ImportError as e:
                     logger.warning(
                         "ADK profiler not available. " +

@@ -21,8 +21,7 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from nat.profiler.parameter_optimization.prompt_optimizer import \
-    PromptOptimizerInputSchema
+from nat.profiler.parameter_optimization.prompt_optimizer import PromptOptimizerInputSchema
 
 
 class PromptOptimizerConfig(FunctionBaseConfig, name="prompt_init"):

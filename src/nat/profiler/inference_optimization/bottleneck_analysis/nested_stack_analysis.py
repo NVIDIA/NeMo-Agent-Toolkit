@@ -35,10 +35,10 @@ import os
 import pandas as pd
 
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.profiler.inference_optimization.data_models import (CallNode,
-                                                             ConcurrencyDistribution,
-                                                             NestedCallProfilingResult,
-                                                             NodeMetrics)
+from nat.profiler.inference_optimization.data_models import CallNode
+from nat.profiler.inference_optimization.data_models import ConcurrencyDistribution
+from nat.profiler.inference_optimization.data_models import NestedCallProfilingResult
+from nat.profiler.inference_optimization.data_models import NodeMetrics
 from nat.profiler.utils import create_standardized_dataframe
 
 logger = logging.getLogger(__name__)
