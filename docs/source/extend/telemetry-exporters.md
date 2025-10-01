@@ -266,14 +266,14 @@ Before creating a custom exporter, check if your observability service is alread
 | Service | Type | Installation | Configuration |
 |---------|------|-------------|---------------|
 | **File** | `file` | `pip install nvidia-nat` | local file or directory |
-| **Langfuse** | `langfuse` | `pip install nvidia-nat[opentelemetry]` | endpoint + API keys |
-| **LangSmith** | `langsmith` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
-| **OpenTelemetry Collector** | `otelcollector` | `pip install nvidia-nat[opentelemetry]` | endpoint + headers |
-| **Patronus** | `patronus` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
-| **Galileo** | `galileo` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
-| **Phoenix** | `phoenix` | `pip install nvidia-nat[phoenix]` | endpoint |
-| **RagaAI/Catalyst** | `catalyst` | `pip install nvidia-nat[ragaai]` | API key + project |
-| **Weave** | `weave` | `pip install nvidia-nat[weave]` | project name |
+| **Langfuse** | `langfuse` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API keys |
+| **LangSmith** | `langsmith` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
+| **OpenTelemetry Collector** | `otelcollector` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + headers |
+| **Patronus** | `patronus` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
+| **Galileo** | `galileo` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
+| **Phoenix** | `phoenix` | `pip install "nvidia-nat[phoenix]"` | endpoint |
+| **RagaAI/Catalyst** | `catalyst` | `pip install "nvidia-nat[ragaai]"` | API key + project |
+| **Weave** | `weave` | `pip install "nvidia-nat[weave]"` | project name |
 
 ### Simple Configuration Example
 
@@ -412,7 +412,7 @@ class CustomSpanExporter(SpanExporter[Span, dict]):
 > **Note**: OpenTelemetry exporters require the `nvidia-nat-opentelemetry` subpackage. Install it with:
 
 > ```bash
-> pip install nvidia-nat[opentelemetry]
+> pip install "nvidia-nat[opentelemetry]"
 > ```
 
 For most OTLP-compatible services, use the pre-built `OTLPSpanAdapterExporter`:
