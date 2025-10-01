@@ -31,7 +31,7 @@ CMake
 Conda
 concurrencies
 config
-Configurability
+[Cc]onfigurability
 [Cc]oroutine(s?)
 CPython
 [Cc]ryptocurrenc[y|ies]
@@ -114,6 +114,7 @@ Pydantic
 PyPI
 pytest
 [Rr]edis
+[Rr]eimplement(ing)?
 [Rr]einstall(s?)
 [Rr]eplatform(ing)?
 [Rr]epo
