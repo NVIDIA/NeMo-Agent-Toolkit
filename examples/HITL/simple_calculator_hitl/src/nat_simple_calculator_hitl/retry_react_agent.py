@@ -165,8 +165,7 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
                     error_msg = "I seem to be having a problem."
 
                     # Create usage statistics for error response
-                    usage = Usage(prompt_tokens=None, completion_tokens=None, total_tokens=None)
-                    return ChatResponse.from_string(error_msg, usage=usage)
+                    return ChatResponse.from_string(error_msg, usage=Usage())
 
         # If we exhausted all retries, return the last response
         return response
@@ -210,16 +209,14 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
             error_msg = "I seem to be having a problem."
 
             # Create usage statistics for error response
-            usage = Usage(prompt_tokens=None, completion_tokens=None, total_tokens=None)
-            return ChatResponse.from_string(error_msg, usage=usage)
+            return ChatResponse.from_string(error_msg, usage=Usage())
 
         except Exception:
             # Handle any other unexpected exceptions
             error_msg = "I seem to be having a problem."
 
             # Create usage statistics for error response
-            usage = Usage(prompt_tokens=None, completion_tokens=None, total_tokens=None)
-            return ChatResponse.from_string(error_msg, usage=usage)
+            return ChatResponse.from_string(error_msg, usage=Usage())
 
     yield FunctionInfo.from_fn(_response_fn, description=config.description)
 

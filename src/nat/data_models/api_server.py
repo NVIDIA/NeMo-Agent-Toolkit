@@ -265,7 +265,7 @@ class ChatResponse(ResponseBaseModelOutput):
     model: str = "unknown-model"
     created: datetime.datetime
     choices: list[ChatResponseChoice]
-    usage: Usage  # Required for non-streaming responses per OpenAI spec
+    usage: Usage
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
 
