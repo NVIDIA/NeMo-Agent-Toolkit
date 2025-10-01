@@ -130,18 +130,12 @@ class SpanStatus(BaseModel):
 
 def _generate_nonzero_trace_id() -> int:
     """Generate a non-zero 128-bit trace ID."""
-    while True:
-        value = uuid.uuid4().int & ((1 << 128) - 1)
-        if value != 0:
-            return value
+    return uuid.uuid4().int
 
 
 def _generate_nonzero_span_id() -> int:
     """Generate a non-zero 64-bit span ID."""
-    while True:
-        value = uuid.uuid4().int & ((1 << 64) - 1)
-        if value != 0:
-            return value
+    return uuid.uuid4().int >> 64
 
 
 class SpanContext(BaseModel):
@@ -153,32 +147,26 @@ class SpanContext(BaseModel):
     @field_validator("trace_id", mode="before")
     @classmethod
     def _validate_trace_id(cls, v: int | str | None) -> int:
-        """Ensure trace_id is within 128-bit range and non-zero; regenerate if invalid."""
-        if v is None:
-            return _generate_nonzero_trace_id()
-        try:
-            value = int(v)
-        except Exception:
-            return _generate_nonzero_trace_id()
-        value = value & ((1 << 128) - 1)
-        if value == 0:
-            return _generate_nonzero_trace_id()
-        return value
+        """Regenerate if trace_id is None; raise an exception if trace_id is invalid;"""
+        if isinstance(v, str):
+            v = uuid.UUID(v).int
+        if isinstance(v, type(None)):
+            v = _generate_nonzero_trace_id()
+        if v == 0:
+            raise Exception("A null UUID is invalid")
+        return v
 
     @field_validator("span_id", mode="before")
     @classmethod
     def _validate_span_id(cls, v: int | str | None) -> int:
-        """Ensure span_id is within 64-bit range and non-zero; regenerate if invalid."""
-        if v is None:
-            return _generate_nonzero_span_id()
-        try:
-            value = int(v)
-        except Exception:
-            return _generate_nonzero_span_id()
-        value = value & ((1 << 64) - 1)
-        if value == 0:
-            return _generate_nonzero_span_id()
-        return value
+        """Regenerate if span_id is None; raise an exception if span_id is invalid;"""
+        if isinstance(v, str):
+            v = uuid.UUID(v).int
+        if isinstance(v, type(None)):
+            v = _generate_nonzero_span_id()
+        if v == 0:
+            raise Exception("A null UUID is invalid")
+        return v
 
 
 class Span(BaseModel):

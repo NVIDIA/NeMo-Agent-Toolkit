@@ -147,16 +147,10 @@ class Runner:
             existing_run_id = self._context_state.workflow_run_id.get()
             existing_trace_id = self._context_state.workflow_trace_id.get()
 
-            workflow_run_id = existing_run_id if existing_run_id else str(uuid.uuid4())
+            workflow_run_id = existing_run_id or str(uuid.uuid4())
 
-            if existing_trace_id:
-                workflow_trace_id = existing_trace_id
-            else:
-                # Ensure non-zero 128-bit workflow trace id
-                while True:
-                    workflow_trace_id = uuid.uuid4().int & ((1 << 128) - 1)
-                    if workflow_trace_id != 0:
-                        break
+            workflow_trace_id = existing_trace_id or uuid.uuid4().int
+
             token_run_id = self._context_state.workflow_run_id.set(workflow_run_id)
             token_trace_id = self._context_state.workflow_trace_id.set(workflow_trace_id)
 
@@ -232,16 +226,10 @@ class Runner:
             existing_run_id = self._context_state.workflow_run_id.get()
             existing_trace_id = self._context_state.workflow_trace_id.get()
 
-            workflow_run_id = existing_run_id if existing_run_id else str(uuid.uuid4())
+            workflow_run_id = existing_run_id or str(uuid.uuid4())
 
-            if existing_trace_id:
-                workflow_trace_id = existing_trace_id
-            else:
-                # Ensure non-zero 128-bit workflow trace id
-                while True:
-                    workflow_trace_id = uuid.uuid4().int & ((1 << 128) - 1)
-                    if workflow_trace_id != 0:
-                        break
+            workflow_trace_id = existing_trace_id or uuid.uuid4().int
+
             token_run_id = self._context_state.workflow_run_id.set(workflow_run_id)
             token_trace_id = self._context_state.workflow_trace_id.set(workflow_trace_id)
 
