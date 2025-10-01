@@ -153,7 +153,7 @@ class SpanContext(BaseModel):
         if isinstance(v, type(None)):
             v = _generate_nonzero_trace_id()
         if v == 0:
-            raise Exception("A null UUID is invalid")
+            raise Exception("A null trace_id is invalid")
         return v
 
     @field_validator("span_id", mode="before")
@@ -161,11 +161,14 @@ class SpanContext(BaseModel):
     def _validate_span_id(cls, v: int | str | None) -> int:
         """Regenerate if span_id is None; raise an exception if span_id is invalid;"""
         if isinstance(v, str):
-            v = uuid.UUID(v).int
+            try:
+                v = int(v, base=0)
+            except ValueError:
+                raise Exception("span_id is unable to be parsed")
         if isinstance(v, type(None)):
             v = _generate_nonzero_span_id()
-        if v == 0:
-            raise Exception("A null UUID is invalid")
+        if (v == 0) or (v >> 64) or (v < 0):
+            raise Exception("span_id is invalid")
         return v
 
 

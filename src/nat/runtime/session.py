@@ -16,6 +16,7 @@
 import asyncio
 import contextvars
 import typing
+import uuid
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import asynccontextmanager
@@ -169,7 +170,7 @@ class SessionManager:
                 if len(parts) >= 4:
                     trace_id_hex = parts[1]
                     if len(trace_id_hex) == 32:
-                        trace_id_int = int(trace_id_hex, 16)
+                        trace_id_int = uuid.UUID(trace_id_hex).int
                         self._context_state.workflow_trace_id.set(trace_id_int)
             except Exception:
                 pass
@@ -178,7 +179,7 @@ class SessionManager:
             workflow_trace_id = request.headers.get("workflow-trace-id")
             if workflow_trace_id:
                 try:
-                    self._context_state.workflow_trace_id.set(int(workflow_trace_id, 16))
+                    self._context_state.workflow_trace_id.set(uuid.UUID(workflow_trace_id).int)
                 except Exception:
                     pass
 
