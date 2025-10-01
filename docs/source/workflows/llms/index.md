@@ -26,6 +26,7 @@ NVIDIA NeMo Agent toolkit supports the following LLM providers:
 | [OpenAI](https://openai.com) | `openai` | OpenAI API |
 | [AWS Bedrock](https://aws.amazon.com/bedrock/) | `aws_bedrock` | AWS Bedrock API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
+| [LiteLLM](https://github.com/BerriAI/litellm) | `litellm` | LiteLLM API |
 
 
 ## LLM Configuration
@@ -47,6 +48,9 @@ llms:
   azure_openai_llm:
     _type: azure_openai
     azure_deployment: gpt-4o-mini
+  litellm_llm:
+    _type: litellm
+    model_name: gpt-4o
 ```
 
 ### NVIDIA NIM
@@ -127,6 +131,22 @@ The Azure OpenAI LLM provider is defined by the {py:class}`~nat.llm.azure_openai
 :::{note}
 `temperature` is model-gated and may not be supported by all models. See [Gated Fields](../../extend/gated-fields.md) for details.
 :::
+
+### LiteLLM
+
+LiteLLM is a general purpose LLM provider that can be used with any model provider that is supported by LiteLLM.
+See the [LiteLLM provider documentation](https://docs.litellm.ai/docs/providers) for more information on how to use LiteLLM.
+
+The LiteLLM LLM provider is defined by the {py:class}`~nat.llm.litellm_llm.LiteLlmModelConfig` class.
+
+* `model_name` - The name of the model to use (dependent on the model provider)
+* `api_key` - The API key to use for the model (dependent on the model provider)
+* `base_url` - The base URL to use for the model
+* `seed` - The seed to use for the model
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model
+* `max_retries` - The maximum number of retries for the request
+
 
 ## Testing Provider
 ### `nat_test_llm`

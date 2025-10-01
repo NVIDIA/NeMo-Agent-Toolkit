@@ -3910,6 +3910,19 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-litellm"
+version = "0.2.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "litellm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/40/8f/08032033cd4bdff1d177d6a9e3a1021e47c4c63fd1d8c564af6f3c7e9f8d/langchain_litellm-0.2.3.tar.gz", hash = "sha256:0e11687373ae6a99efee5a04d3a76de4fab0e1459edc0e84adb6f60ca76ebf79", size = 10829, upload-time = "2025-09-25T11:01:41.295Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/76/26/271b1dad80b39a0e9df7ab13f63fa3fad52ce8288ddf73dec32a2212219f/langchain_litellm-0.2.3-py3-none-any.whl", hash = "sha256:422254b8742893aed6380f5ee73e6ae77869b218758edd0888d14ebd2c439352", size = 11571, upload-time = "2025-09-25T11:01:40.183Z" },
+]
+
+[[package]]
 name = "langchain-milvus"
 version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4374,6 +4387,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ae/b1/f7172ba0c6d808863ea545a2b99c7b4a51b8109caba9df67e44cd8971ca5/llama_index_llms_bedrock-0.3.8.tar.gz", hash = "sha256:8ca2914842a1d09079c35429b15dc50659d697ae84a15a89076a12f90505800e", size = 10771, upload-time = "2025-03-26T16:15:09.008Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ff/2f/7fc5206467151f64764bae61abd0fbbb8392fe84def15b1467f7fb174d7b/llama_index_llms_bedrock-0.3.8-py3-none-any.whl", hash = "sha256:58b804a206146bd7228590a4ee92ce13806a21040d92cb61e3046f2ee64f66cd", size = 11516, upload-time = "2025-03-26T16:15:07.722Z" },
+]
+
+[[package]]
+name = "llama-index-llms-litellm"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "litellm" },
+    { name = "llama-index-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4d/13/64d3d2db8924eec085c05addaf8279f0ba95b28820ea4f035d0ba77cf711/llama_index_llms_litellm-0.5.1.tar.gz", hash = "sha256:b99460b0d1ef7cf48e02d139dc5358e6818a80b95633ba67d8438c73e180f5ef", size = 10611, upload-time = "2025-06-04T11:53:39.934Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/df/87bb97f75390aff4a4a479c329d27dd27d6069451574176eaaf837f67e07/llama_index_llms_litellm-0.5.1-py3-none-any.whl", hash = "sha256:f63c8384d051a9983a86e6f00f79cd9d6a5b81a035a4cff7c1548c3ff4b4d7f0", size = 10881, upload-time = "2025-06-04T11:53:38.619Z" },
 ]
 
 [[package]]
@@ -6362,6 +6388,7 @@ source = { editable = "packages/nvidia_nat_langchain" }
 dependencies = [
     { name = "langchain-aws" },
     { name = "langchain-core" },
+    { name = "langchain-litellm" },
     { name = "langchain-milvus" },
     { name = "langchain-nvidia-ai-endpoints" },
     { name = "langchain-openai" },
@@ -6374,6 +6401,7 @@ dependencies = [
 requires-dist = [
     { name = "langchain-aws", specifier = "~=0.2.31" },
     { name = "langchain-core", specifier = "~=0.3.75" },
+    { name = "langchain-litellm", specifier = "~=0.2.3" },
     { name = "langchain-milvus", specifier = "~=0.2.1" },
     { name = "langchain-nvidia-ai-endpoints", specifier = "~=0.3.17" },
     { name = "langchain-openai", specifier = "~=0.3.32" },
@@ -6393,6 +6421,7 @@ dependencies = [
     { name = "llama-index-embeddings-openai" },
     { name = "llama-index-llms-azure-openai" },
     { name = "llama-index-llms-bedrock" },
+    { name = "llama-index-llms-litellm" },
     { name = "llama-index-llms-nvidia" },
     { name = "llama-index-llms-openai" },
     { name = "llama-index-readers-file" },
@@ -6408,6 +6437,7 @@ requires-dist = [
     { name = "llama-index-embeddings-openai", specifier = "~=0.3.1" },
     { name = "llama-index-llms-azure-openai", specifier = "~=0.3.2" },
     { name = "llama-index-llms-bedrock", specifier = "~=0.3.8" },
+    { name = "llama-index-llms-litellm", specifier = "~=0.5.1" },
     { name = "llama-index-llms-nvidia", specifier = "~=0.3.1" },
     { name = "llama-index-llms-openai", specifier = "~=0.3.42" },
     { name = "llama-index-readers-file", specifier = "~=0.4.4" },
