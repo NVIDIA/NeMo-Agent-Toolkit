@@ -27,7 +27,18 @@ else
 fi
 
 EXPORT_DIR=$(mktemp -d ${MKTEMP_ARGS} nat_converted_notebooks.XXXXXX)
+if [[ ! -d "${EXPORT_DIR}" ]]; then
+    echo "ERROR: Failed to create temporary directory" >&2
+    exit 1
+fi
+
 jupyter nbconvert -y --log-level=WARN --to markdown --output-dir ${EXPORT_DIR} ${NOTEBOOK_FILES}
+if [[ $? -ne 0 ]]; then
+    echo "ERROR: Failed to convert notebooks" >&2
+    rm -rf "${EXPORT_DIR}"
+    exit 1
+fi
+
 CONVERTED_NOTEBOOK_FILES=$(find ${EXPORT_DIR} -type f  -name "*.md")
 
 vale ${DOC_FILES} ${CONVERTED_NOTEBOOK_FILES}
