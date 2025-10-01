@@ -38,8 +38,12 @@ FINISH_REASONS = frozenset({'stop', 'length', 'tool_calls', 'content_filter', 'f
 
 
 class UserMessageContentRoleType(str, Enum):
+    """
+    Enum representing chat message roles in API requests and responses.
+    """
     USER = "user"
     ASSISTANT = "assistant"
+    SYSTEM = "system"
 
 
 class Request(BaseModel):
