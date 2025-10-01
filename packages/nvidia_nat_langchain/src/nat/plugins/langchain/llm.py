@@ -24,6 +24,7 @@ from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
+from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.llm.utils.thinking import BaseThinkingInjector
@@ -152,5 +153,15 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
                             by_alias=True,
                             exclude_none=True,
                         ))
+
+    yield _patch_llm_based_on_config(client, llm_config)
+
+
+@register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def litellm_langchain(llm_config: LiteLlmModelConfig, _builder: Builder):
+
+    from langchain_litellm import ChatLiteLLM
+
+    client = ChatLiteLLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(client, llm_config)
