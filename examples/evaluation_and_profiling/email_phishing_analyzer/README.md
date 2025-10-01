@@ -206,9 +206,10 @@ Ensure `NVIDIA_API_KEY` is set in your environment.
 
 ### Outputs
 Results are written to the path specified by `optimizer.output_path`. Expect artifacts such as:
-- `best_params.json`: Highest-scoring parameter set.
-- `optimization_results.json`: Per-trial metrics and parameters.
-- `pareto_front.png`, `optimization_history.png`, `param_importances.png`: Visual summaries.
+-   `optimized_config.yml`: Tuned configuration derived from the selected trial.
+- You will also see a configuration file for eeach iteration of numeric trials.
+-   `trials_dataframe_params.csv`: Full Optuna trials `dataframe` (`values`, `params`, `timings`, `rep_scores`).
+-   `plots`: This directory will contain pareto visualizations of the optimization results.
 - For prompt optimization (when enabled): `optimized_prompts.json` and per-generation prompt history.
 
 ---
