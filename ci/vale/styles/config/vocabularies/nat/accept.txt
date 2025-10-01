@@ -136,6 +136,7 @@ Tavily
 [Tt]okenization
 [Tt]okenizer(s?)
 triages
+[Uu]ncomment
 [Uu]nencrypted
 [Uu]nittest(s?)
 [Uu]nprocessable
