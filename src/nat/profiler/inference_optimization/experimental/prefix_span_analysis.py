@@ -33,9 +33,9 @@ import numpy as np
 import pandas as pd
 
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.profiler.inference_optimization.data_models import FrequentPattern
-from nat.profiler.inference_optimization.data_models import PrefixCallNode
-from nat.profiler.inference_optimization.data_models import PrefixSpanSubworkflowResult
+from nat.profiler.inference_optimization.data_models import (FrequentPattern,
+                                                             PrefixCallNode,
+                                                             PrefixSpanSubworkflowResult)
 from nat.profiler.utils import create_standardized_dataframe
 
 logger = logging.getLogger(__name__)
@@ -212,7 +212,7 @@ def run_prefixspan(sequences_map: dict[int, list[PrefixCallNode]],
         from prefixspan import PrefixSpan
     except ImportError:
         logger.error("prefixspan is not installed. Please install prefixspan to run the prefix analysis in the "
-                     "profiler or install `nvidia-nat[profiler]` to install all necessary profiling packages.")
+                     "profiler or install \"nvidia-nat[profiler]\" to install all necessary profiling packages.")
 
         raise
 

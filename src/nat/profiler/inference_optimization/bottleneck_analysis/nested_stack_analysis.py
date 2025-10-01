@@ -35,10 +35,10 @@ import os
 import pandas as pd
 
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.profiler.inference_optimization.data_models import CallNode
-from nat.profiler.inference_optimization.data_models import ConcurrencyDistribution
-from nat.profiler.inference_optimization.data_models import NestedCallProfilingResult
-from nat.profiler.inference_optimization.data_models import NodeMetrics
+from nat.profiler.inference_optimization.data_models import (CallNode,
+                                                             ConcurrencyDistribution,
+                                                             NestedCallProfilingResult,
+                                                             NodeMetrics)
 from nat.profiler.utils import create_standardized_dataframe
 
 logger = logging.getLogger(__name__)
@@ -304,7 +304,7 @@ def save_gantt_chart(all_nodes: list[CallNode], output_path: str) -> None:
         import matplotlib.pyplot as plt
     except ImportError:
         logger.error("matplotlib is not installed. Please install matplotlib to use generate plots for the profiler "
-                     "or install `nvidia-nat[profiler]` to install all necessary profiling packages.")
+                     "or install \"nvidia-nat[profiler]\" to install all necessary profiling packages.")
 
         raise
 

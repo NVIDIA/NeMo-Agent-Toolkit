@@ -62,7 +62,7 @@ nat mcp serve --config_file examples/getting_started/simple_calculator/configs/c
 
 To list the tools published by the MCP server you can use the `nat mcp client tool list` command. This command acts as an MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
 
-**Note:** The `nat mcp client` commands require the `nvidia-nat-mcp` package. If you encounter an error about missing MCP client functionality, install it with `uv pip install nvidia-nat[mcp]`.
+**Note:** The `nat mcp client` commands require the `nvidia-nat-mcp` package. If you encounter an error about missing MCP client functionality, install it with `uv pip install "nvidia-nat[mcp]"`.
 
 ```bash
 nat mcp client tool list
