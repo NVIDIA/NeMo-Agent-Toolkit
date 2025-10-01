@@ -262,6 +262,7 @@ nat mcp client tool list --transport stdio --command "python" --args "-m mcp_ser
 # For sse transport
 nat mcp client tool list --url http://localhost:9901/sse --transport sse
 ```
+For SSE transport, ensure the MCP server is started with the `--transport sse` flag. The transport type on the client and server needs to match for MCP communication to work. The default transport type is `streamable-http`.
 
 Sample output:
 ```text
