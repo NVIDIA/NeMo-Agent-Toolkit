@@ -146,6 +146,7 @@ class AuthAdapter(httpx.Auth):
                 token = auth_result.credentials[0].token.get_secret_value()
                 return {"Authorization": f"Bearer {token}"}
             else:
+                logger.info("Auth provider did not return BearerTokenCred")
                 return {}
         except Exception as e:
             logger.warning("Failed to get auth token: %s", e)

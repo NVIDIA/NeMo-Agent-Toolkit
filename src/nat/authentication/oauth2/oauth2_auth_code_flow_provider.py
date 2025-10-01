@@ -38,9 +38,13 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
 
     def __init__(self, config: OAuth2AuthCodeFlowProviderConfig, token_storage=None):
         super().__init__(config)
-        self._authenticated_tokens: dict[str, AuthResult] = {}
         self._auth_callback = None
-        self._token_storage = token_storage
+        # Always use token storage - defaults to in-memory if not provided
+        if token_storage is None:
+            from nat.plugins.mcp.auth.token_storage import InMemoryTokenStorage
+            self._token_storage = InMemoryTokenStorage()
+        else:
+            self._token_storage = token_storage
 
     async def _attempt_token_refresh(self, user_id: str, auth_result: AuthResult) -> AuthResult | None:
         refresh_token = auth_result.raw.get("refresh_token")
@@ -63,10 +67,7 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
                 raw=new_token_data,
             )
 
-            if self._token_storage:
-                await self._token_storage.store(user_id, new_auth_result)
-            else:
-                self._authenticated_tokens[user_id] = new_auth_result
+            await self._token_storage.store(user_id, new_auth_result)
         except httpx.HTTPStatusError:
             return None
         except httpx.RequestError:
@@ -93,11 +94,8 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
             user_id = session_id
 
         if user_id:
-            # Try to retrieve from token storage or fallback to dict
-            if self._token_storage:
-                auth_result = await self._token_storage.retrieve(user_id)
-            else:
-                auth_result = self._authenticated_tokens.get(user_id)
+            # Try to retrieve from token storage
+            auth_result = await self._token_storage.retrieve(user_id)
 
             if auth_result:
                 if not auth_result.is_expired():
@@ -137,9 +135,6 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
         )
 
         if user_id:
-            if self._token_storage:
-                await self._token_storage.store(user_id, auth_result)
-            else:
-                self._authenticated_tokens[user_id] = auth_result
+            await self._token_storage.store(user_id, auth_result)
 
         return auth_result
