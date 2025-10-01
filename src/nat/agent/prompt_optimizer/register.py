@@ -51,7 +51,7 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
         from .prompt import mutator_prompt
     except ImportError as exc:
         raise ImportError("langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
-                          "This error can be resolve by installing nvidia-nat[langchain]") from exc
+                          "This error can be resolve by installing \"nvidia-nat[langchain]\".") from exc
 
     llm = await builder.get_llm(config.optimizer_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
@@ -111,7 +111,7 @@ async def prompt_recombiner_function(config: PromptRecombinerConfig, builder: Bu
         from langchain_core.prompts import PromptTemplate
     except ImportError as exc:
         raise ImportError("langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
-                          "This error can be resolve by installing nvidia-nat[langchain].") from exc
+                          "This error can be resolve by installing \"nvidia-nat[langchain]\".") from exc
 
     llm = await builder.get_llm(config.optimizer_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 

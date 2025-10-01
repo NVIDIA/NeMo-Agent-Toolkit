@@ -66,7 +66,7 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 
 
 [project.optional-dependencies]
-# Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install nvidia-nat[langchain]`
+# Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install "nvidia-nat[langchain]"`
 # Keep sorted!!!
 all = ["nvidia-nat-all"] # meta-package
 adk = ["nvidia-nat-adk"]
