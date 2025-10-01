@@ -208,7 +208,7 @@ Ensure `NVIDIA_API_KEY` is set in your environment.
 Results are written to the path specified by `optimizer.output_path`. Expect artifacts such as:
 - `optimized_config.yml`: Tuned configuration derived from the selected trial.
 - You will also see a configuration file for each iteration of numeric trials. For example, `config_numeric_trial_0.yml`
-  will contain the configuration for the first numeric trial. This is helpful for selecting specific trails whose metrics
+  will contain the configuration for the first numeric trial. This is helpful for selecting specific trials whose metrics
   you may prefer to the optimizer selected trial.
 - `trials_dataframe_params.csv`: Full Optuna trials `dataframe` (`values`, `params`, `timings`, `rep_scores`).
 - `plots`: This directory will contain pareto visualizations of the optimization results.
