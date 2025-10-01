@@ -14,9 +14,9 @@
 # limitations under the License.
 
 import logging
+from collections.abc import Awaitable
 from collections.abc import Callable
 from datetime import UTC
-from collections.abc import Awaitable
 from datetime import datetime
 
 import httpx
