@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
-# isort:skip_file
+"""SQL Retriever module for NeMo Agent Toolkit."""
 
-# Import any providers which need to be automatically registered here
-import nat.retriever.milvus.register
-import nat.retriever.nemo_retriever.register
-import nat.retriever.sql_retriever.register
+from nat.retriever.sql_retriever.sql_retriever import SQLRetriever
+
+__all__ = ["SQLRetriever"]
+
