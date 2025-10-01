@@ -120,6 +120,390 @@ class NIMVanna(ChromaDB_VectorStore, NIMCustomLLM):
         NIMCustomLLM.__init__(self, config=LLMConfig)
 
 
+class ElasticVectorStore(VannaBase):
+    """
+    Elasticsearch-based vector store for Vanna.
+    
+    This class provides vector storage and retrieval capabilities using Elasticsearch's
+    dense_vector field type and kNN search functionality.
+    
+    Configuration:
+        config: Dictionary with the following keys:
+            - url: Elasticsearch connection URL (e.g., "http://localhost:9200")
+            - index_name: Name of the Elasticsearch index to use (default: "vanna_vectors")
+            - api_key: Optional API key for authentication
+            - username: Optional username for basic auth
+            - password: Optional password for basic auth
+            - embedding_function: Function to generate embeddings (required)
+    """
+
+    def __init__(self, config=None):
+        VannaBase.__init__(self, config=config)
+        
+        if not config:
+            raise ValueError("config must be passed for ElasticVectorStore")
+        
+        # Elasticsearch connection parameters
+        self.url = config.get("url", "http://localhost:9200")
+        self.index_name = config.get("index_name", "vanna_vectors")
+        self.api_key = config.get("api_key")
+        self.username = config.get("username")
+        self.password = config.get("password")
+        
+        # Embedding function (required)
+        if "embedding_function" not in config:
+            raise ValueError("embedding_function must be provided in config")
+        self.embedding_function = config["embedding_function"]
+        
+        # Initialize Elasticsearch client
+        self._init_elasticsearch_client()
+        
+        # Create index if it doesn't exist
+        self._create_index_if_not_exists()
+        
+        logger.info(f"ElasticVectorStore initialized with index: {self.index_name}")
+    
+    def _init_elasticsearch_client(self):
+        """Initialize the Elasticsearch client with authentication."""
+        try:
+            from elasticsearch import Elasticsearch
+        except ImportError:
+            raise ImportError(
+                "elasticsearch package is required for ElasticVectorStore. "
+                "Install it with: pip install elasticsearch"
+            )
+        
+        # Build client kwargs
+        client_kwargs = {}
+        
+        if self.api_key:
+            client_kwargs["api_key"] = self.api_key
+        elif self.username and self.password:
+            client_kwargs["basic_auth"] = (self.username, self.password)
+        
+        self.es_client = Elasticsearch(self.url, **client_kwargs)
+        
+        # Test connection
+        if not self.es_client.ping():
+            raise ConnectionError(f"Could not connect to Elasticsearch at {self.url}")
+        
+        logger.info(f"Successfully connected to Elasticsearch at {self.url}")
+    
+    def _create_index_if_not_exists(self):
+        """Create the Elasticsearch index with appropriate mappings if it doesn't exist."""
+        if self.es_client.indices.exists(index=self.index_name):
+            logger.debug(f"Index {self.index_name} already exists")
+            return
+        
+        # Get embedding dimension by creating a test embedding
+        test_embedding = self._generate_embedding("test")
+        embedding_dim = len(test_embedding)
+        
+        # Index mapping with dense_vector field for embeddings
+        index_mapping = {
+            "mappings": {
+                "properties": {
+                    "id": {"type": "keyword"},
+                    "text": {"type": "text"},
+                    "embedding": {
+                        "type": "dense_vector",
+                        "dims": embedding_dim,
+                        "index": True,
+                        "similarity": "cosine"
+                    },
+                    "metadata": {"type": "object", "enabled": True},
+                    "type": {"type": "keyword"},  # ddl, documentation, sql
+                    "created_at": {"type": "date"}
+                }
+            }
+        }
+        
+        self.es_client.indices.create(index=self.index_name, body=index_mapping)
+        logger.info(f"Created Elasticsearch index: {self.index_name}")
+    
+    def _generate_embedding(self, text: str) -> list[float]:
+        """Generate embedding for a given text using the configured embedding function."""
+        if hasattr(self.embedding_function, 'embed_query'):
+            # NVIDIA embedding function returns [[embedding]]
+            result = self.embedding_function.embed_query(text)
+            if isinstance(result, list) and len(result) > 0:
+                if isinstance(result[0], list):
+                    return result[0]  # Extract the inner list
+                return result  # type: ignore[return-value]
+            return result  # type: ignore[return-value]
+        elif callable(self.embedding_function):
+            # Generic callable
+            result = self.embedding_function(text)
+            if isinstance(result, list) and len(result) > 0:
+                if isinstance(result[0], list):
+                    return result[0]
+                return result  # type: ignore[return-value]
+            return result  # type: ignore[return-value]
+        else:
+            raise ValueError("embedding_function must be callable or have embed_query method")
+    
+    def add_ddl(self, ddl: str, **kwargs) -> str:
+        """
+        Add a DDL statement to the vector store.
+        
+        Args:
+            ddl: The DDL statement to store
+            **kwargs: Additional metadata
+            
+        Returns:
+            Document ID
+        """
+        import hashlib
+        from datetime import datetime
+        
+        # Generate document ID
+        doc_id = hashlib.md5(ddl.encode()).hexdigest()
+        
+        # Generate embedding
+        embedding = self._generate_embedding(ddl)
+        
+        # Create document
+        doc = {
+            "id": doc_id,
+            "text": ddl,
+            "embedding": embedding,
+            "type": "ddl",
+            "metadata": kwargs,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        # Index document
+        self.es_client.index(index=self.index_name, id=doc_id, document=doc)
+        logger.debug(f"Added DDL to Elasticsearch: {doc_id}")
+        
+        return doc_id
+    
+    def add_documentation(self, documentation: str, **kwargs) -> str:
+        """
+        Add documentation to the vector store.
+        
+        Args:
+            documentation: The documentation text to store
+            **kwargs: Additional metadata
+            
+        Returns:
+            Document ID
+        """
+        import hashlib
+        from datetime import datetime
+        
+        doc_id = hashlib.md5(documentation.encode()).hexdigest()
+        embedding = self._generate_embedding(documentation)
+        
+        doc = {
+            "id": doc_id,
+            "text": documentation,
+            "embedding": embedding,
+            "type": "documentation",
+            "metadata": kwargs,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        self.es_client.index(index=self.index_name, id=doc_id, document=doc)
+        logger.debug(f"Added documentation to Elasticsearch: {doc_id}")
+        
+        return doc_id
+    
+    def add_question_sql(self, question: str, sql: str, **kwargs) -> str:
+        """
+        Add a question-SQL pair to the vector store.
+        
+        Args:
+            question: The natural language question
+            sql: The corresponding SQL query
+            **kwargs: Additional metadata
+            
+        Returns:
+            Document ID
+        """
+        import hashlib
+        from datetime import datetime
+        
+        # Combine question and SQL for embedding
+        combined_text = f"Question: {question}\nSQL: {sql}"
+        doc_id = hashlib.md5(combined_text.encode()).hexdigest()
+        embedding = self._generate_embedding(question)
+        
+        doc = {
+            "id": doc_id,
+            "text": combined_text,
+            "embedding": embedding,
+            "type": "sql",
+            "metadata": {
+                "question": question,
+                "sql": sql,
+                **kwargs
+            },
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        self.es_client.index(index=self.index_name, id=doc_id, document=doc)
+        logger.debug(f"Added question-SQL pair to Elasticsearch: {doc_id}")
+        
+        return doc_id
+    
+    def get_similar_question_sql(self, question: str, **kwargs) -> list:
+        """
+        Retrieve similar question-SQL pairs using vector similarity search.
+        
+        Args:
+            question: The question to find similar examples for
+            **kwargs: Additional parameters (e.g., top_k)
+            
+        Returns:
+            List of similar documents
+        """
+        top_k = kwargs.get("top_k", 10)
+        
+        # Generate query embedding
+        query_embedding = self._generate_embedding(question)
+        
+        # Build kNN search query
+        search_query = {
+            "knn": {
+                "field": "embedding",
+                "query_vector": query_embedding,
+                "k": top_k,
+                "num_candidates": top_k * 2,
+                "filter": {"term": {"type": "sql"}}
+            },
+            "_source": ["text", "metadata", "type"]
+        }
+        
+        # Execute search
+        response = self.es_client.search(index=self.index_name, body=search_query)
+        
+        # Extract results
+        results = []
+        for hit in response["hits"]["hits"]:
+            source = hit["_source"]
+            results.append({
+                "question": source["metadata"].get("question", ""),
+                "sql": source["metadata"].get("sql", ""),
+                "score": hit["_score"]
+            })
+        
+        logger.debug(f"Found {len(results)} similar question-SQL pairs")
+        return results
+    
+    def get_related_ddl(self, question: str, **kwargs) -> list:
+        """
+        Retrieve related DDL statements using vector similarity search.
+        
+        Args:
+            question: The question to find related DDL for
+            **kwargs: Additional parameters (e.g., top_k)
+            
+        Returns:
+            List of related DDL statements
+        """
+        top_k = kwargs.get("top_k", 10)
+        query_embedding = self._generate_embedding(question)
+        
+        search_query = {
+            "knn": {
+                "field": "embedding",
+                "query_vector": query_embedding,
+                "k": top_k,
+                "num_candidates": top_k * 2,
+                "filter": {"term": {"type": "ddl"}}
+            },
+            "_source": ["text"]
+        }
+        
+        response = self.es_client.search(index=self.index_name, body=search_query)
+        
+        results = [hit["_source"]["text"] for hit in response["hits"]["hits"]]
+        logger.debug(f"Found {len(results)} related DDL statements")
+        return results
+    
+    def get_related_documentation(self, question: str, **kwargs) -> list:
+        """
+        Retrieve related documentation using vector similarity search.
+        
+        Args:
+            question: The question to find related documentation for
+            **kwargs: Additional parameters (e.g., top_k)
+            
+        Returns:
+            List of related documentation
+        """
+        top_k = kwargs.get("top_k", 10)
+        query_embedding = self._generate_embedding(question)
+        
+        search_query = {
+            "knn": {
+                "field": "embedding",
+                "query_vector": query_embedding,
+                "k": top_k,
+                "num_candidates": top_k * 2,
+                "filter": {"term": {"type": "documentation"}}
+            },
+            "_source": ["text"]
+        }
+        
+        response = self.es_client.search(index=self.index_name, body=search_query)
+        
+        results = [hit["_source"]["text"] for hit in response["hits"]["hits"]]
+        logger.debug(f"Found {len(results)} related documentation entries")
+        return results
+    
+    def remove_training_data(self, id: str, **kwargs) -> bool:
+        """
+        Remove a training data entry by ID.
+        
+        Args:
+            id: The document ID to remove
+            **kwargs: Additional parameters
+            
+        Returns:
+            True if successful
+        """
+        try:
+            self.es_client.delete(index=self.index_name, id=id)
+            logger.debug(f"Removed training data: {id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error removing training data {id}: {e}")
+            return False
+
+
+class ElasticNIMVanna(ElasticVectorStore, NIMCustomLLM):
+    """
+    Vanna implementation using NVIDIA NIM for LLM and Elasticsearch for vector storage.
+    
+    This class combines ElasticVectorStore for vector operations with NIMCustomLLM
+    for SQL generation, providing an alternative to ChromaDB-based storage.
+    
+    Example:
+        >>> vanna = ElasticNIMVanna(
+        ...     VectorConfig={
+        ...         "url": "http://localhost:9200",
+        ...         "index_name": "my_sql_vectors",
+        ...         "username": "elastic",
+        ...         "password": "changeme",
+        ...         "embedding_function": NVIDIAEmbeddingFunction(
+        ...             api_key="your-api-key",
+        ...             model="nvidia/llama-3.2-nv-embedqa-1b-v2"
+        ...         )
+        ...     },
+        ...     LLMConfig={
+        ...         "api_key": "your-api-key",
+        ...         "model": "meta/llama-3.1-70b-instruct"
+        ...     }
+        ... )
+    """
+
+    def __init__(self, VectorConfig=None, LLMConfig=None):
+        ElasticVectorStore.__init__(self, config=VectorConfig)
+        NIMCustomLLM.__init__(self, config=LLMConfig)
+
+
 class NVIDIAEmbeddingFunction:
     """
     A class that can be used as a replacement for chroma's DefaultEmbeddingFunction.
