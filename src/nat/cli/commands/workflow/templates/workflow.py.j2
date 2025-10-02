@@ -20,13 +20,31 @@ class {{ workflow_class_name }}(FunctionBaseConfig, name="{{ workflow_name }}"):
 
 @register_function(config_type={{ workflow_class_name }}, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def {{ python_safe_workflow_name }}_function(config: {{ workflow_class_name }}, builder: Builder):
+    """
+    Registers a function (addressable via `{{ workflow_name }}` in the configuration).
+    This registration ensures a static mapping of the function type, `{{ workflow_name }}`, to the `{{ workflow_class_name }}` configuration object.
 
+    Args:
+        config ({{ workflow_class_name }}): The configuration for the function.
+        builder (Builder): The builder object.
+
+    Returns:
+        FunctionInfo: The function info object for the function.
+    """
+
+    # Define the function that will be registered.
     async def _echo(text: str) -> str:
         """
-        This is the part where all the logic for the function goes.
+        Takes a text input and echos back with a pre-defined prefix.
+
+        Args:
+            text (str): The text to echo back.
+
+        Returns:
+            str: The text with the prefix.
         """
         return f"{config.prefix} {text}"
 
-    # This is the part where the function is registered. The description parameter is used to describe the function.
-    yield FunctionInfo.from_fn(
-        _echo, description="This is a function that takes an input and echos back with a pre-defined prefix.")
+    # The callable is wrapped in a FunctionInfo object.
+    # The description parameter is used to describe the function.
+    yield FunctionInfo.from_fn(_echo, description=_echo.__doc__)
