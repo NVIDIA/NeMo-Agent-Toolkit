@@ -116,6 +116,9 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
         """)
     session_aware_tools: bool = Field(default=True,
                                       description="Session-aware tools are created if True. Defaults to True.")
+    max_sessions: int = Field(default=100,
+                              ge=1,
+                              description="Maximum number of concurrent session clients. Defaults to 100.")
 
     @model_validator(mode="after")
     def _validate_reconnect_backoff(self) -> "MCPClientConfig":

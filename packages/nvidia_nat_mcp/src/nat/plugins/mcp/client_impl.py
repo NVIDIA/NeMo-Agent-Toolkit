@@ -83,6 +83,16 @@ class MCPFunctionGroup(FunctionGroup):
         """Set the MCP client transport type."""
         self._mcp_client_transport = transport
 
+    @property
+    def session_count(self) -> int:
+        """Current number of active sessions."""
+        return len(self._session_clients)
+
+    @property
+    def session_limit(self) -> int:
+        """Maximum allowed sessions."""
+        return self._client_config.max_sessions if self._client_config else 100
+
     def _get_session_id_from_context(self) -> str | None:
         """Get the session ID from the current context."""
         try:
@@ -146,6 +156,18 @@ class MCPFunctionGroup(FunctionGroup):
                 return self.mcp_client
 
         if session_id not in self._session_clients:
+            # Check session limit before creating new client
+            if len(self._session_clients) >= self._client_config.max_sessions:
+                # Try cleanup first to free up space
+                async with self._cleanup_lock:
+                    await self.cleanup_inactive_sessions()
+
+                # If still at limit after cleanup, reject the request
+                if len(self._session_clients) >= self._client_config.max_sessions:
+                    logger.warning("Session limit reached (%d), rejecting new session: %s",
+                                   self._client_config.max_sessions,
+                                   session_id)
+                    raise RuntimeError(f"Maximum session limit ({self._client_config.max_sessions}) exceeded")
             # Create session client lazily
             logger.info("Creating new MCP client for session: %s", session_id)
             session_client = await self._create_session_client(session_id)
