@@ -25,6 +25,7 @@ from nat.cli.register_workflow import register_function_group
 from nat.plugins.mcp.client_base import MCPBaseClient
 from nat.plugins.mcp.client_config import MCPClientConfig
 from nat.plugins.mcp.client_config import MCPToolOverrideConfig
+from nat.plugins.mcp.utils import truncate_session_id
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,7 @@ class MCPFunctionGroup(FunctionGroup):
 
             for session_id in inactive_sessions:
                 try:
-                    logger.info("Cleaning up inactive session client: %s", session_id)
+                    logger.info("Cleaning up inactive session client: %s", truncate_session_id(session_id))
                     client = self._session_clients[session_id]
                     # Close the client connection
                     await client.__aexit__(None, None, None)
@@ -149,7 +150,7 @@ class MCPFunctionGroup(FunctionGroup):
                     if session_id in self._session_ref_counts:
                         del self._session_ref_counts[session_id]
                 except Exception as e:
-                    logger.warning("Error cleaning up session client %s: %s", session_id, e)
+                    logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
 
     async def _get_session_client(self, session_id: str) -> MCPBaseClient:
         """Get the appropriate MCP client for the session."""
@@ -187,11 +188,11 @@ class MCPFunctionGroup(FunctionGroup):
                 if len(self._session_clients) >= self._client_config.max_sessions:
                     logger.warning("Session limit reached (%d), rejecting new session: %s",
                                    self._client_config.max_sessions,
-                                   session_id)
+                                   truncate_session_id(session_id))
                     raise RuntimeError(f"Maximum session limit ({self._client_config.max_sessions}) exceeded")
 
             # Create session client lazily
-            logger.info("Creating new MCP client for session: %s", session_id)
+            logger.info("Creating new MCP client for session: %s", truncate_session_id(session_id))
             session_client = await self._create_session_client(session_id)
 
             # Cache the client
@@ -260,7 +261,7 @@ class MCPFunctionGroup(FunctionGroup):
         # Initialize the client
         await client.__aenter__()
 
-        logger.info("Created session client for session: %s", session_id)
+        logger.info("Created session client for session: %s", truncate_session_id(session_id))
         return client
 
     async def _create_session_auth_provider(self, session_id: str):
@@ -279,7 +280,7 @@ class MCPFunctionGroup(FunctionGroup):
         auth_provider_type = type(self._shared_auth_provider)
         session_auth_provider = auth_provider_type(config_copy)
 
-        logger.info("Created session-specific auth provider for session: %s", session_id)
+        logger.info("Created session-specific auth provider for session: %s", truncate_session_id(session_id))
         return session_auth_provider
 
 
