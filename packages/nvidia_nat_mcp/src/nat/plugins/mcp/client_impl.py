@@ -15,6 +15,7 @@
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime
 from datetime import timedelta
 
@@ -44,7 +45,9 @@ class MCPFunctionGroup(FunctionGroup):
         # Session management attributes for per-session isolation
         self._session_clients: dict[str, MCPBaseClient] = {}
         self._session_last_activity: dict[str, datetime] = {}
+        self._session_ref_counts: dict[str, int] = {}  # Track active operations per session
         self._cleanup_lock = asyncio.Lock()
+        self._session_creation_lock = asyncio.Lock()
         # Throttled cleanup control
         self._last_cleanup_check: datetime = datetime.now()
         self._cleanup_check_interval: timedelta = timedelta(minutes=5)
@@ -114,7 +117,11 @@ class MCPFunctionGroup(FunctionGroup):
             return None
 
     async def cleanup_inactive_sessions(self, max_age: timedelta | None = None):
-        """Remove clients for sessions inactive longer than max_age."""
+        """Remove clients for sessions inactive longer than max_age.
+
+        This method uses its own cleanup_lock to ensure thread-safe cleanup.
+        It can be called from within the session_creation_lock without deadlock.
+        """
         if max_age is None:
             max_age = self._client_config.session_idle_timeout if self._client_config else timedelta(hours=1)
 
@@ -123,6 +130,10 @@ class MCPFunctionGroup(FunctionGroup):
             inactive_sessions = []
 
             for session_id, last_activity in self._session_last_activity.items():
+                # Skip cleanup if session is actively being used
+                if session_id in self._session_ref_counts and self._session_ref_counts[session_id] > 0:
+                    continue
+
                 if current_time - last_activity > max_age:
                     inactive_sessions.append(session_id)
 
@@ -134,6 +145,9 @@ class MCPFunctionGroup(FunctionGroup):
                     await client.__aexit__(None, None, None)
                     del self._session_clients[session_id]
                     del self._session_last_activity[session_id]
+                    # Clean up reference count if it exists
+                    if session_id in self._session_ref_counts:
+                        del self._session_ref_counts[session_id]
                 except Exception as e:
                     logger.warning("Error cleaning up session client %s: %s", session_id, e)
 
@@ -145,23 +159,37 @@ class MCPFunctionGroup(FunctionGroup):
             await self.cleanup_inactive_sessions()
             self._last_cleanup_check = now
 
-        # If the session_id equals the configured default_user_id use the base client instead of creating a per-session client
+        # If the session_id equals the configured default_user_id use the base client
+        # instead of creating a per-session client
         default_uid = self._shared_auth_provider.config.default_user_id
         if default_uid and session_id == default_uid:
             return self.mcp_client
 
-        if session_id not in self._session_clients:
+        # Fast path: check if session already exists (no lock needed)
+        if session_id in self._session_clients:
+            # Update last activity for existing client
+            self._session_last_activity[session_id] = datetime.now()
+            return self._session_clients[session_id]
+
+        # Slow path: create session with proper locking
+        async with self._session_creation_lock:
+            # Double-check after acquiring lock (another coroutine might have created it)
+            if session_id in self._session_clients:
+                self._session_last_activity[session_id] = datetime.now()
+                return self._session_clients[session_id]
+
             # Check session limit before creating new client
             if len(self._session_clients) >= self._client_config.max_sessions:
                 # Try cleanup first to free up space
                 await self.cleanup_inactive_sessions()
 
-                # If still at limit after cleanup, reject the request
+                # Re-check after cleanup
                 if len(self._session_clients) >= self._client_config.max_sessions:
                     logger.warning("Session limit reached (%d), rejecting new session: %s",
                                    self._client_config.max_sessions,
                                    session_id)
                     raise RuntimeError(f"Maximum session limit ({self._client_config.max_sessions}) exceeded")
+
             # Create session client lazily
             logger.info("Creating new MCP client for session: %s", session_id)
             session_client = await self._create_session_client(session_id)
@@ -169,11 +197,22 @@ class MCPFunctionGroup(FunctionGroup):
             # Cache the client
             self._session_clients[session_id] = session_client
             self._session_last_activity[session_id] = datetime.now()
-        else:
-            # Update last activity for existing client
-            self._session_last_activity[session_id] = datetime.now()
+            return session_client
 
-        return self._session_clients[session_id]
+    @asynccontextmanager
+    async def _session_usage_context(self, session_id: str):
+        """Context manager to track active session usage and prevent cleanup."""
+        # Increment reference count
+        self._session_ref_counts[session_id] = self._session_ref_counts.get(session_id, 0) + 1
+
+        try:
+            yield
+        finally:
+            # Decrement reference count
+            if session_id in self._session_ref_counts:
+                self._session_ref_counts[session_id] -= 1
+                if self._session_ref_counts[session_id] <= 0:
+                    del self._session_ref_counts[session_id]
 
     async def _create_session_client(self, session_id: str) -> MCPBaseClient:
         """Create a new MCP client instance for the session."""
@@ -221,13 +260,6 @@ class MCPFunctionGroup(FunctionGroup):
         # Initialize the client
         await client.__aenter__()
 
-        # Copy tool definitions from default client
-        # This ensures the session client has the same tools available
-        if hasattr(self.mcp_client, '_tools'):
-            client._tools = self.mcp_client._tools.copy()
-        elif hasattr(self.mcp_client, 'tools'):
-            client.tools = self.mcp_client.tools.copy()
-
         logger.info("Created session client for session: %s", session_id)
         return client
 
@@ -272,18 +304,21 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
             # If no session is available and default-user fallback is disabled, deny the call
             if session_id is None:
                 return "User not authorized to call the tool"
-            client = await function_group._get_session_client(session_id)
 
-            # Resolve the tool from the routed client
-            session_tool = await client.get_tool(tool.name)
+            # Use session usage context to prevent cleanup during tool execution
+            async with function_group._session_usage_context(session_id):
+                client = await function_group._get_session_client(session_id)
 
-            # Preserve original calling convention
-            if tool_input:
-                args = tool_input.model_dump()
-                return await session_tool.acall(args)
+                # Resolve the tool from the routed client
+                session_tool = await client.get_tool(tool.name)
 
-            _ = session_tool.input_schema.model_validate(kwargs)
-            return await session_tool.acall(kwargs)
+                # Preserve original calling convention
+                if tool_input:
+                    args = tool_input.model_dump()
+                    return await session_tool.acall(args)
+
+                _ = session_tool.input_schema.model_validate(kwargs)
+                return await session_tool.acall(kwargs)
         except Exception as e:
             if tool_input:
                 logger.warning("Error calling tool %s with serialized input: %s",
