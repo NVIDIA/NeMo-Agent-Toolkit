@@ -250,7 +250,7 @@ class DecomposedType:
         remaining_args = tuple(arg for arg in self.args if arg is not types.NoneType)
 
         if (len(remaining_args) > 1):
-            return DecomposedType(typing.Union[remaining_args])
+            return DecomposedType(typing.Union[*remaining_args])
         if (len(remaining_args) == 1):
             return DecomposedType(remaining_args[0])
 
@@ -353,7 +353,7 @@ class DecomposedType:
             True if the current type is an instance of the specified instance, False otherwise
         """
 
-        return isinstance(instance, self.root)
+        return isinstance(instance, self.get_base_type().root)
 
     def get_pydantic_schema(self,
                             converters: list[collections.abc.Callable] | None = None) -> type[BaseModel] | type[None]:

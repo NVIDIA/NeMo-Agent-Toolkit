@@ -15,9 +15,13 @@
 
 # flake8: noqa
 # isort:skip_file
+"""Register LLM providers via import side effects.
 
+This module is imported by the NeMo Agent Toolkit runtime to ensure providers are registered and discoverable.
+"""
 # Import any providers which need to be automatically registered here
 from . import aws_bedrock_llm
 from . import azure_openai_llm
+from . import litellm_llm
 from . import nim_llm
 from . import openai_llm

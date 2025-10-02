@@ -65,7 +65,7 @@ async def automated_description_milvus_workflow(workflow_config: AutomatedDescri
     vs_retriever = await builder.get_retriever(retriever_name=workflow_config.retriever_name,
                                                wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     # Get the retriever tool
-    retriever_tool: Function = builder.get_function(workflow_config.retrieval_tool_name)
+    retriever_tool: Function = await builder.get_function(workflow_config.retrieval_tool_name)
 
     vectorstore = vs_retriever.vectorstore
 

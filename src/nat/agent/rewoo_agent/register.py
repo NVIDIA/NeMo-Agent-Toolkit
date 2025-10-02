@@ -71,8 +71,8 @@ class ReWOOAgentWorkflowConfig(AgentBaseConfig, name="rewoo_agent"):
 
 @register_function(config_type=ReWOOAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builder):
-    from langchain.schema import BaseMessage
     from langchain_core.messages import trim_messages
+    from langchain_core.messages.base import BaseMessage
     from langchain_core.messages.human import HumanMessage
     from langchain_core.prompts import ChatPromptTemplate
     from langgraph.graph.state import CompiledStateGraph
@@ -108,7 +108,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
 
     # the agent can run any installed tool, simply install the tool and add it to the config file
     # the sample tool provided can easily be copied or changed
-    tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools = await builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     if not tools:
         raise ValueError(f"No tools specified for ReWOO Agent '{config.llm_name}'")
 
@@ -125,6 +125,17 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
         raise_tool_call_error=config.raise_tool_call_error).build_graph()
 
     async def _response_fn(input_message: ChatRequest) -> ChatResponse:
+        """
+        Main workflow entry function for the ReWOO Agent.
+
+        This function invokes the ReWOO Agent Graph and returns the response.
+
+        Args:
+            input_message (ChatRequest): The input message to process
+
+        Returns:
+            ChatResponse: The response from the agent or error message
+        """
         try:
             # initialize the starting state with the user query
             messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in input_message.messages],
@@ -143,14 +154,14 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
             # get and return the output from the state
             state = ReWOOGraphState(**state)
             output_message = state.result.content
+            # Ensure output_message is a string
+            if isinstance(output_message, list | dict):
+                output_message = str(output_message)
             return ChatResponse.from_string(output_message)
 
         except Exception as ex:
             logger.exception("ReWOO Agent failed with exception: %s", ex)
-            # here, we can implement custom error messages
-            if config.verbose:
-                return ChatResponse.from_string(str(ex))
-            return ChatResponse.from_string("I seem to be having a problem.")
+            raise RuntimeError
 
     if (config.use_openai_api):
         yield FunctionInfo.from_fn(_response_fn, description=config.description)

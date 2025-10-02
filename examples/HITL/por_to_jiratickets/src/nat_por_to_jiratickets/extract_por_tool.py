@@ -147,7 +147,7 @@ async def extract_from_por_tool(config: ExtractPORToolConfig, builder: Builder):
         if os.path.isfile(input_file):
             logger.debug("Detected file: %s", input_file)
 
-            with open(input_file, 'r', encoding='utf-8') as file:
+            with open(input_file, encoding='utf-8') as file:
                 por_content = "\n".join(line.strip() for line in file if line.strip())
         else:
             por_content = input_text
@@ -193,7 +193,7 @@ async def show_tickets_tool(config: ShowTicketsToolConfig, builder: Builder):
     async def _arun(input_text: str) -> str:
         # input_text = process_input_text(input_text)
         try:
-            with open(filename, 'r', encoding='utf-8') as json_file:
+            with open(filename, encoding='utf-8') as json_file:
                 data = json.load(json_file)
                 logger.debug("Data successfully loaded from %s", filename)
         except Exception as e:

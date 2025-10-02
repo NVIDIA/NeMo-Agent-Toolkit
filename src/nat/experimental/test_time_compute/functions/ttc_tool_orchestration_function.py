@@ -82,7 +82,7 @@ async def register_ttc_tool_orchestration_function(
     function_map = {}
     for fn_ref in config.augmented_fns:
         # Retrieve the actual function from the builder
-        fn_obj = builder.get_function(fn_ref)
+        fn_obj = await builder.get_function(fn_ref)
         function_map[fn_ref] = fn_obj
 
     # 2) Instantiate search, editing, scoring, selection strategies (if any)

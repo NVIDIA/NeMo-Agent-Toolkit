@@ -72,8 +72,10 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`AIQ Blueprint`](advanced_agents/aiq_blueprint/README.md)**: Blueprint documentation for the official NVIDIA AIQ Blueprint for building an AI agent designed for enterprise research use cases.
 - **[`alert_triage_agent`](advanced_agents/alert_triage_agent/README.md)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization
 - **[`profiler_agent`](advanced_agents/profiler_agent/README.md)**: Performance profiling agent for analyzing NeMo Agent toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
+- **[`vulnerability_analysis_blueprint`](advanced_agents/vulnerability_analysis_blueprint/README.md)**: Blueprint documentation for vulnerability analysis agents
 
 ### Control Flow
+- **[`router_agent`](control_flow/router_agent/README.md)**: Configurable Router Agent that analyzes incoming requests and directly routes them to the most appropriate branch (other agents, functions or tools) based on request content
 - **[`sequential_executor`](control_flow/sequential_executor/README.md)**: Linear tool execution pipeline that chains multiple functions together where each function's output becomes the input for the next function, with optional type compatibility checking and error handling
 
 ### Custom Functions
@@ -87,7 +89,9 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`swe_bench`](evaluation_and_profiling/swe_bench/README.md)**: Software engineering benchmark system for evaluating AI models on real-world coding tasks
 
 ### Frameworks
+- **[`adk_demo`](frameworks/adk_demo/README.md)**: Minimal example using Google Agent Development Kit showcasing a simple weather time agent that can call tools (a function tool and an MCP tool)
 - **[`agno_personal_finance`](frameworks/agno_personal_finance/README.md)**: Personal finance planning agent built with Agno framework that researches and creates tailored financial plans
+- **[`haystack_deep_research_agent`](frameworks/haystack_deep_research_agent/README.md)**: Deep research agent using Haystack framework that combines web search and Retrieval Augmented Generation (RAG) capabilities with SerperDev API and OpenSearch
 - **[`multi_frameworks`](frameworks/multi_frameworks/README.md)**: Supervisor agent coordinating LangChain/LangGraph, LlamaIndex, and Haystack agents for research, RAG, and chitchat tasks
 - **[`semantic_kernel_demo`](frameworks/semantic_kernel_demo/README.md)**: Multi-agent travel planning system using Microsoft Semantic Kernel with specialized agents for itinerary creation, budget management, and report formatting, including long-term memory for user preferences
 
@@ -97,17 +101,24 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 
 ### Human In The Loop (HITL)
 - **[`por_to_jiratickets`](HITL/por_to_jiratickets/README.md)**: Project requirements to Jira ticket conversion with human oversight
-- **[`simple_calculator_hitl`](HITL/simple_calculator_hitl/README.md)**: Human-in-the-loop version of the basic simple calculator that requests approval from the user before allowing the agent to make additional tool calls.
+- **[`simple_calculator_hitl`](HITL/simple_calculator_hitl/README.md)**: Human-in-the-loop version of the basic simple calculator that requests approval from the user before allowing the agent to make additional tool calls
 
 ### Memory
 - **[`redis`](memory/redis/README.md)**: Basic long-term memory example using redis
 
 ### Model Context Protocol (MCP)
+- **[`simple_auth_mcp`](MCP/simple_auth_mcp/README.md)**: Demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that require authentication using OAuth2 flows
 - **[`simple_calculator_mcp`](MCP/simple_calculator_mcp/README.md)**: Demonstrates Model Context Protocol support using the basic simple calculator example
 
 ### Notebooks
-- **[`first_search_agent`](notebooks/first_search_agent/)**: Demonstrates how to bring an existing agent from a framework like LangChain/LangGraph into this toolkit
-- **[`retail_sales_agent`](notebooks/retail_sales_agent/)**: A simple retail agent that showcases how to incrementally add tools and agents to build a multi-agent system
+- **[Building an Agentic System](notebooks/README.md)**: Series of notebooks demonstrating how to build, connect, evaluate, profile and deploy an agentic system using the NeMo Agent toolkit
+  - **[`1_getting_started.ipynb`](notebooks/1_getting_started.ipynb)**: Getting started with the NeMo Agent toolkit
+  - **[`2_add_tools_and_agents.ipynb`](notebooks/2_add_tools_and_agents.ipynb)**: Adding tools and agents to your workflow
+  - **[`3_observability_evaluation_and_profiling.ipynb`](notebooks/3_observability_evaluation_and_profiling.ipynb)**: Observability, evaluation and profiling
+
+#### Brev Launchables
+
+- **[`GPU Cluster Sizing`](notebooks/launchables/README.md)**: GPU Cluster Sizing with NeMo Agent Toolkit
 
 ### Object Store
 - **[`user_report`](object_store/user_report/README.md)**: User report generation and storage system using object store (S3, MySQL, and/or memory)

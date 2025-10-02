@@ -724,7 +724,7 @@ class TestBatchingProcessorIntegration:
         # Wait for background task to complete
         try:
             await asyncio.wait_for(background_task, timeout=1.0)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             background_task.cancel()
 
         # Verify shutdown completed properly

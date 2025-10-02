@@ -57,7 +57,7 @@ def yaml_load(config_path: StrPath) -> dict:
     """
 
     # Read YAML file
-    with open(config_path, "r", encoding="utf-8") as stream:
+    with open(config_path, encoding="utf-8") as stream:
         config_str = stream.read()
 
     return yaml_loads(config_str)

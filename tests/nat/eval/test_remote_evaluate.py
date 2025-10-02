@@ -66,7 +66,7 @@ def stream_response_app(rag_eval_input, rag_streamed_intermediate_payloads):
 
         # Intermediate steps
         for line in rag_streamed_intermediate_payloads:
-            await resp.write(f"{line}\n".encode("utf-8"))
+            await resp.write(f"{line}\n".encode())
 
         await resp.write_eof()
         return resp
@@ -127,14 +127,14 @@ async def test_run_workflow_remote_single_with_invalid_intermediate_data(rag_eva
         await resp.prepare(request)
 
         # Valid final output
-        await resp.write(f"data: {json.dumps({'value': final_output})}\n\n".encode("utf-8"))
+        await resp.write(f"data: {json.dumps({'value': final_output})}\n\n".encode())
 
         # Malformed intermediate step (invalid JSON)
         await resp.write(b"intermediate_data: {not a valid json string}\n")
 
         # Malformed intermediate step (payload is not a stringified JSON)
         bad_payload = {"id": "xyz", "payload": {"event_type": "TOOL_START"}}
-        await resp.write(f"intermediate_data: {json.dumps(bad_payload)}\n".encode("utf-8"))
+        await resp.write(f"intermediate_data: {json.dumps(bad_payload)}\n".encode())
 
         await resp.write_eof()
         return resp

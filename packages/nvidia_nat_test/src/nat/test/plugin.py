@@ -14,21 +14,20 @@
 # limitations under the License.
 
 import os
+import subprocess
+import typing
+from pathlib import Path
 
 import pytest
+
+if typing.TYPE_CHECKING:
+    from docker.client import DockerClient
 
 
 def pytest_addoption(parser: pytest.Parser):
     """
     Adds command line options for running specfic tests that are disabled by default
     """
-    parser.addoption(
-        "--run_e2e",
-        action="store_true",
-        dest="run_e2e",
-        help="Run end to end tests that would otherwise be skipped",
-    )
-
     parser.addoption(
         "--run_integration",
         action="store_true",
@@ -54,10 +53,6 @@ def pytest_addoption(parser: pytest.Parser):
 
 
 def pytest_runtest_setup(item):
-    if (not item.config.getoption("--run_e2e")):
-        if (item.get_closest_marker("e2e") is not None):
-            pytest.skip("Skipping end to end tests by default. Use --run_e2e to enable")
-
     if (not item.config.getoption("--run_integration")):
         if (item.get_closest_marker("integration") is not None):
             pytest.skip("Skipping integration tests by default. Use --run_integration to enable")
@@ -155,6 +150,39 @@ def nvidia_api_key_fixture(fail_missing: bool):
         fail_missing=fail_missing)
 
 
+@pytest.fixture(name="serp_api_key", scope='session')
+def serp_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a SERP API key.
+    """
+    yield require_env_variables(
+        varnames=["SERP_API_KEY"],
+        reason="SERP integration tests require the `SERP_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="tavily_api_key", scope='session')
+def tavily_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Tavily API key.
+    """
+    yield require_env_variables(
+        varnames=["TAVILY_API_KEY"],
+        reason="Tavily integration tests require the `TAVILY_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="mem0_api_key", scope='session')
+def mem0_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Mem0 API key.
+    """
+    yield require_env_variables(
+        varnames=["MEM0_API_KEY"],
+        reason="Mem0 integration tests require the `MEM0_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
 @pytest.fixture(name="aws_keys", scope='session')
 def aws_keys_fixture(fail_missing: bool):
     """
@@ -181,6 +209,21 @@ def azure_openai_keys_fixture(fail_missing: bool):
         fail_missing=fail_missing)
 
 
+@pytest.fixture(name="require_docker", scope='session')
+def require_docker_fixture(fail_missing: bool) -> "DockerClient":
+    """
+    Use for integration tests that require Docker to be running.
+    """
+    try:
+        from docker.client import DockerClient
+        yield DockerClient()
+    except Exception as e:
+        reason = f"Unable to connect to Docker daemon: {e}"
+        if fail_missing:
+            raise RuntimeError(reason) from e
+        pytest.skip(reason=reason)
+
+
 @pytest.fixture(name="restore_environ")
 def restore_environ_fixture():
     orig_vars = os.environ.copy()
@@ -194,3 +237,98 @@ def restore_environ_fixture():
     for key in list(os.environ.keys()):
         if key not in orig_vars:
             del (os.environ[key])
+
+
+@pytest.fixture(name="root_repo_dir", scope='session')
+def root_repo_dir_fixture() -> Path:
+    from nat.test.utils import locate_repo_root
+    return locate_repo_root()
+
+
+@pytest.fixture(name="require_etcd", scope="session")
+def require_etcd_fixture(fail_missing: bool = False) -> bool:
+    """
+    To run these tests, an etcd server must be running
+    """
+    import requests
+
+    host = os.getenv("NAT_CI_ETCD_HOST", "localhost")
+    port = os.getenv("NAT_CI_ETCD_PORT", "2379")
+    health_url = f"http://{host}:{port}/health"
+
+    try:
+        response = requests.get(health_url, timeout=5)
+        response.raise_for_status()
+        return True
+    except:  # noqa: E722
+        failure_reason = f"Unable to connect to etcd server at {health_url}"
+        if fail_missing:
+            raise RuntimeError(failure_reason)
+        pytest.skip(reason=failure_reason)
+
+
+@pytest.fixture(name="milvus_uri", scope="session")
+def milvus_uri_fixture(require_etcd: bool, fail_missing: bool = False) -> str:
+    """
+    To run these tests, a Milvus server must be running
+    """
+    host = os.getenv("NAT_CI_MILVUS_HOST", "localhost")
+    port = os.getenv("NAT_CI_MILVUS_PORT", "19530")
+    uri = f"http://{host}:{port}"
+    try:
+        from pymilvus import MilvusClient
+        MilvusClient(uri=uri)
+
+        return uri
+    except:  # noqa: E722
+        reason = f"Unable to connect to Milvus server at {uri}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="populate_milvus", scope="session")
+def populate_milvus_fixture(milvus_uri: str, root_repo_dir: Path):
+    """
+    Populate Milvus with some test data.
+    """
+    populate_script = root_repo_dir / "scripts/langchain_web_ingest.py"
+
+    # Ingest default cuda docs
+    subprocess.run(["python", str(populate_script), "--milvus_uri", milvus_uri], check=True)
+
+    # Ingest MCP docs
+    subprocess.run([
+        "python",
+        str(populate_script),
+        "--milvus_uri",
+        milvus_uri,
+        "--urls",
+        "https://github.com/modelcontextprotocol/python-sdk",
+        "--urls",
+        "https://modelcontextprotocol.io/introduction",
+        "--urls",
+        "https://modelcontextprotocol.io/quickstart/server",
+        "--urls",
+        "https://modelcontextprotocol.io/quickstart/client",
+        "--urls",
+        "https://modelcontextprotocol.io/examples",
+        "--urls",
+        "https://modelcontextprotocol.io/docs/concepts/architecture",
+        "--collection_name",
+        "mcp_docs"
+    ],
+                   check=True)
+
+    # Ingest some wikipedia docs
+    subprocess.run([
+        "python",
+        str(populate_script),
+        "--milvus_uri",
+        milvus_uri,
+        "--urls",
+        "https://en.wikipedia.org/wiki/Aardvark",
+        "--collection_name",
+        "wikipedia_docs"
+    ],
+                   check=True)

@@ -165,6 +165,10 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/notebooks/retail_sales_agent/.*configs/",
         r"^\./retail_sales_agent/data/",
     ),
+    (
+        r"^examples/frameworks/haystack_deep_research_agent/README.md",
+        r"^examples/frameworks/haystack_deep_research_agent/data/bedrock-ug.pdf",
+    ),
     # ignore generated files
     (
         r"^docs/",
@@ -276,7 +280,7 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
         A list of PathInfo objects.
     """
     paths = []
-    with open(filename, "r", encoding="utf-8") as f:
+    with open(filename, encoding="utf-8") as f:
         section: list[str] = []
         in_skipped_section: bool = False
         skip_next_line: bool = False

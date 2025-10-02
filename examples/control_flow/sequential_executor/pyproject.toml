@@ -9,6 +9,9 @@ root = "../../.."
 [project]
 name = "nat_sequential_executor"
 dynamic = ["version"]
+dependencies = [
+    "nvidia-nat[langchain]~=1.4",
+]
 requires-python = ">=3.11,<3.14"
 description = "Sequential executor for NeMo Agent toolkit"
 classifiers = ["Programming Language :: Python"]

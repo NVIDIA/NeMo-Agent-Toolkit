@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
-from datetime import timezone
 
 import pytest
 from pydantic import TypeAdapter
@@ -207,7 +207,7 @@ def test_is_expired(delta, expected):
     if delta is None:
         res = AuthResult(credentials=[])
     else:
-        expires = datetime.now(timezone.utc) + timedelta(seconds=delta)
+        expires = datetime.now(UTC) + timedelta(seconds=delta)
         res = AuthResult(credentials=[], token_expires_at=expires)
     assert res.is_expired() is expected
 

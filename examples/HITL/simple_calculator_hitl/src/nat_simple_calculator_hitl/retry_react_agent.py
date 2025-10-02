@@ -60,10 +60,10 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
     from nat.builder.function import Function
 
     # Get references to the underlying React agent and approval function
-    react_agent: Function = builder.get_function(config.react_agent_fn)
+    react_agent: Function = await builder.get_function(config.react_agent_fn)
     react_agent_config: FunctionBaseConfig = builder.get_function_config(
         config.react_agent_fn)  # ReActAgentWorkflowConfig
-    hitl_approval_fn: Function = builder.get_function(config.hitl_approval_fn)
+    hitl_approval_fn: Function = await builder.get_function(config.hitl_approval_fn)
 
     # Regex pattern to detect GraphRecursionError message
     # This pattern matches the specific error message format from LangGraph

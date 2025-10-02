@@ -80,7 +80,7 @@ class EvalDatasetJsonConfig(EvalDatasetBaseConfig, name="json"):
 
 
 def read_jsonl(file_path: FilePath):
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding='utf-8') as f:
         data = [json.loads(line) for line in f]
     return pd.DataFrame(data)
 

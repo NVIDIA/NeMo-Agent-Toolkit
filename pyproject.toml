@@ -19,7 +19,7 @@ dependencies = [
   # `~=0.1.3.5`.
   # Keep sorted!!!
   "aioboto3>=11.0.0",
-  "authlib~=1.3.1",
+  "authlib~=1.5",
   "click~=8.1",
   "colorama~=0.4.6",
   "datasets~=4.0", # workaround for uv's solver choosing different versions of datasets based on sys_platform
@@ -37,6 +37,7 @@ dependencies = [
   "openinference-semantic-conventions~=0.1.14",
   "openpyxl~=3.1",
   "optuna~=4.4.0",
+  "pip>=24.3.1",
   "pkce==1.0.3",
   "pkginfo~=1.12",
   "platformdirs~=4.3",
@@ -46,7 +47,7 @@ dependencies = [
   "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
   "rich~=13.9",
   "tabulate~=0.9",
-  "uvicorn[standard]~=0.32.0",
+  "uvicorn[standard]~=0.34",
   "wikipedia~=1.4",
 ]
 requires-python = ">=3.11,<3.14"
@@ -65,9 +66,10 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 
 
 [project.optional-dependencies]
-# Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install nvidia-nat[langchain]`
+# Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install "nvidia-nat[langchain]"`
 # Keep sorted!!!
 all = ["nvidia-nat-all"] # meta-package
+adk = ["nvidia-nat-adk"]
 agno = ["nvidia-nat-agno"]
 crewai = ["nvidia-nat-crewai"]
 data-flywheel = ["nvidia-nat-data-flywheel"]
@@ -94,6 +96,7 @@ weave = ["nvidia-nat-weave"]
 zep-cloud = ["nvidia-nat-zep-cloud"]
 
 examples = [
+  "nat_adk_demo",
   "nat_agno_personal_finance",
   "nat_alert_triage_agent",
   "nat_automated_description_generation",
@@ -109,6 +112,7 @@ examples = [
   "nat_semantic_kernel_demo",
   "nat_sequential_executor",
   "nat_simple_auth",
+  "nat_simple_auth_mcp",
   "nat_simple_web_query",
   "nat_simple_web_query_eval",
   "nat_simple_calculator",
@@ -139,6 +143,14 @@ async_endpoints = [
   "sqlalchemy[asyncio]~=2.0",
 ]
 
+# specific versions of shared packages within optional subpackages
+litellm = [
+  "litellm==1.74.9"
+]
+openai = [
+  "openai~=1.106"
+]
+
 [tool.uv]
 config-settings = { editable_mode = "compat" }
 
@@ -147,6 +159,7 @@ config-settings = { editable_mode = "compat" }
 # Workspace members
 nvidia-nat-all = { workspace = true }
 nvidia-nat-agno = { workspace = true }
+nvidia-nat-adk = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
 nvidia-nat-data-flywheel = { workspace = true }
 nvidia-nat-ingestion = { workspace = true }
@@ -167,6 +180,7 @@ nvidia-nat-weave = { workspace = true }
 nvidia-nat-zep-cloud = { workspace = true }
 
 # All examples here
+nat_adk_demo = { path = "examples/frameworks/adk_demo", editable = true }
 nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
 nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
@@ -182,6 +196,7 @@ nat_router_agent = { path = "examples/control_flow/router_agent", editable = tru
 nat_semantic_kernel_demo = { path = "examples/frameworks/semantic_kernel_demo", editable = true }
 nat_sequential_executor = { path = "examples/control_flow/sequential_executor", editable = true }
 nat_simple_auth = { path = "examples/front_ends/simple_auth", editable = true }
+nat_simple_auth_mcp = { path = "examples/MCP/simple_auth_mcp", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }
 nat_simple_calculator_custom_routes = { path = "examples/front_ends/simple_calculator_custom_routes", editable = true }
 nat_simple_calculator_eval = { path = "examples/evaluation_and_profiling/simple_calculator_eval", editable = true }
@@ -209,7 +224,6 @@ dev = [
   "nbsphinx~=0.9",
   "nvidia-nat_test",
   "nvidia-sphinx-theme>=0.0.7",
-  "pip>=24.3.1",
   "pre-commit>=4.0,<5.0",
   "pytest_httpserver==1.1.*",
   "pytest-asyncio==0.24.*",
@@ -264,7 +278,6 @@ include-package-data = true
 [tool.pytest.ini_options]
 markers = [
   "benchmark: Benchmarks",
-  "e2e: End-to-end tests",
   "integration: Integration tests which do not use mocks and may require external services",
   "requires_cache: Tests that require a reverse-proxy cache to be running",
   "slow: Slow tests",
@@ -277,7 +290,7 @@ filterwarnings = [
   # Remove once https://github.com/qdrant/qdrant-client/issues/983 is resolved.
   "ignore:^invalid escape sequence:SyntaxWarning",
 ]
-testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
+testpaths = ["tests", "examples/**/tests", "packages/**/tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 
@@ -298,6 +311,8 @@ select = [
   "I",
   # Enable partial pylint support
   "PL",
+  # Enable pyupgrade support
+  "UP"
 ]
 
 extend-ignore = [
@@ -324,6 +339,7 @@ known-first-party = ["aiq", "nat", "nat_*", "_utils"]
 known-third-party = [
   "agno",
   "crewai",
+  "google",
   "langchain",
   "llama_index",
   "mem0ai",

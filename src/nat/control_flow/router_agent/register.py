@@ -53,7 +53,7 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
 
     prompt = create_router_agent_prompt(config)
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    branches = builder.get_tools(tool_names=config.branches, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    branches = await builder.get_tools(tool_names=config.branches, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     if not branches:
         raise ValueError(f"No branches specified for Router Agent '{config.llm_name}'")
 
@@ -81,7 +81,7 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
             logger.exception("%s Router Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
             if config.verbose:
                 return str(ex)
-            return "Router agent failed with exception: %s" % ex
+            return f"Router agent failed with exception: {ex}"
 
     try:
         yield FunctionInfo.from_fn(_response_fn, description=config.description)

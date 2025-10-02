@@ -34,6 +34,7 @@ To keep the library lightweight, many of the first-party plugins supported by Ne
 
 To install these first-party plugin libraries, you can use the full distribution name (for example, `nvidia-nat-langchain`) or use the `nvidia-nat[langchain]` extra distribution. The following extras are supported:
 
+- `nvidia-nat[adk]` or `nvidia-nat-adk` - [Google ADK](https://github.com/google/adk-python)
 - `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/)
 - `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
@@ -91,13 +92,13 @@ pip install nvidia-nat
 NeMo Agent toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain/LangGraph plugin, run the following:
 
 ```bash
-pip install nvidia-nat[langchain]
+pip install "nvidia-nat[langchain]"
 ```
 
 Or for all optional dependencies:
 
 ```bash
-pip install nvidia-nat[all]
+pip install "nvidia-nat[all]"
 ```
 
 The full list of optional dependencies can be found [here](../quick-start/installing.md#framework-integrations).

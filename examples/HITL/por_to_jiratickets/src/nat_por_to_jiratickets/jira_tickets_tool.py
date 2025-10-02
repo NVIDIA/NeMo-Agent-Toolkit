@@ -37,7 +37,7 @@ def get_epics_tool(root_path: str) -> str:
     """
     filename = root_path + "epics_tasks.json"
     try:
-        with open(filename, 'r', encoding='utf-8') as json_file:
+        with open(filename, encoding='utf-8') as json_file:
             data = json.load(json_file)
             logger.debug("Data successfully loaded from %s", filename)
     except Exception as e:
@@ -264,7 +264,7 @@ class CreateJiraToolConfig(FunctionBaseConfig, name="create_jira_tickets_tool"):
 @register_function(config_type=CreateJiraToolConfig)
 async def create_jira_tickets_tool(config: CreateJiraToolConfig, builder: Builder):
 
-    hitl_approval_fn = builder.get_function(config.hitl_approval_fn)
+    hitl_approval_fn = await builder.get_function(config.hitl_approval_fn)
 
     async def _arun(input_text: str) -> str:
 

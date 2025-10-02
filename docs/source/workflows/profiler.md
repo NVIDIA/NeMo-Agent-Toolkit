@@ -41,7 +41,7 @@ uv pip install -e ".[profiling]"
 
 If you are installing from a package, you need to install the `nvidia-nat[profiling]` package by running the following command:
 ```bash
-uv pip install nvidia-nat[profiling]
+uv pip install "nvidia-nat[profiling]"
 ```
 
 ## Current Profiler Architecture
@@ -50,7 +50,7 @@ The NeMo Agent toolkit Profiler can be broken into the following components:
 ### Profiler Decorators and Callbacks
 - `src/nat/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
 - `src/nat/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent toolkit usage stats queue. We currently support callback handlers for LangChain/LangGraph,
-LlamaIndex, CrewAI, and Semantic Kernel.
+LlamaIndex, CrewAI, Google ADK, and Semantic Kernel.
 
 ### Profiler Runner
 

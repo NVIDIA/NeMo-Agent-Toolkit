@@ -472,8 +472,8 @@ class MyCompositeFunctionConfig(FunctionBaseConfig, name="my_composite_function"
 async def my_function(config: MyCompositeFunctionConfig, builder: Builder):
 
     # Get a reference to another function
-    other_function1 = builder.get_function(config.other_function_name1)
-    other_function2 = builder.get_function(config.other_function_name2)
+    other_function1 = await builder.get_function(config.other_function_name1)
+    other_function2 = await builder.get_function(config.other_function_name2)
 
     async def _my_function(message: str) -> str:
 
