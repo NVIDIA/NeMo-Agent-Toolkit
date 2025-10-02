@@ -82,6 +82,12 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
     source .venv/bin/activate
     uv sync --all-groups --all-extras
     ```
+   :::{note}
+   You may encounter `Too many open files (os error 24)`. This error occurs when your system’s file descriptor limit is too low.
+
+   You can fix it by increasing the limit before running the build.
+   On Linux and macOS you can issue `ulimit -n 4096` in your current shell to increase your open file limit to 4096.
+   :::
 
 1. Install and configure pre-commit hooks (optional these can also be run manually).
 
