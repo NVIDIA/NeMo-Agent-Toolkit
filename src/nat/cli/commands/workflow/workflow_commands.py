@@ -220,11 +220,13 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         else:
             install_cmd = ['pip', 'install', '-e', str(new_workflow_dir)]
 
+        python_safe_workflow_name = workflow_name.replace("-", "_")
+
         # List of templates and their destinations
         files_to_render = {
             'pyproject.toml.j2': new_workflow_dir / 'pyproject.toml',
             'register.py.j2': base_dir / 'register.py',
-            'workflow.py.j2': base_dir / f'{workflow_name}_function.py',
+            'workflow.py.j2': base_dir / f'{python_safe_workflow_name}.py',
             '__init__.py.j2': base_dir / '__init__.py',
             'config.yml.j2': configs_dir / 'config.yml',
         }
@@ -233,7 +235,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         context = {
             'editable': editable,
             'workflow_name': workflow_name,
-            'python_safe_workflow_name': workflow_name.replace("-", "_"),
+            'python_safe_workflow_name': python_safe_workflow_name,
             'package_name': package_name,
             'rel_path_to_repo_root': rel_path_to_repo_root,
             'workflow_class_name': f"{_generate_valid_classname(workflow_name)}FunctionConfig",
