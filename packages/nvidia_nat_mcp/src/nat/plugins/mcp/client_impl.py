@@ -142,9 +142,8 @@ class MCPFunctionGroup(FunctionGroup):
         # Throttled cleanup on access
         now = datetime.now()
         if now - self._last_cleanup_check > self._cleanup_check_interval:
-            async with self._cleanup_lock:
-                await self.cleanup_inactive_sessions()
-                self._last_cleanup_check = now
+            await self.cleanup_inactive_sessions()
+            self._last_cleanup_check = now
 
         # If the session_id equals the configured default_user_id use the base client instead of creating a per-session client
         default_uid = self._shared_auth_provider.config.default_user_id
@@ -155,8 +154,7 @@ class MCPFunctionGroup(FunctionGroup):
             # Check session limit before creating new client
             if len(self._session_clients) >= self._client_config.max_sessions:
                 # Try cleanup first to free up space
-                async with self._cleanup_lock:
-                    await self.cleanup_inactive_sessions()
+                await self.cleanup_inactive_sessions()
 
                 # If still at limit after cleanup, reject the request
                 if len(self._session_clients) >= self._client_config.max_sessions:
