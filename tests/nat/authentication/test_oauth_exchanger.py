@@ -173,11 +173,13 @@ async def test_refresh_expired_token(monkeypatch, cfg):
 
     client = OAuth2AuthCodeFlowProvider(cfg)
     past = datetime.now(UTC) - timedelta(seconds=1)
-    client._authenticated_tokens["bob"] = AuthResult(
-        credentials=[BearerTokenCred(token="stale")],  # type: ignore[arg-type]
-        token_expires_at=past,
-        raw={"refresh_token": "refTok"},
-    )
+    await client._token_storage.store(
+        "bob",
+        AuthResult(
+            credentials=[BearerTokenCred(token="stale")],  # type: ignore[arg-type]
+            token_expires_at=past,
+            raw={"refresh_token": "refTok"},
+        ))
 
     res = await client.authenticate("bob")
     assert res.credentials[0].token.get_secret_value() == "newTok"
@@ -222,11 +224,13 @@ async def test_refresh_fallback_to_callback(monkeypatch, cfg):
 
     client = OAuth2AuthCodeFlowProvider(cfg)
     past = datetime.now(UTC) - timedelta(minutes=1)
-    client._authenticated_tokens["eve"] = AuthResult(
-        credentials=[BearerTokenCred(token="old")],  # type: ignore[arg-type]
-        token_expires_at=past,
-        raw={"refresh_token": "badTok"},
-    )
+    await client._token_storage.store(
+        "eve",
+        AuthResult(
+            credentials=[BearerTokenCred(token="old")],  # type: ignore[arg-type]
+            token_expires_at=past,
+            raw={"refresh_token": "badTok"},
+        ))
 
     res = await client.authenticate("eve")
     assert hits["n"] == 1

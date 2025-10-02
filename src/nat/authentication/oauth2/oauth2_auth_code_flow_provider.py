@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from collections.abc import Awaitable
 from collections.abc import Callable
 from datetime import UTC
 from datetime import datetime
@@ -35,10 +36,15 @@ logger = logging.getLogger(__name__)
 
 class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConfig]):
 
-    def __init__(self, config: OAuth2AuthCodeFlowProviderConfig):
+    def __init__(self, config: OAuth2AuthCodeFlowProviderConfig, token_storage=None):
         super().__init__(config)
-        self._authenticated_tokens: dict[str, AuthResult] = {}
         self._auth_callback = None
+        # Always use token storage - defaults to in-memory if not provided
+        if token_storage is None:
+            from nat.plugins.mcp.auth.token_storage import InMemoryTokenStorage
+            self._token_storage = InMemoryTokenStorage()
+        else:
+            self._token_storage = token_storage
 
     async def _attempt_token_refresh(self, user_id: str, auth_result: AuthResult) -> AuthResult | None:
         refresh_token = auth_result.raw.get("refresh_token")
@@ -61,7 +67,7 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
                 raw=new_token_data,
             )
 
-            self._authenticated_tokens[user_id] = new_auth_result
+            await self._token_storage.store(user_id, new_auth_result)
         except httpx.HTTPStatusError:
             return None
         except httpx.RequestError:
@@ -74,26 +80,30 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
 
     def _set_custom_auth_callback(self,
                                   auth_callback: Callable[[OAuth2AuthCodeFlowProviderConfig, AuthFlowType],
-                                                          AuthenticatedContext]):
+                                                          Awaitable[AuthenticatedContext]]):
         self._auth_callback = auth_callback
 
     async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
-        if user_id is None and hasattr(Context.get(), "metadata") and hasattr(
-                Context.get().metadata, "cookies") and Context.get().metadata.cookies is not None:
-            session_id = Context.get().metadata.cookies.get("nat-session", None)
+        context = Context.get()
+        if user_id is None and hasattr(context, "metadata") and hasattr(
+                context.metadata, "cookies") and context.metadata.cookies is not None:
+            session_id = context.metadata.cookies.get("nat-session", None)
             if not session_id:
                 raise RuntimeError("Authentication failed. No session ID found. Cannot identify user.")
 
             user_id = session_id
 
-        if user_id and user_id in self._authenticated_tokens:
-            auth_result = self._authenticated_tokens[user_id]
-            if not auth_result.is_expired():
-                return auth_result
+        if user_id:
+            # Try to retrieve from token storage
+            auth_result = await self._token_storage.retrieve(user_id)
 
-            refreshed_auth_result = await self._attempt_token_refresh(user_id, auth_result)
-            if refreshed_auth_result:
-                return refreshed_auth_result
+            if auth_result:
+                if not auth_result.is_expired():
+                    return auth_result
+
+                refreshed_auth_result = await self._attempt_token_refresh(user_id, auth_result)
+                if refreshed_auth_result:
+                    return refreshed_auth_result
 
         # Try getting callback from the context if that's not set, use the default callback
         try:
@@ -109,19 +119,22 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
         except Exception as e:
             raise RuntimeError(f"Authentication callback failed: {e}") from e
 
-        auth_header = authenticated_context.headers.get("Authorization", "")
+        headers = authenticated_context.headers or {}
+        auth_header = headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
             raise RuntimeError("Invalid Authorization header")
 
         token = auth_header.split(" ")[1]
 
+        # Safely access metadata
+        metadata = authenticated_context.metadata or {}
         auth_result = AuthResult(
             credentials=[BearerTokenCred(token=SecretStr(token))],
-            token_expires_at=authenticated_context.metadata.get("expires_at"),
-            raw=authenticated_context.metadata.get("raw_token"),
+            token_expires_at=metadata.get("expires_at"),
+            raw=metadata.get("raw_token") or {},
         )
 
         if user_id:
-            self._authenticated_tokens[user_id] = auth_result
+            await self._token_storage.store(user_id, auth_result)
 
         return auth_result
