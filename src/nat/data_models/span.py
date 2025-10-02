@@ -128,10 +128,48 @@ class SpanStatus(BaseModel):
     message: str | None = Field(default=None, description="The status message of the span.")
 
 
+def _generate_nonzero_trace_id() -> int:
+    """Generate a non-zero 128-bit trace ID."""
+    return uuid.uuid4().int
+
+
+def _generate_nonzero_span_id() -> int:
+    """Generate a non-zero 64-bit span ID."""
+    return uuid.uuid4().int >> 64
+
+
 class SpanContext(BaseModel):
-    trace_id: int = Field(default_factory=lambda: uuid.uuid4().int, description="The 128-bit trace ID of the span.")
-    span_id: int = Field(default_factory=lambda: uuid.uuid4().int & ((1 << 64) - 1),
-                         description="The 64-bit span ID of the span.")
+    trace_id: int = Field(default_factory=_generate_nonzero_trace_id,
+                          description="The OTel-syle 128-bit trace ID of the span.")
+    span_id: int = Field(default_factory=_generate_nonzero_span_id,
+                         description="The OTel-syle 64-bit span ID of the span.")
+
+    @field_validator("trace_id", mode="before")
+    @classmethod
+    def _validate_trace_id(cls, v: int | str | None) -> int:
+        """Regenerate if trace_id is None; raise an exception if trace_id is invalid;"""
+        if isinstance(v, str):
+            v = uuid.UUID(v).int
+        if isinstance(v, type(None)):
+            v = _generate_nonzero_trace_id()
+        if v <= 0 or v >> 128:
+            raise ValueError(f"Invalid trace_id: must be a non-zero 128-bit integer, got {v}")
+        return v
+
+    @field_validator("span_id", mode="before")
+    @classmethod
+    def _validate_span_id(cls, v: int | str | None) -> int:
+        """Regenerate if span_id is None; raise an exception if span_id is invalid;"""
+        if isinstance(v, str):
+            try:
+                v = int(v, 16)
+            except ValueError:
+                raise ValueError(f"span_id unable to be parsed: {v}")
+        if isinstance(v, type(None)):
+            v = _generate_nonzero_span_id()
+        if v <= 0 or v >> 64:
+            raise ValueError(f"Invalid span_id: must be a non-zero 64-bit integer, got {v}")
+        return v
 
 
 class Span(BaseModel):

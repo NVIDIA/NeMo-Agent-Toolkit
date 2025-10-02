@@ -137,7 +137,7 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
                                     json=ChatRequest(messages=[Message(content=x, role="user")
                                                                for x in values]).model_dump()) as event_source:
                 async for sse in event_source.aiter_sse():
-                    response.append(ChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
+                    response.append(ChatResponseChunk.model_validate(sse.json()).choices[0].delta.content or "")
 
                 assert event_source.response.status_code == 200
                 assert response == values
@@ -159,7 +159,7 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
                                 json=ChatRequest(messages=[Message(content=x, role="user")
                                                            for x in values]).model_dump()) as event_source:
             async for sse in event_source.aiter_sse():
-                response_oai.append(ChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
+                response_oai.append(ChatResponseChunk.model_validate(sse.json()).choices[0].delta.content or "")
 
             assert event_source.response.status_code == 200
             assert response_oai == values

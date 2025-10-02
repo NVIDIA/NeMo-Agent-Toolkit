@@ -67,6 +67,8 @@ class ContextState(metaclass=Singleton):
     def __init__(self):
         self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
         self.user_message_id: ContextVar[str | None] = ContextVar("user_message_id", default=None)
+        self.workflow_run_id: ContextVar[str | None] = ContextVar("workflow_run_id", default=None)
+        self.workflow_trace_id: ContextVar[int | None] = ContextVar("workflow_trace_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
         self._metadata: ContextVar[RequestAttributes | None] = ContextVar("request_attributes", default=None)
@@ -120,14 +122,14 @@ class Context:
     @property
     def input_message(self):
         """
-            Retrieves the input message from the context state.
+        Retrieves the input message from the context state.
 
-            The input_message property is used to access the message stored in the
-            context state. This property returns the message as it is currently
-            maintained in the context.
+        The input_message property is used to access the message stored in the
+        context state. This property returns the message as it is currently
+        maintained in the context.
 
-            Returns:
-                str: The input message retrieved from the context state.
+        Returns:
+            str: The input message retrieved from the context state.
         """
         return self._context_state.input_message.get()
 
@@ -195,6 +197,20 @@ class Context:
         This property retrieves the user message ID which is the unique identifier for the current user message.
         """
         return self._context_state.user_message_id.get()
+
+    @property
+    def workflow_run_id(self) -> str | None:
+        """
+        Returns a stable identifier for the current workflow/agent invocation (UUID string).
+        """
+        return self._context_state.workflow_run_id.get()
+
+    @property
+    def workflow_trace_id(self) -> int | None:
+        """
+        Returns the 128-bit trace identifier for the current run, used as the OpenTelemetry trace_id.
+        """
+        return self._context_state.workflow_trace_id.get()
 
     @contextmanager
     def push_active_function(self,

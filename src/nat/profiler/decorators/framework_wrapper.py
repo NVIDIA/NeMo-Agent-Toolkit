@@ -123,7 +123,7 @@ def set_framework_profiler_handler(
                 except ImportError as e:
                     logger.warning(
                         "ADK profiler not available. " +
-                        "Install NAT with ADK extras: pip install 'nvidia-nat[adk]'. Error: %s",
+                        "Install NAT with ADK extras: pip install \"nvidia-nat[adk]\". Error: %s",
                         e)
                 else:
                     handler = ADKProfilerHandler()
