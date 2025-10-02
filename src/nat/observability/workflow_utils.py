@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+import sys
 import time
 from typing import TYPE_CHECKING
 from typing import Any
@@ -21,6 +23,8 @@ from typing import Optional
 from typing import TypeVar
 
 from nat.observability.context import ObservabilityContext
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from nat.builder.workflow import Workflow
@@ -95,13 +99,15 @@ class ObservabilityWorkflowInvoker:
                 return result
 
         except Exception as e:
-            # Update workflow metadata on failure
+            # Update workflow metadata on failure and log error
             if obs_context:
                 current_workflow = obs_context.get_current_workflow()
                 if current_workflow:
                     current_workflow.end_time = time.time()
                     current_workflow.status = "failed"
                     current_workflow.tags["error"] = str(e)
+
+            logger.error(f"Workflow '{workflow_name}' failed with error: {e}", exc_info=True)
             raise
 
     @staticmethod
@@ -161,13 +167,15 @@ class ObservabilityWorkflowInvoker:
                         current_workflow.status = "completed"
 
         except Exception as e:
-            # Update workflow metadata on failure
+            # Update workflow metadata on failure and log error
             if obs_context:
                 current_workflow = obs_context.get_current_workflow()
                 if current_workflow:
                     current_workflow.end_time = time.time()
                     current_workflow.status = "failed"
                     current_workflow.tags["error"] = str(e)
+
+            logger.error(f"Streaming workflow '{workflow_name}' failed with error: {e}", exc_info=True)
             raise
 
     @staticmethod
@@ -271,11 +279,13 @@ class ObservabilityWorkflowInvoker:
             return result, steps
 
         except Exception as e:
-            # Update workflow metadata on failure
+            # Update workflow metadata on failure and log error
             if obs_context:
                 current_workflow = obs_context.get_current_workflow()
                 if current_workflow:
                     current_workflow.end_time = time.time()
                     current_workflow.status = "failed"
                     current_workflow.tags["error"] = str(e)
+
+            logger.error(f"Workflow with steps '{workflow_name}' failed with error: {e}", exc_info=True)
             raise

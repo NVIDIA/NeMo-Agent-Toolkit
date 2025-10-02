@@ -16,7 +16,7 @@ from nat.observability.context import ObservabilityContext
 from nat.runtime.loader import load_workflow
 
 
-async def create_simple_config():
+async def create_simple_config() -> str:
     """Create a simple workflow config using built-in NAT functions."""
 
     config_content = """
@@ -39,7 +39,7 @@ workflow:
         return f.name
 
 
-async def main():
+async def main() -> None:
     """Demonstrate real NAT workflow with cross-workflow observability."""
 
     print("=" * 50)

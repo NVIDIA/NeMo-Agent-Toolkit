@@ -174,7 +174,7 @@ async def create_sample_workflow_configs():
     temp_dir = tempfile.mkdtemp()
 
     # Data validation workflow config
-    validation_config = f"""
+    validation_config = """
 llms:
   mock_llm:
     _type: mock
@@ -193,7 +193,7 @@ workflow:
         f.write(validation_config.strip())
 
     # Data processing workflow config
-    processing_config = f"""
+    processing_config = """
 llms:
   mock_llm:
     _type: mock
@@ -212,7 +212,7 @@ workflow:
         f.write(processing_config.strip())
 
     # Analysis workflow config
-    analysis_config = f"""
+    analysis_config = """
 llms:
   mock_llm:
     _type: mock

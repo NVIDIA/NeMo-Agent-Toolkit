@@ -13,9 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from nat.data_models.span import Span
 from nat.observability.processor.processor import Processor
 from nat.utils.type_utils import override
+
+logger = logging.getLogger(__name__)
 
 
 class CrossWorkflowProcessor(Processor[Span, Span]):
@@ -98,8 +102,9 @@ class CrossWorkflowProcessor(Processor[Span, Span]):
                 for key, value in obs_context.custom_attributes.items():
                     item.set_attribute(f"observability.custom.{key}", value)
 
-        except Exception as e:
+        except (AttributeError, KeyError, TypeError, ValueError) as e:
             # If there's any error in processing, log it but don't fail the span
+            logger.warning(f"Error processing cross-workflow observability data: {e}", exc_info=True)
             item.set_attribute("observability.processing_error", str(e))
 
         return item
@@ -158,8 +163,9 @@ class WorkflowRelationshipProcessor(Processor[Span, Span]):
                     item.set_attribute("relationship.type", "root_workflow")
                     item.set_attribute("relationship.nesting_level", 0)
 
-        except Exception as e:
+        except (AttributeError, IndexError, TypeError) as e:
             # If there's any error in processing, log it but don't fail the span
+            logger.warning(f"Error processing workflow relationship data: {e}", exc_info=True)
             item.set_attribute("relationship.processing_error", str(e))
 
         return item

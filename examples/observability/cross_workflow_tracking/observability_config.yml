@@ -30,10 +30,10 @@ general:
 
 llms:
   nim_llm:
-    _type: nim
-    model_name: meta/llama-3.1-8b-instruct
-    temperature: 0.7
-    max_tokens: 1024
+    _type: nat_test_llm
+    response_seq:
+      - "This is a test response for observability demonstration."
+    delay_ms: 100
 
 workflow:
   _type: chat_completion
