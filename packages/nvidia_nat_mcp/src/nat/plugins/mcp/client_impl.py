@@ -137,12 +137,8 @@ class MCPFunctionGroup(FunctionGroup):
                 except Exception as e:
                     logger.warning("Error cleaning up session client %s: %s", session_id, e)
 
-    async def _get_session_client(self, session_id: str | None = None) -> MCPBaseClient:
+    async def _get_session_client(self, session_id: str) -> MCPBaseClient:
         """Get the appropriate MCP client for the session."""
-        if session_id is None:
-            # Use default client for users without session_id
-            return self.mcp_client
-
         # Throttled cleanup on access
         now = datetime.now()
         if now - self._last_cleanup_check > self._cleanup_check_interval:
@@ -150,13 +146,10 @@ class MCPFunctionGroup(FunctionGroup):
                 await self.cleanup_inactive_sessions()
                 self._last_cleanup_check = now
 
-        # If the session_id equals the configured default_user_id and default-user
-        # tool calls are allowed, use the base client instead of creating a per-session client
-        if self._shared_auth_provider and \
-                self._shared_auth_provider.config.allow_default_user_id_for_tool_calls:
-            default_uid = self._shared_auth_provider.config.default_user_id
-            if default_uid and session_id == default_uid:
-                return self.mcp_client
+        # If the session_id equals the configured default_user_id use the base client instead of creating a per-session client
+        default_uid = self._shared_auth_provider.config.default_user_id
+        if default_uid and session_id == default_uid:
+            return self.mcp_client
 
         if session_id not in self._session_clients:
             # Check session limit before creating new client
