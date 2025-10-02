@@ -60,7 +60,9 @@ persistent and also unsafe.
 
 For production environments, configure an external object store to persist tokens across restarts. The NeMo Agent toolkit supports S3-compatible storage (MinIO, AWS S3), MySQL, and Redis backends.
 
-> **Note**: For detailed object store setup instructions including MinIO, MySQL, and Redis installation and configuration examples, see the [Object Store User Report Example](../../../../examples/object_store/user_report/README.md#choose-an-object-store).
+:::{note}
+For detailed object store setup instructions including MinIO, MySQL, and Redis installation and configuration examples, see the `examples/object_store/user_report/README.md` guide (under the "Choose an Object Store" section).
+:::
 
 The following example shows token storage configuration using S3-compatible storage (MinIO):
 
