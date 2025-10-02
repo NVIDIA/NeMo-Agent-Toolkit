@@ -36,6 +36,24 @@ nat
 ├── info
 │   ├── channels
 │   └── components
+├── mcp
+│   ├── client
+│   │   ├── ping
+│   │   └── tool
+│   │       ├── call
+│   │       └── list
+│   └── serve
+├── object-store
+│   ├── mysql
+│   │   ├── delete
+│   │   └── upload
+│   ├── redis
+│   │   ├── delete
+│   │   └── upload
+│   └── s3
+│       ├── delete
+│       └── upload
+├── optimize
 ├── registry
 │   ├── publish
 │   ├── pull
@@ -43,22 +61,18 @@ nat
 │   └── search
 ├── run
 ├── serve
+├── sizing
+│   └── calc
 ├── start
 │   ├── console
 │   ├── fastapi
 │   └── mcp
-│       ├── serve
-│       └── client
-│           ├── ping
-│           └── tool
-│               ├── list
-│               └── call
 ├── uninstall
 ├── validate
 └── workflow
     ├── create
-    ├── reinstall
-    └── delete
+    ├── delete
+    └── reinstall
 ```
 
 ## Start
