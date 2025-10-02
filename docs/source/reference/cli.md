@@ -158,38 +158,204 @@ Options:
   --help                     Show this message and exit.
 ```
 
-### MCP
+## MCP
 
-The `nat mcp serve` command (equivalent to `nat start mcp`) starts a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your NeMo Agent toolkit functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. The MCP front-end is especially useful for integrating NeMo Agent toolkit workflows with MCP-compatible clients.
+The `nat mcp` command group provides utilities for both serving workflows as MCP servers and interacting with MCP servers as a client.
 
-The MCP front-end can be configured using the following options:
+### Client
+
+The `nat mcp client` command group provides utilities for interacting with MCP servers directly from the command line. These commands are useful for discovering available tools and testing MCP server connectivity before configuring your workflow.
+
+The `nat mcp client --help` utility provides an overview of the available commands:
+
+```console
+$ nat mcp client --help
+Usage: nat mcp client [OPTIONS] COMMAND [ARGS]...
+
+  MCP client commands.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  ping  Ping an MCP server to check if it's responsive.
+  tool  Inspect and call MCP tools.
+```
+
+#### Ping
+
+```console
+$ nat mcp client ping --help
+Usage: nat mcp client ping [OPTIONS]
+
+  Ping an MCP server to check if it's responsive.
+
+Options:
+  --url TEXT                      MCP server URL (e.g.
+                                  http://localhost:8080/mcp for streamable-
+                                  http, http://localhost:8080/sse for sse)
+                                  [default: http://localhost:9901/mcp]
+  --transport [sse|stdio|streamable-http]
+                                  Type of client to use for ping  [default:
+                                  streamable-http]
+  --command TEXT                  For stdio: The command to run (e.g. mcp-
+                                  server)
+  --args TEXT                     For stdio: Additional arguments for the
+                                  command (space-separated)
+  --env TEXT                      For stdio: Environment variables in
+                                  KEY=VALUE format (space-separated)
+  --timeout INTEGER               Timeout in seconds for ping request
+                                  [default: 60]
+  --json-output                   Output ping result in JSON format
+  --auth-redirect-uri TEXT        OAuth2 redirect URI for authentication
+                                  (streamable-http only, not with --direct)
+  --auth-user-id TEXT             User ID for authentication (streamable-http
+                                  only, not with --direct)
+  --auth-scopes TEXT              OAuth2 scopes (comma-separated, streamable-
+                                  http only, not with --direct)
+  --help                          Show this message and exit.
+```
+
+#### Tool Commands
+
+```console
+$ nat mcp client tool --help
+Usage: nat mcp client tool [OPTIONS] COMMAND [ARGS]...
+
+  Inspect and call MCP tools.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  call  Call a tool by name with optional arguments.
+  list  List tool names (default), or show details with --detail or --tool.
+```
+
+##### List Tools
+
+```console
+$ nat mcp client tool list --help
+Usage: nat mcp client tool list [OPTIONS]
+
+  List tool names (default), or show details with --detail or --tool.
+
+Options:
+  --direct                        Bypass MCPBuilder and use direct MCP
+                                  protocol
+  --url TEXT                      MCP server URL (e.g.
+                                  http://localhost:8080/mcp for streamable-
+                                  http, http://localhost:8080/sse for sse)
+                                  [default: http://localhost:9901/mcp]
+  --transport [sse|stdio|streamable-http]
+                                  Type of client to use (default: streamable-
+                                  http, backwards compatible with sse)
+                                  [default: streamable-http]
+  --command TEXT                  For stdio: The command to run (e.g. mcp-
+                                  server)
+  --args TEXT                     For stdio: Additional arguments for the
+                                  command (space-separated)
+  --env TEXT                      For stdio: Environment variables in
+                                  KEY=VALUE format (space-separated)
+  --tool TEXT                     Get details for a specific tool by name
+  --detail                        Show full details for all tools
+  --json-output                   Output tool metadata in JSON format
+  --auth                          Enable OAuth2 authentication with default
+                                  settings (streamable-http only, not with
+                                  --direct)
+  --auth-redirect-uri TEXT        OAuth2 redirect URI for authentication
+                                  (streamable-http only, not with --direct)
+  --auth-user-id TEXT             User ID for authentication (streamable-http
+                                  only, not with --direct)
+  --auth-scopes TEXT              OAuth2 scopes (comma-separated, streamable-
+                                  http only, not with --direct)
+  --help                          Show this message and exit.
+```
+
+##### Call Tool
+
+```console
+$ nat mcp client tool call --help
+Usage: nat mcp client tool call [OPTIONS] TOOL_NAME
+
+  Call a tool by name with optional arguments.
+
+Options:
+  --direct                        Bypass MCPBuilder and use direct MCP
+                                  protocol
+  --url TEXT                      MCP server URL (e.g.
+                                  http://localhost:8080/mcp for streamable-
+                                  http, http://localhost:8080/sse for sse)
+                                  [default: http://localhost:9901/mcp]
+  --transport [sse|stdio|streamable-http]
+                                  Type of client to use (default: streamable-
+                                  http, backwards compatible with sse)
+                                  [default: streamable-http]
+  --command TEXT                  For stdio: The command to run (e.g. mcp-
+                                  server)
+  --args TEXT                     For stdio: Additional arguments for the
+                                  command (space-separated)
+  --env TEXT                      For stdio: Environment variables in
+                                  KEY=VALUE format (space-separated)
+  --json-args TEXT                Pass tool args as a JSON object string
+  --auth                          Enable OAuth2 authentication with default
+                                  settings (streamable-http only, not with
+                                  --direct)
+  --auth-redirect-uri TEXT        OAuth2 redirect URI for authentication
+                                  (streamable-http only, not with --direct)
+  --auth-user-id TEXT             User ID for authentication (streamable-http
+                                  only, not with --direct)
+  --auth-scopes TEXT              OAuth2 scopes (comma-separated, streamable-
+                                  http only, not with --direct)
+  --help                          Show this message and exit.
+```
+
+### Serve
+
+The `nat mcp serve` command (equivalent to `nat start mcp`) starts a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your NeMo Agent toolkit functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs.
+
+The `nat mcp serve --help` utility provides a brief description of each option:
 
 ```console
 $ nat mcp serve --help
 Usage: nat mcp serve [OPTIONS]
 
+  Run a NAT workflow using the mcp front end.
+
 Options:
-  --config_file FILE         A JSON/YAML file that sets the parameters for the
-                             workflow.  [required]
-  --override <TEXT TEXT>...  Override config values using dot notation (e.g.,
-                             --override llms.nim_llm.temperature 0.7)
-  --name TEXT                Name of the MCP server
-  --host TEXT                Host to bind the server to
-  --port INTEGER             Port to bind the server to
-  --debug BOOLEAN            Enable debug mode
-  --log_level TEXT           Log level for the MCP server
-  --tool_names TEXT          Comma-separated list of tool names to expose.
-                             If not provided, all functions will be exposed.
-  --help                     Show this message and exit.
+  --config_file FILE              A JSON/YAML file that sets the parameters
+                                  for the workflow.  [required]
+  --override <TEXT TEXT>...       Override config values using dot notation
+                                  (e.g., --override llms.nim_llm.temperature
+                                  0.7)
+  --name TEXT                     Name of the MCP server (default: NeMo Agent
+                                  Toolkit MCP)
+  --host TEXT                     Host to bind the server to (default:
+                                  localhost)
+  --port INTEGER                  Port to bind the server to (default: 9901)
+  --debug BOOLEAN                 Enable debug mode (default: False)
+  --log_level TEXT                Log level for the MCP server (default: INFO)
+  --tool_names TEXT               The list of tools MCP server will expose
+                                  (default: all tools)
+  --transport [sse|streamable-http]
+                                  Transport type for the MCP server (default:
+                                  streamable-http, backwards compatible with
+                                  sse)
+  --runner_class TEXT             Custom worker class for handling MCP routes
+                                  (default: built-in worker)
+  --server_auth OAUTH2RESOURCESERVERCONFIG
+                                  OAuth 2.0 Resource Server configuration for
+                                  token verification.
+  --help                          Show this message and exit.
 ```
 
-For example, to start an MCP server with a specific workflow and expose only a particular tool:
+For example, to start an MCP server with a specific workflow:
 
 ```bash
-nat mcp serve --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --tool_names mcp_retriever_tool
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 
-This will start an MCP server exposing the `mcp_retriever_tool` function from the workflow, which can then be accessed by any MCP-compatible client.
+This will start an MCP server on the default host (localhost) and port (9901), available at `http://localhost:9901/mcp`.
 
 ## Run
 
