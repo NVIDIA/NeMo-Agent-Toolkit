@@ -17,16 +17,13 @@ import asyncio
 import logging
 from datetime import datetime
 from datetime import timedelta
-from typing import TYPE_CHECKING
 
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
+from nat.plugins.mcp.client_base import MCPBaseClient
 from nat.plugins.mcp.client_config import MCPClientConfig
 from nat.plugins.mcp.client_config import MCPToolOverrideConfig
-
-if TYPE_CHECKING:  # Only for type checking; avoids runtime import/cycles
-    from nat.plugins.mcp.client_base import MCPBaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +45,9 @@ class MCPFunctionGroup(FunctionGroup):
         self._session_clients: dict[str, MCPBaseClient] = {}
         self._session_last_activity: dict[str, datetime] = {}
         self._cleanup_lock = asyncio.Lock()
+        # Throttled cleanup control
+        self._last_cleanup_check: datetime = datetime.now()
+        self._cleanup_check_interval: timedelta = timedelta(minutes=5)
 
         # Shared components for session client creation
         self._shared_auth_provider = None
@@ -129,6 +129,13 @@ class MCPFunctionGroup(FunctionGroup):
         if session_id is None:
             # Use default client for users without session_id
             return self.mcp_client
+
+        # Throttled cleanup on access
+        now = datetime.now()
+        if now - self._last_cleanup_check > self._cleanup_check_interval:
+            async with self._cleanup_lock:
+                await self.cleanup_inactive_sessions()
+                self._last_cleanup_check = now
 
         # If the session_id equals the configured default_user_id and default-user
         # tool calls are allowed, use the base client instead of creating a per-session client
@@ -361,8 +368,8 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             if config.session_aware_tools:
                 tool_fn = mcp_session_tool_function(tool, group)
             else:
-                from nat.plugins.mcp.tool import mcp_tool_function
-            tool_fn = mcp_tool_function(tool)
+                from nat.plugins.mcp.tool import mcp_tool_function  # noqa: F401
+                tool_fn = mcp_tool_function(tool)
 
             # Normalize optional typing for linter/type-checker compatibility
             single_fn = tool_fn.single_fn
