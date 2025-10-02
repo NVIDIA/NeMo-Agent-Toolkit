@@ -78,8 +78,8 @@ TRACE_ID_CASES: list[tuple[list[tuple[bytes, bytes]], int | None]] = [
     TRACE_ID_CASES,
 )
 @pytest.mark.asyncio
-async def test_session_trace_id_from_headers_parametrized(headers: list[tuple[bytes, bytes]],
-                                                          expected_trace_id: int | None):
+async def test_session_trace_id_from_headers_parameterized(headers: list[tuple[bytes, bytes]],
+                                                           expected_trace_id: int | None):
     scope = {
         "type": "http",
         "method": "GET",
@@ -125,10 +125,10 @@ METADATA_CASES: list[tuple[list[tuple[bytes, bytes]], str | None, str | None, st
     METADATA_CASES,
 )
 @pytest.mark.asyncio
-async def test_session_metadata_headers_parametrized(headers: list[tuple[bytes, bytes]],
-                                                     expected_conv: str | None,
-                                                     expected_msg: str | None,
-                                                     expected_run: str | None):
+async def test_session_metadata_headers_parameterized(headers: list[tuple[bytes, bytes]],
+                                                      expected_conv: str | None,
+                                                      expected_msg: str | None,
+                                                      expected_run: str | None):
     scope = {
         "type": "http",
         "method": "GET",

@@ -152,8 +152,8 @@ class SpanContext(BaseModel):
             v = uuid.UUID(v).int
         if isinstance(v, type(None)):
             v = _generate_nonzero_trace_id()
-        if v == 0:
-            raise Exception("A null trace_id is invalid")
+        if v <= 0 or v >> 128:
+            raise ValueError(f"Invalid trace_id: must be a non-zero 128-bit integer, got {v}")
         return v
 
     @field_validator("span_id", mode="before")
@@ -164,11 +164,11 @@ class SpanContext(BaseModel):
             try:
                 v = int(v, base=0)
             except ValueError:
-                raise Exception("span_id is unable to be parsed")
+                raise ValueError(f"span_id unable to be parsed: {v}")
         if isinstance(v, type(None)):
             v = _generate_nonzero_span_id()
-        if (v == 0) or (v >> 64) or (v < 0):
-            raise Exception("span_id is invalid")
+        if v <= 0 or v >> 64:
+            raise ValueError(f"Invalid span_id: must be a non-zero 64-bit integer, got {v}")
         return v
 
 
