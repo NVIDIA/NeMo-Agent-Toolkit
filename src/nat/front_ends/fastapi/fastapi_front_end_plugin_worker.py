@@ -1128,7 +1128,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     if configured_group.config.type != "mcp_client":
                         continue
 
-                    from nat.plugins.mcp.client_impl import MCPClientConfig
+                    from nat.plugins.mcp.client_config import MCPClientConfig
 
                     config = configured_group.config
                     assert isinstance(config, MCPClientConfig)
