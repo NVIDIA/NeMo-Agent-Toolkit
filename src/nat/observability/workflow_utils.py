@@ -88,27 +88,19 @@ class ObservabilityWorkflowInvoker:
         try:
             async with workflow.run(message, observability_context=obs_context) as runner:
                 result = await runner.result(to_type=to_type)
-
-                # Update workflow metadata on completion
-                if obs_context:
-                    current_workflow = obs_context.get_current_workflow()
-                    if current_workflow:
-                        current_workflow.end_time = time.time()
-                        current_workflow.status = "completed"
-
                 return result
-
-        except Exception as e:
-            # Update workflow metadata on failure and log error
+        finally:
+            exc = sys.exc_info()[1]
             if obs_context:
                 current_workflow = obs_context.get_current_workflow()
                 if current_workflow:
                     current_workflow.end_time = time.time()
-                    current_workflow.status = "failed"
-                    current_workflow.tags["error"] = str(e)
-
-            logger.error(f"Workflow '{workflow_name}' failed with error: {e}", exc_info=True)
-            raise
+                    if exc is None:
+                        current_workflow.status = "completed"
+                    else:
+                        current_workflow.status = "failed"
+                        current_workflow.tags["error"] = str(exc)
+                        logger.error("Workflow '%s' failed: %s", workflow_name, exc)
 
     @staticmethod
     async def invoke_workflow_stream_with_context(
@@ -158,25 +150,18 @@ class ObservabilityWorkflowInvoker:
             async with workflow.run(message, observability_context=obs_context) as runner:
                 async for item in runner.result_stream(to_type=to_type):
                     yield item
-
-                # Update workflow metadata on completion
-                if obs_context:
-                    current_workflow = obs_context.get_current_workflow()
-                    if current_workflow:
-                        current_workflow.end_time = time.time()
-                        current_workflow.status = "completed"
-
-        except Exception as e:
-            # Update workflow metadata on failure and log error
+        finally:
+            exc = sys.exc_info()[1]
             if obs_context:
                 current_workflow = obs_context.get_current_workflow()
                 if current_workflow:
                     current_workflow.end_time = time.time()
-                    current_workflow.status = "failed"
-                    current_workflow.tags["error"] = str(e)
-
-            logger.error(f"Streaming workflow '{workflow_name}' failed with error: {e}", exc_info=True)
-            raise
+                    if exc is None:
+                        current_workflow.status = "completed"
+                    else:
+                        current_workflow.status = "failed"
+                        current_workflow.tags["error"] = str(exc)
+                        logger.error("Streaming workflow '%s' failed: %s", workflow_name, exc)
 
     @staticmethod
     def get_current_observability_context() -> Optional[ObservabilityContext]:
@@ -268,24 +253,16 @@ class ObservabilityWorkflowInvoker:
                 to_type=to_type,
                 observability_context=obs_context
             )
-
-            # Update workflow metadata on completion
-            if obs_context:
-                current_workflow = obs_context.get_current_workflow()
-                if current_workflow:
-                    current_workflow.end_time = time.time()
-                    current_workflow.status = "completed"
-
             return result, steps
-
-        except Exception as e:
-            # Update workflow metadata on failure and log error
+        finally:
+            exc = sys.exc_info()[1]
             if obs_context:
                 current_workflow = obs_context.get_current_workflow()
                 if current_workflow:
                     current_workflow.end_time = time.time()
-                    current_workflow.status = "failed"
-                    current_workflow.tags["error"] = str(e)
-
-            logger.error(f"Workflow with steps '{workflow_name}' failed with error: {e}", exc_info=True)
-            raise
+                    if exc is None:
+                        current_workflow.status = "completed"
+                    else:
+                        current_workflow.status = "failed"
+                        current_workflow.tags["error"] = str(exc)
+                        logger.error("Workflow with steps '%s' failed: %s", workflow_name, exc)

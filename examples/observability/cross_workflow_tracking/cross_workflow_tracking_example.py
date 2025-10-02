@@ -21,15 +21,14 @@ async def create_simple_config() -> str:
 
     config_content = """
 llms:
-  nvidia_llm:
-    _type: nim
-    model_name: meta/llama-3.1-8b-instruct
-    temperature: 0.7
-    max_tokens: 1024
-
+  demo_llm:
+    _type: nat_test_llm
+    response_seq:
+      - "Stubbed workflow reply."
+    delay_ms: 0
 workflow:
   _type: chat_completion
-  llm_name: nvidia_llm
+  llm_name: demo_llm
   system_prompt: "You are a helpful customer support assistant. Provide clear, concise, and helpful responses."
 """
 

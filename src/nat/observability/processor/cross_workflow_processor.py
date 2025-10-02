@@ -104,7 +104,7 @@ class CrossWorkflowProcessor(Processor[Span, Span]):
 
         except (AttributeError, KeyError, TypeError, ValueError) as e:
             # If there's any error in processing, log it but don't fail the span
-            logger.warning(f"Error processing cross-workflow observability data: {e}", exc_info=True)
+            logger.exception("Error processing cross-workflow observability data: %s", e)
             item.set_attribute("observability.processing_error", str(e))
 
         return item
@@ -165,7 +165,7 @@ class WorkflowRelationshipProcessor(Processor[Span, Span]):
 
         except (AttributeError, IndexError, TypeError) as e:
             # If there's any error in processing, log it but don't fail the span
-            logger.warning(f"Error processing workflow relationship data: {e}", exc_info=True)
+            logger.exception("Error processing workflow relationship data: %s", e)
             item.set_attribute("relationship.processing_error", str(e))
 
         return item

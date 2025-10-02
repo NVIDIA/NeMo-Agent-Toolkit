@@ -105,7 +105,7 @@ async def simulate_workflow_execution(workflow_name: str,
         result = await transform_data(input_data)
     elif workflow_name == "storage" or "store" in workflow_name:
         result = await store_data(input_data)
-    elif workflow_name == "report" in workflow_name:
+    elif "report" in workflow_name:
         result = await generate_report(input_data)
     else:
         # Generic processing
