@@ -28,8 +28,10 @@ This guide will cover how to use a NeMo Agent toolkit workflow as a MCP host wit
 MCP client functionality requires the `nvidia-nat-mcp` package. Install it with:
 
 ```bash
-uv pip install nvidia-nat[mcp]
+uv pip install "nvidia-nat[mcp]"
 ```
+## Accessing Protected MCP Servers
+NeMo Agent toolkit can access protected MCP servers via the MCP client auth provider. For more information, see the [MCP Authentication](./mcp-auth.md) documentation.
 
 ## MCP Client Configuration
 NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
@@ -64,6 +66,66 @@ You can use the `mcp_client` function group to connect to an MCP server, dynamic
 The function group supports filtering via the `include` and `exclude` parameters. You can also optionally override the tool name and description defined by the MCP server via the `tool_overrides` parameter.
 
 The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers. See [Function Groups](../function-groups.md) for more information about function group capabilities.
+
+#### Configuration Options
+
+The `mcp_client` function group supports the following configuration options:
+
+**Note**: You can get the complete list of configuration options and their schemas by running:
+```bash
+nat info components -t function_group -q mcp_client
+```
+
+##### Server Configuration
+
+- `server.transport`: Transport type (`stdio`, `sse`, or `streamable-http`). See [Transport Configuration](#transport-configuration) for details.
+- `server.url`: URL of the MCP server (required for `sse` and `streamable-http` transports)
+- `server.command`: Command to run for `stdio` transport (such as `python` or `docker`)
+- `server.args`: Arguments for the stdio command
+- `server.env`: Environment variables for the stdio process
+- `server.auth_provider`: Reference to authentication provider for protected MCP servers (only supported with `streamable-http` transport)
+
+##### Timeout Configuration
+
+- `tool_call_timeout`: Timeout for MCP tool calls. Defaults to `60` seconds
+- `auth_flow_timeout`: Timeout for interactive authentication flow. Defaults to `300` seconds
+
+##### Reconnection Configuration
+
+- `reconnect_enabled`: Whether to enable reconnecting to the MCP server if the connection is lost. Defaults to `true`.
+- `reconnect_max_attempts`: Maximum number of reconnect attempts. Defaults to `2`.
+- `reconnect_initial_backoff`: Initial backoff time for reconnect attempts. Defaults to `0.5` seconds.
+- `reconnect_max_backoff`: Maximum backoff time for reconnect attempts. Defaults to `50.0` seconds.
+
+##### Tool Customization
+
+- `tool_overrides`: Optional overrides for tool names and descriptions. Each entry can specify:
+  - `alias`: Override the tool name (function name in the workflow)
+  - `description`: Override the tool description
+
+Example with all options:
+
+```yaml
+function_groups:
+  mcp_tools:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "http://localhost:9901/mcp"
+      auth_provider: "mcp_oauth2"  # Optional authentication
+    tool_call_timeout: 60  # 1 minute for tool calls
+    auth_flow_timeout: 300  # 5 minutes for auth flow
+    reconnect_enabled: true
+    reconnect_max_attempts: 3
+    reconnect_initial_backoff: 1.0
+    reconnect_max_backoff: 60.0
+    tool_overrides:
+      calculator_add:
+        alias: "add_numbers"
+        description: "Add two numbers together"
+      calculator_multiply:
+        description: "Multiply two numbers"  # Keeps original name
+```
 
 ### `mcp_tool_wrapper` Configuration
 ```yaml
@@ -143,7 +205,7 @@ function_groups:
 ## Example
 The following example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers. This configuration shows how to use multiple MCP servers with different transports in the same workflow.
 
-`examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml`:
+`examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml`:
 ```yaml
 function_groups:
   mcp_time:
@@ -158,7 +220,7 @@ function_groups:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
 
-workflows:
+workflow:
   _type: react_agent
   tool_names:
     - mcp_time
@@ -179,10 +241,10 @@ This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable
 
 2. Run the workflow:
 ```bash
-nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
-## Displaying MCP Tools
+## Displaying MCP Tools via CLI
 
 Use the `nat mcp client` commands to inspect and call tools available from an MCP server before configuring your workflow. This is useful for discovering available tools and understanding their input schemas.
 
@@ -200,6 +262,7 @@ nat mcp client tool list --transport stdio --command "python" --args "-m mcp_ser
 # For sse transport
 nat mcp client tool list --url http://localhost:9901/sse --transport sse
 ```
+For SSE transport, ensure the MCP server is started with the `--transport sse` flag. The transport type on the client and server needs to match for MCP communication to work. The default transport type is `streamable-http`.
 
 Sample output:
 ```text
@@ -231,6 +294,13 @@ nat mcp client tool call calculator_multiply \
 ```
 
 ```
+### Using Protected MCP Servers
+
+To use a protected MCP server, you need to provide the `--auth` flag:
+```bash
+nat mcp client tool list --url http://example.com/mcp --auth
+```
+This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, see the [MCP Authentication](./mcp-auth.md) documentation.
 
 Sample output:
 ```text
@@ -252,6 +322,99 @@ Input Schema:
   "type": "object"
 }
 ------------------------------------------------------------
+```
+
+## List MCP Client Tools via HTTP endpoint
+This is useful when you want to inspect the tools configured on the client side and whether each tool is available on the connected server.
+
+When you serve a workflow that includes an `mcp_client` function group, the NeMo Agent toolkit exposes an HTTP endpoint to inspect the tools configured on the client side and whether each tool is available on the connected server.
+
+### Steps
+
+1. Start the MCP server:
+   ```bash
+   nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
+   ```
+
+2. Start the workflow (MCP client) with FastAPI on port 8080:
+   ```bash
+   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --port 8080
+   ```
+
+3. Call the endpoint and pretty-print the response:
+   ```bash
+   curl -s http://localhost:8080/mcp/client/tool/list | jq
+   ```
+
+### Endpoint
+
+- Path: `/mcp/client/tool/list`
+- Method: `GET`
+- Purpose: Returns tools configured in each `mcp_client` function group, indicates whether each tool is available on the connected MCP server, and includes metadata about the function group and HTTP session.
+
+### Sample Output
+
+```json
+{
+  "mcp_clients": [
+    {
+      "function_group": "mcp_time",
+      "server": "stdio:python",
+      "transport": "stdio",
+      "session_healthy": true,
+      "tools": [
+        {
+          "name": "convert_time",
+          "description": "Convert time between timezones",
+          "server": "stdio:python",
+          "available": true
+        },
+        {
+          "name": "get_current_time_mcp_tool",
+          "description": "Returns the current date and time",
+          "server": "stdio:python",
+          "available": true
+        }
+      ],
+      "total_tools": 2,
+      "available_tools": 2
+    },
+    {
+      "function_group": "mcp_math",
+      "server": "streamable-http:http://localhost:9901/mcp",
+      "transport": "streamable-http",
+      "session_healthy": true,
+      "tools": [
+        {
+          "name": "calculator_divide",
+          "description": "This is a mathematical tool used to divide one number by another. It takes 2 numbers as an input and computes their numeric quotient as the output.",
+          "server": "streamable-http:http://localhost:9901/mcp",
+          "available": true
+        },
+        {
+          "name": "calculator_inequality",
+          "description": "This is a mathematical tool used to perform an inequality comparison between two numbers. It takes two numbers as an input and determines if one is greater or are equal.",
+          "server": "streamable-http:http://localhost:9901/mcp",
+          "available": true
+        },
+        {
+          "name": "calculator_multiply",
+          "description": "This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.",
+          "server": "streamable-http:http://localhost:9901/mcp",
+          "available": true
+        },
+        {
+          "name": "calculator_subtract",
+          "description": "This is a mathematical tool used to subtract one number from another. It takes 2 numbers as an input and computes their numeric difference as the output.",
+          "server": "streamable-http:http://localhost:9901/mcp",
+          "available": true
+        }
+      ],
+      "total_tools": 4,
+      "available_tools": 4
+    }
+  ]
+}
 ```
 
 ### Troubleshooting

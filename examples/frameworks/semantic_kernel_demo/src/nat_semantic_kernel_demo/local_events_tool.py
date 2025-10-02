@@ -40,7 +40,7 @@ async def local_events(tool_config: LocalEventsToolConfig, builder: Builder):
 
     import json
 
-    with open(tool_config.data_path, "r") as f:
+    with open(tool_config.data_path) as f:
         events = LocalEventsResponse.model_validate({"events": json.load(f)}).events
 
     async def _local_events(city: str) -> LocalEventsResponse:

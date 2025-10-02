@@ -48,7 +48,7 @@ def load_data_from_file(file_path: str) -> dict[str, Any]:
             else:
                 raise FileNotFoundError(f"Could not find data file: {file_path}")
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
         logger.info("Successfully loaded data from %s", file_path)
         return data

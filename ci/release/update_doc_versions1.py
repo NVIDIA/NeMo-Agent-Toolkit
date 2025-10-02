@@ -26,7 +26,7 @@ def main(versions_file: str, new_version: str):
     if new_version.count('.') != 1:
         raise ValueError("Version string must only include <major>.<minor>")
 
-    with open(versions_file, "r", encoding="utf-8") as fh:
+    with open(versions_file, encoding="utf-8") as fh:
         version_list = json.load(fh)
 
     for version_data in version_list:

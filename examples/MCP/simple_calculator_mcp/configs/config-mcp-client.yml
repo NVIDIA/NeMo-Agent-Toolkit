@@ -13,37 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-functions:
-  current_datetime_local:
-    _type: current_datetime
+# This config file shows how to use the MCP server to get the current date and time.
+# Here the workflow acts as a MCP client and connects to the MCP server running
+# on the specified URL. streamable-http is the recommended transport for HTTP-based
+# connections, but sse is also supported for backwards compatibility.
+
+# This config file shows -
+# 1. how to use a local MCP server to get the current date and time using stdio transport.
+# 2. how to access a remote MCP server using streamable-http transport for math operations.
+#
+# As the mcp_server_time is running locally ensure that the package "mcp_server_time" is installed
+# on your local machine. For example, if you are using pip, you can install it with:
+# uv pip install mcp-server-time
 
 function_groups:
-  mcp_protected_math:
+  mcp_time:
+    _type: mcp_client
+    server:
+      transport: stdio
+      command: "python"
+      args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
+    tool_overrides:
+      # Optionally override the tool name and description from the MCP server
+      get_current_time:
+        alias: get_current_time_mcp_tool
+        description: "Returns the current date and time"
+
+  mcp_math:
     _type: mcp_client
     server:
       transport: streamable-http
-      auth_provider: static_oauth2
       url: "http://localhost:9901/mcp"
     include:
       - calculator_multiply
       - calculator_inequality
       - calculator_divide
       - calculator_subtract
-
-authentication:
-  static_oauth2:
-    _type: oauth2_auth_code_flow
-    redirect_uri: http://localhost:8000/auth/redirect
-    authorization_url: http://localhost:5001/oauth/authorize
-    token_url: http://localhost:5001/oauth/token
-    token_endpoint_auth_method: client_secret_post
-    client_id: ${MCP_CLIENT_ID}
-    client_secret: ${MCP_CLIENT_SECRET}
-    scopes:
-      - openid
-      - profile
-      - email
-    use_pkce: false
 
 llms:
   nim_llm:
@@ -59,11 +64,8 @@ llms:
 workflow:
   _type: react_agent
   tool_names:
-    - calculator_multiply
-    - calculator_inequality
-    - calculator_divide
-    - calculator_subtract
-    - current_datetime_local
+    - mcp_time
+    - mcp_math
   llm_name: nim_llm
   verbose: true
   retry_parsing_errors: true

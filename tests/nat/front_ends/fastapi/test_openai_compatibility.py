@@ -166,7 +166,7 @@ def test_nat_chat_response_timestamp_serialization():
     import datetime
 
     # Create response with known timestamp
-    test_time = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
+    test_time = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
     response = ChatResponse.from_string("Hello", created=test_time)
 
     # Serialize to JSON

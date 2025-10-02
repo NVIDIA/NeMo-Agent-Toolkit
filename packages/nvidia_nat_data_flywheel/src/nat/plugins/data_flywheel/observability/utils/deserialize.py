@@ -34,7 +34,7 @@ def deserialize_span_attribute(value: dict[str, Any] | list[Any] | str) -> JSONV
         ValueError: If parsing fails
     """
     try:
-        if isinstance(value, (dict, list)):
+        if isinstance(value, dict | list):
             return value
         deserialized_attribute = json.loads(value)
         return deserialized_attribute

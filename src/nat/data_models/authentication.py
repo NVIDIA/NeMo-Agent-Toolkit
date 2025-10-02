@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import typing
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
 from enum import Enum
 
 import httpx
@@ -166,13 +166,7 @@ class BearerTokenCred(_CredBase):
 
 
 Credential = typing.Annotated[
-    typing.Union[
-        HeaderCred,
-        QueryCred,
-        CookieCred,
-        BasicAuthCred,
-        BearerTokenCred,
-    ],
+    HeaderCred | QueryCred | CookieCred | BasicAuthCred | BearerTokenCred,
     Field(discriminator="kind"),
 ]
 
@@ -213,7 +207,7 @@ class AuthResult(BaseModel):
         """
         Checks if the authentication token has expired.
         """
-        return bool(self.token_expires_at and datetime.now(timezone.utc) >= self.token_expires_at)
+        return bool(self.token_expires_at and datetime.now(UTC) >= self.token_expires_at)
 
     def as_requests_kwargs(self) -> dict[str, typing.Any]:
         """
@@ -249,21 +243,3 @@ class AuthResult(BaseModel):
                 target_kwargs.setdefault(k, {}).update(v)
             else:
                 target_kwargs[k] = v
-
-
-class AuthReason(str, Enum):
-    """
-    Why the caller is asking for auth now.
-    """
-    NORMAL = "normal"
-    RETRY_AFTER_401 = "retry_after_401"
-
-
-class AuthRequest(BaseModel):
-    """
-    Authentication request payload for provider.authenticate(...).
-    """
-    model_config = ConfigDict(extra="forbid")
-
-    reason: AuthReason = Field(default=AuthReason.NORMAL, description="Purpose of this auth attempt.")
-    www_authenticate: str | None = Field(default=None, description="Raw WWW-Authenticate header from a 401 response.")

@@ -19,10 +19,10 @@ import logging
 import types
 from abc import abstractmethod
 from collections.abc import AsyncGenerator
+from collections.abc import Callable
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
-from typing import Callable
 from typing import TypeVar
 
 ModelType = TypeVar("ModelType")

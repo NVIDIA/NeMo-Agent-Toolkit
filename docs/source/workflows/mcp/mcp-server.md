@@ -62,7 +62,7 @@ nat mcp serve --config_file examples/getting_started/simple_calculator/configs/c
 
 To list the tools published by the MCP server you can use the `nat mcp client tool list` command. This command acts as an MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
 
-**Note:** The `nat mcp client` commands require the `nvidia-nat-mcp` package. If you encounter an error about missing MCP client functionality, install it with `uv pip install nvidia-nat[mcp]`.
+**Note:** The `nat mcp client` commands require the `nvidia-nat-mcp` package. If you encounter an error about missing MCP client functionality, install it with `uv pip install "nvidia-nat[mcp]"`.
 
 ```bash
 nat mcp client tool list
@@ -153,44 +153,10 @@ The NeMo Agent toolkit MCP front-end implements the Model Context Protocol speci
 In this example, we will use NeMo Agent toolkit as both a MCP client and a MCP server.
 
 1. Start the MCP server by following the instructions in the [MCP Server Usage](#mcp-server-usage) section. NeMo Agent toolkit will act as an MCP server and publish the calculator tools as MCP tools.
-2. Run the simple calculator workflow with the `config-mcp-math.yml` config file. NeMo Agent toolkit will act as an MCP client and connect to the MCP server started in the previous step to access the remote tools.
+2. Run the simple calculator workflow with the `config-mcp-client.yml` config file. NeMo Agent toolkit will act as an MCP client and connect to the MCP server started in the previous step to access the remote tools.
 ```bash
-nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
+nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --input "Is 2 times 2 greater than the current hour?"
 ```
-
-The functions in `config-mcp-math.yml` are configured to use the calculator tools published by the MCP server running on `http://localhost:9901/mcp` using streamable-http transport.
-`examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml`:
-```yaml
-functions:
-  calculator_multiply:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    transport: "streamable-http"
-    mcp_tool_name: calculator_multiply
-    description: "Returns the product of two numbers"
-  calculator_inequality:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    transport: "streamable-http"
-    mcp_tool_name: calculator_inequality
-    description: "Returns the inequality of two numbers"
-  calculator_divide:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    transport: "streamable-http"
-    mcp_tool_name: calculator_divide
-    description: "Returns the quotient of two numbers"
-  current_datetime:
-    _type: current_datetime
-  calculator_subtract:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    transport: "streamable-http"
-    mcp_tool_name: calculator_subtract
-    description: "Returns the difference of two numbers"
-```
-In this example, the `calculator_multiply`, `calculator_inequality`, `calculator_divide`, and `calculator_subtract` tools are remote MCP tools. The `current_datetime` tool is a local NeMo Agent toolkit tool.
-
 
 ## Verifying MCP Server Health
 You can verify the health of the MCP using the `/health` route or the `nat mcp client ping` command.
@@ -222,3 +188,8 @@ Sample output:
 Server at http://localhost:9901/mcp is healthy (response time: 4.35ms)
 ```
 This is useful for health checks and monitoring.
+
+## Limitations
+- The `nat mcp serve` command currently starts an MCP server without built-in authentication. This is a temporary limitation; server-side authentication is planned for a future release.
+- NAT workflows can still connect to protected third-party MCP servers via the MCP client auth provider.
+- Recommendation: run `nat mcp serve` behind a trusted network or an authenticating reverse proxy (HTTPS with OAuth2, JWT or mTLS), and avoid exposing it directly to the public Internet.

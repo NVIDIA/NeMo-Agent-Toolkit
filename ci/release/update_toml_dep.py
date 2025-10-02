@@ -41,7 +41,7 @@ def main(toml_file_path: str, new_version: str, package_name: str, version_match
     version_match : str
         Version match specifier to use for the dependency.
     """
-    with open(toml_file_path, "r", encoding="utf-8") as fh:
+    with open(toml_file_path, encoding="utf-8") as fh:
         toml_data = tomlkit.load(fh)
 
     toml_project: tomlkit.items.Table = toml_data['project']

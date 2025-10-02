@@ -62,7 +62,7 @@ class CodeExecutionResponse(Response):
         super().__init__(status=status_code, mimetype="application/json", response=result.model_dump_json())
 
     @classmethod
-    def with_error(cls, status_code: int, error_message: str) -> 'CodeExecutionResponse':
+    def with_error(cls, status_code: int, error_message: str) -> CodeExecutionResponse:
         return cls(status_code,
                    CodeExecutionResult(process_status=CodeExecutionStatus.ERROR, stdout="", stderr=error_message))
 

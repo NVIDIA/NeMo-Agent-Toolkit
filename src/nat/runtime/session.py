@@ -111,7 +111,7 @@ class SessionManager:
             token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
 
         if isinstance(http_connection, WebSocket):
-            self.set_metadata_from_websocket(user_message_id, conversation_id)
+            self.set_metadata_from_websocket(http_connection, user_message_id, conversation_id)
 
         if isinstance(http_connection, Request):
             self.set_metadata_from_http_request(http_connection)
@@ -161,10 +161,30 @@ class SessionManager:
         if request.headers.get("user-message-id"):
             self._context_state.user_message_id.set(request.headers["user-message-id"])
 
-    def set_metadata_from_websocket(self, user_message_id: str | None, conversation_id: str | None) -> None:
+    def set_metadata_from_websocket(self,
+                                    websocket: WebSocket,
+                                    user_message_id: str | None,
+                                    conversation_id: str | None) -> None:
         """
         Extracts and sets user metadata for Websocket connections.
         """
+
+        # Extract cookies from WebSocket headers (similar to HTTP request)
+        if websocket and hasattr(websocket, 'scope') and 'headers' in websocket.scope:
+            cookies = {}
+            for header_name, header_value in websocket.scope.get('headers', []):
+                if header_name == b'cookie':
+                    cookie_header = header_value.decode('utf-8')
+                    # Parse cookie header: "name1=value1; name2=value2"
+                    for cookie in cookie_header.split(';'):
+                        cookie = cookie.strip()
+                        if '=' in cookie:
+                            name, value = cookie.split('=', 1)
+                            cookies[name.strip()] = value.strip()
+
+            # Set cookies in metadata (same as HTTP request)
+            self._context.metadata._request.cookies = cookies
+            self._context_state.metadata.set(self._context.metadata)
 
         if conversation_id is not None:
             self._context_state.conversation_id.set(conversation_id)

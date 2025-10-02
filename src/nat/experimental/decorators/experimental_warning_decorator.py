@@ -137,8 +137,7 @@ def experimental(func: Any = None, *, feature_name: str | None = None, metadata:
         @functools.wraps(func)
         def sync_gen_wrapper(*args, **kwargs) -> Generator[Any, Any, Any]:
             issue_experimental_warning(function_name, feature_name, metadata)
-            for item in func(*args, **kwargs):
-                yield item  # yield the original item
+            yield from func(*args, **kwargs)  # yield the original item
 
         return sync_gen_wrapper
 

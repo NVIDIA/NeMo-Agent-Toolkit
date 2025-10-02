@@ -18,22 +18,32 @@
 # on the specified URL. streamable-http is the recommended transport for HTTP-based
 # connections, but sse is also supported for backwards compatibility.
 
+# This config file shows -
+# 1. how to use a local MCP server to get the current date and time using stdio transport.
+# 2. how to access a remote MCP server using streamable-http transport for math operations.
+#
+# As the mcp_server_time is running locally ensure that the package "mcp_server_time" is installed
+# on your local machine. For example, if you are using pip, you can install it with:
+# uv pip install mcp-server-time
 
-functions:
-  calculator_multiply:
-    _type: calculator_multiply
-  calculator_inequality:
-    _type: calculator_inequality
-  calculator_divide:
-    _type: nat_simple_calculator/calculator_divide
-  mcp_time_tool:
-    _type: mcp_tool_wrapper
-    transport: sse
-    url: "http://localhost:8080/sse"
-    mcp_tool_name: get_current_time
-    description: "Returns the current date and time from the MCP server"
-  calculator_subtract:
-    _type: calculator_subtract
+# Sample usage:
+# nat run --config_file config-mcp-auth-jira.yml --input "What is jira ticket AIQ-1935 about"
+
+function_groups:
+  mcp_jira:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: ${CORPORATE_MCP_JIRA_URL}
+      auth_provider: mcp_oauth2_jira
+
+authentication:
+  mcp_oauth2_jira:
+    _type: mcp_oauth2
+    server_url: ${CORPORATE_MCP_JIRA_URL}
+    redirect_uri: http://localhost:8000/auth/redirect
+    default_user_id: ${CORPORATE_MCP_JIRA_URL}
+    allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 
 llms:
   nim_llm:
@@ -41,19 +51,12 @@ llms:
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
     max_tokens: 1024
-  openai_llm:
-    _type: openai
-    model_name: gpt-3.5-turbo
-    max_tokens: 2000
 
 workflow:
   _type: react_agent
   tool_names:
-    - calculator_multiply
-    - calculator_inequality
-    - mcp_time_tool
-    - calculator_divide
-    - calculator_subtract
+    - mcp_jira
   llm_name: nim_llm
   verbose: true
-  parse_agent_response_max_retries: 3
+  retry_parsing_errors: true
+  max_retries: 3

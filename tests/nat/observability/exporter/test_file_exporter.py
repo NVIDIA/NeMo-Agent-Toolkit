@@ -163,7 +163,7 @@ class TestFileExporterFunctionality:
         await exporter.export_processed(test_string)
 
         # Verify file content
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             content = f.read()
             assert content == test_string + '\n'
 
@@ -175,7 +175,7 @@ class TestFileExporterFunctionality:
         await exporter.export_processed(test_strings)
 
         # Verify file content
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             lines = f.readlines()
             assert len(lines) == 2
             assert lines[0].strip() == test_strings[0]
@@ -189,7 +189,7 @@ class TestFileExporterFunctionality:
         await exporter.export_processed('{"line": 2}')
 
         # Verify file content
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             lines = f.readlines()
             assert len(lines) == 2
             assert lines[0].strip() == '{"line": 1}'
@@ -200,7 +200,7 @@ class TestFileExporterFunctionality:
                                                         invalid_file_path):
         """Test error handling when file operations fail."""
         # Mock file operation to raise an exception
-        mock_aiofiles_open.side_effect = IOError("File write error")
+        mock_aiofiles_open.side_effect = OSError("File write error")
 
         exporter = FileExporter(context_state=mock_context_state,
                                 output_path=str(invalid_file_path),
@@ -303,7 +303,7 @@ class TestFileExporterEdgeCases:
         await exporter.export_processed('')
 
         # Verify file content
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             content = f.read()
             assert content == '\n'
 
@@ -314,7 +314,7 @@ class TestFileExporterEdgeCases:
         await exporter.export_processed([])
 
         # Verify file is empty (no writes for empty list)
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             content = f.read()
             assert content == ''
 
@@ -328,7 +328,7 @@ class TestFileExporterEdgeCases:
         await asyncio.gather(*tasks)
 
         # Verify all lines were written
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             lines = f.readlines()
             assert len(lines) == 5
             # All lines should be valid (no corruption from concurrent writes)

@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
-import importlib.resources
-import inspect
 import os
 import tempfile
 from datetime import datetime
@@ -31,6 +28,7 @@ import yaml
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.component_ref import LLMRef
+from nat.test.utils import locate_example_config
 from nat_alert_triage_agent.maintenance_check import NO_ONGOING_MAINTENANCE_STR
 from nat_alert_triage_agent.maintenance_check import MaintenanceCheckToolConfig
 from nat_alert_triage_agent.maintenance_check import _get_active_maintenance
@@ -39,16 +37,13 @@ from nat_alert_triage_agent.maintenance_check import _parse_alert_data
 from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 
 
-def test_load_maintenance_data():
+def test_load_maintenance_data(root_repo_dir: Path):
     # Load paths from config like in test_utils.py
-    package_name = inspect.getmodule(AlertTriageAgentWorkflowConfig).__package__
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs",
-                                                                         "config_offline_mode.yml").absolute()
-    with open(config_file, "r") as file:
+    config_file: Path = locate_example_config(AlertTriageAgentWorkflowConfig, "config_offline_mode.yml")
+    with open(config_file, encoding="utf-8") as file:
         config = yaml.safe_load(file)
         maintenance_data_path = config["functions"]["maintenance_check"]["static_data_path"]
-    maintenance_data_path_abs = importlib.resources.files(package_name).joinpath("../../../../../",
-                                                                                 maintenance_data_path).absolute()
+    maintenance_data_path_abs = root_repo_dir.joinpath(maintenance_data_path).absolute()
 
     # Test successful loading with actual maintenance data file
     df = _load_maintenance_data(maintenance_data_path_abs)
@@ -177,7 +172,7 @@ def test_get_active_maintenance():
     assert result is None
 
 
-async def test_maintenance_check_tool():
+async def test_maintenance_check_tool(tmp_path: Path):
     # Create a temporary maintenance data file
     test_data = {
         'host_id': ['host1', 'host2'],
@@ -224,53 +219,49 @@ async def test_maintenance_check_tool():
     ]
 
     # Create a temporary CSV file to store test maintenance data
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
-        try:
-            # Write test data to CSV file
-            df = pd.DataFrame(test_data)
-            df.to_csv(f.name, index=False)
-            f.flush()
+    with open(tmp_path / "test_maintenance_data.csv", mode='w', newline='') as f:
 
-            # Set up mock builder and LLM
-            mock_builder = AsyncMock()
-            mock_llm = MagicMock()
-            mock_builder.get_llm.return_value = mock_llm
+        # Write test data to CSV file
+        df = pd.DataFrame(test_data)
+        df.to_csv(f.name, index=False)
+        f.flush()
 
-            # Configure maintenance check tool
-            config = MaintenanceCheckToolConfig(
-                llm_name=LLMRef(value="dummy"),
-                description="direct test",
-                static_data_path=f.name,
-            )
+        # Set up mock builder and LLM
+        mock_builder = AsyncMock()
+        mock_llm = MagicMock()
+        mock_builder.get_llm.return_value = mock_llm
 
-            # Initialize workflow builder and add maintenance check function
-            async with WorkflowBuilder() as builder:
-                builder.get_llm = mock_builder.get_llm
-                await builder.add_function("maintenance_check", config)
-                maintenance_check_tool = await builder.get_tool("maintenance_check",
-                                                                wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        # Configure maintenance check tool
+        config = MaintenanceCheckToolConfig(
+            llm_name=LLMRef(value="dummy"),
+            description="direct test",
+            static_data_path=f.name,
+        )
 
-                # Run test cases
-                for case in test_cases:
-                    config.skip_maintenance_check = case.get('skip_maintenance_check', False)
+        # Initialize workflow builder and add maintenance check function
+        async with WorkflowBuilder() as builder:
+            builder.get_llm = mock_builder.get_llm
+            await builder.add_function("maintenance_check", config)
+            maintenance_check_tool = await builder.get_tool("maintenance_check",
+                                                            wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-                    # Mock the alert summarization function
-                    with patch('nat_alert_triage_agent.maintenance_check._summarize_alert') as mock_summarize:
-                        if case['expected_maintenance']:
-                            mock_summarize.return_value = case['mock_summary']
+            # Run test cases
+            for case in test_cases:
+                config.skip_maintenance_check = case.get('skip_maintenance_check', False)
 
-                        # Invoke maintenance check tool with test input
-                        result = await maintenance_check_tool.ainvoke(input=case['input'])
+                # Mock the alert summarization function
+                with patch('nat_alert_triage_agent.maintenance_check._summarize_alert') as mock_summarize:
+                    if case['expected_maintenance']:
+                        mock_summarize.return_value = case['mock_summary']
 
-                        # Verify results based on whether maintenance was expected
-                        if case['expected_maintenance']:
-                            assert result == case['mock_summary']
-                            mock_summarize.assert_called_once()
-                            mock_summarize.reset_mock()
-                        else:
-                            assert result == NO_ONGOING_MAINTENANCE_STR
-                            mock_summarize.assert_not_called()
+                    # Invoke maintenance check tool with test input
+                    result = await maintenance_check_tool.ainvoke(input=case['input'])
 
-        finally:
-            # Clean up temporary file
-            os.unlink(f.name)
+                    # Verify results based on whether maintenance was expected
+                    if case['expected_maintenance']:
+                        assert result == case['mock_summary']
+                        mock_summarize.assert_called_once()
+                        mock_summarize.reset_mock()
+                    else:
+                        assert result == NO_ONGOING_MAINTENANCE_STR
+                        mock_summarize.assert_not_called()

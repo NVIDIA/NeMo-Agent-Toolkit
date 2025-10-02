@@ -25,18 +25,21 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import httpx
+from authlib.common.errors import AuthlibBaseError as OAuthError
 from fastapi import Body
 from fastapi import FastAPI
+from fastapi import HTTPException
 from fastapi import Request
 from fastapi import Response
 from fastapi import UploadFile
-from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from pydantic import Field
 from starlette.websockets import WebSocket
 
+from nat.builder.function import Function
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -241,6 +244,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         await self.add_evaluate_route(app, SessionManager(await builder.build()))
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
+        await self.add_mcp_client_tool_list_route(app, builder)
 
         for ep in self.front_end_config.endpoints:
 
@@ -1071,8 +1075,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                code_verifier=verifier,
                                                state=state)
                 flow_state.future.set_result(res)
+            except OAuthError as e:
+                flow_state.future.set_exception(
+                    RuntimeError(f"Authorization server rejected request: {e.error} ({e.description})"))
+            except httpx.HTTPError as e:
+                flow_state.future.set_exception(RuntimeError(f"Network error during token fetch: {e}"))
             except Exception as e:
-                flow_state.future.set_exception(e)
+                flow_state.future.set_exception(RuntimeError(f"Authentication failed: {e}"))
 
             return HTMLResponse(content=AUTH_REDIRECT_SUCCESS_HTML,
                                 status_code=200,
@@ -1087,6 +1096,183 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 endpoint=redirect_uri,
                 methods=["GET"],
                 description="Handles the authorization code and state returned from the Authorization Code Grant Flow.")
+
+    async def add_mcp_client_tool_list_route(self, app: FastAPI, builder: WorkflowBuilder):
+        """Add the MCP client tool list endpoint to the FastAPI app."""
+        from typing import Any
+
+        from pydantic import BaseModel
+
+        class MCPToolInfo(BaseModel):
+            name: str
+            description: str
+            server: str
+            available: bool
+
+        class MCPClientToolListResponse(BaseModel):
+            mcp_clients: list[dict[str, Any]]
+
+        async def get_mcp_client_tool_list() -> MCPClientToolListResponse:
+            """
+            Get the list of MCP tools from all MCP clients in the workflow configuration.
+            Checks session health and compares with workflow function group configuration.
+            """
+            mcp_clients_info = []
+
+            try:
+                # Get all function groups from the builder
+                function_groups = builder._function_groups
+
+                # Find MCP client function groups
+                for group_name, configured_group in function_groups.items():
+                    if configured_group.config.type != "mcp_client":
+                        continue
+
+                    from nat.plugins.mcp.client_impl import MCPClientConfig
+
+                    config = configured_group.config
+                    assert isinstance(config, MCPClientConfig)
+
+                    # Reuse the existing MCP client session stored on the function group instance
+                    group_instance = configured_group.instance
+
+                    client = group_instance.mcp_client
+                    if client is None:
+                        raise RuntimeError(f"MCP client not found for group {group_name}")
+
+                    try:
+                        session_healthy = False
+                        server_tools: dict[str, Any] = {}
+
+                        try:
+                            server_tools = await client.get_tools()
+                            session_healthy = True
+                        except Exception as e:
+                            logger.exception(f"Failed to connect to MCP server {client.server_name}: {e}")
+                            session_healthy = False
+
+                        # Get workflow function group configuration (configured client-side tools)
+                        configured_short_names: set[str] = set()
+                        configured_full_to_fn: dict[str, Function] = {}
+                        try:
+                            # Pass a no-op filter function to bypass any default filtering that might check
+                            # health status, preventing potential infinite recursion during health status checks.
+                            async def pass_through_filter(fn):
+                                return fn
+
+                            accessible_functions = await group_instance.get_accessible_functions(
+                                filter_fn=pass_through_filter)
+                            configured_full_to_fn = accessible_functions
+                            configured_short_names = {name.split('.', 1)[1] for name in accessible_functions.keys()}
+                        except Exception as e:
+                            logger.exception(f"Failed to get accessible functions for group {group_name}: {e}")
+
+                        # Build alias->original mapping and override configs from overrides
+                        alias_to_original: dict[str, str] = {}
+                        override_configs: dict[str, Any] = {}
+                        try:
+                            if config.tool_overrides is not None:
+                                for orig_name, override in config.tool_overrides.items():
+                                    if override.alias is not None:
+                                        alias_to_original[override.alias] = orig_name
+                                        override_configs[override.alias] = override
+                                    else:
+                                        override_configs[orig_name] = override
+                        except Exception:
+                            pass
+
+                        # Create tool info list (always return configured tools; mark availability)
+                        tools_info: list[dict[str, Any]] = []
+                        available_count = 0
+                        for wf_fn, fn_short in zip(configured_full_to_fn.values(), configured_short_names):
+                            orig_name = alias_to_original.get(fn_short, fn_short)
+                            available = session_healthy and (orig_name in server_tools)
+                            if available:
+                                available_count += 1
+
+                            # Prefer tool override description, then workflow function description,
+                            # then server description
+                            description = ""
+                            if fn_short in override_configs and override_configs[fn_short].description:
+                                description = override_configs[fn_short].description
+                            elif wf_fn.description:
+                                description = wf_fn.description
+                            elif available and orig_name in server_tools:
+                                description = server_tools[orig_name].description or ""
+
+                            tools_info.append(
+                                MCPToolInfo(name=fn_short,
+                                            description=description or "",
+                                            server=client.server_name,
+                                            available=available).model_dump())
+
+                        # Sort tools_info by name to maintain consistent ordering
+                        tools_info.sort(key=lambda x: x['name'])
+
+                        mcp_clients_info.append({
+                            "function_group": group_name,
+                            "server": client.server_name,
+                            "transport": config.server.transport,
+                            "session_healthy": session_healthy,
+                            "tools": tools_info,
+                            "total_tools": len(configured_short_names),
+                            "available_tools": available_count
+                        })
+
+                    except Exception as e:
+                        logger.error(f"Error processing MCP client {group_name}: {e}")
+                        mcp_clients_info.append({
+                            "function_group": group_name,
+                            "server": "unknown",
+                            "transport": config.server.transport if config.server else "unknown",
+                            "session_healthy": False,
+                            "error": str(e),
+                            "tools": [],
+                            "total_tools": 0,
+                            "workflow_tools": 0
+                        })
+
+                return MCPClientToolListResponse(mcp_clients=mcp_clients_info)
+
+            except Exception as e:
+                logger.error(f"Error in MCP client tool list endpoint: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to retrieve MCP client information: {str(e)}")
+
+        # Add the route to the FastAPI app
+        app.add_api_route(
+            path="/mcp/client/tool/list",
+            endpoint=get_mcp_client_tool_list,
+            methods=["GET"],
+            response_model=MCPClientToolListResponse,
+            description="Get list of MCP client tools with session health and workflow configuration comparison",
+            responses={
+                200: {
+                    "description": "Successfully retrieved MCP client tool information",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "mcp_clients": [{
+                                    "function_group": "mcp_tools",
+                                    "server": "streamable-http:http://localhost:9901/mcp",
+                                    "transport": "streamable-http",
+                                    "session_healthy": True,
+                                    "tools": [{
+                                        "name": "tool_a",
+                                        "description": "Tool A description",
+                                        "server": "streamable-http:http://localhost:9901/mcp",
+                                        "available": True
+                                    }],
+                                    "total_tools": 1,
+                                    "available_tools": 1
+                                }]
+                            }
+                        }
+                    }
+                },
+                500: {
+                    "description": "Internal Server Error"
+                }
+            })
 
     async def _add_flow(self, state: str, flow_state: FlowState):
         async with self._outstanding_flows_lock:

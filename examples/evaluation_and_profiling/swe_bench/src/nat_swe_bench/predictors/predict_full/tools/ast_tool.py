@@ -57,7 +57,7 @@ async def ast_tool(tool_config: AstToolConfig, builder: Builder):
         logger.info("Analyzing file: %s", file_path)
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 source_code = f.read()
 
             tree = ast.parse(source_code)
@@ -89,7 +89,7 @@ async def ast_tool(tool_config: AstToolConfig, builder: Builder):
                     })
                     logger.info("Found class: %s with methods: %s", node.name, methods)
 
-                elif isinstance(node, (ast.Import, ast.ImportFrom)):
+                elif isinstance(node, ast.Import | ast.ImportFrom):
                     for alias in node.names:
                         import_info = {
                             'name': alias.name,
