@@ -28,7 +28,6 @@ from pydantic import HttpUrl
 from pydantic import conlist
 from pydantic import field_serializer
 from pydantic import field_validator
-from pydantic import model_serializer
 from pydantic_core.core_schema import ValidationInfo
 
 from nat.data_models.interactive import HumanPrompt
