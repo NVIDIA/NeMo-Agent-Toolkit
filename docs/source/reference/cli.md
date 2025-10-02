@@ -36,6 +36,9 @@ nat
 ├── info
 │   ├── channels
 │   └── components
+│
+├── optimize  
+│  
 ├── registry
 │   ├── publish
 │   ├── pull
@@ -291,6 +294,55 @@ Options:
   --reps INTEGER              Number of repetitions for the evaluation.
                               [default: 1]
   --help                      Show this message and exit.
+```
+
+## Optimize
+
+The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent toolkit Optimizer Guide](../reference/optimizer.md) for a comprehensive overview of the optimizer's capabilities and configuration.
+
+The `nat optimize --help` utility provides a brief overview of the command and its available options:
+
+```console
+$ nat optimize --help
+Usage: nat optimize [OPTIONS] COMMAND [ARGS]...
+
+  Optimize a workflow with the specified dataset.
+
+Options:
+  --config_file FILE          A JSON/YAML file that sets the parameters for
+                              the workflow and evaluation.  [required]
+  --dataset FILE              A json file with questions and ground truth
+                              answers. This will override the dataset path in
+                              the config file.
+  --result_json_path TEXT     A JSON path to extract the result from the
+                              workflow. Use this when the workflow returns
+                              multiple objects or a dictionary. For example,
+                              '$.output' will extract the 'output' field from
+                              the result.  [default: $]
+  --endpoint TEXT             Use endpoint for running the workflow. Example:
+                              http://localhost:8000/generate
+  --endpoint_timeout INTEGER  HTTP response timeout in seconds. Only relevant
+                              if endpoint is specified.  [default: 300]
+  --help                      Show this message and exit.
+```
+
+### Options Description
+
+- **`--config_file`**: This is the main configuration file that contains both the workflow configuration and the optimizer settings. The file must include an `optimizer` section that defines the optimization parameters, search spaces, and evaluation metrics.
+
+- **`--dataset`**: Path to a JSON file containing the evaluation dataset with questions and ground truth answers. If provided, this will override the dataset path specified in the configuration file. The dataset is used to evaluate different parameter combinations during optimization.
+
+- **`--result_json_path`**: A JSONPath expression to extract the relevant result from the workflow output. This is useful when your workflow returns complex objects or dictionaries and you need to specify which field contains the actual result to evaluate. The default value `$` uses the entire output.
+
+- **`--endpoint`**: Instead of running the workflow locally, you can specify an HTTP endpoint where the workflow is deployed. This is useful for optimizing workflows that are already running as services.
+
+- **`--endpoint_timeout`**: When using the `--endpoint` option, this sets the maximum time (in seconds) to wait for a response from the remote service.
+
+
+To optimize a workflow with a local configuration, run:
+
+```bash
+nat optimize --config_file configs/my_workflow_optimizer.yml 
 ```
 
 ## Uninstall
