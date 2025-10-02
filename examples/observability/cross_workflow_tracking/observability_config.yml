@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Configuration demonstrating cross-workflow observability integration
+
+general:
+  telemetry:
+    tracing:
+      main_exporter:
+        _type: file
+        output_path: "cross_workflow_traces.jsonl"
+        project: "cross_workflow_demo"
+        mode: append
+        enable_rolling: false
+        # processors:
+        #   - _type: cross_workflow_processor
+        #   - _type: workflow_relationship_processor
+
+llms:
+  nim_llm:
+    _type: nat_test_llm
+    response_seq:
+      - "This is a test response for observability demonstration."
+    delay_ms: 100
+
+workflow:
+  _type: chat_completion
+  llm_name: nim_llm
+  system_prompt: "You are a helpful assistant that provides concise, friendly responses."

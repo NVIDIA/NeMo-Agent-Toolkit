@@ -33,6 +33,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
+from nat.observability.context import ObservabilityContext
 from nat.runtime.user_metadata import RequestAttributes
 from nat.utils.reactive.subject import Subject
 
@@ -73,6 +74,8 @@ class ContextState(metaclass=Singleton):
         self._event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=None)
         self._active_function: ContextVar[InvocationNode | None] = ContextVar("active_function", default=None)
         self._active_span_id_stack: ContextVar[list[str] | None] = ContextVar("active_span_id_stack", default=None)
+        self._observability_context: ContextVar[ObservabilityContext | None] = ContextVar("observability_context",
+                                                                                          default=None)
 
         # Default is a lambda no-op which returns NoneType
         self.user_input_callback: ContextVar[Callable[[InteractionPrompt], Awaitable[HumanResponse | None]]
@@ -106,6 +109,10 @@ class ContextState(metaclass=Singleton):
         if self._active_span_id_stack.get() is None:
             self._active_span_id_stack.set(["root"])
         return typing.cast(ContextVar[list[str]], self._active_span_id_stack)
+
+    @property
+    def observability_context(self) -> ContextVar[ObservabilityContext | None]:
+        return self._observability_context
 
     @staticmethod
     def get() -> "ContextState":
@@ -284,6 +291,29 @@ class Context:
         if callback is None:
             raise RuntimeError("User authentication callback is not set in the context.")
         return callback
+
+    @property
+    def observability_context(self) -> ObservabilityContext | None:
+        """
+        Retrieves the current observability context from the context state.
+
+        This property provides access to the observability context which contains
+        trace IDs, span hierarchies, and workflow metadata for cross-workflow
+        observability tracking.
+
+        Returns:
+            ObservabilityContext | None: The current observability context or None if not set.
+        """
+        return self._context_state.observability_context.get()
+
+    def set_observability_context(self, context: ObservabilityContext | None) -> None:
+        """
+        Sets the observability context in the context state.
+
+        Args:
+            context: The observability context to set, or None to clear.
+        """
+        self._context_state.observability_context.set(context)
 
     @staticmethod
     def get() -> "Context":

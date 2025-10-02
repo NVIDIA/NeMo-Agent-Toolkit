@@ -21,6 +21,7 @@ from nat.builder.context import Context
 from nat.builder.context import ContextState
 from nat.builder.function import Function
 from nat.data_models.invocation_node import InvocationNode
+from nat.observability.context import ObservabilityContext
 from nat.observability.exporter_manager import ExporterManager
 from nat.utils.reactive.subject import Subject
 
@@ -48,7 +49,8 @@ class Runner:
                  input_message: typing.Any,
                  entry_fn: Function,
                  context_state: ContextState,
-                 exporter_manager: ExporterManager):
+                 exporter_manager: ExporterManager,
+                 observability_context: ObservabilityContext | None = None):
         """
         The Runner class is used to run a workflow. It handles converting input and output data types and running the
         workflow with the specified concurrency.
@@ -63,6 +65,8 @@ class Runner:
             The context state to use
         exporter_manager : ExporterManager
             The exporter manager to use
+        observability_context : ObservabilityContext | None
+            Optional observability context for cross-workflow tracking
         """
 
         if (entry_fn is None):
@@ -80,6 +84,7 @@ class Runner:
         self._input_message = input_message
 
         self._exporter_manager = exporter_manager
+        self._observability_context = observability_context
 
     @property
     def context(self) -> Context:
@@ -99,6 +104,10 @@ class Runner:
             function_name="root",
             function_id="root",
         ))
+
+        # Set observability context if provided
+        if self._observability_context:
+            self._context_state.observability_context.set(self._observability_context)
 
         if (self._state == RunnerState.UNINITIALIZED):
             self._state = RunnerState.INITIALIZED
