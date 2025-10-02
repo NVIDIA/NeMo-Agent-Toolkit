@@ -162,7 +162,7 @@ class SpanContext(BaseModel):
         """Regenerate if span_id is None; raise an exception if span_id is invalid;"""
         if isinstance(v, str):
             try:
-                v = int(v, base=0)
+                v = int(v)
             except ValueError:
                 raise ValueError(f"span_id unable to be parsed: {v}")
         if isinstance(v, type(None)):
