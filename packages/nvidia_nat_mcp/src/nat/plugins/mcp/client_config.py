@@ -121,8 +121,7 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
                               description="Maximum number of concurrent session clients. Defaults to 100.")
     session_idle_timeout: timedelta = Field(
         default=timedelta(hours=1),
-        description="Time after which inactive sessions are cleaned up. Defaults to 1 hour."
-    )
+        description="Time after which inactive sessions are cleaned up. Defaults to 1 hour.")
 
     @model_validator(mode="after")
     def _validate_reconnect_backoff(self) -> "MCPClientConfig":
