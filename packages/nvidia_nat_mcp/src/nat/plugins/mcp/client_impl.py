@@ -216,7 +216,11 @@ class MCPFunctionGroup(FunctionGroup):
         # Copy the configuration object
         config_copy = self._shared_auth_provider.config.model_copy()
 
-        # Create new auth provider instance with copied config
+        # Set session-specific configuration
+        config_copy.default_user_id = session_id
+        config_copy.allow_default_user_id_for_tool_calls = True
+
+        # Create new auth provider instance with session-specific config
         auth_provider_type = type(self._shared_auth_provider)
         session_auth_provider = auth_provider_type(config_copy)
 
