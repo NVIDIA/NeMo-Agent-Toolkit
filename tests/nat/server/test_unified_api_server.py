@@ -32,9 +32,9 @@ from pydantic import ValidationError
 from nat.builder.context import Context
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChoice
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import ChatResponseChunkChoice
-from nat.data_models.api_server import Choice
 from nat.data_models.api_server import ChoiceDelta
 from nat.data_models.api_server import ChoiceMessage
 from nat.data_models.api_server import Error
@@ -465,7 +465,7 @@ nat_response_payload_output_test = ResponsePayloadOutput(payload="TEST")
 nat_chat_response_test = ChatResponse(id="default",
                                       object="default",
                                       created=datetime.datetime.now(datetime.UTC),
-                                      choices=[Choice(message=ChoiceMessage(), index=0)],
+                                      choices=[ChatResponseChoice(message=ChoiceMessage(), index=0)],
                                       usage=Usage(prompt_tokens=0, completion_tokens=0, total_tokens=0))
 nat_chat_response_chunk_test = ChatResponseChunk(id="default",
                                                  choices=[ChatResponseChunkChoice(delta=ChoiceDelta(), index=0)],
