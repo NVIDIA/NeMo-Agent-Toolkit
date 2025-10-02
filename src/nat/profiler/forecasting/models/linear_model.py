@@ -36,7 +36,7 @@ class LinearModel(ForecastingBaseModel):
         except ImportError:
             logger.error(
                 "scikit-learn is not installed. Please install scikit-learn to use the LinearModel "
-                "profiling model or install `nvidia-nat[profiler]` to install all necessary profiling packages.")
+                "profiling model or install \"nvidia-nat[profiler]\" to install all necessary profiling packages.")
 
             raise
 

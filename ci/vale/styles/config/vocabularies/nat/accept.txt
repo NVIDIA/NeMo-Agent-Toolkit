@@ -102,6 +102,7 @@ onboarding
 [Oo]verfitting
 pandas
 [Pp]arallelization
+Pareto
 [Pp]arsable
 Patronus
 PCIe

@@ -30,6 +30,9 @@ def run_cli():
     import os
     import sys
 
+    # Suppress warnings from transformers
+    os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+
     parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
     if (parent_dir not in sys.path):

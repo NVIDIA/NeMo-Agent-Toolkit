@@ -21,6 +21,7 @@ from nat.cli.register_workflow import register_llm_client
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
+from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.llm.utils.thinking import BaseThinkingInjector
@@ -97,5 +98,22 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
     }
 
     client = OpenAIChat(**config_obj, id=llm_config.model_name)
+
+    yield _patch_llm_based_on_config(client, llm_config)
+
+
+@register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
+async def litellm_agno(llm_config: LiteLlmModelConfig, _builder: Builder):
+
+    from agno.models.litellm.chat import LiteLLM
+
+    client = LiteLLM(
+        **llm_config.model_dump(
+            exclude={"type", "thinking", "model_name"},
+            by_alias=True,
+            exclude_none=True,
+        ),
+        id=llm_config.model_name,
+    )
 
     yield _patch_llm_based_on_config(client, llm_config)

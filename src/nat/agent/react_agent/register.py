@@ -25,6 +25,7 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.optimizable import OptimizableField
@@ -149,7 +150,14 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             # get and return the output from the state
             state = ReActGraphState(**state)
             output_message = state.messages[-1]
-            return ChatResponse.from_string(str(output_message.content))
+            content = str(output_message.content)
+
+            # Create usage statistics for the response
+            prompt_tokens = sum(len(str(msg.content).split()) for msg in input_message.messages)
+            completion_tokens = len(content.split()) if content else 0
+            total_tokens = prompt_tokens + completion_tokens
+            usage = Usage(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, total_tokens=total_tokens)
+            return ChatResponse.from_string(content, usage=usage)
 
         except Exception as ex:
             logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, str(ex))

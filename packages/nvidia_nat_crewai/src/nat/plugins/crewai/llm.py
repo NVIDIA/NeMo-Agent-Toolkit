@@ -23,6 +23,7 @@ from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
+from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.llm.utils.thinking import BaseThinkingInjector
@@ -120,6 +121,16 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
 async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
+
+    from crewai import LLM
+
+    client = LLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+
+    yield _patch_llm_based_on_config(client, llm_config)
+
+
+@register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
+async def litellm_crewai(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     from crewai import LLM
 
