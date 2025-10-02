@@ -307,6 +307,8 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
             calculator_multiply:
               description: "Multiply two numbers"  # alias defaults to original name
         """)
+    session_aware_tools: bool = Field(default=True,
+                                      description="Session-aware tools are created if True. Defaults to True.")
 
     @model_validator(mode="after")
     def _validate_reconnect_backoff(self) -> "MCPClientConfig":
@@ -441,8 +443,12 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             function_name = override.alias if override and override.alias else tool_name
             description = override.description if override and override.description else tool.description
 
-            # Create a session-aware tool function for the group
-            tool_fn = mcp_session_tool_function(tool, group)
+            # Create the tool function according to configuration
+            if config.session_aware_tools:
+                tool_fn = mcp_session_tool_function(tool, group)
+            else:
+                from nat.plugins.mcp.tool import mcp_tool_function
+                tool_fn = mcp_tool_function(tool)
 
             # Normalize optional typing for linter/type-checker compatibility
             single_fn = tool_fn.single_fn
