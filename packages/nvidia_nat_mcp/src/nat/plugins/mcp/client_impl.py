@@ -113,8 +113,11 @@ class MCPFunctionGroup(FunctionGroup):
         except Exception:
             return None
 
-    async def cleanup_inactive_sessions(self, max_age: timedelta = timedelta(hours=1)):
+    async def cleanup_inactive_sessions(self, max_age: timedelta | None = None):
         """Remove clients for sessions inactive longer than max_age."""
+        if max_age is None:
+            max_age = self._client_config.session_idle_timeout if self._client_config else timedelta(hours=1)
+
         async with self._cleanup_lock:
             current_time = datetime.now()
             inactive_sessions = []
