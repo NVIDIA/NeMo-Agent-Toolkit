@@ -23,8 +23,8 @@ from nat.utils.decorators import issue_deprecation_warning
 
 
 # Reset warning state before each test
-@pytest.fixture(autouse=True)
-def clear_warnings():
+@pytest.fixture(name="clear_warnings", autouse=True)
+def fixture_clear_warnings():
     _warning_issued.clear()
     yield
     _warning_issued.clear()

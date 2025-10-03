@@ -12,6 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Deprecation utilities.
+
+This module provides helpers to standardize deprecation signaling across the
+codebase:
+
+- ``issue_deprecation_warning``: Builds and emits a single deprecation message
+  per function using the standard logging pipeline.
+- ``deprecated``: A decorator that wraps sync/async functions and generators to
+  log a one-time deprecation message upon first use. It supports optional
+  metadata, a planned removal version, a suggested replacement, and an
+  optional feature name label.
+
+Messages are emitted via ``logging.getLogger(__name__).warning`` (not
+``warnings.warn``) so they appear in normal application logs and respect global
+logging configuration. Each unique function logs at most once per process.
+"""
 
 import functools
 import inspect
@@ -36,7 +52,7 @@ def issue_deprecation_warning(function_name: str,
                               replacement: str | None = None,
                               reason: str | None = None,
                               feature_name: str | None = None,
-                              metadata: dict[str, Any] | None = None):
+                              metadata: dict[str, Any] | None = None) -> None:
     """
     Log a deprecation warning message for the function.
 
