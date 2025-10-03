@@ -24,12 +24,12 @@ from nat.plugins.data_flywheel.observability.schema.provider.openai_message impo
 from nat.plugins.data_flywheel.observability.schema.provider.openai_trace_source import OpenAITraceSource
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import AssistantMessage
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import DFWESRecord
+from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import ESRequest
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import FinishReason
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import Function
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import FunctionDetails
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import FunctionMessage
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import Message
-from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import Request
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import RequestTool
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import Response
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.dfw_es_record import ResponseChoice
@@ -314,11 +314,11 @@ def convert_langchain_openai(trace_source: TraceContainer) -> DFWESRecord:
     temperature = None
     max_tokens = None
 
-    request = Request(messages=messages,
-                      model=model_name,
-                      tools=request_tools if request_tools else None,
-                      temperature=temperature,
-                      max_tokens=max_tokens)
+    request = ESRequest(messages=messages,
+                        model=model_name,
+                        tools=request_tools if request_tools else None,
+                        temperature=temperature,
+                        max_tokens=max_tokens)
 
     # Transform chat responses
     response_choices = []
