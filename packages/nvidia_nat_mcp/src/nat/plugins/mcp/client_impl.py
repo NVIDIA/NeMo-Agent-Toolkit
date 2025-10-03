@@ -155,11 +155,14 @@ class MCPFunctionGroup(FunctionGroup):
                     session_data = self._sessions[session_id]
                     # Close the client connection
                     await session_data.client.__aexit__(None, None, None)
-                    del self._sessions[session_id]
                     logger.info("Cleaned up inactive session client: %s", truncate_session_id(session_id))
-                    logger.info(" Total sessions: %d", len(self._sessions))
                 except Exception as e:
                     logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
+                finally:
+                    # Always remove from tracking to prevent leaks, even if close failed
+                    self._sessions.pop(session_id, None)
+                    logger.info("Cleaned up session tracking for: %s", truncate_session_id(session_id))
+                    logger.info(" Total sessions: %d", len(self._sessions))
 
     async def _get_session_client(self, session_id: str) -> MCPBaseClient:
         """Get the appropriate MCP client for the session."""
@@ -207,13 +210,11 @@ class MCPFunctionGroup(FunctionGroup):
             session_client = await self._create_session_client(session_id)
 
             # Create session data with all components
-            session_data = SessionData(
-                client=session_client,
-                last_activity=datetime.now(),
-                ref_count=0,
-                lock=asyncio.Lock()
-            )
-            
+            session_data = SessionData(client=session_client,
+                                       last_activity=datetime.now(),
+                                       ref_count=0,
+                                       lock=asyncio.Lock())
+
             # Cache the session data
             self._sessions[session_id] = session_data
             logger.info(" Total sessions: %d", len(self._sessions))
@@ -224,7 +225,7 @@ class MCPFunctionGroup(FunctionGroup):
         """Context manager to track active session usage and prevent cleanup."""
         # Get session data (session must exist at this point)
         session_data = self._sessions[session_id]
-        
+
         # Thread-safe reference counting using per-session lock
         async with session_data.lock:
             session_data.ref_count += 1
