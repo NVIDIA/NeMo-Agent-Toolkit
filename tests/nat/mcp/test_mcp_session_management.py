@@ -165,7 +165,7 @@ class TestMCPSessionManagement:
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_client_class.return_value = mock_session_client
 
-            with pytest.raises(RuntimeError, match="Maximum session limit"):
+            with pytest.raises(RuntimeError, match="Maximum concurrent.*sessions.*exceeded"):
                 await function_group._get_session_client("session-overflow")
 
     async def test_cleanup_inactive_sessions_removes_old_sessions(self, function_group):
