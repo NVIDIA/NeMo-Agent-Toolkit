@@ -151,7 +151,6 @@ class MCPFunctionGroup(FunctionGroup):
         """Remove clients for sessions inactive longer than max_age.
 
         This method uses the RWLock writer to ensure thread-safe cleanup.
-        It can be called from within other writer locks without deadlock.
         """
         if max_age is None:
             max_age = self._client_config.session_idle_timeout if self._client_config else timedelta(hours=1)
@@ -205,6 +204,11 @@ class MCPFunctionGroup(FunctionGroup):
                 self._sessions[session_id].last_activity = datetime.now()
                 return self._sessions[session_id].client
 
+        # Check session limit before creating new client (outside writer lock to avoid deadlock)
+        if self._client_config and len(self._sessions) >= self._client_config.max_sessions:
+            # Try cleanup first to free up space
+            await self._cleanup_inactive_sessions()
+
         # Slow path: create session with writer lock for exclusive access
         async with self._session_rwlock.writer:
             # Double-check after acquiring writer lock (another coroutine might have created it)
@@ -212,18 +216,13 @@ class MCPFunctionGroup(FunctionGroup):
                 self._sessions[session_id].last_activity = datetime.now()
                 return self._sessions[session_id].client
 
-            # Check session limit before creating new client
+            # Re-check session limit inside writer lock
             if self._client_config and len(self._sessions) >= self._client_config.max_sessions:
-                # Try cleanup first to free up space
-                await self._cleanup_inactive_sessions()
-
-                # Re-check after cleanup
-                if len(self._sessions) >= self._client_config.max_sessions:
-                    logger.warning("Session limit reached (%d), rejecting new session: %s",
-                                   self._client_config.max_sessions,
-                                   truncate_session_id(session_id))
-                    raise RuntimeError(f"Service temporarily unavailable: Maximum concurrent sessions \
-                            ({self._client_config.max_sessions}) exceeded. Please try again later.")
+                logger.warning("Session limit reached (%d), rejecting new session: %s",
+                               self._client_config.max_sessions,
+                               truncate_session_id(session_id))
+                raise RuntimeError(f"Service temporarily unavailable: Maximum concurrent sessions "
+                                   f"({self._client_config.max_sessions}) exceeded. Please try again later.")
 
             # Create session client lazily
             logger.info("Creating new MCP client for session: %s", truncate_session_id(session_id))
