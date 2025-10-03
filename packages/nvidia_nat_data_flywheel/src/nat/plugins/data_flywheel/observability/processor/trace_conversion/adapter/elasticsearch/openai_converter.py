@@ -77,7 +77,7 @@ def create_message_by_role(role: str, content: str | None, **kwargs) -> Message:
     Args:
         role (str): The message role
         content (str): The message content
-        **kwargs: Additional role-specific parameters
+        kwargs: Additional role-specific parameters
 
     Returns:
         Message: The appropriate message type for the role
