@@ -22,4 +22,4 @@ from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
 @register_auth_provider(config_type=MCPOAuth2ProviderConfig)
 async def mcp_oauth2_provider(authentication_provider: MCPOAuth2ProviderConfig, builder: Builder):
     """Register MCP OAuth2 authentication provider with NAT system."""
-    yield MCPOAuth2Provider(authentication_provider)
+    yield MCPOAuth2Provider(authentication_provider, builder=builder)
