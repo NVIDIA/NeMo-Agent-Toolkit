@@ -149,6 +149,8 @@ class MCPFunctionGroup(FunctionGroup):
                     # Clean up reference count if it exists
                     if session_id in self._session_ref_counts:
                         del self._session_ref_counts[session_id]
+                    logger.info("Cleaned up inactive session client: %s", truncate_session_id(session_id))
+                    logger.info(" Total sessions: %d", len(self._session_clients))
                 except Exception as e:
                     logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
 
@@ -242,6 +244,7 @@ class MCPFunctionGroup(FunctionGroup):
         await client.__aenter__()
 
         logger.info("Created session client for session: %s", truncate_session_id(session_id))
+        logger.info(" Total sessions: %d", len(self._session_clients))
         return client
 
 
