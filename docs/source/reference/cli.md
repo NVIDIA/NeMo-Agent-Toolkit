@@ -309,7 +309,7 @@ Options:
 
 ## Optimize
 
-The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent toolkit Optimizer Guide](../reference/optimizer.md) for a comprehensive overview of the optimizer's capabilities and configuration.
+The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent toolkit Optimizer Guide](../reference/optimizer.md) for a comprehensive overview of the optimizer capabilities and configuration.
 
 The `nat optimize --help` utility provides a brief overview of the command and its available options:
 
@@ -343,7 +343,7 @@ Options:
 
 - **`--dataset`**: Path to a JSON file containing the evaluation dataset with questions and ground truth answers. If provided, this will override the dataset path specified in the configuration file. The dataset is used to evaluate different parameter combinations during optimization.
 
-- **`--result_json_path`**: A JSONPath expression to extract the relevant result from the workflow output. This is useful when your workflow returns complex objects or dictionaries and you need to specify which field contains the actual result to evaluate. The default value `$` uses the entire output.
+- **`--result_json_path`**: A JSON path expression to extract the relevant result from the workflow output. This is useful when your workflow returns complex objects or dictionaries and you need to specify which field contains the actual result to evaluate. The default value `$` uses the entire output.
 
 - **`--endpoint`**: Instead of running the workflow locally, you can specify an HTTP endpoint where the workflow is deployed. This is useful for optimizing workflows that are already running as services.
 
@@ -352,9 +352,11 @@ Options:
 
 To optimize a workflow with a local configuration, run:
 
+<!-- path-check-skip-begin -->
 ```bash
 nat optimize --config_file configs/my_workflow_optimizer.yml 
 ```
+<!-- path-check-skip-end -->
 
 ## Uninstall
 
