@@ -933,3 +933,118 @@ Options:
                       artifact.  [required]
   --help              Show this message and exit.
 ```
+
+## Object Store Commands
+
+The `nat object-store` command group provides utilities to interact with object stores. This command group is used to
+upload and download files to and from object stores.
+
+The `nat object-store --help` utility provides an overview of its usage:
+
+```console
+$ nat object-store --help
+Usage: nat object-store [OPTIONS] COMMAND [ARGS]...
+
+  Manage object store operations.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  mysql  MySQL object store operations.
+  redis  Redis object store operations.
+  s3     S3 object store operations.
+```
+
+The listed commands are dependent on the first-party object store plugins installed. See [Object Store](../store-and-retrieve/object-store.md) for more details.
+
+### MySQL Object Store
+
+The `nat object-store mysql` command provides operations to interact with a MySQL object store.
+
+The `nat object-store mysql --help` utility provides an overview of its usage:
+
+```console
+Usage: nat object-store mysql [OPTIONS] BUCKET_NAME COMMAND [ARGS]...
+
+  MySQL object store operations.
+
+Options:
+  --host TEXT      MySQL host
+  --port INTEGER   MySQL port
+  --db TEXT        MySQL database name
+  --username TEXT  MySQL username
+  --password TEXT  MySQL password
+  --help           Show this message and exit.
+
+Commands:
+  delete  Delete files from an object store.
+  upload  Upload a directory to an object store.
+```
+
+### Redis Object Store
+
+The `nat object-store redis` command provides operations to interact with a Redis object store.
+
+The `nat object-store redis --help` utility provides an overview of its usage:
+
+```console
+Usage: nat object-store redis [OPTIONS] BUCKET_NAME COMMAND [ARGS]...
+
+  Redis object store operations.
+
+Options:
+  --host TEXT     Redis host
+  --port INTEGER  Redis port
+  --db INTEGER    Redis db
+  --help          Show this message and exit.
+
+Commands:
+  delete  Delete files from an object store.
+  upload  Upload a directory to an object store.
+```
+
+### S3 Object Store
+
+The `nat object-store s3` command provides operations to interact with a S3 object store.
+
+The `nat object-store s3 --help` utility provides an overview of its usage:
+
+```console
+Usage: nat object-store s3 [OPTIONS] BUCKET_NAME COMMAND [ARGS]...
+
+  S3 object store operations.
+
+Options:
+  --endpoint-url TEXT  S3 endpoint URL
+  --access-key TEXT    S3 access key
+  --secret-key TEXT    S3 secret key
+  --region TEXT        S3 region
+  --help               Show this message and exit.
+
+Commands:
+  delete  Delete files from an object store.
+  upload  Upload a directory to an object store.
+```
+
+### Operations
+
+#### Upload
+
+The `nat object-store <bucket_name> upload --help` utility provides an overview of its usage:
+
+```console
+Usage: nat object-store <type> [type-options] <bucket_name> upload [OPTIONS] LOCAL_DIR
+
+  Upload a directory to an object store.
+```
+
+#### Delete
+
+The `nat object-store <type> <bucket_name> delete --help` utility provides an overview of its usage:
+
+```console
+Usage: nat object-store <type> [type-options] <bucket_name> delete [OPTIONS] KEYS...
+
+  Delete files from an object store.
+```
