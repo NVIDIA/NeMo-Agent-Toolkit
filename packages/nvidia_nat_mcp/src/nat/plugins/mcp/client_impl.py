@@ -436,7 +436,7 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             if config.session_aware_tools:
                 tool_fn = mcp_session_tool_function(tool, group)
             else:
-                from nat.plugins.mcp.tool import mcp_tool_function  # noqa: F401
+                from nat.plugins.mcp.tool import mcp_tool_function
                 tool_fn = mcp_tool_function(tool)
 
             # Normalize optional typing for linter/type-checker compatibility
