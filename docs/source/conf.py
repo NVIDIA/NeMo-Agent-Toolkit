@@ -60,7 +60,7 @@ def _build_api_tree() -> Path:
     dest_plugins_dir = dest_dir / "plugins"
 
     for sub_dir in (dest_dir, dest_plugins_dir):
-        with open(sub_dir / "__init__.py", "w") as f:
+        with open(sub_dir / "__init__.py", "w", encoding="utf-8") as f:
             f.write("")
 
     plugin_dirs = [Path(p) for p in glob.glob(f'{plugins_dir}/nvidia_nat_*')]
@@ -73,7 +73,7 @@ def _build_api_tree() -> Path:
                     shutil.copytree(plugin_subdir, dest_subdir)
                     package_file = dest_subdir / "__init__.py"
                     if not package_file.exists():
-                        with open(package_file, "w") as f:
+                        with open(package_file, "w", encoding="utf-8") as f:
                             f.write("")
 
     return api_tree
