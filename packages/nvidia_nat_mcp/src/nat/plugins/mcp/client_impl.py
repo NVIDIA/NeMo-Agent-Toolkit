@@ -311,12 +311,12 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
             session_id = function_group._get_session_id_from_context()
 
             # If no session is available and default-user fallback is disabled, deny the call
-            if session_id is None:
+            if function_group._shared_auth_provider and session_id is None:
                 return "User not authorized to call the tool"
 
             # Check if this is the default user - if so, use base client directly
-            if (function_group._shared_auth_provider
-                    and session_id == function_group._shared_auth_provider.config.default_user_id):
+            if (not function_group._shared_auth_provider
+                    or session_id == function_group._shared_auth_provider.config.default_user_id):
                 # Use base client directly for default user
                 client = function_group.mcp_client
                 session_tool = await client.get_tool(tool.name)
