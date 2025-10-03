@@ -71,6 +71,10 @@ def _build_api_tree() -> Path:
                 if plugin_subdir.is_dir():
                     dest_subdir = dest_plugins_dir / plugin_subdir.name
                     shutil.copytree(plugin_subdir, dest_subdir)
+                    package_file = dest_subdir / "__init__.py"
+                    if not package_file.exists():
+                        with open(package_file, "w") as f:
+                            f.write("")
 
     return api_tree
 
