@@ -221,6 +221,7 @@ dev = [
   "httpx-sse~=0.4",
   "ipython~=8.31",
   "myst-parser~=4.0",
+  "nbconvert", # Version determined by jupyter
   "nbsphinx~=0.9",
   "nvidia-nat_test",
   "nvidia-sphinx-theme>=0.0.7",
