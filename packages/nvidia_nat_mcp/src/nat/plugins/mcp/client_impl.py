@@ -20,6 +20,7 @@ from datetime import datetime
 from datetime import timedelta
 
 import aiorwlock
+from pydantic import BaseModel
 
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
@@ -30,6 +31,14 @@ from nat.plugins.mcp.client_config import MCPToolOverrideConfig
 from nat.plugins.mcp.utils import truncate_session_id
 
 logger = logging.getLogger(__name__)
+
+
+class SessionData(BaseModel):
+    """Container for all session-related data."""
+    client: MCPBaseClient
+    last_activity: datetime
+    ref_count: int = 0
+    lock: asyncio.Lock
 
 
 class MCPFunctionGroup(FunctionGroup):
@@ -45,17 +54,12 @@ class MCPFunctionGroup(FunctionGroup):
         self._mcp_client_server_name: str | None = None
         self._mcp_client_transport: str | None = None
 
-        # Session management attributes for per-session isolation
-        self._session_clients: dict[str, MCPBaseClient] = {}
-        self._session_last_activity: dict[str, datetime] = {}
-        self._session_ref_counts: dict[str, int] = {}  # Track active operations per session
+        # Session management - consolidated data structure
+        self._sessions: dict[str, SessionData] = {}
 
         # Use RWLock for better concurrency: multiple readers (tool calls) can access
         # existing sessions simultaneously, while writers (create/delete) get exclusive access
         self._session_rwlock = aiorwlock.RWLock()
-
-        # Per-session locks for thread-safe reference counting
-        self._session_locks: dict[str, asyncio.Lock] = {}
         # Throttled cleanup control
         self._last_cleanup_check: datetime = datetime.now()
         self._cleanup_check_interval: timedelta = timedelta(minutes=5)
@@ -97,7 +101,7 @@ class MCPFunctionGroup(FunctionGroup):
     @property
     def session_count(self) -> int:
         """Current number of active sessions."""
-        return len(self._session_clients)
+        return len(self._sessions)
 
     @property
     def session_limit(self) -> int:
@@ -137,30 +141,23 @@ class MCPFunctionGroup(FunctionGroup):
             current_time = datetime.now()
             inactive_sessions = []
 
-            for session_id, last_activity in self._session_last_activity.items():
+            for session_id, session_data in self._sessions.items():
                 # Skip cleanup if session is actively being used
-                if session_id in self._session_ref_counts and self._session_ref_counts[session_id] > 0:
+                if session_data.ref_count > 0:
                     continue
 
-                if current_time - last_activity > max_age:
+                if current_time - session_data.last_activity > max_age:
                     inactive_sessions.append(session_id)
 
             for session_id in inactive_sessions:
                 try:
                     logger.info("Cleaning up inactive session client: %s", truncate_session_id(session_id))
-                    client = self._session_clients[session_id]
+                    session_data = self._sessions[session_id]
                     # Close the client connection
-                    await client.__aexit__(None, None, None)
-                    del self._session_clients[session_id]
-                    del self._session_last_activity[session_id]
-                    # Clean up reference count if it exists
-                    if session_id in self._session_ref_counts:
-                        del self._session_ref_counts[session_id]
-                    # Clean up per-session lock if it exists
-                    if session_id in self._session_locks:
-                        del self._session_locks[session_id]
+                    await session_data.client.__aexit__(None, None, None)
+                    del self._sessions[session_id]
                     logger.info("Cleaned up inactive session client: %s", truncate_session_id(session_id))
-                    logger.info(" Total sessions: %d", len(self._session_clients))
+                    logger.info(" Total sessions: %d", len(self._sessions))
                 except Exception as e:
                     logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
 
@@ -180,25 +177,25 @@ class MCPFunctionGroup(FunctionGroup):
 
         # Fast path: check if session already exists (reader lock for concurrent access)
         async with self._session_rwlock.reader:
-            if session_id in self._session_clients:
+            if session_id in self._sessions:
                 # Update last activity for existing client
-                self._session_last_activity[session_id] = datetime.now()
-                return self._session_clients[session_id]
+                self._sessions[session_id].last_activity = datetime.now()
+                return self._sessions[session_id].client
 
         # Slow path: create session with writer lock for exclusive access
         async with self._session_rwlock.writer:
             # Double-check after acquiring writer lock (another coroutine might have created it)
-            if session_id in self._session_clients:
-                self._session_last_activity[session_id] = datetime.now()
-                return self._session_clients[session_id]
+            if session_id in self._sessions:
+                self._sessions[session_id].last_activity = datetime.now()
+                return self._sessions[session_id].client
 
             # Check session limit before creating new client
-            if len(self._session_clients) >= self._client_config.max_sessions:
+            if len(self._sessions) >= self._client_config.max_sessions:
                 # Try cleanup first to free up space
                 await self._cleanup_inactive_sessions()
 
                 # Re-check after cleanup
-                if len(self._session_clients) >= self._client_config.max_sessions:
+                if len(self._sessions) >= self._client_config.max_sessions:
                     logger.warning("Session limit reached (%d), rejecting new session: %s",
                                    self._client_config.max_sessions,
                                    truncate_session_id(session_id))
@@ -209,34 +206,34 @@ class MCPFunctionGroup(FunctionGroup):
             logger.info("Creating new MCP client for session: %s", truncate_session_id(session_id))
             session_client = await self._create_session_client(session_id)
 
-            # Cache the client
-            self._session_clients[session_id] = session_client
-            self._session_last_activity[session_id] = datetime.now()
-            logger.info(" Total sessions: %d", len(self._session_clients))
+            # Create session data with all components
+            session_data = SessionData(
+                client=session_client,
+                last_activity=datetime.now(),
+                ref_count=0,
+                lock=asyncio.Lock()
+            )
+            
+            # Cache the session data
+            self._sessions[session_id] = session_data
+            logger.info(" Total sessions: %d", len(self._sessions))
             return session_client
 
     @asynccontextmanager
     async def _session_usage_context(self, session_id: str):
         """Context manager to track active session usage and prevent cleanup."""
-        # Ensure per-session lock exists (protected by RWLock writer for creation)
-        async with self._session_rwlock.writer:
-            if session_id not in self._session_locks:
-                self._session_locks[session_id] = asyncio.Lock()
-
+        # Get session data (session must exist at this point)
+        session_data = self._sessions[session_id]
+        
         # Thread-safe reference counting using per-session lock
-        async with self._session_locks[session_id]:
-            self._session_ref_counts[session_id] = self._session_ref_counts.get(session_id, 0) + 1
+        async with session_data.lock:
+            session_data.ref_count += 1
 
         try:
             yield
         finally:
-            async with self._session_locks[session_id]:
-                if session_id in self._session_ref_counts:
-                    self._session_ref_counts[session_id] -= 1
-                    if self._session_ref_counts[session_id] <= 0:
-                        del self._session_ref_counts[session_id]
-                        # Clean up the per-session lock when ref count reaches zero
-                        del self._session_locks[session_id]
+            async with session_data.lock:
+                session_data.ref_count -= 1
 
     async def _create_session_client(self, session_id: str) -> MCPBaseClient:
         """Create a new MCP client instance for the session."""
@@ -272,8 +269,6 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
     Routes each invocation to the appropriate per-session MCP client while
     preserving the original tool input schema, converters, and description.
     """
-    from pydantic import BaseModel
-
     from nat.builder.function import FunctionInfo
 
     def _convert_from_str(input_str: str) -> tool.input_schema:
