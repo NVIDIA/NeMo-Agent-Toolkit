@@ -86,7 +86,7 @@ class TestMCPSessionManagement:
         client = await function_group._get_session_client(session_id)
 
         assert client == function_group.mcp_client
-        assert len(function_group._session_clients) == 0
+        assert len(function_group._sessions) == 0
 
     async def test_get_session_client_creates_new_session_client(self, function_group):
         """Test that a new session client is created for non-default session IDs."""
@@ -100,8 +100,8 @@ class TestMCPSessionManagement:
             client = await function_group._get_session_client(session_id)
 
             assert client == mock_session_client
-            assert session_id in function_group._session_clients
-            assert session_id in function_group._session_last_activity
+            assert session_id in function_group._sessions
+            assert function_group._sessions[session_id].client == mock_session_client
             mock_client_class.assert_called_once()
             mock_session_client.__aenter__.assert_called_once()
 
@@ -136,14 +136,14 @@ class TestMCPSessionManagement:
             await function_group._get_session_client(session_id)
 
             # Record initial activity time
-            initial_time = function_group._session_last_activity[session_id]
+            initial_time = function_group._sessions[session_id].last_activity
 
             # Wait a small amount and access again
             await asyncio.sleep(0.01)
             await function_group._get_session_client(session_id)
 
             # Activity time should be updated
-            updated_time = function_group._session_last_activity[session_id]
+            updated_time = function_group._sessions[session_id].last_activity
             assert updated_time > initial_time
 
     async def test_get_session_client_enforces_max_sessions_limit(self, function_group):
@@ -183,14 +183,13 @@ class TestMCPSessionManagement:
 
             # Manually set last activity to be old
             old_time = datetime.now() - timedelta(hours=1)
-            function_group._session_last_activity[session_id] = old_time
+            function_group._sessions[session_id].last_activity = old_time
 
             # Cleanup inactive sessions
             await function_group._cleanup_inactive_sessions(timedelta(minutes=30))
 
             # Session should be removed
-            assert session_id not in function_group._session_clients
-            assert session_id not in function_group._session_last_activity
+            assert session_id not in function_group._sessions
             mock_session_client.__aexit__.assert_called_once()
 
     async def test_cleanup_inactive_sessions_preserves_active_sessions(self, function_group):
@@ -206,52 +205,68 @@ class TestMCPSessionManagement:
             await function_group._get_session_client(session_id)
 
             # Set reference count to indicate active usage
-            function_group._session_ref_counts[session_id] = 1
+            function_group._sessions[session_id].ref_count = 1
 
             # Manually set last activity to be old
             old_time = datetime.now() - timedelta(hours=1)
-            function_group._session_last_activity[session_id] = old_time
+            function_group._sessions[session_id].last_activity = old_time
 
             # Cleanup inactive sessions
             await function_group._cleanup_inactive_sessions(timedelta(minutes=30))
 
             # Session should be preserved due to active reference
-            assert session_id in function_group._session_clients
-            assert session_id in function_group._session_last_activity
+            assert session_id in function_group._sessions
 
     async def test_session_usage_context_manager(self, function_group):
         """Test the session usage context manager for reference counting."""
         session_id = "session-123"
 
-        # Initially no reference count
-        assert session_id not in function_group._session_ref_counts
+        # Create a session first
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+            mock_session_client = AsyncMock()
+            mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
+            mock_client_class.return_value = mock_session_client
+
+            await function_group._get_session_client(session_id)
+
+        # Initially reference count should be 0
+        assert function_group._sessions[session_id].ref_count == 0
 
         # Use context manager
         async with function_group._session_usage_context(session_id):
             # Reference count should be incremented
-            assert function_group._session_ref_counts[session_id] == 1
+            assert function_group._sessions[session_id].ref_count == 1
 
             # Nested usage
             async with function_group._session_usage_context(session_id):
-                assert function_group._session_ref_counts[session_id] == 2
+                assert function_group._sessions[session_id].ref_count == 2
 
-        # Reference count should be decremented and removed when it reaches 0
-        assert session_id not in function_group._session_ref_counts
+        # Reference count should be decremented back to 0
+        assert function_group._sessions[session_id].ref_count == 0
 
     async def test_session_usage_context_manager_multiple_sessions(self, function_group):
         """Test the session usage context manager with multiple sessions."""
         session1 = "session-1"
         session2 = "session-2"
 
+        # Create sessions first
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+            mock_session_client = AsyncMock()
+            mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
+            mock_client_class.return_value = mock_session_client
+
+            await function_group._get_session_client(session1)
+            await function_group._get_session_client(session2)
+
         # Use context managers for different sessions
         async with function_group._session_usage_context(session1):
             async with function_group._session_usage_context(session2):
-                assert function_group._session_ref_counts[session1] == 1
-                assert function_group._session_ref_counts[session2] == 1
+                assert function_group._sessions[session1].ref_count == 1
+                assert function_group._sessions[session2].ref_count == 1
 
-        # Both should be cleaned up
-        assert session1 not in function_group._session_ref_counts
-        assert session2 not in function_group._session_ref_counts
+        # Both should be back to 0
+        assert function_group._sessions[session1].ref_count == 0
+        assert function_group._sessions[session2].ref_count == 0
 
     async def test_create_session_client_unsupported_transport(self, function_group):
         """Test that creating session clients fails for unsupported transports."""
@@ -276,13 +291,13 @@ class TestMCPSessionManagement:
 
             # Set last activity to be 10 minutes old
             old_time = datetime.now() - timedelta(minutes=10)
-            function_group._session_last_activity[session_id] = old_time
+            function_group._sessions[session_id].last_activity = old_time
 
             # Cleanup with 5 minute max_age (should remove session)
             await function_group._cleanup_inactive_sessions(timedelta(minutes=5))
 
             # Session should be removed
-            assert session_id not in function_group._session_clients
+            assert session_id not in function_group._sessions
 
     async def test_cleanup_inactive_sessions_with_longer_max_age(self, function_group):
         """Test cleanup with longer max_age parameter that doesn't remove sessions."""
@@ -298,13 +313,13 @@ class TestMCPSessionManagement:
 
             # Set last activity to be 10 minutes old
             old_time = datetime.now() - timedelta(minutes=10)
-            function_group._session_last_activity[session_id] = old_time
+            function_group._sessions[session_id].last_activity = old_time
 
             # Cleanup with 20 minute max_age (should not remove session)
             await function_group._cleanup_inactive_sessions(timedelta(minutes=20))
 
             # Session should be preserved
-            assert session_id in function_group._session_clients
+            assert session_id in function_group._sessions
 
     async def test_cleanup_handles_client_close_errors(self, function_group):
         """Test that cleanup handles errors when closing client connections."""
@@ -321,15 +336,14 @@ class TestMCPSessionManagement:
 
             # Set last activity to be old
             old_time = datetime.now() - timedelta(hours=1)
-            function_group._session_last_activity[session_id] = old_time
+            function_group._sessions[session_id].last_activity = old_time
 
             # Cleanup should not raise exception despite close error
             await function_group._cleanup_inactive_sessions(timedelta(minutes=30))
 
-            # Session should NOT be removed from tracking when close fails
-            # (This is the actual behavior - cleanup only removes on successful close)
-            assert session_id in function_group._session_clients
-            assert session_id in function_group._session_last_activity
+            # Session should be removed from tracking even when close fails
+            # (This is the new fail-safe behavior - cleanup always removes tracking)
+            assert session_id not in function_group._sessions
 
     async def test_concurrent_session_creation(self, function_group):
         """Test that concurrent session creation is handled properly."""
@@ -351,8 +365,8 @@ class TestMCPSessionManagement:
         assert all(client == clients[0] for client in clients)
 
         # Only one client should be created
-        assert len(function_group._session_clients) == 1
-        assert session_id in function_group._session_clients
+        assert len(function_group._sessions) == 1
+        assert session_id in function_group._sessions
 
     async def test_throttled_cleanup_on_access(self, function_group):
         """Test that cleanup is throttled and only runs periodically."""

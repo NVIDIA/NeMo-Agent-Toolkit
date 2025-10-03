@@ -16,12 +16,14 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import datetime
 from datetime import timedelta
 
 import aiorwlock
 from pydantic import BaseModel
 
+from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
@@ -33,18 +35,24 @@ from nat.plugins.mcp.utils import truncate_session_id
 logger = logging.getLogger(__name__)
 
 
-class SessionData(BaseModel):
+@dataclass
+class SessionData:
     """Container for all session-related data."""
     client: MCPBaseClient
     last_activity: datetime
     ref_count: int = 0
-    lock: asyncio.Lock
+    lock: asyncio.Lock = None
+
+    def __post_init__(self):
+        """Initialize lock if not provided."""
+        if self.lock is None:
+            self.lock = asyncio.Lock()
 
 
 class MCPFunctionGroup(FunctionGroup):
     """
     A specialized FunctionGroup for MCP clients that includes MCP-specific attributes
-    with proper type safety.
+    with session management.
     """
 
     def __init__(self, *args, **kwargs):
@@ -65,7 +73,7 @@ class MCPFunctionGroup(FunctionGroup):
         self._cleanup_check_interval: timedelta = timedelta(minutes=5)
 
         # Shared components for session client creation
-        self._shared_auth_provider = None
+        self._shared_auth_provider: AuthProviderBase | None = None
         self._client_config: MCPClientConfig | None = None
 
     @property
@@ -174,9 +182,10 @@ class MCPFunctionGroup(FunctionGroup):
 
         # If the session_id equals the configured default_user_id use the base client
         # instead of creating a per-session client
-        default_uid = self._shared_auth_provider.config.default_user_id
-        if default_uid and session_id == default_uid:
-            return self.mcp_client
+        if self._shared_auth_provider:
+            default_uid = self._shared_auth_provider.config.default_user_id
+            if default_uid and session_id == default_uid:
+                return self.mcp_client
 
         # Fast path: check if session already exists (reader lock for concurrent access)
         async with self._session_rwlock.reader:
@@ -193,7 +202,7 @@ class MCPFunctionGroup(FunctionGroup):
                 return self._sessions[session_id].client
 
             # Check session limit before creating new client
-            if len(self._sessions) >= self._client_config.max_sessions:
+            if self._client_config and len(self._sessions) >= self._client_config.max_sessions:
                 # Try cleanup first to free up space
                 await self._cleanup_inactive_sessions()
 
@@ -210,10 +219,7 @@ class MCPFunctionGroup(FunctionGroup):
             session_client = await self._create_session_client(session_id)
 
             # Create session data with all components
-            session_data = SessionData(client=session_client,
-                                       last_activity=datetime.now(),
-                                       ref_count=0,
-                                       lock=asyncio.Lock())
+            session_data = SessionData(client=session_client, last_activity=datetime.now(), ref_count=0)
 
             # Cache the session data
             self._sessions[session_id] = session_data
@@ -223,6 +229,12 @@ class MCPFunctionGroup(FunctionGroup):
     @asynccontextmanager
     async def _session_usage_context(self, session_id: str):
         """Context manager to track active session usage and prevent cleanup."""
+        # Ensure session exists - create it if it doesn't
+        if session_id not in self._sessions:
+            # Create session client first
+            session_client = await self._get_session_client(session_id)
+            # Session should now exist in _sessions
+
         # Get session data (session must exist at this point)
         session_data = self._sessions[session_id]
 
@@ -241,6 +253,8 @@ class MCPFunctionGroup(FunctionGroup):
         from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
 
         config = self._client_config
+        if not config:
+            raise RuntimeError("Client config not initialized")
 
         if config.server.transport == "streamable-http":
             client = MCPStreamableHTTPClient(
@@ -276,6 +290,7 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
         return tool.input_schema.model_validate_json(input_str)
 
     async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
+        """Response function for the session-aware tool."""
         try:
             # Route to the appropriate session client
             session_id = function_group._get_session_id_from_context()
@@ -284,20 +299,25 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
             if session_id is None:
                 return "User not authorized to call the tool"
 
-            # Use session usage context to prevent cleanup during tool execution
-            async with function_group._session_usage_context(session_id):
-                client = await function_group._get_session_client(session_id)
-
-                # Resolve the tool from the routed client
+            # Check if this is the default user - if so, use base client directly
+            if (function_group._shared_auth_provider
+                    and session_id == function_group._shared_auth_provider.config.default_user_id):
+                # Use base client directly for default user
+                client = function_group.mcp_client
                 session_tool = await client.get_tool(tool.name)
+            else:
+                # Use session usage context to prevent cleanup during tool execution
+                async with function_group._session_usage_context(session_id):
+                    client = await function_group._get_session_client(session_id)
+                    session_tool = await client.get_tool(tool.name)
 
-                # Preserve original calling convention
-                if tool_input:
-                    args = tool_input.model_dump()
-                    return await session_tool.acall(args)
+            # Preserve original calling convention
+            if tool_input:
+                args = tool_input.model_dump()
+                return await session_tool.acall(args)
 
-                _ = session_tool.input_schema.model_validate(kwargs)
-                return await session_tool.acall(kwargs)
+            _ = session_tool.input_schema.model_validate(kwargs)
+            return await session_tool.acall(kwargs)
         except Exception as e:
             if tool_input:
                 logger.warning("Error calling tool %s with serialized input: %s",
