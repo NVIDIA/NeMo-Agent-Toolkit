@@ -17,6 +17,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 from datetime import timedelta
 
@@ -41,12 +42,7 @@ class SessionData:
     client: MCPBaseClient
     last_activity: datetime
     ref_count: int = 0
-    lock: asyncio.Lock = None
-
-    def __post_init__(self):
-        """Initialize lock if not provided."""
-        if self.lock is None:
-            self.lock = asyncio.Lock()
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
 class MCPFunctionGroup(FunctionGroup):
