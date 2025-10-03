@@ -20,11 +20,52 @@ from unittest.mock import patch
 import pytest
 
 from nat.cli.commands.workflow.workflow_commands import _get_nat_dependency
+from nat.cli.commands.workflow.workflow_commands import _get_nat_version
+from nat.cli.commands.workflow.workflow_commands import _is_nat_version_prerelease
 from nat.cli.commands.workflow.workflow_commands import get_repo_root
 
 
 def test_get_repo_root(project_dir: str):
     assert get_repo_root() == Path(project_dir)
+
+
+@patch('nat.cli.entrypoint.get_version')
+def test_get_nat_version_unknown(mock_get_version):
+    mock_get_version.return_value = "unknown"
+    assert _get_nat_version() is None
+
+
+@patch('nat.cli.entrypoint.get_version')
+@pytest.mark.parametrize(
+    "input_version, expected",
+    [
+        ("1.2.3", "1.2"),
+        ("1.2.0", "1.2"),
+        ("1.2.3a1", "1.2.3a1"),
+        ("1.2.0rc2", "1.2.0rc2"),
+        ("1.2", "1.2"),
+    ],
+)
+def test_get_nat_version_variants(mock_get_version, input_version, expected):
+    mock_get_version.return_value = input_version
+    assert _get_nat_version() == expected
+
+
+@patch('nat.cli.entrypoint.get_version')
+@pytest.mark.parametrize(
+    "input_version, expected",
+    [
+        ("1.2.3", False),
+        ("1.2.0", False),
+        ("1.2.3a1", True),
+        ("1.2.0rc2", True),
+        ("1.2", False),
+        ("unknown", False),
+    ],
+)
+def test_is_nat_version_prerelease(mock_get_version, input_version, expected):
+    mock_get_version.return_value = input_version
+    assert _is_nat_version_prerelease() == expected
 
 
 @patch('nat.cli.entrypoint.get_version')
