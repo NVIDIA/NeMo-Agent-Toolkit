@@ -136,6 +136,21 @@ class MCPFunctionGroup(FunctionGroup):
         except Exception:
             return None
 
+    async def cleanup_sessions(self, max_age: timedelta | None = None) -> int:
+        """
+        Manually trigger cleanup of inactive sessions.
+
+        Args:
+            max_age: Maximum age for sessions before cleanup. If None, uses configured timeout.
+
+        Returns:
+            Number of sessions cleaned up.
+        """
+        sessions_before = len(self._sessions)
+        await self._cleanup_inactive_sessions(max_age)
+        sessions_after = len(self._sessions)
+        return sessions_before - sessions_after
+
     async def _cleanup_inactive_sessions(self, max_age: timedelta | None = None):
         """Remove clients for sessions inactive longer than max_age.
 
@@ -232,7 +247,7 @@ class MCPFunctionGroup(FunctionGroup):
         # Ensure session exists - create it if it doesn't
         if session_id not in self._sessions:
             # Create session client first
-            session_client = await self._get_session_client(session_id)
+            await self._get_session_client(session_id)
             # Session should now exist in _sessions
 
         # Get session data (session must exist at this point)

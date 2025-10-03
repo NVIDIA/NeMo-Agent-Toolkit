@@ -405,6 +405,101 @@ class TestMCPSessionManagement:
             # Cleanup should only be called once due to throttling
             assert cleanup_calls == 1
 
+    async def test_manual_cleanup_sessions(self, function_group):
+        """Test manual cleanup of sessions."""
+        session1 = "session-1"
+        session2 = "session-2"
+        session3 = "session-3"
+
+        # Create multiple sessions
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+            mock_session_client = AsyncMock()
+            mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
+            mock_session_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_session_client
+
+            await function_group._get_session_client(session1)
+            await function_group._get_session_client(session2)
+            await function_group._get_session_client(session3)
+
+        # Verify all sessions exist
+        assert function_group.session_count == 3
+        assert session1 in function_group._sessions
+        assert session2 in function_group._sessions
+        assert session3 in function_group._sessions
+
+        # Test 1: Manual cleanup with default timeout (should keep recent sessions)
+        cleaned_count = await function_group.cleanup_sessions()
+        assert cleaned_count == 0  # No sessions should be cleaned (they're recent)
+        assert function_group.session_count == 3
+
+        # Test 2: Manual cleanup with very short timeout (should clean all)
+        cleaned_count = await function_group.cleanup_sessions(timedelta(seconds=0))
+        assert cleaned_count == 3  # All sessions should be cleaned
+        assert function_group.session_count == 0
+
+        # Test 3: Manual cleanup when no sessions exist
+        cleaned_count = await function_group.cleanup_sessions()
+        assert cleaned_count == 0  # No sessions to clean
+
+    async def test_manual_cleanup_with_active_sessions(self, function_group):
+        """Test manual cleanup preserves sessions with active references."""
+        session_id = "session-123"
+
+        # Create session
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+            mock_session_client = AsyncMock()
+            mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
+            mock_session_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_session_client
+
+            await function_group._get_session_client(session_id)
+
+        # Set reference count to indicate active usage
+        function_group._sessions[session_id].ref_count = 1
+
+        # Manual cleanup with 0 timeout (should not clean due to active reference)
+        cleaned_count = await function_group.cleanup_sessions(timedelta(seconds=0))
+        assert cleaned_count == 0  # Session should be preserved due to active reference
+        assert session_id in function_group._sessions
+
+        # Reset reference count and cleanup again
+        function_group._sessions[session_id].ref_count = 0
+        cleaned_count = await function_group.cleanup_sessions(timedelta(seconds=0))
+        assert cleaned_count == 1  # Session should be cleaned now
+        assert session_id not in function_group._sessions
+
+    async def test_manual_cleanup_returns_correct_count(self, function_group):
+        """Test that manual cleanup returns accurate count of cleaned sessions."""
+        sessions = ["session-1", "session-2", "session-3", "session-4"]
+
+        # Create sessions
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+            mock_session_client = AsyncMock()
+            mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
+            mock_session_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_session_client
+
+            for session_id in sessions:
+                await function_group._get_session_client(session_id)
+
+        # Verify all sessions created
+        assert function_group.session_count == 4
+
+        # Clean up 2 sessions by setting their activity to be old
+        old_time = datetime.now() - timedelta(hours=1)
+        function_group._sessions["session-1"].last_activity = old_time
+        function_group._sessions["session-2"].last_activity = old_time
+
+        # Manual cleanup with 30 minute timeout
+        cleaned_count = await function_group.cleanup_sessions(timedelta(minutes=30))
+        assert cleaned_count == 2  # Should clean exactly 2 sessions
+        assert function_group.session_count == 2
+        assert "session-1" not in function_group._sessions
+        assert "session-2" not in function_group._sessions
+        assert "session-3" in function_group._sessions
+        assert "session-4" in function_group._sessions
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
