@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from abc import ABC
 from abc import abstractmethod
@@ -55,8 +54,9 @@ class AuthAdapter(httpx.Auth):
     Converts AuthProviderBase to httpx.Auth interface for dynamic token management.
     """
 
-    def __init__(self, auth_provider: AuthProviderBase):
+    def __init__(self, auth_provider: AuthProviderBase, user_id: str | None = None):
         self.auth_provider = auth_provider
+        self.user_id = user_id  # Session-specific user ID for cache isolation
         # each adapter instance has its own lock to avoid unnecessary delays for multiple clients
         self._lock = anyio.Lock()
         # Track whether we're currently in an interactive authentication flow
@@ -104,41 +104,13 @@ class AuthAdapter(httpx.Auth):
                     logger.debug("Authentication flow completed")
         return
 
-    def _get_session_id_from_tool_call_request(self, request: httpx.Request) -> tuple[str | None, bool]:
-        """Check if this is a tool call request based on the request body.
-        Return the session id if it exists and a boolean indicating if it is a tool call request
-        """
-        try:
-            # Check if the request body contains a tool call
-            if request.content:
-                body = json.loads(request.content.decode('utf-8'))
-                # Check if it's a JSON-RPC request with method "tools/call"
-                if (isinstance(body, dict) and body.get("method") == "tools/call"):
-                    session_id = body.get("params").get("_meta").get("session_id")
-                    return session_id, True
-        except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
-            # If we can't parse the body, assume it's not a tool call
-            pass
-        return None, False
-
     async def _get_auth_headers(self,
                                 request: httpx.Request | None = None,
                                 response: httpx.Response | None = None) -> dict[str, str]:
         """Get authentication headers from the NAT auth provider."""
         try:
-            session_id = None
-            is_tool_call = False
-            if request:
-                session_id, is_tool_call = self._get_session_id_from_tool_call_request(request)
-
-            if is_tool_call:
-                # Tool call requests should use the session id
-                user_id = session_id
-            else:
-                # Non-tool call requests should use the session id if it exists and fallback to default user id
-                user_id = session_id or self.auth_provider.config.default_user_id
-
-            auth_result = await self.auth_provider.authenticate(user_id=user_id, response=response)
+            # Use the user_id passed to this AuthAdapter instance
+            auth_result = await self.auth_provider.authenticate(user_id=self.user_id, response=response)
 
             # Check if we have BearerTokenCred
             from nat.data_models.authentication import BearerTokenCred
@@ -171,6 +143,7 @@ class MCPBaseClient(ABC):
     def __init__(self,
                  transport: str = 'streamable-http',
                  auth_provider: AuthProviderBase | None = None,
+                 user_id: str | None = None,
                  tool_call_timeout: timedelta = timedelta(seconds=60),
                  auth_flow_timeout: timedelta = timedelta(seconds=300),
                  reconnect_enabled: bool = True,
@@ -189,7 +162,9 @@ class MCPBaseClient(ABC):
 
         # Convert auth provider to AuthAdapter
         self._auth_provider = auth_provider
-        self._httpx_auth = AuthAdapter(auth_provider) if auth_provider else None
+        # Use provided user_id or fall back to auth provider's default_user_id
+        effective_user_id = user_id or (auth_provider.config.default_user_id if auth_provider else None)
+        self._httpx_auth = AuthAdapter(auth_provider, effective_user_id) if auth_provider else None
 
         self._tool_call_timeout = tool_call_timeout
         self._auth_flow_timeout = auth_flow_timeout
@@ -422,24 +397,6 @@ class MCPBaseClient(ABC):
             self._auth_provider._set_custom_auth_callback(auth_callback)
 
     @mcp_exception_handler
-    async def call_tool_with_meta(self, tool_name: str, args: dict, session_id: str):
-        from mcp.types import CallToolRequest
-        from mcp.types import CallToolRequestParams
-        from mcp.types import CallToolResult
-        from mcp.types import ClientRequest
-
-        if not self._session:
-            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
-
-        async def _call_tool_with_meta():
-            params = CallToolRequestParams(name=tool_name, arguments=args, **{"_meta": {"session_id": session_id}})
-            req = ClientRequest(CallToolRequest(params=params))
-            timeout = await self._get_tool_call_timeout()
-            return await self._session.send_request(req, CallToolResult, request_read_timeout_seconds=timeout)
-
-        return await self._with_reconnect(_call_tool_with_meta)
-
-    @mcp_exception_handler
     async def call_tool(self, tool_name: str, tool_args: dict | None):
 
         async def _call_tool():
@@ -570,6 +527,7 @@ class MCPStreamableHTTPClient(MCPBaseClient):
     def __init__(self,
                  url: str,
                  auth_provider: AuthProviderBase | None = None,
+                 user_id: str | None = None,
                  tool_call_timeout: timedelta = timedelta(seconds=60),
                  auth_flow_timeout: timedelta = timedelta(seconds=300),
                  reconnect_enabled: bool = True,
@@ -578,6 +536,7 @@ class MCPStreamableHTTPClient(MCPBaseClient):
                  reconnect_max_backoff: float = 50.0):
         super().__init__("streamable-http",
                          auth_provider=auth_provider,
+                         user_id=user_id,
                          tool_call_timeout=tool_call_timeout,
                          auth_flow_timeout=auth_flow_timeout,
                          reconnect_enabled=reconnect_enabled,
@@ -662,35 +621,10 @@ class MCPToolClient:
         """
         self._tool_description = description
 
-    def _get_session_id(self) -> str | None:
-        """
-        Get the session id from the context.
-        """
-        from nat.builder.context import Context as _Ctx
-
-        # get auth callback (for example: WebSocketAuthenticationFlowHandler). this is lazily set in the client
-        # on first tool call
-        auth_callback = _Ctx.get().user_auth_callback
-        if auth_callback and self._parent_client:
-            # set custom auth callback
-            self._parent_client.set_user_auth_callback(auth_callback)
-
-        # get session id from context, authentication is done per-websocket session for tool calls
-        session_id = None
-        cookies = getattr(_Ctx.get().metadata, "cookies", None)
-        if cookies:
-            session_id = cookies.get("nat-session")
-
-        if not session_id:
-            # use default user id if allowed
-            if self._parent_client.auth_provider and \
-                self._parent_client.auth_provider.config.allow_default_user_id_for_tool_calls:
-                session_id = self._parent_client.auth_provider.config.default_user_id
-        return session_id
-
     async def acall(self, tool_args: dict) -> str:
         """
         Call the MCP tool with the provided arguments.
+        Session context is now handled at the client level, eliminating the need for metadata injection.
 
         Args:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
@@ -698,25 +632,10 @@ class MCPToolClient:
         if self._session is None:
             raise RuntimeError("No session available for tool call")
 
-        # Extract context information
         try:
-            session_id = self._get_session_id()
-        except Exception:
-            session_id = None
-
-        try:
-            # if auth is enabled and session id is not available return user is not authorized to call the tool
-            if self._parent_client.auth_provider and not session_id:
-                result_str = "User is not authorized to call the tool"
-                mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str), self._parent_client.server_name)
-                raise mcp_error
-
-            if session_id:
-                logger.info("Calling tool %s with arguments %s for a user session", self._tool_name, tool_args)
-                result = await self._parent_client.call_tool_with_meta(self._tool_name, tool_args, session_id)
-            else:
-                logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
-                result = await self._parent_client.call_tool(self._tool_name, tool_args)
+            # Simple tool call - session context is already in the client instance
+            logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
+            result = await self._parent_client.call_tool(self._tool_name, tool_args)
 
             output = []
             for res in result.content:

@@ -93,6 +93,11 @@ authentication:
     default_user_id: ${NAT_USER_ID}
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
+
+:::{warning}
+Set `CORPORATE_MCP_JIRA_URL` to your protected Jira MCP server URL, not the sample URL provided in the examples. The sample URL is for demonstration purposes only and will not work with your actual Jira instance.
+:::
+
 ### Running the Workflow in Single-User Mode (CLI)
 In this mode, the `default_user_id` is used for authentication during setup and for subsequent tool calls.
 
