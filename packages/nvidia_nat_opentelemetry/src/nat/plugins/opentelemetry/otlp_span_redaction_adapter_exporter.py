@@ -55,7 +55,8 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
     - Grafana Tempo
     - Custom OTLP-compatible backends
 
-    Example:
+    Example::
+
         def should_redact(auth_key: str) -> bool:
             return auth_key in ["sensitive_user", "test_user"]
 
