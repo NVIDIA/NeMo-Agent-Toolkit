@@ -222,40 +222,20 @@ class MCPFunctionGroup(FunctionGroup):
         from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
 
         config = self._client_config
-        # Create session-specific auth provider for complete isolation
-        session_auth_provider = await self._create_session_auth_provider(session_id)
 
-        # Build the appropriate client (same logic as default client)
-        if config.server.transport == "stdio":
-            if not config.server.command:
-                raise ValueError("command is required for stdio transport")
-            client = MCPStdioClient(config.server.command,
-                                    config.server.args,
-                                    config.server.env,
-                                    tool_call_timeout=config.tool_call_timeout,
-                                    auth_flow_timeout=config.auth_flow_timeout,
-                                    reconnect_enabled=config.reconnect_enabled,
-                                    reconnect_max_attempts=config.reconnect_max_attempts,
-                                    reconnect_initial_backoff=config.reconnect_initial_backoff,
-                                    reconnect_max_backoff=config.reconnect_max_backoff)
-        elif config.server.transport == "sse":
-            client = MCPSSEClient(str(config.server.url),
-                                  tool_call_timeout=config.tool_call_timeout,
-                                  auth_flow_timeout=config.auth_flow_timeout,
-                                  reconnect_enabled=config.reconnect_enabled,
-                                  reconnect_max_attempts=config.reconnect_max_attempts,
-                                  reconnect_initial_backoff=config.reconnect_initial_backoff,
-                                  reconnect_max_backoff=config.reconnect_max_backoff)
-        elif config.server.transport == "streamable-http":
-            client = MCPStreamableHTTPClient(str(config.server.url),
-                                             auth_provider=session_auth_provider,
-                                             tool_call_timeout=config.tool_call_timeout,
-                                             auth_flow_timeout=config.auth_flow_timeout,
-                                             reconnect_enabled=config.reconnect_enabled,
-                                             reconnect_max_attempts=config.reconnect_max_attempts,
-                                             reconnect_initial_backoff=config.reconnect_initial_backoff,
-                                             reconnect_max_backoff=config.reconnect_max_backoff)
+        if config.server.transport == "streamable-http":
+            client = MCPStreamableHTTPClient(
+                str(config.server.url),
+                auth_provider=self._shared_auth_provider,
+                user_id=session_id,  # Pass session_id as user_id for cache isolation
+                tool_call_timeout=config.tool_call_timeout,
+                auth_flow_timeout=config.auth_flow_timeout,
+                reconnect_enabled=config.reconnect_enabled,
+                reconnect_max_attempts=config.reconnect_max_attempts,
+                reconnect_initial_backoff=config.reconnect_initial_backoff,
+                reconnect_max_backoff=config.reconnect_max_backoff)
         else:
+            # per-user sessions are only supported for streamable-http transport
             raise ValueError(f"Unsupported transport: {config.server.transport}")
 
         # Initialize the client
@@ -263,25 +243,6 @@ class MCPFunctionGroup(FunctionGroup):
 
         logger.info("Created session client for session: %s", truncate_session_id(session_id))
         return client
-
-    async def _create_session_auth_provider(self, session_id: str):
-        """Create a session-specific auth provider with copied configuration."""
-        if not self._shared_auth_provider:
-            return None
-
-        # Copy the configuration object
-        config_copy = self._shared_auth_provider.config.model_copy()
-
-        # Set session-specific configuration
-        config_copy.default_user_id = session_id
-        config_copy.allow_default_user_id_for_tool_calls = True
-
-        # Create new auth provider instance with session-specific config
-        auth_provider_type = type(self._shared_auth_provider)
-        session_auth_provider = auth_provider_type(config_copy)
-
-        logger.info("Created session-specific auth provider for session: %s", truncate_session_id(session_id))
-        return session_auth_provider
 
 
 def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
@@ -377,8 +338,11 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
                               reconnect_initial_backoff=config.reconnect_initial_backoff,
                               reconnect_max_backoff=config.reconnect_max_backoff)
     elif config.server.transport == "streamable-http":
+        # Use default_user_id for the base client
+        base_user_id = auth_provider.config.default_user_id if auth_provider else None
         client = MCPStreamableHTTPClient(str(config.server.url),
                                          auth_provider=auth_provider,
+                                         user_id=base_user_id,
                                          tool_call_timeout=config.tool_call_timeout,
                                          auth_flow_timeout=config.auth_flow_timeout,
                                          reconnect_enabled=config.reconnect_enabled,
