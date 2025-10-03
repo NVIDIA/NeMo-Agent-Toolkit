@@ -15,13 +15,15 @@
 
 import functools
 import inspect
-import warnings
+import logging
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from collections.abc import Generator
 from typing import Any
 from typing import TypeVar
 from typing import overload
+
+logger = logging.getLogger(__name__)
 
 _warning_issued = set()
 
@@ -53,9 +55,9 @@ def issue_deprecation_warning(function_name: str,
     if function_name not in _warning_issued:
         # Build the deprecation message
         if feature_name:
-            warning_message = f"The {feature_name} feature is deprecated"
+            warning_message = f"{feature_name} is deprecated"
         else:
-            warning_message = f"This function is deprecated"
+            warning_message = f"Function {function_name} is deprecated"
 
         if removal_version:
             warning_message += f" and will be removed in version {removal_version}"
@@ -65,18 +67,16 @@ def issue_deprecation_warning(function_name: str,
         warning_message += "."
 
         if reason:
-            warning_message += f" Reason: {reason}"
+            warning_message += f" Reason: {reason}."
 
         if replacement:
             warning_message += f" Use '{replacement}' instead."
-
-        warning_message += f" Function: {function_name}"
 
         if metadata:
             warning_message += f" | Metadata: {metadata}"
 
         # Issue warning and save function name to avoid duplicate warnings
-        warnings.warn(warning_message, DeprecationWarning, stacklevel=3)
+        logger.warning(warning_message)
         _warning_issued.add(function_name)
 
 
@@ -192,7 +192,3 @@ def deprecated(func: Any = None,
         return result
 
     return sync_wrapper
-
-
-# Compatibility aliases with previous releases
-aiq_deprecated = deprecated

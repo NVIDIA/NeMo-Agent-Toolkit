@@ -111,11 +111,9 @@ def mcp_tool_function(tool: MCPToolClient) -> FunctionInfo:
 
 @register_function(config_type=MCPToolConfig)
 @deprecated(
-    removal_version="1.4",
-    replacement="mcp_client",
     reason=
     "This function is being replaced with the new mcp_client function group that supports additional MCP features",
-    feature_name="MCP Tool Wrapper")
+    feature_name="mcp_tool_wrapper")
 async def mcp_tool(config: MCPToolConfig, builder: Builder):
     """
     Generate a NeMo Agent Toolkit Function that wraps a tool provided by the MCP server.
