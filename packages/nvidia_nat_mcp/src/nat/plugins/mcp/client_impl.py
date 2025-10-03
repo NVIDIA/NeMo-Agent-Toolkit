@@ -19,6 +19,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from datetime import timedelta
 
+import aiorwlock
+
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
@@ -47,8 +49,13 @@ class MCPFunctionGroup(FunctionGroup):
         self._session_clients: dict[str, MCPBaseClient] = {}
         self._session_last_activity: dict[str, datetime] = {}
         self._session_ref_counts: dict[str, int] = {}  # Track active operations per session
-        self._cleanup_lock = asyncio.Lock()
-        self._session_creation_lock = asyncio.Lock()
+
+        # Use RWLock for better concurrency: multiple readers (tool calls) can access
+        # existing sessions simultaneously, while writers (create/delete) get exclusive access
+        self._session_rwlock = aiorwlock.RWLock()
+
+        # Per-session locks for thread-safe reference counting
+        self._session_locks: dict[str, asyncio.Lock] = {}
         # Throttled cleanup control
         self._last_cleanup_check: datetime = datetime.now()
         self._cleanup_check_interval: timedelta = timedelta(minutes=5)
@@ -120,13 +127,13 @@ class MCPFunctionGroup(FunctionGroup):
     async def _cleanup_inactive_sessions(self, max_age: timedelta | None = None):
         """Remove clients for sessions inactive longer than max_age.
 
-        This method uses its own cleanup_lock to ensure thread-safe cleanup.
-        It can be called from within the session_creation_lock without deadlock.
+        This method uses the RWLock writer to ensure thread-safe cleanup.
+        It can be called from within other writer locks without deadlock.
         """
         if max_age is None:
             max_age = self._client_config.session_idle_timeout if self._client_config else timedelta(hours=1)
 
-        async with self._cleanup_lock:
+        async with self._session_rwlock.writer:
             current_time = datetime.now()
             inactive_sessions = []
 
@@ -149,6 +156,9 @@ class MCPFunctionGroup(FunctionGroup):
                     # Clean up reference count if it exists
                     if session_id in self._session_ref_counts:
                         del self._session_ref_counts[session_id]
+                    # Clean up per-session lock if it exists
+                    if session_id in self._session_locks:
+                        del self._session_locks[session_id]
                     logger.info("Cleaned up inactive session client: %s", truncate_session_id(session_id))
                     logger.info(" Total sessions: %d", len(self._session_clients))
                 except Exception as e:
@@ -168,15 +178,16 @@ class MCPFunctionGroup(FunctionGroup):
         if default_uid and session_id == default_uid:
             return self.mcp_client
 
-        # Fast path: check if session already exists (no lock needed)
-        if session_id in self._session_clients:
-            # Update last activity for existing client
-            self._session_last_activity[session_id] = datetime.now()
-            return self._session_clients[session_id]
+        # Fast path: check if session already exists (reader lock for concurrent access)
+        async with self._session_rwlock.reader:
+            if session_id in self._session_clients:
+                # Update last activity for existing client
+                self._session_last_activity[session_id] = datetime.now()
+                return self._session_clients[session_id]
 
-        # Slow path: create session with proper locking
-        async with self._session_creation_lock:
-            # Double-check after acquiring lock (another coroutine might have created it)
+        # Slow path: create session with writer lock for exclusive access
+        async with self._session_rwlock.writer:
+            # Double-check after acquiring writer lock (another coroutine might have created it)
             if session_id in self._session_clients:
                 self._session_last_activity[session_id] = datetime.now()
                 return self._session_clients[session_id]
@@ -201,22 +212,31 @@ class MCPFunctionGroup(FunctionGroup):
             # Cache the client
             self._session_clients[session_id] = session_client
             self._session_last_activity[session_id] = datetime.now()
+            logger.info(" Total sessions: %d", len(self._session_clients))
             return session_client
 
     @asynccontextmanager
     async def _session_usage_context(self, session_id: str):
         """Context manager to track active session usage and prevent cleanup."""
-        # Increment reference count
-        self._session_ref_counts[session_id] = self._session_ref_counts.get(session_id, 0) + 1
+        # Ensure per-session lock exists (protected by RWLock writer for creation)
+        async with self._session_rwlock.writer:
+            if session_id not in self._session_locks:
+                self._session_locks[session_id] = asyncio.Lock()
+
+        # Thread-safe reference counting using per-session lock
+        async with self._session_locks[session_id]:
+            self._session_ref_counts[session_id] = self._session_ref_counts.get(session_id, 0) + 1
 
         try:
             yield
         finally:
-            # Decrement reference count
-            if session_id in self._session_ref_counts:
-                self._session_ref_counts[session_id] -= 1
-                if self._session_ref_counts[session_id] <= 0:
-                    del self._session_ref_counts[session_id]
+            async with self._session_locks[session_id]:
+                if session_id in self._session_ref_counts:
+                    self._session_ref_counts[session_id] -= 1
+                    if self._session_ref_counts[session_id] <= 0:
+                        del self._session_ref_counts[session_id]
+                        # Clean up the per-session lock when ref count reaches zero
+                        del self._session_locks[session_id]
 
     async def _create_session_client(self, session_id: str) -> MCPBaseClient:
         """Create a new MCP client instance for the session."""
@@ -243,7 +263,6 @@ class MCPFunctionGroup(FunctionGroup):
         await client.__aenter__()
 
         logger.info("Created session client for session: %s", truncate_session_id(session_id))
-        logger.info(" Total sessions: %d", len(self._session_clients))
         return client
 
 
