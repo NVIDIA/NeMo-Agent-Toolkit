@@ -217,8 +217,6 @@ class MCPFunctionGroup(FunctionGroup):
 
     async def _create_session_client(self, session_id: str) -> MCPBaseClient:
         """Create a new MCP client instance for the session."""
-        from nat.plugins.mcp.client_base import MCPSSEClient
-        from nat.plugins.mcp.client_base import MCPStdioClient
         from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
 
         config = self._client_config
