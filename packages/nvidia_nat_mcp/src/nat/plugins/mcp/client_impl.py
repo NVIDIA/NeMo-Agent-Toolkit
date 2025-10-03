@@ -117,7 +117,7 @@ class MCPFunctionGroup(FunctionGroup):
         except Exception:
             return None
 
-    async def cleanup_inactive_sessions(self, max_age: timedelta | None = None):
+    async def _cleanup_inactive_sessions(self, max_age: timedelta | None = None):
         """Remove clients for sessions inactive longer than max_age.
 
         This method uses its own cleanup_lock to ensure thread-safe cleanup.
@@ -157,7 +157,7 @@ class MCPFunctionGroup(FunctionGroup):
         # Throttled cleanup on access
         now = datetime.now()
         if now - self._last_cleanup_check > self._cleanup_check_interval:
-            await self.cleanup_inactive_sessions()
+            await self._cleanup_inactive_sessions()
             self._last_cleanup_check = now
 
         # If the session_id equals the configured default_user_id use the base client
@@ -182,7 +182,7 @@ class MCPFunctionGroup(FunctionGroup):
             # Check session limit before creating new client
             if len(self._session_clients) >= self._client_config.max_sessions:
                 # Try cleanup first to free up space
-                await self.cleanup_inactive_sessions()
+                await self._cleanup_inactive_sessions()
 
                 # Re-check after cleanup
                 if len(self._session_clients) >= self._client_config.max_sessions:

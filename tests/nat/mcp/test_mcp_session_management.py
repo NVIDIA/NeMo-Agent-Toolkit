@@ -186,7 +186,7 @@ class TestMCPSessionManagement:
             function_group._session_last_activity[session_id] = old_time
 
             # Cleanup inactive sessions
-            await function_group.cleanup_inactive_sessions(timedelta(minutes=30))
+            await function_group._cleanup_inactive_sessions(timedelta(minutes=30))
 
             # Session should be removed
             assert session_id not in function_group._session_clients
@@ -213,7 +213,7 @@ class TestMCPSessionManagement:
             function_group._session_last_activity[session_id] = old_time
 
             # Cleanup inactive sessions
-            await function_group.cleanup_inactive_sessions(timedelta(minutes=30))
+            await function_group._cleanup_inactive_sessions(timedelta(minutes=30))
 
             # Session should be preserved due to active reference
             assert session_id in function_group._session_clients
@@ -279,7 +279,7 @@ class TestMCPSessionManagement:
             function_group._session_last_activity[session_id] = old_time
 
             # Cleanup with 5 minute max_age (should remove session)
-            await function_group.cleanup_inactive_sessions(timedelta(minutes=5))
+            await function_group._cleanup_inactive_sessions(timedelta(minutes=5))
 
             # Session should be removed
             assert session_id not in function_group._session_clients
@@ -301,7 +301,7 @@ class TestMCPSessionManagement:
             function_group._session_last_activity[session_id] = old_time
 
             # Cleanup with 20 minute max_age (should not remove session)
-            await function_group.cleanup_inactive_sessions(timedelta(minutes=20))
+            await function_group._cleanup_inactive_sessions(timedelta(minutes=20))
 
             # Session should be preserved
             assert session_id in function_group._session_clients
@@ -324,7 +324,7 @@ class TestMCPSessionManagement:
             function_group._session_last_activity[session_id] = old_time
 
             # Cleanup should not raise exception despite close error
-            await function_group.cleanup_inactive_sessions(timedelta(minutes=30))
+            await function_group._cleanup_inactive_sessions(timedelta(minutes=30))
 
             # Session should NOT be removed from tracking when close fails
             # (This is the actual behavior - cleanup only removes on successful close)
@@ -368,14 +368,14 @@ class TestMCPSessionManagement:
 
             # Mock cleanup method to track calls
             cleanup_calls = 0
-            original_cleanup = function_group.cleanup_inactive_sessions
+            original_cleanup = function_group._cleanup_inactive_sessions
 
             async def mock_cleanup(*args, **kwargs):
                 nonlocal cleanup_calls
                 cleanup_calls += 1
                 return await original_cleanup(*args, **kwargs)
 
-            function_group.cleanup_inactive_sessions = mock_cleanup
+            function_group._cleanup_inactive_sessions = mock_cleanup
 
             # Manually trigger cleanup by setting last check time to be old
             old_time = datetime.now() - timedelta(minutes=10)
