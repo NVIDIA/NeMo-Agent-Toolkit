@@ -520,9 +520,90 @@ To optimize a workflow with a local configuration, run:
 
 <!-- path-check-skip-begin -->
 ```bash
-nat optimize --config_file configs/my_workflow_optimizer.yml 
+nat optimize --config_file configs/my_workflow_optimizer.yml
 ```
 <!-- path-check-skip-end -->
+
+## GPU Cluster Sizing
+
+The `nat sizing calc` command estimates GPU requirements and produces performance plots for a workflow. You can run it online (collect metrics by executing the workflow) or offline (estimate from previously collected metrics). For a full guide, see [GPU Cluster Sizing](../workflows/sizing-calc.md).
+
+The `nat sizing calc --help` utility provides a brief overview of the command and its available options:
+
+```console
+$ nat sizing calc --help
+Usage: nat sizing calc [OPTIONS]
+
+  Estimate GPU count and plot metrics for a workflow
+
+Options:
+  --config_file FILE               A YAML config file for the workflow and
+                                   evaluation. This is not needed in offline
+                                   mode.
+  --offline_mode                   Run in offline mode. This is used to
+                                   estimate the GPU count for a workflow
+                                   without running the workflow.
+  --target_llm_latency FLOAT       Target p95 LLM latency (seconds). Can be
+                                   set to 0 to ignore.
+  --target_workflow_runtime FLOAT  Target p95 workflow runtime (seconds). Can
+                                   be set to 0 to ignore.
+  --target_users INTEGER           Target number of users to support.
+  --test_gpu_count INTEGER         Number of GPUs used in the test.
+  --calc_output_dir DIRECTORY      Directory to save plots and results
+                                   (optional).
+  --concurrencies TEXT             Comma-separated list of concurrency values
+                                   to test (e.g., 1,2,4,8). Default:
+                                   1,2,3,4,5,6,7,8,9,10
+  --num_passes INTEGER             Number of passes at each concurrency for the
+                                   evaluation. If set to 0 the dataset is
+                                   adjusted to a multiple of the concurrency.
+                                   Default: 0
+  --append_calc_outputs            Append calc outputs to the output
+                                   directory. By default append is set to
+                                   False and the content of the online
+                                   directory is overwritten.
+  --endpoint TEXT                  Endpoint to use for the workflow if it is
+                                   remote (optional).
+  --endpoint_timeout INTEGER       Timeout for the remote workflow endpoint in
+                                   seconds (default: 300).
+  --help                           Show this message and exit.
+```
+
+### Examples
+
+- Online metrics collection and plots:
+
+```bash
+nat sizing calc \
+  --config_file $CONFIG_FILE \
+  --calc_output_dir $CALC_OUTPUT_DIR \
+  --concurrencies 1,2,4,8,16,32 \
+  --num_passes 2
+```
+
+- Offline estimation from prior results, targeting 100 users and 10-second p95 workflow time, assuming tests ran with 8 GPUs:
+
+```bash
+nat sizing calc \
+  --offline_mode \
+  --calc_output_dir $CALC_OUTPUT_DIR \
+  --test_gpu_count 8 \
+  --target_workflow_runtime 10 \
+  --target_users 100
+```
+
+- Combined run (collect metrics and estimate in one command):
+
+```bash
+nat sizing calc \
+  --config_file $CONFIG_FILE \
+  --calc_output_dir $CALC_OUTPUT_DIR \
+  --concurrencies 1,2,4,8,16,32 \
+  --num_passes 2 \
+  --test_gpu_count 8 \
+  --target_workflow_runtime 10 \
+  --target_users 100
+```
 
 ## Uninstall
 
