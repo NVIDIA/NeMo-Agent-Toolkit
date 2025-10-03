@@ -44,10 +44,10 @@ def _opensearch_reachable(url: str) -> bool:
     reason="OpenSearch not reachable on http://localhost:9200; skipping e2e test.",
 )
 async def test_full_workflow_e2e() -> None:
-    config_file = (Path(__file__).resolve().parents[1] / "src" / "aiq_haystack_deep_research_agent" / "configs" /
+    config_file = (Path(__file__).resolve().parents[1] / "src" / "nat_haystack_deep_research_agent" / "configs" /
                    "config.yml")
 
-    loader_mod = importlib.import_module("aiq.runtime.loader")
+    loader_mod = importlib.import_module("nat.runtime.loader")
     load_workflow = getattr(loader_mod, "load_workflow")
 
     async with load_workflow(config_file) as workflow:
