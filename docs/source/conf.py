@@ -39,15 +39,15 @@ if typing.TYPE_CHECKING:
 
 
 def _build_api_tree() -> Path:
+    # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
+    # AutoAPI support for implicit namespaces is broken, so we need to manually
+
     cur_dir = Path(os.path.abspath(__file__)).parent
     docs_dir = cur_dir.parent
     root_dir = docs_dir.parent
     nat_dir = root_dir / "src" / "nat"
     plugins_dir = root_dir / "packages"
 
-    # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
-    # AutoAPI support for implicit namespaces is broken, so we need to manually
-    # construct an nat package with an __init__.py file
     build_dir = docs_dir / "build"
     api_tree = build_dir / "_api_tree"
     dest_dir = api_tree / "nat"
