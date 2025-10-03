@@ -194,7 +194,7 @@ async def _create_mcp_client_config(
     auth_user_id: str | None,
     auth_scopes: list[str] | None,
 ):
-    from nat.plugins.mcp.client_impl import MCPClientConfig
+    from nat.plugins.mcp.client_config import MCPClientConfig
 
     if url and transport == "streamable-http" and auth_redirect_uri:
         try:
@@ -236,8 +236,8 @@ async def list_tools_via_function_group(
     try:
         # Ensure the registration side-effects are loaded
         from nat.builder.workflow_builder import WorkflowBuilder
-        from nat.plugins.mcp.client_impl import MCPClientConfig
-        from nat.plugins.mcp.client_impl import MCPServerConfig
+        from nat.plugins.mcp.client_config import MCPClientConfig
+        from nat.plugins.mcp.client_config import MCPServerConfig
     except ImportError:
         click.echo(
             "MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp",
@@ -826,8 +826,8 @@ async def call_tool_and_print(command: str | None,
 
     try:
         from nat.builder.workflow_builder import WorkflowBuilder
-        from nat.plugins.mcp.client_impl import MCPClientConfig
-        from nat.plugins.mcp.client_impl import MCPServerConfig
+        from nat.plugins.mcp.client_config import MCPClientConfig
+        from nat.plugins.mcp.client_config import MCPServerConfig
     except ImportError:
         click.echo(
             "MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp",

@@ -22,9 +22,9 @@ from pydantic import BaseModel
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.mcp.client_base import MCPBaseClient
-from nat.plugins.mcp.client_impl import MCPClientConfig
-from nat.plugins.mcp.client_impl import MCPServerConfig
-from nat.plugins.mcp.client_impl import MCPToolOverrideConfig
+from nat.plugins.mcp.client_config import MCPClientConfig
+from nat.plugins.mcp.client_config import MCPServerConfig
+from nat.plugins.mcp.client_config import MCPToolOverrideConfig
 from nat.plugins.mcp.client_impl import mcp_apply_tool_alias_and_description
 from nat.plugins.mcp.client_impl import mcp_client_function_group
 
