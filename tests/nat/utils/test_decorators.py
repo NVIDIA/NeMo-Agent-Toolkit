@@ -41,9 +41,10 @@ def test_sync_function_logs_warning_once(caplog):
     # First call should issue warning
     result = sync_function()
     assert result == "test"
-    assert any(
-        "Function test_decorators.test_sync_function_logs_warning_once.<locals>.sync_function is deprecated and will be removed in version 2.0.0. Use 'new_function' instead."
-        in rec.message for rec in caplog.records)
+    old_fn = "test_decorators.test_sync_function_logs_warning_once.<locals>.sync_function"
+    new_fn = "new_function"
+    expected = f"Function {old_fn} is deprecated and will be removed in version 2.0.0. Use '{new_fn}' instead."
+    assert any(expected in rec.getMessage() for rec in caplog.records)
 
     caplog.clear()
 
@@ -65,9 +66,10 @@ def test_async_function_logs_warning_once(caplog):
         # First call should issue warning
         result = await async_function()
         assert result == "async_test"
-        assert any(
-            "Function test_decorators.test_async_function_logs_warning_once.<locals>.async_function is deprecated and will be removed in version 2.0.0. Use 'new_async_function' instead."
-            in rec.message for rec in caplog.records)
+        old_fn = "test_decorators.test_async_function_logs_warning_once.<locals>.async_function"
+        new_fn = "new_async_function"
+        expected = f"Function {old_fn} is deprecated and will be removed in version 2.0.0. Use '{new_fn}' instead."
+        assert any(expected in rec.getMessage() for rec in caplog.records)
 
         caplog.clear()
 
@@ -94,9 +96,10 @@ def test_generator_function_logs_warning_once(caplog):
     gen = generator_function()
     results = list(gen)
     assert results == [1, 2, 3]
-    assert any(
-        "Function test_decorators.test_generator_function_logs_warning_once.<locals>.generator_function is deprecated and will be removed in version 2.0.0. Use 'new_generator' instead."
-        in rec.message for rec in caplog.records)
+    old_fn = "test_decorators.test_generator_function_logs_warning_once.<locals>.generator_function"
+    new_fn = "new_generator"
+    expected = f"Function {old_fn} is deprecated and will be removed in version 2.0.0. Use '{new_fn}' instead."
+    assert any(expected in rec.getMessage() for rec in caplog.records)
 
     caplog.clear()
 
@@ -125,9 +128,10 @@ def test_async_generator_function_logs_warning_once(caplog):
             results.append(item)
 
         assert results == [1, 2, 3]
-        assert any(
-            "Function test_decorators.test_async_generator_function_logs_warning_once.<locals>.async_generator_function is deprecated and will be removed in version 2.0.0. Use 'new_async_generator' instead."
-            in rec.message for rec in caplog.records)
+        old_fn = "test_decorators.test_async_generator_function_logs_warning_once.<locals>.async_generator_function"
+        new_fn = "new_async_generator"
+        expected = f"Function {old_fn} is deprecated and will be removed in version 2.0.0. Use '{new_fn}' instead."
+        assert any(expected in rec.getMessage() for rec in caplog.records)
 
         caplog.clear()
 
@@ -154,7 +158,7 @@ def test_deprecation_with_feature_name(caplog):
 
     result = feature_function()
     assert result == "test"
-    assert any("Old Feature is deprecated and will be removed in version 2.0.0." in rec.message
+    assert any("Old Feature is deprecated and will be removed in version 2.0.0." in rec.getMessage()
                for rec in caplog.records)
 
 
@@ -168,9 +172,11 @@ def test_deprecation_with_reason(caplog):
 
     result = slow_function()
     assert result == "test"
-    assert any(
-        "Function test_decorators.test_deprecation_with_reason.<locals>.slow_function is deprecated and will be removed in a future release. Reason: This function has performance issues. Use 'fast_function' instead."
-        in rec.message for rec in caplog.records)
+    old_fn = "test_decorators.test_deprecation_with_reason.<locals>.slow_function"
+    new_fn = "fast_function"
+    expected = (f"Function {old_fn} is deprecated and will be removed in a future release. "
+                f"Reason: This function has performance issues. Use '{new_fn}' instead.")
+    assert any(expected in rec.getMessage() for rec in caplog.records)
 
 
 def test_deprecation_with_metadata(caplog):
@@ -183,9 +189,10 @@ def test_deprecation_with_metadata(caplog):
 
     result = metadata_function()
     assert result == "test"
-    assert any(
-        "Function test_decorators.test_deprecation_with_metadata.<locals>.metadata_function is deprecated and will be removed in a future release. | Metadata: {'author': 'test', 'version': '1.0'}"
-        in rec.message for rec in caplog.records)
+    old_fn = "test_decorators.test_deprecation_with_metadata.<locals>.metadata_function"
+    expected = (f"Function {old_fn} is deprecated and will be removed in a future release. "
+                "| Metadata: {'author': 'test', 'version': '1.0'}")
+    assert any(expected in rec.getMessage() for rec in caplog.records)
 
 
 def test_deprecation_decorator_factory(caplog):
@@ -198,9 +205,10 @@ def test_deprecation_decorator_factory(caplog):
 
     result = factory_function()
     assert result == "test"
-    assert any(
-        "Function test_decorators.test_deprecation_decorator_factory.<locals>.factory_function is deprecated and will be removed in version 2.0.0. Use 'new_function' instead."
-        in rec.message for rec in caplog.records)
+    old_fn = "test_decorators.test_deprecation_decorator_factory.<locals>.factory_function"
+    new_fn = "new_function"
+    expected = f"Function {old_fn} is deprecated and will be removed in version 2.0.0. Use '{new_fn}' instead."
+    assert any(expected in rec.getMessage() for rec in caplog.records)
 
 
 def test_issue_deprecation_warning_directly(caplog):
@@ -208,7 +216,7 @@ def test_issue_deprecation_warning_directly(caplog):
     caplog.set_level(logging.WARNING)
 
     issue_deprecation_warning("test_function")
-    assert any("Function test_function is deprecated and will be removed in a future release." in rec.message
+    assert any("Function test_function is deprecated and will be removed in a future release." in rec.getMessage()
                for rec in caplog.records)
 
     caplog.clear()
