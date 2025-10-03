@@ -43,7 +43,8 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
     - Grafana Tempo
     - Custom OTLP-compatible backends
 
-    Example:
+    Example::
+
         exporter = OTLPSpanAdapterExporter(
             endpoint="https://api.service.com/v1/traces",
             headers={"Authorization": "Bearer your-token"},
@@ -79,7 +80,7 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
             resource_attributes: Additional resource attributes for spans.
             endpoint: The endpoint for the OTLP service.
             headers: The headers for the OTLP service.
-            **otlp_kwargs: Additional keyword arguments for the OTLP service.
+            otlp_kwargs: Additional keyword arguments for the OTLP service.
         """
         super().__init__(context_state=context_state,
                          batch_size=batch_size,

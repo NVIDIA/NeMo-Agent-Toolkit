@@ -47,8 +47,7 @@ class SessionData:
 
 class MCPFunctionGroup(FunctionGroup):
     """
-    A specialized FunctionGroup for MCP clients that includes MCP-specific attributes
-    with session management.
+    A specialized FunctionGroup for MCP clients that includes MCP-specific attributes with session management.
     """
 
     def __init__(self, *args, **kwargs):
@@ -348,6 +347,7 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
 async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     """
     Connect to an MCP server and expose tools as a function group.
+
     Args:
         config: The configuration for the MCP client
         _builder: The builder
@@ -461,6 +461,7 @@ def mcp_apply_tool_alias_and_description(
         all_tools: dict, tool_overrides: dict[str, MCPToolOverrideConfig] | None) -> dict[str, MCPToolOverrideConfig]:
     """
     Filter tool overrides to only include tools that exist in the MCP server.
+
     Args:
         all_tools: The tools from the MCP server
         tool_overrides: The tool overrides to apply
