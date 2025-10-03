@@ -23,8 +23,8 @@ from pydantic import BaseModel
 
 from nat.data_models.span import Span
 from nat.data_models.span import SpanContext
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record import get_trace_container
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record import span_to_dfw_record
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw import get_trace_container
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw import span_to_dfw_record
 from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
 
 
