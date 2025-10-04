@@ -25,6 +25,7 @@ Authlib
 [Cc]hatbot(s?)
 # clangd is never capitalized even at the start of a sentence https://clangd.llvm.org/
 clangd
+Colab
 CMake
 [Cc]omposability
 [Cc]omposable
@@ -65,7 +66,9 @@ groundedness
 [Gg]ranularities
 [Hh]ashable
 [Hh]yperparameter(s?)
+impactful
 [Ii]nferencing
+[Ii]nterquartile
 isort
 Jira
 jsonlines
