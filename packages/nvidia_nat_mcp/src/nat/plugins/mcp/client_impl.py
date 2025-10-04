@@ -188,7 +188,6 @@ class MCPFunctionGroup(FunctionGroup):
                     # Close the client connection
                     if session_data:
                         to_close.append((session_id, session_data.client))
-                        logger.info("Cleaned up session tracking for: %s", truncate_session_id(session_id))
                 except Exception as e:
                     logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
                 finally:
