@@ -111,10 +111,13 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`simple_calculator_mcp`](MCP/simple_calculator_mcp/README.md)**: Demonstrates Model Context Protocol support using the basic simple calculator example
 
 ### Notebooks
-- **[Building an Agentic System](notebooks/README.md)**: Series of notebooks demonstrating how to build, connect, evaluate, profile and deploy an agentic system using the NeMo Agent toolkit
-  - **[`1_getting_started.ipynb`](notebooks/1_getting_started.ipynb)**: Getting started with the NeMo Agent toolkit
-  - **[`2_add_tools_and_agents.ipynb`](notebooks/2_add_tools_and_agents.ipynb)**: Adding tools and agents to your workflow
-  - **[`3_observability_evaluation_and_profiling.ipynb`](notebooks/3_observability_evaluation_and_profiling.ipynb)**: Observability, evaluation and profiling
+
+**[Building an Agentic System](notebooks/README.md)**: Series of notebooks demonstrating how to build, connect, evaluate, profile and deploy an agentic system using the NeMo Agent toolkit
+
+1. [Getting Started](notebooks/1_getting_started_with_nat.ipynb) - Getting started with the NeMo Agent toolkit
+2. [Bringing Your Own Agent](notebooks/2_bringing_your_own_agent.ipynb) - Bringing your own agent to the NeMo Agent toolkit
+3. [Adding Tools and Agents](notebooks/3_adding_tools_and_agents.ipynb) - Adding tools and agents to your workflow
+4. [Observability, Evaluation, and Profiling](notebooks/4_observability_evaluation_and_profiling.ipynb) - Observability, evaluation and profiling
 
 #### Brev Launchables
 
