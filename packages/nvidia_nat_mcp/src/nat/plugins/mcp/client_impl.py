@@ -65,7 +65,8 @@ class MCPFunctionGroup(FunctionGroup):
     • Reader: very short sections — dict lookups, ref_count ++/--, touch last_activity.
     • Writer: structural changes — create session entries, enforce limits, remove on cleanup.
     - SessionData.lock (asyncio.Lock)
-    • Protects per-session ref_count (and brief per-session fields), taken only while holding RW *reader*.
+    • Protects per-session ref_count only, taken only while holding RW *reader*.
+    • last_activity: written without session lock (timestamp races acceptable for cleanup heuristic).
 
     Ordering & awaits:
     - Always acquire RWLock (reader/writer) before SessionData.lock; never the reverse.
