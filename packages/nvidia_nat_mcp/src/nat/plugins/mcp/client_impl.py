@@ -49,6 +49,37 @@ class MCPFunctionGroup(FunctionGroup):
     """
     A specialized FunctionGroup for MCP clients that includes MCP-specific attributes
     with session management.
+
+    Locking model (simple + safe; occasional 'temporarily unavailable' is acceptable).
+
+    RW semantics:
+    - Multiple readers may hold the reader lock concurrently.
+    - While any reader holds the lock, writers cannot proceed.
+    - While the writer holds the lock, no new readers can proceed.
+
+    Data:
+    - _sessions: dict[str, SessionData]; SessionData = {client, last_activity, ref_count, lock}.
+
+    Locks:
+    - _session_rwlock (aiorwlock.RWLock)
+    • Reader: very short sections — dict lookups, ref_count ++/--, touch last_activity.
+    • Writer: structural changes — create session entries, enforce limits, remove on cleanup.
+    - SessionData.lock (asyncio.Lock)
+    • Protects per-session ref_count (and brief per-session fields), taken only while holding RW *reader*.
+
+    Ordering & awaits:
+    - Always acquire RWLock (reader/writer) before SessionData.lock; never the reverse.
+    - Never await network I/O under the writer (client creation is the one intentional exception).
+    - Client close happens after releasing the writer.
+
+    Cleanup:
+    - Under writer: find inactive (ref_count == 0 and idle > max_age), pop from _sessions, stash clients.
+    - After writer: await client.__aexit__() for each stashed client.
+
+    Invariants:
+    - ref_count > 0 prevents cleanup.
+    - Usage context increments ref_count before yielding and decrements on exit.
+    - If a session disappears between ensure/use, callers return "Tool temporarily unavailable".
     """
 
     def __init__(self, *args, **kwargs):
