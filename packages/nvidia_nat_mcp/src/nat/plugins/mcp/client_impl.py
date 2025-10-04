@@ -72,6 +72,9 @@ class MCPFunctionGroup(FunctionGroup):
         self._shared_auth_provider: AuthProviderBase | None = None
         self._client_config: MCPClientConfig | None = None
 
+        # Use random session id for testing only
+        self._use_random_session_id_for_testing: bool = False
+
     @property
     def mcp_client(self):
         """Get the MCP client instance."""
@@ -121,7 +124,11 @@ class MCPFunctionGroup(FunctionGroup):
             session_id = None
             cookies = getattr(_Ctx.get().metadata, "cookies", None)
             if cookies:
-                session_id = cookies.get("nat-session")
+                if self._use_random_session_id_for_testing:
+                    # This path is for testing only and should not be used in production
+                    session_id = self._get_random_session_id()
+                else:
+                    session_id = cookies.get("nat-session")
 
             if not session_id:
                 # use default user id if allowed
