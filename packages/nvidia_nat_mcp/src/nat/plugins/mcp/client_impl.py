@@ -334,6 +334,8 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
             else:
                 # Use session usage context to prevent cleanup during tool execution
                 async with function_group._session_usage_context(session_id) as client:
+                    if client is None:
+                        return "Tool temporarily unavailable. Try again."
                     session_tool = await client.get_tool(tool.name)
 
             # Preserve original calling convention
