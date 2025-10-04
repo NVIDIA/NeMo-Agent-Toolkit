@@ -162,6 +162,8 @@ class MCPFunctionGroup(FunctionGroup):
         if max_age is None:
             max_age = self._client_config.session_idle_timeout if self._client_config else timedelta(hours=1)
 
+        to_close: list[tuple[str, MCPBaseClient]] = []
+
         async with self._session_rwlock.writer:
             current_time = datetime.now()
             inactive_sessions = []
@@ -179,8 +181,9 @@ class MCPFunctionGroup(FunctionGroup):
                     logger.info("Cleaning up inactive session client: %s", truncate_session_id(session_id))
                     session_data = self._sessions[session_id]
                     # Close the client connection
-                    await session_data.client.__aexit__(None, None, None)
-                    logger.info("Cleaned up inactive session client: %s", truncate_session_id(session_id))
+                    if session_data:
+                        to_close.append((session_id, session_data.client))
+                        logger.info("Cleaned up session tracking for: %s", truncate_session_id(session_id))
                 except Exception as e:
                     logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
                 finally:
@@ -188,6 +191,15 @@ class MCPFunctionGroup(FunctionGroup):
                     self._sessions.pop(session_id, None)
                     logger.info("Cleaned up session tracking for: %s", truncate_session_id(session_id))
                     logger.info(" Total sessions: %d", len(self._sessions))
+
+        # Close sessions outside the writer lock to avoid deadlock
+        for session_id, client in to_close:
+            try:
+                logger.info("Cleaning up inactive session client: %s", truncate_session_id(session_id))
+                await client.__aexit__(None, None, None)
+                logger.info("Cleaned up inactive session client: %s", truncate_session_id(session_id))
+            except Exception as e:
+                logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
 
     async def _get_session_client(self, session_id: str) -> MCPBaseClient:
         """Get the appropriate MCP client for the session."""
