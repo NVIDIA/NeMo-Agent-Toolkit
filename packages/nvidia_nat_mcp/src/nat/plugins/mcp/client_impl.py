@@ -228,8 +228,8 @@ class MCPFunctionGroup(FunctionGroup):
                 logger.warning("Session limit reached (%d), rejecting new session: %s",
                                self._client_config.max_sessions,
                                truncate_session_id(session_id))
-                raise RuntimeError(f"Service temporarily unavailable: Maximum concurrent sessions "
-                                   f"({self._client_config.max_sessions}) exceeded. Please try again later.")
+                raise RuntimeError(f"Tool unavailable: Maximum concurrent sessions "
+                                   f"({self._client_config.max_sessions}) exceeded.")
 
             # Create session client lazily
             logger.info("Creating new MCP client for session: %s", truncate_session_id(session_id))
