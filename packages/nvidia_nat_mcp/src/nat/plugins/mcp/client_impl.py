@@ -76,6 +76,7 @@ class MCPFunctionGroup(FunctionGroup):
     Cleanup:
     - Under writer: find inactive (ref_count == 0 and idle > max_age), pop from _sessions, stash clients.
     - After writer: await client.__aexit__() for each stashed client.
+    - TOCTOU race: cleanup may read ref_count==0 then a usage increments it; accepted, yields None gracefully.
 
     Invariants:
     - ref_count > 0 prevents cleanup.
