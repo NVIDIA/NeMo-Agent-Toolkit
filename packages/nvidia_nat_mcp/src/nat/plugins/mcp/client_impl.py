@@ -249,21 +249,30 @@ class MCPFunctionGroup(FunctionGroup):
         # Ensure session exists - create it if it doesn't
         if session_id not in self._sessions:
             # Create session client first
-            await self._get_session_client(session_id)
-            # Session should now exist in _sessions
+            await self._get_session_client(session_id)  # START read phase: bump ref_count under reader + session lock
 
-        # Get session data (session must exist at this point)
-        session_data = self._sessions[session_id]
-
-        # Thread-safe reference counting using per-session lock
-        async with session_data.lock:
-            session_data.ref_count += 1
+        async with self._session_rwlock.reader:
+            sdata = self._sessions.get(session_id)
+            if not sdata:
+                # this can happen if the session is cleaned up between the check and the lock
+                # this is rare and we can just return that the tool is temporarily unavailable
+                yield None
+                return
+            async with sdata.lock:
+                sdata.ref_count += 1
+                client = sdata.client  # capture
+        # END read phase (release reader before long await)
 
         try:
-            yield
+            yield client
         finally:
-            async with session_data.lock:
-                session_data.ref_count -= 1
+            # Brief read phase to decrement ref_count and touch activity
+            async with self._session_rwlock.reader:
+                sdata = self._sessions.get(session_id)
+                if sdata:
+                    async with sdata.lock:
+                        sdata.ref_count -= 1
+                        sdata.last_activity = datetime.now()
 
     async def _create_session_client(self, session_id: str) -> MCPBaseClient:
         """Create a new MCP client instance for the session."""
@@ -324,8 +333,7 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
                 session_tool = await client.get_tool(tool.name)
             else:
                 # Use session usage context to prevent cleanup during tool execution
-                async with function_group._session_usage_context(session_id):
-                    client = await function_group._get_session_client(session_id)
+                async with function_group._session_usage_context(session_id) as client:
                     session_tool = await client.get_tool(tool.name)
 
             # Preserve original calling convention
