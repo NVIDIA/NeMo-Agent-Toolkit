@@ -115,6 +115,11 @@ class MCPFunctionGroup(FunctionGroup):
         """Maximum allowed sessions."""
         return self._client_config.max_sessions if self._client_config else 100
 
+    def _get_random_session_id(self) -> str:
+        """Get a random session ID."""
+        import uuid
+        return str(uuid.uuid4())
+
     def _get_session_id_from_context(self) -> str | None:
         """Get the session ID from the current context."""
         try:
