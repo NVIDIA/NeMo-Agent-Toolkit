@@ -72,28 +72,25 @@ async def streaming_function(config: StreamingEchoFunctionConfig, builder: Build
     yield FunctionInfo.from_fn(inner_oai if config.use_openai_api else inner, converters=[oai_to_list])
 
 
-class ConstantFunctionConfig(FunctionBaseConfig, name="test_constant"):
-    response: str
+# class ConstantFunctionConfig(FunctionBaseConfig, name="test_constant"):
+#     response: str
 
+# @register_function(config_type=ConstantFunctionConfig)
+# async def constant_function(config: ConstantFunctionConfig, builder: Builder):
 
-@register_function(config_type=ConstantFunctionConfig)
-async def constant_function(config: ConstantFunctionConfig, builder: Builder):
+#     async def inner() -> str:
+#         return config.response
 
-    async def inner() -> str:
-        return config.response
+#     yield inner
 
-    yield inner
+# class StreamingConstantFunctionConfig(FunctionBaseConfig, name="test_streaming_constant"):
+#     responses: list[str]
 
+# @register_function(config_type=StreamingConstantFunctionConfig)
+# async def streaming_constant_function(config: StreamingConstantFunctionConfig, builder: Builder):
 
-class StreamingConstantFunctionConfig(FunctionBaseConfig, name="test_streaming_constant"):
-    responses: list[str]
+#     async def inner() -> AsyncGenerator[str]:
+#         for value in config.responses:
+#             yield value
 
-
-@register_function(config_type=StreamingConstantFunctionConfig)
-async def streaming_constant_function(config: StreamingConstantFunctionConfig, builder: Builder):
-
-    async def inner() -> AsyncGenerator[str]:
-        for value in config.responses:
-            yield value
-
-    yield inner
+#     yield inner

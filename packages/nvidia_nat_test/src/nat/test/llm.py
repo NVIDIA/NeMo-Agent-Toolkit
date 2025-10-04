@@ -35,7 +35,6 @@ from nat.data_models.llm import LLMBaseConfig
 
 class TestLLMConfig(LLMBaseConfig, name="nat_test_llm"):
     """Test LLM configuration."""
-    __test__ = False
     response_seq: list[str] = Field(
         default=[],
         description="Returns the next element in order (wraps)",
