@@ -57,6 +57,7 @@ Dynatrace
 [Ee]val
 [Ee]xplainability
 Faiss
+Gantt
 [Gg]eneratable
 GitHub
 glog
