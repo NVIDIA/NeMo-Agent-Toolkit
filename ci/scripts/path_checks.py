@@ -162,8 +162,8 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     ),
     # ignore notebook-relative paths
     (
-        r"^examples/notebooks/retail_sales_agent/.*configs/",
-        r"^\./retail_sales_agent/data/",
+        r"^examples/notebooks/",
+        r".*(configs|data|src).*",
     ),
     (
         r"^examples/frameworks/haystack_deep_research_agent/README.md",

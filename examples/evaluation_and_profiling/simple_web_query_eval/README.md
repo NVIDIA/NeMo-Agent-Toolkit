@@ -126,8 +126,8 @@ To enable the `eval_upload.yml` workflow, you must configure an S3-compatible bu
 3. In `eval_upload.yml`, update the `bucket`, `endpoint_url` (if using a custom endpoint), and credentials under both `eval.general.output.s3` and `eval.general.dataset.s3`.
 
 **Using MinIO**
-1. Start a local MinIO server or cloud instance.
-2. Create a bucket via the MinIO console or client by following instructions [here](https://min.io/docs/minio/linux/reference/minio-mc/mc-mb.html).
+1. Start a local MinIO server or cloud instance. To start a local MinIO server, consult the [MinIO section](../../deploy/README.md#running-services) of the deployment guide.
+2. Create a bucket by visiting the MinIO console at http://localhost:9001 (or the cloud instance endpoint) and login with your credentials. Then, click the "Create Bucket" button.
 3. Set environment variables:
    ```bash
    export AWS_ACCESS_KEY_ID=<MINIO_ACCESS_KEY>

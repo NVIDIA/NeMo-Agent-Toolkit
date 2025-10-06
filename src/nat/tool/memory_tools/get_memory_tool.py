@@ -67,6 +67,6 @@ async def get_memory_tool(config: GetToolConfig, builder: Builder):
 
         except Exception as e:
 
-            raise ToolException(f"Error retreiving memory: {e}") from e
+            raise ToolException(f"Error retrieving memory: {e}") from e
 
     yield FunctionInfo.from_fn(_arun, description=config.description)
