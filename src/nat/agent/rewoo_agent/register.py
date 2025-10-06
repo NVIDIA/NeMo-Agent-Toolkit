@@ -26,6 +26,7 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.utils.type_converter import GlobalTypeConverter
@@ -157,7 +158,13 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
             # Ensure output_message is a string
             if isinstance(output_message, list | dict):
                 output_message = str(output_message)
-            return ChatResponse.from_string(output_message)
+
+            # Create usage statistics for the response
+            prompt_tokens = sum(len(str(msg.content).split()) for msg in input_message.messages)
+            completion_tokens = len(output_message.split()) if output_message else 0
+            total_tokens = prompt_tokens + completion_tokens
+            usage = Usage(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, total_tokens=total_tokens)
+            return ChatResponse.from_string(output_message, usage=usage)
 
         except Exception as ex:
             logger.exception("ReWOO Agent failed with exception: %s", ex)

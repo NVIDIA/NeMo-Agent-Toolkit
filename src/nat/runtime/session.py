@@ -16,6 +16,7 @@
 import asyncio
 import contextvars
 import typing
+import uuid
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import asynccontextmanager
@@ -160,6 +161,31 @@ class SessionManager:
 
         if request.headers.get("user-message-id"):
             self._context_state.user_message_id.set(request.headers["user-message-id"])
+
+        # W3C Trace Context header: traceparent: 00-<trace-id>-<span-id>-<flags>
+        traceparent = request.headers.get("traceparent")
+        if traceparent:
+            try:
+                parts = traceparent.split("-")
+                if len(parts) >= 4:
+                    trace_id_hex = parts[1]
+                    if len(trace_id_hex) == 32:
+                        trace_id_int = uuid.UUID(trace_id_hex).int
+                        self._context_state.workflow_trace_id.set(trace_id_int)
+            except Exception:
+                pass
+
+        if not self._context_state.workflow_trace_id.get():
+            workflow_trace_id = request.headers.get("workflow-trace-id")
+            if workflow_trace_id:
+                try:
+                    self._context_state.workflow_trace_id.set(uuid.UUID(workflow_trace_id).int)
+                except Exception:
+                    pass
+
+        workflow_run_id = request.headers.get("workflow-run-id")
+        if workflow_run_id:
+            self._context_state.workflow_run_id.set(workflow_run_id)
 
     def set_metadata_from_websocket(self,
                                     websocket: WebSocket,

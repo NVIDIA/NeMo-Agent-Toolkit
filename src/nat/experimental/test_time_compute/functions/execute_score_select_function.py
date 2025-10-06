@@ -46,7 +46,7 @@ async def execute_score_select_function(config: ExecuteScoreSelectFunctionConfig
 
     from pydantic import BaseModel
 
-    executable_fn: Function = builder.get_function(name=config.augmented_fn)
+    executable_fn: Function = await builder.get_function(name=config.augmented_fn)
 
     if config.scorer:
         scorer = await builder.get_ttc_strategy(strategy_name=config.scorer,

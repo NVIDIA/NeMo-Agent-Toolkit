@@ -27,6 +27,50 @@ from jinja2 import FileSystemLoader
 logger = logging.getLogger(__name__)
 
 
+def _get_nat_version() -> str | None:
+    """
+    Get the current NAT version.
+
+    Returns:
+        str: The NAT version intended for use in a dependency string.
+        None: If the NAT version is not found.
+    """
+    from nat.cli.entrypoint import get_version
+
+    current_version = get_version()
+    if current_version == "unknown":
+        return None
+
+    version_parts = current_version.split(".")
+    if len(version_parts) < 3:
+        # If the version somehow doesn't have three parts, return the full version
+        return current_version
+
+    patch = version_parts[2]
+    try:
+        # If the patch is a number, keep only the major and minor parts
+        # Useful for stable releases and adheres to semantic versioning
+        _ = int(patch)
+        digits_to_keep = 2
+    except ValueError:
+        # If the patch is not a number, keep all three digits
+        # Useful for pre-release versions (and nightly builds)
+        digits_to_keep = 3
+
+    return ".".join(version_parts[:digits_to_keep])
+
+
+def _is_nat_version_prerelease() -> bool:
+    """
+    Check if the NAT version is a prerelease.
+    """
+    version = _get_nat_version()
+    if version is None:
+        return False
+
+    return len(version.split(".")) >= 3
+
+
 def _get_nat_dependency(versioned: bool = True) -> str:
     """
     Get the NAT dependency string with version.
@@ -44,16 +88,12 @@ def _get_nat_dependency(versioned: bool = True) -> str:
         logger.debug("Using unversioned NAT dependency: %s", dependency)
         return dependency
 
-    # Get the current NAT version
-    from nat.cli.entrypoint import get_version
-    current_version = get_version()
-    if current_version == "unknown":
-        logger.warning("Could not detect NAT version, using unversioned dependency")
+    version = _get_nat_version()
+    if version is None:
+        logger.debug("Could not detect NAT version, using unversioned dependency: %s", dependency)
         return dependency
 
-    # Extract major.minor (e.g., "1.2.3" -> "1.2")
-    major_minor = ".".join(current_version.split(".")[:2])
-    dependency += f"~={major_minor}"
+    dependency += f"~={version}"
     logger.debug("Using NAT dependency: %s", dependency)
     return dependency
 
@@ -219,12 +259,16 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
             install_cmd = ['uv', 'pip', 'install', '-e', str(new_workflow_dir)]
         else:
             install_cmd = ['pip', 'install', '-e', str(new_workflow_dir)]
+            if _is_nat_version_prerelease():
+                install_cmd.insert(2, "--pre")
+
+        python_safe_workflow_name = workflow_name.replace("-", "_")
 
         # List of templates and their destinations
         files_to_render = {
             'pyproject.toml.j2': new_workflow_dir / 'pyproject.toml',
             'register.py.j2': base_dir / 'register.py',
-            'workflow.py.j2': base_dir / f'{workflow_name}_function.py',
+            'workflow.py.j2': base_dir / f'{python_safe_workflow_name}.py',
             '__init__.py.j2': base_dir / '__init__.py',
             'config.yml.j2': configs_dir / 'config.yml',
         }
@@ -233,7 +277,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         context = {
             'editable': editable,
             'workflow_name': workflow_name,
-            'python_safe_workflow_name': workflow_name.replace("-", "_"),
+            'python_safe_workflow_name': python_safe_workflow_name,
             'package_name': package_name,
             'rel_path_to_repo_root': rel_path_to_repo_root,
             'workflow_class_name': f"{_generate_valid_classname(workflow_name)}FunctionConfig",

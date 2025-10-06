@@ -16,7 +16,7 @@
 from .span_extractor import extract_timestamp
 from .span_extractor import extract_token_usage
 from .span_extractor import extract_usage_info
-from .span_to_dfw_record import span_to_dfw_record
+from .span_to_dfw import span_to_dfw_record
 from .trace_adapter_registry import TraceAdapterRegistry
 from .trace_adapter_registry import register_adapter
 

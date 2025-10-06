@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nat.plugins.opentelemetry.otel_span import OtelSpan
 
-general:
-  logging:
-    console:
-      _type: console
-      level: WARN
 
-workflow:
-  _type: first_search_agent
+def test_otel_span_ids_are_non_zero():
+    s = OtelSpan(name="test", context=None, parent=None, attributes={})
+    ctx = s.get_span_context()
+    assert ctx.trace_id != 0
+    assert ctx.span_id != 0
+    assert len(f"{ctx.trace_id:032x}") == 32
+    assert len(f"{ctx.span_id:016x}") == 16
