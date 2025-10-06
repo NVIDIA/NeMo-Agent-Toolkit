@@ -98,6 +98,7 @@ zep-cloud = ["nvidia-nat-zep-cloud"]
 examples = [
   "nat_adk_demo",
   "nat_agno_personal_finance",
+  "nat_haystack_deep_research_agent",
   "nat_alert_triage_agent",
   "nat_automated_description_generation",
   "nat_email_phishing_analyzer",
@@ -142,6 +143,9 @@ async_endpoints = [
 ]
 
 # specific versions of shared packages within optional subpackages
+nvidia_haystack = [
+  "nvidia-haystack~=0.3.0",
+]
 litellm = [
   "litellm==1.74.9"
 ]
@@ -180,6 +184,7 @@ nvidia-nat-zep-cloud = { workspace = true }
 # All examples here
 nat_adk_demo = { path = "examples/frameworks/adk_demo", editable = true }
 nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
+nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
 nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
