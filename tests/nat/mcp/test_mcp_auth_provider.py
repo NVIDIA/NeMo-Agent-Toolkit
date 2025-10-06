@@ -515,6 +515,7 @@ class TestMCPOAuth2Provider:
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
             mock_resp.status_code = 200
+            mock_resp.headers = {"content-type": "application/json"}
             mock_resp.aread.return_value = b'{"authorization_endpoint": "https://auth.example.com/authorize"}'
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
 
@@ -529,6 +530,7 @@ class TestMCPOAuth2Provider:
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
             mock_resp.status_code = 200
+            mock_resp.headers = {"content-type": "application/json"}
             mock_resp.aread.return_value = b'invalid json'
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
 
