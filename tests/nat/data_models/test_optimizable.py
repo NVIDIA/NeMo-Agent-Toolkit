@@ -71,7 +71,6 @@ class TestOptimizableField:
         class M(BaseModel):
             x: int = OptimizableField(5, space=space)
 
-        m = M()
         extras = dict(M.model_fields)["x"].json_schema_extra
         assert extras["optimizable"] is True
         assert extras["search_space"] is space
@@ -81,7 +80,6 @@ class TestOptimizableField:
         class M(BaseModel):
             x: int = OptimizableField(5)
 
-        m = M()
         extras = dict(M.model_fields)["x"].json_schema_extra
         assert extras["optimizable"] is True
         assert "search_space" not in extras
@@ -98,7 +96,6 @@ class TestOptimizableField:
                 },
             )
 
-        m = M()
         extras = dict(M.model_fields)["x"].json_schema_extra
         assert extras["optimizable"] is True
         assert extras["search_space"] is space
@@ -119,7 +116,6 @@ class TestOptimizableField:
                 },
             )
 
-        m = M()
         extras = dict(M.model_fields)["x"].json_schema_extra
         assert extras["optimizable"] is True
         assert extras["search_space"] is space
@@ -138,7 +134,6 @@ class TestOptimizableField:
                 },
             )
 
-        m = M()
         extras = dict(M.model_fields)["x"].json_schema_extra
         assert extras["optimizable"] is False
         assert extras["search_space"] == user_space
