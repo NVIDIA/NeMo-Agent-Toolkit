@@ -5978,7 +5978,7 @@ requires-dist = [
     { name = "rich", specifier = "~=13.9" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'async-endpoints'", specifier = "~=2.0" },
     { name = "tabulate", specifier = "~=0.9" },
-    { name = "uvicorn", extras = ["standard"], specifier = "~=0.34" },
+    { name = "uvicorn", extras = ["standard"], specifier = "<0.36" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
 provides-extras = ["all", "adk", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
