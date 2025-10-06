@@ -141,7 +141,11 @@ set_type_checking_flag = True  # Enable 'expensive' imports for sphinx_autodoc_t
 nbsphinx_allow_errors = True  # Continue through Jupyter errors
 add_module_names = False  # Remove namespaces from class/method signatures
 myst_heading_anchors = 4  # Generate links for markdown headers
-copybutton_prompt_text = ">>> |$ |# "  # characters to be stripped from the copied text
+copybutton_prompt_text = ">>> |$ "  # characters to be stripped from the copied text
+
+# Allow GitHub-style mermaid fence code blocks to be used in markdown files
+# see https://myst-parser.readthedocs.io/en/latest/configuration.html
+myst_fence_as_directive = ["mermaid"]
 
 suppress_warnings = [
     "myst.header"  # Allow header increases from h2 to h4 (skipping h3)
