@@ -344,6 +344,7 @@ class TestTokenStorageIntegration:
                    ) as mock_provider_class:
             mock_instance = AsyncMock()
             mock_instance.authenticate = AsyncMock(return_value=sample_auth_result)
+            mock_instance._set_custom_auth_callback = MagicMock()
             mock_provider_class.return_value = mock_instance
 
             await provider._nat_oauth2_authenticate(user_id="test_user")
