@@ -160,13 +160,15 @@ class MCPFunctionGroup(FunctionGroup):
 
             # Get session id from context, authentication is done per-websocket session for tool calls
             session_id = None
-            cookies = getattr(_Ctx.get().metadata, "cookies", None)
-            if cookies:
-                if self._use_random_session_id_for_testing:
-                    # This path is for testing only and should not be used in production
-                    session_id = self._get_random_session_id()
-                else:
-                    session_id = cookies.get("nat-session")
+            # get session id from cookies if session_aware_tools is enabled
+            if self._client_config and self._client_config.session_aware_tools:
+                cookies = getattr(_Ctx.get().metadata, "cookies", None)
+                if cookies:
+                    if self._use_random_session_id_for_testing:
+                        # This path is for testing only and should not be used in production
+                        session_id = self._get_random_session_id()
+                    else:
+                        session_id = cookies.get("nat-session")
 
             if not session_id:
                 # use default user id if allowed
@@ -495,11 +497,7 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             description = override.description if override and override.description else tool.description
 
             # Create the tool function according to configuration
-            if config.session_aware_tools:
-                tool_fn = mcp_session_tool_function(tool, group)
-            else:
-                from nat.plugins.mcp.tool import mcp_tool_function
-                tool_fn = mcp_tool_function(tool)
+            tool_fn = mcp_session_tool_function(tool, group)
 
             # Normalize optional typing for linter/type-checker compatibility
             single_fn = tool_fn.single_fn
