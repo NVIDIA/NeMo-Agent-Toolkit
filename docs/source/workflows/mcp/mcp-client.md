@@ -300,7 +300,6 @@ nat mcp client tool call calculator_multiply \
   --json-args '{"text": "2 * 3"}'
 ```
 
-```
 ### Using Protected MCP Servers
 
 To use a protected MCP server, you need to provide the `--auth` flag:

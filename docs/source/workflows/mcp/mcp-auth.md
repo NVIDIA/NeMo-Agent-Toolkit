@@ -101,7 +101,7 @@ Set `CORPORATE_MCP_JIRA_URL` to your protected Jira MCP server URL, not the samp
 ### Running the Workflow in Single-User Mode (CLI)
 In this mode, the `default_user_id` is used for authentication during setup and for subsequent tool calls.
 
-```{mermaid}
+```mermaid
 flowchart LR
   U[User<br/>default-user-id] --> H[MCP Host<br/>NAT Workflow]
   H --> C[MCP Client<br/>default-user-id]
@@ -122,7 +122,7 @@ nat run --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.
 ### Running the Workflow in Multi-User Mode (FastAPI)
 In this mode the workflow is served via a FastAPI frontend. Multiple users can access the workflow concurrently using a UI with `WebSocket` mode enabled.
 
-```{mermaid}
+```mermaid
 flowchart LR
   U0[User<br/>default-user-id] --> H2[MCP Host<br/>NAT Workflow]
   U1[User<br/>UI-User-1] --> H2
