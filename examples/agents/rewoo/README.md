@@ -233,7 +233,7 @@ Once the server is running, you can make HTTP requests to interact with the work
 curl --request POST \
   --url http://localhost:8000/generate \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "Make a joke comparing Elon and Mark Zuckerberg's birthdays?"}'
+  --data "{\"input_message\": \"Make a joke comparing Elon and Mark Zuckerberg's birthdays?\"}"
 ```
 
 #### Streaming Requests
@@ -244,7 +244,7 @@ curl --request POST \
 curl --request POST \
   --url http://localhost:8000/generate/stream \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "Make a joke comparing Elon and Mark Zuckerberg's birthdays?"}'
+  --data "{\"input_message\": \"Make a joke comparing Elon and Mark Zuckerberg's birthdays?\"}"
 ```
 ---
 
