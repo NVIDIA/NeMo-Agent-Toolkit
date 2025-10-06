@@ -41,6 +41,7 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
     A callback manager/handler for CrewAI that intercepts calls to:
       - ToolUsage._use
       - LLM Calls
+
     to collect usage statistics (tokens, inputs, outputs, time intervals, etc.)
     and store them in NAT's usage_stats queue for subsequent analysis.
     """

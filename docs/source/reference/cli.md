@@ -473,6 +473,138 @@ Options:
   --help                      Show this message and exit.
 ```
 
+## Optimize
+
+The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent toolkit Optimizer Guide](../reference/optimizer.md) for a comprehensive overview of the optimizer capabilities and configuration.
+
+The `nat optimize --help` utility provides a brief overview of the command and its available options:
+
+```console
+$ nat optimize --help
+Usage: nat optimize [OPTIONS] COMMAND [ARGS]...
+
+  Optimize a workflow with the specified dataset.
+
+Options:
+  --config_file FILE          A JSON/YAML file that sets the parameters for
+                              the workflow and evaluation.  [required]
+  --dataset FILE              A json file with questions and ground truth
+                              answers. This will override the dataset path in
+                              the config file.
+  --result_json_path TEXT     A JSON path to extract the result from the
+                              workflow. Use this when the workflow returns
+                              multiple objects or a dictionary. For example,
+                              '$.output' will extract the 'output' field from
+                              the result.  [default: $]
+  --endpoint TEXT             Use endpoint for running the workflow. Example:
+                              http://localhost:8000/generate
+  --endpoint_timeout INTEGER  HTTP response timeout in seconds. Only relevant
+                              if endpoint is specified.  [default: 300]
+  --help                      Show this message and exit.
+```
+
+### Options Description
+
+- **`--config_file`**: This is the main configuration file that contains both the workflow configuration and the optimizer settings. The file must include an `optimizer` section that defines the optimization parameters, search spaces, and evaluation metrics.
+
+- **`--dataset`**: Path to a JSON file containing the evaluation dataset with questions and ground truth answers. If provided, this will override the dataset path specified in the configuration file. The dataset is used to evaluate different parameter combinations during optimization.
+
+- **`--result_json_path`**: A JSON path expression to extract the relevant result from the workflow output. This is useful when your workflow returns complex objects or dictionaries and you need to specify which field contains the actual result to evaluate. The default value `$` uses the entire output.
+
+- **`--endpoint`**: Instead of running the workflow locally, you can specify an HTTP endpoint where the workflow is deployed. This is useful for optimizing workflows that are already running as services.
+
+- **`--endpoint_timeout`**: When using the `--endpoint` option, this sets the maximum time (in seconds) to wait for a response from the remote service.
+
+
+To optimize a workflow with a local configuration, run:
+
+<!-- path-check-skip-begin -->
+```bash
+nat optimize --config_file configs/my_workflow_optimizer.yml
+```
+<!-- path-check-skip-end -->
+
+## GPU Cluster Sizing
+
+The `nat sizing calc` command estimates GPU requirements and produces performance plots for a workflow. You can run it online (collect metrics by executing the workflow) or offline (estimate from previously collected metrics). For a full guide, see [GPU Cluster Sizing](../workflows/sizing-calc.md).
+
+The `nat sizing calc --help` utility provides a brief overview of the command and its available options:
+
+```console
+$ nat sizing calc --help
+Usage: nat sizing calc [OPTIONS]
+
+  Estimate GPU count and plot metrics for a workflow
+
+Options:
+  --config_file FILE               A YAML config file for the workflow and
+                                   evaluation. This is not needed in offline
+                                   mode.
+  --offline_mode                   Run in offline mode. This is used to
+                                   estimate the GPU count for a workflow
+                                   without running the workflow.
+  --target_llm_latency FLOAT       Target p95 LLM latency (seconds). Can be
+                                   set to 0 to ignore.
+  --target_workflow_runtime FLOAT  Target p95 workflow runtime (seconds). Can
+                                   be set to 0 to ignore.
+  --target_users INTEGER           Target number of users to support.
+  --test_gpu_count INTEGER         Number of GPUs used in the test.
+  --calc_output_dir DIRECTORY      Directory to save plots and results
+                                   (optional).
+  --concurrencies TEXT             Comma-separated list of concurrency values
+                                   to test (e.g., 1,2,4,8). Default:
+                                   1,2,3,4,5,6,7,8,9,10
+  --num_passes INTEGER             Number of passes at each concurrency for the
+                                   evaluation. If set to 0 the dataset is
+                                   adjusted to a multiple of the concurrency.
+                                   Default: 0
+  --append_calc_outputs            Append calc outputs to the output
+                                   directory. By default append is set to
+                                   False and the content of the online
+                                   directory is overwritten.
+  --endpoint TEXT                  Endpoint to use for the workflow if it is
+                                   remote (optional).
+  --endpoint_timeout INTEGER       Timeout for the remote workflow endpoint in
+                                   seconds (default: 300).
+  --help                           Show this message and exit.
+```
+
+### Examples
+
+- Online metrics collection and plots:
+
+```bash
+nat sizing calc \
+  --config_file $CONFIG_FILE \
+  --calc_output_dir $CALC_OUTPUT_DIR \
+  --concurrencies 1,2,4,8,16,32 \
+  --num_passes 2
+```
+
+- Offline estimation from prior results, targeting 100 users and 10-second p95 workflow time, assuming tests ran with 8 GPUs:
+
+```bash
+nat sizing calc \
+  --offline_mode \
+  --calc_output_dir $CALC_OUTPUT_DIR \
+  --test_gpu_count 8 \
+  --target_workflow_runtime 10 \
+  --target_users 100
+```
+
+- Combined run (collect metrics and estimate in one command):
+
+```bash
+nat sizing calc \
+  --config_file $CONFIG_FILE \
+  --calc_output_dir $CALC_OUTPUT_DIR \
+  --concurrencies 1,2,4,8,16,32 \
+  --num_passes 2 \
+  --test_gpu_count 8 \
+  --target_workflow_runtime 10 \
+  --target_users 100
+```
+
 ## Uninstall
 
 When a package and its corresponding components are no longer needed, they can be removed from the local environment.
@@ -881,4 +1013,119 @@ Options:
   -c, --channel TEXT  The remote registry channel that will remove the NAT
                       artifact.  [required]
   --help              Show this message and exit.
+```
+
+## Object Store Commands
+
+The `nat object-store` command group provides utilities to interact with object stores. This command group is used to
+upload and download files to and from object stores.
+
+The `nat object-store --help` utility provides an overview of its usage:
+
+```console
+$ nat object-store --help
+Usage: nat object-store [OPTIONS] COMMAND [ARGS]...
+
+  Manage object store operations.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  mysql  MySQL object store operations.
+  redis  Redis object store operations.
+  s3     S3 object store operations.
+```
+
+The listed commands are dependent on the first-party object store plugins installed. See [Object Store](../store-and-retrieve/object-store.md) for more details.
+
+### MySQL Object Store
+
+The `nat object-store mysql` command provides operations to interact with a MySQL object store.
+
+The `nat object-store mysql --help` utility provides an overview of its usage:
+
+```console
+Usage: nat object-store mysql [OPTIONS] BUCKET_NAME COMMAND [ARGS]...
+
+  MySQL object store operations.
+
+Options:
+  --host TEXT      MySQL host
+  --port INTEGER   MySQL port
+  --db TEXT        MySQL database name
+  --username TEXT  MySQL username
+  --password TEXT  MySQL password
+  --help           Show this message and exit.
+
+Commands:
+  delete  Delete files from an object store.
+  upload  Upload a directory to an object store.
+```
+
+### Redis Object Store
+
+The `nat object-store redis` command provides operations to interact with a Redis object store.
+
+The `nat object-store redis --help` utility provides an overview of its usage:
+
+```console
+Usage: nat object-store redis [OPTIONS] BUCKET_NAME COMMAND [ARGS]...
+
+  Redis object store operations.
+
+Options:
+  --host TEXT     Redis host
+  --port INTEGER  Redis port
+  --db INTEGER    Redis db
+  --help          Show this message and exit.
+
+Commands:
+  delete  Delete files from an object store.
+  upload  Upload a directory to an object store.
+```
+
+### S3 Object Store
+
+The `nat object-store s3` command provides operations to interact with a S3 object store.
+
+The `nat object-store s3 --help` utility provides an overview of its usage:
+
+```console
+Usage: nat object-store s3 [OPTIONS] BUCKET_NAME COMMAND [ARGS]...
+
+  S3 object store operations.
+
+Options:
+  --endpoint-url TEXT  S3 endpoint URL
+  --access-key TEXT    S3 access key
+  --secret-key TEXT    S3 secret key
+  --region TEXT        S3 region
+  --help               Show this message and exit.
+
+Commands:
+  delete  Delete files from an object store.
+  upload  Upload a directory to an object store.
+```
+
+### Operations
+
+#### Upload
+
+The `nat object-store <bucket_name> upload --help` utility provides an overview of its usage:
+
+```console
+Usage: nat object-store <type> [type-options] <bucket_name> upload [OPTIONS] LOCAL_DIR
+
+  Upload a directory to an object store.
+```
+
+#### Delete
+
+The `nat object-store <type> <bucket_name> delete --help` utility provides an overview of its usage:
+
+```console
+Usage: nat object-store <type> [type-options] <bucket_name> delete [OPTIONS] KEYS...
+
+  Delete files from an object store.
 ```
