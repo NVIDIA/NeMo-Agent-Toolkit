@@ -30,4 +30,5 @@ NeMo Agent toolkit [Model Context Protocol (MCP)](https://modelcontextprotocol.i
 Connecting to Remote Tools <./mcp-client.md>
 Serving NeMo Agent toolkit Functions <./mcp-server.md>
 MCP Authentication <./mcp-auth.md>
+Secure Token Storage <./mcp-auth-token-storage.md>
 ```

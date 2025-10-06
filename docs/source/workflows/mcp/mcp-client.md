@@ -97,6 +97,11 @@ nat info components -t function_group -q mcp_client
 - `reconnect_initial_backoff`: Initial backoff time for reconnect attempts. Defaults to `0.5` seconds.
 - `reconnect_max_backoff`: Maximum backoff time for reconnect attempts. Defaults to `50.0` seconds.
 
+##### Session Management Configuration
+
+- `max_sessions`: Maximum number of concurrent session clients. Defaults to `100`.
+- `session_idle_timeout`: Time after which inactive sessions are cleaned up. Defaults to `1 hour`.
+
 ##### Tool Customization
 
 - `tool_overrides`: Optional overrides for tool names and descriptions. Each entry can specify:
@@ -119,6 +124,8 @@ function_groups:
     reconnect_max_attempts: 3
     reconnect_initial_backoff: 1.0
     reconnect_max_backoff: 60.0
+    max_sessions: 50  # Maximum concurrent sessions
+    session_idle_timeout: 7200  # 2 hours (in seconds)
     tool_overrides:
       calculator_add:
         alias: "add_numbers"
@@ -262,6 +269,7 @@ nat mcp client tool list --transport stdio --command "python" --args "-m mcp_ser
 # For sse transport
 nat mcp client tool list --url http://localhost:9901/sse --transport sse
 ```
+For SSE transport, ensure the MCP server is started with the `--transport sse` flag. The transport type on the client and server needs to match for MCP communication to work. The default transport type is `streamable-http`.
 
 Sample output:
 ```text
