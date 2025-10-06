@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
@@ -108,7 +109,7 @@ class TestDiscoverOAuth2Endpoints:
         # Mock the protected resource metadata response
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
-            mock_resp.raise_for_status.return_value = None
+            mock_resp.raise_for_status = MagicMock(return_value=None)
             mock_resp.aread.return_value = b'{"authorization_servers": ["https://auth.example.com"]}'
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
 
@@ -224,7 +225,7 @@ class TestDynamicClientRegistration:
         # Mock the registration response
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
-            mock_resp.raise_for_status.return_value = None
+            mock_resp.raise_for_status = MagicMock(return_value=None)
             mock_resp.aread.return_value = b'{"client_id": "registered_client_id",\
             "client_secret": "registered_client_secret", "redirect_uris": ["https://example.com/callback"]}'
 
@@ -247,7 +248,7 @@ class TestDynamicClientRegistration:
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
-            mock_resp.raise_for_status.return_value = None
+            mock_resp.raise_for_status = MagicMock(return_value=None)
             mock_resp.aread.return_value = b'{"client_id": "registered_client_id", "redirect_uris": ["https://example.com/callback"]}'
             mock_client.return_value.__aenter__.return_value.post.return_value = mock_resp
 
@@ -265,7 +266,7 @@ class TestDynamicClientRegistration:
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
-            mock_resp.raise_for_status.return_value = None
+            mock_resp.raise_for_status = MagicMock(return_value=None)
             mock_resp.aread.return_value = b'invalid json'
             mock_client.return_value.__aenter__.return_value.post.return_value = mock_resp
 
@@ -278,7 +279,7 @@ class TestDynamicClientRegistration:
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
-            mock_resp.raise_for_status.return_value = None
+            mock_resp.raise_for_status = MagicMock(return_value=None)
             mock_resp.aread.return_value = b'{"client_secret": "secret", "redirect_uris": ["https://example.com/callback"]}'
             mock_client.return_value.__aenter__.return_value.post.return_value = mock_resp
 
@@ -435,7 +436,7 @@ class TestMCPOAuth2Provider:
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
-            mock_resp.raise_for_status.return_value = None
+            mock_resp.raise_for_status = MagicMock(return_value=None)
             mock_resp.aread.return_value = b'{"resource": "https://example.com/api", "authorization_servers": ["https://auth.example.com"]}'
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
 
@@ -449,7 +450,7 @@ class TestMCPOAuth2Provider:
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
-            mock_resp.raise_for_status.return_value = None
+            mock_resp.raise_for_status = MagicMock(return_value=None)
             mock_resp.aread.return_value = b'invalid json'
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
 
@@ -463,7 +464,7 @@ class TestMCPOAuth2Provider:
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
-            mock_resp.raise_for_status.return_value = None
+            mock_resp.raise_for_status = MagicMock(return_value=None)
             mock_resp.aread.return_value = b'{"resource": "https://example.com/api", "other_field": "value"}'
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
 
@@ -499,6 +500,7 @@ class TestMCPOAuth2Provider:
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
             mock_resp.status_code = 200
+            mock_resp.headers = {"content-type": "application/json"}
             mock_resp.aread.return_value = b'{"token_endpoint": "https://auth.example.com/token"}'
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
 
@@ -513,6 +515,7 @@ class TestMCPOAuth2Provider:
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
             mock_resp.status_code = 200
+            mock_resp.headers = {"content-type": "application/json"}
             mock_resp.aread.return_value = b'{"authorization_endpoint": "https://auth.example.com/authorize"}'
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
 
@@ -527,6 +530,7 @@ class TestMCPOAuth2Provider:
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
             mock_resp.status_code = 200
+            mock_resp.headers = {"content-type": "application/json"}
             mock_resp.aread.return_value = b'invalid json'
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
 
@@ -564,7 +568,7 @@ class TestMCPOAuth2Provider:
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
-            mock_resp.raise_for_status.return_value = None
+            mock_resp.raise_for_status = MagicMock(return_value=None)
             mock_resp.aread.return_value = b'{"client_id": "test_client_id", "client_secret": "test_secret",\
                 "redirect_uris": ["https://example.com/callback"]}'
 
@@ -582,7 +586,7 @@ class TestMCPOAuth2Provider:
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_resp = AsyncMock()
-            mock_resp.raise_for_status.return_value = None
+            mock_resp.raise_for_status = MagicMock(return_value=None)
             mock_resp.aread.return_value = b'{"client_id": "test_client_id", "client_secret": "test_secret",\
                 "redirect_uris": ["https://example.com/callback"]}'
 
