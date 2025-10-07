@@ -26,6 +26,7 @@ This example demonstrates how to integrate and use the web-based user interface 
 - **Real-Time Streaming:** Shows how to enable intermediate step streaming for enhanced user experience, allowing users to see agent reasoning and tool execution in real-time.
 - **UI Customization Options:** Supports theme customization, endpoint configuration, and display options to match different deployment environments and user preferences.
 - **Conversation Management:** Includes conversation history, session management, and context preservation across multiple interactions within the same session.
+- **Human-in-the-Loop Support:** Interactive prompts and OAuth consent handling for workflows requiring user input or authentication.
 
 ## What You'll Learn
 
@@ -33,8 +34,10 @@ This example demonstrates how to integrate and use the web-based user interface 
 - **Interactive workflow management**: Use the UI to interact with agents and view conversation history
 - **Connection management**: Configure HTTP and WebSocket connections for different use cases
 - **Real-time streaming**: Enable intermediate step streaming for enhanced user experience
-- **UI customization**: Customize themes, endpoints, and display options
+- **UI customization**: Customize themes, endpoints, and display options through environment variables
 
 ## Quick Start
 
 For complete setup and usage instructions, refer to the comprehensive guide: [Launching the UI](../../docs/source/quick-start/launching-ui.md).
+
+> **Important**: Workflows requiring human input or interaction (such as human-in-the-loop workflows, OAuth authentication, or interactive prompts) must use WebSocket connections. HTTP requests are the default method of communication, but human-in-the-loop functionality is not supported through HTTP. Ensure that `Websocket` mode is enabled in the UI by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out.
