@@ -40,4 +40,5 @@ This example demonstrates how to integrate and use the web-based user interface 
 
 For complete setup and usage instructions, refer to the comprehensive guide: [Launching the UI](../../docs/source/quick-start/launching-ui.md).
 
-> **Important**: Workflows requiring human input or interaction (such as human-in-the-loop workflows, OAuth authentication, or interactive prompts) must use WebSocket connections. HTTP requests are the default method of communication, but human-in-the-loop functionality is not supported through HTTP. Ensure that `Websocket` mode is enabled in the UI by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out.
+> [!IMPORTANT]
+> Workflows requiring human input or interaction (such as human-in-the-loop workflows, OAuth authentication, or interactive prompts) must use WebSocket connections. HTTP requests are the default method of communication, but human-in-the-loop functionality is not supported through HTTP. Ensure that `Websocket` mode is enabled in the UI by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out.
