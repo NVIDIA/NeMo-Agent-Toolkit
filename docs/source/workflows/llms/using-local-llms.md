@@ -32,10 +32,11 @@ Regardless of the model you choose, the process is the same for downloading the 
 
 ### Install the Simple Web Query Example
 
-First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install the simple web query example so we have the `webpage_query` tool available.
+First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install the NVIDIA NeMo Agent toolkit and the simple web query example.
 
 ```bash
-pip install -e examples/getting_started/simple_web_query
+uv pip install -e .
+uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ### Downloading the NIM Containers
@@ -112,7 +113,7 @@ llms:
   nim_llm:
     _type: nim
     base_url: "http://localhost:8000/v1"
-    model_name: nvidia/llama3.1-nemotron-nano-4b-v1.1
+    model_name: nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1
 
 embedders:
   nv-embedqa-e5-v5:
@@ -142,10 +143,11 @@ vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getti
 
 ### Install the Simple Web Query Example
 
-First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install the simple web query example so we have the `webpage_query` tool available.
+First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install the NVIDIA NeMo Agent toolkit and the simple web query example.
 
 ```bash
-pip install -e examples/getting_started/simple_web_query
+uv pip install -e .
+uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ### Serving the Models
