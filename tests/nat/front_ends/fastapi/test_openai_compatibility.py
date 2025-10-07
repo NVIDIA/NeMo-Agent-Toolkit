@@ -13,12 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from contextlib import asynccontextmanager
-
 import pytest
-from asgi_lifespan import LifespanManager
-from httpx import ASGITransport
-from httpx import AsyncClient
 from httpx_sse import aconnect_sse
 
 from nat.data_models.api_server import ChatRequest
@@ -31,20 +26,9 @@ from nat.data_models.api_server import UserMessageContentRoleType
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from nat.test.functions import EchoFunctionConfig
 from nat.test.functions import StreamingEchoFunctionConfig
-
-
-@asynccontextmanager
-async def _build_client(config: Config, worker_class: type[FastApiFrontEndPluginWorker] = FastApiFrontEndPluginWorker):
-    """Helper to build test client with proper lifecycle management"""
-    worker = worker_class(config)
-    app = worker.build_app()
-
-    async with LifespanManager(app):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            yield client
+from nat.test.utils import build_nat_client
 
 
 def test_fastapi_config_openai_api_v1_path_field():
@@ -198,7 +182,7 @@ async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None
         workflow=EchoFunctionConfig(use_openai_api=True),
     )
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         base_path = "/v1/chat/completions"
 
         if openai_api_v1_path:
@@ -273,7 +257,7 @@ async def test_openai_compatible_mode_stream_parameter():
         workflow=StreamingEchoFunctionConfig(use_openai_api=True),
     )
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         base_path = "/v1/chat/completions"
 
         # Test stream=true (should return streaming response)
@@ -311,7 +295,7 @@ async def test_legacy_non_streaming_response_format():
         workflow=EchoFunctionConfig(use_openai_api=True),
     )
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         # Send request to legacy OpenAI endpoint
         response = await client.post("/chat",
                                      json={
@@ -386,7 +370,7 @@ async def test_legacy_streaming_response_format():
         workflow=StreamingEchoFunctionConfig(use_openai_api=True),
     )
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         async with aconnect_sse(client,
                                 "POST",
                                 "/chat/stream",
@@ -454,7 +438,7 @@ async def test_openai_compatible_non_streaming_response_format():
         workflow=EchoFunctionConfig(use_openai_api=True),
     )
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         # Send request to actual OpenAI endpoint - this will trigger generate_single_response
         response = await client.post("/v1/chat/completions",
                                      json={
@@ -530,7 +514,7 @@ async def test_openai_compatible_streaming_response_format():
         workflow=StreamingEchoFunctionConfig(use_openai_api=True),
     )
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         async with aconnect_sse(client,
                                 "POST",
                                 "/v1/chat/completions",
