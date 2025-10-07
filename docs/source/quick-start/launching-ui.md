@@ -77,9 +77,9 @@ curl --request POST \
 ```
 
 Running this command will produce the following expected output:
-
-> **Note:** The response depends on the current time of day that the command is run.
-
+:::note
+The response depends on the current time of day that the command is run.
+:::
 ```bash
 {
   "value": "No, 8 is less than the current hour of the day (4)."
