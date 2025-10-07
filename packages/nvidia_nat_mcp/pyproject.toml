@@ -29,6 +29,8 @@ description = "Subpackage for MCP client integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "rag", "agents", "mcp"]
 license = "Apache-2.0"
+authors = [{ name = "NVIDIA Corporation" }]
+maintainers = [{ name = "NVIDIA Corporation" }]
 classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.11",

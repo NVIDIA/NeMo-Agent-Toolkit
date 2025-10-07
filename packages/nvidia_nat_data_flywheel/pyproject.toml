@@ -28,6 +28,8 @@ description = "Subpackage for NVIDIA Data Flywheel Blueprint integration in NeMo
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "observability", "nemo", "data flywheel"]
 license = "Apache-2.0"
+authors = [{ name = "NVIDIA Corporation" }]
+maintainers = [{ name = "NVIDIA Corporation" }]
 classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.11",
