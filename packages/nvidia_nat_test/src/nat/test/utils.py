@@ -21,6 +21,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 if typing.TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from httpx import AsyncClient
+
     from nat.data_models.config import Config
     from nat.utils.type_utils import StrPath
 
@@ -88,16 +92,8 @@ async def run_workflow(
     return result
 
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
-    from httpx import AsyncClient
-
 @asynccontextmanager
-async def build_nat_client(
-    config: "Config", worker_class: type | None = None
-) -> "AsyncIterator[AsyncClient]":
+async def build_nat_client(config: "Config", worker_class: type | None = None) -> "AsyncIterator[AsyncClient]":
     """
     Build a NAT client for testing purposes.
 
@@ -115,9 +111,7 @@ async def build_nat_client(
     from httpx import ASGITransport
     from httpx import AsyncClient
 
-    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import (
-        FastApiFrontEndPluginWorker,
-    )
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
     if worker_class is None:
         worker_class = FastApiFrontEndPluginWorker
@@ -126,7 +120,5 @@ async def build_nat_client(
     app = worker.build_app()
 
     async with LifespanManager(app):
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             yield client
