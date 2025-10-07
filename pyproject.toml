@@ -53,7 +53,8 @@ dependencies = [
 requires-python = ">=3.11,<3.14"
 description = "NVIDIA NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
-license = { file = "LICENSE.md" }
+license = "Apache-2.0"
+license-files = ["LICENSE.md", "LICENSE-3rd-party.txt"]
 keywords = ["ai", "rag", "agents"]
 classifiers = [
   "Programming Language :: Python",
@@ -64,6 +65,9 @@ classifiers = [
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 
+[project.urls]
+documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
+source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
 [project.optional-dependencies]
 # Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install "nvidia-nat[langchain]"`

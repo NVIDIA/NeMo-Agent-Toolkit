@@ -23,7 +23,10 @@ import pytest
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.component_ref import LLMRef
+from nat.plugins.adk.agent import ADKFunctionConfig
 from nat.runtime.loader import load_workflow
+from nat.test.llm import TestLLMConfig
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -396,3 +399,50 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_co
             pytest.skip(f"Unsupported wrapper: {wrapper}")
 
     assert outs == seq
+
+
+@pytest.mark.asyncio
+async def test_adk_function_integration_returns_deterministic_text():
+    pytest.importorskip("google.adk")
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("main", TestLLMConfig(response_seq=["tool-free"], delay_ms=0))
+
+        # Build a NAT function that uses the ADK integration
+        fn_cfg = ADKFunctionConfig(
+            name="nat_adk_test_agent_fn",
+            description="ADK agent function test",
+            prompt="Always reply with a short word",
+            llm=LLMRef("main"),
+            tool_names=[],
+            workflow_alias="adk_agent",
+            user_id="nat",
+        )
+
+        function = await builder.add_function("adk_agent_fn", fn_cfg)
+        result = await function.ainvoke("hello")
+        assert result == "tool-free"
+
+
+@pytest.mark.asyncio
+async def test_adk_function_integration_multiple_invokes_cycle():
+    pytest.importorskip("google.adk")
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("main", TestLLMConfig(response_seq=["A", "B"], delay_ms=0))
+
+        fn_cfg = ADKFunctionConfig(
+            name="nat_adk_test_agent_fn",
+            description="ADK agent function cycling test",
+            prompt="Respond",
+            llm=LLMRef("main"),
+            tool_names=[],
+            workflow_alias="adk_agent",
+            user_id="nat",
+        )
+
+        function = await builder.add_function("adk_agent_fn2", fn_cfg)
+        r1 = await function.ainvoke("first")
+        r2 = await function.ainvoke("second")
+        r3 = await function.ainvoke("third")
+        assert r1 == "A"
+        assert r2 == "B"
+        assert r3 == "A"
