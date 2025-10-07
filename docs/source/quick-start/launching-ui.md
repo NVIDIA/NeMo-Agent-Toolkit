@@ -77,9 +77,9 @@ curl --request POST \
 ```
 
 Running this command will produce the following expected output:
-
-> **Note:** The response depends on the current time of day that the command is run.
-
+:::note
+The response depends on the current time of day that the command is run.
+:::
 ```bash
 {
   "value": "No, 8 is less than the current hour of the day (4)."
@@ -108,7 +108,9 @@ Port `3001` is an alternative port if port `3000` (default) is in use.
 
 ![NeMo Agent toolkit Web User Interface](../_static/ui_home_page.png)
 
-> **Important**: Workflows requiring human input or interaction (such as human-in-the-loop workflows, OAuth authentication, or interactive prompts) must use WebSocket connections. HTTP requests are the default method of communication, but human-in-the-loop functionality is not supported through HTTP. Ensure that `Websocket` mode is enabled in the UI by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out.
+:::important
+Workflows requiring human input or interaction (such as human-in-the-loop workflows, OAuth authentication, or interactive prompts) must use WebSocket connections. HTTP requests are the default method of communication, but human-in-the-loop functionality is not supported through HTTP. Ensure that `Websocket` mode is enabled in the UI by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out.
+:::
 
 ### Connect the User Interface to the NeMo Agent Toolkit Server Using HTTP API
 
@@ -139,7 +141,9 @@ Configure the settings by selecting the *Settings* icon located on the bottom le
   - **Generate — Streaming** - Streaming generation over WebSocket
   - **Generate — Non-Streaming** - Non-streaming generation over WebSocket
 
-**Note:** For intermediate results streaming, use **Chat Completions — Streaming** (`/chat/stream`) or **Generate — Streaming** (`/generate/stream`).
+:::note
+For intermediate results streaming, use **Chat Completions — Streaming** (`/chat/stream`) or **Generate — Streaming** (`/generate/stream`).
+:::
 
 ### Simple Calculator Example Conversation
 

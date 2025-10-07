@@ -153,4 +153,5 @@ Once you've successfully connected to the WebSocket, you can start querying the 
 Who am I logged in as?
 ```
 
-**Tip**: If you encounter errors, verify that WebSocket mode is enabled. HTTP requests are the default method of communication, but human-in-the-loop functionality (including OAuth authentication) is not supported through HTTP.
+> [!TIP]
+> If you encounter errors, verify that WebSocket mode is enabled. HTTP requests are the default method of communication, but human-in-the-loop functionality (including OAuth authentication) is not supported through HTTP.
