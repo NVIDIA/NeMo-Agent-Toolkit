@@ -40,7 +40,7 @@ class TestMCPSessionManagement:
                        'lifetime_task') and session_data.lifetime_task and not session_data.lifetime_task.done():
                 try:
                     await asyncio.wait_for(session_data.lifetime_task, timeout=1.0)
-                except (asyncio.TimeoutError, asyncio.CancelledError):
+                except (TimeoutError, asyncio.CancelledError):
                     session_data.lifetime_task.cancel()
                     try:
                         await session_data.lifetime_task
