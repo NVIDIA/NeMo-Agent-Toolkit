@@ -42,6 +42,7 @@ variables:
   NAT_CI_ETCD_HOST: "etcd"
   NAT_CI_MILVUS_HOST: "milvus"
   NAT_CI_MYSQL_HOST: "mysql"
+  NAT_CI_OPENSEARCH_URL: "https://opensearch:9200"
   NAT_CI_REDIS_HOST: "redis"
   NAT_CI_S3_HOST: "minio"
   UV_CACHE_DIR: .uv-cache
