@@ -402,6 +402,7 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_co
 
 
 async def test_adk_function_integration_returns_deterministic_text():
+    pytest.importorskip("google.adk")
     async with WorkflowBuilder() as builder:
         await builder.add_llm("main", TestLLMConfig(response_seq=["tool-free"], delay_ms=0))
 
@@ -422,6 +423,7 @@ async def test_adk_function_integration_returns_deterministic_text():
 
 
 async def test_adk_function_integration_multiple_invokes_cycle():
+    pytest.importorskip("google.adk")
     async with WorkflowBuilder() as builder:
         await builder.add_llm("main", TestLLMConfig(response_seq=["A", "B"], delay_ms=0))
 

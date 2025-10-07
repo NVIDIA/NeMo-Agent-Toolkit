@@ -221,13 +221,15 @@ async def test_llm_adk(config: TestLLMConfig, builder: Builder):
 
     class ADKTestLLM(BaseLlm):
 
-        async def generate_content_async(self, llm_request, stream: bool = False):
+        async def generate_content_async(self,
+                                         llm_request: Any,
+                                         stream: bool = False) -> AsyncGenerator[LlmResponse, None]:
             self._maybe_append_user_content(llm_request)
             await chooser.async_sleep()
             text = chooser.next_response()
             yield LlmResponse(content=types.Content(role="model", parts=[types.Part.from_text(text=text)]))
 
-        def connect(self, *_args, **_kwargs):
+        def connect(self, *_args: Any, **_kwargs: Any) -> None:
             return None
 
     yield ADKTestLLM(model="nat_test_llm")
