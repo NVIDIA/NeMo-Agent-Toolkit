@@ -33,7 +33,7 @@ class DeleteToolConfig(FunctionBaseConfig, name="delete_memory"):
     description: str = Field(default=("Tool to retrieve memory about a user's "
                                       "interactions to help answer questions in a personalized way."),
                              description="The description of this function's use for tool calling agents.")
-    memory: MemoryRef = Field(default="saas_memory",
+    memory: MemoryRef = Field(default=MemoryRef("saas_memory"),
                               description=("Instance name of the memory client instance from the workflow "
                                            "configuration object."))
 
@@ -47,7 +47,7 @@ async def delete_memory_tool(config: DeleteToolConfig, builder: Builder):
     from langchain_core.tools import ToolException
 
     # First, retrieve the memory client
-    memory_editor = builder.get_memory_client(config.memory)
+    memory_editor = await builder.get_memory_client(config.memory)
 
     async def _arun(user_id: str) -> str:
         """
