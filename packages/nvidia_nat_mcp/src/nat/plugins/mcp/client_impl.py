@@ -247,6 +247,11 @@ class MCPFunctionGroup(FunctionGroup):
                         await sdata.lifetime_task  # __aexit__ runs in that task
                     else:
                         logger.debug("Session client %s lifetime task already done", truncate_session_id(session_id))
+                else:
+                    # add fallback to ensure we clean up the client
+                    logger.warning("Session client %s lifetime task not found, cleaning up client",
+                                   truncate_session_id(session_id))
+                    await sdata.client.__aexit__(None, None, None)
             except Exception as e:
                 logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
 
@@ -374,7 +379,7 @@ class MCPFunctionGroup(FunctionGroup):
                 ready.set()
                 await stop_event.wait()
 
-        task = asyncio.create_task(_lifetime(), name=f"mcp-session-{session_id}")
+        task = asyncio.create_task(_lifetime(), name=f"mcp-session-{truncate_session_id(session_id)}")
         await ready.wait()  # ensure __aenter__ finished before returning
 
         logger.info("Created session client for session: %s", truncate_session_id(session_id))
