@@ -32,7 +32,7 @@ Regardless of the model you choose, the process is the same for downloading the 
 
 ### Install the Simple Web Query Example
 
-First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install the NVIDIA NeMo Agent toolkit and the simple web query example.
+First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install NAT and the simple web query example.
 
 ```bash
 uv pip install -e .
@@ -143,7 +143,7 @@ vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getti
 
 ### Install the Simple Web Query Example
 
-First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install the NVIDIA NeMo Agent toolkit and the simple web query example.
+First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install NAT and the simple web query example.
 
 ```bash
 uv pip install -e .
