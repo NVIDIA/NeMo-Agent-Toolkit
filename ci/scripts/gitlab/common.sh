@@ -26,7 +26,7 @@ function get_git_tag() {
     FT=$(git fetch --all --tags)
 
     # Get the latest Git tag, sorted by version, excluding lightweight tags
-    GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")
+    GIT_TAG=$(git describe --first-parent --tags --abbrev=0 2>/dev/null || echo "no-tag")
 
     if [[ "${CI_CRON_NIGHTLY}" == "1" ]]; then
         if [[ ${GIT_TAG} == "no-tag" ]]; then
@@ -48,7 +48,7 @@ function get_git_tag() {
 function is_current_commit_release_tagged() {
     # Check if the current commit is tagged for release, either an RC tag or the release tag
     set +e
-    GIT_TAG=$(git describe --tags --exact-match HEAD 2>/dev/null)
+    GIT_TAG=$(git describe --first-parent --tags --exact-match HEAD 2>/dev/null)
     local status_code=$?
     set -e
 
