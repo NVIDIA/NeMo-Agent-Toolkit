@@ -88,21 +88,45 @@ async def run_workflow(
     return result
 
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from httpx import AsyncClient
+
 @asynccontextmanager
-async def build_nat_client(config: "Config", worker_class: type | None = None):
+async def build_nat_client(
+    config: "Config", worker_class: type | None = None
+) -> "AsyncIterator[AsyncClient]":
+    """
+    Build a NAT client for testing purposes.
+
+    Creates a test client with an ASGI transport for the specified configuration.
+    The client is backed by a FastAPI application built from the provided worker class.
+
+    Args:
+        config: The NAT configuration to use for building the client.
+        worker_class: Optional worker class to use. Defaults to FastApiFrontEndPluginWorker.
+
+    Yields:
+        An AsyncClient instance configured for testing.
+    """
     from asgi_lifespan import LifespanManager
     from httpx import ASGITransport
     from httpx import AsyncClient
 
-    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import (
+        FastApiFrontEndPluginWorker,
+    )
 
     if worker_class is None:
         worker_class = FastApiFrontEndPluginWorker
 
     worker = worker_class(config)
-
     app = worker.build_app()
 
     async with LifespanManager(app):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             yield client
