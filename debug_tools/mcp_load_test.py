@@ -29,6 +29,7 @@ class MCPLoadTester:
         num_users: int = 40,
         calls_per_user: int = 10,
         delay_between_calls: float = 0.5,
+        use_cli: bool = True,
     ):
         """
         Initialize the load tester.
@@ -38,11 +39,13 @@ class MCPLoadTester:
             num_users: Number of concurrent users to simulate
             calls_per_user: Number of tool calls each user should make
             delay_between_calls: Delay in seconds between consecutive calls per user
+            use_cli: If True, use nat mcp client CLI (proper protocol). If False, use HTTP (gets 406 errors)
         """
         self.server_url = server_url
         self.num_users = num_users
         self.calls_per_user = calls_per_user
         self.delay_between_calls = delay_between_calls
+        self.use_cli = use_cli
         self.total_calls = 0
         self.successful_calls = 0
         self.failed_calls = 0
@@ -95,6 +98,58 @@ class MCPLoadTester:
             logger.error(traceback.format_exc())
             return []
 
+    async def call_tool_via_cli(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        user_id: int,
+    ) -> bool:
+        """
+        Call an MCP tool using the nat mcp client CLI (proper MCP protocol).
+
+        Args:
+            tool_name: Name of the tool to call
+            arguments: Tool arguments
+            user_id: ID of the simulated user making the call
+
+        Returns:
+            True if call was successful, False otherwise
+        """
+        try:
+            import json
+
+            # Build the CLI command
+            cmd = [
+                "nat",
+                "mcp",
+                "client",
+                "tool",
+                "call",
+                tool_name,
+                "--url",
+                self.server_url,
+                "--json-args",
+                json.dumps(arguments)
+            ]
+
+            # Run the command
+            process = await asyncio.create_subprocess_exec(*cmd,
+                                                           stdout=asyncio.subprocess.DEVNULL,
+                                                           stderr=asyncio.subprocess.DEVNULL)
+
+            returncode = await process.wait()
+
+            if returncode == 0:
+                logger.debug(f"User {user_id}: Tool {tool_name} succeeded")
+                return True
+            else:
+                logger.debug(f"User {user_id}: Tool {tool_name} failed with code {returncode}")
+                return False
+
+        except Exception as e:
+            logger.debug(f"User {user_id}: Tool {tool_name} error: {e}")
+            return False
+
     async def call_tool_via_http(
         self,
         session: aiohttp.ClientSession,
@@ -104,6 +159,9 @@ class MCPLoadTester:
     ) -> bool:
         """
         Call an MCP tool via HTTP using the streamable-http transport.
+
+        NOTE: This method sends raw HTTP POST requests which may get 406 Not Acceptable
+        errors from the MCP server. Use call_tool_via_cli() for proper MCP protocol.
 
         Args:
             session: aiohttp client session
@@ -189,7 +247,7 @@ class MCPLoadTester:
 
         Args:
             user_id: Unique identifier for this user
-            session: aiohttp client session
+            session: aiohttp client session (used only for HTTP mode)
             tools: List of available tools to call
         """
         logger.info(f"User {user_id} starting {self.calls_per_user} calls")
@@ -199,8 +257,11 @@ class MCPLoadTester:
             tool_name = random.choice(tools)
             arguments = self.generate_tool_arguments(tool_name)
 
-            # Make the tool call
-            success = await self.call_tool_via_http(session, tool_name, arguments, user_id)
+            # Make the tool call using selected method
+            if self.use_cli:
+                success = await self.call_tool_via_cli(tool_name, arguments, user_id)
+            else:
+                success = await self.call_tool_via_http(session, tool_name, arguments, user_id)
 
             self.total_calls += 1
             if success:
@@ -266,6 +327,7 @@ async def run_multiple_rounds(
     calls_per_user: int,
     num_rounds: int,
     delay_between_rounds: float,
+    use_cli: bool = True,
 ):
     """
     Run multiple rounds of load testing to observe memory behavior over time.
@@ -276,8 +338,10 @@ async def run_multiple_rounds(
         calls_per_user: Number of calls per user per round
         num_rounds: Number of rounds to execute
         delay_between_rounds: Delay in seconds between rounds
+        use_cli: If True, use nat mcp client CLI (proper protocol)
     """
     logger.info(f"Starting {num_rounds} rounds of load testing")
+    logger.info(f"Method: {'CLI (proper MCP protocol)' if use_cli else 'HTTP (may get 406 errors)'}")
 
     for round_num in range(1, num_rounds + 1):
         logger.info(f"\n{'=' * 70}")
@@ -288,6 +352,7 @@ async def run_multiple_rounds(
             server_url=server_url,
             num_users=num_users,
             calls_per_user=calls_per_user,
+            use_cli=use_cli,
         )
 
         await tester.run_load_test()
@@ -310,11 +375,19 @@ def main():
     parser.add_argument("--rounds", type=int, default=1, help="Number of load test rounds to run (default: 1)")
     parser.add_argument("--delay", type=float, default=5.0, help="Delay in seconds between rounds (default: 5.0)")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose debug logging")
+    parser.add_argument("--use-cli",
+                        action="store_true",
+                        default=True,
+                        help="Use nat mcp client CLI for proper MCP protocol (default: True)")
+    parser.add_argument("--use-http", action="store_true", help="Use raw HTTP POST (gets 406 errors, for testing only)")
 
     args = parser.parse_args()
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    # Determine which method to use
+    use_cli = not args.use_http  # Default to CLI unless --use-http is specified
 
     # Run the load test
     asyncio.run(
@@ -324,6 +397,7 @@ def main():
             calls_per_user=args.calls,
             num_rounds=args.rounds,
             delay_between_rounds=args.delay,
+            use_cli=use_cli,
         ))
 
 
