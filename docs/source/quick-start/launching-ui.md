@@ -139,7 +139,9 @@ Configure the settings by selecting the *Settings* icon located on the bottom le
   - **Generate — Streaming** - Streaming generation over WebSocket
   - **Generate — Non-Streaming** - Non-streaming generation over WebSocket
 
-**Note:** For intermediate results streaming, use **Chat Completions — Streaming** (`/chat/stream`) or **Generate — Streaming** (`/generate/stream`).
+:::note
+For intermediate results streaming, use **Chat Completions — Streaming** (`/chat/stream`) or **Generate — Streaming** (`/generate/stream`).
+:::
 
 ### Simple Calculator Example Conversation
 
