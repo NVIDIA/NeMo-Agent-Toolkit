@@ -30,8 +30,7 @@ logger = logging.getLogger(__name__)
 class DeleteToolConfig(FunctionBaseConfig, name="delete_memory"):
     """Function to delete memory from a hosted memory platform."""
 
-    description: str = Field(default=("Tool to retrieve memory about a user's "
-                                      "interactions to help answer questions in a personalized way."),
+    description: str = Field(default="Tool to delete a memory from a hosted memory platform.",
                              description="The description of this function's use for tool calling agents.")
     memory: MemoryRef = Field(default=MemoryRef("saas_memory"),
                               description=("Instance name of the memory client instance from the workflow "

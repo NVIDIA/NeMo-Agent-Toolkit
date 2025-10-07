@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class GetToolConfig(FunctionBaseConfig, name="get_memory"):
     """Function to get memory to a hosted memory platform."""
 
-    description: str = Field(default=("Tool to retrieve memory about a user's "
+    description: str = Field(default=("Tool to retrieve a memory about a user's "
                                       "interactions to help answer questions in a personalized way."),
                              description="The description of this function's use for tool calling agents.")
     memory: MemoryRef = Field(default=MemoryRef("saas_memory"),
