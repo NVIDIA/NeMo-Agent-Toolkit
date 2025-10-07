@@ -375,12 +375,38 @@ class MCPFunctionGroup(FunctionGroup):
             Create a lifetime task to respect task boundaries and ensure the
             cancel scope is entered and exited in the same task.
             """
-            async with client:
-                ready.set()
-                await stop_event.wait()
+            try:
+                async with client:
+                    ready.set()
+                    await stop_event.wait()
+            except Exception:
+                ready.set()  # Ensure we don't hang the waiter
+                raise
 
         task = asyncio.create_task(_lifetime(), name=f"mcp-session-{truncate_session_id(session_id)}")
-        await ready.wait()  # ensure __aenter__ finished before returning
+
+        # Wait for initialization with timeout to prevent infinite hangs
+        timeout = config.tool_call_timeout.total_seconds() if config else 300
+        try:
+            await asyncio.wait_for(ready.wait(), timeout=timeout)
+        except TimeoutError:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            logger.error("Session client initialization timed out after %ds for %s",
+                         timeout,
+                         truncate_session_id(session_id))
+            raise RuntimeError(f"Session client initialization timed out after {timeout}s")
+
+        # Check if initialization failed before ready was set
+        if task.done():
+            try:
+                await task  # Re-raise exception if the task failed
+            except Exception as e:
+                logger.error("Failed to initialize session client for %s: %s", truncate_session_id(session_id), e)
+                raise RuntimeError(f"Failed to initialize session client: {e}") from e
 
         logger.info("Created session client for session: %s", truncate_session_id(session_id))
         # NOTE: caller will place client into SessionData and attach stop_event/task
