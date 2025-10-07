@@ -153,7 +153,7 @@ Subsequent tool calls can be disabled for the default user ID by setting `allow_
 
 3. **Start the UI**:
 - Start the UI by following the instructions in the [Launching the UI](../../quick-start/launching-ui.md) documentation.
-- Connect to the UI at `http://localhost:3000`
+- Connect to the UI at http://localhost:3000
 
 :::important
 Ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. WebSocket connections are required for OAuth authentication workflows.
