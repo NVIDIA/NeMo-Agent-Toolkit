@@ -44,6 +44,10 @@ class SessionData:
     ref_count: int = 0
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
+    # lifetime task to respect task boundaries
+    stop_event: asyncio.Event = field(default_factory=asyncio.Event)
+    lifetime_task: asyncio.Task | None = None
+
 
 class MCPFunctionGroup(FunctionGroup):
     """
@@ -202,7 +206,7 @@ class MCPFunctionGroup(FunctionGroup):
         if max_age is None:
             max_age = self._client_config.session_idle_timeout if self._client_config else timedelta(hours=1)
 
-        to_close: list[tuple[str, MCPBaseClient]] = []
+        to_close: list[tuple[str, SessionData]] = []
 
         async with self._session_rwlock.writer:
             current_time = datetime.now()
@@ -222,7 +226,7 @@ class MCPFunctionGroup(FunctionGroup):
                     session_data = self._sessions[session_id]
                     # Close the client connection
                     if session_data:
-                        to_close.append((session_id, session_data.client))
+                        to_close.append((session_id, session_data))
                 except Exception as e:
                     logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
                 finally:
@@ -232,11 +236,22 @@ class MCPFunctionGroup(FunctionGroup):
                     logger.info(" Total sessions: %d", len(self._sessions))
 
         # Close sessions outside the writer lock to avoid deadlock
-        for session_id, client in to_close:
+        for session_id, sdata in to_close:
             try:
-                logger.info("Cleaning up inactive session client: %s", truncate_session_id(session_id))
-                await client.__aexit__(None, None, None)
-                logger.info("Cleaned up inactive session client: %s", truncate_session_id(session_id))
+                if sdata.stop_event and sdata.lifetime_task:
+                    if not sdata.lifetime_task.done():
+                        # Instead of directly exiting the task, set the stop event
+                        # and wait for the task to exit. This ensures the cancel scope
+                        # is entered and exited in the same task.
+                        sdata.stop_event.set()
+                        await sdata.lifetime_task  # __aexit__ runs in that task
+                    else:
+                        logger.debug("Session client %s lifetime task already done", truncate_session_id(session_id))
+                else:
+                    # add fallback to ensure we clean up the client
+                    logger.warning("Session client %s lifetime task not found, cleaning up client",
+                                   truncate_session_id(session_id))
+                    await sdata.client.__aexit__(None, None, None)
             except Exception as e:
                 logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
 
@@ -284,10 +299,14 @@ class MCPFunctionGroup(FunctionGroup):
 
             # Create session client lazily
             logger.info("Creating new MCP client for session: %s", truncate_session_id(session_id))
-            session_client = await self._create_session_client(session_id)
-
-            # Create session data with all components
-            session_data = SessionData(client=session_client, last_activity=datetime.now(), ref_count=0)
+            session_client, stop_event, lifetime_task = await self._create_session_client(session_id)
+            session_data = SessionData(
+                client=session_client,
+                last_activity=datetime.now(),
+                ref_count=0,
+                stop_event=stop_event,
+                lifetime_task=lifetime_task,
+            )
 
             # Cache the session data
             self._sessions[session_id] = session_data
@@ -325,7 +344,7 @@ class MCPFunctionGroup(FunctionGroup):
                         sdata.ref_count -= 1
                         sdata.last_activity = datetime.now()
 
-    async def _create_session_client(self, session_id: str) -> MCPBaseClient:
+    async def _create_session_client(self, session_id: str) -> tuple[MCPBaseClient, asyncio.Event, asyncio.Task]:
         """Create a new MCP client instance for the session."""
         from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
 
@@ -348,11 +367,50 @@ class MCPFunctionGroup(FunctionGroup):
             # per-user sessions are only supported for streamable-http transport
             raise ValueError(f"Unsupported transport: {config.server.transport}")
 
-        # Initialize the client
-        await client.__aenter__()
+        ready = asyncio.Event()
+        stop_event = asyncio.Event()
+
+        async def _lifetime():
+            """
+            Create a lifetime task to respect task boundaries and ensure the
+            cancel scope is entered and exited in the same task.
+            """
+            try:
+                async with client:
+                    ready.set()
+                    await stop_event.wait()
+            except Exception:
+                ready.set()  # Ensure we don't hang the waiter
+                raise
+
+        task = asyncio.create_task(_lifetime(), name=f"mcp-session-{truncate_session_id(session_id)}")
+
+        # Wait for initialization with timeout to prevent infinite hangs
+        timeout = config.tool_call_timeout.total_seconds() if config else 300
+        try:
+            await asyncio.wait_for(ready.wait(), timeout=timeout)
+        except TimeoutError:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            logger.error("Session client initialization timed out after %ds for %s",
+                         timeout,
+                         truncate_session_id(session_id))
+            raise RuntimeError(f"Session client initialization timed out after {timeout}s")
+
+        # Check if initialization failed before ready was set
+        if task.done():
+            try:
+                await task  # Re-raise exception if the task failed
+            except Exception as e:
+                logger.error("Failed to initialize session client for %s: %s", truncate_session_id(session_id), e)
+                raise RuntimeError(f"Failed to initialize session client: {e}") from e
 
         logger.info("Created session client for session: %s", truncate_session_id(session_id))
-        return client
+        # NOTE: caller will place client into SessionData and attach stop_event/task
+        return client, stop_event, task
 
 
 def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
