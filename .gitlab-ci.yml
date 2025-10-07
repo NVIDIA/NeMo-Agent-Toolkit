@@ -42,6 +42,7 @@ variables:
   NAT_CI_ETCD_HOST: "etcd"
   NAT_CI_MILVUS_HOST: "milvus"
   NAT_CI_MYSQL_HOST: "mysql"
+  NAT_CI_OPENSEARCH_URL: "http://opensearch:9200"
   NAT_CI_REDIS_HOST: "redis"
   NAT_CI_S3_HOST: "minio"
   UV_CACHE_DIR: .uv-cache
@@ -94,6 +95,11 @@ test:python_tests:
         ETCD_ENDPOINTS: etcd:2379
         MINIO_ADDRESS: minio:9000
       command: ["milvus", "run", "standalone"]
+    - name: opensearchproject/opensearch:2.11.1
+      alias: opensearch
+      variables:
+        discovery.type: "single-node"
+        plugins.security.disabled: "true"
 
   script:
     - echo "Running tests"
