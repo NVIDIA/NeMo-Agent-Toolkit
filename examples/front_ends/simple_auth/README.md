@@ -143,9 +143,12 @@ handles authentication.
 
 ## Query the Agent
 
-Open the NeMo Agent Toolkit UI in your browser at `http://localhost:3000`. By default, the UI is configured to connect to your agent's API endpoint at `http://localhost:8000` and the WebSocket URL at `ws://localhost:8000/websocket`. These default values can be changed using environment variables. See the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide for environment variable configuration details.
+Open the NeMo Agent Toolkit UI in your browser at http://localhost:3000.
 
-> **Important**: In your chat window, ensure that `Websocket` mode is enabled by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out. This is required for the OAuth 2.0 authentication flow to work properly.
+By default, the UI is configured to connect to your agent's API endpoint at `http://localhost:8000` and the WebSocket URL at `ws://localhost:8000/websocket`. These default values can be changed using environment variables. See the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide for environment variable configuration details.
+
+> [!IMPORTANT]
+> In your chat window, ensure that `Websocket` mode is enabled by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out. This is required for the OAuth 2.0 authentication flow to work properly.
 
 Once you've successfully connected to the WebSocket, you can start querying the agent. Asking the agent the following query should initiate the demonstrative authentication flow and then return information about the authenticated user:
 
