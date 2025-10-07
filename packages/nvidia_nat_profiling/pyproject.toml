@@ -29,7 +29,7 @@ requires-python = ">=3.11,<3.14"
 description = "Meta-package providing profiling dependencies for NVIDIA NeMo Agent Toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
-license = "Apache 2.0"
+license = "Apache-2.0"
 classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.11",

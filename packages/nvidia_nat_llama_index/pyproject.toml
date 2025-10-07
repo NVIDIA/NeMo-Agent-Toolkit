@@ -39,7 +39,7 @@ requires-python = ">=3.11,<3.14"
 description = "Subpackage for Llama-Index integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
-license = "Apache 2.0"
+license = "Apache-2.0"
 classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.11",

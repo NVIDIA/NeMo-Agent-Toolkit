@@ -18,7 +18,7 @@ dependencies = [
 ]
 readme = "pypi.md"
 description = "Transitional package for nvidia-nat-langchain, this package is deprecated and will be removed in the future."
-license = "Apache 2.0"
+license = "Apache-2.0"
 classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.11",
