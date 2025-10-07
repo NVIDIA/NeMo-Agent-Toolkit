@@ -41,7 +41,7 @@ Although you can run the sizing calculator against a publicly hosted LLM, the re
 
 ## Getting Started With Sizing a GPU Cluster
 
-To begin, set the configuration file and output directory.For this example we will start with the simple calculator evaluation configuration file, however in a real-world scenario you would use the configuration file of your own workflow you want to size.
+To begin, set the configuration file and output directory. For this example we will start with the simple calculator evaluation configuration file, however in a real-world scenario you would use the configuration file of your own workflow you want to size.
 ```
 export CALC_OUTPUT_DIR=.tmp/sizing_calc/
 export CONFIG_FILE=${CALC_OUTPUT_DIR}config-sizing-calc.yml
