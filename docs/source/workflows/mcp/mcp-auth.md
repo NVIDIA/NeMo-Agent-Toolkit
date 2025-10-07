@@ -152,9 +152,12 @@ At this point, a consent window is displayed to the user. The user must authoriz
 Subsequent tool calls can be disabled for the default user ID by setting `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration. This is recommended for multi-user workflows to avoid accidental tool calls by unauthorized users.
 
 3. **Start the UI**:
-- Start the UI by following the instructions in the [User Interface](../../quick-start/launching-ui.md) documentation.
-- Connect to  the UI at `http://localhost:3000`
-- Ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out.
+- Start the UI by following the instructions in the [Launching the UI](../../quick-start/launching-ui.md) documentation.
+- Connect to the UI at http://localhost:3000
+
+:::important
+Ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. WebSocket connections are required for OAuth authentication workflows.
+:::
 
 4. **Send the input to the workflow via the UI**:
 ```text
