@@ -30,6 +30,7 @@ description = "Subpackage for OpenTelemetry integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "observability", "opentelemetry"]
 license = "Apache-2.0"
+license-files = ["../../LICENSE.md", "../../LICENSE-3rd-party.txt"]
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 classifiers = [

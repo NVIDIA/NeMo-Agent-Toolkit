@@ -30,6 +30,7 @@ description = "Meta-package providing profiling dependencies for NVIDIA NeMo Age
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
 license = "Apache-2.0"
+license-files = ["../../LICENSE.md", "../../LICENSE-3rd-party.txt"]
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 classifiers = [

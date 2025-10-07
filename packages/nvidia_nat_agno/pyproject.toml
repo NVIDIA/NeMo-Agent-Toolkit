@@ -29,6 +29,7 @@ readme = "src/nat/meta/pypi.md"
 description = "Subpackage for Agno integration in NeMo Agent toolkit"
 keywords = ["ai", "rag", "agents"]
 license = "Apache-2.0"
+license-files = ["../../LICENSE.md", "../../LICENSE-3rd-party.txt"]
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 classifiers = [

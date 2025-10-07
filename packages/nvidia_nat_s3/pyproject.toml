@@ -28,6 +28,7 @@ description = "Subpackage for S3-compatible integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "agents", "memory", "data store"]
 license = "Apache-2.0"
+license-files = ["../../LICENSE.md", "../../LICENSE-3rd-party.txt"]
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 classifiers = [
