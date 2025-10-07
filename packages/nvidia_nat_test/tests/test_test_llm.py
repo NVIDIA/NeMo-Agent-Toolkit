@@ -333,6 +333,8 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_co
         pytest.importorskip("semantic_kernel")
     if wrapper == LLMFrameworkEnum.LLAMA_INDEX.value:
         pytest.importorskip("llama_index")
+    if wrapper == LLMFrameworkEnum.ADK.value:
+        pytest.importorskip("google.adk")
 
     async with WorkflowBuilder() as builder:
         cfg = test_llm_config_cls(response_seq=list(seq), delay_ms=0)
@@ -392,14 +394,21 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_co
                 outs.append(r)
 
         elif wrapper == LLMFrameworkEnum.ADK.value:
+            from google.adk.models.llm_request import LlmRequest
+            from google.adk.models.llm_response import LlmResponse
             for i in range(len(seq)):
-                r = await client.ainvoke([
-                    {
-                        "role": "user", "content": f"p{i}"
-                    },
-                ])
-                assert isinstance(r, str)
-                outs.append(r)
+                request = LlmRequest.model_validate({"contents": [{"parts": [{"text": f"p{i}"}]}]})
+                gen = client.generate_content_async(request)
+                try:
+                    async for r in gen:
+                        assert isinstance(r, LlmResponse)
+                        assert r.content is not None
+                        assert r.content.parts is not None
+                        assert r.content.parts[0].text is not None
+                        outs.append(r.content.parts[0].text)
+                        break  # We only need the first response
+                finally:
+                    await gen.aclose()  # Ensure we properly close the generator
 
         else:
             pytest.skip(f"Unsupported wrapper: {wrapper}")
