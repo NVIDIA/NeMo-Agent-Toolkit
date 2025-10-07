@@ -26,6 +26,7 @@ if typing.TYPE_CHECKING:
     from httpx import AsyncClient
 
     from nat.data_models.config import Config
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
     from nat.utils.type_utils import StrPath
 
 
@@ -93,7 +94,9 @@ async def run_workflow(
 
 
 @asynccontextmanager
-async def build_nat_client(config: "Config", worker_class: type | None = None) -> "AsyncIterator[AsyncClient]":
+async def build_nat_client(
+        config: "Config",
+        worker_class: "type[FastApiFrontEndPluginWorker] | None" = None) -> "AsyncIterator[AsyncClient]":
     """
     Build a NAT client for testing purposes.
 
