@@ -401,6 +401,7 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_co
     assert outs == seq
 
 
+@pytest.mark.asyncio
 async def test_adk_function_integration_returns_deterministic_text():
     pytest.importorskip("google.adk")
     async with WorkflowBuilder() as builder:
@@ -422,6 +423,7 @@ async def test_adk_function_integration_returns_deterministic_text():
         assert result == "tool-free"
 
 
+@pytest.mark.asyncio
 async def test_adk_function_integration_multiple_invokes_cycle():
     pytest.importorskip("google.adk")
     async with WorkflowBuilder() as builder:
