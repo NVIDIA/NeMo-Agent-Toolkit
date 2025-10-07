@@ -17,6 +17,7 @@ import importlib.resources
 import inspect
 import subprocess
 import typing
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 if typing.TYPE_CHECKING:
@@ -85,3 +86,23 @@ async def run_workflow(
         assert expected_answer.lower() in result.lower(), f"Expected '{expected_answer}' in '{result}'"
 
     return result
+
+
+@asynccontextmanager
+async def build_nat_client(config: "Config", worker_class: type | None = None):
+    from asgi_lifespan import LifespanManager
+    from httpx import ASGITransport
+    from httpx import AsyncClient
+
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+
+    if worker_class is None:
+        worker_class = FastApiFrontEndPluginWorker
+
+    worker = worker_class(config)
+
+    app = worker.build_app()
+
+    async with LifespanManager(app):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            yield client

@@ -14,14 +14,9 @@
 # limitations under the License.
 
 import os
-import typing
-from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
-
-if typing.TYPE_CHECKING:
-    from nat.data_models.config import Config
 
 
 @pytest.fixture(name="simple_calculator_config_file", scope="module")
@@ -40,33 +35,14 @@ def fixture_set_nat_config_file_env_var(restore_environ, simple_calculator_confi
     return str_path
 
 
-@asynccontextmanager
-async def _build_client(config: "Config", worker_class: type | None = None):
-    from asgi_lifespan import LifespanManager
-    from httpx import ASGITransport
-    from httpx import AsyncClient
-
-    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
-
-    if worker_class is None:
-        worker_class = FastApiFrontEndPluginWorker
-
-    worker = worker_class(config)
-
-    app = worker.build_app()
-
-    async with LifespanManager(app):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            yield client
-
-
 @pytest.mark.usefixtures("nvidia_api_key")
 @pytest.mark.integration
 async def test_full_workflow(simple_calculator_config_file: Path):
     from nat.runtime.loader import load_config
+    from nat.test.utils import build_nat_client
     config = load_config(simple_calculator_config_file)
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         response = await client.post("/get_request_metadata",
                                      headers={
                                          "accept": "application/json",
