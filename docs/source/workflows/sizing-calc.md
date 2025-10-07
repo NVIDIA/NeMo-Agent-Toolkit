@@ -22,7 +22,7 @@ The NVIDIA NeMo Agent toolkit provides a sizing calculator to estimate the GPU c
 The sizing calculator uses the [evaluation](evaluate.md) and [profiling](./profiler.md) systems in the NeMo Agent toolkit.
 
 ## Prerequisites
-Sizing calculator uses the profiler subsystem. Ensure that is installed by running the following command:
+Sizing calculator uses the profiler subsystem. Ensure that it is installed by running the following command:
 ```bash
 uv pip install -e ".[profiling]"
 ```
