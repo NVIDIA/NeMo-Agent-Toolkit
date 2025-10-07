@@ -123,6 +123,9 @@ class TestMCPSessionManagement:
             mock_client_class.assert_called_once()
             mock_session_client.__aenter__.assert_called_once()
 
+            # Clean up session
+            await self.cleanup_sessions(function_group)
+
     async def test_get_session_client_reuses_existing_session_client(self, function_group):
         """Test that existing session clients are reused."""
         session_id = "session-123"
@@ -140,6 +143,9 @@ class TestMCPSessionManagement:
 
             assert client1 == client2
             assert mock_client_class.call_count == 1  # Only created once
+
+            # Clean up session
+            await self.cleanup_sessions(function_group)
 
     async def test_get_session_client_updates_last_activity(self, function_group):
         """Test that last activity is updated when accessing existing sessions."""
@@ -164,6 +170,9 @@ class TestMCPSessionManagement:
             updated_time = function_group._sessions[session_id].last_activity
             assert updated_time > initial_time
 
+            # Clean up session
+            await self.cleanup_sessions(function_group)
+
     async def test_get_session_client_enforces_max_sessions_limit(self, function_group):
         """Test that the maximum session limit is enforced."""
         # Create clients up to the limit
@@ -185,6 +194,9 @@ class TestMCPSessionManagement:
 
             with pytest.raises(RuntimeError, match="Maximum concurrent.*sessions.*exceeded"):
                 await function_group._get_session_client("session-overflow")
+
+        # Clean up all sessions
+        await self.cleanup_sessions(function_group)
 
     async def test_cleanup_inactive_sessions_removes_old_sessions(self, function_group):
         """Test that inactive sessions are cleaned up."""
@@ -235,6 +247,9 @@ class TestMCPSessionManagement:
             # Session should be preserved due to active reference
             assert session_id in function_group._sessions
 
+            # Clean up session
+            await self.cleanup_sessions(function_group)
+
     async def test_session_usage_context_manager(self, function_group):
         """Test the session usage context manager for reference counting."""
         session_id = "session-123"
@@ -262,6 +277,9 @@ class TestMCPSessionManagement:
         # Reference count should be decremented back to 0
         assert function_group._sessions[session_id].ref_count == 0
 
+        # Clean up session
+        await self.cleanup_sessions(function_group)
+
     async def test_session_usage_context_manager_multiple_sessions(self, function_group):
         """Test the session usage context manager with multiple sessions."""
         session1 = "session-1"
@@ -285,6 +303,9 @@ class TestMCPSessionManagement:
         # Both should be back to 0
         assert function_group._sessions[session1].ref_count == 0
         assert function_group._sessions[session2].ref_count == 0
+
+        # Clean up sessions
+        await self.cleanup_sessions(function_group)
 
     async def test_create_session_client_unsupported_transport(self, function_group):
         """Test that creating session clients fails for unsupported transports."""
@@ -339,6 +360,9 @@ class TestMCPSessionManagement:
             # Session should be preserved
             assert session_id in function_group._sessions
 
+            # Clean up session
+            await self.cleanup_sessions(function_group)
+
     async def test_cleanup_handles_client_close_errors(self, function_group):
         """Test that cleanup handles errors when closing client connections."""
         session_id = "session-123"
@@ -386,6 +410,9 @@ class TestMCPSessionManagement:
         assert len(function_group._sessions) == 1
         assert session_id in function_group._sessions
 
+        # Clean up session
+        await self.cleanup_sessions(function_group)
+
     async def test_throttled_cleanup_on_access(self, function_group):
         """Test that cleanup is throttled and only runs periodically."""
         session_id = "session-123"
@@ -422,6 +449,9 @@ class TestMCPSessionManagement:
 
             # Cleanup should only be called once due to throttling
             assert cleanup_calls == 1
+
+            # Clean up session
+            await self.cleanup_sessions(function_group)
 
     async def test_manual_cleanup_sessions(self, function_group):
         """Test manual cleanup of sessions."""
@@ -517,6 +547,9 @@ class TestMCPSessionManagement:
         assert "session-2" not in function_group._sessions
         assert "session-3" in function_group._sessions
         assert "session-4" in function_group._sessions
+
+        # Clean up remaining sessions
+        await self.cleanup_sessions(function_group)
 
     async def test_lifetime_task_successful_initialization(self, function_group):
         """Test that lifetime task properly manages client lifecycle on success."""
