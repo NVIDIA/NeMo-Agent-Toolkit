@@ -94,6 +94,11 @@ test:python_tests:
         ETCD_ENDPOINTS: etcd:2379
         MINIO_ADDRESS: minio:9000
       command: ["milvus", "run", "standalone"]
+    - name: opensearchproject/opensearch:2.11.1
+      alias: opensearch
+      variables:
+        discovery.type: "single-node"
+        plugins.security.disabled: "true"
 
   script:
     - echo "Running tests"
