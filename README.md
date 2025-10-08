@@ -72,7 +72,7 @@ Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11, 3.1
 
 ### Stable Version
 
-Based on your system settings, you may need to configure and activate a python virtual environment. On macOS or Linux, you can run the following commands:
+Based on your system settings, you may need to configure and activate a Python virtual environment. On macOS or Linux, you can run the following commands:
 
 ```bash
 python3 -m venv .venv
