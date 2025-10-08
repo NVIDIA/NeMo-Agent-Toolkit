@@ -211,6 +211,7 @@ async def test_llm_adk(config: TestLLMConfig, builder: Builder):
 
     try:
         from google.adk.models.base_llm import BaseLlm
+        from google.adk.models.llm_request import LlmRequest
         from google.adk.models.llm_response import LlmResponse
         from google.genai import types
     except ImportError as exc:
@@ -222,7 +223,7 @@ async def test_llm_adk(config: TestLLMConfig, builder: Builder):
     class ADKTestLLM(BaseLlm):
 
         async def generate_content_async(self,
-                                         llm_request: Any,
+                                         llm_request: LlmRequest,
                                          stream: bool = False) -> AsyncGenerator[LlmResponse, None]:
             self._maybe_append_user_content(llm_request)
             await chooser.async_sleep()
