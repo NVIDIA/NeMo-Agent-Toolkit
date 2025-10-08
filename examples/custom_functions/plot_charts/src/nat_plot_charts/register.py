@@ -90,16 +90,13 @@ async def plot_charts_function(config: PlotChartsWorkflowConfig, builder: Builde
             filename = f"{chart_type}_chart_{timestamp}.png"
             output_path = output_dir / filename
 
-            # Create the appropriate chart
-            if chart_type == "line":
-                saved_path = create_line_plot(data, str(output_path), config.figure_size)
-            elif chart_type == "bar":
-                saved_path = create_bar_plot(data, str(output_path), config.figure_size)
-            elif chart_type == "scatter":
-                saved_path = create_scatter_plot(data, str(output_path), config.figure_size)
-            else:
+            create_function_mapping = {"line": create_line_plot, "bar": create_bar_plot, "scatter": create_scatter_plot}
+            if chart_type not in create_function_mapping:
                 return (f"Error: Unsupported chart type '{chart_type}'. "
                         f"Available types: {config.chart_types}")
+
+            # Create the appropriate chart
+            saved_path = create_function_mapping[chart_type](data, str(output_path), config.figure_size)
 
             # Generate description using LLM
             description = await generate_chart_description(llm, data, chart_type)

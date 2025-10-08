@@ -152,18 +152,19 @@ def create_scatter_plot(data: dict[str, Any], output_path: str, figure_size: tup
 
 def determine_chart_type(user_request: str, available_types: list[str]) -> str:
     """Determine the best chart type based on user request."""
-    request_lower = user_request.lower()
+    requested_type = user_request.lower()
 
     # Simple keyword matching for chart type detection
-    if any(word in request_lower for word in ["line", "trend", "over time", "timeline"]):
-        if "line" in available_types:
-            return "line"
-    elif any(word in request_lower for word in ["bar", "column", "compare", "comparison"]):
-        if "bar" in available_types:
-            return "bar"
-    elif any(word in request_lower for word in ["scatter", "correlation", "relationship"]):
-        if "scatter" in available_types:
-            return "scatter"
+    if any(word in requested_type for word in ["line", "trend", "over time", "timeline"]):
+        requested_type = "line"
+    elif any(word in requested_type for word in ["bar", "column", "compare", "comparison"]):
+        requested_type = "bar"
+    elif any(word in requested_type for word in ["scatter", "correlation", "relationship"]):
+        requested_type = "scatter"
+
+    # make sure the requested type is in the available types
+    if requested_type in available_types:
+        return requested_type
 
     raise ValueError(f"No chart type found for user request: {user_request}")
 
