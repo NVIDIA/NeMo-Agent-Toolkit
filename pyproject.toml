@@ -43,6 +43,7 @@ dependencies = [
   "platformdirs~=4.3",
   "pydantic~=2.11",
   "pymilvus~=2.4",
+  "python-dotenv~=1.1.1",
   "PyYAML~=6.0",
   "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
   "rich~=13.9",

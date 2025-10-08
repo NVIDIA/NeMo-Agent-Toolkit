@@ -29,6 +29,7 @@ import time
 
 import click
 import nest_asyncio
+from dotenv import load_dotenv
 
 from nat.utils.log_levels import LOG_LEVELS
 
@@ -44,6 +45,9 @@ from .commands.start import start_command
 from .commands.uninstall import uninstall_command
 from .commands.validate import validate_command
 from .commands.workflow.workflow import workflow_command
+
+# Load environment variables from .env file, if it exists
+load_dotenv()
 
 # Apply at the beginning of the file to avoid issues with asyncio
 nest_asyncio.apply()
