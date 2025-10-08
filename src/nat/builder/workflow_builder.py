@@ -156,6 +156,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._registry = registry
 
         self._logging_handlers: dict[str, logging.Handler] = {}
+        self._removed_root_handlers: list[tuple[logging.Handler, int]] = []
         self._telemetry_exporters: dict[str, ConfiguredTelemetryExporter] = {}
 
         self._functions: dict[str, ConfiguredFunction] = {}
@@ -187,6 +188,15 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Get the telemetry info from the config
         telemetry_config = self.general_config.telemetry
 
+        # If we have logging configuration, we need to manage the root logger properly
+        root_logger = logging.getLogger()
+
+        # Collect configured handler types to determine if we need to adjust existing handlers
+        # This is somewhat of a hack by inspecting the class name of the config object
+        has_console_handler = any(
+            hasattr(config, "__class__") and "console" in config.__class__.__name__.lower()
+            for config in telemetry_config.logging.values())
+
         for key, logging_config in telemetry_config.logging.items():
             # Use the same pattern as tracing, but for logging
             logging_info = self._registry.get_logging_method(type(logging_config))
@@ -200,7 +210,31 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             self._logging_handlers[key] = handler
 
             # Now attach to NAT's root logger
-            logging.getLogger().addHandler(handler)
+            root_logger.addHandler(handler)
+
+        # If we added logging handlers, manage existing handlers appropriately
+        if self._logging_handlers:
+            min_handler_level = min((handler.level for handler in root_logger.handlers), default=logging.CRITICAL)
+
+            # Ensure the root logger level allows messages through
+            root_logger.level = max(root_logger.level, min_handler_level)
+
+            # If a console handler is configured, adjust or remove default CLI handlers
+            # to avoid duplicate output while preserving workflow visibility
+            if has_console_handler:
+                # Adjust existing StreamHandler levels to match minimum configured level
+                for handler in root_logger.handlers[:]:
+                    if isinstance(handler, logging.StreamHandler) and handler not in self._logging_handlers.values():
+                        self._removed_root_handlers.append((handler, handler.level))
+                        root_logger.removeHandler(handler)
+            else:
+                # No console handler configured, but adjust existing handler levels
+                # to respect the minimum configured level for file/other handlers
+                for handler in root_logger.handlers[:]:
+                    if isinstance(handler, logging.StreamHandler):
+                        old_level = handler.level
+                        handler.setLevel(min_handler_level)
+                        self._removed_root_handlers.append((handler, old_level))
 
         # Add the telemetry exporters
         for key, telemetry_exporter_config in telemetry_config.tracing.items():
@@ -212,8 +246,17 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         assert self._exit_stack is not None, "Exit stack not initialized"
 
-        for _, handler in self._logging_handlers.items():
-            logging.getLogger().removeHandler(handler)
+        root_logger = logging.getLogger()
+
+        # Remove custom logging handlers
+        for handler in self._logging_handlers.values():
+            root_logger.removeHandler(handler)
+
+        # Restore original handlers and their levels
+        for handler, old_level in self._removed_root_handlers:
+            if handler not in root_logger.handlers:
+                root_logger.addHandler(handler)
+            handler.setLevel(old_level)
 
         await self._exit_stack.__aexit__(*exc_details)
 
