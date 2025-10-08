@@ -481,6 +481,12 @@ def test_rewoo_config_tool_call_max_retries():
     assert config_custom.tool_call_max_retries == 7
 
 
+def test_rewoo_config_use_openai_api_default_value():
+    """Test that use_openai_api defaults to True."""
+    config = ReWOOAgentWorkflowConfig(tool_names=["test_tool"], llm_name="test_llm")  # type: ignore
+    assert config.use_openai_api is True
+
+
 def test_json_output_parsing_valid_format():
     """Test that the planner can parse valid JSON output correctly."""
     import json

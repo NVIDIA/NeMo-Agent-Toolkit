@@ -54,9 +54,10 @@ class ReWOOAgentWorkflowConfig(AgentBaseConfig, name="rewoo_agent"):
                                                description="The number of retries before raising a tool call error.",
                                                ge=1)
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
-    use_openai_api: bool = Field(default=False,
-                                 description=("Use OpenAI API for the input/output types to the function. "
-                                              "If False, strings will be used."))
+    use_openai_api: bool = Field(
+        default=True,
+        description=("Default to True, using OpenAI API for the input/output types to the function. "
+                     "If False, strings will be used."))
     additional_planner_instructions: str | None = Field(
         default=None,
         validation_alias=AliasChoices("additional_planner_instructions", "additional_instructions"),

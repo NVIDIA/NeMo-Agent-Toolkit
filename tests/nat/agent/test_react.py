@@ -652,6 +652,12 @@ def test_config_alias_default_values():
     assert config.max_tool_calls == 15
 
 
+def test_config_use_openai_api_default_value():
+    """Test that use_openai_api defaults to True."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+    assert config.use_openai_api is True
+
+
 def test_config_alias_json_serialization():
     """Test that configuration with aliases can be serialized and deserialized."""
     config = ReActAgentWorkflowConfig(tool_names=['test'],

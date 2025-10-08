@@ -70,9 +70,10 @@ class ReActAgentWorkflowConfig(AgentBaseConfig, OptimizableMixin, name="react_ag
         default=None,
         description="Provides the SYSTEM_PROMPT to use with the agent")  # defaults to SYSTEM_PROMPT in prompt.py
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
-    use_openai_api: bool = Field(default=False,
-                                 description=("Use OpenAI API for the input/output types to the function. "
-                                              "If False, strings will be used."))
+    use_openai_api: bool = Field(
+        default=True,
+        description=("Default to True, using OpenAI API for the input/output types to the function. "
+                     "If False, strings will be used."))
     additional_instructions: str | None = OptimizableField(
         default=None,
         description="Additional instructions to provide to the agent in addition to the base prompt.",
