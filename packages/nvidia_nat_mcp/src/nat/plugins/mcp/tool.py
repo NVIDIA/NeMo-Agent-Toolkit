@@ -94,10 +94,7 @@ def mcp_tool_function(tool: MCPToolClient) -> FunctionInfo:
             _ = tool.input_schema.model_validate(kwargs)
             return await tool.acall(kwargs)
         except Exception as e:
-            if tool_input:
-                logger.warning("Error calling tool %s", tool.name, exc_info=True)
-            else:
-                logger.warning("Error calling tool %s", tool.name, exc_info=True)
+            logger.warning("Error calling tool %s", tool.name, exc_info=True)
             return str(e)
 
     return FunctionInfo.create(single_fn=_response_fn,
