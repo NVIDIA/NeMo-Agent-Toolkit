@@ -1,0 +1,99 @@
+# Example configuration for nvidia-nat-vanna package
+# This demonstrates how to use the text2sql and execute_db_query functions
+
+general:
+  use_uvloop: true
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: INFO
+
+functions:
+  # Text-to-SQL function using Vanna
+  text2sql:
+    _type: text2sql
+    llm_name: nim_llm
+    embedder_name: nim_embedder
+
+    # Database configuration
+    database_type: databricks
+    databricks_server_hostname: "${DATABRICKS_SERVER_HOSTNAME}"
+    databricks_http_path: "${DATABRICKS_HTTP_PATH}"
+    databricks_access_token: "${DATABRICKS_ACCESS_TOKEN}"
+    db_catalog: "main"
+    db_schema: "default"
+
+    # Milvus configuration
+    milvus_host: "${MILVUS_HOST:-localhost}"
+    milvus_port: 19530
+    milvus_user: "root"
+    milvus_db_name: "default"
+    milvus_use_tls: false
+
+    # Vanna settings
+    allow_llm_to_see_data: false
+    execute_sql: false  # Only generate SQL, don't execute
+    train_on_startup: true
+    n_results: 5
+
+    # Training data
+    training_ddl:
+      - "CREATE TABLE customers (id INT PRIMARY KEY, name VARCHAR(100), email VARCHAR(100), created_at TIMESTAMP)"
+      - "CREATE TABLE orders (id INT PRIMARY KEY, customer_id INT, product VARCHAR(100), amount DECIMAL(10,2), order_date DATE)"
+      - "CREATE TABLE products (id INT PRIMARY KEY, name VARCHAR(100), category VARCHAR(50), price DECIMAL(10,2))"
+
+    training_documentation:
+      - "The customers table contains all registered users. The created_at field shows registration date."
+      - "Orders table tracks all purchases. The amount field is in USD."
+      - "Products are organized by category (electronics, clothing, home, etc.)."
+
+    training_examples:
+      - question: "How many customers do we have?"
+        sql: "SELECT COUNT(*) as customer_count FROM customers"
+      - question: "What is the total revenue?"
+        sql: "SELECT SUM(amount) as total_revenue FROM orders"
+      - question: "Who are the top 5 customers by spending?"
+        sql: "SELECT c.name, SUM(o.amount) as total_spent FROM customers c JOIN orders o ON c.id = o.customer_id GROUP BY c.id, c.name ORDER BY total_spent DESC LIMIT 5"
+      - question: "How many orders were placed last month?"
+        sql: "SELECT COUNT(*) FROM orders WHERE order_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND order_date < DATE_TRUNC('month', CURRENT_DATE)"
+
+  # Database query execution function
+  execute_db_query:
+    _type: execute_db_query
+    database_type: databricks
+    databricks_server_hostname: "${DATABRICKS_SERVER_HOSTNAME}"
+    databricks_http_path: "${DATABRICKS_HTTP_PATH}"
+    databricks_access_token: "${DATABRICKS_ACCESS_TOKEN}"
+    db_catalog: "main"
+    db_schema: "default"
+    max_rows: 100
+    add_table_prefix_enabled: true
+
+# LLM configuration
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    api_key: "${NVIDIA_API_KEY}"
+    base_url: https://integrate.api.nvidia.com/v1
+    temperature: 0.0
+    max_tokens: 2000
+
+# Embedder configuration
+embedders:
+  nim_embedder:
+    _type: nim
+    model_name: nvidia/llama-3.2-nv-embedqa-1b-v2
+    api_key: "${NVIDIA_API_KEY}"
+    base_url: https://integrate.api.nvidia.com/v1
+
+# Workflow configuration - combines both functions
+workflow:
+  _type: tool_calling_agent
+  tool_names:
+    - text2sql
+    - execute_db_query
+  llm_name: nim_llm
+  verbose: true
+  max_history: 10
