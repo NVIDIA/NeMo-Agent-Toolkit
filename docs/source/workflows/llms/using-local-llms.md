@@ -138,8 +138,13 @@ nat run --config_file examples/documentation_guides/locally_hosted_llms/nim_conf
 
 ## Using vLLM
 
+
+vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients.
+
+If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. It is recommended to use a **separate** virtual environment for vLLM due to potential conflicts with NeMo Agent toolkit dependencies.
+
 <!-- path-check-skip-next-line -->
-vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients. If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. Similar to the previous example we will be using the same [`nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1`](https://huggingface.co/nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) embedding model.
+Similar to the previous example we will be using the same [`nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1`](https://huggingface.co/nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) embedding model.
 
 ### Install the Simple Web Query Example
 
