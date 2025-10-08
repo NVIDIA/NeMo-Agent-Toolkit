@@ -17,7 +17,7 @@
 set +e
 
 # Intentionally excluding CHANGELOG.md as it immutable
-DOC_FILES=$(git ls-files "*.md" "*.rst" | grep -v -E '^(CHANGELOG|LICENSE)\.md$')
+DOC_FILES=$(git ls-files "*.md" "*.rst" | grep -v -E '(CHANGELOG|LICENSE)\.md$')
 NOTEBOOK_FILES=$(git ls-files "*.ipynb")
 
 if [[ -v ${WORKSPACE_TMP} ]]; then
