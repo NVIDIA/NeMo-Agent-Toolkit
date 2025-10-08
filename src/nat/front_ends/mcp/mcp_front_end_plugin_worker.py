@@ -29,6 +29,7 @@ from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
+from nat.front_ends.mcp.memory_profiler import MemoryProfiler
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,11 @@ class MCPFrontEndPluginWorkerBase(ABC):
         """
         self.full_config = config
         self.front_end_config: MCPFrontEndConfig = config.general.front_end
+
+        # Initialize memory profiler if enabled
+        self.memory_profiler = MemoryProfiler(enabled=self.front_end_config.enable_memory_profiling,
+                                              log_interval=self.front_end_config.memory_profile_interval,
+                                              top_n=self.front_end_config.memory_profile_top_n)
 
     def _setup_health_endpoint(self, mcp: FastMCP):
         """Set up the HTTP health endpoint that exercises MCP ping handler."""
@@ -115,6 +121,9 @@ class MCPFrontEndPluginWorkerBase(ABC):
         Exposes:
           - GET /debug/tools/list: List tools. Optional query param `name` (one or more, repeatable or comma separated)
             selects a subset and returns details for those tools.
+          - GET /debug/memory/stats: Get current memory profiling statistics (if enabled)
+          - POST /debug/memory/log: Force log current memory stats (if enabled)
+          - POST /debug/memory/reset: Reset memory profiling baseline (if enabled)
         """
 
         @mcp.custom_route("/debug/tools/list", methods=["GET"])
@@ -206,6 +215,39 @@ class MCPFrontEndPluginWorkerBase(ABC):
             return JSONResponse(
                 _build_final_json(functions_to_include, _parse_detail_param(detail_raw, has_names=bool(names))))
 
+        # Memory profiling endpoints
+        @mcp.custom_route("/debug/memory/stats", methods=["GET"])
+        async def get_memory_stats(_request: Request):
+            """Get current memory profiling statistics."""
+            from starlette.responses import JSONResponse
+
+            stats = self.memory_profiler.get_stats()
+            return JSONResponse(stats)
+
+        @mcp.custom_route("/debug/memory/log", methods=["POST"])
+        async def log_memory_stats(_request: Request):
+            """Force log current memory statistics."""
+            from starlette.responses import JSONResponse
+
+            if not self.memory_profiler.enabled:
+                return JSONResponse({"error": "Memory profiling is not enabled"}, status_code=400)
+
+            stats = self.memory_profiler.log_memory_stats()
+            return JSONResponse({"message": "Memory stats logged", "stats": stats})
+
+        @mcp.custom_route("/debug/memory/reset", methods=["POST"])
+        async def reset_memory_baseline(_request: Request):
+            """Reset memory profiling baseline."""
+            from starlette.responses import JSONResponse
+
+            if not self.memory_profiler.enabled:
+                return JSONResponse({"error": "Memory profiling is not enabled"}, status_code=400)
+
+            self.memory_profiler.reset_baseline()
+            return JSONResponse({
+                "message": "Memory profiling baseline reset", "request_count": self.memory_profiler.request_count
+            })
+
 
 class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
     """Default MCP front end plugin worker implementation."""
@@ -241,7 +283,7 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
 
         # Register each function with MCP, passing workflow context for observability
         for function_name, function in functions.items():
-            register_function_with_mcp(mcp, function_name, function, workflow)
+            register_function_with_mcp(mcp, function_name, function, workflow, self.memory_profiler)
 
         # Add a simple fallback function if no functions were found
         if not functions:

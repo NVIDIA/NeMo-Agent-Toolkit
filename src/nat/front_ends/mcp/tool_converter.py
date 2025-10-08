@@ -38,6 +38,7 @@ def create_function_wrapper(
     schema: type[BaseModel],
     is_workflow: bool = False,
     workflow: 'Workflow | None' = None,
+    memory_profiler: typing.Any | None = None,
 ):
     """Create a wrapper function that exposes the actual parameters of a NAT Function as an MCP tool.
 
@@ -47,6 +48,7 @@ def create_function_wrapper(
         schema (type[BaseModel]): The input schema of the function
         is_workflow (bool): Whether the function is a Workflow
         workflow (Workflow | None): The parent workflow for observability context
+        memory_profiler: Optional memory profiler to track requests
 
     Returns:
         A wrapper function suitable for registration with MCP
@@ -172,6 +174,10 @@ def create_function_wrapper(
                 if ctx:
                     await ctx.report_progress(100, 100)
 
+                # Track request completion for memory profiling
+                if memory_profiler:
+                    memory_profiler.on_request_complete()
+
                 # Handle different result types for proper formatting
                 if isinstance(result, str):
                     return result
@@ -181,6 +187,11 @@ def create_function_wrapper(
             except Exception as e:
                 if ctx:
                     ctx.error("Error calling function %s: %s", function_name, str(e))
+
+                # Track request completion even on error
+                if memory_profiler:
+                    memory_profiler.on_request_complete()
+
                 raise
 
         return wrapper_with_ctx
@@ -242,7 +253,8 @@ def get_function_description(function: FunctionBase) -> str:
 def register_function_with_mcp(mcp: FastMCP,
                                function_name: str,
                                function: FunctionBase,
-                               workflow: 'Workflow | None' = None) -> None:
+                               workflow: 'Workflow | None' = None,
+                               memory_profiler: typing.Any | None = None) -> None:
     """Register a NAT Function as an MCP tool.
 
     Args:
@@ -250,6 +262,7 @@ def register_function_with_mcp(mcp: FastMCP,
         function_name: The name to register the function under
         function: The NAT Function to register
         workflow: The parent workflow for observability context (if available)
+        memory_profiler: Optional memory profiler to track requests
     """
     logger.info("Registering function %s with MCP", function_name)
 
@@ -267,5 +280,10 @@ def register_function_with_mcp(mcp: FastMCP,
     function_description = get_function_description(function)
 
     # Create and register the wrapper function with MCP
-    wrapper_func = create_function_wrapper(function_name, function, input_schema, is_workflow, workflow)
+    wrapper_func = create_function_wrapper(function_name,
+                                           function,
+                                           input_schema,
+                                           is_workflow,
+                                           workflow,
+                                           memory_profiler)
     mcp.tool(name=function_name, description=function_description)(wrapper_func)
