@@ -28,6 +28,7 @@ from pydantic import HttpUrl
 from pydantic import conlist
 from pydantic import field_serializer
 from pydantic import field_validator
+from pydantic import model_validator
 from pydantic_core.core_schema import ValidationInfo
 
 from nat.data_models.interactive import HumanPrompt
@@ -120,15 +121,7 @@ class Message(BaseModel):
     role: UserMessageContentRoleType
 
 
-class ChatRequest(BaseModel):
-    """
-    ChatRequest is a data model that represents a request to the NAT chat API.
-    Fully compatible with OpenAI Chat Completions API specification.
-    """
-
-    # Required fields
-    messages: typing.Annotated[list[Message], conlist(Message, min_length=1)]
-
+class ChatRequestOptionals(BaseModel):
     # Optional fields (OpenAI Chat Completions API compatible)
     model: str | None = Field(default=None, description="name of the model to use")
     frequency_penalty: float | None = Field(default=0.0,
@@ -152,6 +145,16 @@ class ChatRequest(BaseModel):
     tool_choice: str | dict[str, typing.Any] | None = Field(default=None, description="Controls which tool is called")
     parallel_tool_calls: bool | None = Field(default=True, description="Whether to enable parallel function calling")
     user: str | None = Field(default=None, description="Unique identifier representing end-user")
+
+
+class ChatRequest(ChatRequestOptionals):
+    """
+    ChatRequest is a data model that represents a request to the NAT chat API.
+    Fully compatible with OpenAI Chat Completions API specification.
+    """
+
+    # Required fields
+    messages: typing.Annotated[list[Message], conlist(Message, min_length=1)]
 
     model_config = ConfigDict(extra="allow",
                               json_schema_extra={
@@ -192,6 +195,42 @@ class ChatRequest(BaseModel):
                            temperature=temperature,
                            max_tokens=max_tokens,
                            top_p=top_p)
+
+
+class ChatRequestOrMessage(ChatRequestOptionals):
+    """
+    ChatRequestOrMessage is a data model that represents either a conversation or a string input.
+    This is useful for functions that can handle either type of input.
+
+    `messages` is compatible with the OpenAI Chat Completions API specification.
+
+    `input_string` is a string input that can be used for functions that do not require a conversation.
+    """
+
+    messages: typing.Annotated[list[Message] | None, conlist(Message, min_length=1)] = Field(
+        default=None, description="The conversation messages to process.")
+
+    input_string: str | None = Field(default=None, alias="input_message", description="The input message to process.")
+
+    @property
+    def is_string(self) -> bool:
+        return self.input_string is not None
+
+    @property
+    def is_conversation(self) -> bool:
+        return self.messages is not None
+
+    @model_validator(mode="after")
+    def validate_messages_or_input_string(self):
+        if self.messages is not None and self.input_string is not None:
+            raise ValueError("Either messages or input_message/input_string must be provided, not both")
+        if self.messages is None and self.input_string is None:
+            raise ValueError("Either messages or input_message/input_string must be provided")
+        if self.input_string is not None:
+            extra_fields = self.model_dump(exclude={"input_string"}, exclude_none=True, exclude_unset=True)
+            if len(extra_fields) > 0:
+                raise ValueError("no extra fields are permitted when input_message/input_string is provided")
+        return self
 
 
 class ChoiceMessage(BaseModel):
@@ -659,6 +698,36 @@ def _string_to_nat_chat_request(data: str) -> ChatRequest:
 
 
 GlobalTypeConverter.register_converter(_string_to_nat_chat_request)
+
+
+def _chat_request_or_message_to_chat_request(data: ChatRequestOrMessage) -> ChatRequest:
+    if data.input_string is not None:
+        return _string_to_nat_chat_request(data.input_string)
+    return ChatRequest(**data.model_dump(exclude={"input_string"}))
+
+
+GlobalTypeConverter.register_converter(_chat_request_or_message_to_chat_request)
+
+
+def _chat_request_to_chat_request_or_message(data: ChatRequest) -> ChatRequestOrMessage:
+    return ChatRequestOrMessage(**data.model_dump(by_alias=True))
+
+
+GlobalTypeConverter.register_converter(_chat_request_to_chat_request_or_message)
+
+
+def _chat_request_or_message_to_string(data: ChatRequestOrMessage) -> str:
+    return data.input_string or ""
+
+
+GlobalTypeConverter.register_converter(_chat_request_or_message_to_string)
+
+
+def _string_to_chat_request_or_message(data: str) -> ChatRequestOrMessage:
+    return ChatRequestOrMessage(input_message=data)
+
+
+GlobalTypeConverter.register_converter(_string_to_chat_request_or_message)
 
 
 # ======== ChatResponse Converters ========
