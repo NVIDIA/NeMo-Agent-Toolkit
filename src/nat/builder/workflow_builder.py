@@ -222,16 +222,16 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # If a console handler is configured, adjust or remove default CLI handlers
             # to avoid duplicate output while preserving workflow visibility
             if has_console_handler:
-                # Adjust existing StreamHandler levels to match minimum configured level
+                # Remove existing StreamHandlers that are not the newly configured ones
                 for handler in root_logger.handlers[:]:
-                    if isinstance(handler, logging.StreamHandler) and handler not in self._logging_handlers.values():
+                    if type(handler) is logging.StreamHandler and handler not in self._logging_handlers.values():
                         self._removed_root_handlers.append((handler, handler.level))
                         root_logger.removeHandler(handler)
             else:
                 # No console handler configured, but adjust existing handler levels
                 # to respect the minimum configured level for file/other handlers
                 for handler in root_logger.handlers[:]:
-                    if isinstance(handler, logging.StreamHandler):
+                    if type(handler) is logging.StreamHandler:
                         old_level = handler.level
                         handler.setLevel(min_handler_level)
                         self._removed_root_handlers.append((handler, old_level))

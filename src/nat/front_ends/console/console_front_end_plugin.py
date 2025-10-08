@@ -102,8 +102,8 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         # Additionally print to stdout if console handlers are set to a level higher than INFO
         # This ensures workflow results are always visible regardless of logging configuration
         root_logger = logging.getLogger()
-        console_level_too_high = any(
-            isinstance(handler, logging.StreamHandler) and handler.level > logging.INFO
+        console_level_too_high = all(
+            type(handler) is not logging.StreamHandler or handler.level > logging.INFO
             for handler in root_logger.handlers)
 
         if console_level_too_high:
