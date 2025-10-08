@@ -1,0 +1,56 @@
+# Configuration for standalone text2sql MCP server
+# For load testing and memory leak detection
+
+general:
+  use_uvloop: true
+  telemetry:
+    logging:
+      console:
+        level: INFO  # Use DEBUG for more verbose output
+        format: json
+
+# Standalone text2sql function - no auth, no execution
+functions:
+  text2sql_standalone:
+    _type: text2sql_standalone
+    llm_name: nim_llm
+    embedder_name: nim_embedder
+    train_on_startup: false  # Set to true for first run
+    database_type: databricks
+    allow_llm_to_see_data: false
+    execute_sql: false  # Only generate SQL, don't execute
+    authorize: false  # No auth for load testing
+    enable_followup_questions: false
+    vanna_remote: true  # Use remote Milvus
+    milvus_host: ${MILVUS_HOST}  # Set via env var
+    milvus_port: ${MILVUS_PORT}  # Set via env var
+    milvus_user: ${MILVUS_USERNAME}  # Set via env var
+    milvus_db_name: "default"
+    training_analysis_filter: ["pbr", "supply_gap"]
+
+# LLM configuration
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 2048
+    timeout: 60.0
+
+# Embedder configuration
+embedders:
+  nim_embedder:
+    _type: nvidia_ai_endpoints
+    model_name: nvidia/nv-embedqa-e5-v5
+    truncate: END
+
+# Simple workflow - just the standalone text2sql tool
+workflow:
+  _type: react_agent
+  tool_names:
+    - text2sql_standalone
+  llm_name: nim_llm
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
+

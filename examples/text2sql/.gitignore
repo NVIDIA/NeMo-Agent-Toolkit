@@ -1,0 +1,28 @@
+# Log files
+logs/
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Memory profiles
+*.prof
+*.mprofile
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# Environment files (may contain secrets)
+.env
+.env.local
