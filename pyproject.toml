@@ -20,6 +20,7 @@ dependencies = [
   # Keep sorted!!!
   "aioboto3>=11.0.0",
   "authlib~=1.5",
+  "chromadb~=1.1.0",
   "click~=8.1",
   "colorama~=0.4.6",
   "datasets~=4.0", # workaround for uv's solver choosing different versions of datasets based on sys_platform
@@ -37,6 +38,7 @@ dependencies = [
   "openinference-semantic-conventions~=0.1.14",
   "openpyxl~=3.1",
   "optuna~=4.4.0",
+  "pandas~=2.0",
   "pip>=24.3.1",
   "pkce==1.0.3",
   "pkginfo~=1.12",
@@ -48,6 +50,7 @@ dependencies = [
   "rich~=13.9",
   "tabulate~=0.9",
   "uvicorn[standard]~=0.34",
+  "vanna~=0.7.9",
   "wikipedia~=1.4",
 ]
 requires-python = ">=3.11,<3.14"
@@ -80,6 +83,7 @@ mcp = ["nvidia-nat-mcp"]
 mem0ai = ["nvidia-nat-mem0ai"]
 opentelemetry = ["nvidia-nat-opentelemetry"]
 phoenix = ["nvidia-nat-phoenix"]
+postgres = ["psycopg2-binary~=2.9"]
 profiling = ["nvidia-nat-profiling"] # meta-package
 ragaai = ["nvidia-nat-ragaai"]
 mysql = ["nvidia-nat-mysql"]
