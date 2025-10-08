@@ -107,8 +107,6 @@ The ReWOO agent is configured through the `config.yml` file. The following confi
 
 * `log_response_max_chars`: Defaults to 1000. Maximum number of characters to display in logs when logging tool responses.
 
-* `use_openai_api`: Defaults to False. If set to True, the ReWOO agent will output in OpenAI API spec. If set to False, strings will be used.
-
 * `additional_planner_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base planner prompt.
 
 * `additional_solver_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base solver prompt.
