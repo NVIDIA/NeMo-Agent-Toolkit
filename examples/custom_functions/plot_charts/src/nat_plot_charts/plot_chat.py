@@ -156,14 +156,16 @@ def determine_chart_type(user_request: str, available_types: list[str]) -> str:
 
     # Simple keyword matching for chart type detection
     if any(word in request_lower for word in ["line", "trend", "over time", "timeline"]):
-        return "line" if "line" in available_types else available_types[0]
+        if "line" in available_types:
+            return "line"
     elif any(word in request_lower for word in ["bar", "column", "compare", "comparison"]):
-        return "bar" if "bar" in available_types else available_types[0]
+        if "bar" in available_types:
+            return "bar"
     elif any(word in request_lower for word in ["scatter", "correlation", "relationship"]):
-        return "scatter" if "scatter" in available_types else available_types[0]
+        if "scatter" in available_types:
+            return "scatter"
 
-    # Default to first available type
-    return available_types[0] if available_types else "line"
+    raise ValueError(f"No chart type found for user request: {user_request}")
 
 
 async def generate_chart_description(llm: BaseChatModel, data: dict[str, Any], chart_type: str) -> str:

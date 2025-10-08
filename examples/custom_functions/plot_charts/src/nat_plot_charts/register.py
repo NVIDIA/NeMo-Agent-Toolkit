@@ -16,10 +16,13 @@
 import logging
 from pathlib import Path
 
+from pydantic import Field
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -27,12 +30,13 @@ logger = logging.getLogger(__name__)
 
 class PlotChartsWorkflowConfig(FunctionBaseConfig, name="plot_charts"):
     """Configuration for the plot charts workflow."""
-    llm_name: str
-    data_file_path: str = "example_data.json"
-    output_directory: str = "outputs"
-    chart_types: list[str] = ["line", "bar", "scatter"]
-    max_data_points: int = 100
-    figure_size: tuple[int, int] = (10, 6)
+    llm_name: LLMRef
+    data_file_path: str = Field(description="The path to the data file.", default="example_data.json")
+    output_directory: str = Field(description="The path to the output directory.", default="outputs")
+    chart_types: list[str] = Field(description="The chart types to support.",
+                                   default_factory=lambda: ["line", "bar", "scatter"])
+    max_data_points: int = Field(description="The maximum number of data points to support.", default=100)
+    figure_size: tuple[int, int] = Field(description="The figure size for the chart.", default=(10, 6))
 
 
 @register_function(config_type=PlotChartsWorkflowConfig)
@@ -63,6 +67,10 @@ async def plot_charts_function(config: PlotChartsWorkflowConfig, builder: Builde
         logger.info("Processing chart request: %s", input_message)
 
         try:
+            # Determine chart type from user request
+            chart_type = determine_chart_type(input_message, config.chart_types)
+            logger.info("Selected chart type: %s", chart_type)
+
             # Load data from configured file
             data = load_data_from_file(config.data_file_path)
 
@@ -75,10 +83,6 @@ async def plot_charts_function(config: PlotChartsWorkflowConfig, builder: Builde
             if total_points > config.max_data_points:
                 return (f"Error: Data contains {total_points} points, which exceeds the limit of "
                         f"{config.max_data_points}.")
-
-            # Determine chart type from user request
-            chart_type = determine_chart_type(input_message, config.chart_types)
-            logger.info("Selected chart type: %s", chart_type)
 
             # Generate unique filename
             import time
