@@ -95,16 +95,6 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         else:
             assert False, "Should not reach here. Should have been caught by pre_run"
 
-        # Always log the result at INFO level
+        # Always log the result at CRITICAL level so it is always visible
         result_message = f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n%s{Fore.RESET}\n{'-' * 50}"
-        logger.info(result_message, runner_outputs)
-
-        # Additionally print to stdout if console handlers are set to a level higher than INFO
-        # This ensures workflow results are always visible regardless of logging configuration
-        root_logger = logging.getLogger()
-        console_level_too_high = all(
-            type(handler) is not logging.StreamHandler or handler.level > logging.INFO
-            for handler in root_logger.handlers)
-
-        if console_level_too_high:
-            print(f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n{runner_outputs}{Fore.RESET}\n{'-' * 50}")
+        logger.critical(result_message, runner_outputs)
