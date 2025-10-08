@@ -52,7 +52,11 @@ nest_asyncio.apply()
 def setup_logging(log_level: str):
     """Configure logging with the specified level"""
     numeric_level = LOG_LEVELS.get(log_level.upper(), logging.INFO)
-    logging.basicConfig(level=numeric_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=numeric_level,
+        format="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
     return numeric_level
 
 
