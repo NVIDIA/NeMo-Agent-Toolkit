@@ -31,12 +31,20 @@ requires-python = ">=3.11,<3.14"
 description = "Subpackage for Weave integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "observability", "wandb", "pii"]
+license = "Apache-2.0"
+license-files = ["../../LICENSE.md", "../../LICENSE-3rd-party.txt"]
+authors = [{ name = "NVIDIA Corporation" }]
+maintainers = [{ name = "NVIDIA Corporation" }]
 classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
+
+[project.urls]
+documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
+source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
 
 [tool.uv]

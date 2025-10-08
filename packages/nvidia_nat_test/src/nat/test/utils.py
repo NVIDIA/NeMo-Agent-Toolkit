@@ -17,10 +17,16 @@ import importlib.resources
 import inspect
 import subprocess
 import typing
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 if typing.TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from httpx import AsyncClient
+
     from nat.data_models.config import Config
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
     from nat.utils.type_utils import StrPath
 
 
@@ -85,3 +91,37 @@ async def run_workflow(
         assert expected_answer.lower() in result.lower(), f"Expected '{expected_answer}' in '{result}'"
 
     return result
+
+
+@asynccontextmanager
+async def build_nat_client(
+        config: "Config",
+        worker_class: "type[FastApiFrontEndPluginWorker] | None" = None) -> "AsyncIterator[AsyncClient]":
+    """
+    Build a NAT client for testing purposes.
+
+    Creates a test client with an ASGI transport for the specified configuration.
+    The client is backed by a FastAPI application built from the provided worker class.
+
+    Args:
+        config: The NAT configuration to use for building the client.
+        worker_class: Optional worker class to use. Defaults to FastApiFrontEndPluginWorker.
+
+    Yields:
+        An AsyncClient instance configured for testing.
+    """
+    from asgi_lifespan import LifespanManager
+    from httpx import ASGITransport
+    from httpx import AsyncClient
+
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+
+    if worker_class is None:
+        worker_class = FastApiFrontEndPluginWorker
+
+    worker = worker_class(config)
+    app = worker.build_app()
+
+    async with LifespanManager(app):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            yield client

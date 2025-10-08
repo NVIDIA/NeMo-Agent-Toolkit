@@ -256,7 +256,7 @@ def test_recursive_componentref_discovery():
         expected_instance_id = generate_instance_id(instance_config)
 
         result_set = set()
-        for field_name, field_info in instance_config.model_fields.items():
+        for field_name, field_info in TestConfig.model_fields.items():
 
             for instance_id, value_node in recursive_componentref_discovery(
                     instance_config,
