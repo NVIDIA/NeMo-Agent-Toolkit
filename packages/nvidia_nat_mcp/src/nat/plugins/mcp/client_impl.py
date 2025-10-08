@@ -456,12 +456,9 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
             return await session_tool.acall(kwargs)
         except Exception as e:
             if tool_input:
-                logger.warning("Error calling tool %s with serialized input: %s",
-                               tool.name,
-                               tool_input.model_dump(),
-                               exc_info=True)
+                logger.warning("Error calling tool %s", tool.name, exc_info=True)
             else:
-                logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
+                logger.warning("Error calling tool %s", tool.name, exc_info=True)
             return str(e)
 
     return FunctionInfo.create(single_fn=_response_fn,
