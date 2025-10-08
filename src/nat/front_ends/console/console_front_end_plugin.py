@@ -95,6 +95,14 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         else:
             assert False, "Should not reach here. Should have been caught by pre_run"
 
-        # Always log the result at CRITICAL level so it is always visible
-        result_message = f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n%s{Fore.RESET}\n{'-' * 50}"
-        logger.critical(result_message, runner_outputs)
+        line = f"{'-' * 50}"
+        prefix = f"{line}\n{Fore.GREEN}Workflow Result:\n"
+        suffix = f"{Fore.RESET}\n{line}"
+
+        logger.info(f"{prefix}%s{suffix}", runner_outputs)
+
+        # (handler is a stream handler) => (level > INFO)
+        effective_level_too_high = all(
+            type(h) is not logging.StreamHandler or h.level > logging.INFO for h in logging.getLogger().handlers)
+        if effective_level_too_high:
+            print(f"{prefix}{runner_outputs}{suffix}")
