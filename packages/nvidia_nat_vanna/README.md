@@ -224,7 +224,6 @@ db_password: "${DB_PASSWORD}"
 |-----------|------|-------------|---------|
 | `database_type` | str | Database type | "databricks" |
 | `max_rows` | int | Maximum rows to return | 100 |
-| `add_table_prefix_enabled` | bool | Add catalog.schema prefix | true |
 | `db_catalog` | str | Database catalog | null |
 | `db_schema` | str | Database schema | null |
 
@@ -374,7 +373,6 @@ Error: Failed to connect to database
 
 **SQL execution errors:**
 - Enable `execute_sql: false` to review queries before execution
-- Check table prefixes with `add_table_prefix_enabled`
 - Verify catalog and schema names
 
 **No training data found:**
