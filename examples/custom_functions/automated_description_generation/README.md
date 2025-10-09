@@ -29,8 +29,14 @@ The documentation will also cover configuration considerations and how to set up
 ## Table of Contents
 
 * [Key Features](#key-features)
-* [Installation and Usage](#installation-and-setup)
+* [Installation and Setup](#installation-and-setup)
+  * [Install this Workflow](#install-this-workflow)
+  * [Set Up API Keys](#set-up-api-keys)
+  * [Set Up Milvus](#set-up-milvus)
+  * [Bootstrap Data](#bootstrap-data)
 * [Example Usage](#example-usage)
+  * [No Automated Description Generation](#no-automated-description-generation)
+  * [Automated Description Generation](#automated-description-generation)
 
 
 ## Key Features
@@ -60,22 +66,33 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-### Setting Up Milvus
+### Set Up Milvus
 
 This example uses a Milvus vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses the built-in NeMo Agent toolkit abstractions for retrievers, this example will work for any database that implements the required methods of the NeMo Agent toolkit `retriever` interface.
 
-The rest of this example assumes you have a running instance of Milvus at `localhost:19530`. If you would like a guide on setting up the database used in this example, please follow
-the instructions in the `simple_rag` example of NeMo Agent toolkit [here](../../RAG/simple_rag/README.md#set-up-milvus).
+Start the docker compose
+```bash
+docker compose -f examples/deploy/docker-compose.milvus.yml up -d
+```
 
-If you have a different Milvus database you would like to use, please modify the `./configs/config.yml` with the appropriate URLs to your database instance.
+> [!NOTE]
+> It can take some time for Milvus to start up. You can check the logs with:
+> ```bash
+> docker compose -f examples/deploy/docker-compose.milvus.yml logs --follow
+> ```
 
-To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of NeMo Agent toolkit [here](../../RAG/simple_rag/README.md) and running the following command:
+### Bootstrap Data
+
+To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. The following script will create the collections and populate the data:
 
 ```bash
 python scripts/langchain_web_ingest.py --collection_name=cuda_docs
 python scripts/langchain_web_ingest.py --urls https://en.wikipedia.org/wiki/Aardvark --collection_name=wikipedia_docs
 ```
+
 ## Example Usage
+
+### No Automated Description Generation
 
 To demonstrate the benefit of this methodology to automatically generate collection descriptions, we will use it in a function that can automatically discover and generate descriptions for collections within a given vector database.
 It will then rename the retriever tool for that database with the generated description instead of the user-provided description. Let us explore the `config_no_auto.yml` file, that performs simple RAG.
@@ -157,7 +174,11 @@ Workflow Result:
 ['There is only one species of Aardvark, Orycteropus afer, and it has no recognized subspecies.']
 ```
 
-If we look at the full output from the toolkit, we see that the agent did not call tool for retrieval as it was incorrectly described. However, let us see what happens if we use the automated description generate function to intelligently sample the documents in the retriever and create an appropriate description. We could do so with the following configuration:
+If we look at the full output from the toolkit, we see that the agent did not call the tool for retrieval as it was incorrectly described.
+
+### Automated Description Generation
+
+Let us see what happens if we use the automated description generate function to intelligently sample the documents in the retriever and create an appropriate description. We could do so with the following configuration:
 
 ```yaml
 llms:
@@ -203,6 +224,7 @@ workflow:
   verbose: true
   llm_name: nim_llm
 ```
+
 Here, we're searching for information about Wikipedia in a collection using a tool incorrectly described to contain documents about NVIDIA's CUDA library. We see above that we use the automated description generation tool to generate a description for the collection `wikipedia_docs`. The tool uses the `retriever` to retrieve documents from the collection, and then uses the `nim_llm` to generate a description for the collection.
 
 If we run the updated configuration, we see the following output:
