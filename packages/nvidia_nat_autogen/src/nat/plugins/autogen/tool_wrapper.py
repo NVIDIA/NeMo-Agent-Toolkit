@@ -15,10 +15,8 @@
 """Tool wrapper for AutoGen integration with NAT."""
 
 import logging
-from collections.abc import AsyncIterator
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from dataclasses import is_dataclass
-
 # PythonType not available in AutoGen 0.7.4, using Any instead
 from typing import Any
 
@@ -145,7 +143,7 @@ def autogen_tool_wrapper(
                     annotations[param_name] = resolved_type
             if input_schema is not None:
                 func_to_wrap.__signature__ = inspect.Signature(parameters=params)
-+               func_to_wrap.__annotations__ = annotations
+                func_to_wrap.__annotations__ = annotations
 
             return func_to_wrap
 
