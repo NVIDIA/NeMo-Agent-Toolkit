@@ -163,6 +163,6 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             return response
         except Exception as ex:
             logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, str(ex))
-            raise RuntimeError
+            raise
 
     yield FunctionInfo.from_fn(_response_fn, description=config.description)

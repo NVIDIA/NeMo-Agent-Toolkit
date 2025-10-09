@@ -170,6 +170,6 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
             return response
         except Exception as ex:
             logger.exception("ReWOO Agent failed with exception: %s", ex)
-            raise RuntimeError
+            raise
 
     yield FunctionInfo.from_fn(_response_fn, description=config.description)

@@ -196,8 +196,7 @@ class Runner:
 
             return result
         except Exception as e:
-            err_msg = f": {e}" if str(e).strip() else "."
-            logger.error("Error running workflow%s", err_msg)
+            logger.error("Error running workflow: %s", e)
             event_stream = self._context_state.event_stream.get()
             if event_stream:
                 event_stream.on_complete()
