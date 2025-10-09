@@ -1,25 +1,24 @@
 """Database query execution function for NeMo Agent Toolkit."""
 
 import logging
+import uuid
 from collections.abc import AsyncGenerator
 from typing import Any
 
-import pandas as pd
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.function import FunctionBaseConfig
 from pydantic import BaseModel, Field, TypeAdapter
 
-from nat.plugins.vanna.db_utils import (
-    add_table_prefix,
-    connect_to_database,
-    execute_query,
-    extract_sql_from_message,
-)
-
 logger = logging.getLogger(__name__)
+
+
+class StatusPayload(BaseModel):
+    """Payload for status intermediate steps."""
+    message: str
 
 
 class ExecuteDBQueryInput(BaseModel):
@@ -101,21 +100,36 @@ async def execute_db_query(
     builder: Builder,
 ):
     """Register the Execute DB Query function."""
+    # Import implementation details inside the registration function
+    import pandas as pd
+
+    from nat.plugins.vanna.db_utils import (
+        add_table_prefix,
+        connect_to_database,
+        execute_query,
+        extract_sql_from_message,
+    )
+
     logger.info("Initializing Execute DB Query function")
 
     # Streaming version
     async def _execute_sql_query_stream(
         input_data: ExecuteDBQueryInput,
-    ) -> AsyncGenerator[dict[str, Any], None]:
+    ) -> AsyncGenerator[ResponseIntermediateStep | ExecuteDBQueryOutput, None]:
         """Stream SQL query execution progress and results."""
         sql_query = extract_sql_from_message(input_data.sql_query)
         logger.info(f"Executing SQL: {sql_query}")
 
-        yield {
-            "type": "status",
-            "message": "Starting SQL query execution...",
-            "node": "execute_db_query",
-        }
+        # Generate parent_id for this function call
+        parent_id = str(uuid.uuid4())
+
+        yield ResponseIntermediateStep(
+            id=str(uuid.uuid4()),
+            parent_id=parent_id,
+            type="markdown",
+            name="execute_db_query_status",
+            payload=StatusPayload(message="Starting SQL query execution...").model_dump_json(),
+        )
 
         try:
             # Clean up query
@@ -125,11 +139,13 @@ async def execute_db_query(
             if sql_query.startswith("'") and sql_query.endswith("'"):
                 sql_query = sql_query[1:-1]
 
-            yield {
-                "type": "status",
-                "message": "Connecting to database...",
-                "node": "execute_db_query",
-            }
+            yield ResponseIntermediateStep(
+                id=str(uuid.uuid4()),
+                parent_id=parent_id,
+                type="markdown",
+                name="execute_db_query_status",
+                payload=StatusPayload(message="Connecting to database...").model_dump_json(),
+            )
 
             # Connect to database
             if config.database_type == "databricks":
@@ -140,17 +156,12 @@ async def execute_db_query(
                         config.databricks_access_token,
                     ]
                 ):
-                    error_response = ExecuteDBQueryOutput(
+                    yield ExecuteDBQueryOutput(
                         success=False,
                         error="Missing Databricks connection parameters",
                         sql_query=sql_query,
                         dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
                     )
-                    yield {
-                        "type": "result",
-                        "query_result": error_response.model_dump(),
-                        "node": "execute_db_query",
-                    }
                     return
 
                 connection = connect_to_database(
@@ -162,17 +173,12 @@ async def execute_db_query(
                 )
             else:
                 if not all([config.db_host, config.db_name]):
-                    error_response = ExecuteDBQueryOutput(
+                    yield ExecuteDBQueryOutput(
                         success=False,
                         error="Missing database connection parameters",
                         sql_query=sql_query,
                         dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
                     )
-                    yield {
-                        "type": "result",
-                        "query_result": error_response.model_dump(),
-                        "node": "execute_db_query",
-                    }
                     return
 
                 connection = connect_to_database(
@@ -185,17 +191,12 @@ async def execute_db_query(
                 )
 
             if connection is None:
-                error_response = ExecuteDBQueryOutput(
+                yield ExecuteDBQueryOutput(
                     success=False,
                     error="Failed to connect to database",
                     sql_query=sql_query,
                     dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
                 )
-                yield {
-                    "type": "result",
-                    "query_result": error_response.model_dump(),
-                    "node": "execute_db_query",
-                }
                 return
 
             # Add table prefix if configured
@@ -203,11 +204,13 @@ async def execute_db_query(
             if config.add_table_prefix_enabled and (
                 config.db_catalog or config.db_schema
             ):
-                yield {
-                    "type": "status",
-                    "message": "Adding table prefix...",
-                    "node": "execute_db_query",
-                }
+                yield ResponseIntermediateStep(
+                    id=str(uuid.uuid4()),
+                    parent_id=parent_id,
+                    type="markdown",
+                    name="execute_db_query_status",
+                    payload=StatusPayload(message="Adding table prefix...").model_dump_json(),
+                )
                 prefix_parts = []
                 if config.db_catalog:
                     prefix_parts.append(config.db_catalog)
@@ -217,11 +220,13 @@ async def execute_db_query(
                 sql_query = add_table_prefix(sql_query, table_prefix)
                 logger.info(f"Modified query: {sql_query}")
 
-            yield {
-                "type": "status",
-                "message": "Executing SQL query...",
-                "node": "execute_db_query",
-            }
+            yield ResponseIntermediateStep(
+                id=str(uuid.uuid4()),
+                parent_id=parent_id,
+                type="markdown",
+                name="execute_db_query_status",
+                payload=StatusPayload(message="Executing SQL query...").model_dump_json(),
+            )
 
             # Execute query
             results, columns = execute_query(
@@ -231,11 +236,13 @@ async def execute_db_query(
             # Close connection
             connection.close()
 
-            yield {
-                "type": "status",
-                "message": "Processing results...",
-                "node": "execute_db_query",
-            }
+            yield ResponseIntermediateStep(
+                id=str(uuid.uuid4()),
+                parent_id=parent_id,
+                type="markdown",
+                name="execute_db_query_status",
+                payload=StatusPayload(message="Processing results...").model_dump_json(),
+            )
 
             # Limit results
             limited_results = (
@@ -288,41 +295,35 @@ async def execute_db_query(
                 response.limited_to = config.max_rows
                 response.truncated = True
 
-            yield {
-                "type": "result",
-                "query_result": response.model_dump(),
-                "node": "execute_db_query",
-            }
+            # Yield final result as ExecuteDBQueryOutput
+            yield response
 
         except Exception as e:
             logger.error(f"Error executing SQL query: {e}")
-            error_response = ExecuteDBQueryOutput(
+            yield ExecuteDBQueryOutput(
                 success=False,
                 error=str(e),
                 sql_query=sql_query,
                 dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
             )
-            yield {
-                "type": "result",
-                "query_result": error_response.model_dump(),
-                "node": "execute_db_query",
-            }
 
         logger.info("Execute DB Query completed")
 
     # Non-streaming version
-    async def _execute_sql_query(input_data: ExecuteDBQueryInput) -> str:
+    async def _execute_sql_query(input_data: ExecuteDBQueryInput) -> ExecuteDBQueryOutput:
         """Execute SQL query and return results."""
-        result = None
-
         async for update in _execute_sql_query_stream(input_data):
-            if update["type"] == "result":
-                result = update["query_result"]
+            # Skip ResponseIntermediateStep objects, only return ExecuteDBQueryOutput
+            if isinstance(update, ExecuteDBQueryOutput):
+                return update
 
-        if result and isinstance(result, dict):
-            return TypeAdapter(dict).dump_json(result).decode("utf-8")
-
-        return str(result) if result else "{}"
+        # Fallback if no result found
+        return ExecuteDBQueryOutput(
+            success=False,
+            error="No result returned",
+            sql_query="",
+            dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
+        )
 
     description = (
         f"Execute SQL queries on {config.database_type} and return results. "
@@ -339,4 +340,3 @@ async def execute_db_query(
         description=description,
         input_schema=ExecuteDBQueryInput,
     )
-

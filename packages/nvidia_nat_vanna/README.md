@@ -141,7 +141,7 @@ workflow:
 
 ```bash
 # Using NAT CLI
-nat run --config text2sql_config.yml --input "Retrieve the total number of customers."
+nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "Retrieve the total number of customers."
 
 # Or programmatically
 ```
@@ -338,6 +338,11 @@ general:
         _type: console
         level: INFO
 ```
+
+Other features include:
+- Full integration with NAT's intermediate step tracking system
+- Better UI Display - Front-ends can now properly render intermediate steps
+- Parent Tracking - Each function call has a parent_id to group related steps
 
 ## Troubleshooting
 
