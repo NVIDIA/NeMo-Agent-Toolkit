@@ -162,7 +162,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
                 return GlobalTypeConverter.get().convert(response, to_type=str)
             return response
         except Exception as ex:
-            logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, str(ex))
+            logger.error("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, str(ex))
             raise
 
     yield FunctionInfo.from_fn(_response_fn, description=config.description)

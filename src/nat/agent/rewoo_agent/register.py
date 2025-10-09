@@ -169,7 +169,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
                 return GlobalTypeConverter.get().convert(response, to_type=str)
             return response
         except Exception as ex:
-            logger.exception("ReWOO Agent failed with exception: %s", ex)
+            logger.error("ReWOO Agent failed with exception: %s", ex)
             raise
 
     yield FunctionInfo.from_fn(_response_fn, description=config.description)
