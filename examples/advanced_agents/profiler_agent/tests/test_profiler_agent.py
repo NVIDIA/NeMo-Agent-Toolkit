@@ -94,4 +94,4 @@ async def test_token_usage_tool(df_path: Path):
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_full_workflow():
     config_file: Path = locate_example_config(ProfilerAgentConfig)
-    await run_workflow(config_file, "Is the product of 33 * 4 greater than the current hour of the day?", "yes")
+    await run_workflow(config_file, "Show me the token usage of last run", "tokens")
