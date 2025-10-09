@@ -16,6 +16,7 @@
 import dataclasses
 import logging
 import typing
+import weakref
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
@@ -46,10 +47,18 @@ class IntermediateStepManager:
     Manages updates to the NAT Event Stream for intermediate steps
     """
 
+    # Class-level tracking for debugging and monitoring
+    _instance_count: int = 0
+    _active_instances: set[weakref.ref] = set()
+
     def __init__(self, context_state: "ContextState"):  # noqa: F821
         self._context_state = context_state
 
         self._outstanding_start_steps: dict[str, OpenStep] = {}
+
+        # Track instance creation
+        IntermediateStepManager._instance_count += 1
+        IntermediateStepManager._active_instances.add(weakref.ref(self, self._cleanup_instance_tracking))
 
     def push_intermediate_step(self, payload: IntermediateStepPayload) -> None:
         """
@@ -172,3 +181,17 @@ class IntermediateStepManager:
         """
 
         return self._context_state.event_stream.get().subscribe(on_next, on_error, on_complete)
+
+    @classmethod
+    def _cleanup_instance_tracking(cls, ref: weakref.ref) -> None:
+        """Cleanup callback for weakref when instance is garbage collected."""
+        cls._active_instances.discard(ref)
+
+    @classmethod
+    def get_active_instance_count(cls) -> int:
+        """Get the number of active IntermediateStepManager instances.
+
+        Returns:
+            int: Number of active instances (cleaned up automatically via weakref)
+        """
+        return len(cls._active_instances)

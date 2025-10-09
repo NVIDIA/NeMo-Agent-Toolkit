@@ -17,7 +17,6 @@
 import gc
 import logging
 import tracemalloc
-import weakref
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -40,9 +39,6 @@ class MemoryProfiler:
         self.top_n = top_n
         self.request_count = 0
         self.baseline_snapshot = None
-
-        # Track IntermediateStepManager instances
-        self._intermediate_step_managers: list[weakref.ref] = []
 
         # Track whether this instance started tracemalloc (to avoid resetting external tracing)
         self._we_started_tracemalloc = False
@@ -135,8 +131,7 @@ class MemoryProfiler:
                 "request_count": self.request_count,
                 "current_memory_mb": None,
                 "peak_memory_mb": None,
-                "alive_intermediate_managers": self._alive_intermediate_manager_count(),
-                "total_intermediate_managers": len(self._intermediate_step_managers),
+                "active_intermediate_managers": self._safe_intermediate_step_manager_count(),
                 "active_exporters": self._safe_exporter_count(),
                 "isolated_exporters": self._safe_isolated_exporter_count(),
                 "subject_instances": self._count_instances_of_type("Subject"),
@@ -159,8 +154,7 @@ class MemoryProfiler:
             "request_count": self.request_count,
             "current_memory_mb": round(current_mb, 2),
             "peak_memory_mb": round(peak_mb, 2),
-            "alive_intermediate_managers": self._alive_intermediate_manager_count(),
-            "total_intermediate_managers": len(self._intermediate_step_managers),
+            "active_intermediate_managers": self._safe_intermediate_step_manager_count(),
             "active_exporters": exporter_count,
             "isolated_exporters": isolated_exporter_count,
             "subject_instances": subject_count,
@@ -172,9 +166,7 @@ class MemoryProfiler:
         logger.info("  Peak Memory: %.2f MB", peak_mb)
         logger.info("")
         logger.info("NAT COMPONENT INSTANCES:")
-        logger.info("  IntermediateStepManagers: %d alive / %d total",
-                    stats["alive_intermediate_managers"],
-                    stats["total_intermediate_managers"])
+        logger.info("  IntermediateStepManagers: %d active", stats["active_intermediate_managers"])
         logger.info("  BaseExporters: %d active (%d isolated)", stats["active_exporters"], stats["isolated_exporters"])
         logger.info("  Subject (event streams): %d instances", stats["subject_instances"])
 
@@ -195,25 +187,6 @@ class MemoryProfiler:
         logger.info("=" * 80)
 
         return stats
-
-    def _alive_intermediate_manager_count(self) -> int:
-        """Return count of alive refs; prunes dead refs for accuracy without changing 'total'."""
-        alive = 0
-        # Light pruning during the count
-        keep: list[weakref.ref] = []
-        for r in self._intermediate_step_managers:
-            obj = r()
-            if obj is not None:
-                alive += 1
-                keep.append(r)
-            else:
-                # drop dead refs to avoid unbounded growth
-                pass
-        # Keep behavior: 'total_intermediate_managers' reflects original list length,
-        # so we only prune for alive count; to preserve exact original semantics,
-        # comment out the next line. (This change only reduces list size in memory.)
-        self._intermediate_step_managers = keep
-        return alive
 
     def _count_instances_of_type(self, type_name: str) -> int:
         """Count instances of a specific type in memory."""
@@ -241,17 +214,13 @@ class MemoryProfiler:
         except Exception:
             return 0
 
-    def track_intermediate_step_manager(self, manager: Any) -> None:
-        """Track an IntermediateStepManager instance."""
-        if not self.enabled:
-            return
-        self._intermediate_step_managers.append(weakref.ref(manager))
-        alive_count = len([r for r in self._intermediate_step_managers if r() is not None])
-        logger.debug(
-            "IntermediateStepManager created (alive: %d, total: %d)",
-            alive_count,
-            len(self._intermediate_step_managers),
-        )
+    def _safe_intermediate_step_manager_count(self) -> int:
+        try:
+            from nat.builder.intermediate_step_manager import IntermediateStepManager
+            return IntermediateStepManager.get_active_instance_count()
+        except Exception as e:
+            logger.debug("Could not get IntermediateStepManager stats: %s", e)
+            return 0
 
     def get_stats(self) -> dict[str, Any]:
         """Get current memory statistics without logging."""
@@ -265,8 +234,7 @@ class MemoryProfiler:
                 "request_count": self.request_count,
                 "current_memory_mb": None,
                 "peak_memory_mb": None,
-                "alive_intermediate_managers": len([r for r in self._intermediate_step_managers if r() is not None]),
-                "total_intermediate_managers": len(self._intermediate_step_managers),
+                "active_intermediate_managers": self._safe_intermediate_step_manager_count(),
                 "active_exporters": self._safe_exporter_count(),
                 "isolated_exporters": self._safe_isolated_exporter_count(),
                 "subject_instances": self._count_instances_of_type("Subject"),
@@ -278,8 +246,7 @@ class MemoryProfiler:
             "request_count": self.request_count,
             "current_memory_mb": round(current_mb, 2),
             "peak_memory_mb": round(peak_mb, 2),
-            "alive_intermediate_managers": len([r for r in self._intermediate_step_managers if r() is not None]),
-            "total_intermediate_managers": len(self._intermediate_step_managers),
+            "active_intermediate_managers": self._safe_intermediate_step_manager_count(),
             "active_exporters": self._safe_exporter_count(),
             "isolated_exporters": self._safe_isolated_exporter_count(),
             "subject_instances": self._count_instances_of_type("Subject"),
