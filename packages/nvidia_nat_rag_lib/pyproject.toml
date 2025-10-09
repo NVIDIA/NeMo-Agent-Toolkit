@@ -1,0 +1,44 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nat.*"]
+
+
+[tool.setuptools_scm]
+git_describe_command = ["git", "describe", "--long", "--first-parent"]
+root = "../.."
+
+
+[project]
+name = "nvidia-nat-rag-lib"
+dynamic = ["version"]
+dependencies = [
+  "nvidia-nat~=1.4",
+  "nvidia-rag>=2.2.2",
+]
+
+requires-python = ">=3.11,<3.14"
+description = "Subpackage for NVIDIA RAG library integration in NeMo Agent Toolkit"
+readme = "src/nat/meta/pypi.md"
+keywords = ["ai", "rag", "agents", "retrieval"]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+[tool.uv]
+config-settings = { editable_mode = "compat" }
+
+
+[tool.uv.sources]
+nvidia-nat = { workspace = true }
+
+
+[project.entry-points.'nat.components']
+nat_rag_lib = "nat.plugins.rag_lib.register"

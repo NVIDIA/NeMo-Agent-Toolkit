@@ -81,6 +81,7 @@ mem0ai = ["nvidia-nat-mem0ai"]
 opentelemetry = ["nvidia-nat-opentelemetry"]
 phoenix = ["nvidia-nat-phoenix"]
 profiling = ["nvidia-nat-profiling"] # meta-package
+rag-lib = ["nvidia-nat-rag-lib"]
 ragaai = ["nvidia-nat-ragaai"]
 mysql = ["nvidia-nat-mysql"]
 redis = ["nvidia-nat-redis"]
@@ -171,6 +172,7 @@ nvidia-nat-mysql = { workspace = true }
 nvidia-nat-opentelemetry = { workspace = true }
 nvidia-nat-phoenix = { workspace = true }
 nvidia-nat-profiling = { workspace = true }
+nvidia-nat-rag-lib = { workspace = true }
 nvidia-nat-ragaai = { workspace = true }
 nvidia-nat-redis = { workspace = true }
 nvidia-nat-s3 = { workspace = true }

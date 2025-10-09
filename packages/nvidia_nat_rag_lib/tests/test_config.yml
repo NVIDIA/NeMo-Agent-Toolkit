@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Test configuration for NVIDIA RAG Library integration
+# This configuration is used as a pytest fixture for testing
+
+llms:
+  test_llm:
+    _type: nim
+    model_name: meta/llama-3.1-8b-instruct
+    temperature: 0.0
+    max_tokens: 512
+
+embedders:
+  test_embedder:
+    _type: nim
+    model_name: nvidia/nv-embedqa-e5-v5
+    truncate: "END"
+
+functions:
+  rag_client:
+    _type: nvidia_rag_lib
+    # Core configuration
+    vdb_endpoint: "http://localhost:19530"
+    reranker_top_k: 5
+    vdb_top_k: 50
+    collection_names: ["test_collection"]
+
+    # Document processing
+    chunk_size: 256
+    chunk_overlap: 50
+    generate_summary: false
+    blocking_upload: false
+
+    # Model references
+    llm_name: test_llm
+    embedder_name: test_embedder
+
+    # Infrastructure
+    vectorstore_gpu_device_id: "0"
+    model_directory: "/tmp/test-model-cache"
+
+    # Service configuration
+    deployment_mode: "hosted"
+    timeout: 30.0
+
+    # Setup options (disabled for testing)
+    verify_prerequisites: false
+    health_check_dependencies: false
+    health_check_timeout: 10.0
+
+workflow:
+  _type: react_agent
+  llm_name: test_llm
+  tool_names: [rag_client]
+  verbose: false
