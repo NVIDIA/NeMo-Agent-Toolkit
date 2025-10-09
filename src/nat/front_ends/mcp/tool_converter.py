@@ -15,7 +15,6 @@
 
 import json
 import logging
-import typing
 from inspect import Parameter
 from inspect import Signature
 from typing import TYPE_CHECKING
@@ -29,6 +28,7 @@ from nat.builder.function_base import FunctionBase
 
 if TYPE_CHECKING:
     from nat.builder.workflow import Workflow
+    from nat.front_ends.mcp.memory_profiler import MemoryProfiler
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def create_function_wrapper(
     schema: type[BaseModel],
     is_workflow: bool = False,
     workflow: 'Workflow | None' = None,
-    memory_profiler: typing.Any | None = None,
+    memory_profiler: 'MemoryProfiler | None' = None,
 ):
     """Create a wrapper function that exposes the actual parameters of a NAT Function as an MCP tool.
 
@@ -255,7 +255,7 @@ def register_function_with_mcp(mcp: FastMCP,
                                function_name: str,
                                function: FunctionBase,
                                workflow: 'Workflow | None' = None,
-                               memory_profiler: typing.Any | None = None) -> None:
+                               memory_profiler: 'MemoryProfiler | None' = None) -> None:
     """Register a NAT Function as an MCP tool.
 
     Args:

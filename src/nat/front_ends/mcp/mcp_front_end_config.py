@@ -50,7 +50,7 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     memory_profile_interval: int = Field(default=50,
                                          description="Log memory stats every N requests (default: 50)",
                                          ge=1)
-    memory_profile_top_n: int = Field(default=10,
-                                      description="Number of top memory allocations to log (default: 10)",
+    memory_profile_top_n: int = Field(default=5,
+                                      description="Number of top memory allocations to log (default: 5)",
                                       ge=1,
                                       le=50)
