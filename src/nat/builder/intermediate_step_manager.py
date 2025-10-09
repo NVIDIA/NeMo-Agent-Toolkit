@@ -17,6 +17,7 @@ import dataclasses
 import logging
 import typing
 import weakref
+from typing import ClassVar
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
@@ -48,8 +49,8 @@ class IntermediateStepManager:
     """
 
     # Class-level tracking for debugging and monitoring
-    _instance_count: int = 0
-    _active_instances: set[weakref.ref] = set()
+    _instance_count: ClassVar[int] = 0
+    _active_instances: ClassVar[set[weakref.ref]] = set()
 
     def __init__(self, context_state: "ContextState"):  # noqa: F821
         self._context_state = context_state

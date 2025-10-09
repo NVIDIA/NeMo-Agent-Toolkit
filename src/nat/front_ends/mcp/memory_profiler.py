@@ -104,7 +104,7 @@ class MemoryProfiler:
         except RuntimeError:
             return None
 
-    def _safe_snapshot(self):
+    def _safe_snapshot(self) -> tracemalloc.Snapshot | None:
         """Return a tracemalloc Snapshot if available, else None."""
         if not self._ensure_tracing():
             return None
