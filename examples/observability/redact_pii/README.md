@@ -89,7 +89,8 @@ export WANDB_API_KEY=your_api_key_here
           # - PHONE_NUMBER
           # - CREDIT_CARD
           # - US_SSN
-          # - PERSON      redact_keys:
+          # - PERSON
+        redact_keys:
           - custom_secret
           - api_key
           - auth_token
