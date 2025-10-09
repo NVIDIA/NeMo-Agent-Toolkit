@@ -14,38 +14,34 @@ import uuid
 
 import pandas as pd
 from dotenv import load_dotenv
-from fastapi import HTTPException, status
-from langchain_nvidia_ai_endpoints import ChatNVIDIA, NVIDIAEmbeddings
-from pymilvus import DataType, MilvusClient
+from fastapi import HTTPException
+from fastapi import status
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
+from pymilvus import DataType
+from pymilvus import MilvusClient
 from vanna.base import VannaBase
 from vanna.milvus import Milvus_VectorStore
 from vanna.utils import deterministic_uuid
 
-from talk_to_supply_chain.resources.followup_resources import (
-    FOLLOWUP_GUIDELINES,
-    TABLE_USE_CASES,
-)
-from talk_to_supply_chain.utils.constant import (
-    MAX_LIMIT_SIZE,
-    MAX_SQL_ROWS,
-    MILVUS_MAX_LEN,
-)
-from talk_to_supply_chain.utils.db_schema import (
-    DEMAND_DLT_EXAMPLES,
-    INSTRUCTION_PROMPT,
-    PBR_EXAMPLES,
-    RESPONSE_GUIDELINES,
-    TABLES,
-    TTYSC_TABLES,
-    generate_table_description,
-)
-from talk_to_supply_chain.utils.db_utils import (
-    add_table_prefix,
-    async_query,
-    infer_table_name_from_sql,
-)
-from talk_to_supply_chain.utils.feature_flag import Flag, get_flag_value
-from talk_to_supply_chain.utils.milvus_utils import create_milvus_client
+from text2sql.resources.followup_resources import FOLLOWUP_GUIDELINES
+from text2sql.resources.followup_resources import TABLE_USE_CASES
+from text2sql.utils.constant import MAX_LIMIT_SIZE
+from text2sql.utils.constant import MAX_SQL_ROWS
+from text2sql.utils.constant import MILVUS_MAX_LEN
+from text2sql.utils.db_schema import DEMAND_DLT_EXAMPLES
+from text2sql.utils.db_schema import INSTRUCTION_PROMPT
+from text2sql.utils.db_schema import PBR_EXAMPLES
+from text2sql.utils.db_schema import RESPONSE_GUIDELINES
+from text2sql.utils.db_schema import TABLES
+from text2sql.utils.db_schema import TTYSC_TABLES
+from text2sql.utils.db_schema import generate_table_description
+from text2sql.utils.db_utils import add_table_prefix
+from text2sql.utils.db_utils import async_query
+from text2sql.utils.db_utils import infer_table_name_from_sql
+from text2sql.utils.feature_flag import Flag
+from text2sql.utils.feature_flag import get_flag_value
+from text2sql.utils.milvus_utils import create_milvus_client
 
 # Load environment variables from .env file
 load_dotenv()
@@ -58,9 +54,7 @@ _vanna_instance = None
 _init_lock = None
 
 
-def validate_analysis_type(
-    analysis_type: str | None, valid_types: list[str] | None = None
-) -> str | None:
+def validate_analysis_type(analysis_type: str | None, valid_types: list[str] | None = None) -> str | None:
     """Validate and sanitize analysis_type parameter.
 
     Args:
@@ -83,10 +77,8 @@ def validate_analysis_type(
     # If no valid types configured, filtering is disabled
     if not valid_types or len(valid_types) == 0:
         if analysis_type:
-            logger.warning(
-                f"analysis_type '{analysis_type}' provided but "
-                "training_analysis_filter not configured - filtering disabled"
-            )
+            logger.warning(f"analysis_type '{analysis_type}' provided but "
+                           "training_analysis_filter not configured - filtering disabled")
         return None
 
     # Convert valid types to set and normalize to lowercase
@@ -96,11 +88,9 @@ def validate_analysis_type(
     cleaned_type = analysis_type.strip().lower()
 
     if cleaned_type not in valid_types_set:
-        error_msg = (
-            f"Invalid analysis_type: '{analysis_type}'. "
-            f"Must be one of: {', '.join(sorted(valid_types_set))}. "
-            "Continuing without filtering."
-        )
+        error_msg = (f"Invalid analysis_type: '{analysis_type}'. "
+                     f"Must be one of: {', '.join(sorted(valid_types_set))}. "
+                     "Continuing without filtering.")
         logger.error(error_msg)
         return None  # Return None instead of raising, allowing graceful degradation
 
@@ -137,10 +127,8 @@ def build_sql_result(
     # Build base result dictionary
     result = {
         "sql": sql,
-        "explanation": (
-            f"{'Regenerated' if method == 'vanna_retry' else 'Generated'} "
-            f"SQL query for: {question}"
-        ),
+        "explanation": (f"{'Regenerated' if method == 'vanna_retry' else 'Generated'} "
+                        f"SQL query for: {question}"),
         "confidence": confidence,
         "method": method,
         "results": {
@@ -205,39 +193,29 @@ class VannaChatNVIDIA(VannaBase):
     ) -> list:
         """Generate a prompt for the LLM to generate SQL."""
         if initial_prompt is None:
-            initial_prompt = (
-                f"You are a {self.dialect} expert. "
-                "Please help to generate a SQL query to answer the question. "
-                "Your response should ONLY be based on the given context "
-                "and follow the response guidelines and format instructions. "
-            )
+            initial_prompt = (f"You are a {self.dialect} expert. "
+                              "Please help to generate a SQL query to answer the question. "
+                              "Your response should ONLY be based on the given context "
+                              "and follow the response guidelines and format instructions. ")
 
-        initial_prompt = self.add_ddl_to_prompt(
-            initial_prompt, ddl_list, max_tokens=self.max_tokens
-        )
+        initial_prompt = self.add_ddl_to_prompt(initial_prompt, ddl_list, max_tokens=self.max_tokens)
 
         if self.static_documentation != "":
             doc_list.append(self.static_documentation)
 
-        initial_prompt = self.add_documentation_to_prompt(
-            initial_prompt, doc_list, max_tokens=self.max_tokens
-        )
+        initial_prompt = self.add_documentation_to_prompt(initial_prompt, doc_list, max_tokens=self.max_tokens)
 
         initial_prompt += RESPONSE_GUIDELINES
-        initial_prompt += (
-            f"5. Ensure that the output SQL is {self.dialect}-compliant "
-            "and executable, and free of syntax errors. \n"
-        )
+        initial_prompt += (f"5. Ensure that the output SQL is {self.dialect}-compliant "
+                           "and executable, and free of syntax errors. \n")
 
         # If there is an error in previously generated SQL, add it to the prompt
         if error_message is not None:
-            initial_prompt += (
-                f"6. For question: {question}. "
-                "\tPrevious SQL attempt failed with error: "
-                f"{error_message['sql_error']}\n"
-                f"\tPrevious SQL was: {error_message['previous_sql']}\n"
-                f"\tPlease fix the SQL syntax/logic error and regenerate."
-            )
+            initial_prompt += (f"6. For question: {question}. "
+                               "\tPrevious SQL attempt failed with error: "
+                               f"{error_message['sql_error']}\n"
+                               f"\tPrevious SQL was: {error_message['previous_sql']}\n"
+                               f"\tPlease fix the SQL syntax/logic error and regenerate.")
 
         message_log = [self.system_message(initial_prompt)]
 
@@ -279,19 +257,13 @@ class VannaChatNVIDIA(VannaBase):
 
         # Validate and sanitize analysis_type for security
         # Note: Invalid values return None and log error, allowing graceful degradation
-        validated_analysis_type = validate_analysis_type(
-            analysis_type, valid_types=self.valid_analysis_types
-        )
+        validated_analysis_type = validate_analysis_type(analysis_type, valid_types=self.valid_analysis_types)
 
         if validated_analysis_type:
-            logger.info(
-                f"Generating SQL with analysis_type filter: {validated_analysis_type}"
-            )
+            logger.info(f"Generating SQL with analysis_type filter: {validated_analysis_type}")
         elif analysis_type and not validated_analysis_type:
             # Log when an invalid type was provided and ignored
-            logger.error(
-                f"Invalid analysis_type '{analysis_type}' - proceeding without filter"
-            )
+            logger.error(f"Invalid analysis_type '{analysis_type}' - proceeding without filter")
         else:
             logger.info("Generating SQL (no analysis_type filter)")
 
@@ -302,10 +274,7 @@ class VannaChatNVIDIA(VannaBase):
 
         retrieval_in_parallel = []
         retrieval_in_parallel.append(
-            self.get_similar_question_sql(
-                question, analysis_type=validated_analysis_type, **kwargs
-            )
-        )
+            self.get_similar_question_sql(question, analysis_type=validated_analysis_type, **kwargs))
         retrieval_in_parallel.append(self.get_related_ddl(question, **kwargs))
         retrieval_in_parallel.append(self.get_related_documentation(question, **kwargs))
 
@@ -316,9 +285,7 @@ class VannaChatNVIDIA(VannaBase):
         #     )
         # )
 
-        question_sql_list, ddl_list, doc_list = await asyncio.gather(
-            *retrieval_in_parallel
-        )
+        question_sql_list, ddl_list, doc_list = await asyncio.gather(*retrieval_in_parallel)
 
         # SQL comments are disabled for now
         sql_comments = []
@@ -327,11 +294,9 @@ class VannaChatNVIDIA(VannaBase):
         if sql_comments:
             doc_list.append("\n===Few-Shot Examples with Reasoning\n")
             for comment in sql_comments:
-                doc_list.append(
-                    f"Question: {comment['question']}\n"
-                    f"SQL: {comment['sql']}\n"
-                    f"Reasoning: {comment['explanation']}\n"
-                )
+                doc_list.append(f"Question: {comment['question']}\n"
+                                f"SQL: {comment['sql']}\n"
+                                f"Reasoning: {comment['explanation']}\n")
 
         prompt = self.get_sql_prompt(
             initial_prompt=initial_prompt,
@@ -357,12 +322,10 @@ class VannaChatNVIDIA(VannaBase):
 
         if "intermediate_sql" in llm_response:
             if not allow_llm_to_see_data:
-                return (
-                    "The LLM is not allowed to see the data in your database. "
-                    "Your question requires database introspection to generate "
-                    "the necessary SQL. Please set allow_llm_to_see_data=True "
-                    "to enable this."
-                )
+                return ("The LLM is not allowed to see the data in your database. "
+                        "Your question requires database introspection to generate "
+                        "the necessary SQL. Please set allow_llm_to_see_data=True "
+                        "to enable this.")
 
             intermediate_sql = self.extract_sql(llm_response)
 
@@ -375,11 +338,9 @@ class VannaChatNVIDIA(VannaBase):
                     question=question,
                     question_sql_list=question_sql_list,
                     ddl_list=ddl_list,
-                    doc_list=doc_list
-                    + [
+                    doc_list=doc_list + [
                         "The following is a pandas DataFrame with the results of "
-                        f"the intermediate SQL query {intermediate_sql}: \n"
-                        + df.to_markdown()
+                        f"the intermediate SQL query {intermediate_sql}: \n" + df.to_markdown()
                     ],
                     **kwargs,
                 )
@@ -415,38 +376,27 @@ class VannaChatNVIDIA(VannaBase):
         )
 
         # Add DDL context
-        initial_prompt = self.add_ddl_to_prompt(
-            formatted_prompt, ddl_list, max_tokens=self.max_tokens
-        )
+        initial_prompt = self.add_ddl_to_prompt(formatted_prompt, ddl_list, max_tokens=self.max_tokens)
 
         # Add documentation context
         if self.static_documentation != "":
             doc_list.append(self.static_documentation)
 
-        initial_prompt = self.add_documentation_to_prompt(
-            initial_prompt, doc_list, max_tokens=self.max_tokens
-        )
+        initial_prompt = self.add_documentation_to_prompt(initial_prompt, doc_list, max_tokens=self.max_tokens)
 
         # Add SQL examples context
-        initial_prompt = self.add_sql_to_prompt(
-            initial_prompt, question_sql_list, max_tokens=self.max_tokens
-        )
+        initial_prompt = self.add_sql_to_prompt(initial_prompt, question_sql_list, max_tokens=self.max_tokens)
 
         message_log = [self.system_message(initial_prompt)]
         message_log.append(
-            self.user_message(
-                "Generate a list of followup questions that the user might ask "
-                "about this data. Respond with a list of questions, one per line. "
-                "Do not answer with any explanations -- just the questions."
-            )
-        )
+            self.user_message("Generate a list of followup questions that the user might ask "
+                              "about this data. Respond with a list of questions, one per line. "
+                              "Do not answer with any explanations -- just the questions."))
 
         return message_log
 
     # TODO(apourhabib): This is repetitive and I need to import it from followup tool.
-    def _validate_questions(
-        self, questions_text: str, applicable_use_cases: list[str], user_prompt: str
-    ) -> str:
+    def _validate_questions(self, questions_text: str, applicable_use_cases: list[str], user_prompt: str) -> str:
         """Validate that generated questions align with supported use cases.
 
         Args:
@@ -482,10 +432,7 @@ class VannaChatNVIDIA(VannaBase):
                 continue
 
             # Check if the question contains forbidden patterns
-            if any(
-                re.search(pattern, line, re.IGNORECASE)
-                for pattern in forbidden_patterns
-            ):
+            if any(re.search(pattern, line, re.IGNORECASE) for pattern in forbidden_patterns):
                 continue
 
             # Check if question matches use cases or parameter substitution
@@ -494,23 +441,16 @@ class VannaChatNVIDIA(VannaBase):
 
         # If we don't have enough valid questions, generate fallbacks
         while len(validated_questions) < 4:
-            fallback = self._get_fallback_question(
-                len(validated_questions) + 1, applicable_use_cases, user_prompt
-            )
+            fallback = self._get_fallback_question(len(validated_questions) + 1, applicable_use_cases, user_prompt)
             if fallback:
                 validated_questions.append(fallback)
             else:
                 break
 
-        return (
-            "\n".join(validated_questions)
-            if validated_questions
-            else self._generate_fallback_questions(applicable_use_cases, user_prompt)
-        )
+        return ("\n".join(validated_questions) if validated_questions else self._generate_fallback_questions(
+            applicable_use_cases, user_prompt))
 
-    def _is_valid_question(
-        self, question: str, applicable_use_cases: list[str], user_prompt: str
-    ) -> bool:
+    def _is_valid_question(self, question: str, applicable_use_cases: list[str], user_prompt: str) -> bool:
         """Check if question is valid by comparing to use cases and user prompt."""
         question_lower = question.lower()
         user_prompt_lower = user_prompt.lower()
@@ -521,9 +461,7 @@ class VannaChatNVIDIA(VannaBase):
 
         # Check if it matches patterns from applicable use cases
         for use_case in applicable_use_cases:
-            if self._question_matches_use_case_pattern(
-                question_lower, use_case.lower()
-            ):
+            if self._question_matches_use_case_pattern(question_lower, use_case.lower()):
                 return True
 
         return False
@@ -534,19 +472,15 @@ class VannaChatNVIDIA(VannaBase):
         question_clean = re.sub(r"^\d+\.\s*", "", question)
 
         # Define common parameter patterns
-        nvpn_pattern = (
-            r"(?:[A-Z]{3}\d{6}|\d{3}[-\.][A-Z0-9]{4,5}[-\.][A-Z0-9]{3,4}"
-            r"(?:\.[A-Z])?|\d{2,3}\.[\dA-Z\.]{4,})"
-        )
+        nvpn_pattern = (r"(?:[A-Z]{3}\d{6}|\d{3}[-\.][A-Z0-9]{4,5}[-\.][A-Z0-9]{3,4}"
+                        r"(?:\.[A-Z])?|\d{2,3}\.[\dA-Z\.]{4,})")
         cm_pattern = r"[A-Z0-9_]{3,}"
         sku_pattern = r"\d{3}-[A-Z0-9]{5}-\d{4}-[A-Z0-9]{3}"
 
         # Replace parameters with placeholders for comparison
         question_normalized = re.sub(nvpn_pattern, "NVPN_PLACEHOLDER", question_clean)
         question_normalized = re.sub(cm_pattern, "CM_PLACEHOLDER", question_normalized)
-        question_normalized = re.sub(
-            sku_pattern, "SKU_PLACEHOLDER", question_normalized
-        )
+        question_normalized = re.sub(sku_pattern, "SKU_PLACEHOLDER", question_normalized)
 
         user_normalized = re.sub(nvpn_pattern, "NVPN_PLACEHOLDER", user_prompt)
         user_normalized = re.sub(cm_pattern, "CM_PLACEHOLDER", user_normalized)
@@ -573,9 +507,8 @@ class VannaChatNVIDIA(VannaBase):
         overlap = len(use_case_words.intersection(question_words))
         return overlap >= 3  # At least 3 words should match
 
-    def _get_fallback_question(
-        self, question_num: int, applicable_use_cases: list[str], _user_prompt: str
-    ) -> str | None:
+    def _get_fallback_question(self, question_num: int, applicable_use_cases: list[str],
+                               _user_prompt: str) -> str | None:
         """Generate a safe fallback question."""
         if not applicable_use_cases:
             return None
@@ -584,9 +517,7 @@ class VannaChatNVIDIA(VannaBase):
         fallback_use_case = applicable_use_cases[0]
         return f"{question_num}. {fallback_use_case}"
 
-    def _generate_fallback_questions(
-        self, applicable_use_cases: list[str], _user_prompt: str
-    ) -> str:
+    def _generate_fallback_questions(self, applicable_use_cases: list[str], _user_prompt: str) -> str:
         """Generate safe fallback questions when validation fails."""
         if not applicable_use_cases:
             return "No supported follow-up questions available."
@@ -611,9 +542,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             # Store valid analysis types from config for validation
             self.valid_analysis_types = config.get("valid_analysis_types", None)
 
-            self.n_results_sql_comment = config.get(
-                "n_results_sql_comment", config.get("n_results", 5)
-            )
+            self.n_results_sql_comment = config.get("n_results_sql_comment", config.get("n_results", 5))
             self.n_results = config.get("n_results", 5)
 
             # Use configured embedder if provided, otherwise fallback to default
@@ -628,9 +557,7 @@ class MilvusVectorStore(Milvus_VectorStore):
                 self._embedding_dim = len(self.embedder.embed_documents(["foo"])[0])
                 logger.info(f"embedding_dim: {self._embedding_dim}")
             except Exception as e:
-                logger.error(
-                    f"Error calling embedder client during Milvus initialization: {e}"
-                )
+                logger.error(f"Error calling embedder client during Milvus initialization: {e}")
                 error_msg = "Error calling embedder client during Milvus initialization"
                 raise Exception(error_msg) from e
 
@@ -643,10 +570,10 @@ class MilvusVectorStore(Milvus_VectorStore):
         """Check if all collections are empty."""
         collections_empty = True
         for coll in [
-            get_flag_value(Flag.VANNA_SQL_COLLECION),
-            get_flag_value(Flag.VANNA_DDL_COLLECION),
-            get_flag_value(Flag.VANNA_DOC_COLLECION),
-            get_flag_value(Flag.VANNA_COMMENT_COLLECION),
+                get_flag_value(Flag.VANNA_SQL_COLLECION),
+                get_flag_value(Flag.VANNA_DDL_COLLECION),
+                get_flag_value(Flag.VANNA_DOC_COLLECION),
+                get_flag_value(Flag.VANNA_COMMENT_COLLECION),
         ]:
             if self.milvus_client.has_collection(collection_name=coll):
                 stats = self.milvus_client.get_collection_stats(collection_name=coll)
@@ -727,9 +654,7 @@ class MilvusVectorStore(Milvus_VectorStore):
                 datatype=DataType.VARCHAR,
                 max_length=MILVUS_MAX_LEN,
             )
-            vannacomment_schema.add_field(
-                field_name="sql", datatype=DataType.VARCHAR, max_length=MILVUS_MAX_LEN
-            )
+            vannacomment_schema.add_field(field_name="sql", datatype=DataType.VARCHAR, max_length=MILVUS_MAX_LEN)
             vannacomment_schema.add_field(
                 field_name="explanation",
                 datatype=DataType.VARCHAR,
@@ -755,9 +680,7 @@ class MilvusVectorStore(Milvus_VectorStore):
                 consistency_level="Strong",
             )
 
-    def add_question_sql(
-        self, question: str, sql: str, analysis: str | None = None
-    ) -> str:
+    def add_question_sql(self, question: str, sql: str, analysis: str | None = None) -> str:
         """Add question-SQL pair to collection with optional analysis metadata."""
         if len(question) == 0 or len(sql) == 0:
             msg = "pair of question and sql can not be null"
@@ -787,7 +710,9 @@ class MilvusVectorStore(Milvus_VectorStore):
         embedding = self.embedder.embed_documents([ddl])[0]
         self.milvus_client.insert(
             collection_name=get_flag_value(Flag.VANNA_DDL_COLLECION),
-            data={"id": _id, "ddl": ddl, "vector": embedding},
+            data={
+                "id": _id, "ddl": ddl, "vector": embedding
+            },
         )
         return _id
 
@@ -800,14 +725,18 @@ class MilvusVectorStore(Milvus_VectorStore):
         embedding = self.embedder.embed_documents([documentation])[0]
         self.milvus_client.insert(
             collection_name=get_flag_value(Flag.VANNA_DOC_COLLECION),
-            data={"id": _id, "doc": documentation, "vector": embedding},
+            data={
+                "id": _id, "doc": documentation, "vector": embedding
+            },
         )
         return _id
 
     def add_sql_comment(self, question: str, sql: str, explanation: str) -> str:
         """Add SQL comment to collection."""
         sql_comment_json = json.dumps(
-            {"question": question, "sql": sql, "explanation": explanation},
+            {
+                "question": question, "sql": sql, "explanation": explanation
+            },
             ensure_ascii=False,
         )
 
@@ -852,16 +781,14 @@ class MilvusVectorStore(Milvus_VectorStore):
             for doc in res:
                 list_doc.append(doc["doc"])
         except Exception as e:
-            logger.error(
-                f"Error during milvus client query in get_related_documentation: {e}"
-            )
+            logger.error(f"Error during milvus client query in get_related_documentation: {e}")
         return list_doc
 
     async def get_similar_question_sql(
-        self,
-        question: str,
-        analysis_type: str | None = None,
-        **kwargs,  # noqa: ARG002
+            self,
+            question: str,
+            analysis_type: str | None = None,
+            **kwargs,  # noqa: ARG002
     ) -> list:
         """Get similar question-SQL pairs, optionally filtered.
 
@@ -877,7 +804,9 @@ class MilvusVectorStore(Milvus_VectorStore):
         """
         search_params = {
             "metric_type": "L2",
-            "params": {"nprobe": 128},
+            "params": {
+                "nprobe": 128
+            },
         }
         list_sql = []
         try:
@@ -889,9 +818,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             filter_expr = None
             if analysis_type:
                 filter_expr = f'analysis == "{analysis_type}"'
-                logger.debug(
-                    f"Applying Milvus filter for similar_question_sql: {filter_expr}"
-                )
+                logger.debug(f"Applying Milvus filter for similar_question_sql: {filter_expr}")
 
             search_kwargs = {
                 "collection_name": get_flag_value(Flag.VANNA_SQL_COLLECION),
@@ -925,17 +852,13 @@ class MilvusVectorStore(Milvus_VectorStore):
                 dict["analysis"] = doc["entity"].get("analysis", "")
                 list_sql.append(dict)
 
-            logger.info(
-                f"Retrieved {len(list_sql)} similar SQL examples"
-                + (f" (filtered by {analysis_type})" if analysis_type else "")
-            )
+            logger.info(f"Retrieved {len(list_sql)} similar SQL examples" +
+                        (f" (filtered by {analysis_type})" if analysis_type else ""))
 
             # Warn if filtering resulted in no examples
             if analysis_type and len(list_sql) == 0:
-                logger.warning(
-                    f"No SQL examples found with filter: analysis={analysis_type}. "
-                    "SQL generation may be less accurate."
-                )
+                logger.warning(f"No SQL examples found with filter: analysis={analysis_type}. "
+                               "SQL generation may be less accurate.")
         except Exception as e:
             logger.error(
                 f"Error during milvus client search in get_similar_question_sql: {e}",
@@ -944,10 +867,10 @@ class MilvusVectorStore(Milvus_VectorStore):
         return list_sql
 
     async def get_similar_sql_comments(
-        self,
-        question: str,
-        analysis_type: str | None = None,
-        **kwargs,  # noqa: ARG002
+            self,
+            question: str,
+            analysis_type: str | None = None,
+            **kwargs,  # noqa: ARG002
     ) -> list:
         """Get similar SQL comments, optionally filtered.
 
@@ -963,7 +886,9 @@ class MilvusVectorStore(Milvus_VectorStore):
         """
         search_params = {
             "metric_type": "L2",
-            "params": {"nprobe": 128},
+            "params": {
+                "nprobe": 128
+            },
         }
         list_sql = []
         try:
@@ -975,9 +900,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             filter_expr = None
             if analysis_type:
                 filter_expr = f'analysis == "{analysis_type}"'
-                logger.debug(
-                    f"Applying Milvus filter for similar_sql_comments: {filter_expr}"
-                )
+                logger.debug(f"Applying Milvus filter for similar_sql_comments: {filter_expr}")
 
             search_kwargs = {
                 "collection_name": get_flag_value(Flag.VANNA_COMMENT_COLLECION),
@@ -1013,18 +936,14 @@ class MilvusVectorStore(Milvus_VectorStore):
                 dict["analysis"] = doc["entity"].get("analysis", "")
                 list_sql.append(dict)
 
-            logger.info(
-                f"Retrieved {len(list_sql)} similar SQL comments"
-                + (f" (filtered by {analysis_type})" if analysis_type else "")
-            )
+            logger.info(f"Retrieved {len(list_sql)} similar SQL comments" +
+                        (f" (filtered by {analysis_type})" if analysis_type else ""))
 
             # Warn if filtering resulted in no examples
             if analysis_type and len(list_sql) == 0:
-                logger.warning(
-                    f"No SQL comment examples found with filter: "
-                    f"analysis={analysis_type}. "
-                    "SQL generation may be less accurate."
-                )
+                logger.warning(f"No SQL comment examples found with filter: "
+                               f"analysis={analysis_type}. "
+                               "SQL generation may be less accurate.")
         except Exception as e:
             logger.error(
                 f"Error during milvus client search in get_similar_sql_comments: {e}",
@@ -1040,13 +959,11 @@ class MilvusVectorStore(Milvus_VectorStore):
             limit=MAX_LIMIT_SIZE,
         )
         df = pd.DataFrame()
-        df_sql = pd.DataFrame(
-            {
-                "id": [doc["id"] for doc in sql_data],
-                "question": [doc["text"] for doc in sql_data],
-                "content": [doc["sql"] for doc in sql_data],
-            }
-        )
+        df_sql = pd.DataFrame({
+            "id": [doc["id"] for doc in sql_data],
+            "question": [doc["text"] for doc in sql_data],
+            "content": [doc["sql"] for doc in sql_data],
+        })
         df_sql["training_data_type"] = "sql"
         df = pd.concat([df, df_sql])
 
@@ -1056,13 +973,11 @@ class MilvusVectorStore(Milvus_VectorStore):
             limit=MAX_LIMIT_SIZE,
         )
 
-        df_ddl = pd.DataFrame(
-            {
-                "id": [doc["id"] for doc in ddl_data],
-                "question": [None for doc in ddl_data],
-                "content": [doc["ddl"] for doc in ddl_data],
-            }
-        )
+        df_ddl = pd.DataFrame({
+            "id": [doc["id"] for doc in ddl_data],
+            "question": [None for doc in ddl_data],
+            "content": [doc["ddl"] for doc in ddl_data],
+        })
         df_ddl["training_data_type"] = "ddl"
         df = pd.concat([df, df_ddl])
 
@@ -1072,13 +987,11 @@ class MilvusVectorStore(Milvus_VectorStore):
             limit=MAX_LIMIT_SIZE,
         )
 
-        df_doc = pd.DataFrame(
-            {
-                "id": [doc["id"] for doc in doc_data],
-                "question": [None for doc in doc_data],
-                "content": [doc["doc"] for doc in doc_data],
-            }
-        )
+        df_doc = pd.DataFrame({
+            "id": [doc["id"] for doc in doc_data],
+            "question": [None for doc in doc_data],
+            "content": [doc["doc"] for doc in doc_data],
+        })
         df_doc["training_data_type"] = "documentation"
         df = pd.concat([df, df_doc])
 
@@ -1088,14 +1001,12 @@ class MilvusVectorStore(Milvus_VectorStore):
             limit=MAX_LIMIT_SIZE,
         )
 
-        df_sql_comment = pd.DataFrame(
-            {
-                "id": [doc["id"] for doc in comment_data],
-                "question": [doc["question"] for doc in comment_data],
-                "content": [doc["sql"] for doc in comment_data],
-                "explanation": [doc["explanation"] for doc in comment_data],
-            }
-        )
+        df_sql_comment = pd.DataFrame({
+            "id": [doc["id"] for doc in comment_data],
+            "question": [doc["question"] for doc in comment_data],
+            "content": [doc["sql"] for doc in comment_data],
+            "explanation": [doc["explanation"] for doc in comment_data],
+        })
         df_sql_comment["training_data_type"] = "sql_comment"
         df = pd.concat([df, df_sql_comment])
 
@@ -1104,9 +1015,7 @@ class MilvusVectorStore(Milvus_VectorStore):
     def remove_training_data(self, id: str, **kwargs) -> bool:
         """Remove training data by ID."""
         if id.endswith("-sql-comment"):
-            self.milvus_client.delete(
-                collection_name=get_flag_value(Flag.VANNA_COMMENT_COLLECION), ids=[id]
-            )
+            self.milvus_client.delete(collection_name=get_flag_value(Flag.VANNA_COMMENT_COLLECION), ids=[id])
             return True
         return super().remove_training_data(id, **kwargs)
 
@@ -1164,9 +1073,7 @@ def generate_all_table_description() -> str:
     return "\n".join(descriptions)
 
 
-def get_examples(
-    analysis_filter: list[str] | None = None,
-):
+def get_examples(analysis_filter: list[str] | None = None, ):
     """Get training examples with optional metadata filtering.
 
     Args:
@@ -1192,9 +1099,7 @@ def get_examples(
                 filtered_examples.append(ex)
 
         all_examples = filtered_examples
-        logger.info(
-            f"Filtered examples: {len(all_examples)} (analysis={analysis_filter})"
-        )
+        logger.info(f"Filtered examples: {len(all_examples)} (analysis={analysis_filter})")
 
     logger.info(f"Vanna num sql: {len(all_examples)}")
     return all_examples
@@ -1224,9 +1129,7 @@ def connect_to_databricks(
         raise ValueError(msg_missingvalue)
 
     # Create connection
-    conn = sql.connect(
-        server_hostname=server_hostname, http_path=http_path, access_token=access_token
-    )
+    conn = sql.connect(server_hostname=server_hostname, http_path=http_path, access_token=access_token)
 
     def run_sql_databricks(sql_query: str) -> pd.DataFrame:
         """Execute SQL on Databricks and return results as DataFrame."""
@@ -1245,11 +1148,7 @@ def connect_to_databricks(
                 results = cursor.fetchall()
 
                 # Get column names
-                columns = (
-                    [desc[0] for desc in cursor.description]
-                    if cursor.description
-                    else []
-                )
+                columns = ([desc[0] for desc in cursor.description] if cursor.description else [])
 
                 # Create DataFrame
                 df = pd.DataFrame(results, columns=columns)
@@ -1314,9 +1213,7 @@ async def train_vanna(
                 logger.info("pair of question and sql can not be null")
                 continue
 
-            vn.add_sql_comment(
-                question=ex["Query"], sql=ex["SQL"], explanation=ex["Comment"]
-            )
+            vn.add_sql_comment(question=ex["Query"], sql=ex["SQL"], explanation=ex["Comment"])
             logger.info(f"Added to sql_comment collection: {ex['Query']}")
 
         else:
@@ -1380,25 +1277,30 @@ async def get_vanna_instance(
             return _vanna_instance
 
         milvus_config = {
-            "milvus_client": create_milvus_client(
-                is_async=False,
-                milvus_host=milvus_host,
-                milvus_port=milvus_port,
-                milvus_user=milvus_user,
-                milvus_db_name=milvus_db_name,
-                vanna_remote=vanna_remote,
-            ),
-            "async_milvus_client": create_milvus_client(
-                is_async=True,
-                milvus_host=milvus_host,
-                milvus_port=milvus_port,
-                milvus_user=milvus_user,
-                milvus_db_name=milvus_db_name,
-                vanna_remote=vanna_remote,
-            ),
-            "n_results": 7,
-            "embedder_client": embedder_client,  # Pass embedder to config
-            "valid_analysis_types": valid_analysis_types,  # Pass from config
+            "milvus_client":
+                create_milvus_client(
+                    is_async=False,
+                    milvus_host=milvus_host,
+                    milvus_port=milvus_port,
+                    milvus_user=milvus_user,
+                    milvus_db_name=milvus_db_name,
+                    vanna_remote=vanna_remote,
+                ),
+            "async_milvus_client":
+                create_milvus_client(
+                    is_async=True,
+                    milvus_host=milvus_host,
+                    milvus_port=milvus_port,
+                    milvus_user=milvus_user,
+                    milvus_db_name=milvus_db_name,
+                    vanna_remote=vanna_remote,
+                ),
+            "n_results":
+                7,
+            "embedder_client":
+                embedder_client,  # Pass embedder to config
+            "valid_analysis_types":
+                valid_analysis_types,  # Pass from config
         }
 
         # Create and initialize new instance
@@ -1481,9 +1383,7 @@ async def generate_followup_questions_if_enabled(
         retrieval_in_parallel.append(vn.get_related_ddl(question))
         retrieval_in_parallel.append(vn.get_related_documentation(question))
 
-        question_sql_list, ddl_list, doc_list = await asyncio.gather(
-            *retrieval_in_parallel
-        )
+        question_sql_list, ddl_list, doc_list = await asyncio.gather(*retrieval_in_parallel)
 
         # Generate follow-up questions prompt
         followup_prompt = vn.get_followup_questions_prompt(
@@ -1499,14 +1399,10 @@ async def generate_followup_questions_if_enabled(
         followup_response = await vn.submit_prompt(followup_prompt)
 
         # Get applicable use cases for validation
-        applicable_use_cases = TABLE_USE_CASES.get(
-            table_name, TABLE_USE_CASES[TTYSC_TABLES.PBR]
-        )
+        applicable_use_cases = TABLE_USE_CASES.get(table_name, TABLE_USE_CASES[TTYSC_TABLES.PBR])
 
         # Validate the response using the validation methods
-        validated_response = vn._validate_questions(
-            followup_response, applicable_use_cases, question
-        )
+        validated_response = vn._validate_questions(followup_response, applicable_use_cases, question)
 
         # Parse the validated response into a list of questions
         followup_questions = []
@@ -1521,9 +1417,7 @@ async def generate_followup_questions_if_enabled(
                         followup_questions.append(clean_line)
 
         # TODO(apourhabib): Avoid hardcoding this value and make it configurable
-        return followup_questions[
-            :4
-        ]  # Return max 4 questions as specified in guidelines
+        return followup_questions[:4]  # Return max 4 questions as specified in guidelines
 
     except Exception as e:
         logger.error(f"Error generating follow-up questions: {e}")
@@ -1573,9 +1467,11 @@ async def generate_sql_with_fallback(
             records = df.to_dict("records")
 
             # Generate follow-up questions if enabled
-            followup_questions = await generate_followup_questions_if_enabled(
-                vn, question, df, enable_followup_questions, sql_query=sql
-            )
+            followup_questions = await generate_followup_questions_if_enabled(vn,
+                                                                              question,
+                                                                              df,
+                                                                              enable_followup_questions,
+                                                                              sql_query=sql)
 
             # Return successful result
             return build_sql_result(
@@ -1592,10 +1488,8 @@ async def generate_sql_with_fallback(
         except Exception as sql_error:
             # SQL execution failed - try to regenerate with error context
             error_message = {"sql_error": str(sql_error), "previous_sql": sql}
-            log_error_message = (
-                f"SQL execution failed: {error_message['sql_error']}. "
-                "Attempting regeneration..."
-            )
+            log_error_message = (f"SQL execution failed: {error_message['sql_error']}. "
+                                 "Attempting regeneration...")
             logger.error(log_error_message)
 
             try:
@@ -1617,9 +1511,11 @@ async def generate_sql_with_fallback(
                 records = df.to_dict("records")
 
                 # Generate follow-up questions if enabled
-                followup_questions = await generate_followup_questions_if_enabled(
-                    vn, question, df, enable_followup_questions, sql_query=retry_sql
-                )
+                followup_questions = await generate_followup_questions_if_enabled(vn,
+                                                                                  question,
+                                                                                  df,
+                                                                                  enable_followup_questions,
+                                                                                  sql_query=retry_sql)
 
                 # Return successful result from retry
                 return build_sql_result(
@@ -1637,33 +1533,27 @@ async def generate_sql_with_fallback(
             except Exception as retry_error:
                 # Both attempts failed
                 logger.error(f"SQL regeneration also failed: {str(retry_error)}")
-                explanation = (
-                    f"SQL execution failed twice. Original error: {str(sql_error)}."
-                    f"Retry error: {str(retry_error)}"
-                )
-                return json.dumps(
-                    {
-                        "sql": retry_sql if "retry_sql" in locals() else sql,
-                        "error": str(retry_error),
-                        "explanation": explanation,
-                        "confidence": "low",
-                        "original_error": str(sql_error),
-                        "retry_error": str(retry_error),
-                    }
-                )
+                explanation = (f"SQL execution failed twice. Original error: {str(sql_error)}."
+                               f"Retry error: {str(retry_error)}")
+                return json.dumps({
+                    "sql": retry_sql if "retry_sql" in locals() else sql,
+                    "error": str(retry_error),
+                    "explanation": explanation,
+                    "confidence": "low",
+                    "original_error": str(sql_error),
+                    "retry_error": str(retry_error),
+                })
 
     except Exception as e:
         logger.error(f"Error generating SQL with Vanna: {str(e)}")
 
         if execute_sql:
-            return json.dumps(
-                {
-                    "sql": None,
-                    "error": str(e),
-                    "explanation": f"An error occurred while generating SQL: {str(e)}",
-                    "confidence": "low",
-                }
-            )
+            return json.dumps({
+                "sql": None,
+                "error": str(e),
+                "explanation": f"An error occurred while generating SQL: {str(e)}",
+                "confidence": "low",
+            })
         else:
             raise
 
@@ -1700,10 +1590,8 @@ def drop_collection(client, collection_to_drop):
         get_flag_value(Flag.VANNA_COMMENT_COLLECION),
     ]
     if collection_to_drop not in collections:
-        logger.warning(
-            f"{collection_to_drop} not in {collections}. "
-            "Please specify a valid collection name"
-        )
+        logger.warning(f"{collection_to_drop} not in {collections}. "
+                       "Please specify a valid collection name")
 
     with contextlib.suppress(Exception):
         client.drop_collection(collection_name=collection_to_drop)

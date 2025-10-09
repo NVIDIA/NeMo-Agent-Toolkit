@@ -15,7 +15,7 @@ functions:
     _type: text2sql_standalone
     llm_name: nim_llm
     embedder_name: nim_embedder
-    train_on_startup: false  # Set to true for first run
+    train_on_startup: false  # Set to true for first run to populate Milvus
     database_type: databricks
     allow_llm_to_see_data: false
     execute_sql: false  # Only generate SQL, don't execute
@@ -53,4 +53,3 @@ workflow:
   verbose: true
   retry_parsing_errors: true
   max_retries: 3
-

@@ -121,6 +121,7 @@ examples = [
   "nat_simple_calculator_hitl",
   "nat_simple_rag",
   "nat_swe_bench",
+  "nat_text2sql",
   "nat_user_report",
 ]
 
@@ -203,6 +204,7 @@ nat_simple_rag = { path = "examples/RAG/simple_rag", editable = true }
 nat_simple_web_query = { path = "examples/getting_started/simple_web_query", editable = true }
 nat_simple_web_query_eval = { path = "examples/evaluation_and_profiling/simple_web_query_eval", editable = true }
 nat_swe_bench = { path = "examples/evaluation_and_profiling/swe_bench", editable = true }
+nat_text2sql = { path = "examples/text2sql", editable = true }
 nat_user_report = { path = "examples/object_store/user_report", editable = true }
 
 

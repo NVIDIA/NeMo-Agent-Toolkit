@@ -10,13 +10,15 @@ import logging
 from collections.abc import AsyncGenerator
 from typing import Any
 
+from pydantic import Field
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
-from nat.data_models.component_ref import EmbedderRef, LLMRef
+from nat.data_models.component_ref import EmbedderRef
+from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from pydantic import Field
 
 logger = logging.getLogger(__name__)
 
@@ -26,16 +28,12 @@ class Text2sqlStandaloneConfig(FunctionBaseConfig, name="text2sql_standalone"):
 
     _type: str = "text2sql_standalone"
     llm_name: LLMRef = Field(description="Name of the LLM to use for SQL generation")
-    embedder_name: EmbedderRef = Field(
-        description="Name of the embedder to use for vector operations"
-    )
+    embedder_name: EmbedderRef = Field(description="Name of the embedder to use for vector operations")
     train_on_startup: bool = Field(
         default=False,
         description="Flag to train Vanna on startup with examples and DDL",
     )
-    database_type: str = Field(
-        default="databricks", description="Type of database to connect to"
-    )
+    database_type: str = Field(default="databricks", description="Type of database to connect to")
     allow_llm_to_see_data: bool = Field(
         default=False,
         description="Whether to allow LLM to see actual data for intermediate queries",
@@ -44,9 +42,7 @@ class Text2sqlStandaloneConfig(FunctionBaseConfig, name="text2sql_standalone"):
         default=False,
         description="Whether to execute SQL or just return the query string",
     )
-    authorize: bool = Field(
-        default=False, description="Require Bearer token to run the function"
-    )
+    authorize: bool = Field(default=False, description="Require Bearer token to run the function")
     enable_followup_questions: bool = Field(
         default=False,
         description="Whether to generate follow-up questions along with SQL results",
@@ -73,42 +69,28 @@ class Text2sqlStandaloneConfig(FunctionBaseConfig, name="text2sql_standalone"):
     )
     training_analysis_filter: list[str] | None = Field(
         default=None,
-        description=(
-            "Filter examples by analysis type during training "
-            "(e.g., ['pbr'], ['supply_gap'])"
-        ),
+        description=("Filter examples by analysis type during training "
+                     "(e.g., ['pbr'], ['supply_gap'])"),
     )
 
 
-@register_function(
-    config_type=Text2sqlStandaloneConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN]
-)
-async def text2sql_standalone(
-    config: Text2sqlStandaloneConfig, builder: Builder
-):  # noqa: ARG001
+@register_function(config_type=Text2sqlStandaloneConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
+async def text2sql_standalone(config: Text2sqlStandaloneConfig, builder: Builder):  # noqa: ARG001
     """Register standalone Text2SQL function for MCP server deployment."""
     # Import implementation details inside the registration function
-    from talk_to_supply_chain.functions.text2sql.sql_utils import (
-        generate_sql_with_fallback,
-        get_vanna_instance,
-        train_vanna,
-    )
+    from text2sql.functions.sql_utils import generate_sql_with_fallback
+    from text2sql.functions.sql_utils import get_vanna_instance
+    from text2sql.functions.sql_utils import train_vanna
 
     logger.info("🚀 Starting standalone text2sql for MCP server deployment")
-    logger.info(
-        f"Configuration: execute_sql={config.execute_sql}, "
-        f"authorize={config.authorize}"
-    )
+    logger.info(f"Configuration: execute_sql={config.execute_sql}, "
+                f"authorize={config.authorize}")
 
     # Get the configured LLM client from the builder
-    llm_client = await builder.get_llm(
-        config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN
-    )
+    llm_client = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     # Get the configured embedder client from the builder
-    embedder_client = await builder.get_embedder(
-        config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN
-    )
+    embedder_client = await builder.get_embedder(config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     # Initialize Vanna instance on startup if needed
     vanna_instance = await get_vanna_instance(
@@ -208,22 +190,18 @@ async def text2sql_standalone(
         result = None
 
         # Run streaming version and capture final result
-        async for update in _generate_sql_stream(
-            question, analysis_type=analysis_type
-        ):
+        async for update in _generate_sql_stream(question, analysis_type=analysis_type):
             if update["type"] == "result":
                 result = update
 
         return result["sql_result"]
 
     # Create function description
-    description = (
-        "Standalone text-to-SQL tool for MCP server deployment and load testing. "
-        "This tool generates SQL queries from natural language questions using "
-        "AI. It leverages similar question-SQL pairs, DDL information, and "
-        "documentation to generate accurate SQL queries. "
-        "Designed for independent deployment and memory profiling."
-    )
+    description = ("Standalone text-to-SQL tool for MCP server deployment and load testing. "
+                   "This tool generates SQL queries from natural language questions using "
+                   "AI. It leverages similar question-SQL pairs, DDL information, and "
+                   "documentation to generate accurate SQL queries. "
+                   "Designed for independent deployment and memory profiling.")
 
     try:
         yield FunctionInfo.create(
@@ -235,4 +213,3 @@ async def text2sql_standalone(
         logger.info("Text2SQL standalone function exited early!")
     finally:
         logger.info("Cleaning up Text2SQL standalone workflow...")
-

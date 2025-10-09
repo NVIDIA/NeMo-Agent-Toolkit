@@ -1,326 +1,194 @@
-# Text2SQL MCP Server Load Testing - Setup Complete ✅
+# Setup Complete ✓
 
-This document summarizes what has been created for testing the text2sql function for memory leaks.
+The standalone Text2SQL MCP server example has been successfully set up!
 
-## Files Created
+## What Was Created
 
-### Configuration & Code
-- ✅ `config_text2sql_mcp.yml` - MCP server configuration (already existed)
-- ✅ `text2sql_standalone.py` - Standalone function without auth (already existed)
-- ✅ `text2sql_function.py` - Production function with auth (already existed)
-- ✅ `sql_utils.py` - Vanna utilities (copy from talk_to_supply_chain)
-- ✅ `__init__.py` - Python package initialization
-
-### Load Testing Tools
-- ✅ `text2sql_load_test.py` - Load testing script with realistic queries
-- ✅ `monitor_server_memory.py` - Memory monitoring script
-- ✅ `run_text2sql_load_test.sh` - Automated test runner (all-in-one)
-
-### Documentation
-- ✅ `README.md` - Comprehensive guide with all details
-- ✅ `QUICKSTART.md` - Quick start guide for fast setup
-- ✅ `.gitignore` - Ignore logs and temporary files
-
-## What You Can Do Now
-
-### 1. Quick Test (5 minutes)
-
-```bash
-# Make sure you have the environment variables set
-export NVIDIA_API_KEY="your-api-key"
-export MILVUS_HOST="your-milvus-host"
-export MILVUS_PORT="19530"
-export MILVUS_USERNAME="your-username"
-export MILVUS_PASSWORD="your-password"
-
-# Run the automated test
-./examples/text2sql/run_text2sql_load_test.sh
-```
-
-This will:
-1. Start MCP server on port 9901
-2. Monitor memory usage
-3. Run 3 rounds of load testing (20 users × 10 calls each)
-4. Generate report showing:
-   - Success rate
-   - Response times
-   - Memory usage patterns
-   - Performance degradation (if any)
-5. Clean up automatically
-
-### 2. Manual Testing (for debugging)
-
-**Terminal 1 - Start Server:**
-```bash
-nat mcp serve \
-  --config_file examples/text2sql/config_text2sql_mcp.yml \
-  --port 9901 \
-  --log_level INFO
-```
-
-**Terminal 2 - Run Load Test:**
-```bash
-python examples/text2sql/text2sql_load_test.py \
-  --url http://localhost:9901/mcp \
-  --users 20 \
-  --calls 10 \
-  --rounds 3 \
-  --verbose
-```
-
-**Terminal 3 - Monitor Memory:**
-```bash
-# Get server PID
-SERVER_PID=$(pgrep -f "nat mcp serve")
-
-# Monitor it
-python examples/text2sql/monitor_server_memory.py --pid $SERVER_PID
-```
-
-### 3. Stress Test (for finding slow leaks)
-
-```bash
-# Run with higher load over longer period
-NUM_USERS=50 \
-CALLS_PER_USER=20 \
-NUM_ROUNDS=10 \
-DELAY_BETWEEN_ROUNDS=10.0 \
-./examples/text2sql/run_text2sql_load_test.sh
-```
-
-## Understanding the Test
-
-### Test Flow
-
-1. **Server Start**: MCP server loads `text2sql_standalone` function
-2. **Connection**: Vanna connects to Milvus vector store for few-shot examples
-3. **Load Test**: Multiple concurrent users send natural language questions
-4. **SQL Generation**: Vanna generates SQL using LLM + RAG (no execution)
-5. **Monitoring**: Memory and performance metrics collected
-6. **Analysis**: Trends analyzed across multiple rounds
-
-### What We're Testing
-
-The `text2sql_standalone` function:
-- Takes natural language questions
-- Retrieves relevant few-shot examples from Milvus
-- Uses NVIDIA NIM LLM to generate SQL
-- Returns SQL query (no execution in standalone version)
-
-**Key differences from production:**
-- ❌ No authentication
-- ❌ No SQL execution
-- ❌ No database connection needed
-- ✅ Same Vanna logic
-- ✅ Same LLM/embedder
-- ✅ Same Milvus integration
-
-This isolates the core text2sql logic for testing.
-
-### Sample Test Questions
-
-The load test uses realistic supply chain questions:
-- "Show me the top 10 suppliers by total revenue"
-- "List all parts with inventory below 50 units"
-- "What are the most expensive parts in inventory?"
-- "Find orders with delivery delays"
-- "Show seasonal demand patterns"
-
-See `text2sql_load_test.py` for the full list.
-
-### Memory Leak Indicators
-
-**Warning Signs:**
-1. Memory increases >20% across rounds
-2. Response times increase significantly
-3. Memory doesn't return to baseline
-4. Continuous growth pattern
-
-**What to Look For in Logs:**
-```
-# Good (no leak)
-Round 1: 250 MB avg memory, 2.3s avg response
-Round 2: 255 MB avg memory, 2.4s avg response
-Round 3: 252 MB avg memory, 2.3s avg response
-
-# Bad (potential leak)
-Round 1: 250 MB avg memory, 2.3s avg response
-Round 2: 350 MB avg memory, 3.1s avg response
-Round 3: 450 MB avg memory, 4.2s avg response
-```
-
-## Test Results Location
-
-After running tests, check these directories:
+### Directory Structure
 
 ```
-examples/text2sql/logs/
-├── server_YYYYMMDD_HHMMSS.log      # Server output
-├── loadtest_YYYYMMDD_HHMMSS.log    # Load test results
-└── memory_YYYYMMDD_HHMMSS.log      # Memory monitoring data
+examples/text2sql/
+├── src/text2sql/
+│   ├── __init__.py
+│   ├── register.py                    # Component registration
+│   ├── functions/
+│   │   ├── __init__.py
+│   │   ├── text2sql_standalone.py    # Main function implementation
+│   │   └── sql_utils.py              # Vanna integration & SQL utilities
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── constant.py               # Constants (MAX_SQL_ROWS, etc.)
+│   │   ├── feature_flag.py           # Feature flag management
+│   │   ├── milvus_utils.py           # Milvus client creation
+│   │   ├── db_utils.py               # Database query utilities
+│   │   └── db_schema.py              # Schema, examples, prompts
+│   ├── resources/
+│   │   ├── __init__.py
+│   │   └── followup_resources.py     # Follow-up question templates
+│   └── configs/
+│       └── config_text2sql_mcp.yml   # MCP server configuration
+├── pyproject.toml                     # Project dependencies
+├── env.example                        # Environment variable template
+├── README.md                          # Comprehensive documentation
+├── QUICKSTART.md                      # Quick start guide
+└── SETUP_COMPLETE.md                  # This file
 ```
 
-## Configuration Options
+### Key Files Copied from talk-to-supply-chain-tools/
 
-Edit `config_text2sql_mcp.yml` to change:
+1. **Functions:**
+   - `text2sql_standalone.py` - Standalone text2sql function for MCP
+   - `sql_utils.py` - Complete Vanna integration with custom Milvus vector store
 
-```yaml
-functions:
-  text2sql_standalone:
-    # Training
-    train_on_startup: false         # Set true for first run only
-    training_analysis_filter:       # Filter few-shot examples
-      - pbr
-      - supply_gap
+2. **Utilities:**
+   - `constant.py` - Configuration constants
+   - `feature_flag.py` - Feature flag system
+   - `milvus_utils.py` - Milvus client utilities
+   - `db_utils.py` - Database connection and query utilities
+   - `db_schema.py` - Database schema, DDL, and 80+ few-shot examples
 
-    # Milvus
-    vanna_remote: true              # Use remote Milvus (vs local)
-    milvus_host: ${MILVUS_HOST}
-    milvus_port: ${MILVUS_PORT}
+3. **Resources:**
+   - `followup_resources.py` - Follow-up question generation resources
 
-    # Functionality
-    execute_sql: false              # Don't execute (for testing)
-    authorize: false                # No auth (for testing)
-    allow_llm_to_see_data: false    # Don't show data to LLM
-    enable_followup_questions: false  # No followup generation
+### Import Updates
 
-# LLM settings
-llms:
-  nim_llm:
-    model_name: meta/llama-3.1-70b-instruct
-    temperature: 0.0                # Deterministic for testing
-    max_tokens: 2048
-    timeout: 60.0
-
-# Embedder settings
-embedders:
-  nim_embedder:
-    model_name: nvidia/nv-embedqa-e5-v5
-    truncate: END
+All imports have been updated from:
+```python
+from talk_to_supply_chain.xxx import yyy
 ```
 
-## Troubleshooting Common Issues
-
-### 1. "Module 'talk_to_supply_chain' not found"
-
-**Solution:**
-```bash
-pip install -e talk-to-supply-chain-tools/
+To:
+```python
+from text2sql.xxx import yyy
 ```
 
-Or update imports in `text2sql_standalone.py` to use local `sql_utils.py`.
+### Configuration Files
 
-### 2. "Milvus connection failed"
+1. **config_text2sql_mcp.yml**
+   - Configured for MCP server deployment
+   - Standalone text2sql function
+   - ReAct agent workflow
+   - NVIDIA NIM LLM & embeddings
 
-**Option A - Use local Milvus:**
-```yaml
-# In config_text2sql_mcp.yml
-vanna_remote: false
-```
+2. **env.example**
+   - Template for environment variables
+   - NVIDIA API key
+   - Milvus configuration
+   - Databricks configuration (optional)
 
-**Option B - Check remote credentials:**
-```bash
-echo $MILVUS_HOST
-echo $MILVUS_PORT
-echo $MILVUS_USERNAME
-```
+### Dependencies Added
 
-### 3. "NVIDIA API key invalid"
+The following dependencies were added to `pyproject.toml`:
+- `vanna>=0.3.4` - Text-to-SQL framework
+- `pymilvus>=2.3.0` - Vector database client
+- `databricks-sql-connector>=3.0.0` - SQL execution
+- `sqlglot>=20.0.0` - SQL parsing
+- `pandas>=2.0.0` - Data manipulation
+- `python-dotenv>=1.0.0` - Environment variables
 
-```bash
-# Verify key is set
-echo $NVIDIA_API_KEY
+## What's Included
 
-# Should start with "nvapi-"
-```
+### Text-to-SQL Features
 
-### 4. Server starts but requests timeout
+✓ Natural language to SQL conversion
+✓ Vanna AI framework integration
+✓ NVIDIA NIM LLM support
+✓ Milvus vector database for RAG
+✓ 80+ domain-specific few-shot examples
+✓ Support for multiple table schemas
+✓ Optional SQL execution on Databricks
+✓ Optional follow-up question generation
+✓ Analysis type filtering (pbr, supply_gap)
+✓ Error handling with retry logic
 
-Check server logs:
-```bash
-tail -f examples/text2sql/logs/server_*.log
-```
+### MCP Server Features
 
-Common causes:
-- Milvus connection slow/failing
-- LLM API rate limiting
-- Missing dependencies
+✓ Full MCP protocol support
+✓ Claude Desktop integration ready
+✓ Streaming responses
+✓ Load testing optimized
+✓ Memory leak testing friendly
+✓ Minimal dependencies
 
-### 5. No memory increase detected
+### Database Support
 
-This is actually good! It means no obvious leak. To be thorough:
-- Increase load: more users, more calls
-- Run longer: more rounds
-- Check for subtle patterns in detailed memory logs
+✓ PBR (Prototype Build Request) table
+✓ DEMAND_DLT (Supply Gap Analysis) table
+✓ Databricks SQL Warehouse
+✓ Custom schema extensibility
 
 ## Next Steps
 
-### After Running Tests
-
-1. **Review logs** in `examples/text2sql/logs/`
-2. **Check for patterns** across multiple rounds
-3. **Compare with production** (if accessible)
-4. **Use profilers** for deeper analysis:
+1. **Set up environment:**
    ```bash
-   pip install memory-profiler
-   python -m memory_profiler text2sql_standalone.py
+   cp env.example .env
+   # Edit .env with your credentials
    ```
 
-### If Memory Leak Found
+2. **Install dependencies:**
+   ```bash
+   uv pip install -e .
+   ```
 
-1. **Identify the source:**
-   - Vanna instance caching?
-   - Milvus connections?
-   - LLM client pooling?
-   - Session management?
+3. **Train Vanna (first time only):**
+   - Edit `config_text2sql_mcp.yml`: set `train_on_startup: true`
+   - Run: `nat-cli run --workflow-config src/text2sql/configs/config_text2sql_mcp.yml`
+   - Edit config again: set `train_on_startup: false`
 
-2. **Review related code:**
-   - `sql_utils.py` - Vanna lifecycle
-   - `text2sql_standalone.py` - Function registration
-   - Builder/context management in NAT
+4. **Start MCP server:**
+   ```bash
+   nat-cli serve mcp --workflow-config src/text2sql/configs/config_text2sql_mcp.yml
+   ```
 
-3. **Test fixes:**
-   - Modify code
-   - Re-run load test
-   - Compare memory profiles
+5. **Integrate with Claude Desktop** (optional):
+   - Add configuration to `claude_desktop_config.json`
+   - See QUICKSTART.md for details
 
-### If No Leak Found
+## Documentation
 
-1. **Test production function:**
-   - Use `text2sql_function.py` instead
-   - Enable auth and SQL execution
-   - Compare memory patterns
+- **README.md** - Comprehensive documentation with architecture, setup, usage, troubleshooting
+- **QUICKSTART.md** - 5-minute quick start guide
+- **env.example** - Environment variable template with comments
+- **config_text2sql_mcp.yml** - Fully commented configuration file
 
-2. **Test other components:**
-   - Auth module
-   - Database connections
-   - Other functions in the workflow
+## Testing
 
-3. **Increase test intensity:**
-   - More concurrent users (50+)
-   - Longer duration (100+ rounds)
-   - Vary query patterns
+The example is ready for:
+- ✓ Functional testing (SQL generation)
+- ✓ Integration testing (MCP server)
+- ✓ Load testing (performance)
+- ✓ Memory testing (leak detection)
 
-## Additional Resources
+## Key Differences from Full Package
 
-- **Main README**: [README.md](./README.md) - Full documentation
-- **Quick Start**: [QUICKSTART.md](./QUICKSTART.md) - Fast setup guide
-- **Memory Analysis**: [../../MEMORY_LEAK_ANALYSIS.md](../../MEMORY_LEAK_ANALYSIS.md) - Overall memory leak investigation
-- **Debug Tools**: [../../debug_tools/](../../debug_tools/) - Additional testing utilities
-- **MCP Docs**: [../../docs/source/workflows/mcp/](../../docs/source/workflows/mcp/) - MCP server/client documentation
+This standalone version:
+- **Simpler:** No authentication, single tool focus
+- **Lighter:** Minimal dependencies for easier debugging
+- **Focused:** Optimized for SQL generation
+- **Independent:** No talk-to-supply-chain-tools required
 
-## Contact & Support
+But missing:
+- Multi-tool workflows
+- Chart generation
+- Answer summarization
+- Advanced features
 
-For questions or issues:
-1. Check documentation above
-2. Review existing load test results
-3. Examine server logs for errors
-4. Consult with the team
+## Ready to Use!
+
+The standalone Text2SQL MCP server example is now complete and ready for:
+1. MCP server deployment
+2. Claude Desktop integration
+3. Load testing
+4. Memory profiling
+5. Further customization
+
+See **QUICKSTART.md** to get started in 5 minutes!
+See **README.md** for complete documentation.
 
 ---
 
-**Setup completed on**: 2025-10-08
-
-**Created for**: Testing text2sql function for memory leaks in production environment
-
-**Status**: ✅ Ready to run
+**Status:** ✅ All components successfully copied and configured
+**Linter:** ✅ No errors
+**Imports:** ✅ All updated to new structure
+**Dependencies:** ✅ Added to pyproject.toml
+**Documentation:** ✅ Complete with examples

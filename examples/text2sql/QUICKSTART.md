@@ -1,232 +1,197 @@
-# Text2SQL MCP Server Load Testing - Quick Start
+# Text2SQL Standalone - Quick Start Guide
 
-This guide will help you quickly set up and run load tests for the text2sql function.
+Get started with the Text2SQL MCP server in 5 minutes!
 
-## 1. Install Dependencies
+## Quick Setup
 
-```bash
-# Install NeMo Agent Toolkit with MCP support
-pip install -e ".[mcp]"
-
-# Install talk-to-supply-chain-tools (if not already installed)
-# Adjust path as needed based on your directory structure
-pip install -e talk-to-supply-chain-tools/
-
-# Install additional dependencies
-pip install psutil aiohttp
-```
-
-## 2. Set Environment Variables
-
-Create a `.env` file or export variables:
+### 1. Install Dependencies
 
 ```bash
-# Required: NVIDIA API Key for LLM and embeddings
-export NVIDIA_API_KEY="nvapi-xxxxxxxxxxxx"
-
-# Required if using remote Milvus (vanna_remote: true in config)
-export MILVUS_HOST="your-milvus-host.com"
-export MILVUS_PORT="19530"
-export MILVUS_USERNAME="your-username"
-export MILVUS_PASSWORD="your-password"
+cd examples/text2sql
+uv pip install -e .
 ```
 
-## 3. Run the Test
+### 2. Configure Environment
 
-### Option A: Automated (Recommended)
-
-Run everything with one command:
+Create a `.env` file:
 
 ```bash
-./examples/text2sql/run_text2sql_load_test.sh
+cp env.example .env
 ```
 
-This will:
-- Start the MCP server
-- Run the load test
-- Monitor memory usage
-- Generate a report
-- Clean up automatically
-
-### Option B: Manual
-
-#### Terminal 1: Start Server
+Edit `.env` with your credentials:
 
 ```bash
-nat mcp serve \
-  --config_file examples/text2sql/config_text2sql_mcp.yml \
-  --port 9901
+NVIDIA_API_KEY=nvapi-xxxxxxxxxxxx
+MILVUS_HOST=your-milvus-instance.zillizcloud.com
+MILVUS_PORT=19530
+MILVUS_USERNAME=your_username
+MILVUS_PASSWORD=your_password
 ```
 
-Wait for: `Server is ready`
+### 3. Train on First Run
 
-#### Terminal 2: Run Load Test
-
-```bash
-python examples/text2sql/text2sql_load_test.py \
-  --users 20 \
-  --calls 10 \
-  --rounds 3
-```
-
-#### Terminal 3: Monitor Memory (Optional)
-
-```bash
-# Find the server process ID
-ps aux | grep "nat mcp serve"
-
-# Monitor it
-python examples/text2sql/monitor_server_memory.py --pid <PID>
-```
-
-## 4. Interpret Results
-
-### Look for Memory Leaks
-
-**Good** (no leak):
-```
-Round 1: avg response time: 2.3s
-Round 2: avg response time: 2.4s
-Round 3: avg response time: 2.3s
-✓ Performance stable across rounds
-```
-
-**Bad** (potential leak):
-```
-Round 1: avg response time: 2.3s
-Round 2: avg response time: 3.8s
-Round 3: avg response time: 5.2s
-⚠️  Performance degradation detected
-```
-
-### Memory Usage
-
-Check the memory log:
-```bash
-tail examples/text2sql/logs/memory_*.log
-```
-
-**Warning signs:**
-- Memory increasing >20% between rounds
-- Memory not returning to baseline
-- Continuously growing memory usage
-
-## 5. Customize the Test
-
-### Change Load Parameters
-
-```bash
-# More aggressive load
-NUM_USERS=50 CALLS_PER_USER=20 NUM_ROUNDS=5 \
-  ./examples/text2sql/run_text2sql_load_test.sh
-
-# Lighter load
-NUM_USERS=5 CALLS_PER_USER=5 NUM_ROUNDS=2 \
-  ./examples/text2sql/run_text2sql_load_test.sh
-```
-
-### Edit Test Configuration
-
-Edit `examples/text2sql/config_text2sql_mcp.yml`:
+Edit `src/text2sql/configs/config_text2sql_mcp.yml`:
 
 ```yaml
 functions:
   text2sql_standalone:
-    train_on_startup: true    # Train on startup (first run only)
-    execute_sql: true         # Actually execute SQL (needs DB)
-    authorize: true           # Test with authentication
+    train_on_startup: true  # ← Set to true
 ```
 
-### Edit Sample Questions
+Run once to populate Milvus:
 
-Edit `examples/text2sql/text2sql_load_test.py`:
-
-```python
-SAMPLE_QUESTIONS = [
-    "Your custom question 1",
-    "Your custom question 2",
-    # ... add more
-]
+```bash
+nat-cli run --workflow-config src/text2sql/configs/config_text2sql_mcp.yml
 ```
 
-## 6. Troubleshooting
+### 4. Set train_on_startup to False
 
-### Issue: "text2sql_standalone not found"
+After training completes, edit config again:
 
-**Solution:** Check the config file has the correct function type:
 ```yaml
 functions:
-  text2sql_standalone:  # Must match the function name
-    _type: text2sql_standalone  # Must match the registered type
+  text2sql_standalone:
+    train_on_startup: false  # ← Set to false
 ```
 
-### Issue: "Module 'talk_to_supply_chain' not found"
+### 5. Start MCP Server
 
-**Solution:** Install the package:
 ```bash
-pip install -e talk-to-supply-chain-tools/
+nat-cli serve mcp --workflow-config src/text2sql/configs/config_text2sql_mcp.yml
 ```
 
-Or update imports in `text2sql_standalone.py` to use local files.
+Done! Your MCP server is now running.
 
-### Issue: "Milvus connection failed"
+## Test It Out
 
-**Solution 1:** Use local Milvus:
+### Option 1: Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "text2sql": {
+      "command": "nat-cli",
+      "args": [
+        "serve",
+        "mcp",
+        "--workflow-config",
+        "/full/path/to/examples/text2sql/src/text2sql/configs/config_text2sql_mcp.yml"
+      ],
+      "env": {
+        "NVIDIA_API_KEY": "your_key",
+        "MILVUS_HOST": "your-host.zillizcloud.com",
+        "MILVUS_PORT": "19530",
+        "MILVUS_USERNAME": "your_username",
+        "MILVUS_PASSWORD": "your_password"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop and ask:
+> "Convert to SQL: Show me the top 10 components with highest shortages"
+
+### Option 2: CLI
+
+```bash
+nat-cli run --workflow-config src/text2sql/configs/config_text2sql_mcp.yml
+```
+
+Then ask questions like:
+- "Show me all red items for build id PB-61738"
+- "What are the lead times for NVPN 316-0899-000?"
+- "Display components with shortages greater than 100"
+
+## Example Questions
+
+Try these sample questions:
+
+### Supply Chain Analysis
+- "Show me the top 20 NVPNs with highest shortages"
+- "What components have lead time greater than 50 days?"
+- "Display safety stock data for NVPN 316-0899-000"
+
+### Build Requests
+- "Show all consigned parts for build id PB-61738 that are green"
+- "List components without lead time for project E2425"
+- "Which items at FXHC have shortages more than 8000?"
+
+### Inventory
+- "Show supply and demand trend for NVPN 315-1157-000"
+- "What is the latest material cost by CM for NVPN 316-0899-000?"
+- "Display items with nettable inventory above 1000 units"
+
+## Configuration Options
+
+### SQL Execution
+
+To execute SQL on Databricks (requires Databricks credentials):
+
 ```yaml
-vanna_remote: false
+functions:
+  text2sql_standalone:
+    execute_sql: true  # Will execute and return results
+    allow_llm_to_see_data: false
 ```
 
-**Solution 2:** Verify remote Milvus credentials:
+### Follow-up Questions
+
+To generate follow-up questions:
+
+```yaml
+functions:
+  text2sql_standalone:
+    enable_followup_questions: true
+```
+
+### Local Milvus
+
+To use local Milvus instead of cloud:
+
+```yaml
+functions:
+  text2sql_standalone:
+    vanna_remote: false
+    # Don't need milvus_host, milvus_port, etc.
+```
+
+Set in `.env`:
 ```bash
-echo $MILVUS_HOST
-echo $MILVUS_PORT
+SUPPLY_CHAIN_VDB_PATH=./milvus_vanna.db
 ```
 
-### Issue: Server starts but no requests complete
+## Troubleshooting
 
-**Solution:** Check server logs:
-```bash
-tail -f examples/text2sql/logs/server_*.log
-```
+### "Connection refused" error
+- Check Milvus credentials in `.env`
+- Verify network connectivity to Milvus instance
 
-Look for errors related to:
-- NVIDIA API key
-- Milvus connection
-- Missing dependencies
+### "No training data found"
+- Run with `train_on_startup: true` first
+- Check logs for training completion
 
-## 7. Next Steps
+### Poor SQL quality
+- Ensure training completed successfully
+- Review few-shot examples in `src/text2sql/utils/db_schema.py`
+- Consider adjusting `training_analysis_filter`
 
-### Profile Memory in Detail
+### "NVIDIA_API_KEY not set"
+- Check `.env` file exists and has correct key
+- Verify key is valid at https://build.nvidia.com
 
-Use Python memory profiler:
-```bash
-pip install memory-profiler
+## Next Steps
 
-# Profile the server
-python -m memory_profiler -m nat.cli.cli mcp serve \
-  --config_file examples/text2sql/config_text2sql_mcp.yml
-```
+- Read the full [README.md](README.md) for detailed documentation
+- Explore configuration options in `src/text2sql/configs/config_text2sql_mcp.yml`
+- Add custom examples in `src/text2sql/utils/db_schema.py`
+- Set up load testing for performance evaluation
 
-### Compare Production vs Standalone
+## Need Help?
 
-1. Test standalone (current setup)
-2. Test production function:
-   - Update config to use `text2sql` function
-   - Add auth token
-   - Enable SQL execution
-   - Compare memory profiles
-
-### Long-Running Test
-
-Run overnight to catch slow leaks:
-```bash
-nohup ./examples/text2sql/run_text2sql_load_test.sh \
-  NUM_USERS=30 NUM_ROUNDS=50 > overnight.log 2>&1 &
-```
-
-## Support
-
-For issues or questions:
-- Check the main [README.md](./README.md)
-- Review [MEMORY_LEAK_ANALYSIS.md](../../MEMORY_LEAK_ANALYSIS.md)
-- See [debug_tools/](../../debug_tools/) for more testing utilities
+- Check the main [README.md](README.md) for detailed troubleshooting
+- Review logs for specific error messages
+- Verify all environment variables are set correctly
