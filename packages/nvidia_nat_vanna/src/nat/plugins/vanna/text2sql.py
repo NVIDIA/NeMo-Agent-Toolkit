@@ -1,6 +1,7 @@
 """Text-to-SQL function for NeMo Agent Toolkit with Vanna integration."""
 
 import logging
+import uuid
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -8,15 +9,23 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.component_ref import EmbedderRef, LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from pydantic import Field
-
-from nat.plugins.vanna.db_utils import setup_vanna_db_connection
-from nat.plugins.vanna.milvus_utils import create_milvus_client
-from nat.plugins.vanna.vanna_utils import get_vanna_instance, train_vanna
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+
+class StatusPayload(BaseModel):
+    """Payload for status intermediate steps."""
+    message: str
+
+
+class Text2SQLOutput(BaseModel):
+    """Output schema for text2sql function."""
+    sql: str = Field(description="Generated SQL query")
+    explanation: str | None = Field(default=None, description="Explanation of the query")
 
 
 class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
@@ -96,6 +105,11 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
 )
 async def text2sql(config: Text2SQLConfig, builder: Builder):
     """Register the Text2SQL function with Vanna integration."""
+    # Import implementation details inside the registration function
+    from nat.plugins.vanna.db_utils import setup_vanna_db_connection
+    from nat.plugins.vanna.milvus_utils import create_milvus_client
+    from nat.plugins.vanna.vanna_utils import get_vanna_instance, train_vanna
+
     logger.info("Initializing Text2SQL function")
 
     # Get LLM and embedder
@@ -169,63 +183,76 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
     # Streaming version
     async def _generate_sql_stream(
         question: str,
-    ) -> AsyncGenerator[dict[str, Any], None]:
+    ) -> AsyncGenerator[ResponseIntermediateStep | Text2SQLOutput, None]:
         """Stream SQL generation progress and results."""
         logger.info(f"Text2SQL input: {question}")
 
-        yield {
-            "type": "status",
-            "message": "Starting SQL generation...",
-            "node": "text2sql",
-        }
+        # Generate parent_id for this function call
+        parent_id = str(uuid.uuid4())
+
+        # Yield starting status as ResponseIntermediateStep
+        yield ResponseIntermediateStep(
+            id=str(uuid.uuid4()),
+            parent_id=parent_id,
+            type="markdown",
+            name="text2sql_status",
+            payload=StatusPayload(message="Starting SQL generation...").model_dump_json(),
+        )
 
         try:
-            # Generate SQL using Vanna
-            sql = await vanna_instance.generate_sql(
+            # Generate SQL using Vanna (returns dict with sql and explanation)
+            sql_result = await vanna_instance.generate_sql(
                 question=question,
                 allow_llm_to_see_data=config.allow_llm_to_see_data,
             )
 
+            sql = sql_result.get("sql", "")
+            explanation = sql_result.get("explanation")
+
             # If execute_sql is enabled, run the query
             if config.execute_sql:
-                yield {
-                    "type": "status",
-                    "message": "Executing SQL query...",
-                    "node": "text2sql",
-                }
+                yield ResponseIntermediateStep(
+                    id=str(uuid.uuid4()),
+                    parent_id=parent_id,
+                    type="markdown",
+                    name="text2sql_status",
+                    payload=StatusPayload(message="Executing SQL query...").model_dump_json(),
+                )
                 try:
                     df = vanna_instance.run_sql(sql)
-                    result = {
-                        "sql": sql,
-                        "executed": True,
-                        "row_count": len(df),
-                        "columns": df.columns.tolist(),
-                    }
+                    # Log execution success but don't change the output
+                    logger.info(f"SQL executed successfully: {len(df)} rows returned")
                 except Exception as e:
                     logger.error(f"SQL execution failed: {e}")
-                    result = {"sql": sql, "executed": False, "error": str(e)}
-            else:
-                result = {"sql": sql, "executed": False}
+                    # Note: execution errors are logged but don't change the SQL output
 
-            yield {"type": "result", "sql_result": result, "node": "text2sql"}
+            # Yield final result as Text2SQLOutput
+            yield Text2SQLOutput(sql=sql, explanation=explanation)
 
         except Exception as e:
             logger.error(f"SQL generation failed: {e}")
-            yield {"type": "error", "message": str(e), "node": "text2sql"}
+            # Error status as ResponseIntermediateStep
+            yield ResponseIntermediateStep(
+                id=str(uuid.uuid4()),
+                parent_id=parent_id,
+                type="markdown",
+                name="text2sql_error",
+                payload=StatusPayload(message=str(e)).model_dump_json(),
+            )
             raise
 
         logger.info("Text2SQL completed successfully")
 
     # Non-streaming version
-    async def _generate_sql(question: str) -> str:
+    async def _generate_sql(question: str) -> Text2SQLOutput:
         """Generate SQL query from natural language."""
-        result = None
-
         async for update in _generate_sql_stream(question):
-            if update["type"] == "result":
-                result = update["sql_result"]
+            # Skip ResponseIntermediateStep objects, only return Text2SQLOutput
+            if isinstance(update, Text2SQLOutput):
+                return update
 
-        return result.get("sql", "") if result else ""
+        # Fallback if no result found
+        return Text2SQLOutput(sql="", explanation=None)
 
     description = (
         "Generate SQL queries from natural language questions using AI. "
@@ -246,4 +273,3 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         logger.info("Text2SQL function exited early")
     finally:
         logger.info("Cleaning up Text2SQL function")
-

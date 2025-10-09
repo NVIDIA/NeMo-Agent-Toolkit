@@ -5,17 +5,14 @@ supporting multiple database backends and vector stores.
 """
 
 import asyncio
-import json
 import logging
 import uuid
 from typing import Any
 
-import pandas as pd
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from pymilvus import DataType, MilvusClient
 from vanna.base import VannaBase
 from vanna.milvus import Milvus_VectorStore
-from vanna.utils import deterministic_uuid
+
+from nat.plugins.vanna.constants import CHAT_MODEL_VALUES, REASONING_MODEL_VALUES
 
 logger = logging.getLogger(__name__)
 
@@ -24,16 +21,85 @@ _vanna_instance = None
 _init_lock = None
 
 
+def extract_json_from_string(content: str) -> dict:
+    """Extract JSON from a string that may contain additional content.
+
+    Args:
+        content: String containing JSON data
+
+    Returns:
+        Parsed JSON as dictionary
+
+    Raises:
+        ValueError: If no valid JSON found
+    """
+    import json
+
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        try:
+            # Extract JSON from string that may contain additional content
+            # Try to find JSON between ```json markers
+            if "```json" in content:
+                json_start = content.find("```json")
+                if json_start != -1:
+                    json_start += len("```json")
+                    json_end = content.find("```", json_start)
+                    if json_end != -1:
+                        json_str = content[json_start:json_end]
+                    else:
+                        msg = "No JSON found in response"
+                        raise ValueError(msg)
+            else:
+                json_start = content.find("{")
+                json_end = content.rfind("}") + 1
+                json_str = content[json_start:json_end]
+
+            return json.loads(json_str.strip())
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Failed to extract JSON from content: {e}")
+            raise ValueError("Could not extract valid JSON from response") from e
+
+
+def remove_think_tags(text: str, model_name: str) -> str:
+    """Remove think tags from reasoning model output based on model type.
+
+    Args:
+        text: Text potentially containing think tags
+        model_name: Name of the model
+
+    Returns:
+        Text with think tags removed if applicable
+    """
+    if "openai/gpt-oss" in model_name:
+        return text
+    elif model_name in REASONING_MODEL_VALUES:
+        from nat.utils.io.model_processing import remove_r1_think_tags
+
+        return remove_r1_think_tags(text)
+    else:
+        return text
+
+
 # Default prompts
 DEFAULT_RESPONSE_GUIDELINES = """
 Response Guidelines:
 1. Carefully analyze the question to understand the user’s intent, target columns, filters, and any aggregation or grouping requirements.
 2. Retrieve only the relevant columns and tables needed to answer the question, avoiding unnecessary joins or selections.
+3. Generate a valid SQL query and return it in JSON format as shown:
+
+{
+  "sql": "generated SQL query here",
+  "explanation": "explanation of the SQL query"
+}
 """
 
 
 def to_langchain_msgs(msgs):
     """Convert message dicts to LangChain message objects."""
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
     role2cls = {"system": SystemMessage, "user": HumanMessage, "assistant": AIMessage}
     return [role2cls[m["role"]](content=m["content"]) for m in msgs]
 
@@ -132,7 +198,7 @@ class VannaLangChainLLM(VannaBase):
         allow_llm_to_see_data: bool = False,
         error_message: dict | None = None,
         **kwargs,
-    ) -> str:
+    ) -> dict[str, str | None]:
         """Generate SQL using the LLM.
 
         Args:
@@ -142,7 +208,7 @@ class VannaLangChainLLM(VannaBase):
             **kwargs: Additional keyword arguments
 
         Returns:
-            Generated SQL query string
+            Dictionary with 'sql' and optional 'explanation' keys
         """
         logger.info("Starting SQL Generation with Vanna")
 
@@ -171,25 +237,54 @@ class VannaLangChainLLM(VannaBase):
 
         # Generate SQL
         try:
-            response = await self.submit_prompt(prompt)
-            llm_response = response
+            # Determine model type for reasoning model handling
+            try:
+                from langchain_openai.chat_models.base import ChatOpenAI
+
+                if type(self.client) == ChatOpenAI:
+                    llm_name = self.client.model_name
+                else:
+                    llm_name = self.client.model
+            except ImportError:
+                llm_name = self.client.model if hasattr(self.client, 'model') else "unknown"
+
+            # Get LLM response (with streaming for reasoning models)
+            if llm_name in REASONING_MODEL_VALUES:
+                llm_output = ""
+                async for chunk in self.client.astream(prompt):
+                    llm_output += chunk.content
+                llm_response = remove_think_tags(llm_output, llm_name)
+            else:
+                llm_response = await self.submit_prompt(prompt)
+
             self.log(title="LLM Response", message=llm_response)
+
+            # Try to extract structured JSON response (sql + explanation)
+            try:
+                llm_response_json = extract_json_from_string(llm_response)
+                sql_text = llm_response_json.get("sql", "")
+                explanation_text = llm_response_json.get("explanation")
+            except Exception:
+                # Fallback: treat entire response as SQL without explanation
+                sql_text = llm_response
+                explanation_text = None
 
         except Exception as e:
             logger.error(f"Error calling LLM during SQL query generation: {e}")
             raise
 
         # Handle intermediate SQL for data introspection
-        if "intermediate_sql" in llm_response:
+        if "intermediate_sql" in sql_text:
             if not allow_llm_to_see_data:
-                return (
-                    "The LLM is not allowed to see the data in your database. "
-                    "Your question requires database introspection to generate "
-                    "the necessary SQL. Please set allow_llm_to_see_data=True "
-                    "to enable this."
-                )
+                return {
+                    "sql": "The LLM is not allowed to see the data in your database. "
+                           "Your question requires database introspection to generate "
+                           "the necessary SQL. Please set allow_llm_to_see_data=True "
+                           "to enable this.",
+                    "explanation": None
+                }
 
-            intermediate_sql = self.extract_sql(llm_response)
+            intermediate_sql = self.extract_sql(sql_text)
 
             try:
                 self.log(title="Running Intermediate SQL", message=intermediate_sql)
@@ -209,14 +304,25 @@ class VannaLangChainLLM(VannaBase):
                     ],
                     **kwargs,
                 )
-                response = await self.submit_prompt(prompt, **kwargs)
-                llm_response = response
+                llm_response = await self.submit_prompt(prompt, **kwargs)
                 self.log(title="LLM Response", message=llm_response)
-            except Exception as e:
-                return f"Error running intermediate SQL: {e}"
 
-        sql = self.extract_sql(llm_response)
-        return sql.replace("\\_", "_")
+                # Re-extract from new response
+                try:
+                    llm_response_json = extract_json_from_string(llm_response)
+                    sql_text = llm_response_json.get("sql", "")
+                    explanation_text = llm_response_json.get("explanation")
+                except Exception:
+                    sql_text = llm_response
+                    explanation_text = None
+            except Exception as e:
+                return {"sql": f"Error running intermediate SQL: {e}", "explanation": None}
+
+        sql = self.extract_sql(sql_text)
+        return {
+            "sql": sql.replace("\\_", "_"),
+            "explanation": explanation_text
+        }
 
 
 class MilvusVectorStore(Milvus_VectorStore):
@@ -263,6 +369,8 @@ class MilvusVectorStore(Milvus_VectorStore):
 
     def _create_sql_collection(self, name: str):
         """Create SQL collection."""
+        from pymilvus import DataType, MilvusClient
+
         if not self.milvus_client.has_collection(collection_name=name):
             schema = MilvusClient.create_schema(
                 auto_id=False,
@@ -299,6 +407,8 @@ class MilvusVectorStore(Milvus_VectorStore):
 
     def _create_ddl_collection(self, name: str):
         """Create DDL collection."""
+        from pymilvus import DataType, MilvusClient
+
         if not self.milvus_client.has_collection(collection_name=name):
             schema = MilvusClient.create_schema(
                 auto_id=False,
@@ -332,6 +442,8 @@ class MilvusVectorStore(Milvus_VectorStore):
 
     def _create_doc_collection(self, name: str):
         """Create documentation collection."""
+        from pymilvus import DataType, MilvusClient
+
         if not self.milvus_client.has_collection(collection_name=name):
             schema = MilvusClient.create_schema(
                 auto_id=False,
@@ -459,8 +571,10 @@ class MilvusVectorStore(Milvus_VectorStore):
             logger.error(f"Error retrieving similar questions: {e}")
         return list_sql
 
-    def get_training_data(self) -> pd.DataFrame:
+    def get_training_data(self):
         """Get all training data."""
+        import pandas as pd
+
         df = pd.DataFrame()
 
         # Get SQL data
@@ -638,4 +752,3 @@ async def train_vanna(vn: VannaLangChain, training_data: dict):
             vn.train(question=example["question"], sql=example["sql"])
 
     logger.info("Vanna training complete")
-
