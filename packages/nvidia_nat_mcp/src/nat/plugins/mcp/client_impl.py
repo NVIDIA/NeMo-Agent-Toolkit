@@ -44,10 +44,48 @@ class SessionData:
     ref_count: int = 0
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
+    # lifetime task to respect task boundaries
+    stop_event: asyncio.Event = field(default_factory=asyncio.Event)
+    lifetime_task: asyncio.Task | None = None
+
 
 class MCPFunctionGroup(FunctionGroup):
     """
-    A specialized FunctionGroup for MCP clients that includes MCP-specific attributes with session management.
+    A specialized FunctionGroup for MCP clients that includes MCP-specific attributes
+    with session management.
+
+    Locking model (simple + safe; occasional 'temporarily unavailable' is acceptable).
+
+    RW semantics:
+    - Multiple readers may hold the reader lock concurrently.
+    - While any reader holds the lock, writers cannot proceed.
+    - While the writer holds the lock, no new readers can proceed.
+
+    Data:
+    - _sessions: dict[str, SessionData]; SessionData = {client, last_activity, ref_count, lock}.
+
+    Locks:
+    - _session_rwlock (aiorwlock.RWLock)
+    • Reader: very short sections — dict lookups, ref_count ++/--, touch last_activity.
+    • Writer: structural changes — create session entries, enforce limits, remove on cleanup.
+    - SessionData.lock (asyncio.Lock)
+    • Protects per-session ref_count only, taken only while holding RW *reader*.
+    • last_activity: written without session lock (timestamp races acceptable for cleanup heuristic).
+
+    Ordering & awaits:
+    - Always acquire RWLock (reader/writer) before SessionData.lock; never the reverse.
+    - Never await network I/O under the writer (client creation is the one intentional exception).
+    - Client close happens after releasing the writer.
+
+    Cleanup:
+    - Under writer: find inactive (ref_count == 0 and idle > max_age), pop from _sessions, stash clients.
+    - After writer: await client.__aexit__() for each stashed client.
+    - TOCTOU race: cleanup may read ref_count==0 then a usage increments it; accepted, yields None gracefully.
+
+    Invariants:
+    - ref_count > 0 prevents cleanup.
+    - Usage context increments ref_count before yielding and decrements on exit.
+    - If a session disappears between ensure/use, callers return "Tool temporarily unavailable".
     """
 
     def __init__(self, *args, **kwargs):
@@ -70,6 +108,9 @@ class MCPFunctionGroup(FunctionGroup):
         # Shared components for session client creation
         self._shared_auth_provider: AuthProviderBase | None = None
         self._client_config: MCPClientConfig | None = None
+
+        # Use random session id for testing only
+        self._use_random_session_id_for_testing: bool = False
 
     @property
     def mcp_client(self):
@@ -111,6 +152,11 @@ class MCPFunctionGroup(FunctionGroup):
         """Maximum allowed sessions."""
         return self._client_config.max_sessions if self._client_config else 100
 
+    def _get_random_session_id(self) -> str:
+        """Get a random session ID."""
+        import uuid
+        return str(uuid.uuid4())
+
     def _get_session_id_from_context(self) -> str | None:
         """Get the session ID from the current context."""
         try:
@@ -118,9 +164,15 @@ class MCPFunctionGroup(FunctionGroup):
 
             # Get session id from context, authentication is done per-websocket session for tool calls
             session_id = None
-            cookies = getattr(_Ctx.get().metadata, "cookies", None)
-            if cookies:
-                session_id = cookies.get("nat-session")
+            # get session id from cookies if session_aware_tools is enabled
+            if self._client_config and self._client_config.session_aware_tools:
+                cookies = getattr(_Ctx.get().metadata, "cookies", None)
+                if cookies:
+                    if self._use_random_session_id_for_testing:
+                        # This path is for testing only and should not be used in production
+                        session_id = self._get_random_session_id()
+                    else:
+                        session_id = cookies.get("nat-session")
 
             if not session_id:
                 # use default user id if allowed
@@ -154,6 +206,8 @@ class MCPFunctionGroup(FunctionGroup):
         if max_age is None:
             max_age = self._client_config.session_idle_timeout if self._client_config else timedelta(hours=1)
 
+        to_close: list[tuple[str, SessionData]] = []
+
         async with self._session_rwlock.writer:
             current_time = datetime.now()
             inactive_sessions = []
@@ -171,8 +225,8 @@ class MCPFunctionGroup(FunctionGroup):
                     logger.info("Cleaning up inactive session client: %s", truncate_session_id(session_id))
                     session_data = self._sessions[session_id]
                     # Close the client connection
-                    await session_data.client.__aexit__(None, None, None)
-                    logger.info("Cleaned up inactive session client: %s", truncate_session_id(session_id))
+                    if session_data:
+                        to_close.append((session_id, session_data))
                 except Exception as e:
                     logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
                 finally:
@@ -180,6 +234,26 @@ class MCPFunctionGroup(FunctionGroup):
                     self._sessions.pop(session_id, None)
                     logger.info("Cleaned up session tracking for: %s", truncate_session_id(session_id))
                     logger.info(" Total sessions: %d", len(self._sessions))
+
+        # Close sessions outside the writer lock to avoid deadlock
+        for session_id, sdata in to_close:
+            try:
+                if sdata.stop_event and sdata.lifetime_task:
+                    if not sdata.lifetime_task.done():
+                        # Instead of directly exiting the task, set the stop event
+                        # and wait for the task to exit. This ensures the cancel scope
+                        # is entered and exited in the same task.
+                        sdata.stop_event.set()
+                        await sdata.lifetime_task  # __aexit__ runs in that task
+                    else:
+                        logger.debug("Session client %s lifetime task already done", truncate_session_id(session_id))
+                else:
+                    # add fallback to ensure we clean up the client
+                    logger.warning("Session client %s lifetime task not found, cleaning up client",
+                                   truncate_session_id(session_id))
+                    await sdata.client.__aexit__(None, None, None)
+            except Exception as e:
+                logger.warning("Error cleaning up session client %s: %s", truncate_session_id(session_id), e)
 
     async def _get_session_client(self, session_id: str) -> MCPBaseClient:
         """Get the appropriate MCP client for the session."""
@@ -220,15 +294,19 @@ class MCPFunctionGroup(FunctionGroup):
                 logger.warning("Session limit reached (%d), rejecting new session: %s",
                                self._client_config.max_sessions,
                                truncate_session_id(session_id))
-                raise RuntimeError(f"Service temporarily unavailable: Maximum concurrent sessions "
-                                   f"({self._client_config.max_sessions}) exceeded. Please try again later.")
+                raise RuntimeError(f"Tool unavailable: Maximum concurrent sessions "
+                                   f"({self._client_config.max_sessions}) exceeded.")
 
             # Create session client lazily
             logger.info("Creating new MCP client for session: %s", truncate_session_id(session_id))
-            session_client = await self._create_session_client(session_id)
-
-            # Create session data with all components
-            session_data = SessionData(client=session_client, last_activity=datetime.now(), ref_count=0)
+            session_client, stop_event, lifetime_task = await self._create_session_client(session_id)
+            session_data = SessionData(
+                client=session_client,
+                last_activity=datetime.now(),
+                ref_count=0,
+                stop_event=stop_event,
+                lifetime_task=lifetime_task,
+            )
 
             # Cache the session data
             self._sessions[session_id] = session_data
@@ -241,23 +319,32 @@ class MCPFunctionGroup(FunctionGroup):
         # Ensure session exists - create it if it doesn't
         if session_id not in self._sessions:
             # Create session client first
-            await self._get_session_client(session_id)
-            # Session should now exist in _sessions
+            await self._get_session_client(session_id)  # START read phase: bump ref_count under reader + session lock
 
-        # Get session data (session must exist at this point)
-        session_data = self._sessions[session_id]
-
-        # Thread-safe reference counting using per-session lock
-        async with session_data.lock:
-            session_data.ref_count += 1
+        async with self._session_rwlock.reader:
+            sdata = self._sessions.get(session_id)
+            if not sdata:
+                # this can happen if the session is cleaned up between the check and the lock
+                # this is rare and we can just return that the tool is temporarily unavailable
+                yield None
+                return
+            async with sdata.lock:
+                sdata.ref_count += 1
+                client = sdata.client  # capture
+        # END read phase (release reader before long await)
 
         try:
-            yield
+            yield client
         finally:
-            async with session_data.lock:
-                session_data.ref_count -= 1
+            # Brief read phase to decrement ref_count and touch activity
+            async with self._session_rwlock.reader:
+                sdata = self._sessions.get(session_id)
+                if sdata:
+                    async with sdata.lock:
+                        sdata.ref_count -= 1
+                        sdata.last_activity = datetime.now()
 
-    async def _create_session_client(self, session_id: str) -> MCPBaseClient:
+    async def _create_session_client(self, session_id: str) -> tuple[MCPBaseClient, asyncio.Event, asyncio.Task]:
         """Create a new MCP client instance for the session."""
         from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
 
@@ -280,11 +367,50 @@ class MCPFunctionGroup(FunctionGroup):
             # per-user sessions are only supported for streamable-http transport
             raise ValueError(f"Unsupported transport: {config.server.transport}")
 
-        # Initialize the client
-        await client.__aenter__()
+        ready = asyncio.Event()
+        stop_event = asyncio.Event()
+
+        async def _lifetime():
+            """
+            Create a lifetime task to respect task boundaries and ensure the
+            cancel scope is entered and exited in the same task.
+            """
+            try:
+                async with client:
+                    ready.set()
+                    await stop_event.wait()
+            except Exception:
+                ready.set()  # Ensure we don't hang the waiter
+                raise
+
+        task = asyncio.create_task(_lifetime(), name=f"mcp-session-{truncate_session_id(session_id)}")
+
+        # Wait for initialization with timeout to prevent infinite hangs
+        timeout = config.tool_call_timeout.total_seconds() if config else 300
+        try:
+            await asyncio.wait_for(ready.wait(), timeout=timeout)
+        except TimeoutError:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            logger.error("Session client initialization timed out after %ds for %s",
+                         timeout,
+                         truncate_session_id(session_id))
+            raise RuntimeError(f"Session client initialization timed out after {timeout}s")
+
+        # Check if initialization failed before ready was set
+        if task.done():
+            try:
+                await task  # Re-raise exception if the task failed
+            except Exception as e:
+                logger.error("Failed to initialize session client for %s: %s", truncate_session_id(session_id), e)
+                raise RuntimeError(f"Failed to initialize session client: {e}") from e
 
         logger.info("Created session client for session: %s", truncate_session_id(session_id))
-        return client
+        # NOTE: caller will place client into SessionData and attach stop_event/task
+        return client, stop_event, task
 
 
 def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
@@ -316,8 +442,9 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
                 session_tool = await client.get_tool(tool.name)
             else:
                 # Use session usage context to prevent cleanup during tool execution
-                async with function_group._session_usage_context(session_id):
-                    client = await function_group._get_session_client(session_id)
+                async with function_group._session_usage_context(session_id) as client:
+                    if client is None:
+                        return "Tool temporarily unavailable. Try again."
                     session_tool = await client.get_tool(tool.name)
 
             # Preserve original calling convention
@@ -428,11 +555,7 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             description = override.description if override and override.description else tool.description
 
             # Create the tool function according to configuration
-            if config.session_aware_tools:
-                tool_fn = mcp_session_tool_function(tool, group)
-            else:
-                from nat.plugins.mcp.tool import mcp_tool_function
-                tool_fn = mcp_tool_function(tool)
+            tool_fn = mcp_session_tool_function(tool, group)
 
             # Normalize optional typing for linter/type-checker compatibility
             single_fn = tool_fn.single_fn

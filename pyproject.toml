@@ -43,17 +43,19 @@ dependencies = [
   "platformdirs~=4.3",
   "pydantic~=2.11",
   "pymilvus~=2.4",
+  "python-dotenv~=1.1.1",
   "PyYAML~=6.0",
   "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
   "rich~=13.9",
   "tabulate~=0.9",
-  "uvicorn[standard]~=0.34",
+  "uvicorn[standard]<0.36", # need to limit version until nest_asyncio is resolved
   "wikipedia~=1.4",
 ]
 requires-python = ">=3.11,<3.14"
 description = "NVIDIA NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
-license = { file = "LICENSE.md" }
+license = "Apache-2.0"
+license-files = ["LICENSE.md", "LICENSE-3rd-party.txt"]
 keywords = ["ai", "rag", "agents"]
 classifiers = [
   "Programming Language :: Python",
@@ -64,6 +66,9 @@ classifiers = [
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 
+[project.urls]
+documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
+source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
 [project.optional-dependencies]
 # Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install "nvidia-nat[langchain]"`
@@ -98,6 +103,7 @@ zep-cloud = ["nvidia-nat-zep-cloud"]
 examples = [
   "nat_adk_demo",
   "nat_agno_personal_finance",
+  "nat_haystack_deep_research_agent",
   "nat_alert_triage_agent",
   "nat_automated_description_generation",
   "nat_email_phishing_analyzer",
@@ -142,6 +148,9 @@ async_endpoints = [
 ]
 
 # specific versions of shared packages within optional subpackages
+nvidia_haystack = [
+  "nvidia-haystack~=0.3.0",
+]
 litellm = [
   "litellm==1.74.9"
 ]
@@ -180,6 +189,7 @@ nvidia-nat-zep-cloud = { workspace = true }
 # All examples here
 nat_adk_demo = { path = "examples/frameworks/adk_demo", editable = true }
 nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
+nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
 nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }

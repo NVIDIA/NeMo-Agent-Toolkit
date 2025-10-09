@@ -25,7 +25,7 @@ from nat.test.object_store_tests import ObjectStoreTests
 
 # NOTE: This test requires a MySQL server to be running locally.
 # To launch a local server using docker, run the following command:
-# docker run --rm -ti --name test-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -d -p 3306:3306 mysql:9.3
+# docker run --rm -ti --name test-mysql -e MYSQL_ROOT_PASSWORD=my_password -d -p 3306:3306 mysql:9.3
 
 
 @pytest_asyncio.fixture(name="mysql_server", scope="module")
@@ -36,7 +36,7 @@ async def fixture_mysql_server(fail_missing: bool):
         conn = await aiomysql.connect(host=os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1'),
                                       port=3306,
                                       user='root',
-                                      password=os.environ.get('MYSQL_ROOT_PASSWORD', 'my-secret-pw'))
+                                      password=os.environ.get('MYSQL_ROOT_PASSWORD', 'my_password'))
         yield
         conn.close()
     except ImportError:

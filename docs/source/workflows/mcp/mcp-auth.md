@@ -101,7 +101,7 @@ Set `CORPORATE_MCP_JIRA_URL` to your protected Jira MCP server URL, not the samp
 ### Running the Workflow in Single-User Mode (CLI)
 In this mode, the `default_user_id` is used for authentication during setup and for subsequent tool calls.
 
-```{mermaid}
+```mermaid
 flowchart LR
   U[User<br/>default-user-id] --> H[MCP Host<br/>NAT Workflow]
   H --> C[MCP Client<br/>default-user-id]
@@ -122,7 +122,7 @@ nat run --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.
 ### Running the Workflow in Multi-User Mode (FastAPI)
 In this mode the workflow is served via a FastAPI frontend. Multiple users can access the workflow concurrently using a UI with `WebSocket` mode enabled.
 
-```{mermaid}
+```mermaid
 flowchart LR
   U0[User<br/>default-user-id] --> H2[MCP Host<br/>NAT Workflow]
   U1[User<br/>UI-User-1] --> H2
@@ -152,9 +152,12 @@ At this point, a consent window is displayed to the user. The user must authoriz
 Subsequent tool calls can be disabled for the default user ID by setting `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration. This is recommended for multi-user workflows to avoid accidental tool calls by unauthorized users.
 
 3. **Start the UI**:
-- Start the UI by following the instructions in the [User Interface](../../quick-start/launching-ui.md) documentation.
-- Connect to  the UI at `http://localhost:3000`
-- Ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out.
+- Start the UI by following the instructions in the [Launching the UI](../../quick-start/launching-ui.md) documentation.
+- Connect to the UI at http://localhost:3000
+
+:::important
+Ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. WebSocket connections are required for OAuth authentication workflows.
+:::
 
 4. **Send the input to the workflow via the UI**:
 ```text

@@ -131,7 +131,7 @@ Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
 API Authentication <./reference/api-authentication.md>
 Interactive Models <./reference/interactive-models.md>
 API Server Endpoints <./reference/api-server-endpoints.md>
-Websockets <./reference/websockets.md>
+WebSockets <./reference/websockets.md>
 Command Line Interface (CLI) <./reference/cli.md>
 Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
