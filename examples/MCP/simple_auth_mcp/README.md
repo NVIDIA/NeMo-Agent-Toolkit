@@ -72,7 +72,11 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
 ```
 
 2. **Start the UI**:
-Start UI and connect to the URL `http://localhost:3000`. Ensure that `Websocket` mode is enabled by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out.
+
+   Start the UI by following the instructions in the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide. Connect to the URL http://localhost:3000.
+
+   > [!IMPORTANT]
+   > Ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. WebSocket connections are required for OAuth authentication workflows.
 
 3. **Send the input to the workflow via the UI**:
 ```text

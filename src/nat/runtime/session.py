@@ -192,7 +192,7 @@ class SessionManager:
                                     user_message_id: str | None,
                                     conversation_id: str | None) -> None:
         """
-        Extracts and sets user metadata for Websocket connections.
+        Extracts and sets user metadata for WebSocket connections.
         """
 
         # Extract cookies from WebSocket headers (similar to HTTP request)

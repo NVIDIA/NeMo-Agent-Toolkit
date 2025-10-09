@@ -25,10 +25,28 @@ import pytest
 from nat.plugins.mcp.client_config import MCPClientConfig
 from nat.plugins.mcp.client_config import MCPServerConfig
 from nat.plugins.mcp.client_impl import MCPFunctionGroup
+from nat.plugins.mcp.client_impl import SessionData
 
 
 class TestMCPSessionManagement:
     """Test the per-session client management functionality in MCPFunctionGroup."""
+
+    async def cleanup_sessions(self, function_group):
+        """Helper method to clean up all sessions."""
+        for session_data in function_group._sessions.values():
+            if hasattr(session_data, 'stop_event') and session_data.stop_event:
+                session_data.stop_event.set()
+            if hasattr(session_data,
+                       'lifetime_task') and session_data.lifetime_task and not session_data.lifetime_task.done():
+                try:
+                    await asyncio.wait_for(session_data.lifetime_task, timeout=1.0)
+                except (TimeoutError, asyncio.CancelledError):
+                    session_data.lifetime_task.cancel()
+                    try:
+                        await session_data.lifetime_task
+                    except asyncio.CancelledError:
+                        pass
+        function_group._sessions.clear()
 
     @pytest.fixture
     def mock_config(self):
@@ -105,6 +123,9 @@ class TestMCPSessionManagement:
             mock_client_class.assert_called_once()
             mock_session_client.__aenter__.assert_called_once()
 
+            # Clean up session
+            await self.cleanup_sessions(function_group)
+
     async def test_get_session_client_reuses_existing_session_client(self, function_group):
         """Test that existing session clients are reused."""
         session_id = "session-123"
@@ -122,6 +143,9 @@ class TestMCPSessionManagement:
 
             assert client1 == client2
             assert mock_client_class.call_count == 1  # Only created once
+
+            # Clean up session
+            await self.cleanup_sessions(function_group)
 
     async def test_get_session_client_updates_last_activity(self, function_group):
         """Test that last activity is updated when accessing existing sessions."""
@@ -146,6 +170,9 @@ class TestMCPSessionManagement:
             updated_time = function_group._sessions[session_id].last_activity
             assert updated_time > initial_time
 
+            # Clean up session
+            await self.cleanup_sessions(function_group)
+
     async def test_get_session_client_enforces_max_sessions_limit(self, function_group):
         """Test that the maximum session limit is enforced."""
         # Create clients up to the limit
@@ -167,6 +194,9 @@ class TestMCPSessionManagement:
 
             with pytest.raises(RuntimeError, match="Maximum concurrent.*sessions.*exceeded"):
                 await function_group._get_session_client("session-overflow")
+
+        # Clean up all sessions
+        await self.cleanup_sessions(function_group)
 
     async def test_cleanup_inactive_sessions_removes_old_sessions(self, function_group):
         """Test that inactive sessions are cleaned up."""
@@ -217,6 +247,9 @@ class TestMCPSessionManagement:
             # Session should be preserved due to active reference
             assert session_id in function_group._sessions
 
+            # Clean up session
+            await self.cleanup_sessions(function_group)
+
     async def test_session_usage_context_manager(self, function_group):
         """Test the session usage context manager for reference counting."""
         session_id = "session-123"
@@ -244,6 +277,9 @@ class TestMCPSessionManagement:
         # Reference count should be decremented back to 0
         assert function_group._sessions[session_id].ref_count == 0
 
+        # Clean up session
+        await self.cleanup_sessions(function_group)
+
     async def test_session_usage_context_manager_multiple_sessions(self, function_group):
         """Test the session usage context manager with multiple sessions."""
         session1 = "session-1"
@@ -267,6 +303,9 @@ class TestMCPSessionManagement:
         # Both should be back to 0
         assert function_group._sessions[session1].ref_count == 0
         assert function_group._sessions[session2].ref_count == 0
+
+        # Clean up sessions
+        await self.cleanup_sessions(function_group)
 
     async def test_create_session_client_unsupported_transport(self, function_group):
         """Test that creating session clients fails for unsupported transports."""
@@ -321,6 +360,9 @@ class TestMCPSessionManagement:
             # Session should be preserved
             assert session_id in function_group._sessions
 
+            # Clean up session
+            await self.cleanup_sessions(function_group)
+
     async def test_cleanup_handles_client_close_errors(self, function_group):
         """Test that cleanup handles errors when closing client connections."""
         session_id = "session-123"
@@ -368,6 +410,9 @@ class TestMCPSessionManagement:
         assert len(function_group._sessions) == 1
         assert session_id in function_group._sessions
 
+        # Clean up session
+        await self.cleanup_sessions(function_group)
+
     async def test_throttled_cleanup_on_access(self, function_group):
         """Test that cleanup is throttled and only runs periodically."""
         session_id = "session-123"
@@ -404,6 +449,9 @@ class TestMCPSessionManagement:
 
             # Cleanup should only be called once due to throttling
             assert cleanup_calls == 1
+
+            # Clean up session
+            await self.cleanup_sessions(function_group)
 
     async def test_manual_cleanup_sessions(self, function_group):
         """Test manual cleanup of sessions."""
@@ -499,6 +547,301 @@ class TestMCPSessionManagement:
         assert "session-2" not in function_group._sessions
         assert "session-3" in function_group._sessions
         assert "session-4" in function_group._sessions
+
+        # Clean up remaining sessions
+        await self.cleanup_sessions(function_group)
+
+    async def test_lifetime_task_successful_initialization(self, function_group):
+        """Test that lifetime task properly manages client lifecycle on success."""
+        session_id = "test-session-123"
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        # Mock the client creation
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+            client, stop_event, lifetime_task = await function_group._create_session_client(session_id)
+
+        # Verify the client was created
+        assert client == mock_client
+        assert isinstance(stop_event, asyncio.Event)
+        assert isinstance(lifetime_task, asyncio.Task)
+        assert not lifetime_task.done()
+
+        # Verify __aenter__ was called
+        mock_client.__aenter__.assert_called_once()
+
+        # Clean up
+        stop_event.set()
+        await lifetime_task
+        assert lifetime_task.done()
+
+        # Clean up any remaining sessions
+        await self.cleanup_sessions(function_group)
+
+    async def test_lifetime_task_initialization_failure(self, function_group):
+        """Test that lifetime task properly handles __aenter__ failure."""
+        session_id = "test-session-456"
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(side_effect=RuntimeError("Connection failed"))
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+            with pytest.raises(RuntimeError, match="Failed to initialize session client: Connection failed"):
+                await function_group._create_session_client(session_id)
+
+    async def test_lifetime_task_timeout(self, function_group):
+        """Test that lifetime task times out if initialization hangs."""
+        session_id = "test-session-timeout"
+        mock_client = AsyncMock()
+
+        # Make __aenter__ hang indefinitely
+        async def hanging_aenter(self):
+            await asyncio.sleep(1000)  # Never completes
+            return mock_client
+
+        mock_client.__aenter__ = hanging_aenter
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+            with pytest.raises(RuntimeError, match="Session client initialization timed out after 60.0s"):
+                await function_group._create_session_client(session_id)
+
+    async def test_lifetime_task_cleanup_on_stop_event(self, function_group):
+        """Test that lifetime task properly exits when stop_event is set."""
+        session_id = "test-session-cleanup"
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+            _, stop_event, lifetime_task = await function_group._create_session_client(session_id)
+
+        # Verify task is running
+        assert not lifetime_task.done()
+
+        # Signal stop
+        stop_event.set()
+
+        # Wait for task to complete
+        await lifetime_task
+
+        # Verify __aexit__ was called
+        mock_client.__aexit__.assert_called_once_with(None, None, None)
+        assert lifetime_task.done()
+
+    async def test_lifetime_task_cancel_scope_respect(self, function_group):
+        """Test that cancel scope is entered and exited in the same task."""
+        session_id = "test-session-scope"
+        mock_client = AsyncMock()
+        enter_task_id = None
+        exit_task_id = None
+
+        # Track which task calls __aenter__ and __aexit__
+        original_aenter = AsyncMock(return_value=mock_client)
+        original_aexit = AsyncMock(return_value=None)
+
+        async def tracked_aenter(self):
+            nonlocal enter_task_id
+            task = asyncio.current_task()
+            enter_task_id = task.get_name() if task else "unknown"
+            return await original_aenter()
+
+        async def tracked_aexit(self, exc_type, exc_val, exc_tb):
+            nonlocal exit_task_id
+            task = asyncio.current_task()
+            exit_task_id = task.get_name() if task else "unknown"
+            return await original_aexit(exc_type, exc_val, exc_tb)
+
+        mock_client.__aenter__ = tracked_aenter
+        mock_client.__aexit__ = tracked_aexit
+
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+            _, stop_event, lifetime_task = await function_group._create_session_client(session_id)
+
+        # Signal stop and wait for completion
+        stop_event.set()
+        await lifetime_task
+        assert lifetime_task.done()
+
+        # Verify both enter and exit happened in the same task
+        assert enter_task_id is not None
+        assert exit_task_id is not None
+        assert enter_task_id == exit_task_id
+        assert isinstance(enter_task_id, str)
+        assert "mcp-session-" in enter_task_id
+
+        # Clean up any remaining sessions
+        await self.cleanup_sessions(function_group)
+
+    async def test_cleanup_with_lifetime_task(self, function_group):
+        """Test that cleanup properly signals the lifetime task."""
+        session_id = "test-cleanup-session"
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+            client, stop_event, lifetime_task = await function_group._create_session_client(session_id)
+
+        # Create session data
+        session_data = SessionData(client=client,
+                                   last_activity=function_group._last_cleanup_check - timedelta(hours=2),
+                                   ref_count=0,
+                                   stop_event=stop_event,
+                                   lifetime_task=lifetime_task)
+
+        # Add to sessions
+        function_group._sessions[session_id] = session_data
+
+        # Perform cleanup
+        await function_group._cleanup_inactive_sessions(timedelta(minutes=1))
+
+        # Verify session was removed
+        assert session_id not in function_group._sessions
+
+        # Verify __aexit__ was called
+        mock_client.__aexit__.assert_called_once_with(None, None, None)
+
+    async def test_cleanup_skips_active_sessions_with_lifetime_task(self, function_group):
+        """Test that cleanup skips sessions with ref_count > 0 using lifetime tasks."""
+        session_id = "test-active-session"
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+            client, stop_event, lifetime_task = await function_group._create_session_client(session_id)
+
+        # Create session data with active ref_count
+        session_data = SessionData(
+            client=client,
+            last_activity=function_group._last_cleanup_check - timedelta(hours=2),
+            ref_count=1,  # Active session
+            stop_event=stop_event,
+            lifetime_task=lifetime_task)
+
+        # Add to sessions
+        function_group._sessions[session_id] = session_data
+
+        # Perform cleanup
+        await function_group._cleanup_inactive_sessions(timedelta(minutes=1))
+
+        # Verify session was NOT removed
+        assert session_id in function_group._sessions
+
+        # Verify __aexit__ was NOT called
+        mock_client.__aexit__.assert_not_called()
+
+        # Clean up manually
+        stop_event.set()
+        await lifetime_task
+
+    async def test_cleanup_handles_already_done_task(self, function_group):
+        """Test that cleanup handles tasks that are already done."""
+        session_id = "test-done-session"
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+            client, stop_event, lifetime_task = await function_group._create_session_client(session_id)
+
+        # Complete the task manually
+        stop_event.set()
+        await lifetime_task
+
+        # Create session data with completed task
+        session_data = SessionData(client=client,
+                                   last_activity=function_group._last_cleanup_check - timedelta(hours=2),
+                                   ref_count=0,
+                                   stop_event=stop_event,
+                                   lifetime_task=lifetime_task)
+
+        # Add to sessions
+        function_group._sessions[session_id] = session_data
+
+        # Perform cleanup - should not hang or error
+        await function_group._cleanup_inactive_sessions(timedelta(minutes=1))
+
+        # Verify session was removed
+        assert session_id not in function_group._sessions
+
+    async def test_session_creation_and_usage_with_lifetime_task(self, function_group):
+        """Test complete session lifecycle with lifetime tasks."""
+        session_id = "test-full-session"
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+            # Create session
+            client = await function_group._get_session_client(session_id)
+            assert client == mock_client
+
+            # Verify session exists
+            assert session_id in function_group._sessions
+            session_data = function_group._sessions[session_id]
+            assert session_data.lifetime_task is not None
+            assert not session_data.lifetime_task.done()
+
+            # Use session context
+            async with function_group._session_usage_context(session_id) as ctx_client:
+                assert ctx_client == mock_client
+                assert session_data.ref_count == 1
+
+            # Verify ref_count was decremented
+            assert session_data.ref_count == 0
+
+            # Clean up
+            session_data.stop_event.set()
+            await session_data.lifetime_task
+            assert session_data.lifetime_task.done()
+
+            # Clean up any remaining sessions
+            await self.cleanup_sessions(function_group)
+
+    async def test_multiple_sessions_independence_with_lifetime_tasks(self, function_group):
+        """Test that multiple sessions operate independently with lifetime tasks."""
+        session1_id = "session-1"
+        session2_id = "session-2"
+
+        mock_client1 = AsyncMock()
+        mock_client1.__aenter__ = AsyncMock(return_value=mock_client1)
+        mock_client1.__aexit__ = AsyncMock(return_value=None)
+
+        mock_client2 = AsyncMock()
+        mock_client2.__aenter__ = AsyncMock(return_value=mock_client2)
+        mock_client2.__aexit__ = AsyncMock(return_value=None)
+
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+            mock_client_class.side_effect = [mock_client1, mock_client2]
+
+            # Create both sessions
+            client1 = await function_group._get_session_client(session1_id)
+            client2 = await function_group._get_session_client(session2_id)
+
+            assert client1 == mock_client1
+            assert client2 == mock_client2
+            assert len(function_group._sessions) == 2
+
+            # Clean up both sessions properly
+            session1_data = function_group._sessions[session1_id]
+            session2_data = function_group._sessions[session2_id]
+
+            # Signal stop events
+            session1_data.stop_event.set()
+            session2_data.stop_event.set()
+
+            # Wait for both tasks to complete
+            await asyncio.gather(session1_data.lifetime_task, session2_data.lifetime_task, return_exceptions=True)
+
+            # Verify both tasks are done
+            assert session1_data.lifetime_task.done()
+            assert session2_data.lifetime_task.done()
+
+            # Clean up any remaining sessions
+            await self.cleanup_sessions(function_group)
 
 
 if __name__ == "__main__":
