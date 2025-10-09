@@ -32,6 +32,7 @@ This directory contains configurations for running services used by the examples
 
 - **Docker Compose Services:** Provides pre-configured Docker Compose files for essential services used across NeMo Agent toolkit examples.
 - **Example Support Infrastructure:** Simplifies setup of supporting services required by various examples in the repository.
+- **Milvus:** Includes `docker-compose.milvus.yml` for running a Milvus server for RAG examples.
 - **MinIO:** Includes `docker-compose.minio.yml` for running a MinIO server for object store examples.
 - **MySQL:** Includes `docker-compose.mysql.yml` for running a MySQL server for object store examples.
 - **Phoenix Observability:** Includes `docker-compose.phoenix.yml` for running Phoenix observability server to monitor and debug workflows.
@@ -40,6 +41,7 @@ This directory contains configurations for running services used by the examples
 
 ## Available Services
 
+- **`milvus`**: `docker-compose.milvus.yml`
 - **`minio`**: `docker-compose.minio.yml`
 - **`mysql`**: `docker-compose.mysql.yml`
 - **`phoenix`**: `docker-compose.phoenix.yml`
@@ -62,6 +64,11 @@ docker info
 
 ### Running Services
 
+To start Milvus (for RAG examples):
+```bash
+docker compose -f examples/deploy/docker-compose.milvus.yml up -d
+```
+
 To start MinIO (for object store examples):
 ```bash
 docker compose -f examples/deploy/docker-compose.minio.yml up -d
@@ -83,6 +90,11 @@ docker compose -f examples/deploy/docker-compose.redis.yml up -d
 ```
 
 ### Stopping Services
+
+To stop the Milvus service:
+```bash
+docker compose -f examples/deploy/docker-compose.milvus.yml down
+```
 
 To stop the MinIO service:
 ```bash
