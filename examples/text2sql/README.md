@@ -241,26 +241,70 @@ nat-cli run --workflow-config src/text2sql/configs/config_text2sql_mcp.yml
 
 ## Load Testing
 
-This standalone example is designed for load testing and memory profiling. To perform load tests:
+This standalone example includes comprehensive load testing tools for memory profiling and leak detection.
+
+### Quick Start
+
+Run the integrated test suite that automatically starts the server, monitors memory, and runs load tests:
+
+```bash
+cd examples/text2sql
+python run_text2sql_memory_leak_test.py
+```
+
+This will simulate 40 concurrent users making realistic text2sql queries across 3 rounds and detect potential memory leaks.
+
+### Manual Load Testing
+
+For more control, run components separately:
 
 1. **Start the MCP server:**
 
 ```bash
-nat-cli serve mcp --workflow-config src/text2sql/configs/config_text2sql_mcp.yml
+nat mcp serve --config_file configs/config_text2sql_mcp.yml
 ```
 
 2. **Run load tests** (in another terminal):
 
 ```bash
-# Example using a custom load test script
-python your_load_test_script.py --endpoint http://localhost:8000 --requests 1000
+python load_test_text2sql.py \
+  --url http://localhost:9901/mcp \
+  --users 40 \
+  --calls 10 \
+  --rounds 3
 ```
 
+### Customization
+
+Customize test parameters:
+
+```bash
+python run_text2sql_memory_leak_test.py \
+  --users 50 \              # Number of concurrent users
+  --calls 20 \              # Queries per user per round
+  --rounds 5 \              # Number of test rounds
+  --delay 15.0              # Delay between rounds (seconds)
+```
+
+### What Gets Tested
+
+The load test uses realistic supply chain queries:
+- Shortage analysis queries
+- Lead time inquiries
+- Inventory status checks
+- Build request queries
+- Material cost analysis
+- CM site breakdowns
+- Trend forecasts
+
+See [LOAD_TESTING.md](LOAD_TESTING.md) for detailed documentation, troubleshooting, and performance analysis.
+
 The simplified standalone version makes it easier to:
-- Profile memory usage
-- Detect memory leaks
-- Measure performance under load
+- Profile memory usage with real-time monitoring
+- Detect memory leaks under concurrent load
+- Measure performance and throughput
 - Debug issues in isolation
+- Simulate production workloads
 
 ## Features
 
