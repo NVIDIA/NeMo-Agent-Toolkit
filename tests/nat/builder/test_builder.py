@@ -1200,7 +1200,8 @@ async def test_function_group_add_function_validation():
         group.add_function("", dummy_func)
 
     # Test function name with whitespace
-    with pytest.raises(ValueError, match="Function name can only contain letters, numbers, underscores, and hyphens"):
+    with pytest.raises(ValueError,
+                       match="Function name can only contain letters, numbers, underscores, periods, and hyphens"):
 
         async def dummy_func2(x: int) -> int:
             return x

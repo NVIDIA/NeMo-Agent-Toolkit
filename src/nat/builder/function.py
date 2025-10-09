@@ -416,8 +416,9 @@ class FunctionGroup:
         """
         if not name.strip():
             raise ValueError("Function name cannot be empty or blank")
-        if not re.match(r"^[a-zA-Z0-9_-]+$", name):
-            raise ValueError(f"Function name can only contain letters, numbers, underscores, and hyphens: {name}")
+        if not re.match(r"^[a-zA-Z0-9_.-]+$", name):
+            raise ValueError(
+                f"Function name can only contain letters, numbers, underscores, periods, and hyphens: {name}")
         if name in self._functions:
             raise ValueError(f"Function {name} already exists in function group {self._instance_name}")
 
