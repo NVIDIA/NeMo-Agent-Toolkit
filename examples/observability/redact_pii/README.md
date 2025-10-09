@@ -77,22 +77,22 @@ export WANDB_API_KEY=your_api_key_here
 1. An example weave config is provided in the `weave_redact_pii_config.yaml` file.
 
 ```yaml
-telemetry:
-  tracing:
-    weave:
-      _type: weave
-      project: "nvidia-nat-pii"
-      redact_pii: true
-      redact_pii_fields:
-        - EMAIL_ADDRESS
-        # Uncomment other entity types as needed
-        # - PHONE_NUMBER
-        # - CREDIT_CARD
-        # - US_SSN
-        # - PERSON      redact_keys:
-        - custom_secret
-        - api_key
-        - auth_token
+  telemetry:
+    tracing:
+      weave:
+        _type: weave
+        project: "nvidia-nat-pii"
+        redact_pii: true
+        redact_pii_fields:
+          - EMAIL_ADDRESS
+          # Uncomment other entity types as needed
+          # - PHONE_NUMBER
+          # - CREDIT_CARD
+          # - US_SSN
+          # - PERSON      redact_keys:
+          - custom_secret
+          - api_key
+          - auth_token
 ```
 
 2. Serve the workflow:
