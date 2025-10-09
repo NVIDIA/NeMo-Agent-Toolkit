@@ -174,7 +174,7 @@ Workflow Result:
 ['There is only one species of Aardvark, Orycteropus afer, and it has no recognized subspecies.']
 ```
 
-If we look at the full output from the toolkit, we see that the agent did not call tool for retrieval as it was incorrectly described.
+If we look at the full output from the toolkit, we see that the agent did not call the tool for retrieval as it was incorrectly described.
 
 ### Automated Description Generation
 
