@@ -109,6 +109,6 @@ async def test_full_workflow(phoenix_url: str):
 
     config_file: Path = locate_example_config(ProfilerAgentConfig)
     config = load_config(config_file)
-    config.general.tracing.phoenix.endpoint = phoenix_url
+    config.general.telemetry.tracing["phoenix"].endpoint = phoenix_url
 
     await run_workflow(config_file, "Show me the token usage of last run", "tokens")
