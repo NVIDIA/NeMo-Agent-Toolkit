@@ -36,13 +36,15 @@ Running the integration tests requires several services to be running, and sever
 
 ### Set the API keys:
 ```bash
+export AWS_ACCESS_KEY_ID=<KEY>
+export AWS_SECRET_ACCESS_KEY=<KEY>
+export AZURE_OPENAI_API_KEY=<KEY>
+export MEM0_API_KEY=<KEY>
 export NVIDIA_API_KEY=<KEY>
 export OPENAI_API_KEY=<KEY>
-export TAVILY_API_KEY=<KEY>
-export MEM0_API_KEY=<KEY>
 export SERP_API_KEY=<KEY>  # https://serpapi.com
 export SERPERDEV_API_KEY=<KEY>  # https://serper.dev
-export AZURE_OPENAI_API_KEY=<KEY>
+export TAVILY_API_KEY=<KEY>
 ```
 
 ### Optional variables
@@ -50,6 +52,16 @@ export AZURE_OPENAI_API_KEY=<KEY>
 export AZURE_OPENAI_DEPLOYMENT="<custom model>"
 export AZURE_OPENAI_ENDPOINT="<your-custom-endpoint>"
 ```
+
+### Other Variables
+- `NAT_CI_ETCD_HOST`
+- `NAT_CI_ETCD_PORT`
+- `NAT_CI_MILVUS_HOST`
+- `NAT_CI_MILVUS_PORT`
+- `NAT_CI_MYSQL_HOST`
+- `NAT_CI_OPENSEARCH_URL`
+- `NAT_CI_REDIS_HOST`
+- `NAT_CI_S3_HOST`
 
 
 ### Start the Required Services
