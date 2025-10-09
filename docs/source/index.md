@@ -149,6 +149,7 @@ FAQ <./resources/faq.md>
 Code of Conduct <./resources/code-of-conduct.md>
 Migration Guide <./resources/migration-guide.md>
 Contributing <./resources/contributing.md>
+./resources/running-tests.md
 ./resources/running-ci-locally.md
 ./support.md
 ./resources/licensing.md
