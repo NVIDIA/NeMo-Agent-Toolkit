@@ -17,12 +17,14 @@
 
 # Running Tests
 
-To run the basic set of tests, from the root of the repository, run:
+NeMo Agent toolkit uses [pytest](https://docs.pytest.org/en/stable) for running tests. To run the basic set of tests, from the root of the repository, run:
 ```bash
 pytest
 ```
 
-NeMo Agent Toolkit Optional Flags
+## Optional pytest Flags
+NeMo Agent toolkit adds the following optional pytest flags to control which tests are run:
+
 | Flag | Description |
 |------|-------------|
 | `--run_slow` | Run tests marked as slow, these tests typically take longer than 30 seconds to run. |
