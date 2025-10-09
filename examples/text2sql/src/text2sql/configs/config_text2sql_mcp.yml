@@ -1,13 +1,12 @@
 # Configuration for standalone text2sql MCP server
 # For load testing and memory leak detection
 
-general:
-  use_uvloop: true
-  telemetry:
-    logging:
-      console:
-        level: INFO  # Use DEBUG for more verbose output
-        format: json
+# general:
+#   telemetry:
+#     logging:
+#       console:
+#         level: INFO  # Use DEBUG for more verbose output
+#         format: json
 
 # Standalone text2sql function - no auth, no execution
 functions:
@@ -15,17 +14,17 @@ functions:
     _type: text2sql_standalone
     llm_name: nim_llm
     embedder_name: nim_embedder
-    train_on_startup: false  # Set to true for first run to populate Milvus
+    train_on_startup: true  # Set to true for first run to populate Milvus
     database_type: databricks
     allow_llm_to_see_data: false
     execute_sql: false  # Only generate SQL, don't execute
     authorize: false  # No auth for load testing
     enable_followup_questions: false
-    vanna_remote: true  # Use remote Milvus
-    milvus_host: ${MILVUS_HOST}  # Set via env var
-    milvus_port: ${MILVUS_PORT}  # Set via env var
-    milvus_user: ${MILVUS_USERNAME}  # Set via env var
-    milvus_db_name: "default"
+    vanna_remote: false  # Use remote Milvus
+    # milvus_host: ${MILVUS_HOST}  # Set via env var
+    # milvus_port: ${MILVUS_PORT}  # Set via env var
+    # milvus_user: ${MILVUS_USERNAME}  # Set via env var
+    # milvus_db_name: "default"
     training_analysis_filter: ["pbr", "supply_gap"]
 
 # LLM configuration
@@ -40,7 +39,7 @@ llms:
 # Embedder configuration
 embedders:
   nim_embedder:
-    _type: nvidia_ai_endpoints
+    _type: nim
     model_name: nvidia/nv-embedqa-e5-v5
     truncate: END
 

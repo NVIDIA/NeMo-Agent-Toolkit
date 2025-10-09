@@ -1317,12 +1317,21 @@ async def get_vanna_instance(
             config=llm_config | milvus_config,
         )
 
-        # Connect to Databricks
-        vn = connect_to_databricks(
-            vn,
-            catalog="hive_metastore",
-            schema="silver_global_supply",
-        )
+        # Connect to Databricks (only if credentials are available)
+        # Check if Databricks env vars are set
+        if all([
+                os.getenv("DATABRICKS_SERVER_HOSTNAME"),
+                os.getenv("DATABRICKS_HTTP_PATH"),
+                os.getenv("DATABRICKS_ACCESS_TOKEN")
+        ]):
+            logger.info("Databricks credentials found, connecting...")
+            vn = connect_to_databricks(
+                vn,
+                catalog="hive_metastore",
+                schema="silver_global_supply",
+            )
+        else:
+            logger.info("Databricks credentials not found, skipping connection (SQL execution will not be available)")
 
         _vanna_instance = vn
         return _vanna_instance

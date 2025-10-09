@@ -82,7 +82,7 @@ services:
     restart: on-failure
     environment:
       - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - xpack.security.enabled=false
       - xpack.license.self_generated.type=basic
       - network.host=0.0.0.0
@@ -100,4 +100,3 @@ services:
 networks:
   default:
     name: nvidia-rag-test
-
