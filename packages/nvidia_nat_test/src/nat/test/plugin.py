@@ -214,9 +214,8 @@ def azure_openai_keys_fixture(fail_missing: bool):
     Use for integration tests that require Azure OpenAI credentials.
     """
     yield require_env_variables(
-        varnames=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
-        reason="Azure integration tests require the `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` environment "
-        "variable to be defined.",
+        varnames=["AZURE_OPENAI_API_KEY"],
+        reason="Azure integration tests require the `AZURE_OPENAI_API_KEY` environment variable to be defined.",
         fail_missing=fail_missing)
 
 
