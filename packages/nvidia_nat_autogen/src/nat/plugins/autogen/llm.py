@@ -15,8 +15,7 @@
 """AutoGen LLM client registrations for NAT."""
 
 from collections.abc import AsyncGenerator
-from typing import Any
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -27,9 +26,7 @@ from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
-from nat.llm.utils.thinking import BaseThinkingInjector
-from nat.llm.utils.thinking import FunctionArgumentWrapper
-from nat.llm.utils.thinking import patch_with_thinking
+from nat.llm.utils.thinking import (BaseThinkingInjector, FunctionArgumentWrapper, patch_with_thinking)
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 from nat.utils.type_utils import override
 
@@ -111,8 +108,7 @@ async def openai_autogen(llm_config: OpenAIModelConfig, _builder: Builder) -> As
     Yields:
         AsyncGenerator[ModelType, None]: Configured AutoGen OpenAI client
     """
-    from autogen_core.models import ModelFamily
-    from autogen_core.models import ModelInfo
+    from autogen_core.models import ModelFamily, ModelInfo
     from autogen_ext.models.openai import OpenAIChatCompletionClient
 
     # Extract AutoGen-compatible configuration
@@ -134,6 +130,7 @@ async def openai_autogen(llm_config: OpenAIModelConfig, _builder: Builder) -> As
 
     # Add required AutoGen 0.7.4 parameters
     config_obj.update({"model_info": model_info})
+    config_obj.pop("model", None)
 
     # Create AutoGen OpenAI client
     client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
@@ -154,8 +151,7 @@ async def azure_openai_autogen(llm_config: AzureOpenAIModelConfig,
     Yields:
         AsyncGenerator[ModelType, None]: Configured AutoGen Azure OpenAI client
     """
-    from autogen_core.models import ModelFamily
-    from autogen_core.models import ModelInfo
+    from autogen_core.models import ModelFamily, ModelInfo
     from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 
     config_obj = {
@@ -200,8 +196,7 @@ async def nim_autogen(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
     Yields:
         Configured AutoGen NIM client (via OpenAI compatibility)
     """
-    from autogen_core.models import ModelFamily
-    from autogen_core.models import ModelInfo
+    from autogen_core.models import ModelFamily, ModelInfo
     from autogen_ext.models.openai import OpenAIChatCompletionClient
 
     # Extract NIM configuration for OpenAI-compatible client

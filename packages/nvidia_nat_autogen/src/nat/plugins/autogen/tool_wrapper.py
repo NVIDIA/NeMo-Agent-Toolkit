@@ -116,6 +116,10 @@ def autogen_tool_wrapper(
         if input_schema is not None and is_dataclass(input_schema):
             input_schema = pydantic_dataclass(input_schema)
 
+        from pydantic.dataclasses import create_model_from_dataclass
+        if input_schema is not None and is_dataclass(input_schema):
+            input_schema = create_model_from_dataclass(input_schema)
+
         def decorator(func_to_wrap: Callable[..., Any]) -> Callable[..., Any]:
             """
             Decorator to set metadata on the function.
@@ -143,8 +147,9 @@ def autogen_tool_wrapper(
                                           annotation=resolved_type,
                                           default=default))
                     annotations[param_name] = resolved_type
-            setattr(func_to_wrap, "__signature__", inspect.Signature(parameters=params))
-            setattr(func_to_wrap, "__annotations__", annotations)
+            if input_schema is not None:
+                func_to_wrap.__signature__ = inspect.Signature(parameters=params)
++               func_to_wrap.__annotations__ = annotations
 
             return func_to_wrap
 
