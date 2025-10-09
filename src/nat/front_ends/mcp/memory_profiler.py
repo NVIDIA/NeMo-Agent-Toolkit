@@ -132,6 +132,7 @@ class MemoryProfiler:
                 "current_memory_mb": None,
                 "peak_memory_mb": None,
                 "active_intermediate_managers": self._safe_intermediate_step_manager_count(),
+                "outstanding_steps": self._safe_outstanding_step_count(),
                 "active_exporters": self._safe_exporter_count(),
                 "isolated_exporters": self._safe_isolated_exporter_count(),
                 "subject_instances": self._count_instances_of_type("Subject"),
@@ -155,6 +156,7 @@ class MemoryProfiler:
             "current_memory_mb": round(current_mb, 2),
             "peak_memory_mb": round(peak_mb, 2),
             "active_intermediate_managers": self._safe_intermediate_step_manager_count(),
+            "outstanding_steps": self._safe_outstanding_step_count(),
             "active_exporters": exporter_count,
             "isolated_exporters": isolated_exporter_count,
             "subject_instances": subject_count,
@@ -166,7 +168,9 @@ class MemoryProfiler:
         logger.info("  Peak Memory: %.2f MB", peak_mb)
         logger.info("")
         logger.info("NAT COMPONENT INSTANCES:")
-        logger.info("  IntermediateStepManagers: %d active", stats["active_intermediate_managers"])
+        logger.info("  IntermediateStepManagers: %d active (%d outstanding steps)",
+                    stats["active_intermediate_managers"],
+                    stats["outstanding_steps"])
         logger.info("  BaseExporters: %d active (%d isolated)", stats["active_exporters"], stats["isolated_exporters"])
         logger.info("  Subject (event streams): %d instances", stats["subject_instances"])
 
@@ -217,9 +221,43 @@ class MemoryProfiler:
     def _safe_intermediate_step_manager_count(self) -> int:
         try:
             from nat.builder.intermediate_step_manager import IntermediateStepManager
-            return IntermediateStepManager.get_active_instance_count()
+            # len() is atomic in CPython, but catch RuntimeError just in case
+            try:
+                return IntermediateStepManager.get_active_instance_count()
+            except RuntimeError:
+                # Set was modified during len() - very rare
+                logger.debug("Set changed during count, returning 0")
+                return 0
         except Exception as e:
             logger.debug("Could not get IntermediateStepManager stats: %s", e)
+            return 0
+
+    def _safe_outstanding_step_count(self) -> int:
+        """Get total outstanding steps across all active IntermediateStepManager instances."""
+        try:
+            from nat.builder.intermediate_step_manager import IntermediateStepManager
+
+            # Make a snapshot to avoid "Set changed size during iteration" if GC runs
+            try:
+                instances_snapshot = list(IntermediateStepManager._active_instances)
+            except RuntimeError:
+                # Set changed during list() call - rare but possible
+                logger.debug("Set changed during snapshot, returning 0 for outstanding steps")
+                return 0
+
+            total_outstanding = 0
+            # Iterate through snapshot safely
+            for ref in instances_snapshot:
+                try:
+                    manager = ref()
+                    if manager is not None:
+                        total_outstanding += manager.get_outstanding_step_count()
+                except (ReferenceError, AttributeError):
+                    # Manager was GC'd or in invalid state - skip it
+                    continue
+            return total_outstanding
+        except Exception as e:
+            logger.debug("Could not get outstanding step count: %s", e)
             return 0
 
     def get_stats(self) -> dict[str, Any]:
@@ -235,6 +273,7 @@ class MemoryProfiler:
                 "current_memory_mb": None,
                 "peak_memory_mb": None,
                 "active_intermediate_managers": self._safe_intermediate_step_manager_count(),
+                "outstanding_steps": self._safe_outstanding_step_count(),
                 "active_exporters": self._safe_exporter_count(),
                 "isolated_exporters": self._safe_isolated_exporter_count(),
                 "subject_instances": self._count_instances_of_type("Subject"),
@@ -247,6 +286,7 @@ class MemoryProfiler:
             "current_memory_mb": round(current_mb, 2),
             "peak_memory_mb": round(peak_mb, 2),
             "active_intermediate_managers": self._safe_intermediate_step_manager_count(),
+            "outstanding_steps": self._safe_outstanding_step_count(),
             "active_exporters": self._safe_exporter_count(),
             "isolated_exporters": self._safe_isolated_exporter_count(),
             "subject_instances": self._count_instances_of_type("Subject"),

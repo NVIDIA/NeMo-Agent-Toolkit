@@ -121,9 +121,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
         Exposes:
           - GET /debug/tools/list: List tools. Optional query param `name` (one or more, repeatable or comma separated)
             selects a subset and returns details for those tools.
-          - GET /debug/memory/stats: Get current memory profiling statistics (if enabled)
-          - POST /debug/memory/log: Force log current memory stats (if enabled)
-          - POST /debug/memory/reset: Reset memory profiling baseline (if enabled)
+          - GET /debug/memory/stats: Get current memory profiling statistics (read-only)
         """
 
         @mcp.custom_route("/debug/tools/list", methods=["GET"])
@@ -215,7 +213,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
             return JSONResponse(
                 _build_final_json(functions_to_include, _parse_detail_param(detail_raw, has_names=bool(names))))
 
-        # Memory profiling endpoints
+        # Memory profiling endpoint (read-only)
         @mcp.custom_route("/debug/memory/stats", methods=["GET"])
         async def get_memory_stats(_request: Request):
             """Get current memory profiling statistics."""
@@ -223,30 +221,6 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
             stats = self.memory_profiler.get_stats()
             return JSONResponse(stats)
-
-        @mcp.custom_route("/debug/memory/log", methods=["POST"])
-        async def log_memory_stats(_request: Request):
-            """Force log current memory statistics."""
-            from starlette.responses import JSONResponse
-
-            if not self.memory_profiler.enabled:
-                return JSONResponse({"error": "Memory profiling is not enabled"}, status_code=400)
-
-            stats = self.memory_profiler.log_memory_stats()
-            return JSONResponse({"message": "Memory stats logged", "stats": stats})
-
-        @mcp.custom_route("/debug/memory/reset", methods=["POST"])
-        async def reset_memory_baseline(_request: Request):
-            """Reset memory profiling baseline."""
-            from starlette.responses import JSONResponse
-
-            if not self.memory_profiler.enabled:
-                return JSONResponse({"error": "Memory profiling is not enabled"}, status_code=400)
-
-            self.memory_profiler.reset_baseline()
-            return JSONResponse({
-                "message": "Memory profiling baseline reset", "request_count": self.memory_profiler.request_count
-            })
 
 
 class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):

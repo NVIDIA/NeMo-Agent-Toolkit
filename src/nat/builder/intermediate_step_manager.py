@@ -195,3 +195,11 @@ class IntermediateStepManager:
             int: Number of active instances (cleaned up automatically via weakref)
         """
         return len(cls._active_instances)
+
+    def get_outstanding_step_count(self) -> int:
+        """Get the number of outstanding (started but not ended) steps.
+
+        Returns:
+            int: Number of steps that have been started but not yet ended
+        """
+        return len(self._outstanding_start_steps)
