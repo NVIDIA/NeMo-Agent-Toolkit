@@ -93,5 +93,13 @@ async def test_token_usage_tool(df_path: Path):
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_full_workflow():
+    # This workflow requires a prior trace to be ingested into Phoenix.
+    cur_dir = Path(__file__).parent
+    examples_dir = cur_dir.parent.parent.parent
+    simple_calc_observe_config = (examples_dir /
+                                  "observability/simple_calculator_observability/configs/config-phoenix.yml")
+
+    await run_workflow(simple_calc_observe_config, "add 1 and 2", "3", assert_expected_answer=False)
+
     config_file: Path = locate_example_config(ProfilerAgentConfig)
     await run_workflow(config_file, "Show me the token usage of last run", "tokens")
