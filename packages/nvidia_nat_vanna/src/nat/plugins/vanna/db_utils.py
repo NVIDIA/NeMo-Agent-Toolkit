@@ -7,10 +7,6 @@ import logging
 import re
 from typing import Any
 
-import pandas as pd
-import sqlglot
-from sqlglot.expressions import Table
-
 logger = logging.getLogger(__name__)
 
 
@@ -19,8 +15,10 @@ def extract_sql_from_message(sql_query: str | Any) -> str:
 
     Handles:
     1. Direct SQL strings (passes through)
-    2. Tool message format with content attribute
-    3. String representations of tool messages
+    2. BaseModel objects with 'sql' field (Text2SQLOutput)
+    3. Dictionaries with 'sql' key
+    4. Tool message format with content attribute
+    5. String representations of tool messages
 
     Args:
         sql_query: SQL query in various formats
@@ -28,19 +26,51 @@ def extract_sql_from_message(sql_query: str | Any) -> str:
     Returns:
         Clean SQL query string
     """
-    # Handle objects with content attribute
+    from pydantic import BaseModel
+
+    # Handle BaseModel objects (e.g., Text2SQLOutput)
+    if isinstance(sql_query, BaseModel):
+        # Try to get 'sql' field from BaseModel
+        if hasattr(sql_query, "sql"):
+            return sql_query.sql
+        # Fall back to model_dump_json if no sql field
+        sql_query = sql_query.model_dump_json()
+
+    # Handle dictionaries with 'sql' key
+    if isinstance(sql_query, dict):
+        return sql_query.get("sql", str(sql_query))
+
+    # Handle objects with content attribute (ToolMessage)
     if not isinstance(sql_query, str):
         if hasattr(sql_query, "content"):
-            sql_query = sql_query.content
+            content = sql_query.content
+            # Content might be a dict or list
+            if isinstance(content, dict):
+                return content.get("sql", str(content))
+            if isinstance(content, list) and len(content) > 0:
+                first_item = content[0]
+                if isinstance(first_item, dict):
+                    return first_item.get("sql", str(first_item))
+            sql_query = str(content)
         else:
             sql_query = str(sql_query)
 
-    # Extract from tool message format
+    # Extract from tool message format (legacy)
     if isinstance(sql_query, str) and 'content="' in sql_query:
         match = re.search(r'content="((?:[^"\\\\]|\\\\.)*)"', sql_query)
         if match:
             sql_query = match.group(1)
             sql_query = sql_query.replace("\\'", "'").replace('\\"', '"')
+
+    # Try to parse as JSON if it looks like JSON
+    if isinstance(sql_query, str) and sql_query.strip().startswith("{"):
+        try:
+            import json
+            parsed = json.loads(sql_query)
+            if isinstance(parsed, dict) and "sql" in parsed:
+                return parsed["sql"]
+        except json.JSONDecodeError:
+            pass
 
     return sql_query
 
@@ -55,6 +85,9 @@ def add_table_prefix(sql_query: str, prefix: str = "") -> str:
     Returns:
         SQL query with prefixed table names
     """
+    import sqlglot
+    from sqlglot.expressions import Table
+
     if not prefix:
         return sql_query
 
@@ -235,7 +268,7 @@ def execute_query(
 
 async def async_query(
     connection: Any, query: str, catalog: str | None = None, schema: str | None = None
-) -> pd.DataFrame:
+):
     """Execute query asynchronously and return DataFrame.
 
     Args:
@@ -248,6 +281,8 @@ async def async_query(
         DataFrame with query results
     """
     import asyncio
+
+    import pandas as pd
 
     # Run synchronous query in executor
     loop = asyncio.get_event_loop()
@@ -287,6 +322,8 @@ def setup_vanna_db_connection(
     Returns:
         Vanna instance with database connection configured
     """
+    import pandas as pd
+
     # Connect to database
     if database_type == "databricks":
         connection = connect_to_databricks(
@@ -331,4 +368,3 @@ def setup_vanna_db_connection(
 
     logger.info(f"Database connection configured for {database_type}")
     return vn
-

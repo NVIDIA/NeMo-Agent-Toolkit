@@ -80,6 +80,48 @@ llms:
     temperature: 0.0
     max_tokens: 2000
 
+  oai_oss_120b:
+    _type: openai
+    model_name: openai/gpt-oss-120b
+    base_url: https://integrate.api.nvidia.com/v1
+    api_key: ${NVIDIA_API_KEY}
+    temperature: 1
+    top_p: 1
+    max_tokens: 4096
+
+  oai_oss_20b:
+    _type: openai
+    model_name: openai/gpt-oss-20b
+    base_url: https://integrate.api.nvidia.com/v1
+    api_key: ${NVIDIA_API_KEY}
+    temperature: 1
+    top_p: 1
+    max_tokens: 4096
+
+  nemotron_253b:
+    _type: nim
+    model_name: nvidia/llama-3.1-nemotron-ultra-253b-v1
+    base_url: https://integrate.api.nvidia.com/v1
+    api_key: ${NVIDIA_API_KEY}
+    temperature: 0.0
+    max_tokens: 4096
+
+  nemotron_49b_1_5:
+    _type: nim
+    model_name: nvidia/llama-3_3-nemotron-super-49b-v1_5
+    base_url: https://integrate.api.nvidia.com/v1
+    api_key: ${NVIDIA_API_KEY}
+    temperature: 0.0
+    max_tokens: 4096
+
+  ds_v31:
+    _type: openai
+    model_name: deepseek-ai/deepseek-v3.1
+    base_url: https://integrate.api.nvidia.com/v1
+    api_key: ${NVIDIA_API_KEY}
+    temperature: 0
+    max_tokens: 4096
+
 # Embedder configuration
 embedders:
   nim_embedder:
