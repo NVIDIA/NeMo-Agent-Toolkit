@@ -21,6 +21,7 @@ functions:
     authorize: false  # No auth for load testing
     enable_followup_questions: false
     vanna_remote: false  # Use remote Milvus
+    use_mock_vanna: false  # Set to true to use mock Vanna (for memory leak testing)
     # milvus_host: ${MILVUS_HOST}  # Set via env var
     # milvus_port: ${MILVUS_PORT}  # Set via env var
     # milvus_user: ${MILVUS_USERNAME}  # Set via env var

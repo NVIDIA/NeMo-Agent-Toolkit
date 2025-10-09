@@ -264,15 +264,16 @@ class Text2SQLMemoryLeakTest:
         # Stop MCP server
         if self.server_process:
             try:
-                logger.info("Stopping MCP server...")
+                logger.info("Stopping MCP server (allowing cleanup to complete)...")
                 if sys.platform != 'win32':
-                    # Kill the process group
+                    # Kill the process group with SIGTERM (allows graceful shutdown)
                     os.killpg(os.getpgid(self.server_process.pid), signal.SIGTERM)
                 else:
                     self.server_process.terminate()
 
-                self.server_process.wait(timeout=10)
-                logger.info("MCP server stopped")
+                # Give server extra time to clean up connections
+                self.server_process.wait(timeout=15)
+                logger.info("MCP server stopped (cleanup completed)")
             except Exception as e:
                 logger.error(f"Error stopping MCP server: {e}")
                 try:
@@ -380,8 +381,8 @@ def main():
     """Main entry point for the test runner."""
     parser = argparse.ArgumentParser(description="Run integrated Text2SQL MCP server memory leak tests")
     parser.add_argument("--config_file",
-                        default="./examples/text2sql/configs/config_text2sql_mcp.yml",
-                        help="Path to NAT workflow config file (default: configs/config_text2sql_mcp.yml)")
+                        default="src/text2sql/configs/config_text2sql_mcp.yml",
+                        help="Path to NAT workflow config file (default: src/text2sql/configs/config_text2sql_mcp.yml)")
     parser.add_argument("--host", default="localhost", help="MCP server host (default: localhost)")
     parser.add_argument("--port", type=int, default=9901, help="MCP server port (default: 9901)")
     parser.add_argument("--users", type=int, default=40, help="Number of concurrent users to simulate (default: 40)")

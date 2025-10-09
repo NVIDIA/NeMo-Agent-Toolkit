@@ -1337,6 +1337,69 @@ async def get_vanna_instance(
         return _vanna_instance
 
 
+async def cleanup_vanna_instance():
+    """
+    Clean up Vanna instance and close all connections.
+
+    This function should be called during server shutdown to properly
+    release Milvus connections and other resources.
+    """
+    global _vanna_instance
+
+    if _vanna_instance is None:
+        logger.info("No Vanna instance to clean up")
+        return
+
+    logger.info("Cleaning up Vanna instance and closing connections...")
+
+    try:
+        # Close sync Milvus client
+        if hasattr(_vanna_instance, 'milvus_client') and _vanna_instance.milvus_client is not None:
+            try:
+                _vanna_instance.milvus_client.close()
+                logger.info("✓ Closed sync Milvus client")
+            except Exception as e:
+                logger.error(f"Error closing sync Milvus client: {e}")
+
+        # Close async Milvus client
+        if hasattr(_vanna_instance, 'async_milvus_client') and _vanna_instance.async_milvus_client is not None:
+            try:
+                await _vanna_instance.async_milvus_client.close()
+                logger.info("✓ Closed async Milvus client")
+            except Exception as e:
+                logger.error(f"Error closing async Milvus client: {e}")
+
+        # Close Databricks connection if exists
+        if hasattr(_vanna_instance, 'run_sql') and hasattr(_vanna_instance, 'db_connection'):
+            try:
+                # Databricks SQL connector cleanup
+                if hasattr(_vanna_instance.db_connection, 'close'):
+                    _vanna_instance.db_connection.close()
+                    logger.info("✓ Closed Databricks connection")
+            except Exception as e:
+                logger.error(f"Error closing Databricks connection: {e}")
+
+        # Clear the instance
+        _vanna_instance = None
+        logger.info("✓ Vanna instance cleaned up successfully")
+
+    except Exception as e:
+        logger.error(f"Error during Vanna cleanup: {e}")
+        # Still clear the instance even if cleanup failed
+        _vanna_instance = None
+
+
+def reset_vanna_instance():
+    """
+    Reset the Vanna instance (for testing purposes).
+
+    Note: This does NOT clean up resources. Use cleanup_vanna_instance() first.
+    """
+    global _vanna_instance
+    _vanna_instance = None
+    logger.info("Vanna instance reset")
+
+
 async def generate_sql_vanna(query: str):
     """Generate SQL using Vanna instance."""
     vanna = await get_vanna_instance()

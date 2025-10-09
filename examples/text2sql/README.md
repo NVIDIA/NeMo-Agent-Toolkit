@@ -1,443 +1,270 @@
-# Text2SQL Standalone MCP Server Example
+# Text2SQL MCP Server Load Testing and Memory Leak Detection
 
-This is a standalone example of the Text2SQL functionality designed for MCP server deployment and load testing. It demonstrates how to serve a text-to-SQL tool via the Model Context Protocol (MCP) without requiring the full `talk-to-supply-chain-tools` package.
-
-## Overview
-
-This example provides:
-- **Standalone Text2SQL function** that converts natural language questions to SQL queries
-- **MCP server deployment** for easy integration with Claude Desktop and other MCP clients
-- **Load testing capabilities** for memory profiling and performance testing
-- **Minimal dependencies** for easier debugging and profiling
-
-The standalone version uses:
-- Vanna AI framework for text-to-SQL conversion
-- NVIDIA NIM for LLM inference
-- Milvus vector database for storing DDL, documentation, and few-shot examples
-- Databricks for SQL execution (optional)
-
-## Architecture
-
-```
-examples/text2sql/
-├── src/text2sql/
-│   ├── functions/           # Text2SQL implementation
-│   │   ├── text2sql_standalone.py  # Main function registration
-│   │   └── sql_utils.py            # Vanna integration & utilities
-│   ├── utils/               # Utility modules
-│   │   ├── constant.py             # Constants
-│   │   ├── feature_flag.py         # Feature flags
-│   │   ├── milvus_utils.py         # Milvus client utilities
-│   │   ├── db_utils.py             # Database utilities
-│   │   └── db_schema.py            # Database schema & examples
-│   ├── resources/           # Resource files
-│   │   └── followup_resources.py   # Follow-up question resources
-│   ├── configs/             # Configuration files
-│   │   └── config_text2sql_mcp.yml # MCP server config
-│   └── register.py          # Component registration
-├── pyproject.toml           # Project dependencies
-├── env.example              # Environment variable template
-└── README.md               # This file
-```
+Load testing and memory leak detection tools for the Text2SQL MCP server. The test suite simulates multiple concurrent users making text2sql queries while monitoring memory usage to identify memory leaks, performance degradation, and concurrency issues.
 
 ## Prerequisites
 
-- Python 3.11 or higher
-- NVIDIA API key (for LLM and embeddings)
-- Milvus instance (cloud or local)
-- Databricks account (optional, only needed if executing SQL)
+### Required Dependencies
 
-## Setup Instructions
+```bash
+pip install psutil requests aiohttp
+```
 
-### 1. Clone and Navigate to Example
+### Environment Setup
 
+1. **Install Text2SQL:**
 ```bash
 cd examples/text2sql
-```
-
-### 2. Set Up Environment Variables
-
-Copy the example environment file and fill in your credentials:
-
-```bash
-cp env.example .env
-```
-
-Edit `.env` with your credentials:
-
-```bash
-# Required: NVIDIA API Key
-NVIDIA_API_KEY=your_nvidia_api_key_here
-
-# Required for remote Milvus
-MILVUS_HOST=your-milvus-host.zillizcloud.com
-MILVUS_PORT=19530
-MILVUS_USERNAME=your_milvus_username
-MILVUS_PASSWORD=your_milvus_password
-
-# Optional: Databricks (only if execute_sql=true)
-DATABRICKS_SERVER_HOSTNAME=your_databricks_hostname.cloud.databricks.com
-DATABRICKS_HTTP_PATH=/sql/1.0/warehouses/your_warehouse_id
-DATABRICKS_ACCESS_TOKEN=your_databricks_access_token
-```
-
-### 3. Install Dependencies
-
-Using uv (recommended):
-
-```bash
-# From the examples/text2sql directory
 uv pip install -e .
 ```
 
-Or using pip:
-
+2. **Set up Milvus** (for real Vanna tests only):
 ```bash
-pip install -e .
+# Local Docker
+docker run -d --name milvus \
+  -p 19530:19530 \
+  -p 9091:9091 \
+  -v $(pwd)/milvus_data:/var/lib/milvus \
+  milvusdb/milvus:latest
 ```
 
-### 4. Train Vanna (First Time Only)
-
-On first run, you need to populate the Milvus vector database with training data (DDL, documentation, and examples). Edit `src/text2sql/configs/config_text2sql_mcp.yml`:
-
-```yaml
-functions:
-  text2sql_standalone:
-    train_on_startup: true  # Set to true for first run
-    # ... other settings
-```
-
-Then run the workflow once to train:
-
+3. **Configure environment variables** (create `.env` file):
 ```bash
-nat-cli run --workflow-config src/text2sql/configs/config_text2sql_mcp.yml
+# NVIDIA API Key (Required for real Vanna)
+NVIDIA_API_KEY=nvapi-your-key-here
+
+# Milvus Configuration (optional, for cloud Milvus)
+# MILVUS_HOST=your-cluster.aws-us-west-2.vectordb.zillizcloud.com
+# MILVUS_PORT=19530
+# MILVUS_USERNAME=your_username
+# MILVUS_PASSWORD=your_password
 ```
 
-After training completes, set `train_on_startup: false` for subsequent runs.
-
-### 5. Run as MCP Server
-
-To serve the text2sql function via MCP:
-
+4. **Train Vanna** (first time only, for real Vanna tests):
+Edit `src/text2sql/configs/config_text2sql_mcp.yml` and set `train_on_startup: true`, then run:
 ```bash
-nat-cli serve mcp --workflow-config src/text2sql/configs/config_text2sql_mcp.yml
+nat run --config_file ./examples/text2sql/src/text2sql/configs/config_text2sql_mcp.yml --input "test"
 ```
+After training completes, set `train_on_startup: false` in the config.
 
-The MCP server will start and expose the `text2sql_standalone` tool.
+## Running Load Tests
 
-## Configuration
+### Standard Test (Real Vanna with Milvus)
 
-The main configuration file is `src/text2sql/configs/config_text2sql_mcp.yml`. Key settings:
-
-### Function Configuration
-
-```yaml
-functions:
-  text2sql_standalone:
-    _type: text2sql_standalone
-    llm_name: nim_llm
-    embedder_name: nim_embedder
-    train_on_startup: false           # Set to true for first run
-    execute_sql: false                # If true, executes SQL on Databricks
-    authorize: false                  # If true, requires Bearer token
-    enable_followup_questions: false  # Generate follow-up questions
-    vanna_remote: true                # Use remote Milvus (true) or local (false)
-    training_analysis_filter: ["pbr", "supply_gap"]  # Filter training examples
-```
-
-### LLM Configuration
-
-```yaml
-llms:
-  nim_llm:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
-    temperature: 0.0
-    max_tokens: 2048
-    timeout: 60.0
-```
-
-### Embedder Configuration
-
-```yaml
-embedders:
-  nim_embedder:
-    _type: nvidia_ai_endpoints
-    model_name: nvidia/nv-embedqa-e5-v5
-    truncate: END
-```
-
-## Usage Examples
-
-### Using with Claude Desktop
-
-Add to your Claude Desktop MCP configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
-
-```json
-{
-  "mcpServers": {
-    "text2sql": {
-      "command": "nat-cli",
-      "args": [
-        "serve",
-        "mcp",
-        "--workflow-config",
-        "/path/to/examples/text2sql/src/text2sql/configs/config_text2sql_mcp.yml"
-      ],
-      "env": {
-        "NVIDIA_API_KEY": "your_key_here",
-        "MILVUS_HOST": "your-host.zillizcloud.com",
-        "MILVUS_PORT": "19530",
-        "MILVUS_USERNAME": "your_username",
-        "MILVUS_PASSWORD": "your_password"
-      }
-    }
-  }
-}
-```
-
-Then in Claude Desktop:
-- Ask: "Convert this to SQL: Show me the top 10 components with highest shortages"
-- Claude will use the `text2sql_standalone` tool to generate the SQL query
-
-### Using Programmatically
-
-```python
-from nat.builder import Builder
-from text2sql.functions.text2sql_standalone import Text2sqlStandaloneConfig
-
-# Create config
-config = Text2sqlStandaloneConfig(
-    llm_name="nim_llm",
-    embedder_name="nim_embedder",
-    train_on_startup=False,
-    execute_sql=False,
-    vanna_remote=True,
-    milvus_host="your-host.zillizcloud.com",
-    milvus_port="19530",
-    milvus_user="your_username",
-    milvus_db_name="default"
-)
-
-# Initialize builder and run
-builder = Builder()
-async for result in text2sql_standalone(config, builder):
-    # Use the function
-    question = "Show me parts with shortages greater than 100"
-    async for update in result.stream_fn(question):
-        print(update)
-```
-
-### Using via CLI
-
-```bash
-# Run interactively
-nat-cli run --workflow-config src/text2sql/configs/config_text2sql_mcp.yml
-
-# Then ask questions:
-# "Show me the top 10 components with highest shortages"
-# "What are the lead times for NVPN 316-0899-000?"
-```
-
-## Load Testing
-
-This standalone example includes comprehensive load testing tools for memory profiling and leak detection.
-
-### Quick Start
-
-Run the integrated test suite that automatically starts the server, monitors memory, and runs load tests:
+Run the complete integrated test suite:
 
 ```bash
 cd examples/text2sql
 python run_text2sql_memory_leak_test.py
 ```
 
-This will simulate 40 concurrent users making realistic text2sql queries across 3 rounds and detect potential memory leaks.
+This automatically starts the server, monitors memory, runs load tests with 40 concurrent users across three rounds, and saves results to `test_results/`.
 
-### Manual Load Testing
+### Mock Test (Isolate Vanna/Milvus)
 
-For more control, run components separately:
-
-1. **Start the MCP server:**
-
-```bash
-nat mcp serve --config_file configs/config_text2sql_mcp.yml
-```
-
-2. **Run load tests** (in another terminal):
-
-```bash
-python load_test_text2sql.py \
-  --url http://localhost:9901/mcp \
-  --users 40 \
-  --calls 10 \
-  --rounds 3
-```
-
-### Customization
-
-Customize test parameters:
+To determine if memory leaks are in the Vanna/Milvus layer, run with mock mode:
 
 ```bash
 python run_text2sql_memory_leak_test.py \
-  --users 50 \              # Number of concurrent users
-  --calls 20 \              # Queries per user per round
-  --rounds 5 \              # Number of test rounds
-  --delay 15.0              # Delay between rounds (seconds)
+  --config_file examples/text2sql/src/text2sql/configs/config_text2sql_mock.yml
 ```
 
-### What Gets Tested
+Mock mode bypasses all Milvus connections and returns instant mock SQL responses. If the memory leak disappears with mock mode, the leak is in the Vanna/Milvus layer. If it persists, the leak is elsewhere in the system.
+
+### Comparing Real vs Mock
+
+```bash
+# Test with real Vanna
+python run_text2sql_memory_leak_test.py \
+  --config_file examples/text2sql/src/text2sql/configs/config_text2sql_mcp.yml \
+  --output_dir test_results/real_vanna
+
+# Test with mock Vanna
+python run_text2sql_memory_leak_test.py \
+  --config_file examples/text2sql/src/text2sql/configs/config_text2sql_mock.yml \
+  --output_dir test_results/mock_vanna
+
+# Compare results
+python analyze_memory_leak.py \
+  test_results/real_vanna/text2sql_memory_*.csv \
+  test_results/mock_vanna/text2sql_memory_*.csv \
+  --compare
+```
+
+### Customizing Test Parameters
+
+```bash
+python run_text2sql_memory_leak_test.py \
+  --users 50 \          # Number of concurrent users
+  --calls 20 \          # Calls per user per round
+  --rounds 5 \          # Number of test rounds
+  --delay 15.0 \        # Delay between rounds (seconds)
+  --output_dir my_results
+```
+
+## Analyzing Results
+
+### Analyze Memory Data
+
+```bash
+# Analyze a single test
+python analyze_memory_leak.py test_results/text2sql_memory_*.csv --recommendations
+
+# Compare multiple tests
+python analyze_memory_leak.py \
+  test_results/real_vanna/text2sql_memory_*.csv \
+  test_results/mock_vanna/text2sql_memory_*.csv \
+  --compare
+```
+
+### Memory Analysis
+
+The test monitors memory usage and flags potential issues:
+
+- **Normal (<20% growth)**: ✓ Expected memory increase from caching and normal operations
+- **Significant (20-50% growth)**: ⚠️ May indicate inefficient resource management
+- **Leak (>50% growth)**: ⚠️ Strong indication of a memory leak
+
+### Interpreting Mock Test Results
+
+| Scenario | Real Vanna | Mock Vanna | Conclusion |
+|----------|-----------|------------|------------|
+| Leak in Vanna/Milvus | 71% growth 🔴 | <10% growth ✅ | Leak is in Milvus connections |
+| Leak elsewhere | 71% growth 🔴 | 65% growth 🔴 | Leak is NOT in Vanna/Milvus |
+| Multiple leaks | 71% growth 🔴 | 30% growth ⚠️ | Multiple leak sources |
+
+### Test Output
+
+After the test completes, you'll see:
+
+```
+======================================================================
+TEXT2SQL MEMORY LEAK TEST RESULTS
+======================================================================
+
+Memory Analysis:
+  Initial memory:    245.32 MB
+  Final memory:      289.45 MB
+  Peak memory:       312.18 MB
+  Memory growth:     44.13 MB
+  Growth percentage: 17.99%
+
+✓  Memory growth appears normal (<20%)
+
+Output files:
+  Memory data:       test_results/text2sql_memory_20251009_143022.csv
+  Load test log:     test_results/text2sql_load_test_20251009_143022.log
+  Server log:        test_results/text2sql_server_20251009_143022.log
+======================================================================
+```
+
+### Output Files
+
+The test generates three files in the output directory:
+
+1. **Memory CSV** (`text2sql_memory_*.csv`): Timestamp, Process ID, RSS in MB, VMS in MB, Total RSS (including children), CPU percentage, Number of child processes
+
+2. **Load Test Log** (`text2sql_load_test_*.log`): User activity, Query execution results, Success/failure rates, Performance metrics
+
+3. **Server Log** (`text2sql_server_*.log`): Server startup messages, Request handling logs, Error messages
+
+## Test Queries
 
 The load test uses realistic supply chain queries:
-- Shortage analysis queries
-- Lead time inquiries
-- Inventory status checks
-- Build request queries
-- Material cost analysis
-- CM site breakdowns
-- Trend forecasts
 
-See [LOAD_TESTING.md](LOAD_TESTING.md) for detailed documentation, troubleshooting, and performance analysis.
+- **Shortage queries**: "Show me the top 10 components with highest shortages"
+- **Lead time queries**: "What components have lead time greater than 50 days?"
+- **Inventory queries**: "Display components with nettable inventory above 1000 units"
+- **Build request queries**: "Show all components without lead time for build id PB-60506"
+- **Material cost queries**: "Display the latest material cost by CM for NVPN 316-0899-000"
+- **CM and site queries**: "Show shortage breakdown by CM site"
+- **Trend analysis**: "Show demand forecast for next quarter"
 
-The simplified standalone version makes it easier to:
-- Profile memory usage with real-time monitoring
-- Detect memory leaks under concurrent load
-- Measure performance and throughput
-- Debug issues in isolation
-- Simulate production workloads
+These queries are randomly selected during the load test to simulate realistic usage patterns.
 
-## Features
+## What Gets Tested
 
-### Text-to-SQL Conversion
+### Real Vanna Mode
 
-- Converts natural language questions to SQL queries
-- Supports complex supply chain queries
-- Uses few-shot learning with domain-specific examples
-- Handles multiple database tables (PBR, DEMAND_DLT, etc.)
+Tests with actual Milvus connections:
+- Milvus sync and async clients
+- NVIDIA NIM LLM inference
+- NVIDIA NIM embedding generation
+- Vector similarity searches
+- Training data storage
 
-### Optional SQL Execution
+### Mock Vanna Mode
 
-When `execute_sql: true`, the function will:
-- Generate SQL from the question
-- Execute it on Databricks
-- Return results as JSON with row/column information
-- Handle errors with retry logic
+Bypasses Vanna/Milvus layer entirely:
+- No Milvus connections
+- No LLM API calls
+- No embedding generation
+- Returns instant mock SQL responses
+- Minimal memory footprint
 
-### Follow-up Questions
-
-When `enable_followup_questions: true`, generates contextual follow-up questions based on:
-- Query results
-- Table structure
-- Domain-specific use cases
-
-### Analysis Type Filtering
-
-The `training_analysis_filter` parameter allows filtering training examples:
-- `["pbr"]` - Only prototype build request examples
-- `["supply_gap"]` - Only supply gap analysis examples
-- `["pbr", "supply_gap"]` - Both types
+Both modes test the same MCP server infrastructure, HTTP handling, and session management.
 
 ## Troubleshooting
 
-### Milvus Connection Issues
+### Server Fails to Start
 
-If you see connection errors:
-1. Verify your Milvus credentials in `.env`
-2. Check that `MILVUS_PASSWORD` is set (it's required for cloud instances)
-3. Ensure the host doesn't include `https://` prefix
+**Solutions:**
+- Check server log for error messages
+- Ensure Milvus is running and accessible (for real Vanna)
+- Verify NVIDIA API key is valid (for real Vanna)
+- Ensure training was completed successfully (for real Vanna)
+- Check port 9901 is not already in use: `lsof -i :9901`
+- Check Milvus status: `docker ps | grep milvus`
 
-### Training Failures
+### Memory Monitor Fails
 
-If training fails:
-1. Check your NVIDIA API key is valid
-2. Verify embedder model is accessible
-3. Review logs for specific errors
+**Solutions:**
+- Ensure psutil is installed: `pip install psutil`
+- Check that server started successfully
+- Verify process name in monitor script
 
-### SQL Generation Issues
+### Load Test Timeouts
 
-If SQL generation is poor:
-1. Ensure training was completed successfully
-2. Check that examples match your use case
-3. Consider adjusting `training_analysis_filter`
-4. Review the few-shot examples in `utils/db_schema.py`
+**Solutions:**
+- Increase timeout in `load_test_text2sql.py` (default 60s)
+- Reduce number of concurrent users
+- Increase delay between calls
+- Check server logs for bottlenecks
 
-### Memory Issues During Load Testing
+### High Failure Rate
 
-If you encounter memory issues:
-1. Monitor with: `ps aux | grep nat-cli`
-2. Check MCP server logs for errors
-3. Adjust batch sizes in your load test
-4. Consider increasing timeout values
+**Solutions:**
+- Verify server is healthy: `curl http://localhost:9901/health`
+- Check server logs for errors
+- Ensure training data is properly loaded (for real Vanna)
+- Reduce load (fewer users or calls)
 
-## Development
+## Performance Baselines
 
-### Adding New Examples
+Expected performance on a typical development machine:
 
-To add new few-shot examples, edit `src/text2sql/utils/db_schema.py`:
+- **Concurrent users**: 40
+- **Queries per second**: 2-5 (depending on query complexity)
+- **Memory per query**: ~1-5 MB (temporary, should be released)
+- **Initial memory**: 200-300 MB
+- **Memory growth**: <20% over three rounds
+- **Average query time**: 5-15 seconds (real Vanna), <10ms (mock Vanna)
 
-```python
-PBR_EXAMPLES = [
-    {
-        "Query": "Your natural language question",
-        "SQL": "SELECT ... FROM ...",
-        "metadata": {"analysis": "pbr"}
-    },
-    # ... more examples
-]
-```
+## Files
 
-### Modifying Database Schema
+### Scripts
+- `run_text2sql_memory_leak_test.py` - Main test runner (starts server, monitors memory, runs load tests)
+- `load_test_text2sql.py` - Load test client with realistic queries
+- `analyze_memory_leak.py` - Memory analysis and leak detection
 
-Update table schemas in `src/text2sql/utils/db_schema.py`:
+### Configuration
+- `examples/text2sql/src/text2sql/configs/config_text2sql_mcp.yml` - Real Vanna with Milvus
+- `examples/text2sql/src/text2sql/configs/config_text2sql_mock.yml` - Mock Vanna without Milvus
+- `env.example` - Environment variables template
 
-```python
-TABLES = [
-    {
-        "name": "table_name",
-        "description": "Table description",
-        "schema": [
-            {
-                "field": "column_name",
-                "type": "data_type",
-                "description": "Column description"
-            },
-            # ... more columns
-        ]
-    }
-]
-```
-
-### Customizing Prompts
-
-Modify system prompts in `src/text2sql/utils/db_schema.py`:
-- `INSTRUCTION_PROMPT` - Main system prompt
-- `CONCEPTS` - Domain-specific terminology
-- `GUIDELINES` - SQL generation guidelines
-
-## Differences from Full talk-to-supply-chain-tools
-
-This standalone version:
-- ✅ No authentication/authorization (simpler for testing)
-- ✅ Minimal dependencies (easier to debug)
-- ✅ Focused on SQL generation (not execution by default)
-- ✅ Optimized for MCP deployment
-- ❌ No multi-tool workflows (single tool only)
-- ❌ No advanced features (chart generation, summarization, etc.)
-
-## References
-
-- [NeMo Agent Toolkit Documentation](../../docs/)
-- [Vanna AI Framework](https://github.com/vanna-ai/vanna)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [NVIDIA NIM](https://developer.nvidia.com/nim)
-- [Milvus Vector Database](https://milvus.io/)
-
-## Support
-
-For issues specific to this example:
-1. Check the troubleshooting section above
-2. Review the logs for detailed error messages
-3. Verify your environment variables are set correctly
-4. Ensure all dependencies are installed
-
-For general NeMo Agent Toolkit issues, refer to the main repository documentation.
+### Source Code
+- `examples/text2sql/src/text2sql/functions/text2sql_standalone.py` - Main function with mock/real mode support
+- `examples/text2sql/src/text2sql/functions/sql_utils.py` - Real Vanna integration with cleanup
+- `examples/text2sql/src/text2sql/functions/mock_vanna.py` - Mock Vanna for testing
+- `examples/text2sql/src/text2sql/utils/` - Database and Milvus utilities
+- `examples/text2sql/src/text2sql/resources/` - Follow-up question resources

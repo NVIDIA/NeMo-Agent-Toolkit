@@ -72,45 +72,89 @@ class Text2sqlStandaloneConfig(FunctionBaseConfig, name="text2sql_standalone"):
         description=("Filter examples by analysis type during training "
                      "(e.g., ['pbr'], ['supply_gap'])"),
     )
+    use_mock_vanna: bool = Field(
+        default=False,
+        description="Use mock Vanna instance for testing (bypasses Milvus connections)",
+    )
 
 
 @register_function(config_type=Text2sqlStandaloneConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def text2sql_standalone(config: Text2sqlStandaloneConfig, builder: Builder):  # noqa: ARG001
     """Register standalone Text2SQL function for MCP server deployment."""
-    # Import implementation details inside the registration function
-    from text2sql.functions.sql_utils import generate_sql_with_fallback
-    from text2sql.functions.sql_utils import get_vanna_instance
-    from text2sql.functions.sql_utils import train_vanna
-
     logger.info("🚀 Starting standalone text2sql for MCP server deployment")
     logger.info(f"Configuration: execute_sql={config.execute_sql}, "
-                f"authorize={config.authorize}")
+                f"authorize={config.authorize}, use_mock_vanna={config.use_mock_vanna}")
 
-    # Get the configured LLM client from the builder
-    llm_client = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    # Choose between mock and real Vanna based on configuration
+    if config.use_mock_vanna:
+        logger.warning("⚠️  Using MOCK Vanna instance - no actual Milvus connections")
+        logger.warning("   This mode is for memory leak testing only!")
 
-    # Get the configured embedder client from the builder
-    embedder_client = await builder.get_embedder(config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        # Import mock implementation
+        from text2sql.functions.mock_vanna import generate_sql_with_mock
+        from text2sql.functions.mock_vanna import get_mock_vanna_instance
+        from text2sql.functions.mock_vanna import train_mock_vanna
 
-    # Initialize Vanna instance on startup if needed
-    vanna_instance = await get_vanna_instance(
-        llm_client,
-        embedder_client,
-        config.vanna_remote,
-        config.milvus_host,
-        config.milvus_port,
-        config.milvus_user,
-        config.milvus_db_name,
-        valid_analysis_types=config.training_analysis_filter,
-    )
+        # Create mock instance (no LLM/embedder needed)
+        vanna_instance = await get_mock_vanna_instance()
 
-    # Train Vanna on startup if configured
-    if config.train_on_startup:
-        logger.info("Training Vanna on startup...")
-        await train_vanna(
-            vanna_instance,
-            analysis_filter=config.training_analysis_filter,
+        # Mock training (no-op)
+        if config.train_on_startup:
+            logger.info("Mock training (no-op)...")
+            await train_mock_vanna(vanna_instance)
+
+        # Use mock SQL generation
+        async def generate_sql_func(question: str, analysis_type: str | None = None):
+            return await generate_sql_with_mock(
+                question=question,
+                allow_llm_to_see_data=config.allow_llm_to_see_data,
+                execute_sql=config.execute_sql,
+                enable_followup_questions=config.enable_followup_questions,
+                analysis_type=analysis_type,
+                vanna_instance=vanna_instance,
+            )
+    else:
+        # Import real implementation
+        from text2sql.functions.sql_utils import cleanup_vanna_instance
+        from text2sql.functions.sql_utils import generate_sql_with_fallback
+        from text2sql.functions.sql_utils import get_vanna_instance
+        from text2sql.functions.sql_utils import train_vanna
+
+        # Get the configured LLM client from the builder
+        llm_client = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+        # Get the configured embedder client from the builder
+        embedder_client = await builder.get_embedder(config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+        # Initialize real Vanna instance
+        vanna_instance = await get_vanna_instance(
+            llm_client,
+            embedder_client,
+            config.vanna_remote,
+            config.milvus_host,
+            config.milvus_port,
+            config.milvus_user,
+            config.milvus_db_name,
+            valid_analysis_types=config.training_analysis_filter,
         )
+
+        # Train Vanna on startup if configured
+        if config.train_on_startup:
+            logger.info("Training Vanna on startup...")
+            await train_vanna(
+                vanna_instance,
+                analysis_filter=config.training_analysis_filter,
+            )
+
+        # Use real SQL generation
+        async def generate_sql_func(question: str, analysis_type: str | None = None):
+            return await generate_sql_with_fallback(
+                question=question,
+                allow_llm_to_see_data=config.allow_llm_to_see_data,
+                execute_sql=config.execute_sql,
+                enable_followup_questions=config.enable_followup_questions,
+                analysis_type=analysis_type,
+            )
 
     if not config.authorize:
         logger.info("ℹ️  Authorization disabled for standalone version")
@@ -148,14 +192,11 @@ async def text2sql_standalone(config: Text2sqlStandaloneConfig, builder: Builder
                 "node": "text2sql_standalone",
             }
 
-            # Generate SQL using Vanna
+            # Generate SQL using configured function (real or mock)
             # Note: Invalid analysis_type values are logged and ignored
             # (graceful degradation)
-            output_message = await generate_sql_with_fallback(
+            output_message = await generate_sql_func(
                 question=question,
-                allow_llm_to_see_data=config.allow_llm_to_see_data,
-                execute_sql=config.execute_sql,
-                enable_followup_questions=config.enable_followup_questions,
                 analysis_type=analysis_type,
             )
 
@@ -213,3 +254,5 @@ async def text2sql_standalone(config: Text2sqlStandaloneConfig, builder: Builder
         logger.info("Text2SQL standalone function exited early!")
     finally:
         logger.info("Cleaning up Text2SQL standalone workflow...")
+        # Clean up Vanna instance and close all connections
+        await cleanup_vanna_instance()

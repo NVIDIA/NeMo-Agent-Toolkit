@@ -1,0 +1,44 @@
+# Configuration for Text2SQL with MOCK Vanna (for memory leak testing)
+# This bypasses all Milvus connections to isolate leak sources
+
+# Standalone text2sql function - MOCK MODE
+functions:
+  text2sql_standalone:
+    _type: text2sql_standalone
+    llm_name: nim_llm
+    embedder_name: nim_embedder
+    train_on_startup: false  # Mock mode - training is no-op
+    database_type: databricks
+    allow_llm_to_see_data: false
+    execute_sql: false
+    authorize: false
+    enable_followup_questions: false
+    vanna_remote: false
+    use_mock_vanna: true  # ⚠️ MOCK MODE ENABLED - no actual Milvus connections
+    training_analysis_filter: ["pbr", "supply_gap"]
+
+# LLM configuration (not used in mock mode, but required for config validation)
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 2048
+    timeout: 60.0
+
+# Embedder configuration (not used in mock mode, but required for config validation)
+embedders:
+  nim_embedder:
+    _type: nim
+    model_name: nvidia/nv-embedqa-e5-v5
+    truncate: END
+
+# Simple workflow - just the standalone text2sql tool
+workflow:
+  _type: react_agent
+  tool_names:
+    - text2sql_standalone
+  llm_name: nim_llm
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
