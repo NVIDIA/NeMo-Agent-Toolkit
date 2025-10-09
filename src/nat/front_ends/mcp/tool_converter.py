@@ -15,6 +15,7 @@
 
 import json
 import logging
+import typing
 from inspect import Parameter
 from inspect import Signature
 from typing import TYPE_CHECKING
