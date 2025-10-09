@@ -15,7 +15,7 @@
     limitations under the License.
 -->
 
-# Running Tests
+# Running NVIDIA NeMo Agent Toolkit Tests
 
 NeMo Agent toolkit uses [pytest](https://docs.pytest.org/en/stable) for running tests. To run the basic set of tests, from the root of the repository, run:
 ```bash
