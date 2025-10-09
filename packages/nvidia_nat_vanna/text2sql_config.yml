@@ -34,29 +34,8 @@ functions:
     # Vanna settings
     allow_llm_to_see_data: false
     execute_sql: false  # Only generate SQL, don't execute
-    train_on_startup: true
+    train_on_startup: true  # Uses training data from db_schema.py
     n_results: 5
-
-    # Training data
-    training_ddl:
-      - "CREATE TABLE customers (id INT PRIMARY KEY, name VARCHAR(100), email VARCHAR(100), created_at TIMESTAMP)"
-      - "CREATE TABLE orders (id INT PRIMARY KEY, customer_id INT, product VARCHAR(100), amount DECIMAL(10,2), order_date DATE)"
-      - "CREATE TABLE products (id INT PRIMARY KEY, name VARCHAR(100), category VARCHAR(50), price DECIMAL(10,2))"
-
-    training_documentation:
-      - "The customers table contains all registered users. The created_at field shows registration date."
-      - "Orders table tracks all purchases. The amount field is in USD."
-      - "Products are organized by category (electronics, clothing, home, etc.)."
-
-    training_examples:
-      - question: "How many customers do we have?"
-        sql: "SELECT COUNT(*) as customer_count FROM customers"
-      - question: "What is the total revenue?"
-        sql: "SELECT SUM(amount) as total_revenue FROM orders"
-      - question: "Who are the top 5 customers by spending?"
-        sql: "SELECT c.name, SUM(o.amount) as total_spent FROM customers c JOIN orders o ON c.id = o.customer_id GROUP BY c.id, c.name ORDER BY total_spent DESC LIMIT 5"
-      - question: "How many orders were placed last month?"
-        sql: "SELECT COUNT(*) FROM orders WHERE order_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND order_date < DATE_TRUNC('month', CURRENT_DATE)"
 
   # Database query execution function
   execute_db_query:
@@ -68,7 +47,6 @@ functions:
     db_catalog: "main"
     db_schema: "default"
     max_rows: 100
-    add_table_prefix_enabled: true
 
 # LLM configuration
 llms:

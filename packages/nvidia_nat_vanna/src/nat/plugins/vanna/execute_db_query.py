@@ -86,9 +86,6 @@ class ExecuteDBQueryConfig(FunctionBaseConfig, name="execute_db_query"):
 
     # Query configuration
     max_rows: int = Field(default=100, description="Maximum rows to return")
-    add_table_prefix_enabled: bool = Field(
-        default=True, description="Add catalog.schema prefix to tables"
-    )
 
 
 @register_function(
@@ -104,7 +101,6 @@ async def execute_db_query(
     import pandas as pd
 
     from nat.plugins.vanna.db_utils import (
-        add_table_prefix,
         connect_to_database,
         execute_query,
         extract_sql_from_message,
@@ -199,27 +195,6 @@ async def execute_db_query(
                 )
                 return
 
-            # Add table prefix if configured
-            original_query = sql_query
-            if config.add_table_prefix_enabled and (
-                config.db_catalog or config.db_schema
-            ):
-                yield ResponseIntermediateStep(
-                    id=str(uuid.uuid4()),
-                    parent_id=parent_id,
-                    type="markdown",
-                    name="execute_db_query_status",
-                    payload=StatusPayload(message="Adding table prefix...").model_dump_json(),
-                )
-                prefix_parts = []
-                if config.db_catalog:
-                    prefix_parts.append(config.db_catalog)
-                if config.db_schema:
-                    prefix_parts.append(config.db_schema)
-                table_prefix = ".".join(prefix_parts)
-                sql_query = add_table_prefix(sql_query, table_prefix)
-                logger.info(f"Modified query: {sql_query}")
-
             yield ResponseIntermediateStep(
                 id=str(uuid.uuid4()),
                 parent_id=parent_id,
@@ -285,7 +260,7 @@ async def execute_db_query(
                 success=True,
                 columns=[str(col) for col in columns] if columns else [],
                 row_count=len(results),
-                sql_query=original_query,
+                sql_query=sql_query,
                 query_executed=sql_query,
                 dataframe_records=df.to_dict("records") if not df.empty else [],
                 dataframe_info=dataframe_info,
@@ -330,9 +305,6 @@ async def execute_db_query(
         "Connects to the database, executes the provided SQL query, "
         "and returns results in a structured format."
     )
-
-    if config.add_table_prefix_enabled:
-        description += " Automatically adds table prefixes if configured."
 
     yield FunctionInfo.create(
         single_fn=_execute_sql_query,

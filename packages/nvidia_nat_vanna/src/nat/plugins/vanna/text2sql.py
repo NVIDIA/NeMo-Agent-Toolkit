@@ -74,16 +74,7 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
         default=False, description="Execute SQL or just return query string"
     )
     train_on_startup: bool = Field(
-        default=False, description="Train Vanna on startup"
-    )
-    training_ddl: list[str] | None = Field(
-        default=None, description="DDL statements for training"
-    )
-    training_documentation: list[str] | None = Field(
-        default=None, description="Documentation for training"
-    )
-    training_examples: list[dict[str, str]] | None = Field(
-        default=None, description="Question-SQL examples for training"
+        default=False, description="Train Vanna on startup (uses training data from db_schema.py)"
     )
     initial_prompt: str | None = Field(
         default=None, description="Custom system prompt"
@@ -172,12 +163,10 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
 
     # Train on startup if configured
     if config.train_on_startup:
+        from nat.plugins.vanna.db_schema import get_training_data
+
         logger.info("Training Vanna on startup...")
-        training_data = {
-            "ddl": config.training_ddl or [],
-            "documentation": config.training_documentation or [],
-            "examples": config.training_examples or [],
-        }
+        training_data = get_training_data()
         await train_vanna(vanna_instance, training_data)
 
     # Streaming version
