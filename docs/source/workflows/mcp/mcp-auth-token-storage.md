@@ -15,18 +15,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Secure Token Storage for MCP Authentication
+# Secure Token Storage for Model Context Protocol (MCP) Authentication
 
-The NeMo Agent toolkit provides a configurable, secure token storage mechanism for Model Context Protocol (MCP) OAuth2 authentication. You can store tokens securely using the object store infrastructure, which provides encryption at rest, access controls, and persistence across service restarts.
+The NVIDIA NeMo Agent toolkit provides a configurable, secure token storage mechanism for Model Context Protocol (MCP) OAuth2 authentication. You can store tokens securely using the object store infrastructure, which provides encryption at rest, access controls, and persistence across service restarts.
 
 ## Overview
 
 When using MCP with OAuth2 authentication, the toolkit needs to store authentication tokens for each user. The secure token storage feature provides:
 
-- **Encryption at rest**: Tokens are stored in object stores that support encryption
-- **Flexible backends**: Choose from in-memory (default), S3, MySQL, Redis, or custom object stores
-- **Persistence**: Tokens persist across restarts when using external storage backends
-- **Multi-user support**: Tokens are isolated per user with proper access controls
+- **Encryption at rest**: Stores tokens in object stores that support encryption
+- **Flexible backends**: Allows you to choose from in-memory (default), S3, MySQL, Redis, or custom object stores
+- **Persistence**: Persists tokens across restarts when using external storage backends
+- **Multi-user support**: Isolates tokens per user with proper access controls
 - **Automatic refresh**: Supports OAuth2 token refresh flows
 
 ### Components
@@ -38,10 +38,14 @@ The token storage system includes three main components:
 3. **ObjectStoreTokenStorage**: Implementation backed by configurable object stores such as S3, MySQL, and Redis.
 
 ## Configuration
+This section describes the ways you can configure your token storage.
 
 ### Default Configuration (In-Memory Storage)
 
-By default, MCP OAuth2 authentication uses in-memory storage. No additional configuration is required:
+By default, MCP OAuth2 authentication uses in-memory storage. The following is the default configuration with no additional configuration required.
+:::{note}
+This setup is suitable only for development and testing environments because it uses in-memory storage that is not persistent and unsafe.
+:::
 
 ```yaml
 authentication:
@@ -53,15 +57,12 @@ authentication:
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 
-This setup is **ONLY suitable for development and testing environments** since it uses in-memory storage that is not
-persistent and also unsafe.
-
 ### External Object Store Configuration
 
-For production environments, configure an external object store to persist tokens across restarts. The NeMo Agent toolkit supports S3-compatible storage (MinIO, AWS S3), MySQL, and Redis backends.
+For production environments, configure an external object store to persist tokens across restarts. The NeMo Agent toolkit supports S3-compatible storage (for example, MinIO and AWS S3), MySQL, and Redis backends.
 
 :::{note}
-For detailed object store setup instructions including MinIO, MySQL, and Redis installation and configuration examples, see the `examples/object_store/user_report/README.md` guide (under the "Choose an Object Store" section).
+For detailed object store setup instructions including MinIO, MySQL, and Redis installation and configuration examples, refer to the `examples/object_store/user_report/README.md` guide, under the **Choose an Object Store** section.
 :::
 
 The following example shows token storage configuration using S3-compatible storage (MinIO):
@@ -141,14 +142,14 @@ Example stored token:
 
 ## Token Lifecycle
 
-### 1. Initial Authentication
+### Initial Authentication
 
 When a user first authenticates, the system completes the following steps:
 1. The OAuth2 flow completes and returns an access token.
 2. The token is serialized and stored using the configured storage backend.
 3. The token is associated with the user's session ID.
 
-### 2. Token Retrieval
+### Token Retrieval
 
 On subsequent requests, the system completes the following steps:
 1. The user's session ID is extracted from cookies.
@@ -156,7 +157,7 @@ On subsequent requests, the system completes the following steps:
 3. The token expiration is checked.
 4. If expired, a token refresh is attempted.
 
-### 3. Token Refresh
+### Token Refresh
 
 When a token expires, the system completes the following steps:
 1. The refresh token is extracted from the stored token.
@@ -167,7 +168,7 @@ When a token expires, the system completes the following steps:
 
 ## Custom Token Storage
 
-You can implement custom token storage by extending the `TokenStorageBase` abstract class:
+Create custom token storage by extending the `TokenStorageBase` abstract class:
 
 ```python
 from nat.plugins.mcp.auth.token_storage import TokenStorageBase
