@@ -37,39 +37,6 @@ def load_config_from_yaml(config_path: str | Path) -> LoadTestConfig:
     Raises:
         FileNotFoundError: If the config file doesn't exist
         ValueError: If the config file is invalid
-
-    Example YAML structure::
-
-        # Path to NAT workflow config file
-        config_file: "examples/getting_started/simple_calculator/configs/config.yml"
-
-        # Server configuration
-        server:
-          host: "localhost"
-          port: 9901
-          transport: "streamable-http"  # or "sse"
-
-        # Load test parameters
-        load_test:
-          num_concurrent_users: 10
-          duration_seconds: 30
-          warmup_seconds: 5
-
-        # Output configuration
-        output:
-          directory: "load_test_results"
-
-        # Tool calls to execute
-        tool_calls:
-          - tool_name: "calculator_multiply"
-            args:
-              text: "2 * 3"
-            weight: 2.0
-          - tool_name: "calculator_divide"
-            args:
-              text: "10 / 2"
-            weight: 1.0
-
     """
     config_path = Path(config_path)
 

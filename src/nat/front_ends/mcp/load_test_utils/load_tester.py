@@ -543,21 +543,6 @@ def run_load_test(
 
     Returns:
         Dictionary containing test results and statistics
-
-    Example::
-
-        from nat.front_ends.mcp.load_test_utils import run_load_test
-
-        results = run_load_test(
-            config_file="examples/getting_started/simple_calculator/configs/config.yml",
-            tool_calls=[
-                {"tool_name": "calculator_multiply", "args": {"text": "2 * 3"}, "weight": 2.0},
-                {"tool_name": "calculator_divide", "args": {"text": "10 / 2"}, "weight": 1.0},
-            ],
-            num_concurrent_users=10,
-            duration_seconds=30,
-        )
-
     """
     # Convert tool_calls dict to ToolCallConfig objects
     if tool_calls is None:
@@ -595,13 +580,6 @@ def run_load_test_from_yaml(yaml_config_path: str) -> dict[str, Any]:
 
     Returns:
         Dictionary containing test results and statistics
-
-    Example::
-
-        from nat.front_ends.mcp.load_test_utils import run_load_test_from_yaml
-
-        results = run_load_test_from_yaml("configs/config.yml")
-
     """
     from nat.front_ends.mcp.load_test_utils.config_loader import load_config_from_yaml
     from nat.front_ends.mcp.load_test_utils.config_loader import validate_config
