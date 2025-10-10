@@ -108,7 +108,7 @@ class MemoryProfiler:
             return False
 
     def _safe_traced_memory(self) -> tuple[float, float] | None:
-        """Return (current_mb, peak_mb) if tracemalloc is active, else None."""
+        """Return (current, peak usage in MB) if tracemalloc is active, else None."""
         if not self._ensure_tracing():
             return None
 
