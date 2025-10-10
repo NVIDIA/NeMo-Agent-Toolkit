@@ -10,7 +10,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.api_server import ResponseIntermediateStep
-from nat.data_models.component_ref import EmbedderRef, LLMRef
+from nat.data_models.component_ref import EmbedderRef, LLMRef, RetrieverRef
 from nat.data_models.function import FunctionBaseConfig
 from pydantic import BaseModel, Field
 
@@ -36,6 +36,12 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     # LLM and Embedder
     llm_name: LLMRef = Field(description="LLM for SQL generation")
     embedder_name: EmbedderRef = Field(description="Embedder for vector operations")
+
+    # Milvus retriever (backward compatibility)
+    milvus_retriever: RetrieverRef | None = Field(
+        default=None,
+        description="Optional milvus_retriever reference for backward compatibility. If provided, uses the retriever's client for sync operations. Milvus connection details are still needed for async operations."
+    )
 
     # Database configuration
     database_type: str = Field(default="databricks", description="Database type")
@@ -112,15 +118,22 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
     )
 
     # Create Milvus clients
-    milvus_client = create_milvus_client(
-        host=config.milvus_host,
-        port=config.milvus_port,
-        user=config.milvus_user,
-        password=config.milvus_password,
-        db_name=config.milvus_db_name,
-        use_tls=config.milvus_use_tls,
-        is_async=False,
-    )
+    if config.milvus_retriever:
+        logger.info("Using milvus_retriever for Milvus connection")
+        retriever = await builder.get_retriever(config.milvus_retriever)
+        milvus_client = retriever._client  # type: ignore[attr-defined]
+    else:
+        milvus_client = create_milvus_client(
+            host=config.milvus_host,
+            port=config.milvus_port,
+            user=config.milvus_user,
+            password=config.milvus_password,
+            db_name=config.milvus_db_name,
+            use_tls=config.milvus_use_tls,
+            is_async=False,
+        )
+    # Create async client with same config
+    # TODO: Replace with async NAT milvus_retriever
     async_milvus_client = create_milvus_client(
         host=config.milvus_host,
         port=config.milvus_port,
