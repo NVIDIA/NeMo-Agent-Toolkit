@@ -176,13 +176,13 @@ class MemoryProfiler:
 
         # Show top allocations
         if snapshot is None:
-            logger.info("\ntracemalloc snapshot unavailable.")
+            logger.info("tracemalloc snapshot unavailable.")
         else:
             if self.baseline_snapshot:
-                logger.info("\nTOP %d MEMORY GROWTH SINCE BASELINE:", self.top_n)
+                logger.info("TOP %d MEMORY GROWTH SINCE BASELINE:", self.top_n)
                 top_stats = snapshot.compare_to(self.baseline_snapshot, 'lineno')
             else:
-                logger.info("\nTOP %d MEMORY ALLOCATIONS:", self.top_n)
+                logger.info("TOP %d MEMORY ALLOCATIONS:", self.top_n)
                 top_stats = snapshot.statistics('lineno')
 
             for i, stat in enumerate(top_stats[:self.top_n], 1):
