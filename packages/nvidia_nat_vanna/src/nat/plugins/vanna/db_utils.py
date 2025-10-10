@@ -229,26 +229,50 @@ def connect_to_database(
 
 
 def execute_query(
-    connection: Any, query: str, catalog: str | None = None, schema: str | None = None
+    connection: Any,
+    query: str,
+    catalog: str | None = None,
+    schema: str | None = None,
+    database_type: str | None = None,
 ) -> tuple[list[tuple[Any, ...]], list[str]]:
     """Execute a query and return results.
 
     Args:
         connection: Database connection object
         query: SQL query to execute
-        catalog: Optional catalog to use (Databricks)
+        catalog: Optional catalog to use (Databricks only)
         schema: Optional schema to use
+        database_type: Type of database for proper catalog/schema handling
 
     Returns:
         Tuple of (results, column_names)
     """
     try:
         with connection.cursor() as cursor:
-            # Set catalog and schema for Databricks
-            if catalog:
-                cursor.execute(f"USE CATALOG {catalog}")
-            if schema:
-                cursor.execute(f"USE SCHEMA {schema}")
+            # Database-specific catalog and schema handling
+            if database_type:
+                db_type = database_type.lower()
+
+                if db_type == "databricks":
+                    if catalog:
+                        cursor.execute(f"USE CATALOG {catalog}")
+                    if schema:
+                        cursor.execute(f"USE SCHEMA {schema}")
+
+                elif db_type in ("postgres", "postgresql"):
+                    if schema:
+                        cursor.execute(f"SET search_path TO {schema}")
+                    # PostgreSQL doesn't have catalog concept
+
+                elif db_type == "mysql":
+                    if schema:
+                        cursor.execute(f"USE {schema}")
+                    # MySQL uses database, not catalog
+
+                elif db_type in ("mssql", "sqlserver"):
+                    # SQL Server uses database.schema notation
+                    # Schema is typically set in the query itself or connection string
+                    pass
 
             logger.info(f"Executing query: {query}")
             cursor.execute(query)
@@ -267,7 +291,11 @@ def execute_query(
 
 
 async def async_query(
-    connection: Any, query: str, catalog: str | None = None, schema: str | None = None
+    connection: Any,
+    query: str,
+    catalog: str | None = None,
+    schema: str | None = None,
+    database_type: str | None = None,
 ):
     """Execute query asynchronously and return DataFrame.
 
@@ -276,6 +304,7 @@ async def async_query(
         query: SQL query to execute
         catalog: Optional catalog to use
         schema: Optional schema to use
+        database_type: Type of database for proper catalog/schema handling
 
     Returns:
         DataFrame with query results
@@ -287,7 +316,7 @@ async def async_query(
     # Run synchronous query in executor
     loop = asyncio.get_event_loop()
     results, columns = await loop.run_in_executor(
-        None, execute_query, connection, query, catalog, schema
+        None, execute_query, connection, query, catalog, schema, database_type
     )
 
     return pd.DataFrame(results, columns=columns)
@@ -342,12 +371,13 @@ def setup_vanna_db_connection(
             **kwargs,
         )
 
-    # Define run_sql function for Vanna
-    def run_sql(sql_query: str) -> pd.DataFrame:
-        """Execute SQL and return DataFrame."""
+    # Define async run_sql function for Vanna
+    async def run_sql(sql_query: str) -> pd.DataFrame:
+        """Execute SQL asynchronously and return DataFrame."""
         try:
-            results, columns = execute_query(connection, sql_query, catalog, schema)
-            return pd.DataFrame(results, columns=columns)
+            return await async_query(
+                connection, sql_query, catalog, schema, database_type
+            )
         except Exception as e:
             logger.error(f"Error executing SQL: {e}")
             raise
@@ -355,16 +385,6 @@ def setup_vanna_db_connection(
     # Set up Vanna
     vn.run_sql = run_sql
     vn.run_sql_is_set = True
-
-    # Set dialect
-    dialect_map = {
-        "databricks": "databricks",
-        "postgres": "postgres",
-        "postgresql": "postgres",
-        "mysql": "mysql",
-        "sqlite": "sqlite",
-    }
-    vn.dialect = dialect_map.get(database_type.lower(), database_type.lower())
 
     logger.info(f"Database connection configured for {database_type}")
     return vn
