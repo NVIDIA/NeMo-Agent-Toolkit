@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# MCP Load Test Configuration Example
+
+# Path to NAT workflow config file
+config_file: "examples/getting_started/simple_calculator/configs/config.yml"
+
+# Server configuration
+server:
+  host: "localhost"
+  port: 9901
+  transport: "streamable-http"  # Options: "streamable-http" or "sse"
+
+# Load test parameters
+load_test:
+  num_concurrent_users: 10
+  duration_seconds: 30
+  warmup_seconds: 5
+
+# Output configuration
+output:
+  directory: "load_test_results"
+
+# Tool calls to execute during load testing
+# Each tool call can have:
+#   - tool_name (required): Name of the MCP tool
+#   - args (optional): Dictionary of arguments to pass to the tool
+#   - weight (optional): Relative frequency weight (default: 1.0)
+tool_calls:
+  - tool_name: "calculator_multiply"
+    args:
+      text: "2 * 3"
+    weight: 2.0  # Called twice as often as weight 1.0 tools
+
+  - tool_name: "calculator_divide"
+    args:
+      text: "10 / 2"
+    weight: 1.0
+
+  - tool_name: "calculator_subtract"
+    args:
+      text: "10 - 3"
+    weight: 1.0
+
+  - tool_name: "calculator_inequality"
+    args:
+      text: "5 > 3"
+    weight: 1.0

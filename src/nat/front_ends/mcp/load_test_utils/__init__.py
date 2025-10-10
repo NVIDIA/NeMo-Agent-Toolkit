@@ -19,5 +19,6 @@ This module provides utilities for load testing MCP servers.
 
 from nat.front_ends.mcp.load_test_utils.load_test import MCPLoadTest
 from nat.front_ends.mcp.load_test_utils.load_test import run_load_test
+from nat.front_ends.mcp.load_test_utils.load_test import run_load_test_from_yaml
 
-__all__ = ["MCPLoadTest", "run_load_test"]
+__all__ = ["MCPLoadTest", "run_load_test", "run_load_test_from_yaml"]

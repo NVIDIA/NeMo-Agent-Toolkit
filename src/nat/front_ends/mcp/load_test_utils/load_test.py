@@ -15,7 +15,6 @@
 """MCP Server Load Testing."""
 
 import asyncio
-import json
 import logging
 import random
 import subprocess
@@ -26,11 +25,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import psutil
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
 
-from nat.front_ends.mcp.load_test_utils.report_generator import generate_html_report
 from nat.front_ends.mcp.load_test_utils.report_generator import generate_summary_report
 
 logger = logging.getLogger(__name__)
@@ -94,6 +93,16 @@ class ToolCallResult:
     response: str | None = None
 
 
+@dataclass
+class MemorySample:
+    """Memory usage sample at a point in time."""
+
+    timestamp: float
+    rss_mb: float  # Resident Set Size in MB
+    vms_mb: float  # Virtual Memory Size in MB
+    percent: float  # Memory usage percentage
+
+
 class MCPLoadTest:
     """MCP Server Load Test Runner."""
 
@@ -105,8 +114,10 @@ class MCPLoadTest:
         """
         self.config = config
         self.results: list[ToolCallResult] = []
+        self.memory_samples: list[MemorySample] = []
         self.server_process: subprocess.Popen | None = None
         self.server_url = self._get_server_url()
+        self._memory_monitor_task: asyncio.Task | None = None
 
         # Set up output directory
         if config.output_dir:
@@ -259,6 +270,38 @@ class MCPLoadTest:
 
         logger.debug("User %d finished simulation", user_id)
 
+    async def _monitor_memory(self, end_time: float) -> None:
+        """Monitor server memory usage during the test.
+
+        Args:
+            end_time: Timestamp when to stop monitoring
+        """
+        if not self.server_process:
+            return
+
+        try:
+            process = psutil.Process(self.server_process.pid)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            logger.warning("Cannot monitor memory for server process")
+            return
+
+        while time.time() < end_time:
+            try:
+                mem_info = process.memory_info()
+                mem_percent = process.memory_percent()
+
+                self.memory_samples.append(
+                    MemorySample(
+                        timestamp=time.time(),
+                        rss_mb=mem_info.rss / (1024 * 1024),  # Convert to MB
+                        vms_mb=mem_info.vms / (1024 * 1024),  # Convert to MB
+                        percent=mem_percent,
+                    ))
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                break
+
+            await asyncio.sleep(1.0)  # Sample every second
+
     async def run(self) -> dict[str, Any]:
         """Run the load test.
 
@@ -292,6 +335,9 @@ class MCPLoadTest:
             test_start_time = time.time()
             test_end_time = test_start_time + self.config.duration_seconds
 
+            # Start memory monitoring
+            self._memory_monitor_task = asyncio.create_task(self._monitor_memory(test_end_time))
+
             # Create concurrent user simulations
             tasks = [
                 asyncio.create_task(self._user_simulation(i, test_end_time))
@@ -301,12 +347,16 @@ class MCPLoadTest:
             # Wait for all users to complete
             await asyncio.gather(*tasks)
 
+            # Wait for memory monitoring to complete
+            if self._memory_monitor_task:
+                await self._memory_monitor_task
+
             test_duration = time.time() - test_start_time
 
             logger.info("Load test completed. Total calls: %d", len(self.results))
 
             # Generate reports
-            summary = generate_summary_report(self.results, test_duration, self.config)
+            summary = generate_summary_report(self.results, test_duration, self.config, self.memory_samples)
             self._save_reports(summary)
 
             return summary
@@ -323,23 +373,15 @@ class MCPLoadTest:
         """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # Save JSON report
-        json_file = self.output_dir / f"load_test_{timestamp}.json"
-        with open(json_file, "w") as f:
-            json.dump(summary, f, indent=2)
-        logger.info("Saved JSON report: %s", json_file)
-
-        # Save HTML report
-        html_file = self.output_dir / f"load_test_{timestamp}.html"
-        html_content = generate_html_report(summary, self.config)
-        with open(html_file, "w") as f:
-            f.write(html_content)
-        logger.info("Saved HTML report: %s", html_file)
-
         # Save detailed results as CSV
         csv_file = self.output_dir / f"load_test_{timestamp}.csv"
         self._save_csv(csv_file)
         logger.info("Saved CSV report: %s", csv_file)
+
+        # Save summary as text file
+        summary_file = self.output_dir / f"load_test_{timestamp}_summary.txt"
+        self._save_summary_text(summary_file, summary)
+        logger.info("Saved summary report: %s", summary_file)
 
     def _save_csv(self, file_path: Path) -> None:
         """Save detailed results as CSV.
@@ -351,16 +393,113 @@ class MCPLoadTest:
 
         with open(file_path, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["timestamp", "tool_name", "success", "latency_ms", "error"])
+            writer.writerow([
+                "timestamp",
+                "tool_name",
+                "success",
+                "latency_ms",
+                "memory_rss_mb",
+                "memory_vms_mb",
+                "memory_percent",
+                "error",
+            ])
 
             for result in self.results:
+                # Find the closest memory sample for this result
+                memory_rss = ""
+                memory_vms = ""
+                memory_percent = ""
+
+                if self.memory_samples:
+                    # Find the closest memory sample by timestamp
+                    closest_sample = min(
+                        self.memory_samples,
+                        key=lambda sample: abs(sample.timestamp - result.timestamp),
+                    )
+                    memory_rss = f"{closest_sample.rss_mb:.2f}"
+                    memory_vms = f"{closest_sample.vms_mb:.2f}"
+                    memory_percent = f"{closest_sample.percent:.2f}"
+
                 writer.writerow([
                     result.timestamp,
                     result.tool_name,
                     result.success,
                     result.latency_ms,
+                    memory_rss,
+                    memory_vms,
+                    memory_percent,
                     result.error or "",
                 ])
+
+    def _save_summary_text(self, file_path: Path, summary: dict[str, Any]) -> None:
+        """Save summary report as text file.
+
+        Args:
+            file_path: Path to save summary file
+            summary: Summary statistics dictionary
+        """
+        with open(file_path, "w") as f:
+            f.write("=" * 70 + "\n")
+            f.write("MCP LOAD TEST SUMMARY\n")
+            f.write("=" * 70 + "\n\n")
+
+            # Test configuration
+            f.write("TEST CONFIGURATION\n")
+            f.write("-" * 70 + "\n")
+            config_data = summary.get("test_configuration", {})
+            for key, value in config_data.items():
+                f.write(f"{key.replace('_', ' ').title()}: {value}\n")
+            f.write("\n")
+
+            # Summary metrics
+            f.write("SUMMARY METRICS\n")
+            f.write("-" * 70 + "\n")
+            summary_data = summary.get("summary", {})
+            for key, value in summary_data.items():
+                f.write(f"{key.replace('_', ' ').title()}: {value}\n")
+            f.write("\n")
+
+            # Latency statistics
+            f.write("LATENCY STATISTICS\n")
+            f.write("-" * 70 + "\n")
+            latency_data = summary.get("latency_statistics", {})
+            for key, value in latency_data.items():
+                f.write(f"{key.upper()}: {value:.2f} ms\n")
+            f.write("\n")
+
+            # Memory statistics
+            memory_data = summary.get("memory_statistics", {})
+            if memory_data:
+                f.write("MEMORY STATISTICS\n")
+                f.write("-" * 70 + "\n")
+                for key, value in memory_data.items():
+                    if isinstance(value, float):
+                        f.write(f"{key.replace('_', ' ').title()}: {value:.2f} MB\n")
+                    else:
+                        f.write(f"{key.replace('_', ' ').title()}: {value}\n")
+                f.write("\n")
+
+            # Per-tool statistics
+            f.write("PER-TOOL STATISTICS\n")
+            f.write("-" * 70 + "\n")
+            tool_stats = summary.get("per_tool_statistics", {})
+            for tool_name, stats in tool_stats.items():
+                f.write(f"\nTool: {tool_name}\n")
+                for key, value in stats.items():
+                    if isinstance(value, float):
+                        f.write(f"  {key.replace('_', ' ').title()}: {value:.2f}\n")
+                    else:
+                        f.write(f"  {key.replace('_', ' ').title()}: {value}\n")
+
+            # Errors
+            errors = summary.get("errors", {})
+            if errors:
+                f.write("\nERRORS\n")
+                f.write("-" * 70 + "\n")
+                for error_msg, count in sorted(errors.items(), key=lambda x: x[1], reverse=True):
+                    f.write(f"{error_msg}: {count}\n")
+
+            f.write("\n" + "=" * 70 + "\n")
 
 
 def run_load_test(
@@ -431,6 +570,32 @@ def run_load_test(
         warmup_seconds=warmup_seconds,
         output_dir=output_dir,
     )
+
+    load_test = MCPLoadTest(config)
+    return asyncio.run(load_test.run())
+
+
+def run_load_test_from_yaml(yaml_config_path: str) -> dict[str, Any]:
+    """Run an MCP load test using a YAML configuration file.
+
+    Args:
+        yaml_config_path: Path to YAML config file
+
+    Returns:
+        Dictionary containing test results and statistics
+
+    Example:
+        ```python
+        from nat.front_ends.mcp.load_test_utils import run_load_test_from_yaml
+
+        results = run_load_test_from_yaml("configs/example_config.yml")
+        ```
+    """
+    from nat.front_ends.mcp.load_test_utils.config_loader import load_config_from_yaml
+    from nat.front_ends.mcp.load_test_utils.config_loader import validate_config
+
+    config = load_config_from_yaml(yaml_config_path)
+    validate_config(config)
 
     load_test = MCPLoadTest(config)
     return asyncio.run(load_test.run())
