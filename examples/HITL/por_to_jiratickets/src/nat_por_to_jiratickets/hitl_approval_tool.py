@@ -42,7 +42,7 @@ async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder)
 
     import re
 
-    prompt = f"{config.prompt} Please confirm if you would like to proceed. Respond with 'yes' or 'no'."
+    prompt = f"{config.prompt.strip()} Please confirm if you would like to proceed. Respond with 'yes' or 'no'."
 
     async def _arun(unused: str = "") -> bool:
 
