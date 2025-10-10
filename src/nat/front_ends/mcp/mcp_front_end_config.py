@@ -13,12 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import Literal
 
 from pydantic import Field
+from pydantic import model_validator
 
 from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 from nat.data_models.front_end import FrontEndBaseConfig
+
+logger = logging.getLogger(__name__)
 
 
 class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
@@ -43,3 +47,31 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
 
     server_auth: OAuth2ResourceServerConfig | None = Field(
         default=None, description=("OAuth 2.0 Resource Server configuration for token verification."))
+
+    @model_validator(mode="after")
+    def validate_security_configuration(self):
+        """Validate security configuration to prevent accidental misconfigurations."""
+        # Check if server is bound to a non-localhost interface without authentication
+        localhost_hosts = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
+        if self.host not in localhost_hosts and self.server_auth is None:
+            logger.warning(
+                "MCP server is configured to bind to '%s' without authentication. "
+                "This may expose your server to unauthorized access. "
+                "Consider either: (1) binding to localhost for local-only access, "
+                "or (2) configuring server_auth for production deployments on public interfaces.",
+                self.host)
+
+        # Check if SSE transport is used (which doesn't support authentication)
+        if self.transport == "sse":
+            if self.server_auth is not None:
+                logger.warning("SSE transport does not support authentication. "
+                               "The configured server_auth will be ignored. "
+                               "For production use with authentication, use 'streamable-http' transport instead.")
+            elif self.host not in localhost_hosts:
+                logger.warning(
+                    "SSE transport does not support authentication and is bound to '%s'. "
+                    "This configuration is not recommended for production use. "
+                    "For production deployments, use 'streamable-http' transport with server_auth configured.",
+                    self.host)
+
+        return self
