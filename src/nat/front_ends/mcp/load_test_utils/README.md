@@ -17,17 +17,36 @@ limitations under the License.
 
 # MCP Server Load Testing
 
-Load testing utilities for NeMo Agent toolkit MCP servers. Simulate concurrent users making tool calls and generate detailed performance reports.
+This utility simulates concurrent users making tool calls to MCP servers and generates detailed performance reports for NVIDIA NeMo Agent toolkit.
+
+## Requirements
+
+Before running load tests, ensure you have the following:
+
+- NeMo Agent toolkit with MCP support installed through `nvidia-nat[mcp]`
+- Valid NeMo Agent toolkit workflow configuration with MCP-compatible tools
+- Python 3.10 or higher
+- `psutil` package for memory monitoring
+
+### Installing psutil
+
+The `psutil` package is required for monitoring server memory usage during load tests. Install it using one of the following methods:
+
+```bash
+uv pip install psutil
+```
+
+If you have already installed NeMo Agent toolkit with all dependencies, psutil may already be available. Verify the installation:
+
+```bash
+python -c "import psutil; print(f'psutil {psutil.__version__} installed')"
+```
 
 ## Quick Start
 
-Run a load test using the main entry point script:
+Run a load test from the project root:
 
 ```bash
-# From the load_test_utils directory
-python cli.py --config_file=configs/config.yml
-
-# Or from the project root
 python src/nat/front_ends/mcp/load_test_utils/cli.py \
   --config_file=src/nat/front_ends/mcp/load_test_utils/configs/config.yml
 ```
@@ -35,23 +54,23 @@ python src/nat/front_ends/mcp/load_test_utils/cli.py \
 List available configurations:
 
 ```bash
-python cli.py --list-configs
+python src/nat/front_ends/mcp/load_test_utils/cli.py --list-configs
 ```
 
 Get help:
 
 ```bash
-python cli.py --help
+python src/nat/front_ends/mcp/load_test_utils/cli.py --help
 ```
 
 ## Configuration
 
-All load test options are configured using YAML files stored in the `configs/` directory.
+Configure load test options using YAML files stored in the `configs/` directory.
 
 ### Example Configuration
 
 ```yaml
-# Path to NAT workflow config file
+# Path to NeMo Agent toolkit workflow configuration file
 config_file: "examples/getting_started/simple_calculator/configs/config.yml"
 
 # Server configuration
@@ -70,12 +89,12 @@ load_test:
 output:
   directory: "load_test_results"
 
-# Tool calls to execute
+# Tool calls to execute during load testing
 tool_calls:
   - tool_name: "calculator_multiply"
     args:
       text: "2 * 3"
-    weight: 2.0  # Called twice as often
+    weight: 2.0  # Called twice as often as weight 1.0 tools
 
   - tool_name: "calculator_divide"
     args:
@@ -83,52 +102,78 @@ tool_calls:
     weight: 1.0
 ```
 
-### Configuration Options
+### Configuration Parameters
 
-#### Required Fields
+#### Required Parameters
 
-- `config_file` (str): Path to NAT workflow configuration file
+**`config_file`** (string)
+: Path to the NeMo Agent toolkit workflow configuration file.
 
-#### Server Configuration (`server`)
+#### Server Configuration
 
-- `host` (str): Server host (default: "localhost")
-- `port` (int): Server port (default: 9901)
-- `transport` (str): Transport type - "streamable-http" or "sse" (default: "streamable-http")
+Configure the MCP server settings in the `server` section:
 
-#### Load Test Parameters (`load_test`)
+**`host`** (string, default: `"localhost"`)
+: Host address where the MCP server will run.
 
-- `num_concurrent_users` (int): Number of concurrent users to simulate (default: 10)
-- `duration_seconds` (int): Test duration in seconds (default: 60)
-- `warmup_seconds` (int): Warmup period before measurements (default: 5)
+**`port`** (integer, default: `9901`)
+: Port number for the MCP server.
 
-#### Output Configuration (`output`)
+**`transport`** (string, default: `"streamable-http"`)
+: Transport protocol type. Options: `"streamable-http"` or `"sse"`.
 
-- `directory` (str): Output directory for reports (default: "load_test_results")
+#### Load Test Parameters
 
-#### Tool Calls (`tool_calls`)
+Configure load test behavior in the `load_test` section:
 
-List of tool configurations:
-- `tool_name` (str, required): Name of the MCP tool
-- `args` (dict, optional): Arguments to pass to the tool
-- `weight` (float, optional): Relative call frequency (default: 1.0)
+**`num_concurrent_users`** (integer, default: `10`)
+: Number of concurrent users to simulate.
 
-Higher weight values mean the tool will be called more frequently. For example, a tool with weight 2.0 will be called twice as often as a tool with weight 1.0.
+**`duration_seconds`** (integer, default: `60`)
+: Duration of the load test in seconds.
 
-## Usage
+**`warmup_seconds`** (integer, default: `5`)
+: Warmup period before measurements begin, in seconds.
 
-### Command Line (Recommended)
+#### Output Configuration
 
-Run load tests using the main entry point script:
+Configure report output in the `output` section:
+
+**`directory`** (string, default: `"load_test_results"`)
+: Directory where test reports will be saved.
+
+#### Tool Calls
+
+Define tool calls to execute in the `tool_calls` list. Each tool call includes:
+
+**`tool_name`** (string, required)
+: Name of the MCP tool to call.
+
+**`args`** (dictionary, optional)
+: Arguments to pass to the tool.
+
+**`weight`** (float, default: `1.0`)
+: Relative call frequency. Tools with higher weights are called more frequently. A tool with weight 2.0 is called twice as often as a tool with weight 1.0.
+
+## Running Load Tests
+
+### Command Line
+
+Run load tests from the project root using the command-line interface:
 
 ```bash
 # Basic usage
-python cli.py --config_file=configs/config.yml
+python src/nat/front_ends/mcp/load_test_utils/cli.py \
+  --config_file=src/nat/front_ends/mcp/load_test_utils/configs/config.yml
 
 # With verbose logging
-python cli.py --config_file=configs/config.yml --verbose
+python src/nat/front_ends/mcp/load_test_utils/cli.py \
+  --config_file=src/nat/front_ends/mcp/load_test_utils/configs/config.yml \
+  --verbose
 
 # Short form
-python cli.py -c configs/config.yml
+python src/nat/front_ends/mcp/load_test_utils/cli.py \
+  -c src/nat/front_ends/mcp/load_test_utils/configs/config.yml
 ```
 
 ### Python API
@@ -138,10 +183,12 @@ python cli.py -c configs/config.yml
 ```python
 from nat.front_ends.mcp.load_test_utils import run_load_test_from_yaml
 
-results = run_load_test_from_yaml("configs/config.yml")
+results = run_load_test_from_yaml(
+    "src/nat/front_ends/mcp/load_test_utils/configs/config.yml"
+)
 ```
 
-#### Programmatic Usage (Advanced)
+#### Programmatic Usage
 
 ```python
 from nat.front_ends.mcp.load_test_utils import run_load_test
@@ -149,58 +196,81 @@ from nat.front_ends.mcp.load_test_utils import run_load_test
 results = run_load_test(
     config_file="examples/getting_started/simple_calculator/configs/config.yml",
     tool_calls=[
-        {"tool_name": "calculator_multiply", "args": {"text": "2 * 3"}, "weight": 2.0},
-        {"tool_name": "calculator_divide", "args": {"text": "10 / 2"}, "weight": 1.0},
+        {
+            "tool_name": "calculator_multiply",
+            "args": {"text": "2 * 3"},
+            "weight": 2.0,
+        },
+        {
+            "tool_name": "calculator_divide",
+            "args": {"text": "10 / 2"},
+            "weight": 1.0,
+        },
     ],
     num_concurrent_users=10,
     duration_seconds=30,
 )
 ```
 
-## Output
+## Output Reports
 
 The load test generates two report files in the output directory:
 
-1. **CSV Report** (`load_test_YYYYMMDD_HHMMSS.csv`): Detailed per-request data with columns:
-   - `timestamp`: Request timestamp
-   - `tool_name`: Name of the tool called
-   - `success`: Boolean success status
-   - `latency_ms`: Request latency in milliseconds
-   - `memory_rss_mb`: Resident Set Size (RSS) memory in MB at request time
-   - `memory_vms_mb`: Virtual Memory Size (VMS) in MB at request time
-   - `memory_percent`: Memory usage percentage at request time
-   - `error`: Error message (if failed)
+### CSV Report
 
-2. **Summary Report** (`load_test_YYYYMMDD_HHMMSS_summary.txt`): Human-readable summary with statistics
+**File name**: `load_test_YYYYMMDD_HHMMSS.csv`
 
-### Report Contents
+Detailed per-request data with the following columns:
 
-- **Summary Metrics**: Total requests, success rate, requests per second
-- **Latency Statistics**: Mean, median, P95, P99, min, max latencies
-- **Memory Statistics**: RSS and VMS memory usage (mean, max), percentage (mean, max)
-- **Per-Tool Statistics**: Individual performance for each tool
-- **Error Analysis**: Failed request breakdown
+- `timestamp`: Request timestamp
+- `tool_name`: Name of the tool called
+- `success`: Boolean success status
+- `latency_ms`: Request latency in milliseconds
+- `memory_rss_mb`: Resident Set Size (RSS) memory in MB at request time
+- `memory_vms_mb`: Virtual Memory Size (VMS) in MB at request time
+- `memory_percent`: Memory usage percentage at request time
+- `error`: Error message if the request failed
+
+### Summary Report
+
+**File name**: `load_test_YYYYMMDD_HHMMSS_summary.txt`
+
+Human-readable summary with the following statistics:
+
+**Summary Metrics**
+: Total requests, success rate, requests per second
+
+**Latency Statistics**
+: Mean, median, P95, P99, minimum, and maximum latencies
+
+**Memory Statistics**
+: RSS and VMS memory usage (mean and max), memory percentage (mean and max)
+
+**Per-Tool Statistics**
+: Individual performance metrics for each tool
+
+**Error Analysis**
+: Breakdown of failed requests by error type
 
 ## Creating Custom Tests
 
-1. Copy the config file from the `configs/` directory:
+To create a custom load test configuration:
+
+1. Copy the example configuration file:
+
    ```bash
-   cp configs/config.yml configs/my_test.yml
+   cp src/nat/front_ends/mcp/load_test_utils/configs/config.yml \
+      src/nat/front_ends/mcp/load_test_utils/configs/my_test.yml
    ```
 
-2. Modify the parameters in `configs/my_test.yml` for your use case:
-   - Update `config_file` to point to your NAT workflow
+2. Edit `my_test.yml` to customize the following parameters:
+   - Update `config_file` to point to your NeMo Agent toolkit workflow
    - Adjust `tool_calls` to match your available tools
-   - Set load test parameters (`num_concurrent_users`, `duration_seconds`)
+   - Set load test parameters such as `num_concurrent_users` and `duration_seconds`
 
 3. Run your custom test:
+
    ```bash
-   python cli.py --config_file=configs/my_test.yml
+   python src/nat/front_ends/mcp/load_test_utils/cli.py \
+     --config_file=src/nat/front_ends/mcp/load_test_utils/configs/my_test.yml
    ```
-
-## Requirements
-
-- NeMo Agent toolkit with MCP support (`nvidia-nat[mcp]`)
-- Valid NAT workflow configuration with MCP-compatible tools
-- Python 3.10 or higher
-- psutil package (for memory monitoring)
