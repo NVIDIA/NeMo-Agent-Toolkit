@@ -54,3 +54,5 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
                                       description="Number of top memory allocations to log (default: 10)",
                                       ge=1,
                                       le=50)
+    memory_profile_log_level: str = Field(default="DEBUG",
+                                          description="Log level for memory profiling output (default: DEBUG)")

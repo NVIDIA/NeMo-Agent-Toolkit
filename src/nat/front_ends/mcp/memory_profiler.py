@@ -25,18 +25,20 @@ logger = logging.getLogger(__name__)
 class MemoryProfiler:
     """Memory profiler for tracking memory usage and potential leaks."""
 
-    def __init__(self, enabled: bool = False, log_interval: int = 50, top_n: int = 10):
+    def __init__(self, enabled: bool = False, log_interval: int = 50, top_n: int = 10, log_level: str = "DEBUG"):
         """Initialize the memory profiler.
 
         Args:
             enabled: Whether memory profiling is enabled
             log_interval: Log stats every N requests
             top_n: Number of top allocations to log
+            log_level: Log level for memory profiling output (e.g., "DEBUG", "INFO")
         """
         self.enabled = enabled
         # normalize interval to avoid modulo-by-zero
         self.log_interval = max(1, int(log_interval))
         self.top_n = top_n
+        self.log_level = getattr(logging, log_level.upper(), logging.DEBUG)
         self.request_count = 0
         self.baseline_snapshot = None
 
@@ -44,7 +46,10 @@ class MemoryProfiler:
         self._we_started_tracemalloc = False
 
         if self.enabled:
-            logger.info("Memory profiling ENABLED (interval=%d, top_n=%d)", self.log_interval, top_n)
+            logger.info("Memory profiling ENABLED (interval=%d, top_n=%d, log_level=%s)",
+                        self.log_interval,
+                        top_n,
+                        log_level)
             try:
                 if not tracemalloc.is_tracing():
                     tracemalloc.start()
@@ -56,6 +61,15 @@ class MemoryProfiler:
                 logger.warning("tracemalloc unavailable or not tracing: %s", e)
         else:
             logger.info("Memory profiling DISABLED")
+
+    def _log(self, message: str, *args: Any) -> None:
+        """Log a message at the configured log level.
+
+        Args:
+            message: Log message format string
+            *args: Arguments for the format string
+        """
+        logger.log(self.log_level, message, *args)
 
     def on_request_complete(self) -> None:
         """Called after each request completes."""
@@ -163,33 +177,33 @@ class MemoryProfiler:
             "subject_instances": subject_count,
         }
 
-        logger.info("=" * 80)
-        logger.info("MEMORY PROFILE AFTER %d REQUESTS:", self.request_count)
-        logger.info("  Current Memory: %.2f MB", current_mb)
-        logger.info("  Peak Memory: %.2f MB", peak_mb)
-        logger.info("")
-        logger.info("NAT COMPONENT INSTANCES:")
-        logger.info("  IntermediateStepManagers: %d active (%d outstanding steps)",
-                    stats["active_intermediate_managers"],
-                    stats["outstanding_steps"])
-        logger.info("  BaseExporters: %d active (%d isolated)", stats["active_exporters"], stats["isolated_exporters"])
-        logger.info("  Subject (event streams): %d instances", stats["subject_instances"])
+        self._log("=" * 80)
+        self._log("MEMORY PROFILE AFTER %d REQUESTS:", self.request_count)
+        self._log("  Current Memory: %.2f MB", current_mb)
+        self._log("  Peak Memory: %.2f MB", peak_mb)
+        self._log("")
+        self._log("NAT COMPONENT INSTANCES:")
+        self._log("  IntermediateStepManagers: %d active (%d outstanding steps)",
+                  stats["active_intermediate_managers"],
+                  stats["outstanding_steps"])
+        self._log("  BaseExporters: %d active (%d isolated)", stats["active_exporters"], stats["isolated_exporters"])
+        self._log("  Subject (event streams): %d instances", stats["subject_instances"])
 
         # Show top allocations
         if snapshot is None:
-            logger.info("tracemalloc snapshot unavailable.")
+            self._log("tracemalloc snapshot unavailable.")
         else:
             if self.baseline_snapshot:
-                logger.info("TOP %d MEMORY GROWTH SINCE BASELINE:", self.top_n)
+                self._log("TOP %d MEMORY GROWTH SINCE BASELINE:", self.top_n)
                 top_stats = snapshot.compare_to(self.baseline_snapshot, 'lineno')
             else:
-                logger.info("TOP %d MEMORY ALLOCATIONS:", self.top_n)
+                self._log("TOP %d MEMORY ALLOCATIONS:", self.top_n)
                 top_stats = snapshot.statistics('lineno')
 
             for i, stat in enumerate(top_stats[:self.top_n], 1):
-                logger.info("  #%d: %s", i, stat)
+                self._log("  #%d: %s", i, stat)
 
-        logger.info("=" * 80)
+        self._log("=" * 80)
 
         return stats
 

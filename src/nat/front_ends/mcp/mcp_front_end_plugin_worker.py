@@ -49,7 +49,8 @@ class MCPFrontEndPluginWorkerBase(ABC):
         # Initialize memory profiler if enabled
         self.memory_profiler = MemoryProfiler(enabled=self.front_end_config.enable_memory_profiling,
                                               log_interval=self.front_end_config.memory_profile_interval,
-                                              top_n=self.front_end_config.memory_profile_top_n)
+                                              top_n=self.front_end_config.memory_profile_top_n,
+                                              log_level=self.front_end_config.memory_profile_log_level)
 
     def _setup_health_endpoint(self, mcp: FastMCP):
         """Set up the HTTP health endpoint that exercises MCP ping handler."""
