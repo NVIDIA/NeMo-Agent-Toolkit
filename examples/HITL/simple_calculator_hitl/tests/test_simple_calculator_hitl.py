@@ -13,7 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
+import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -23,18 +26,43 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_hitl_workflow():
+async def test_hitl_workflow(capsys):
+    import nat_por_to_jiratickets.register  # noqa: F401
     from nat.runtime.loader import load_workflow
     from nat.test.utils import locate_example_config
-    from nat_simple_calculator_hitl.register import RetryReactAgentConfig
+    from nat_simple_calculator_hitl.retry_react_agent import RetryReactAgentConfig
 
-    config_file: Path = locate_example_config(RetryReactAgentConfig)
+    expected_prompt = "Please confirm if you would like to proceed"
+    config_file: Path = locate_example_config(RetryReactAgentConfig, "config-hitl.yml")
 
-    # async with load_workflow(config_file) as workflow:
+    result = None
+    async with load_workflow(config_file) as workflow:
 
-    #     async with workflow.run("Is 4 * 4 less than the current hour?") as runner:
+        async with workflow.run("Is 2 * 4 greater than 5?") as runner:
 
-    #         result = await runner.result(to_type=str)
+            runner_future = asyncio.create_task(runner.result(to_type=str))
+            deadline = time.time() + 120  # 2 minute timeout
+            done = False
+            prompted = False
+            while not done and time.time() < deadline:
+                captured = capsys.readouterr()
+                if not prompted:
+                    assert not runner_future.done(), "Runner finished before prompt detected"
+                    if expected_prompt in captured.out:
+                        prompted = True
+                        sys.stdin.write("no\n")
+                    else:
+                        await asyncio.sleep(0.1)
+                else:
+                    done = runner_future.done()
+                    if done:
+                        assert runner_future.exception() is None, f"Runner failed with {runner_future.exception()}"
+                        result = runner_future.result()
+                    else:
+                        await asyncio.sleep(0.1)
 
-    #     result = result.lower()
-    #     assert "6" in result
+            if not done:
+                runner_future.cancel()
+
+    assert result is not None, "Test did not complete successfully"
+    assert "I seem to be having a problem." in result.lower()
