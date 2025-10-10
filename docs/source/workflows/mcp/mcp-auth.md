@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# MCP Authentication for the NVIDIA NeMo Agent Toolkit
+# Model Context Protocol (MCP) Authentication for the NVIDIA NeMo Agent Toolkit
 MCP provides authorization capabilities at the transport level, enabling MCP clients to make requests to restricted MCP servers on behalf of resource owners. The NVIDIA NeMo Agent toolkit provides a set of built-in authentication providers for accessing servers that require authentication. The `mcp_oauth2` provider is the default authentication provider in the NeMo Agent toolkit for MCP servers. It conforms to the [MCP OAuth2](https://modelcontextprotocol.io/specification/draft/basic/authorization) specification.
 
 ## Supported Capabilities
@@ -58,7 +58,7 @@ export NAT_USER_ID="dev-user"
 export ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS=true
 ```
 ## Referencing Auth Providers in Clients
-The authentication provider is referenced by name via the `auth_provider` parameter in the MCP client configuration.
+The authentication provider is referenced by name through the `auth_provider` parameter in the MCP client configuration.
 ```yaml
 function_groups:
   mcp_tools:
@@ -69,7 +69,7 @@ function_groups:
       auth_provider: auth_provider_mcp
 ```
 
-## Limitations & Supported Transports
+## Limitations and Supported Transports
 
 :::{warning}
 **SSE Transport Security Limitations**: The SSE transport does not support authentication. MCP authentication is only available for `streamable-http` transport. If you need authentication, you must use `streamable-http` transport instead of SSE.
@@ -85,7 +85,7 @@ function_groups:
 - Not supported with `mcp_tool_wrapper` style configuration
 
 ## Example Workflow
-The MCP Authentication Example Workflow, `examples/MCP/simple_auth_mcp/README.md`, provides an example of how to use the `mcp_oauth2` authentication provider to authenticate with a MCP server.
+The MCP Authentication Example Workflow, `examples/MCP/simple_auth_mcp/README.md`, provides an example of how to use the `mcp_oauth2` authentication provider to authenticate with an MCP server.
 ### Example Configuration
 ```yaml
 function_groups:
@@ -131,7 +131,7 @@ nat run --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.
 ```
 
 ### Running the Workflow in Multi-User Mode (FastAPI)
-In this mode the workflow is served via a FastAPI frontend. Multiple users can access the workflow concurrently using a UI with `WebSocket` mode enabled.
+In this mode, the workflow is served through a FastAPI frontend. Multiple users can access the workflow concurrently using a UI with `WebSocket` mode enabled.
 
 ```mermaid
 flowchart LR
@@ -148,13 +148,14 @@ flowchart LR
   C2 --> S2
 ```
 
+Follow the steps below to run the workflow in multi-user mode.
 1. Set the environment variables to access the protected MCP server:
 ```bash
 export CORPORATE_MCP_JIRA_URL="https://your-jira-server.com/mcp"
 export NAT_USER_ID="dev-user"
 export ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS=false
 ```
-2. **Start the workflow**:
+2. Start the workflow:
 ```bash
 nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.yml
 ```
@@ -162,26 +163,26 @@ At this point, a consent window is displayed to the user. The user must authoriz
 
 Subsequent tool calls can be disabled for the default user ID by setting `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration. This is recommended for multi-user workflows to avoid accidental tool calls by unauthorized users.
 
-3. **Start the UI**:
-- Start the UI by following the instructions in the [Launching the UI](../../quick-start/launching-ui.md) documentation.
-- Connect to the UI at http://localhost:3000
+3. Launch the UI:
+- Launch the UI by following the instructions in the [User Interface](../../quick-start/launching-ui.md) documentation.
+- Connect to the UI at `http://localhost:3000`
 
 :::important
 Ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. WebSocket connections are required for OAuth authentication workflows.
 :::
 
-4. **Send the input to the workflow via the UI**:
+4. Send the input to the workflow using the UI:
 ```text
 What is ticket AIQ-1935 about
 ```
 At this point, a consent window is displayed again. The `UI` user must authorize the workflow to access the MCP server and call the tool. This user's information is cached separately using the `WebSocket` session cookie as the user ID.
 
-## Displaying Protected MCP Tools via CLI
+## Displaying Protected MCP Tools through the CLI
 MCP client CLI can be used to display and call MCP tools on a remote MCP server. To use a protected MCP server, you need to provide the `--auth` flag:
 ```bash
 nat mcp client tool list --url http://example.com/mcp --auth
 ```
-This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, see the [MCP Client](./mcp-client.md) documentation.
+This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Client](./mcp-client.md).
 
 ## Security Considerations
 
@@ -191,6 +192,7 @@ This will use the `mcp_oauth2` authentication provider to authenticate the user.
 :::
 
 ### Authentication Best Practices
+When using MCP authentication, consider the following security recommendations:
 - The `default_user_id` is used to cache the authenticating user during setup and optionally for tool calls. It is recommended to set `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration for multi-user workflows to avoid accidental tool calls by unauthorized users.
 - Use HTTPS redirect URIs in production environments.
 - Scope OAuth2 tokens to the minimum required permissions.
@@ -202,11 +204,11 @@ This will use the `mcp_oauth2` authentication provider to authenticate the user.
 - **Never**: Use SSE transport for authenticated or production deployments
 
 ## Troubleshooting
-1.  **Setup fails** - This can happen if:
+Setup may fail if one of the following happens:
 - The user identified by `default_user_id` did not complete the authentication flow through the pop-up UI, or
 - The user did not authorize the workflow to access the MCP server
 
-2. **Tool calls fail** - This can happen if:
+Tool calls may fail if one of the following happens:
 - The workflow was not accessed in `WebSocket` mode, or
 - The user did not complete the authentication flow through the `WebSocket` UI, or
 - The user is not authorized to call the tool
