@@ -150,7 +150,7 @@ class MCPLoadTest:
         for i in range(max_retries):
             try:
                 async with streamablehttp_client(url=self.server_url) as ctx:
-                    read, write = ctx
+                    read, write = (ctx[0], ctx[1]) if isinstance(ctx, tuple) else ctx
                     async with ClientSession(read, write) as session:
                         await session.initialize()
                 logger.info("MCP server is ready")
@@ -200,7 +200,7 @@ class MCPLoadTest:
 
         try:
             async with streamablehttp_client(url=self.server_url) as ctx:
-                read, write = ctx
+                read, write = (ctx[0], ctx[1]) if isinstance(ctx, tuple) else ctx
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     result = await session.call_tool(tool_call.tool_name, tool_call.args)
