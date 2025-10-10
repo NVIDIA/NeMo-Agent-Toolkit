@@ -52,7 +52,7 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     def validate_security_configuration(self):
         """Validate security configuration to prevent accidental misconfigurations."""
         # Check if server is bound to a non-localhost interface without authentication
-        localhost_hosts = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
+        localhost_hosts = {"localhost", "127.0.0.1", "::1"}
         if self.host not in localhost_hosts and self.server_auth is None:
             logger.warning(
                 "MCP server is configured to bind to '%s' without authentication. "
