@@ -132,9 +132,10 @@ embedders:
     base_url: https://integrate.api.nvidia.com/v1
 
 workflow:
-  _type: tool_calling_agent
+  _type: rewoo_agent
   tool_names: [text2sql, execute_db_query]
   llm_name: my_llm
+  tool_call_max_retries: 3
 ```
 
 ### 4. Run the Workflow
@@ -161,10 +162,19 @@ asyncio.run(main())
 
 Expected output:
 ```
+# ReWOO Agent Planning Phase
+Plan 1: Generate SQL query from natural language
+  Tool: text2sql
+Plan 2: Execute the generated SQL query
+  Tool: execute_db_query
+
+# Execution Phase
 Starting SQL generation...
 Retrieved 1 similar SQL examples
-SQL generated:
-SELECT COUNT(*) FROM customers
+SQL generated: SELECT COUNT(*) FROM customers
+
+Executing SQL query...
+Results: 42 customers found
 ```
 
 ## Configuration
@@ -263,9 +273,28 @@ training_examples:
 
 ## Advanced Usage
 
-### Multi-Turn Conversations
+### Multi-Step Query Planning
 
-Use with a conversational agent to support follow-up questions:
+The ReWOO agent automatically plans a two-step workflow:
+1. Generate SQL from natural language using `text2sql`
+2. Execute the SQL using `execute_db_query`
+
+You can customize the planning and solving prompts:
+
+```yaml
+workflow:
+  _type: rewoo_agent
+  tool_names: [text2sql, execute_db_query]
+  llm_name: my_llm
+  tool_call_max_retries: 3
+  additional_planner_instructions: |
+    When generating SQL queries, prioritize performance and accuracy.
+    Always plan to verify the SQL before execution.
+  additional_solver_instructions: |
+    Format the final results in a clear, user-friendly manner.
+```
+
+For alternative agent types (such as ReAct for multi-turn conversations):
 
 ```yaml
 workflow:
