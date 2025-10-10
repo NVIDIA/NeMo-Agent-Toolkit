@@ -103,7 +103,7 @@ def test_no_security_warning_localhost_without_auth(caplog):
 
 def test_no_security_warning_with_auth(caplog):
     """Test that no warning is logged when authentication is configured for non-localhost."""
-    auth_config = OAuth2ResourceServerConfig(issuer_url="https://example.com/oauth2")  # noqa: F841
+    auth_config = OAuth2ResourceServerConfig(issuer_url="https://example.com/oauth2")
     config = MCPFrontEndConfig(host="192.168.1.100", port=9901, server_auth=auth_config)  # noqa: F841
     # Check that no warning about missing authentication was logged
     assert not any("without authentication" in record.message for record in caplog.records)
@@ -111,7 +111,7 @@ def test_no_security_warning_with_auth(caplog):
 
 def test_security_warning_sse_with_auth(caplog):
     """Test that a warning is logged when SSE transport is used with authentication configured."""
-    auth_config = OAuth2ResourceServerConfig(issuer_url="https://example.com/oauth2")  # noqa: F841
+    auth_config = OAuth2ResourceServerConfig(issuer_url="https://example.com/oauth2")
     config = MCPFrontEndConfig(transport="sse", server_auth=auth_config)  # noqa: F841
     # Check that a warning was logged about SSE not supporting auth
     assert any("SSE transport does not support authentication" in record.message for record in caplog.records)
@@ -135,7 +135,7 @@ def test_no_security_warning_sse_localhost(caplog):
 
 def test_no_security_warning_streamable_http_with_auth(caplog):
     """Test that no warning is logged when streamable-http is used with authentication."""
-    auth_config = OAuth2ResourceServerConfig(issuer_url="https://example.com/oauth2")  # noqa: F841
+    auth_config = OAuth2ResourceServerConfig(issuer_url="https://example.com/oauth2")
     config = MCPFrontEndConfig(transport="streamable-http", host="192.168.1.100", server_auth=auth_config)  # noqa: F841
     # Check that no warnings were logged (this is the recommended configuration)
     assert not any("WARNING" in record.levelname for record in caplog.records)
