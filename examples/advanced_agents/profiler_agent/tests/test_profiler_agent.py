@@ -110,7 +110,10 @@ async def test_full_workflow(phoenix_url: str):
     simple_calc_observe_config = load_config(simple_calc_observe_config_file)
     simple_calc_observe_config.general.telemetry.tracing["phoenix"].endpoint = phoenix_trace_url
 
-    await run_workflow(config_file=None, config=simple_calc_observe_config, question="add 1 and 2", expected_answer="3")
+    await run_workflow(config_file=None,
+                       config=simple_calc_observe_config,
+                       question="multiply 3 and 2",
+                       expected_answer="6")
 
     config_file: Path = locate_example_config(ProfilerAgentConfig)
     config = load_config(config_file)
