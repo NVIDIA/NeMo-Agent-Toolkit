@@ -72,6 +72,13 @@ def extract_sql_from_message(sql_query: str | Any) -> str:
         except json.JSONDecodeError:
             pass
 
+    # Handle format: sql='...' explanation='...'
+    if isinstance(sql_query, str) and "sql=" in sql_query:
+        # Match sql='...' or sql="..." (non-greedy to stop at first closing quote before explanation)
+        match = re.search(r"sql=['\"](.+?)['\"](?:\s+explanation=|$)", sql_query)
+        if match:
+            return match.group(1)
+
     return sql_query
 
 
@@ -349,7 +356,7 @@ def setup_vanna_db_connection(
         **kwargs: Additional connection parameters
 
     Returns:
-        Vanna instance with database connection configured
+        Database connection object (must be closed by caller)
     """
     import pandas as pd
 
@@ -387,4 +394,4 @@ def setup_vanna_db_connection(
     vn.run_sql_is_set = True
 
     logger.info(f"Database connection configured for {database_type}")
-    return vn
+    return connection

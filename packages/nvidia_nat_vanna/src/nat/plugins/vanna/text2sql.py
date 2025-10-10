@@ -70,7 +70,6 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     milvus_user: str | None = Field(default=None, description="Milvus username")
     milvus_password: str | None = Field(default=None, description="Milvus password")
     milvus_db_name: str | None = Field(default=None, description="Milvus database")
-    milvus_use_tls: bool = Field(default=True, description="Use TLS for Milvus")
 
     # Vanna configuration
     allow_llm_to_see_data: bool = Field(
@@ -105,7 +104,7 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
     # Import implementation details inside the registration function
     from nat.plugins.vanna.db_utils import setup_vanna_db_connection
     from nat.plugins.vanna.milvus_utils import create_milvus_client
-    from nat.plugins.vanna.vanna_utils import get_vanna_instance, train_vanna
+    from nat.plugins.vanna.vanna_utils import get_vanna_instance, train_vanna, _vanna_instance
 
     logger.info("Initializing Text2SQL function")
 
@@ -117,34 +116,44 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN
     )
 
-    # Create Milvus clients
-    if config.milvus_retriever:
-        logger.info("Using milvus_retriever for Milvus connection")
-        retriever = await builder.get_retriever(config.milvus_retriever)
-        milvus_client = retriever._client  # type: ignore[attr-defined]
-    else:
-        milvus_client = create_milvus_client(
+    # Track database connection for cleanup
+    db_connection = None
+
+    # Create Milvus clients only if singleton doesn't exist
+    # This avoids creating orphaned clients when reusing singleton
+    if _vanna_instance is None:
+        owns_sync_client = True  # Track if we own the sync client
+        if config.milvus_retriever:
+            logger.info("Using milvus_retriever for Milvus connection")
+            retriever = await builder.get_retriever(config.milvus_retriever)
+            milvus_client = retriever._client  # type: ignore[attr-defined]
+            owns_sync_client = False  # Managed by retriever
+        else:
+            milvus_client = create_milvus_client(
+                host=config.milvus_host,
+                port=config.milvus_port,
+                user=config.milvus_user,
+                password=config.milvus_password,
+                db_name=config.milvus_db_name,
+                is_async=False,
+            )
+        # Create async client with same config
+        # TODO: Replace with async NAT milvus_retriever
+        async_milvus_client = create_milvus_client(
             host=config.milvus_host,
             port=config.milvus_port,
             user=config.milvus_user,
             password=config.milvus_password,
             db_name=config.milvus_db_name,
-            use_tls=config.milvus_use_tls,
-            is_async=False,
+            is_async=True,
         )
-    # Create async client with same config
-    # TODO: Replace with async NAT milvus_retriever
-    async_milvus_client = create_milvus_client(
-        host=config.milvus_host,
-        port=config.milvus_port,
-        user=config.milvus_user,
-        password=config.milvus_password,
-        db_name=config.milvus_db_name,
-        use_tls=config.milvus_use_tls,
-        is_async=True,
-    )
+    else:
+        # Reuse existing singleton's clients
+        milvus_client = _vanna_instance.milvus_client
+        async_milvus_client = _vanna_instance.async_milvus_client
+        owns_sync_client = _vanna_instance._owns_sync_client
 
-    # Initialize Vanna instance
+    # Initialize Vanna instance (singleton pattern)
     vanna_instance = await get_vanna_instance(
         llm_client=llm_client,
         embedder_client=embedder_client,
@@ -156,10 +165,11 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         sql_collection=config.sql_collection,
         ddl_collection=config.ddl_collection,
         doc_collection=config.doc_collection,
+        owns_sync_client=owns_sync_client,
     )
 
     # Setup database connection
-    setup_vanna_db_connection(
+    db_connection = setup_vanna_db_connection(
         vn=vanna_instance,
         database_type=config.database_type,
         host=config.db_host or config.databricks_server_hostname,
@@ -204,8 +214,8 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
                 allow_llm_to_see_data=config.allow_llm_to_see_data,
             )
 
-            sql = sql_result.get("sql", "")
-            explanation = sql_result.get("explanation")
+            sql = str(sql_result.get("sql", ""))
+            explanation: str | None = sql_result.get("explanation")
 
             # If execute_sql is enabled, run the query
             if config.execute_sql:
@@ -216,13 +226,10 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
                     name="text2sql_status",
                     payload=StatusPayload(message="Executing SQL query...").model_dump_json(),
                 )
-                try:
-                    df = await vanna_instance.run_sql(sql)
-                    # Log execution success but don't change the output
-                    logger.info(f"SQL executed successfully: {len(df)} rows returned")
-                except Exception as e:
-                    logger.error(f"SQL execution failed: {e}")
-                    # Note: execution errors are logged but don't change the SQL output
+                # Execute SQL and propagate errors
+                # Note: run_sql is dynamically set as async function in setup_vanna_db_connection
+                df = await vanna_instance.run_sql(sql)  # type: ignore[misc]
+                logger.info(f"SQL executed successfully: {len(df)} rows returned")
 
             # Yield final result as Text2SQLOutput
             yield Text2SQLOutput(sql=sql, explanation=explanation)
@@ -267,7 +274,13 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
             stream_fn=_generate_sql_stream,
             description=description,
         )
-    except GeneratorExit:
-        logger.info("Text2SQL function exited early")
     finally:
         logger.info("Cleaning up Text2SQL function")
+
+        # Close database connection
+        if db_connection is not None:
+            try:
+                db_connection.close()
+                logger.info("Closed database connection")
+            except Exception as e:
+                logger.warning(f"Error closing database connection: {e}")
