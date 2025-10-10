@@ -101,8 +101,8 @@ async def execute_db_query(
     import pandas as pd
 
     from nat.plugins.vanna.db_utils import (
+        async_query,
         connect_to_database,
-        execute_query,
         extract_sql_from_message,
     )
 
@@ -204,8 +204,8 @@ async def execute_db_query(
             )
 
             # Execute query
-            results, columns = execute_query(
-                connection, sql_query, config.db_catalog, config.db_schema
+            df = await async_query(
+                connection, sql_query, config.db_catalog, config.db_schema, config.database_type
             )
 
             # Close connection
@@ -219,31 +219,12 @@ async def execute_db_query(
                 payload=StatusPayload(message="Processing results...").model_dump_json(),
             )
 
+            # Store original row count before limiting
+            original_row_count = len(df)
+
             # Limit results
-            limited_results = (
-                results[: config.max_rows]
-                if len(results) > config.max_rows
-                else results
-            )
-
-            # Convert to serializable format
-            serializable_results = []
-            for row in limited_results:
-                serializable_row = []
-                for value in row:
-                    if value is None:
-                        serializable_row.append(None)
-                    elif isinstance(value, (int, float, str, bool)):
-                        serializable_row.append(value)
-                    else:
-                        serializable_row.append(str(value))
-                serializable_results.append(serializable_row)
-
-            # Create DataFrame
-            if serializable_results and columns:
-                df = pd.DataFrame(serializable_results, columns=columns)
-            else:
-                df = pd.DataFrame()
+            if original_row_count > config.max_rows:
+                df = df.head(config.max_rows)
 
             # Create response
             dataframe_info = DataFrameInfo(
@@ -258,15 +239,15 @@ async def execute_db_query(
 
             response = ExecuteDBQueryOutput(
                 success=True,
-                columns=[str(col) for col in columns] if columns else [],
-                row_count=len(results),
+                columns=df.columns.tolist() if not df.empty else [],
+                row_count=original_row_count,
                 sql_query=sql_query,
                 query_executed=sql_query,
                 dataframe_records=df.to_dict("records") if not df.empty else [],
                 dataframe_info=dataframe_info,
             )
 
-            if len(results) > config.max_rows:
+            if original_row_count > config.max_rows:
                 response.limited_to = config.max_rows
                 response.truncated = True
 

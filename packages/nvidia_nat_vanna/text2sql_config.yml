@@ -36,6 +36,9 @@ functions:
     execute_sql: false  # Only generate SQL, don't execute
     train_on_startup: true  # Uses training data from db_schema.py
     n_results: 5
+    sql_collection: "vanna_sql_v0"
+    ddl_collection: "vanna_ddl_v0"
+    doc_collection: "vanna_documentation_v0"
 
   # Database query execution function
   execute_db_query:

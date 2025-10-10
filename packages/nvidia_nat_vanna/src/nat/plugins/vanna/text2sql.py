@@ -137,6 +137,7 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         embedder_client=embedder_client,
         milvus_client=milvus_client,
         async_milvus_client=async_milvus_client,
+        dialect=config.database_type,
         initial_prompt=config.initial_prompt,
         n_results=config.n_results,
         sql_collection=config.sql_collection,
@@ -144,30 +145,25 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         doc_collection=config.doc_collection,
     )
 
-    # Setup database connection if execute_sql is enabled
-    if config.execute_sql:
-        setup_vanna_db_connection(
-            vn=vanna_instance,
-            database_type=config.database_type,
-            host=config.db_host or config.databricks_server_hostname,
-            port=config.db_port,
-            database=config.db_name,
-            username=config.db_username,
-            password=config.db_password or config.databricks_access_token,
-            catalog=config.db_catalog,
-            schema=config.db_schema,
-            server_hostname=config.databricks_server_hostname,
-            http_path=config.databricks_http_path,
-            access_token=config.databricks_access_token,
-        )
+    # Setup database connection
+    setup_vanna_db_connection(
+        vn=vanna_instance,
+        database_type=config.database_type,
+        host=config.db_host or config.databricks_server_hostname,
+        port=config.db_port,
+        database=config.db_name,
+        username=config.db_username,
+        password=config.db_password or config.databricks_access_token,
+        catalog=config.db_catalog,
+        schema=config.db_schema,
+        server_hostname=config.databricks_server_hostname,
+        http_path=config.databricks_http_path,
+        access_token=config.databricks_access_token,
+    )
 
     # Train on startup if configured
     if config.train_on_startup:
-        from nat.plugins.vanna.db_schema import get_training_data
-
-        logger.info("Training Vanna on startup...")
-        training_data = get_training_data()
-        await train_vanna(vanna_instance, training_data)
+        await train_vanna(vanna_instance, auto_extract_ddl=True)
 
     # Streaming version
     async def _generate_sql_stream(
@@ -208,7 +204,7 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
                     payload=StatusPayload(message="Executing SQL query...").model_dump_json(),
                 )
                 try:
-                    df = vanna_instance.run_sql(sql)
+                    df = await vanna_instance.run_sql(sql)
                     # Log execution success but don't change the output
                     logger.info(f"SQL executed successfully: {len(df)} rows returned")
                 except Exception as e:
