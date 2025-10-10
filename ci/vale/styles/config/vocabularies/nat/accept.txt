@@ -54,6 +54,7 @@ DB(s?)
 Dynatrace
 [Ee]mbedder(s?)
 [Ee]ngineerable
+etcd
 [Ee]val
 [Ee]xplainability
 Faiss

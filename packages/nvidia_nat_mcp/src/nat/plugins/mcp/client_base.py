@@ -634,7 +634,7 @@ class MCPToolClient:
 
         try:
             # Simple tool call - session context is already in the client instance
-            logger.info("Calling tool %s with arguments %s", self._tool_name, tool_args)
+            logger.info("Calling tool %s", self._tool_name)
             result = await self._parent_client.call_tool(self._tool_name, tool_args)
 
             output = []
