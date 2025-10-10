@@ -54,8 +54,7 @@ dependencies = [
 requires-python = ">=3.11,<3.14"
 description = "NVIDIA NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
-license = "Apache-2.0"
-license-files = ["LICENSE.md", "LICENSE-3rd-party.txt"]
+license = { text = "Apache-2.0" }
 keywords = ["ai", "rag", "agents"]
 classifiers = [
   "Programming Language :: Python",

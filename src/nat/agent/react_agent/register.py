@@ -24,6 +24,7 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import FunctionGroupRef
@@ -70,9 +71,6 @@ class ReActAgentWorkflowConfig(AgentBaseConfig, OptimizableMixin, name="react_ag
         default=None,
         description="Provides the SYSTEM_PROMPT to use with the agent")  # defaults to SYSTEM_PROMPT in prompt.py
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
-    use_openai_api: bool = Field(default=False,
-                                 description=("Use OpenAI API for the input/output types to the function. "
-                                              "If False, strings will be used."))
     additional_instructions: str | None = OptimizableField(
         default=None,
         description="Additional instructions to provide to the agent in addition to the base prompt.",
@@ -118,21 +116,23 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent,
         normalize_tool_input_quotes=config.normalize_tool_input_quotes).build_graph()
 
-    async def _response_fn(input_message: ChatRequest) -> ChatResponse:
+    async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         """
         Main workflow entry function for the ReAct Agent.
 
         This function invokes the ReAct Agent Graph and returns the response.
 
         Args:
-            input_message (ChatRequest): The input message to process
+            chat_request_or_message (ChatRequestOrMessage): The input message to process
 
         Returns:
-            ChatResponse: The response from the agent or error message
+            ChatResponse | str: The response from the agent or error message
         """
         try:
+            message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
+
             # initialize the starting state with the user query
-            messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in input_message.messages],
+            messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in message.messages],
                                                         max_tokens=config.max_history,
                                                         strategy="last",
                                                         token_counter=len,
@@ -153,25 +153,16 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             content = str(output_message.content)
 
             # Create usage statistics for the response
-            prompt_tokens = sum(len(str(msg.content).split()) for msg in input_message.messages)
+            prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
             completion_tokens = len(content.split()) if content else 0
             total_tokens = prompt_tokens + completion_tokens
             usage = Usage(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, total_tokens=total_tokens)
-            return ChatResponse.from_string(content, usage=usage)
-
+            response = ChatResponse.from_string(content, usage=usage)
+            if chat_request_or_message.is_string:
+                return GlobalTypeConverter.get().convert(response, to_type=str)
+            return response
         except Exception as ex:
-            logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, str(ex))
-            raise RuntimeError
+            logger.error("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, str(ex))
+            raise
 
-    if (config.use_openai_api):
-        yield FunctionInfo.from_fn(_response_fn, description=config.description)
-    else:
-
-        async def _str_api_fn(input_message: str) -> str:
-            oai_input = GlobalTypeConverter.get().try_convert(input_message, to_type=ChatRequest)
-
-            oai_output = await _response_fn(oai_input)
-
-            return GlobalTypeConverter.get().try_convert(oai_output, to_type=str)
-
-        yield FunctionInfo.from_fn(_str_api_fn, description=config.description)
+    yield FunctionInfo.from_fn(_response_fn, description=config.description)

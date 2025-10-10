@@ -159,8 +159,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
                 return result
             except Exception as e:
-                err_msg = f"Error: {e}" if str(e).strip() else ""
-                logger.error("Error with ainvoke in function with input: %s. %s", value, err_msg)
+                logger.error("Error with ainvoke in function with input: %s. Error: %s", value, e)
                 raise
 
     @typing.final
@@ -416,8 +415,9 @@ class FunctionGroup:
         """
         if not name.strip():
             raise ValueError("Function name cannot be empty or blank")
-        if not re.match(r"^[a-zA-Z0-9_-]+$", name):
-            raise ValueError(f"Function name can only contain letters, numbers, underscores, and hyphens: {name}")
+        if not re.match(r"^[a-zA-Z0-9_.-]+$", name):
+            raise ValueError(
+                f"Function name can only contain letters, numbers, underscores, periods, and hyphens: {name}")
         if name in self._functions:
             raise ValueError(f"Function {name} already exists in function group {self._instance_name}")
 

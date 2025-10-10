@@ -12,8 +12,7 @@ dynamic = ["version"]
 dependencies = ["nvidia-nat[semantic-kernel]~=1.4"]
 readme = "pypi.md"
 description = "Transitional package for nvidia-nat-semantic-kernel, this package is deprecated and will be removed in the future."
-license = "Apache-2.0"
-license-files = ["../../../LICENSE.md", "../../../LICENSE-3rd-party.txt"]
+license = { text = "Apache-2.0" }
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 classifiers = [
