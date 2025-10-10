@@ -28,18 +28,10 @@ Before running load tests, ensure you have the following:
 - Python 3.10 or higher
 - `psutil` package for memory monitoring
 
-### Installing psutil
-
 The `psutil` package is required for monitoring server memory usage during load tests. Install it using one of the following methods:
 
 ```bash
 uv pip install psutil
-```
-
-If you have already installed NeMo Agent toolkit with all dependencies, psutil may already be available. Verify the installation:
-
-```bash
-python -c "import psutil; print(f'psutil {psutil.__version__} installed')"
 ```
 
 ## Quick Start
@@ -254,23 +246,9 @@ Human-readable summary with the following statistics:
 
 ## Creating Custom Tests
 
-To create a custom load test configuration:
+Create a custom load test configuration `my_test.yml` then run your test:
 
-1. Copy the example configuration file:
-
-   ```bash
-   cp src/nat/front_ends/mcp/load_test_utils/configs/config.yml \
-      src/nat/front_ends/mcp/load_test_utils/configs/my_test.yml
-   ```
-
-2. Edit `my_test.yml` to customize the following parameters:
-   - Update `config_file` to point to your NeMo Agent toolkit workflow
-   - Adjust `tool_calls` to match your available tools
-   - Set load test parameters such as `num_concurrent_users` and `duration_seconds`
-
-3. Run your custom test:
-
-   ```bash
-   python src/nat/front_ends/mcp/load_test_utils/cli.py \
-     --config_file=src/nat/front_ends/mcp/load_test_utils/configs/my_test.yml
-   ```
+```bash
+python src/nat/front_ends/mcp/load_test_utils/cli.py \
+  --config_file=src/nat/front_ends/mcp/load_test_utils/configs/my_test.yml
+```
