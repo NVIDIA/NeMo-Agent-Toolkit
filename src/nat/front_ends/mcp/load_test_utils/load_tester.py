@@ -529,10 +529,7 @@ def run_load_test(
 
     Args:
         config_file: Path to NAT workflow config file
-        tool_calls: List of tool call configurations. Each entry should have:
-            - tool_name (str): Name of the tool
-            - args (dict): Arguments for the tool
-            - weight (float, optional): Relative frequency weight (default: 1.0)
+        tool_calls: List of tool call configurations.
         num_concurrent_users: Number of concurrent users to simulate
         duration_seconds: Duration of the load test
         server_host: MCP server host
