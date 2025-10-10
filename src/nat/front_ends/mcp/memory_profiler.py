@@ -67,7 +67,7 @@ class MemoryProfiler:
 
         Args:
             message: Log message format string
-            *args: Arguments for the format string
+            args: Arguments for the format string
         """
         logger.log(self.log_level, message, *args)
 
