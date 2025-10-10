@@ -1,0 +1,24 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../../.."
+
+[project]
+name = "nat_autogen_demo"
+dynamic = ["version"]
+dependencies = [
+  "nvidia-nat[autogen]~=1.4",
+]
+requires-python = ">=3.11,<3.14"
+description = "AutoGen Workflow Example"
+keywords = ["ai", "rag", "agents", "autogen", "multi-agent"]
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+
+[project.entry-points.'nat.components']
+nat_autogen_demo = "nat_autogen_demo.register"
