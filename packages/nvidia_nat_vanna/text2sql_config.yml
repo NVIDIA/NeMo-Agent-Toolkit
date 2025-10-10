@@ -15,7 +15,7 @@ functions:
     _type: text2sql
     llm_name: nim_llm
     embedder_name: nim_embedder
-
+    milvus_retriever: milvus_retriever
     # Database configuration
     database_type: databricks
     databricks_server_hostname: "${DATABRICKS_SERVER_HOSTNAME}"
@@ -24,7 +24,7 @@ functions:
     db_catalog: "main"
     db_schema: "default"
 
-    # Milvus configuration
+    # AsyncMilvus configuration
     milvus_host: "${MILVUS_HOST:-localhost}"
     milvus_port: 19530
     milvus_user: "root"
@@ -110,6 +110,17 @@ embedders:
     model_name: nvidia/llama-3.2-nv-embedqa-1b-v2
     api_key: "${NVIDIA_API_KEY}"
     base_url: https://integrate.api.nvidia.com/v1
+
+retrievers:
+  milvus_retriever:
+    _type: milvus_retriever
+    uri: "${MILVUS_URI:-http://localhost:19530}"
+    connection_args:
+      user: "root"
+      password: "${MILVUS_PASSWORD}"
+      db_name: "default"
+    embedding_model: nim_embedder
+    content_field: text
 
 # Workflow configuration - combines both functions
 workflow:
