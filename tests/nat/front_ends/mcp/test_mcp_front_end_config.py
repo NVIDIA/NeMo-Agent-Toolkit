@@ -16,7 +16,6 @@
 import pytest
 from pydantic import ValidationError
 
-from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 
 
@@ -110,7 +109,6 @@ def test_no_security_warning_with_auth(caplog):
 
 def test_security_warning_sse_with_auth(caplog):
     """Test that a warning is logged when SSE transport is used with authentication configured."""
-    config = MCPFrontEndConfig(transport="sse", server_auth=auth_config)
 
     # Check that a warning was logged about SSE not supporting auth
     assert any("SSE transport does not support authentication" in record.message for record in caplog.records)
