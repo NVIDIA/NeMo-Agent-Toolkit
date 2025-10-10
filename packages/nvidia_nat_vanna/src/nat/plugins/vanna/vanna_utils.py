@@ -247,6 +247,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             self.milvus_client = config["milvus_client"]
             self.async_milvus_client = config["async_milvus_client"]
             self.n_results = config.get("n_results", 5)
+            self._owns_sync_client = config.get("owns_sync_client", True)
 
             # Use configured embedder
             if config.get("embedder_client") is not None:
@@ -529,6 +530,25 @@ class MilvusVectorStore(Milvus_VectorStore):
 
         return df
 
+    async def close(self):
+        """Close Milvus client connections."""
+        try:
+            # Close async client (always owned by us)
+            if hasattr(self, 'async_milvus_client') and self.async_milvus_client is not None:
+                await self.async_milvus_client.close()
+                logger.info("Closed async Milvus client")
+        except Exception as e:
+            logger.warning(f"Error closing async Milvus client: {e}")
+
+        try:
+            # Close sync client only if we own it
+            if hasattr(self, '_owns_sync_client') and self._owns_sync_client:
+                if hasattr(self, 'milvus_client') and self.milvus_client is not None:
+                    self.milvus_client.close()
+                    logger.info("Closed sync Milvus client")
+        except Exception as e:
+            logger.warning(f"Error closing sync Milvus client: {e}")
+
 
 class VannaLangChain(MilvusVectorStore, VannaLangChainLLM):
     """Combined Vanna implementation with Milvus and LangChain LLM."""
@@ -632,6 +652,7 @@ async def get_vanna_instance(
     sql_collection: str = "vanna_sql",
     ddl_collection: str = "vanna_ddl",
     doc_collection: str = "vanna_documentation",
+    owns_sync_client: bool = True,
 ) -> VannaLangChain:
     """Get or create a singleton Vanna instance.
 
@@ -646,6 +667,7 @@ async def get_vanna_instance(
         sql_collection: Collection name for SQL examples
         ddl_collection: Collection name for DDL
         doc_collection: Collection name for documentation
+        owns_sync_client: Whether we own the sync client for cleanup
 
     Returns:
         Initialized Vanna instance
@@ -677,6 +699,7 @@ async def get_vanna_instance(
             "sql_collection": sql_collection,
             "ddl_collection": ddl_collection,
             "doc_collection": doc_collection,
+            "owns_sync_client": owns_sync_client,
         }
 
         logger.info(f"Creating new Vanna instance with LangChain (dialect: {dialect})")
@@ -686,12 +709,17 @@ async def get_vanna_instance(
         return _vanna_instance
 
 
-def reset_vanna_instance():
+async def reset_vanna_instance():
     """Reset the singleton Vanna instance.
 
     Useful for testing or when configuration changes.
     """
     global _vanna_instance
+    if _vanna_instance is not None:
+        try:
+            await _vanna_instance.close()
+        except Exception as e:
+            logger.warning(f"Error closing Vanna instance: {e}")
     _vanna_instance = None
 
 
@@ -706,19 +734,37 @@ async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
 
     # Train with DDL
     if auto_extract_ddl:
-        if vn.dialect == 'databricks':
-            from nat.plugins.vanna.db_schema import ACTIVE_TABLES
-            ddls = []
+        from nat.plugins.vanna.db_schema import ACTIVE_TABLES
+
+        dialect = vn.dialect.lower()
+        ddls = []
+
+        if dialect == 'databricks':
             for table in ACTIVE_TABLES:
                 ddl_sql = f"SHOW CREATE TABLE {table}"
                 ddl = await vn.run_sql(ddl_sql)
-                ddl = ddl.to_string() # Convert DataFrame to string
+                ddl = ddl.to_string()  # Convert DataFrame to string
                 ddls.append(ddl)
+
+        elif dialect == 'mysql':
+            for table in ACTIVE_TABLES:
+                ddl_sql = f"SHOW CREATE TABLE {table};"
+                ddl = await vn.run_sql(ddl_sql)
+                ddl = ddl.to_string()  # Convert DataFrame to string
+                ddls.append(ddl)
+
+        elif dialect == 'sqlite':
+            for table in ACTIVE_TABLES:
+                ddl_sql = f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table}';"
+                ddl = await vn.run_sql(ddl_sql)
+                ddl = ddl.to_string()  # Convert DataFrame to string
+                ddls.append(ddl)
+
         else:
             error_msg = (
                 f"Auto-extraction of DDL is not implemented for dialect: {vn.dialect}. "
-                "Only 'databricks' dialect is currently supported. "
-                "Please either set auto_extract_ddl=False or change the dialect to 'databricks'."
+                "Supported dialects: 'databricks', 'mysql', 'sqlite'. "
+                "Please either set auto_extract_ddl=False or use a supported dialect."
             )
             logger.error(error_msg)
             raise NotImplementedError(error_msg)

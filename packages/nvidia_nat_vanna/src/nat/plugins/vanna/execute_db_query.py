@@ -195,64 +195,67 @@ async def execute_db_query(
                 )
                 return
 
-            yield ResponseIntermediateStep(
-                id=str(uuid.uuid4()),
-                parent_id=parent_id,
-                type="markdown",
-                name="execute_db_query_status",
-                payload=StatusPayload(message="Executing SQL query...").model_dump_json(),
-            )
+            # Ensure connection is always closed
+            try:
+                yield ResponseIntermediateStep(
+                    id=str(uuid.uuid4()),
+                    parent_id=parent_id,
+                    type="markdown",
+                    name="execute_db_query_status",
+                    payload=StatusPayload(message="Executing SQL query...").model_dump_json(),
+                )
 
-            # Execute query
-            df = await async_query(
-                connection, sql_query, config.db_catalog, config.db_schema, config.database_type
-            )
+                # Execute query
+                df = await async_query(
+                    connection, sql_query, config.db_catalog, config.db_schema, config.database_type
+                )
 
-            # Close connection
-            connection.close()
+                yield ResponseIntermediateStep(
+                    id=str(uuid.uuid4()),
+                    parent_id=parent_id,
+                    type="markdown",
+                    name="execute_db_query_status",
+                    payload=StatusPayload(message="Processing results...").model_dump_json(),
+                )
 
-            yield ResponseIntermediateStep(
-                id=str(uuid.uuid4()),
-                parent_id=parent_id,
-                type="markdown",
-                name="execute_db_query_status",
-                payload=StatusPayload(message="Processing results...").model_dump_json(),
-            )
+                # Store original row count before limiting
+                original_row_count = len(df)
 
-            # Store original row count before limiting
-            original_row_count = len(df)
+                # Limit results
+                if original_row_count > config.max_rows:
+                    df = df.head(config.max_rows)
 
-            # Limit results
-            if original_row_count > config.max_rows:
-                df = df.head(config.max_rows)
+                # Create response
+                dataframe_info = DataFrameInfo(
+                    shape=[len(df), len(df.columns)] if not df.empty else [0, 0],
+                    dtypes=(
+                        {str(k): str(v) for k, v in df.dtypes.to_dict().items()}
+                        if not df.empty
+                        else {}
+                    ),
+                    columns=df.columns.tolist() if not df.empty else [],
+                )
 
-            # Create response
-            dataframe_info = DataFrameInfo(
-                shape=[len(df), len(df.columns)] if not df.empty else [0, 0],
-                dtypes=(
-                    {str(k): str(v) for k, v in df.dtypes.to_dict().items()}
-                    if not df.empty
-                    else {}
-                ),
-                columns=df.columns.tolist() if not df.empty else [],
-            )
+                response = ExecuteDBQueryOutput(
+                    success=True,
+                    columns=df.columns.tolist() if not df.empty else [],
+                    row_count=original_row_count,
+                    sql_query=sql_query,
+                    query_executed=sql_query,
+                    dataframe_records=df.to_dict("records") if not df.empty else [],
+                    dataframe_info=dataframe_info,
+                )
 
-            response = ExecuteDBQueryOutput(
-                success=True,
-                columns=df.columns.tolist() if not df.empty else [],
-                row_count=original_row_count,
-                sql_query=sql_query,
-                query_executed=sql_query,
-                dataframe_records=df.to_dict("records") if not df.empty else [],
-                dataframe_info=dataframe_info,
-            )
+                if original_row_count > config.max_rows:
+                    response.limited_to = config.max_rows
+                    response.truncated = True
 
-            if original_row_count > config.max_rows:
-                response.limited_to = config.max_rows
-                response.truncated = True
-
-            # Yield final result as ExecuteDBQueryOutput
-            yield response
+                # Yield final result as ExecuteDBQueryOutput
+                yield response
+            finally:
+                # Always close connection
+                connection.close()
+                logger.debug("Database connection closed")
 
         except Exception as e:
             logger.error(f"Error executing SQL query: {e}")

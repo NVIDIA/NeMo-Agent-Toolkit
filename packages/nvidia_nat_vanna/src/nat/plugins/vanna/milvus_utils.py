@@ -11,7 +11,6 @@ def create_milvus_client(
     user: str | None = None,
     password: str | None = None,
     db_name: str | None = None,
-    use_tls: bool = True,
     is_async: bool = False,
 ):
     """Create Milvus client (sync or async).
@@ -22,7 +21,6 @@ def create_milvus_client(
         user: Milvus username
         password: Milvus password
         db_name: Milvus database name
-        use_tls: Use TLS for connection
         is_async: Create async client
 
     Returns:
@@ -35,9 +33,8 @@ def create_milvus_client(
     port = port or 19530
     db_name = db_name or "default"
 
-    # Build URI
-    protocol = "https" if use_tls else "http"
-    uri = f"{protocol}://{host}:{port}"
+    # Build URI (default to http as standard for Milvus)
+    uri = f"http://{host}:{port}"
 
     # Create client config
     client_config = {"uri": uri, "db_name": db_name, "timeout": 60.0}
