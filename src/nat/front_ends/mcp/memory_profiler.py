@@ -100,7 +100,8 @@ class MemoryProfiler:
 
         try:
             current, peak = tracemalloc.get_traced_memory()
-            return (current / 1024 / 1024, peak / 1024 / 1024)
+            megabyte = (1 << 20)
+            return (current / megabyte, peak / megabyte)
         except RuntimeError:
             return None
 
