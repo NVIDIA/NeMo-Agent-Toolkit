@@ -51,7 +51,7 @@ def phoenix_url_fixture(fail_missing: bool) -> str:
     """
     import requests
 
-    url = os.getenv("NAT_CI_PHOENIX_URL", "http://localhost:6006/v1/traces")
+    url = os.getenv("NAT_CI_PHOENIX_URL", "http://localhost:6006")
     try:
         response = requests.get(url, timeout=5)
         response.raise_for_status()
@@ -99,16 +99,25 @@ async def test_full_workflow(phoenix_url: str):
     from nat.test.utils import locate_example_config
     from nat.test.utils import run_workflow
 
+    phoenix_trace_url = f"{phoenix_url}/v1/traces"
+
     # This workflow requires a prior trace to be ingested into Phoenix.
     cur_dir = Path(__file__).parent
     examples_dir = cur_dir.parent.parent.parent
-    simple_calc_observe_config = (examples_dir /
-                                  "observability/simple_calculator_observability/configs/config-phoenix.yml")
+    simple_calc_observe_config_file = (examples_dir /
+                                       "observability/simple_calculator_observability/configs/config-phoenix.yml")
 
-    await run_workflow(simple_calc_observe_config, "add 1 and 2", "3", assert_expected_answer=False)
+    simple_calc_observe_config = load_config(simple_calc_observe_config_file)
+    simple_calc_observe_config.general.telemetry.tracing["phoenix"].endpoint = phoenix_trace_url
+
+    await run_workflow(config_file=None, config=simple_calc_observe_config, question="add 1 and 2", expected_answer="3")
 
     config_file: Path = locate_example_config(ProfilerAgentConfig)
     config = load_config(config_file)
-    config.general.telemetry.tracing["phoenix"].endpoint = phoenix_url
+    config.general.telemetry.tracing["phoenix"].endpoint = phoenix_trace_url
+    config.functions["px_query"].phoenix_url = phoenix_url
 
-    await run_workflow(config_file, "Show me the token usage of last run", "tokens")
+    await run_workflow(config_file=None,
+                       config=config,
+                       question="Show me the token usage of last run",
+                       expected_answer="tokens")
