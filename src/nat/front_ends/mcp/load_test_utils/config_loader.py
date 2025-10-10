@@ -38,8 +38,8 @@ def load_config_from_yaml(config_path: str | Path) -> LoadTestConfig:
         FileNotFoundError: If the config file doesn't exist
         ValueError: If the config file is invalid
 
-    Example YAML structure:
-        ```yaml
+    Example YAML structure::
+
         # Path to NAT workflow config file
         config_file: "examples/getting_started/simple_calculator/configs/config.yml"
 
@@ -69,7 +69,7 @@ def load_config_from_yaml(config_path: str | Path) -> LoadTestConfig:
             args:
               text: "10 / 2"
             weight: 1.0
-        ```
+
     """
     config_path = Path(config_path)
 
