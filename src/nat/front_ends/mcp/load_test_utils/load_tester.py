@@ -131,6 +131,18 @@ class MCPLoadTest:
         endpoint = "mcp" if self.config.transport == "streamable-http" else "sse"
         return f"http://{self.config.server_host}:{self.config.server_port}/{endpoint}"
 
+    def _client_ctx(self):
+        """Get the appropriate MCP client context manager based on transport type.
+
+        Returns:
+            Client context manager (streamablehttp_client or sse_client)
+        """
+        if self.config.transport == "streamable-http":
+            return streamablehttp_client(url=self.server_url)
+        else:
+            from mcp.client.sse import sse_client
+            return sse_client(url=self.server_url)
+
     async def _start_server(self) -> None:
         """Start the MCP server."""
         logger.info("Starting MCP server with config: %s", self.config.config_file)
@@ -160,7 +172,7 @@ class MCPLoadTest:
         max_retries = 30
         for i in range(max_retries):
             try:
-                async with streamablehttp_client(url=self.server_url) as ctx:
+                async with self._client_ctx() as ctx:
                     read, write = (ctx[0], ctx[1]) if isinstance(ctx, tuple) else ctx
                     async with ClientSession(read, write) as session:
                         await session.initialize()
@@ -210,7 +222,7 @@ class MCPLoadTest:
         timestamp = start_time
 
         try:
-            async with streamablehttp_client(url=self.server_url) as ctx:
+            async with self._client_ctx() as ctx:
                 read, write = (ctx[0], ctx[1]) if isinstance(ctx, tuple) else ctx
                 async with ClientSession(read, write) as session:
                     await session.initialize()

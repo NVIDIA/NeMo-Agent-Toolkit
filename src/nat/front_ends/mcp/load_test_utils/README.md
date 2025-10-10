@@ -25,10 +25,8 @@ Before running load tests, ensure you have the following:
 
 - NeMo Agent toolkit with MCP support installed through `nvidia-nat[mcp]`
 - Valid NeMo Agent toolkit workflow configuration with MCP-compatible tools
-- Python 3.10 or higher
-- `psutil` package for memory monitoring
 
-The `psutil` package is required for monitoring server memory usage during load tests. Install it using one of the following methods:
+The `psutil` package is required for monitoring server memory usage during load tests. Install it using the following command:
 
 ```bash
 uv pip install psutil
@@ -41,12 +39,6 @@ Run a load test from the project root:
 ```bash
 python src/nat/front_ends/mcp/load_test_utils/cli.py \
   --config_file=src/nat/front_ends/mcp/load_test_utils/configs/config.yml
-```
-
-List available configurations:
-
-```bash
-python src/nat/front_ends/mcp/load_test_utils/cli.py --list-configs
 ```
 
 Get help:
@@ -243,12 +235,3 @@ Human-readable summary with the following statistics:
 
 **Error Analysis**
 : Breakdown of failed requests by error type
-
-## Creating Custom Tests
-
-Create a custom load test configuration `my_test.yml` then run your test:
-
-```bash
-python src/nat/front_ends/mcp/load_test_utils/cli.py \
-  --config_file=src/nat/front_ends/mcp/load_test_utils/configs/my_test.yml
-```

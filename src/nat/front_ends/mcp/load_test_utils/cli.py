@@ -81,34 +81,7 @@ Configuration File Format:
         help="Enable verbose debug logging",
     )
 
-    parser.add_argument(
-        "--list-configs",
-        action="store_true",
-        help="List available configuration files in the configs/ directory",
-    )
-
     return parser.parse_args()
-
-
-def list_configs():
-    """List available configuration files."""
-    configs_dir = Path(__file__).parent / "configs"
-
-    if not configs_dir.exists():
-        logger.error("Configs directory not found: %s", configs_dir)
-        return
-
-    yml_files = sorted(configs_dir.glob("*.yml"))
-    yaml_files = sorted(configs_dir.glob("*.yaml"))
-    config_files = yml_files + yaml_files
-
-    if not config_files:
-        logger.info("No configuration files found in %s", configs_dir)
-        return
-
-    logger.info("Available configuration files:")
-    for config_file in config_files:
-        logger.info("  - %s", config_file.name)
 
 
 def print_summary(results: dict):
@@ -186,11 +159,6 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
         logger.debug("Verbose logging enabled")
 
-    # List configs if requested
-    if args.list_configs:
-        list_configs()
-        return 0
-
     # Validate config file path
     config_path = Path(args.config_file)
 
@@ -205,7 +173,6 @@ def main():
             logger.info("Found config at: %s", alternative_path)
             config_path = alternative_path
         else:
-            logger.info("\nTip: Use --list-configs to see available configuration files")
             return 1
 
     logger.info("Starting MCP load test")
