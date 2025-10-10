@@ -18,9 +18,8 @@
 Run load tests against MCP servers using YAML configuration files.
 
 Usage:
-    python run_load_test.py --config_file=./configs/example_config.yml
-    python run_load_test.py --config_file=./configs/quick_test_config.yml
-    python run_load_test.py -c configs/example_config.yml
+    python cli.py --config_file=./configs/config.yml
+    python cli.py -c configs/config.yml --verbose
 """
 
 import argparse
@@ -46,14 +45,14 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Run with example config
-  python run_load_test.py --config_file=configs/example_config.yml
+  # Run with config file
+  python cli.py --config_file=configs/config.yml
 
-  # Run with quick test config
-  python run_load_test.py --config_file=configs/quick_test_config.yml
+  # With verbose logging
+  python cli.py --config_file=configs/config.yml --verbose
 
   # Short form
-  python run_load_test.py -c configs/example_config.yml
+  python cli.py -c configs/config.yml
 
 Configuration File Format:
   The YAML config file should contain:
@@ -63,7 +62,7 @@ Configuration File Format:
     - output: Output directory configuration
     - tool_calls: List of tool calls to execute
 
-  See configs/example_config.yml for a complete example.
+  See configs/config.yml for a complete example.
         """,
     )
 
@@ -72,7 +71,7 @@ Configuration File Format:
         "--config_file",
         type=str,
         required=True,
-        help="Path to YAML configuration file (e.g., configs/example_config.yml)",
+        help="Path to YAML configuration file (e.g., configs/config.yml)",
     )
 
     parser.add_argument(

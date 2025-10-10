@@ -19,9 +19,9 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 if TYPE_CHECKING:
-    from nat.front_ends.mcp.load_test_utils.load_test import LoadTestConfig
-    from nat.front_ends.mcp.load_test_utils.load_test import MemorySample
-    from nat.front_ends.mcp.load_test_utils.load_test import ToolCallResult
+    from nat.front_ends.mcp.load_test_utils.load_tester import LoadTestConfig
+    from nat.front_ends.mcp.load_test_utils.load_tester import MemorySample
+    from nat.front_ends.mcp.load_test_utils.load_tester import ToolCallResult
 
 
 def generate_summary_report(

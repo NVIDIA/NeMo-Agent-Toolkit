@@ -588,7 +588,7 @@ def run_load_test_from_yaml(yaml_config_path: str) -> dict[str, Any]:
         ```python
         from nat.front_ends.mcp.load_test_utils import run_load_test_from_yaml
 
-        results = run_load_test_from_yaml("configs/example_config.yml")
+        results = run_load_test_from_yaml("configs/config.yml")
         ```
     """
     from nat.front_ends.mcp.load_test_utils.config_loader import load_config_from_yaml

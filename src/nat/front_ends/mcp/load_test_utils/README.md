@@ -25,29 +25,23 @@ Run a load test using the main entry point script:
 
 ```bash
 # From the load_test_utils directory
-python run_load_test.py --config_file=configs/example_config.yml
+python cli.py --config_file=configs/config.yml
 
 # Or from the project root
-python src/nat/front_ends/mcp/load_test_utils/run_load_test.py \
-  --config_file=src/nat/front_ends/mcp/load_test_utils/configs/example_config.yml
-```
-
-Quick 10-second test:
-
-```bash
-python run_load_test.py --config_file=configs/quick_test_config.yml
+python src/nat/front_ends/mcp/load_test_utils/cli.py \
+  --config_file=src/nat/front_ends/mcp/load_test_utils/configs/config.yml
 ```
 
 List available configurations:
 
 ```bash
-python run_load_test.py --list-configs
+python cli.py --list-configs
 ```
 
 Get help:
 
 ```bash
-python run_load_test.py --help
+python cli.py --help
 ```
 
 ## Configuration
@@ -128,13 +122,13 @@ Run load tests using the main entry point script:
 
 ```bash
 # Basic usage
-python run_load_test.py --config_file=configs/example_config.yml
+python cli.py --config_file=configs/config.yml
 
 # With verbose logging
-python run_load_test.py --config_file=configs/example_config.yml --verbose
+python cli.py --config_file=configs/config.yml --verbose
 
 # Short form
-python run_load_test.py -c configs/quick_test_config.yml
+python cli.py -c configs/config.yml
 ```
 
 ### Python API
@@ -144,7 +138,7 @@ python run_load_test.py -c configs/quick_test_config.yml
 ```python
 from nat.front_ends.mcp.load_test_utils import run_load_test_from_yaml
 
-results = run_load_test_from_yaml("configs/example_config.yml")
+results = run_load_test_from_yaml("configs/config.yml")
 ```
 
 #### Programmatic Usage (Advanced)
@@ -189,9 +183,9 @@ The load test generates two report files in the output directory:
 
 ## Creating Custom Tests
 
-1. Copy an existing config from the `configs/` directory:
+1. Copy the config file from the `configs/` directory:
    ```bash
-   cp configs/example_config.yml configs/my_test.yml
+   cp configs/config.yml configs/my_test.yml
    ```
 
 2. Modify the parameters in `configs/my_test.yml` for your use case:
@@ -201,7 +195,7 @@ The load test generates two report files in the output directory:
 
 3. Run your custom test:
    ```bash
-   python run_load_test.py --config_file=configs/my_test.yml
+   python cli.py --config_file=configs/my_test.yml
    ```
 
 ## Requirements
