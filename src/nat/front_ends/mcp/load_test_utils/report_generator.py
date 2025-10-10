@@ -59,7 +59,6 @@ def generate_summary_report(
     failed_count = len(failed)
     success_rate = (successful_count / total_requests) * 100 if total_requests > 0 else 0.0
 
-    # Calculate latency statistics (only for successful requests)
     latencies = [r.latency_ms for r in successful]
 
     if latencies:
@@ -83,7 +82,6 @@ def generate_summary_report(
             "stdev_ms": 0.0,
         }
 
-    # Per-tool statistics
     tool_stats: dict[str, dict[str, Any]] = {}
     tool_names = set(r.tool_name for r in results)
 
@@ -102,15 +100,12 @@ def generate_summary_report(
             "p95_latency_ms": _percentile(tool_latencies, 0.95) if tool_latencies else 0.0,
         }
 
-    # Error analysis
     error_counts: dict[str, int] = {}
     for result in failed:
         error_msg = result.error or "Unknown error"
-        # Truncate long error messages
         error_key = error_msg[:100]
         error_counts[error_key] = error_counts.get(error_key, 0) + 1
 
-    # Memory statistics
     memory_stats: dict[str, Any] = {}
     if memory_samples:
         rss_values = [sample.rss_mb for sample in memory_samples]
@@ -175,8 +170,8 @@ def _percentile(data: list[float], percentile: float) -> float:
     """Calculate percentile value.
 
     Args:
-        data: Sorted or unsorted list of values
-        percentile: Percentile to calculate (0.0 to 1.0)
+        data: List of values
+        percentile: Percentile to calculate
 
     Returns:
         Percentile value

@@ -46,7 +46,7 @@ class ToolCallConfig:
     """Arguments to pass to the tool"""
 
     weight: float = 1.0
-    """Relative weight for this tool call (higher = more frequent)"""
+    """Relative weight for this tool call"""
 
 
 @dataclass
@@ -72,13 +72,13 @@ class LoadTestConfig:
     """MCP server port"""
 
     transport: str = "streamable-http"
-    """Transport type (streamable-http or sse)"""
+    """Transport type"""
 
     warmup_seconds: int = 5
     """Warmup period before starting measurements"""
 
     output_dir: str | None = None
-    """Output directory for reports (default: load_test_results)"""
+    """Output directory for reports"""
 
 
 @dataclass
@@ -98,9 +98,9 @@ class MemorySample:
     """Memory usage sample at a point in time."""
 
     timestamp: float
-    rss_mb: float  # Resident Set Size in MB
-    vms_mb: float  # Virtual Memory Size in MB
-    percent: float  # Memory usage percentage
+    rss_mb: float
+    vms_mb: float
+    percent: float
 
 
 class MCPLoadTest:
@@ -119,7 +119,6 @@ class MCPLoadTest:
         self.server_url = self._get_server_url()
         self._memory_monitor_task: asyncio.Task | None = None
 
-        # Set up output directory
         if config.output_dir:
             self.output_dir = Path(config.output_dir)
         else:
@@ -135,7 +134,7 @@ class MCPLoadTest:
         """Get the appropriate MCP client context manager based on transport type.
 
         Returns:
-            Client context manager (streamablehttp_client or sse_client)
+            Client context manager for the configured transport
         """
         if self.config.transport == "streamable-http":
             return streamablehttp_client(url=self.server_url)
@@ -168,7 +167,6 @@ class MCPLoadTest:
             text=True,
         )
 
-        # Wait for server to be ready
         max_retries = 30
         for i in range(max_retries):
             try:
@@ -206,7 +204,6 @@ class MCPLoadTest:
             if r <= cumulative:
                 return tool_call
 
-        # Fallback to first tool call
         return self.config.tool_calls[0]
 
     async def _call_tool(self, tool_call: ToolCallConfig) -> ToolCallResult:
@@ -228,7 +225,6 @@ class MCPLoadTest:
                     await session.initialize()
                     result = await session.call_tool(tool_call.tool_name, tool_call.args)
 
-            # Extract response
             outputs: list[str] = []
             for content in result.content:
                 if isinstance(content, TextContent):
@@ -277,7 +273,6 @@ class MCPLoadTest:
             result = await self._call_tool(tool_call)
             self.results.append(result)
 
-            # Small random delay between calls to simulate realistic behavior
             await asyncio.sleep(random.uniform(0.1, 0.2))
 
         logger.debug("User %d finished simulation", user_id)
@@ -305,14 +300,14 @@ class MCPLoadTest:
                 self.memory_samples.append(
                     MemorySample(
                         timestamp=time.time(),
-                        rss_mb=mem_info.rss / (1024 * 1024),  # Convert to MB
-                        vms_mb=mem_info.vms / (1024 * 1024),  # Convert to MB
+                        rss_mb=mem_info.rss / (1024 * 1024),
+                        vms_mb=mem_info.vms / (1024 * 1024),
                         percent=mem_percent,
                     ))
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 break
 
-            await asyncio.sleep(1.0)  # Sample every second
+            await asyncio.sleep(1.0)
 
     async def run(self) -> dict[str, Any]:
         """Run the load test.
@@ -322,11 +317,9 @@ class MCPLoadTest:
         """
         logger.info("Starting load test with config: %s", self.config)
 
-        # Start server
         await self._start_server()
 
         try:
-            # Warmup period
             if self.config.warmup_seconds > 0:
                 logger.info("Warming up for %d seconds", self.config.warmup_seconds)
                 warmup_end = time.time() + self.config.warmup_seconds
@@ -335,9 +328,8 @@ class MCPLoadTest:
                     for i in range(min(3, self.config.num_concurrent_users))
                 ]
                 await asyncio.gather(*warmup_tasks)
-                self.results.clear()  # Clear warmup results
+                self.results.clear()
 
-            # Actual load test
             logger.info(
                 "Starting load test: %d concurrent users for %d seconds",
                 self.config.num_concurrent_users,
@@ -347,19 +339,15 @@ class MCPLoadTest:
             test_start_time = time.time()
             test_end_time = test_start_time + self.config.duration_seconds
 
-            # Start memory monitoring
             self._memory_monitor_task = asyncio.create_task(self._monitor_memory(test_end_time))
 
-            # Create concurrent user simulations
             tasks = [
                 asyncio.create_task(self._user_simulation(i, test_end_time))
                 for i in range(self.config.num_concurrent_users)
             ]
 
-            # Wait for all users to complete
             await asyncio.gather(*tasks)
 
-            # Wait for memory monitoring to complete
             if self._memory_monitor_task:
                 await self._memory_monitor_task
 
@@ -367,14 +355,12 @@ class MCPLoadTest:
 
             logger.info("Load test completed. Total calls: %d", len(self.results))
 
-            # Generate reports
             summary = generate_summary_report(self.results, test_duration, self.config, self.memory_samples)
             self._save_reports(summary)
 
             return summary
 
         finally:
-            # Stop server
             await self._stop_server()
 
     def _save_reports(self, summary: dict[str, Any]) -> None:
@@ -385,12 +371,10 @@ class MCPLoadTest:
         """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # Save detailed results as CSV
         csv_file = self.output_dir / f"load_test_{timestamp}.csv"
         self._save_csv(csv_file)
         logger.info("Saved CSV report: %s", csv_file)
 
-        # Save summary as text file
         summary_file = self.output_dir / f"load_test_{timestamp}_summary.txt"
         self._save_summary_text(summary_file, summary)
         logger.info("Saved summary report: %s", summary_file)
@@ -417,13 +401,11 @@ class MCPLoadTest:
             ])
 
             for result in self.results:
-                # Find the closest memory sample for this result
                 memory_rss = ""
                 memory_vms = ""
                 memory_percent = ""
 
                 if self.memory_samples:
-                    # Find the closest memory sample by timestamp
                     closest_sample = min(
                         self.memory_samples,
                         key=lambda sample: abs(sample.timestamp - result.timestamp),
@@ -455,7 +437,6 @@ class MCPLoadTest:
             f.write("MCP LOAD TEST SUMMARY\n")
             f.write("=" * 70 + "\n\n")
 
-            # Test configuration
             f.write("TEST CONFIGURATION\n")
             f.write("-" * 70 + "\n")
             config_data = summary.get("test_configuration", {})
@@ -463,7 +444,6 @@ class MCPLoadTest:
                 f.write(f"{key.replace('_', ' ').title()}: {value}\n")
             f.write("\n")
 
-            # Summary metrics
             f.write("SUMMARY METRICS\n")
             f.write("-" * 70 + "\n")
             summary_data = summary.get("summary", {})
@@ -471,7 +451,6 @@ class MCPLoadTest:
                 f.write(f"{key.replace('_', ' ').title()}: {value}\n")
             f.write("\n")
 
-            # Latency statistics
             f.write("LATENCY STATISTICS\n")
             f.write("-" * 70 + "\n")
             latency_data = summary.get("latency_statistics", {})
@@ -479,7 +458,6 @@ class MCPLoadTest:
                 f.write(f"{key.upper()}: {value:.2f} ms\n")
             f.write("\n")
 
-            # Memory statistics
             memory_data = summary.get("memory_statistics", {})
             if memory_data:
                 f.write("MEMORY STATISTICS\n")
@@ -491,7 +469,6 @@ class MCPLoadTest:
                         f.write(f"{key.replace('_', ' ').title()}: {value}\n")
                 f.write("\n")
 
-            # Per-tool statistics
             f.write("PER-TOOL STATISTICS\n")
             f.write("-" * 70 + "\n")
             tool_stats = summary.get("per_tool_statistics", {})
@@ -503,7 +480,6 @@ class MCPLoadTest:
                     else:
                         f.write(f"  {key.replace('_', ' ').title()}: {value}\n")
 
-            # Errors
             errors = summary.get("errors", {})
             if errors:
                 f.write("\nERRORS\n")
@@ -529,19 +505,18 @@ def run_load_test(
 
     Args:
         config_file: Path to NAT workflow config file
-        tool_calls: List of tool call configurations.
+        tool_calls: List of tool call configurations
         num_concurrent_users: Number of concurrent users to simulate
         duration_seconds: Duration of the load test
         server_host: MCP server host
         server_port: MCP server port
-        transport: Transport type (streamable-http or sse)
+        transport: Transport type
         warmup_seconds: Warmup period before measurements
         output_dir: Output directory for reports
 
     Returns:
         Dictionary containing test results and statistics
     """
-    # Convert tool_calls dict to ToolCallConfig objects
     if tool_calls is None:
         raise ValueError("tool_calls must be provided")
 

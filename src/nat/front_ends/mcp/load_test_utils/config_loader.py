@@ -51,31 +51,26 @@ def load_config_from_yaml(config_path: str | Path) -> LoadTestConfig:
     if not config_data:
         raise ValueError("Config file is empty")
 
-    # Extract required field
     config_file = config_data.get("config_file")
     if not config_file:
-        raise ValueError("'config_file' is required in the config")
+        raise ValueError("config_file is required in the config")
 
-    # Extract server configuration
     server_config = config_data.get("server", {})
     server_host = server_config.get("host", "localhost")
     server_port = server_config.get("port", 9901)
     transport = server_config.get("transport", "streamable-http")
 
-    # Extract load test parameters
     load_test_config = config_data.get("load_test", {})
     num_concurrent_users = load_test_config.get("num_concurrent_users", 10)
     duration_seconds = load_test_config.get("duration_seconds", 60)
     warmup_seconds = load_test_config.get("warmup_seconds", 5)
 
-    # Extract output configuration
     output_config = config_data.get("output", {})
     output_dir = output_config.get("directory", None)
 
-    # Extract tool calls
     tool_calls_data = config_data.get("tool_calls", [])
     if not tool_calls_data:
-        raise ValueError("At least one tool call must be specified in 'tool_calls'")
+        raise ValueError("At least one tool call must be specified in tool_calls")
 
     tool_calls = []
     for tc in tool_calls_data:
@@ -130,7 +125,7 @@ def validate_config(config: LoadTestConfig) -> None:
         raise ValueError("At least one tool call must be specified")
 
     if config.transport not in ["streamable-http", "sse"]:
-        raise ValueError("transport must be 'streamable-http' or 'sse'")
+        raise ValueError("transport must be streamable-http or sse")
 
     if config.server_port < 1 or config.server_port > 65535:
         raise ValueError("server_port must be between 1 and 65535")
