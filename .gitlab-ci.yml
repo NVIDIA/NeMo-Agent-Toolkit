@@ -43,7 +43,7 @@ variables:
   NAT_CI_MILVUS_HOST: "milvus"
   NAT_CI_MYSQL_HOST: "mysql"
   NAT_CI_OPENSEARCH_URL: "http://opensearch:9200"
-  NAT_CI_PHOENIX_URL: "http://phoenix:6006/v1/traces"
+  NAT_CI_PHOENIX_URL: "http://phoenix:6006"
   NAT_CI_REDIS_HOST: "redis"
   NAT_CI_S3_HOST: "minio"
   UV_CACHE_DIR: .uv-cache
