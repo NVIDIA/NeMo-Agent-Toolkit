@@ -19,8 +19,8 @@ from pathlib import Path
 
 import yaml
 
-from nat.front_ends.mcp.load_test_utils.load_tester import LoadTestConfig
-from nat.front_ends.mcp.load_test_utils.load_tester import ToolCallConfig
+from nat.test.mcp.load_test_utils.load_tester import LoadTestConfig
+from nat.test.mcp.load_test_utils.load_tester import ToolCallConfig
 
 logger = logging.getLogger(__name__)
 

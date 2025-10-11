@@ -30,7 +30,7 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
 
-from nat.front_ends.mcp.load_test_utils.report_generator import generate_summary_report
+from nat.test.mcp.load_test_utils.report_generator import generate_summary_report
 
 logger = logging.getLogger(__name__)
 
@@ -553,8 +553,8 @@ def run_load_test_from_yaml(yaml_config_path: str) -> dict[str, Any]:
     Returns:
         Dictionary containing test results and statistics
     """
-    from nat.front_ends.mcp.load_test_utils.config_loader import load_config_from_yaml
-    from nat.front_ends.mcp.load_test_utils.config_loader import validate_config
+    from nat.test.mcp.load_test_utils.config_loader import load_config_from_yaml
+    from nat.test.mcp.load_test_utils.config_loader import validate_config
 
     config = load_config_from_yaml(yaml_config_path)
     validate_config(config)

@@ -37,14 +37,14 @@ uv pip install psutil
 Run a load test from the project root:
 
 ```bash
-python src/nat/front_ends/mcp/load_test_utils/cli.py \
-  --config_file=src/nat/front_ends/mcp/load_test_utils/configs/config.yml
+python packages/nvidia_nat_test/src/nat/test/mcp/load_test_utils/cli.py \
+  --config_file=packages/nvidia_nat_test/src/nat/test/mcp/load_test_utils/configs/config.yml
 ```
 
 Get help:
 
 ```bash
-python src/nat/front_ends/mcp/load_test_utils/cli.py --help
+python packages/nvidia_nat_test/src/nat/test/mcp/load_test_utils/cli.py --help
 ```
 
 ## Configuration
@@ -147,17 +147,17 @@ Run load tests from the project root using the command-line interface:
 
 ```bash
 # Basic usage
-python src/nat/front_ends/mcp/load_test_utils/cli.py \
-  --config_file=src/nat/front_ends/mcp/load_test_utils/configs/config.yml
+python packages/nvidia_nat_test/src/nat/test/mcp/load_test_utils/cli.py \
+  --config_file=packages/nvidia_nat_test/src/nat/test/mcp/load_test_utils/configs/config.yml
 
 # With verbose logging
-python src/nat/front_ends/mcp/load_test_utils/cli.py \
-  --config_file=src/nat/front_ends/mcp/load_test_utils/configs/config.yml \
+python packages/nvidia_nat_test/src/nat/test/mcp/load_test_utils/cli.py \
+  --config_file=packages/nvidia_nat_test/src/nat/test/mcp/load_test_utils/configs/config.yml \
   --verbose
 
 # Short form
-python src/nat/front_ends/mcp/load_test_utils/cli.py \
-  -c src/nat/front_ends/mcp/load_test_utils/configs/config.yml
+python packages/nvidia_nat_test/src/nat/test/mcp/load_test_utils/cli.py \
+  -c packages/nvidia_nat_test/src/nat/test/mcp/load_test_utils/configs/config.yml
 ```
 
 ### Python API
@@ -165,17 +165,17 @@ python src/nat/front_ends/mcp/load_test_utils/cli.py \
 #### Using YAML Configuration
 
 ```python
-from nat.front_ends.mcp.load_test_utils import run_load_test_from_yaml
+from nat.test.mcp.load_test_utils import run_load_test_from_yaml
 
 results = run_load_test_from_yaml(
-    "src/nat/front_ends/mcp/load_test_utils/configs/config.yml"
+    "packages/nvidia_nat_test/src/nat/test/mcp/load_test_utils/configs/config.yml"
 )
 ```
 
 #### Programmatic Usage
 
 ```python
-from nat.front_ends.mcp.load_test_utils import run_load_test
+from nat.test.mcp.load_test_utils import run_load_test
 
 results = run_load_test(
     config_file="examples/getting_started/simple_calculator/configs/config.yml",

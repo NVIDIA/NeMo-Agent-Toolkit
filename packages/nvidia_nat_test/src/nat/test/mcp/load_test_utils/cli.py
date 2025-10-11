@@ -23,7 +23,7 @@ import logging
 import sys
 from pathlib import Path
 
-from nat.front_ends.mcp.load_test_utils import run_load_test_from_yaml
+from nat.test.mcp.load_test_utils import run_load_test_from_yaml
 
 # Configure logging
 logging.basicConfig(
