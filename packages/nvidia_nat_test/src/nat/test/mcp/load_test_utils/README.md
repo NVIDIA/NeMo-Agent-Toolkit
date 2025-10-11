@@ -24,6 +24,7 @@ This utility simulates concurrent users making tool calls to MCP servers and gen
 Before running load tests, ensure you have the following:
 
 - NeMo Agent toolkit with MCP support installed through `nvidia-nat[mcp]`
+- NeMo Agent toolkit with Test support installed through `nvidia-nat[test]`
 - Valid NeMo Agent toolkit workflow configuration with MCP-compatible tools
 
 The `psutil` package is required for monitoring server memory usage during load tests. Install it using the following command:
