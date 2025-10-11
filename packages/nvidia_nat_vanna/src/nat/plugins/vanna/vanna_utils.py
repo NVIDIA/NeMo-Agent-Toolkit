@@ -46,6 +46,7 @@ def extract_json_from_string(content: str) -> dict:
     except json.JSONDecodeError:
         try:
             # Extract JSON from string that may contain additional content
+            json_str = content
             # Try to find JSON between ``` markers
             if "```" in content:
                 json_start = content.find("```")
@@ -105,8 +106,8 @@ class VannaLangChainLLM(VannaBase):
 
         self.client = client
         self.config = config or {}
-        self.dialect = config.get("dialect", "SQL")
-        self.model = getattr(client, "model", "unknown")
+        self.dialect = self.config.get("dialect", "SQL")
+        self.model = getattr(self.client, "model", "unknown")
 
     def system_message(self, message: str) -> dict:
         """Create system message."""
@@ -155,12 +156,13 @@ class VannaLangChainLLM(VannaBase):
 
     def get_sql_prompt(
         self,
-        initial_prompt: str,
+        initial_prompt: str | None,
         question: str,
         question_sql_list: list,
         ddl_list: list,
         doc_list: list,
         error_message: dict | None = None,
+        **kwargs,
     ) -> list:
         """Generate prompt for SQL generation."""
         if initial_prompt is None:
@@ -212,7 +214,7 @@ class VannaLangChainLLM(VannaBase):
         message_log.append(self.user_message(question))
         return message_log
 
-    async def submit_prompt(self, prompt) -> str:
+    async def submit_prompt(self, prompt, **kwargs) -> str:
         """Submit prompt to LLM."""
         try:
             # Determine model name
@@ -388,7 +390,7 @@ class MilvusVectorStore(Milvus_VectorStore):
                 consistency_level="Strong",
             )
 
-    def add_question_sql(self, question: str, sql: str) -> str:
+    def add_question_sql(self, question: str, sql: str, **kwargs) -> str:
         """Add question-SQL pair to collection."""
         if len(question) == 0 or len(sql) == 0:
             msg = "Question and SQL cannot be empty"
@@ -399,7 +401,7 @@ class MilvusVectorStore(Milvus_VectorStore):
         self.milvus_client.insert(collection_name=self.sql_collection, data=data)
         return _id
 
-    def add_ddl(self, ddl: str) -> str:
+    def add_ddl(self, ddl: str, **kwargs) -> str:
         """Add DDL to collection."""
         if len(ddl) == 0:
             msg = "DDL cannot be empty"
@@ -412,7 +414,7 @@ class MilvusVectorStore(Milvus_VectorStore):
         )
         return _id
 
-    def add_documentation(self, documentation: str) -> str:
+    def add_documentation(self, documentation: str, **kwargs) -> str:
         """Add documentation to collection."""
         if len(documentation) == 0:
             msg = "Documentation cannot be empty"
@@ -477,7 +479,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             logger.error(f"Error retrieving similar questions: {e}")
         return list_sql
 
-    def get_training_data(self):
+    def get_training_data(self, **kwargs):
         """Get all training data."""
         import pandas as pd
 
