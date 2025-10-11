@@ -64,8 +64,8 @@ def extract_sql_from_message(sql_query: str | Any) -> str:
 
     # Try to parse as JSON if it looks like JSON
     if isinstance(sql_query, str) and sql_query.strip().startswith("{"):
+        import json
         try:
-            import json
             parsed = json.loads(sql_query)
             if isinstance(parsed, dict) and "sql" in parsed:
                 return parsed["sql"]
@@ -181,7 +181,7 @@ def connect_to_database(
     if database_type == "databricks":
         return connect_to_databricks(
             server_hostname=kwargs.get("server_hostname", host),
-            http_path=kwargs.get("http_path"),
+            http_path=kwargs.get("http_path", ""),
             access_token=kwargs.get("access_token", password),
         )
 
@@ -364,7 +364,7 @@ def setup_vanna_db_connection(
     if database_type == "databricks":
         connection = connect_to_databricks(
             server_hostname=kwargs.get("server_hostname", host),
-            http_path=kwargs.get("http_path"),
+            http_path=kwargs.get("http_path", ""),
             access_token=kwargs.get("access_token", password),
         )
     else:

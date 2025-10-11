@@ -101,7 +101,6 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
 )
 async def text2sql(config: Text2SQLConfig, builder: Builder):
     """Register the Text2SQL function with Vanna integration."""
-    # Import implementation details inside the registration function
     from nat.plugins.vanna.db_utils import setup_vanna_db_connection
     from nat.plugins.vanna.milvus_utils import create_milvus_client
     from nat.plugins.vanna.vanna_utils import get_vanna_instance, train_vanna, _vanna_instance
