@@ -160,7 +160,7 @@ The `mcp_client` function group can connect to MCP servers using different trans
 ### Transport Types
 
 - **`streamable-http`** (default): Modern HTTP-based transport, recommended for new deployments
-- **`sse`**: Server-Sent Events transport, maintained for backwards compatibility
+- **`SSE`**: Server-Sent Events transport, maintained for backwards compatibility
 - **`stdio`**: Standard input/output transport for local process communication
 
 ### Streamable-HTTP Mode Configuration
@@ -266,7 +266,7 @@ nat mcp client tool list --url http://localhost:9901/mcp
 # For stdio transport
 nat mcp client tool list --transport stdio --command "python" --args "-m mcp_server_time"
 
-# For sse transport
+# For SSE transport
 nat mcp client tool list --url http://localhost:9901/sse --transport sse
 ```
 For SSE transport, ensure the MCP server starts with the `--transport sse` flag. The transport type on the client and server needs to match for MCP communication to work. The default transport type is `streamable-http`.

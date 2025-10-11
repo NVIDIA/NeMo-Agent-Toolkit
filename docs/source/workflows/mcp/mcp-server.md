@@ -198,7 +198,7 @@ This is useful for health checks and monitoring.
 ### Transport Selection
 The NeMo Agent toolkit supports two MCP transport protocols:
 - **streamable-http** (recommended): Supports authentication and is recommended for production deployments
-- **sse** (Server-Sent Events): Does not support authentication and should only be used for local development
+- **SSE** (Server-Sent Events): Does not support authentication and should only be used for local development
 
 ### Host Binding and Authentication
 When deploying MCP servers, consider the following security best practices:

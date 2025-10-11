@@ -135,7 +135,6 @@ pytest
 [Ss]ubword(s?)
 [Ss]uperset(s?)
 SSE
-sse
 SQLAlchemy
 Tavily
 [Tt]eardown

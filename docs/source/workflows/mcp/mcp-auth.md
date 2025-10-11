@@ -78,7 +78,7 @@ function_groups:
 ### Supported Transports
 - **streamable-http**: Supports authentication (recommended for production)
 - **stdio**: Local process communication, no network authentication needed
-- **sse**: Does not support authentication, use only for local development
+- **SSE**: Does not support authentication, use only for local development
 
 ### Configuration Compatibility
 - Authentication configuration is only available with `mcp_client` style configuration
