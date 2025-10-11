@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class StatusPayload(BaseModel):
     """Payload for status intermediate steps."""
+
     message: str
 
 
@@ -97,7 +98,6 @@ async def execute_db_query(
     builder: Builder,
 ):
     """Register the Execute DB Query function."""
-    # Import implementation details inside the registration function
     import pandas as pd
 
     from nat.plugins.vanna.db_utils import (
