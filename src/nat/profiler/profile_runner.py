@@ -45,6 +45,7 @@ class InferenceOptimizationHolder(BaseModel):
     common_prefixes: Any
     token_uniqueness: Any
     workflow_runtimes: Any
+    node_metrics: Any
 
 
 class ProfilerRunner:
@@ -102,6 +103,8 @@ class ProfilerRunner:
             prefixspan_subworkflow_with_text,
         )  # yapf: disable
         from nat.profiler.inference_optimization.llm_metrics import LLMMetrics
+        from nat.profiler.inference_optimization.node_metrics import compute_node_metrics
+        from nat.profiler.inference_optimization.node_metrics import generate_node_metrics_summary
         from nat.profiler.inference_optimization.prompt_caching import get_common_prefixes
         from nat.profiler.inference_optimization.token_uniqueness import compute_inter_query_token_uniqueness_by_llm
         from nat.profiler.inference_optimization.workflow_runtimes import compute_workflow_runtime_metrics
@@ -161,7 +164,7 @@ class ProfilerRunner:
                                              llm_latency_confidence_intervals=llm_latency_ci.model_dump(),
                                              throughput_estimate_confidence_interval=throughput_ci.model_dump())
 
-        common_prefix_results = token_uniqueness_results = workflow_runtimes_results = None
+        common_prefix_results = token_uniqueness_results = workflow_runtimes_results = node_metrics_results = None
 
         if self.profile_config.prompt_caching_prefixes.enable:
             # ------------------------------------------------------------
@@ -187,10 +190,17 @@ class ProfilerRunner:
             workflow_runtimes = compute_workflow_runtime_metrics(all_steps)
             workflow_runtimes_results = workflow_runtimes
 
+        # ------------------------------------------------------------
+        # Compute and save node-level execution metrics
+        # ------------------------------------------------------------
+        node_metrics_results = compute_node_metrics(all_steps)
+        logger.info("Node metrics computation complete")
+
         inference_optimization_results = InferenceOptimizationHolder(confidence_intervals=simple_metrics,
                                                                      common_prefixes=common_prefix_results,
                                                                      token_uniqueness=token_uniqueness_results,
-                                                                     workflow_runtimes=workflow_runtimes_results)
+                                                                     workflow_runtimes=workflow_runtimes_results,
+                                                                     node_metrics=node_metrics_results)
 
         if self.write_output and inference_optimization_results:
             # Save to JSON
@@ -233,6 +243,15 @@ class ProfilerRunner:
             workflow_profiling_metrics["concurrency_spike_analysis"] = concurrency_metrics.model_dump(
                 exclude=["textual_report"])
             logger.info("Concurrency spike analysis complete")
+
+        # ------------------------------------------------------------
+        # Add node metrics summary to profiling report
+        # ------------------------------------------------------------
+        if node_metrics_results and node_metrics_results.get("total_node_executions", 0) > 0:
+            node_metrics_summary = generate_node_metrics_summary(node_metrics_results)
+            workflow_profiling_reports += "\n\n\n" + node_metrics_summary
+            workflow_profiling_metrics["node_metrics"] = node_metrics_results
+            logger.info("Added node metrics to profiling report")
 
         if self.profile_config.prefix_span_analysis.enable:
             # ------------------------------------------------------------
