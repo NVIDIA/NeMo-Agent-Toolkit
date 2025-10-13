@@ -16,6 +16,7 @@
 import logging
 
 from pydantic import Field
+from pydantic import field_validator
 
 from nat.builder.builder import Builder
 from nat.builder.context import Context
@@ -36,13 +37,18 @@ class HITLApprovalFnConfig(FunctionBaseConfig, name="hitl_approval_tool"):
 
     prompt: str = Field(..., description="The prompt to use for the HITL function")
 
+    @field_validator("prompt", mode="after")
+    @classmethod
+    def validate_prompt(cls, prompt: str) -> str:
+        return prompt.strip()
+
 
 @register_function(config_type=HITLApprovalFnConfig)
 async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder):
 
     import re
 
-    prompt = f"{config.prompt.strip()} Please confirm if you would like to proceed. Respond with 'yes' or 'no'."
+    prompt = f"{config.prompt} Please confirm if you would like to proceed. Respond with 'yes' or 'no'."
 
     async def _arun(unused: str = "") -> bool:
 
