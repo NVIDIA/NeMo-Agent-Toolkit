@@ -42,5 +42,6 @@ def test_hitl_workflow(response: str, expected_result: str):
         f"Process failed with return code {proc.returncode}\nstdout: {stdout}\nstderr: {stderr}"
     assert expected_prompt in stdout
 
-    assert re.search(f"Workflow Result:.*{expected_result}", stderr, (re.IGNORECASE | re.MULTILINE | re.DOTALL)) is not None, \
+    result_pattern = re.compile(f"Workflow Result:.*{expected_result}", re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    assert result_pattern.search(stderr) is not None, \
         f"Expected result '{expected_result}' not found in stderr: {stderr}"
