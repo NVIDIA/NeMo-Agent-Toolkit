@@ -29,20 +29,11 @@ logger = logging.getLogger(__name__)
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_eval():
-    """
-    1. nat-eval writes the workflow output to workflow_output.json
-    2. nat-eval creates a file with scores for each evaluation metric.
-    3. This test audits -
-       a. the rag accuracy metric
-       b. the trajectory score (if present)
-    """
     import nat_simple_calculator_eval
 
     # Get config dynamically
     config_file: Path = locate_example_config(nat_simple_calculator_eval, "config-tunable-rag-eval.yml")
 
-    # Create the configuration object for running the evaluation, single rep using the eval config in eval_config.yml
-    # WIP: skip test if eval config is not present
     config = EvaluationRunConfig(
         config_file=config_file,
         dataset=None,
