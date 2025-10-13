@@ -107,7 +107,7 @@ async def simple_calc_mcp_avail_fixture(simple_calc_mcp_process: subprocess.Pope
 @pytest.mark.usefixtures("nvidia_api_key", "simple_calc_mcp_avail")
 async def test_mcp_workflow(root_repo_dir: Path, nat_mcp_url: str):
     """
-    This example runs two seperate workflows, one which serves the calculator tool via MCP, anlong with the mcp client
+    This example runs two separate workflows, one which serves the calculator tool via MCP, along with the MCP client
     workflow. For the test we will launch the MCP server in a subprocess, then run the client workflow via the API.
     """
     from pydantic import HttpUrl
