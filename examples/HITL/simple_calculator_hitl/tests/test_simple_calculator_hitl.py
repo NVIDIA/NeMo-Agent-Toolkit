@@ -31,7 +31,7 @@ def test_hitl_workflow(response: str, expected_result: str):
     expected_prompt = "Please confirm if you would like to proceed"
     config_file: Path = locate_example_config(RetryReactAgentConfig, "config-hitl.yml")
 
-    # Use subprocess to run the NAT CLI rather than usign the API for two reasons:
+    # Use subprocess to run the NAT CLI rather than using the API for two reasons:
     # 1) The HITL callback function requires a hook which is only available using the console front-end
     # 2) Pytest sets stdin to NULL by default
     cmd = ["nat", "run", "--config_file", str(config_file.absolute()), "--input", '"Is 2 * 4 greater than 5?"']
