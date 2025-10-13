@@ -35,6 +35,17 @@ NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that 
 > [!NOTE]
 > NeMo Agent toolkit was previously known as the Agent Intelligence (AIQ) toolkit, and <!-- vale off -->AgentIQ<!-- vale on -->. The library was renamed to better reflect the purpose of the toolkit and to align with the NVIDIA NeMo family of products. The core technologies, performance and roadmap remain unchanged and the API is fully compatible with previous release. Please refer to the [Migration Guide](./docs/source/resources/migration-guide.md) for more information.
 
+## 🔥 New Features
+
+- **Automatic Hyperparameter Tuning:** NeMo Agent toolkit now supports automatic hyperparameter tuning. This allows you to automatically tune the hyperparameters of your agents, tools, and workflows to maximize performance.
+- [**Google ADK Support:**](./docs/source/extend/google-adk.md) NeMo Agent toolkit now supports the Google Agent Development Kit (ADK) framework. This allows you to use NeMo Agent toolkit with Google's ADK framework.
+
+- 🔁 [**MCP Authorization:**](./docs/source/workflows/mcp/index.md) NeMo Agent toolkit now supports MCP authorization. This allows you to use NeMo Agent toolkit with MCP authorization.
+
+- 🔁 [**Streamable HTTP Support:**](./docs/source/workflows/http/index.md) NeMo Agent toolkit now supports streamable HTTP. This allows you to use NeMo Agent toolkit with streamable HTTP.
+
+- 🔁 [**Test Time Compute:**](./docs/source/workflows/test-time-compute.md) NeMo Agent toolkit now supports test time compute. This allows you to use NeMo Agent toolkit with test time compute.
+
 ## ✨ Key Features
 
 - 🧩 [**Framework Agnostic:**](./docs/source/quick-start/installing.md#framework-integrations) NeMo Agent toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
@@ -56,6 +67,32 @@ NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that 
 With NeMo Agent toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
 ## 🚀 Installation
+
+> [!NOTE]
+> For users who want to run the examples, it's recommended to clone the repository and install from source to get the necessary files required to run the examples. Please refer to the [Examples](./examples/README.md) documentation for more information.
+
+To install the latest stable version of NeMo Agent Toolkit from `pip`, run the following command:
+
+```bash
+pip install nvidia-nat
+```
+
+NeMo Agent Toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain/LangGraph plugin, run the following:
+
+```bash
+pip install "nvidia-nat[langchain]"
+```
+
+Or for all optional dependencies:
+
+```bash
+pip install "nvidia-nat[all]"
+```
+
+Detailed installation instructions, including the full list of optional dependencies, can be found [here](./docs/source/quick-start/installing.md).
+
+The full list of optional dependencies can be found [here](./docs/source/quick-start/installing.md#framework-integrations).
+
 
 Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11, 3.12, or 3.13 installed on your system.
 
