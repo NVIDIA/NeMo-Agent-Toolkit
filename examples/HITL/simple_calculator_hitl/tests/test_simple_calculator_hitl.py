@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
-import sys
-import time
+import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -24,45 +23,28 @@ import pytest
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_hitl_workflow(capsys):
-    import nat_por_to_jiratickets.register  # noqa: F401
-    from nat.runtime.loader import load_workflow
+@pytest.mark.parametrize("response, expected_result", [("no", "I seem to be having a problem"), ("yes", "Yes")],
+                         ids=["no", "yes"])
+async def test_hitl_workflow(response: str, expected_result: str):
     from nat.test.utils import locate_example_config
     from nat_simple_calculator_hitl.retry_react_agent import RetryReactAgentConfig
 
     expected_prompt = "Please confirm if you would like to proceed"
     config_file: Path = locate_example_config(RetryReactAgentConfig, "config-hitl.yml")
 
-    result = None
-    async with load_workflow(config_file) as workflow:
+    # Use subprocess to run the NAT CLI rather than usign the API for two reasons:
+    # 1) The HITL callback function requires a hook which is only available using the console front-end
+    # 2) Pytest sets stdin to NULL by default
+    cmd = ["nat", "run", "--config_file", str(config_file.absolute()), "--input", '"Is 2 * 4 greater than 5?"']
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
-        async with workflow.run("Is 2 * 4 greater than 5?") as runner:
+    (stdout, stderr) = proc.communicate(input=f"{response}\n", timeout=60)
+    assert proc.returncode == 0, \
+        f"Process failed with return code {proc.returncode}\nstdout: {stdout}\nstderr: {stderr}"
+    assert expected_prompt in stdout
 
-            runner_future = asyncio.create_task(runner.result(to_type=str))
-            deadline = time.time() + 120  # 2 minute timeout
-            done = False
-            prompted = False
-            while not done and time.time() < deadline:
-                captured = capsys.readouterr()
-                if not prompted:
-                    assert not runner_future.done(), "Runner finished before prompt detected"
-                    if expected_prompt in captured.out:
-                        prompted = True
-                        sys.stdin.write("no\n")
-                    else:
-                        await asyncio.sleep(0.1)
-                else:
-                    done = runner_future.done()
-                    if done:
-                        assert runner_future.exception() is None, f"Runner failed with {runner_future.exception()}"
-                        result = runner_future.result()
-                    else:
-                        await asyncio.sleep(0.1)
-
-            if not done:
-                runner_future.cancel()
-
-    assert result is not None, "Test did not complete successfully"
-    assert "I seem to be having a problem." in result.lower()
+    assert re.search(f"Workflow Result:.*{expected_result}", stderr, (re.IGNORECASE | re.MULTILINE | re.DOTALL)) is not None, \
+        f"Expected result '{expected_result}' not found in stderr: {stderr}"
