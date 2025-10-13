@@ -76,6 +76,10 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self._run_id_to_tool_input = {}
         self._run_id_to_start_time = {}
 
+        # Node tracking state variables
+        self._run_id_to_node_name = {}
+        self._run_id_to_node_input = {}
+
     def __repr__(self) -> str:
         return (f"Tokens Used: {self.total_tokens}\n"
                 f"\tPrompt Tokens: {self.prompt_tokens}\n"
@@ -99,6 +103,72 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                 total_tokens=total_tokens,
             )
         return TokenUsageBaseModel()
+
+    def _should_track_node(self, serialized: dict[str, Any], tags: list[str] | None = None) -> bool:
+        """
+        Determine if a chain execution should be tracked as a LangGraph node.
+
+        We want to track StateGraph nodes (like 'agent', 'tool', 'planner', etc.)
+        but filter out internal LangChain runnables to avoid excessive events.
+
+        Args:
+            serialized: Serialized information about the chain
+            tags: Tags associated with the chain execution
+
+        Returns:
+            True if this should be tracked as a node, False otherwise
+        """
+        # Get the node name - try different possible locations
+        node_name = serialized.get("name", "")
+        node_id = serialized.get("id", [])
+
+        # If there's no meaningful name or ID, skip tracking
+        if not node_name and not node_id:
+            return False
+
+        # Common LangGraph node names we want to track
+        # These are typical node names used in NAT agents
+        tracked_node_names = {
+            "agent", "tool", "planner", "executor", "solver", "branch", "action", "__start__", "__end__"
+        }
+
+        # Check if this is a known node name
+        if node_name.lower() in tracked_node_names:
+            return True
+
+        # Check tags for LangGraph indicators
+        if tags:
+            # LangGraph typically tags nodes with specific markers
+            if any("graph" in tag.lower() or "node" in tag.lower() for tag in tags):
+                return True
+
+        # Check the ID structure - LangGraph nodes have specific patterns
+        if isinstance(node_id, list) and len(node_id) > 0:
+            # LangGraph nodes often have "RunnableLambda" or node names in their ID
+            id_str = " ".join(str(i) for i in node_id)
+            if any(name in id_str for name in tracked_node_names):
+                return True
+
+        # Skip common internal runnables to reduce noise
+        skip_patterns = [
+            "RunnableSequence",
+            "RunnableParallel",
+            "RunnablePassthrough",
+            "RunnableLambda",
+            "RunnableBranch",
+            "RunnableBinding"
+        ]
+
+        # If this looks like an internal runnable and doesn't match our patterns, skip it
+        if any(pattern in node_name for pattern in skip_patterns):
+            return False
+
+        # For anything else with a meaningful name, track it
+        # This allows custom node names to be tracked
+        if len(node_name) > 0 and not node_name.startswith("_"):
+            return True
+
+        return False
 
     async def on_llm_start(self, serialized: dict[str, Any], prompts: list[str], **kwargs: Any) -> None:
 
@@ -295,3 +365,114 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                                                              output=output))
 
         self.step_manager.push_intermediate_step(stats)
+
+    async def on_chain_start(
+        self,
+        serialized: dict[str, Any],
+        inputs: dict[str, Any],
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Track when a LangGraph node starts execution.
+
+        This callback is triggered when any chain/runnable starts, but we filter
+        to only track meaningful LangGraph nodes using _should_track_node.
+        """
+        # Check if we should track this node
+        if not self._should_track_node(serialized, tags):
+            return
+
+        # Extract node name
+        node_name = serialized.get("name", serialized.get("id", ["unknown"])[0] if serialized.get("id") else "unknown")
+
+        run_id_str = str(run_id)
+        self._run_id_to_node_name[run_id_str] = node_name
+        self._run_id_to_start_time[run_id_str] = time.time()
+
+        # Store inputs (but limit size to avoid memory issues with large states)
+        try:
+            node_input = copy.deepcopy(inputs)
+            self._run_id_to_node_input[run_id_str] = node_input
+        except Exception as e:
+            logger.debug("Could not copy node inputs for node %s: %s", node_name, e)
+            self._run_id_to_node_input[run_id_str] = {"error": "Failed to copy inputs"}
+
+        # Create node info metadata
+        node_info = {
+            "node_name": node_name,
+            "node_type": serialized.get("id", ["unknown"])[0] if serialized.get("id") else "unknown",
+            "parent_run_id": str(parent_run_id) if parent_run_id else None,
+        }
+
+        stats = IntermediateStepPayload(event_type=IntermediateStepType.NODE_START,
+                                        framework=LLMFrameworkEnum.LANGCHAIN,
+                                        name=node_name,
+                                        UUID=run_id_str,
+                                        tags=tags,
+                                        data=StreamEventData(input=inputs),
+                                        metadata=TraceMetadata(node_inputs=copy.deepcopy(inputs) if inputs else None,
+                                                               node_info=node_info,
+                                                               provided_metadata=metadata),
+                                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
+
+        self.step_manager.push_intermediate_step(stats)
+        logger.debug("Tracked NODE_START for node: %s (run_id: %s)", node_name, run_id_str)
+
+    async def on_chain_end(
+        self,
+        outputs: dict[str, Any],
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Track when a LangGraph node completes execution.
+
+        This callback is triggered when any chain/runnable ends. We only process
+        it if we tracked a corresponding NODE_START event.
+        """
+        run_id_str = str(run_id)
+
+        # Only track if we recorded a start event for this node
+        node_name = self._run_id_to_node_name.get(run_id_str)
+        if not node_name:
+            return
+
+        # Get start time and calculate duration
+        start_time = self._run_id_to_start_time.get(run_id_str, time.time())
+        duration = time.time() - start_time
+
+        # Get the original inputs
+        node_input = self._run_id_to_node_input.get(run_id_str, {})
+
+        # Create node info with duration
+        node_info = {
+            "node_name": node_name,
+            "duration_seconds": duration,
+            "parent_run_id": str(parent_run_id) if parent_run_id else None,
+        }
+
+        stats = IntermediateStepPayload(event_type=IntermediateStepType.NODE_END,
+                                        span_event_timestamp=start_time,
+                                        framework=LLMFrameworkEnum.LANGCHAIN,
+                                        name=node_name,
+                                        UUID=run_id_str,
+                                        data=StreamEventData(input=node_input, output=outputs),
+                                        metadata=TraceMetadata(node_inputs=node_input,
+                                                               node_outputs=copy.deepcopy(outputs) if outputs else None,
+                                                               node_info=node_info),
+                                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
+
+        self.step_manager.push_intermediate_step(stats)
+        logger.debug("Tracked NODE_END for node: %s (run_id: %s, duration: %.3fs)", node_name, run_id_str, duration)
+
+        # Clean up tracking dictionaries
+        self._run_id_to_node_name.pop(run_id_str, None)
+        self._run_id_to_node_input.pop(run_id_str, None)
+        self._run_id_to_start_time.pop(run_id_str, None)
