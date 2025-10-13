@@ -25,10 +25,9 @@ import pytest
 @pytest.mark.usefixtures("nvidia_api_key")
 @pytest.mark.parametrize("response, expected_result", [("no", "I seem to be having a problem"), ("yes", "Yes")],
                          ids=["no", "yes"])
-async def test_hitl_workflow(response: str, expected_result: str):
+def test_hitl_workflow(response: str, expected_result: str):
     from nat.test.utils import locate_example_config
     from nat_simple_calculator_hitl.retry_react_agent import RetryReactAgentConfig
-
     expected_prompt = "Please confirm if you would like to proceed"
     config_file: Path = locate_example_config(RetryReactAgentConfig, "config-hitl.yml")
 
