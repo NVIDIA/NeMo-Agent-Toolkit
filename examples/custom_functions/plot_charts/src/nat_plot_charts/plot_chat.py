@@ -152,18 +152,21 @@ def create_scatter_plot(data: dict[str, Any], output_path: str, figure_size: tup
 
 def determine_chart_type(user_request: str, available_types: list[str]) -> str:
     """Determine the best chart type based on user request."""
-    request_lower = user_request.lower()
+    requested_type = user_request.lower()
 
     # Simple keyword matching for chart type detection
-    if any(word in request_lower for word in ["line", "trend", "over time", "timeline"]):
-        return "line" if "line" in available_types else available_types[0]
-    elif any(word in request_lower for word in ["bar", "column", "compare", "comparison"]):
-        return "bar" if "bar" in available_types else available_types[0]
-    elif any(word in request_lower for word in ["scatter", "correlation", "relationship"]):
-        return "scatter" if "scatter" in available_types else available_types[0]
+    if any(word in requested_type for word in ["line", "trend", "over time", "timeline"]):
+        requested_type = "line"
+    elif any(word in requested_type for word in ["bar", "column", "compare", "comparison"]):
+        requested_type = "bar"
+    elif any(word in requested_type for word in ["scatter", "correlation", "relationship"]):
+        requested_type = "scatter"
 
-    # Default to first available type
-    return available_types[0] if available_types else "line"
+    # make sure the requested type is in the available types
+    if requested_type in available_types:
+        return requested_type
+
+    raise ValueError(f"No chart type found for user request: {user_request}")
 
 
 async def generate_chart_description(llm: BaseChatModel, data: dict[str, Any], chart_type: str) -> str:

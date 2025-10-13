@@ -153,11 +153,22 @@ def nvidia_api_key_fixture(fail_missing: bool):
 @pytest.fixture(name="serp_api_key", scope='session')
 def serp_api_key_fixture(fail_missing: bool):
     """
-    Use for integration tests that require a SERP API key.
+    Use for integration tests that require a SERP API (serpapi.com) key.
     """
     yield require_env_variables(
         varnames=["SERP_API_KEY"],
         reason="SERP integration tests require the `SERP_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="serperdev", scope='session')
+def serperdev_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Serper Dev API (https://serper.dev) key.
+    """
+    yield require_env_variables(
+        varnames=["SERPERDEV_API_KEY"],
+        reason="SERPERDEV integration tests require the `SERPERDEV_API_KEY` environment variable to be defined.",
         fail_missing=fail_missing)
 
 

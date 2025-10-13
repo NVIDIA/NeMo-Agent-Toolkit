@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import os
 from pathlib import Path
 
 import pytest
@@ -28,8 +29,6 @@ except ImportError:
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.test.utils import locate_example_config
-from nat.test.utils import run_workflow
 
 logger = logging.getLogger(__name__)
 
@@ -43,20 +42,23 @@ def require_profiler_agent(fail_missing: bool = False):
         pytest.skip(reason=reason)
 
 
-@pytest.fixture(autouse=True)
-def require_phoenix_server(fail_missing: bool = False):
+@pytest.fixture(name="phoenix_url", scope="session")
+def phoenix_url_fixture(fail_missing: bool) -> str:
     """
     To run these tests, a phoenix server must be running.
     The phoenix server can be started by running the following command:
     docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:latest
     """
-
     import requests
+
+    url = os.getenv("NAT_CI_PHOENIX_URL", "http://localhost:6006")
     try:
-        response = requests.get("http://localhost:6006/v1/traces", timeout=5)
+        response = requests.get(url, timeout=5)
         response.raise_for_status()
+
+        return url
     except Exception as e:
-        reason = f"Unable to connect to Phoenix server at http://localhost:6006/v1/traces: {e}"
+        reason = f"Unable to connect to Phoenix server at {url}: {e}"
         if fail_missing:
             raise RuntimeError(reason)
         pytest.skip(reason=reason)
@@ -92,8 +94,33 @@ async def test_token_usage_tool(df_path: Path):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_full_workflow():
+async def test_full_workflow(phoenix_url: str):
+    from nat.runtime.loader import load_config
+    from nat.test.utils import locate_example_config
+    from nat.test.utils import run_workflow
+
+    phoenix_trace_url = f"{phoenix_url}/v1/traces"
+
+    # This workflow requires a prior trace to be ingested into Phoenix.
+    cur_dir = Path(__file__).parent
+    examples_dir = cur_dir.parent.parent.parent
+    simple_calc_observe_config_file = (examples_dir /
+                                       "observability/simple_calculator_observability/configs/config-phoenix.yml")
+
+    simple_calc_observe_config = load_config(simple_calc_observe_config_file)
+    simple_calc_observe_config.general.telemetry.tracing["phoenix"].endpoint = phoenix_trace_url
+
+    await run_workflow(config_file=None,
+                       config=simple_calc_observe_config,
+                       question="multiply 3 and 2",
+                       expected_answer="6")
+
     config_file: Path = locate_example_config(ProfilerAgentConfig)
-    await run_workflow(config_file=config_file,
-                       question="Is the product of 33 * 4 greater than the current hour of the day?",
-                       expected_answer="yes")
+    config = load_config(config_file)
+    config.general.telemetry.tracing["phoenix"].endpoint = phoenix_trace_url
+    config.functions["px_query"].phoenix_url = phoenix_url
+
+    await run_workflow(config_file=None,
+                       config=config,
+                       question="Show me the token usage of last run",
+                       expected_answer="tokens")

@@ -26,6 +26,7 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
 from nat.plugins.mcp.client_base import MCPToolClient
+from nat.utils.decorators import deprecated
 
 logger = logging.getLogger(__name__)
 
@@ -93,13 +94,7 @@ def mcp_tool_function(tool: MCPToolClient) -> FunctionInfo:
             _ = tool.input_schema.model_validate(kwargs)
             return await tool.acall(kwargs)
         except Exception as e:
-            if tool_input:
-                logger.warning("Error calling tool %s with serialized input: %s",
-                               tool.name,
-                               tool_input.model_dump(),
-                               exc_info=True)
-            else:
-                logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
+            logger.warning("Error calling tool %s", tool.name, exc_info=True)
             return str(e)
 
     return FunctionInfo.create(single_fn=_response_fn,
@@ -109,6 +104,10 @@ def mcp_tool_function(tool: MCPToolClient) -> FunctionInfo:
 
 
 @register_function(config_type=MCPToolConfig)
+@deprecated(
+    reason=
+    "This function is being replaced with the new mcp_client function group that supports additional MCP features",
+    feature_name="mcp_tool_wrapper")
 async def mcp_tool(config: MCPToolConfig, builder: Builder):
     """
     Generate a NeMo Agent Toolkit Function that wraps a tool provided by the MCP server.

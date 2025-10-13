@@ -16,13 +16,15 @@
 ARG BASE_IMAGE_URL=nvcr.io/nvidia/base/ubuntu
 ARG BASE_IMAGE_TAG=22.04_20240212
 ARG PYTHON_VERSION=3.13
-ARG UV_VERSION=0.8.15
 # Specified on the command line with --build-arg NAT_VERSION=$(python -m setuptools_scm)
 ARG NAT_VERSION
 
 FROM --platform=$TARGETPLATFORM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 
-COPY --from=ghcr.io/astral-sh/uv:${UV_VERSION} /uv /uvx /bin/
+ARG PYTHON_VERSION
+ARG NAT_VERSION
+
+COPY --from=ghcr.io/astral-sh/uv:0.8.15 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 

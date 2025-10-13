@@ -53,6 +53,11 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     default_user_id: str | None = Field(default=None, description="Default user ID for authentication")
     allow_default_user_id_for_tool_calls: bool = Field(default=True, description="Allow default user ID for tool calls")
 
+    # Token storage configuration
+    token_storage_object_store: str | None = Field(
+        default=None,
+        description="Reference to object store for secure token storage. If None, uses in-memory storage.")
+
     @model_validator(mode="after")
     def validate_auth_config(self):
         """Validate authentication configuration for MCP-specific options."""

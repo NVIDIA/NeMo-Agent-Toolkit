@@ -35,7 +35,8 @@ class PhoenixMixin:
 
     This mixin is designed to be used with OtelSpanExporter as a base class:
 
-    Example:
+    Example::
+
         class MyPhoenixExporter(OtelSpanExporter, PhoenixMixin):
             def __init__(self, endpoint, project, **kwargs):
                 super().__init__(endpoint=endpoint, project=project, **kwargs)
