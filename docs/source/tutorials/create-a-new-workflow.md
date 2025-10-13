@@ -43,19 +43,18 @@ Each workflow created in this way also creates a Python project, and by default,
 <!-- path-check-skip-begin -->
 This creates a new directory `examples/text_file_ingest` with the following layout:
 ```
-examples/
-└── text_file_ingest/
-    ├── configs -> src/text_file_ingest/configs
-    |── data   -> src/text_file_ingest/data
-    ├── pyproject.toml
-    └── src/
-        └── text_file_ingest/
-            ├── configs
-            │   └── config.yml
-            ├── data
-            ├── __init__.py
-            ├── register.py
-            └── text_file_ingest_function.py
+examples/text_file_ingest
+├── configs -> src/text_file_ingest/configs
+├── data -> src/text_file_ingest/data
+├── pyproject.toml
+└── src
+    └── text_file_ingest
+        ├── __init__.py
+        ├── configs
+        │   └── config.yml
+        ├── data
+        ├── register.py
+        └── text_file_ingest.py
 ```
 <!-- path-check-skip-end -->
 
@@ -142,7 +141,7 @@ async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builde
     from langchain.tools.retriever import create_retriever_tool
     from langchain_community.document_loaders import DirectoryLoader
     from langchain_community.document_loaders import TextLoader
-    from langchain_community.vectorstores import FAISS
+    from langchain_community.vectorstores import USearch
     from langchain_core.embeddings import Embeddings
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -156,7 +155,7 @@ async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builde
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=config.chunk_size)
     documents = text_splitter.split_documents(docs)
-    vector = await FAISS.afrom_documents(documents, embeddings)
+    vector = await USearch.afrom_documents(documents, embeddings)
 
     retriever = vector.as_retriever()
 
@@ -218,7 +217,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
 
   ```toml
   dependencies = [
-    "nvidia-nat[langchain]~=1.1",
+    "nvidia-nat[langchain]~=1.3",
     # Add any additional dependencies your workflow needs
   ]
   ```
@@ -265,7 +264,7 @@ nat workflow reinstall text_file_ingest
 ```
 
 :::{note}
-Alternatively, the workflow can be uninstalled with the following command:
+Alternatively, the workflow can be uninstalled and deleted with the following command:
 ```bash
 nat workflow delete text_file_ingest
 ```
