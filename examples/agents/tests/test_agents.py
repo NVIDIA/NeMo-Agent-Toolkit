@@ -62,7 +62,7 @@ def rewoo_answer_fixture(request: pytest.FixtureRequest, rewoo_data: list[dict])
                          indirect=True)
 async def test_rewoo_full_workflow(rewoo_question: str, rewoo_answer: str):
     config_file = os.path.join(AGENTS_DIR, "rewoo/configs/config.yml")
-    await run_workflow(config_file, rewoo_question, rewoo_answer)
+    await run_workflow(config_file=config_file, question=rewoo_question, expected_answer=rewoo_answer)
 
 
 @pytest.mark.slow
@@ -79,4 +79,4 @@ async def test_rewoo_full_workflow(rewoo_question: str, rewoo_answer: str):
     ],
     ids=["mixture_of_agents", "react", "react-reasoning", "tool_calling", "tool_calling-reasoning"])
 async def test_agent_full_workflow(config_file: str, question: str, answer: str):
-    await run_workflow(config_file, question, answer)
+    await run_workflow(config_file=config_file, question=question, expected_answer=answer)
