@@ -105,13 +105,18 @@ async def simple_calc_mcp_avail_fixture(simple_calc_mcp_process: subprocess.Pope
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key", "simple_calc_mcp_avail")
-async def test_mcp_workflow(root_repo_dir: Path):
+async def test_mcp_workflow(root_repo_dir: Path, nat_mcp_url: str):
     """
     This example runs two seperate workflows, one which serves the calculator tool via MCP, anlong with the mcp client
     workflow. For the test we will launch the MCP server in a subprocess, then run the client workflow via the API.
     """
+    from pydantic import HttpUrl
+
+    from nat.runtime.loader import load_config
     from nat.test.utils import run_workflow
 
     config_path = root_repo_dir / "examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml"
+    config = load_config(config_path)
+    config.function_groups["mcp_math"].server.url = HttpUrl(nat_mcp_url)
 
-    await run_workflow(config_file=config_path, question="Is 2 * 4 greater than 5?", expected_answer="yes")
+    await run_workflow(config=config, question="Is 2 * 4 greater than 5?", expected_answer="yes")
