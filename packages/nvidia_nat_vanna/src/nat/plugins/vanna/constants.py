@@ -6,7 +6,7 @@ MAX_LIMIT_SIZE = 1000
 # Reasoning models that require special handling (think tags removal, JSON extraction)
 REASONING_MODEL_VALUES = {
     "nvidia/llama-3.1-nemotron-ultra-253b-v1",
-    "nvidia/llama-3_3-nemotron-super-49b-v1_5",
+    "nvidia/llama-3.3-nemotron-super-49b-v1.5",
     "deepseek-ai/deepseek-v3.1",
     "deepseek-ai/deepseek-r1",
 }
