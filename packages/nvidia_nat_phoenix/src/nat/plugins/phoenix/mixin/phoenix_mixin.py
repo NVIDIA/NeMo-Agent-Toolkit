@@ -15,9 +15,10 @@
 
 import logging
 
+from openinference.instrumentation import dangerously_using_project
+
 from nat.plugins.opentelemetry.otel_span import OtelSpan
 from phoenix.otel import HTTPSpanExporter
-from phoenix.trace.projects import using_project
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ class PhoenixMixin:
             Exception: If there's an error during span export (logged but not re-raised).
         """
         try:
-            with using_project(self._project):
+            with dangerously_using_project(self._project):
                 self._exporter.export(spans)  # type: ignore
         except Exception as e:
             logger.error("Error exporting spans: %s", e, exc_info=True)
