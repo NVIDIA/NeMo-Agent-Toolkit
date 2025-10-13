@@ -49,7 +49,7 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json",
     ),
     (
-        r"^examples/evaluation_and_profiling/email_phishing_analyzer/configs",
+        r"^examples/evaluation_and_profiling/email_phishing_analyzer/.*/configs",
         r"^examples/evaluation_and_profiling/email_phishing_analyzer/data",
     ),
     (

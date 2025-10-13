@@ -286,7 +286,7 @@ uv pip install -e examples/documentation_guides/workflows/text_file_ingest
 Run the workflow with the following command:
 ```bash
 nat run --config_file examples/documentation_guides/workflows/text_file_ingest/configs/config.yml \
-   --input "What does DOCA GPUNetIO to remove the CPU from the critical path?"
+   --input "What does DOCA GPUNetIO do to remove the CPU from the critical path?"
 ```
 
 If successful, you should receive output similar to the following:
