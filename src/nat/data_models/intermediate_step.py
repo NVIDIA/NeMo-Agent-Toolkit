@@ -37,6 +37,7 @@ class IntermediateStepCategory(str, Enum):
     FUNCTION = "FUNCTION"
     CUSTOM = "CUSTOM"
     SPAN = "SPAN"
+    NODE = "NODE"
 
 
 class IntermediateStepType(str, Enum):
@@ -56,6 +57,8 @@ class IntermediateStepType(str, Enum):
     SPAN_START = "SPAN_START"
     SPAN_CHUNK = "SPAN_CHUNK"
     SPAN_END = "SPAN_END"
+    NODE_START = "NODE_START"
+    NODE_END = "NODE_END"
 
 
 class IntermediateStepState(str, Enum):
@@ -111,6 +114,9 @@ class TraceMetadata(BaseModel):
     tool_info: typing.Any | None = None
     span_inputs: typing.Any | None = None
     span_outputs: typing.Any | None = None
+    node_inputs: typing.Any | None = None
+    node_outputs: typing.Any | None = None
+    node_info: typing.Any | None = None
     provided_metadata: typing.Any | None = None
     tools_schema: list[ToolSchema] = Field(default_factory=list,
                                            description="The schema of tools used in a tool calling request.")
@@ -176,6 +182,10 @@ class IntermediateStepPayload(BaseModel):
                 return IntermediateStepCategory.SPAN
             case IntermediateStepType.SPAN_END:
                 return IntermediateStepCategory.SPAN
+            case IntermediateStepType.NODE_START:
+                return IntermediateStepCategory.NODE
+            case IntermediateStepType.NODE_END:
+                return IntermediateStepCategory.NODE
             case _:
                 raise ValueError(f"Unknown event type: {self.event_type}")
 
@@ -213,6 +223,10 @@ class IntermediateStepPayload(BaseModel):
             case IntermediateStepType.SPAN_CHUNK:
                 return IntermediateStepState.CHUNK
             case IntermediateStepType.SPAN_END:
+                return IntermediateStepState.END
+            case IntermediateStepType.NODE_START:
+                return IntermediateStepState.START
+            case IntermediateStepType.NODE_END:
                 return IntermediateStepState.END
             case _:
                 raise ValueError(f"Unknown event type: {self.event_type}")
