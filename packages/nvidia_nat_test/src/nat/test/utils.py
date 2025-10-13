@@ -129,7 +129,7 @@ async def build_nat_client(
             yield client
 
 
-def validate_workflow_output(workflow_output_file: Path):
+def validate_workflow_output(workflow_output_file: Path) -> None:
     """
     Validate the contents of the workflow output file.
     WIP: output format should be published as a schema and this validation should be done against that schema.
@@ -141,8 +141,8 @@ def validate_workflow_output(workflow_output_file: Path):
     try:
         with open(workflow_output_file, encoding="utf-8") as f:
             result_json = json.load(f)
-    except json.JSONDecodeError:
-        raise RuntimeError("Failed to parse workflow_output.json as valid JSON")
+    except json.JSONDecodeError as err:
+        raise RuntimeError("Failed to parse workflow_output.json as valid JSON") from err
 
     assert isinstance(result_json, list), "The workflow_output.json file is not a list"
     assert len(result_json) > 0, "The workflow_output.json file is empty"
