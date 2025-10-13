@@ -66,5 +66,5 @@ async def test_eval():
     assert output.workflow_output_file, "The workflow_output.json file was not created"
     validate_workflow_output(output.workflow_output_file)
 
-    # Verify that atleast one tuneable_eval_output file is present
+    # Verify that at least one tuneable_eval_output file is present
     assert tuneable_eval_output, "Expected output file does not exist"
