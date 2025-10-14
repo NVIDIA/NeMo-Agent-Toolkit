@@ -14,17 +14,16 @@
 # limitations under the License.
 
 import json
-import logging
-import os
+from pathlib import Path
 
 import pytest
 
 from nat.test.utils import run_workflow
 
-logger = logging.getLogger(__name__)
 
-CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-AGENTS_DIR = os.path.dirname(CUR_DIR)
+@pytest.fixture(name="agents_dir", scope="session")
+def agents_dir_fixture(examples_dir: Path) -> Path:
+    return examples_dir / "agents"
 
 
 @pytest.fixture(name="question", scope="module")
@@ -38,9 +37,9 @@ def answer_fixture() -> str:
 
 
 @pytest.fixture(name="rewoo_data", scope="module")
-def rewoo_data_fixture() -> list[dict]:
-    data_path = os.path.join(AGENTS_DIR, "data/rewoo.json")
-    assert os.path.exists(data_path), f"Data file {data_path} does not exist"
+def rewoo_data_fixture(agents_dir: Path) -> list[dict]:
+    data_path = agents_dir / "data/rewoo.json"
+    assert data_path.exists(), f"Data file {data_path} does not exist"
     with open(data_path, encoding="utf-8") as f:
         return json.load(f)
 
@@ -60,8 +59,8 @@ def rewoo_answer_fixture(request: pytest.FixtureRequest, rewoo_data: list[dict])
 @pytest.mark.parametrize("rewoo_question, rewoo_answer", [(i, i) for i in range(4)],
                          ids=[f"qa_{i+1}" for i in range(4)],
                          indirect=True)
-async def test_rewoo_full_workflow(rewoo_question: str, rewoo_answer: str):
-    config_file = os.path.join(AGENTS_DIR, "rewoo/configs/config.yml")
+async def test_rewoo_full_workflow(agents_dir: Path, rewoo_question: str, rewoo_answer: str):
+    config_file = agents_dir / "rewoo/configs/config.yml"
     await run_workflow(config_file=config_file, question=rewoo_question, expected_answer=rewoo_answer)
 
 
@@ -71,12 +70,13 @@ async def test_rewoo_full_workflow(rewoo_question: str, rewoo_answer: str):
 @pytest.mark.parametrize(
     "config_file",
     [
-        os.path.join(AGENTS_DIR, "mixture_of_agents/configs/config.yml"),
-        os.path.join(AGENTS_DIR, "react/configs/config.yml"),
-        os.path.join(AGENTS_DIR, "react/configs/config-reasoning.yml"),
-        os.path.join(AGENTS_DIR, "tool_calling/configs/config.yml"),
-        os.path.join(AGENTS_DIR, "tool_calling/configs/config-reasoning.yml"),
+        # These are all expected to be relative to the agents_dir
+        "mixture_of_agents/configs/config.yml",
+        "react/configs/config.yml",
+        "react/configs/config-reasoning.yml",
+        "tool_calling/configs/config.yml",
+        "tool_calling/configs/config-reasoning.yml",
     ],
     ids=["mixture_of_agents", "react", "react-reasoning", "tool_calling", "tool_calling-reasoning"])
-async def test_agent_full_workflow(config_file: str, question: str, answer: str):
-    await run_workflow(config_file=config_file, question=question, expected_answer=answer)
+async def test_agent_full_workflow(agents_dir: Path, config_file: str, question: str, answer: str):
+    await run_workflow(config_file=agents_dir / config_file, question=question, expected_answer=answer)
