@@ -82,6 +82,7 @@ async def run_workflow(
 
     if config is None:
         assert config_file is not None, "Either config_file or config must be provided"
+        assert Path(config_file).exists(), f"Config file {config_file} does not exist"
         config = load_config(config_file)
 
     async with WorkflowBuilder.from_config(config=config) as workflow_builder:
