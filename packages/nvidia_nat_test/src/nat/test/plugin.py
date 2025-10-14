@@ -223,6 +223,17 @@ def azure_openai_keys_fixture(fail_missing: bool):
         fail_missing=fail_missing)
 
 
+@pytest.fixture(name="wandb_api_key", scope='session')
+def wandb_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Weights & Biases API key.
+    """
+    yield require_env_variables(
+        varnames=["WANDB_API_KEY"],
+        reason="Weights & Biases integration tests require the `WANDB_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
 @pytest.fixture(name="require_docker", scope='session')
 def require_docker_fixture(fail_missing: bool) -> "DockerClient":
     """

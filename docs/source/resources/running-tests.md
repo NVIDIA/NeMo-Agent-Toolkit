@@ -47,6 +47,7 @@ export OPENAI_API_KEY=<KEY>
 export SERP_API_KEY=<KEY>  # https://serpapi.com
 export SERPERDEV_API_KEY=<KEY>  # https://serper.dev
 export TAVILY_API_KEY=<KEY>
+export WANDB_API_KEY=<KEY>
 ```
 
 ### Optional variables
