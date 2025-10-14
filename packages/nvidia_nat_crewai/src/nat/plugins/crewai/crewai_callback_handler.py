@@ -157,7 +157,8 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
             model_input = []
             try:
                 for message in kwargs.get('messages', []):
-                    model_input.append(message.get('content', ""))
+                    content = message.get('content', "")
+                    model_input.append("" if content is None else str(content))
             except Exception as e:
                 logger.exception("Error getting model input: %s", e)
 

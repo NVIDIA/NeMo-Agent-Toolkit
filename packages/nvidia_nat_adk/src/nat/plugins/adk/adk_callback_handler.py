@@ -225,7 +225,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
                             else:
                                 model_input.append(str(part))
                     else:
-                        model_input.append(content or "")
+                        model_input.append("" if content is None else str(content))
             except Exception as _e:
                 logger.exception("Error getting model input")
 
