@@ -106,12 +106,15 @@ nat serve --config_file examples/observability/redact_pii/configs/weave_redact_p
 
 In another terminal, submit a POST request to invoke the served workflow
 
+```bash
+curl -X 'POST' 'http://localhost:8000/generate' \
+   -H 'accept: application/json' \
+   -H 'Content-Type: application/json' \
+   -d '{"input_message": "What is John Doe'\''s contact information?"}'
+```
+
+Example response:
 ```console
-curl -X 'POST'   'http://localhost:8000/generate'
-   -H 'accept: application/json'
-   -H 'Content-Type: application/json'   -d '{
-  "input_message": "What is John Doe'\''s contact information?"
-}'
 {"value":"John Doe's contact information is:\n\n* Email: test@example.com\n* Phone: 555-123-4567"}
 ```
 
