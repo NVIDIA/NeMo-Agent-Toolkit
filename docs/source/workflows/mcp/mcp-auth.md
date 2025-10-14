@@ -193,7 +193,6 @@ This will use the `mcp_oauth2` authentication provider to authenticate the user.
 
 ### Authentication Best Practices
 When using MCP authentication, consider the following security recommendations:
-When using MCP authentication, consider the following security recommendations:
 - The `default_user_id` is used to cache the authenticating user during setup and optionally for tool calls. It is recommended to set `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration for multi-user workflows to avoid accidental tool calls by unauthorized users.
 - Use HTTPS redirect URIs in production environments.
 - Scope OAuth2 tokens to the minimum required permissions.
