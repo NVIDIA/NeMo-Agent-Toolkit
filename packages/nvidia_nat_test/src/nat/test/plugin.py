@@ -439,3 +439,46 @@ async def fixture_mysql_server(fail_missing: bool) -> AsyncGenerator[dict[str, s
         if fail_missing:
             raise
         pytest.skip(f"Error connecting to MySQL server: {e}, skipping MySQL tests")
+
+
+@pytest.fixture(name="minio_server", scope="module")
+def minio_server_fixture(fail_missing: bool) -> Generator[dict[str, str | int]]:
+    """Fixture to safely skip MinIO based tests if MinIO is not running"""
+    host = os.getenv("NAT_CI_MINIO_HOST", "localhost")
+    port = int(os.getenv("NAT_CI_MINIO_PORT", "9000"))
+    bucket_name = os.getenv("NAT_CI_MINIO_BUCKET_NAME", "test")
+    aws_access_key_id = os.getenv("NAT_CI_MINIO_ACCESS_KEY_ID", "minioadmin")
+    aws_secret_access_key = os.getenv("NAT_CI_MINIO_SECRET_ACCESS_KEY", "minioadmin")
+    endpoint_url = f"http://{host}:{port}"
+
+    minio_info = {
+        "host": host,
+        "port": port,
+        "bucket_name": bucket_name,
+        "endpoint_url": endpoint_url,
+        "aws_access_key_id": aws_access_key_id,
+        "aws_secret_access_key": aws_secret_access_key,
+    }
+
+    try:
+        import botocore.session
+        session = botocore.session.get_session()
+
+        client = session.create_client("s3",
+                                       aws_access_key_id=aws_access_key_id,
+                                       aws_secret_access_key=aws_secret_access_key,
+                                       endpoint_url=endpoint_url)
+        client.head_bucket(Bucket=bucket_name)
+        yield minio_info
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("aioboto3 not installed, skipping MinIO tests")
+    except Exception as e:
+        import botocore.exceptions
+        if isinstance(e, botocore.exceptions.ClientError) and e.response['Error']['Code'] == '404':
+            yield minio_info  # Bucket does not exist, but server is reachable
+        elif fail_missing:
+            raise
+        else:
+            pytest.skip(f"Error connecting to MinIO server: {e}, skipping MinIO tests")

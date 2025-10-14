@@ -28,35 +28,13 @@ from nat.test.object_store_tests import ObjectStoreTests
 #     server /data --console-address ":9001"
 
 
-@pytest.fixture(name="s3_server", scope="module")
-def fixture_s3_server(fail_missing: bool):
-    """Fixture to safely skip S3 based tests if S3 is not running"""
-    try:
-        import botocore.session
-        session = botocore.session.get_session()
-        host = os.getenv("NAT_CI_S3_HOST", "localhost")
-        client = session.create_client("s3",
-                                       aws_access_key_id="minioadmin",
-                                       aws_secret_access_key="minioadmin",
-                                       endpoint_url=f"http://{host}:9000")
-        client.head_bucket(Bucket="test")
-        yield
-    except ImportError:
-        if fail_missing:
-            raise
-        pytest.skip("aioboto3 not installed, skipping S3 tests")
-    except Exception as e:
-        import botocore.exceptions
-        if isinstance(e, botocore.exceptions.ClientError) and e.response['Error']['Code'] == '404':
-            yield  # Bucket does not exist, but server is reachable
-        elif fail_missing:
-            raise
-        else:
-            pytest.skip(f"Error connecting to S3 server: {e}, skipping S3 tests")
+@pytest.fixture(scope='class', autouse=True)
+def _minio_server(request, minio_server: dict[str, str | int]):
+    request.cls._minio_server_info = minio_server
 
 
 @pytest.mark.integration
-@pytest.mark.usefixtures("s3_server")
+@pytest.mark.usefixtures("minio_server")
 class TestS3ObjectStore(ObjectStoreTests):
 
     @asynccontextmanager
@@ -65,9 +43,9 @@ class TestS3ObjectStore(ObjectStoreTests):
         async with WorkflowBuilder() as builder:
             await builder.add_object_store(
                 "object_store_name",
-                S3ObjectStoreClientConfig(bucket_name="test",
-                                          endpoint_url=f"http://{host}:9000",
-                                          access_key="minioadmin",
-                                          secret_key="minioadmin"))
+                S3ObjectStoreClientConfig(bucket_name=self._minio_server_info["bucket_name"],
+                                          endpoint_url=self._minio_server_info["endpoint_url"],
+                                          access_key=self._minio_server_info["aws_access_key_id"],
+                                          secret_key=self._minio_server_info["aws_secret_access_key"]))
 
             yield await builder.get_object_store_client("object_store_name")
