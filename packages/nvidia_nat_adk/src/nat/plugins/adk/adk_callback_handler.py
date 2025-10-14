@@ -214,20 +214,22 @@ class ADKProfilerHandler(BaseProfilerCallback):
                     model_name = first
             model_name = model_name or ""
 
-            model_input = ""
+            model_input = []
             try:
                 for message in kwargs.get("messages", []):
                     content = message.get("content", "")
                     if isinstance(content, list):
                         for part in content:
                             if isinstance(part, dict):
-                                model_input += str(part.get("text", ""))  # text parts
+                                model_input.append(str(part.get("text", "")))  # text parts
                             else:
-                                model_input += str(part)
+                                model_input.append(str(part))
                     else:
-                        model_input += content or ""
+                        model_input.append(content or "")
             except Exception as _e:
                 logger.exception("Error getting model input")
+
+            model_input = "".join(model_input)
 
             # Record the start event
             input_stats = IntermediateStepPayload(
@@ -252,13 +254,15 @@ class ADKProfilerHandler(BaseProfilerCallback):
                 raise RuntimeError("Original LLM function is None - instrumentation may not have been set up correctly")
             output = await original_func(*args, **kwargs)
 
-            model_output = ""
+            model_output = []
             try:
                 for choice in output.choices:
                     msg = choice.message
-                    model_output += msg.content or ""
+                    model_output.append(msg.content or "")
             except Exception as _e:
                 logger.exception("Error getting model output")
+
+            model_output = "".join(model_output)
 
             now = time.time()
             # Record the end event
