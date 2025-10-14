@@ -67,6 +67,11 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
             """
             system_message = SystemMessage(content=self.system_prompt)
             if isinstance(messages, BaseMessage):
+                # Attempt to inject the system prompt into the first system message
+                if isinstance(messages, SystemMessage):
+                    messages.content = f"{self.system_prompt}\n\n{messages.content}"
+                    return FunctionArgumentWrapper(messages, *args, **kwargs)
+                # If no system message found, prepend a new one
                 new_messages = [system_message, messages]
                 return FunctionArgumentWrapper(new_messages, *args, **kwargs)
             elif isinstance(messages, PromptValue):
@@ -77,7 +82,14 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
                 return FunctionArgumentWrapper(new_messages, *args, **kwargs)
             elif isinstance(messages, Sequence):
                 if all(isinstance(m, BaseMessage) for m in messages):
-                    new_messages = [system_message, *list(messages)]
+                    messages = list(messages)
+                    # Attempt to inject the system prompt into the first system message
+                    for message in messages:
+                        if isinstance(message, SystemMessage):
+                            message.content = f"{self.system_prompt}\n\n{message.content}"
+                            return FunctionArgumentWrapper(messages, *args, **kwargs)
+                    # If no system message found, prepend a new one
+                    new_messages = [system_message, *messages]
                     return FunctionArgumentWrapper(new_messages, *args, **kwargs)
             raise ValueError(f"Unsupported message type: {type(messages)}")
 
