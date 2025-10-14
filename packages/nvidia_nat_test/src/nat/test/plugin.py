@@ -16,6 +16,7 @@
 import os
 import subprocess
 import typing
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -389,3 +390,27 @@ def phoenix_trace_url_fixture(phoenix_url: str) -> str:
     general.telemetry.tracing["phoenix"].endpoint expects the trace url which is what this fixture provides.
     """
     return f"{phoenix_url}/v1/traces"
+
+
+@pytest.fixture(name="redis_server", scope="session")
+def fixture_redis_server(fail_missing: bool) -> Generator[dict[str, str | int]]:
+    """Fixture to safely skip redis based tests if redis is not running"""
+    host = os.environ.get("NAT_CI_REDIS_HOST", "localhost")
+    port = int(os.environ.get("NAT_CI_REDIS_PORT", "6379"))
+    db = int(os.environ.get("NAT_CI_REDIS_DB", "0"))
+    bucket_name = os.environ.get("NAT_CI_REDIS_BUCKET_NAME", "test")
+
+    try:
+        import redis
+        client = redis.Redis(host=host, port=port, db=db)
+        if not client.ping():
+            raise RuntimeError("Failed to connect to Redis")
+        yield {"host": host, "port": port, "db": db, "bucket_name": bucket_name}
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("redis not installed, skipping redis tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        pytest.skip(f"Error connecting to Redis server: {e}, skipping redis tests")
