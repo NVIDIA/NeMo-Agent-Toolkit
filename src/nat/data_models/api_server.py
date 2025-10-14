@@ -196,17 +196,54 @@ class ChatRequest(BaseModel):
 
 class ChatRequestOrMessage(BaseModel):
     """
-    ChatRequestOrMessage is a data model that represents either a conversation or a string input.
+    `ChatRequestOrMessage` is a data model that represents either a conversation or a string input.
     This is useful for functions that can handle either type of input.
 
-    `messages` is compatible with the OpenAI Chat Completions API specification.
-
-    `input_message` is a string input that can be used for functions that do not require a conversation.
+    - `messages` is compatible with the OpenAI Chat Completions API specification.
+    - `input_message` is a string input that can be used for functions that do not require a conversation.
 
     Note: When `messages` is provided, extra fields are allowed to enable lossless round-trip
     conversion with ChatRequest. When `input_message` is provided, no extra fields are permitted.
     """
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "examples": [
+                {
+                    "input_message": "What can you do?"
+                },
+                {
+                    "messages": [{
+                        "role": "user", "content": "What can you do?"
+                    }],
+                    "model": "nvidia/nemotron",
+                    "temperature": 0.7
+                },
+            ],
+            "oneOf": [
+                {
+                    "required": ["input_message"],
+                    "properties": {
+                        "input_message": {
+                            "type": "string"
+                        },
+                    },
+                    "additionalProperties": {
+                        "not": True, "errorMessage": 'remove additional property ${0#}'
+                    },
+                },
+                {
+                    "required": ["messages"],
+                    "properties": {
+                        "messages": {
+                            "type": "array"
+                        },
+                    },
+                    "additionalProperties": True
+                },
+            ]
+        },
+    )
 
     messages: typing.Annotated[list[Message] | None, conlist(Message, min_length=1)] = Field(
         default=None, description="A non-empty conversation of messages to process.")
