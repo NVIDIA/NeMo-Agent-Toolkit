@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import pytest
@@ -29,15 +30,17 @@ from nat.test.object_store_tests import ObjectStoreTests
 
 
 @pytest_asyncio.fixture(name="mysql_server", scope="module")
-async def fixture_mysql_server(fail_missing: bool):
+async def fixture_mysql_server(fail_missing: bool) -> AsyncGenerator[dict[str, str | int]]:
     """Fixture to safely skip MySQL based tests if MySQL is not running"""
+    host = os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1')
+    port = int(os.environ.get('NAT_CI_MYSQL_PORT', '3306'))
+    user = os.environ.get('NAT_CI_MYSQL_USER', 'root')
+    password = os.environ.get('MYSQL_ROOT_PASSWORD', 'my_password')
+    bucket_name = os.environ.get('NAT_CI_MYSQL_BUCKET_NAME', 'test')
     try:
         import aiomysql
-        conn = await aiomysql.connect(host=os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1'),
-                                      port=3306,
-                                      user='root',
-                                      password=os.environ.get('MYSQL_ROOT_PASSWORD', 'my_password'))
-        yield
+        conn = await aiomysql.connect(host=host, port=port, user=user, password=password)
+        yield {"host": host, "port": port, "username": user, "password": password, "bucket_name": bucket_name}
         conn.close()
     except ImportError:
         if fail_missing:
@@ -49,6 +52,11 @@ async def fixture_mysql_server(fail_missing: bool):
         pytest.skip(f"Error connecting to MySQL server: {e}, skipping MySQL tests")
 
 
+@pytest.fixture(scope='class', autouse=True)
+def _mysql_server(request, mysql_server: dict[str, str | int]):
+    request.cls._mysql_server_info = mysql_server
+
+
 @pytest.mark.integration
 @pytest.mark.usefixtures("mysql_server")
 class TestMySQLObjectStore(ObjectStoreTests):
@@ -58,9 +66,7 @@ class TestMySQLObjectStore(ObjectStoreTests):
         async with WorkflowBuilder() as builder:
             await builder.add_object_store(
                 "object_store_name",
-                MySQLObjectStoreClientConfig(host=os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1'),
-                                             bucket_name="test",
-                                             username="root",
-                                             password=os.environ.get('MYSQL_ROOT_PASSWORD', 'my-secret-pw')))
+                MySQLObjectStoreClientConfig(**self._mysql_server_info),
+            )
 
             yield await builder.get_object_store_client("object_store_name")
