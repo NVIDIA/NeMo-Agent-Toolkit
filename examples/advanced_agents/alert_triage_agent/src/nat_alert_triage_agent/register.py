@@ -24,6 +24,8 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.optimizable import OptimizableField
+from nat.data_models.optimizable import SearchSpace
 from nat.profiler.decorators.function_tracking import track_function
 
 # flake8: noqa
@@ -41,6 +43,7 @@ from . import utils
 # Import custom evaluator
 from .classification_evaluator import register_classification_evaluator
 from .prompts import ALERT_TRIAGE_AGENT_PROMPT
+from .optimizer_prompt import OptimizerPrompts
 
 
 class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agent"):
@@ -61,8 +64,15 @@ class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agen
     benign_fallback_data_path: str | None = Field(
         default="examples/advanced_agents/alert_triage_agent/data/benign_fallback_offline_data.json",
         description="Path to the JSON file with baseline/normal system behavior data")
-    agent_prompt: str = Field(default=ALERT_TRIAGE_AGENT_PROMPT,
-                              description="The system prompt to use for the alert triage agent.")
+    agent_prompt: str = OptimizableField(
+        default=ALERT_TRIAGE_AGENT_PROMPT,
+        description="The system prompt to use for the alert triage agent.",
+        space=SearchSpace(
+            is_prompt=True,
+            prompt=ALERT_TRIAGE_AGENT_PROMPT,
+            prompt_purpose=OptimizerPrompts.AGENT_PROMPT_PURPOSE,
+        )
+    )
 
 
 @register_function(config_type=AlertTriageAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])

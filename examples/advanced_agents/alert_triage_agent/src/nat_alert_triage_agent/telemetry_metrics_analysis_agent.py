@@ -21,18 +21,26 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-
+from nat.data_models.optimizable import OptimizableField
+from nat.data_models.optimizable import SearchSpace
 from . import utils
 from .prompts import TelemetryMetricsAnalysisAgentPrompts
-
+from .optimizer_prompt import OptimizerPrompts
 
 class TelemetryMetricsAnalysisAgentConfig(FunctionBaseConfig, name="telemetry_metrics_analysis_agent"):
     description: str = Field(default=TelemetryMetricsAnalysisAgentPrompts.TOOL_DESCRIPTION,
                              description="Description of the tool for the triage agent.")
     tool_names: list[str] = []
     llm_name: LLMRef
-    prompt: str = Field(default=TelemetryMetricsAnalysisAgentPrompts.PROMPT,
-                        description="Main prompt for the telemetry metrics analysis agent.")
+    prompt: str | None = OptimizableField(
+        default=TelemetryMetricsAnalysisAgentPrompts.PROMPT,
+        description="The system prompt to use for the alert triage agent.",
+        space=SearchSpace(
+            is_prompt=True,
+            prompt=TelemetryMetricsAnalysisAgentPrompts.PROMPT,
+            prompt_purpose=OptimizerPrompts.TELEMETRY_AGENT_PROMPT_PURPOSE,
+        )
+    )
 
 
 @register_function(config_type=TelemetryMetricsAnalysisAgentConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
