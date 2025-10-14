@@ -56,6 +56,12 @@ class TestThinkingMixin:
         m_false = Model(model_name="NVIDIA/LLaMa-3.1-Nemotron-v1-5", thinking=False)
         assert m_false.thinking_system_prompt == "/no_think"
 
+        m_true = Model(model_name="NVIDIA/LLaMa-3.1-Nemotron-v1", thinking=True)
+        assert m_true.thinking_system_prompt == "detailed thinking on"
+
+        m_false = Model(model_name="NVIDIA/LLaMa-3.1-Nemotron-v1", thinking=False)
+        assert m_false.thinking_system_prompt == "detailed thinking off"
+
     def test_supported_default_remains_none(self):
 
         class Model(ThinkingMixin):
