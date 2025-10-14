@@ -104,7 +104,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
             )
         return TokenUsageBaseModel()
 
-    def _should_track_node(self, serialized: dict[str, Any], tags: list[str] | None = None) -> bool:
+    def _should_track_node(self, serialized: dict[str, Any] | None, tags: list[str] | None = None) -> bool:
         """
         Determine if a chain execution should be tracked as a LangGraph node.
 
@@ -112,12 +112,16 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         but filter out internal LangChain runnables to avoid excessive events.
 
         Args:
-            serialized: Serialized information about the chain
+            serialized: Serialized information about the chain (can be None)
             tags: Tags associated with the chain execution
 
         Returns:
             True if this should be tracked as a node, False otherwise
         """
+        # Handle None serialized parameter
+        if serialized is None:
+            return False
+
         # Get the node name - try different possible locations
         node_name = serialized.get("name", "")
         node_id = serialized.get("id", [])
@@ -368,7 +372,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
 
     async def on_chain_start(
         self,
-        serialized: dict[str, Any],
+        serialized: dict[str, Any] | None,
         inputs: dict[str, Any],
         *,
         run_id: UUID,
@@ -387,7 +391,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         if not self._should_track_node(serialized, tags):
             return
 
-        # Extract node name
+        # Extract node name (serialized is guaranteed not None here due to _should_track_node check)
         node_name = serialized.get("name", serialized.get("id", ["unknown"])[0] if serialized.get("id") else "unknown")
 
         run_id_str = str(run_id)
@@ -403,9 +407,14 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
             self._run_id_to_node_input[run_id_str] = {"error": "Failed to copy inputs"}
 
         # Create node info metadata
+        node_type = "unknown"
+        if serialized and serialized.get("id"):
+            node_type = serialized.get("id", ["unknown"])[0] if isinstance(serialized.get("id"), list) else str(
+                serialized.get("id"))
+
         node_info = {
             "node_name": node_name,
-            "node_type": serialized.get("id", ["unknown"])[0] if serialized.get("id") else "unknown",
+            "node_type": node_type,
             "parent_run_id": str(parent_run_id) if parent_run_id else None,
         }
 

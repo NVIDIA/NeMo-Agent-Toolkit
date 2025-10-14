@@ -26,14 +26,13 @@ logger = logging.getLogger(__name__)
 
 def compute_node_metrics(all_steps: list[list[IntermediateStep]]) -> dict[str, Any]:
     """
-    Compute node-level execution metrics from profiler traces.
-
-    This function analyzes NODE_START and NODE_END events to calculate:
-    - Total execution time per node
-    - Average execution time per node
-    - Min/max execution time per node
-    - Percentile statistics (P50, P90, P95, P99)
-    - Call count per node
+    Compute node-level execution metrics from profiler traces. This function analyzes NODE_START and
+    NODE_END events to calculate:
+    1. Total execution time per node
+    2. Average execution time per node
+    3. Min/max execution time per node
+    4. Percentile statistics (P50, P90, P95, P99)
+    5. Call count per node
 
     Args:
         all_steps: List of intermediate steps for each example/request
