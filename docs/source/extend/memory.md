@@ -74,19 +74,20 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
            self._conn_url = config.connection_url
            # Possibly set up connections here
 
-       async def add_items(self, user_id: str, items: list[MemoryItem]) -> None:
+       async def add_items(self, items: list[MemoryItem], user_id: str, **kwargs) -> None:
            # Insert into your custom DB or vector store
-           # user_id is passed as a required positional parameter for multi-tenant isolation
+           # user_id is a required parameter (after items) for multi-tenant isolation
            ...
 
-       async def retrieve_memory(self, user_id: str, query: str, top_k: int = 5, **kwargs) -> str:
+       async def retrieve_memory(self, query: str, user_id: str, **kwargs) -> str:
            # Perform your query in the DB or vector store
+           # user_id is a required parameter (after query) for multi-tenant isolation
            # Return formatted memory as a string optimized for LLM consumption
            ...
 
        async def remove_items(self, user_id: str, **kwargs) -> None:
            # Implement your deletion logic
-           # user_id is passed as a required positional parameter for multi-tenant isolation
+           # user_id is a required parameter for multi-tenant isolation
            ...
    ```
 3. **Tell NeMo Agent toolkit how to build your MemoryEditor**. Typically, you do this by hooking into the builder system so that when `builder.get_memory_client("my_custom_memory")` is called, it returns an instance of `MyCustomMemoryEditor`.

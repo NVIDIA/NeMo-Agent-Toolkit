@@ -22,7 +22,6 @@ import redis.exceptions as redis_exceptions
 from langchain_core.embeddings import Embeddings
 from redis.commands.search.query import Query
 
-from nat.builder.context import Context
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
 

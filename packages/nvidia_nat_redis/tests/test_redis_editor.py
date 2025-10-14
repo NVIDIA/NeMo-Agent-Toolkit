@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 from langchain_core.embeddings import Embeddings
@@ -125,7 +126,7 @@ async def test_add_items_empty_list(redis_editor: RedisEditor, mock_redis_client
     """Test adding an empty list of MemoryItem objects."""
     await redis_editor.add_items([], "test_user")
 
-    mock_redis_client.add_items.assert_not_called()
+    mock_redis_client.json().set.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -155,15 +156,21 @@ async def test_retrieve_memory_success(redis_editor: RedisEditor, mock_redis_cli
     async def mock_json_get(doc_id):
         if doc_id == "pytest:memory:001":
             return {
-                "conversation": [{"role": "user", "content": "I like pizza"}],
+                "conversation": [{
+                    "role": "user", "content": "I like pizza"
+                }],
                 "user_id": "user123",
                 "tags": ["food", "preferences"],
-                "metadata": {"key1": "value1"},
+                "metadata": {
+                    "key1": "value1"
+                },
                 "memory": "User likes pizza"
             }
         elif doc_id == "pytest:memory:002":
             return {
-                "conversation": [{"role": "user", "content": "I'm vegetarian"}],
+                "conversation": [{
+                    "role": "user", "content": "I'm vegetarian"
+                }],
                 "user_id": "user123",
                 "tags": ["dietary"],
                 "metadata": {},

@@ -14,16 +14,21 @@
 # limitations under the License.
 
 import logging
-import re
 from typing import Any
 
+from langchain_core.messages import AIMessage
+from langchain_core.messages import BaseMessage
+from langchain_core.messages import HumanMessage
+from langchain_core.messages import SystemMessage
 from langgraph.graph import StateGraph
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
 
 from nat.builder.context import Context
-from nat.data_models.api_server import ChatRequest, Message, UserMessageContentRoleType
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import Message
+from nat.data_models.api_server import UserMessageContentRoleType
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
+
 from .state import AutoMemoryWrapperState
 
 logger = logging.getLogger(__name__)
@@ -89,11 +94,12 @@ class AutoMemoryWrapperGraph:
             user_id = Context.get().user_id or "default_NAT_user"
 
             # Add to memory, passing user_id as positional argument
-            await self.memory_editor.add_items([
-                MemoryItem(
-                    conversation=[{"role": "user", "content": str(user_message.content)}]
-                )
-            ], user_id, **self.add_params)
+            await self.memory_editor.add_items(
+                [MemoryItem(conversation=[{
+                    "role": "user", "content": str(user_message.content)
+                }])],
+                user_id,
+                **self.add_params)
         return state
 
     async def memory_retrieve_node(self, state: AutoMemoryWrapperState):
@@ -116,9 +122,7 @@ class AutoMemoryWrapperGraph:
 
         # Inject memory as system message if available
         if memory_string:
-            memory_message = SystemMessage(
-                content=f"Relevant context from memory:\n{memory_string}"
-            )
+            memory_message = SystemMessage(content=f"Relevant context from memory:\n{memory_string}")
             # Insert before the last user message
             state.messages.insert(-1, memory_message)
 
@@ -172,11 +176,12 @@ class AutoMemoryWrapperGraph:
             user_id = Context.get().user_id or "default_NAT_user"
 
             # Add to memory, passing user_id as positional argument
-            await self.memory_editor.add_items([
-                MemoryItem(
-                    conversation=[{"role": "assistant", "content": str(ai_message.content)}]
-                )
-            ], user_id, **self.add_params)
+            await self.memory_editor.add_items(
+                [MemoryItem(conversation=[{
+                    "role": "assistant", "content": str(ai_message.content)
+                }])],
+                user_id,
+                **self.add_params)
         return state
 
     def build_graph(self):
@@ -193,9 +198,8 @@ class AutoMemoryWrapperGraph:
             workflow.add_node("capture_ai_response", self.capture_ai_response_node)
 
         # Connect nodes based on enabled features
-        workflow.set_entry_point("capture_user_message" if self.save_user_messages else
-                                 "memory_retrieve" if self.retrieve_memory else
-                                 "inner_agent")
+        workflow.set_entry_point("capture_user_message" if self.save_user_messages else "memory_retrieve" if self.
+                                 retrieve_memory else "inner_agent")
 
         if self.save_user_messages and self.retrieve_memory:
             workflow.add_edge("capture_user_message", "memory_retrieve")

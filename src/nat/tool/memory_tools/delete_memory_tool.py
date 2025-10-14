@@ -50,7 +50,7 @@ async def delete_memory_tool(config: DeleteToolConfig, builder: Builder):
     # First, retrieve the memory client
     memory_editor = builder.get_memory_client(config.memory)
 
-    async def _arun(delete_input: DeleteMemoryInput) -> str:
+    async def _arun(_delete_input: DeleteMemoryInput) -> str:
         """
         Asynchronous execution of deletion of memories.
 
@@ -62,9 +62,10 @@ async def delete_memory_tool(config: DeleteToolConfig, builder: Builder):
         try:
             # Get user_id from Context (not from LLM input)
             user_id = Context.get().user_id or "default_NAT_user"
+            thread_id = Context.get().thread_id or "default_thread"
 
-            # Pass user_id to memory editor as positional argument
-            await memory_editor.remove_items(user_id)
+            # Pass user_id and thread_id to memory editor
+            await memory_editor.remove_items(user_id, thread_id)
 
             return "Memories deleted!"
 

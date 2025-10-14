@@ -25,8 +25,8 @@ These examples use the Zep Cloud memory backend.
 - [Prerequisites](#prerequisites)
 - [Installation and Setup](#installation-and-setup)
 - [Run the Workflow](#run-the-workflow)
-  - [Create Memory](#create-memory)
-  - [Recall Memory](#recall-memory)
+  - [Approach 1: Automatic Memory (Recommended)](#approach-1-automatic-memory-recommended)
+  - [Approach 2: Hybrid Memory (Tool-Based Retrieval)](#approach-2-hybrid-memory-tool-based-retrieval)
 
 ## Key Features
 

@@ -53,14 +53,15 @@ class ZepEditor(MemoryEditor):
         Args:
             user_id (str): The user ID to check/create.
         """
-        logger.info(f"Checking if Zep user {user_id} exists...")
+        logger.info("Checking if Zep user exists")
         try:
             # Try to get the user
             await self._client.user.get(user_id=user_id)
-            logger.info(f"Zep user {user_id} already exists")
+            logger.info("Zep user already exists")
         except Exception as e:
+            # TODO: Replace with zep-cloud SDK-specific exceptions when available
             # User doesn't exist, create with info from Context or fallbacks
-            logger.info(f"Zep user {user_id} not found (error: {type(e).__name__}), creating...")
+            logger.info("Zep user not found (%s), creating...", type(e).__name__)
 
             # Get user info from Context with fallbacks
             ctx = Context.get()
@@ -69,16 +70,12 @@ class ZepEditor(MemoryEditor):
             email = ctx.user_email or "john.doe@example.com"
 
             try:
-                await self._client.user.add(
-                    user_id=user_id,
-                    email=email,
-                    first_name=first_name,
-                    last_name=last_name
-                )
-                logger.info(f"Successfully created Zep user {user_id} with name: {first_name} {last_name}")
+                await self._client.user.add(user_id=user_id, email=email, first_name=first_name, last_name=last_name)
+                logger.info("Successfully created Zep user")
             except Exception as create_error:
+                # TODO: Replace with zep-cloud SDK-specific exceptions when available
                 # User might have been created by another request, ignore
-                logger.warning(f"Error creating Zep user {user_id}: {create_error}, assuming it exists")
+                logger.warning("Error creating Zep user: %s, assuming it exists", type(create_error).__name__)
 
     async def add_items(self, items: list[MemoryItem], user_id: str, **kwargs) -> None:
         """
@@ -96,11 +93,11 @@ class ZepEditor(MemoryEditor):
         """
         # Warn if using default user_id
         if user_id == "default_NAT_user":
-            logger.warning(f"No user_id provided in Context, proceeding with user_id='{user_id}'")
-            
+            logger.warning("No user_id provided in Context, using default value")
+
         # Get user info from Context for message names and check for warnings
         nat_context = Context.get()
-        
+
         user_first_name = nat_context.user_first_name
         if not user_first_name:
             logger.warning("No user_first_name provided in Context, using default value 'John' for message attribution")
@@ -110,7 +107,7 @@ class ZepEditor(MemoryEditor):
         if not user_last_name:
             logger.warning("No user_last_name provided in Context, using default value 'Doe' for message attribution")
             user_last_name = "Doe"
-        
+
         user_email = nat_context.user_email
         if not user_email:
             logger.warning("No user_email provided in Context, using default value 'john.doe@example.com'")
@@ -148,31 +145,27 @@ class ZepEditor(MemoryEditor):
                 # Create Message with name field for better graph construction
                 # Use full name from Context for user messages, or explicit name if provided
                 default_name = user_full_name if msg["role"] == "user" else "AI Assistant"
-                message = Message(
-                    content=msg["content"],
-                    role=msg["role"],
-                    name=msg.get("name", default_name)
-                )
+                message = Message(content=msg["content"], role=msg["role"], name=msg.get("name", default_name))
                 messages.append(message)
 
             # Ensure thread exists - try to create it (more reliable than checking first)
-            logger.info(f"Ensuring Zep thread {thread_id} exists for Zep user {user_id}...")
+            logger.info("Ensuring Zep thread exists")
             try:
                 # Always try to create the thread
                 await self._client.thread.create(thread_id=thread_id, user_id=user_id)
-                logger.info(f"Successfully created new Zep thread {thread_id} for Zep user {user_id}")
+                logger.info("Successfully created new Zep thread")
             except Exception as create_error:
+                # TODO: Replace with zep-cloud SDK-specific exceptions when available
                 # Thread likely already exists, which is fine
                 error_msg = str(create_error).lower()
                 if "already exists" in error_msg or "409" in error_msg or "conflict" in error_msg:
-                    logger.info(f"Zep thread {thread_id} already exists (expected), continuing")
+                    logger.info("Zep thread already exists (expected), continuing")
                 else:
                     # Unexpected error, log it but continue anyway
-                    logger.warning(f"Unexpected error creating thread {thread_id}: {create_error}, attempting to continue")
-
+                    logger.warning("Unexpected error creating thread: %s, attempting to continue", type(create_error).__name__)
 
             # Add messages to thread using Zep v3 API
-            logger.info(f"Queueing add_messages for thread {thread_id} with {len(messages)} messages")
+            logger.info("Queueing add_messages for thread with %d messages", len(messages))
 
             # Build add_messages parameters
             add_messages_params = {"thread_id": thread_id, "messages": messages}
@@ -203,7 +196,7 @@ class ZepEditor(MemoryEditor):
         """
         # Warn if using default user_id
         if user_id == "default_NAT_user":
-            logger.warning(f"No user_id provided in Context, proceeding with user_id='{user_id}'")
+            logger.warning("No user_id provided in Context, using default value")
 
         mode = kwargs.pop("mode", "basic")  # Get mode, default to "basic" for fast retrieval
 
@@ -216,10 +209,7 @@ class ZepEditor(MemoryEditor):
 
         try:
             # Use Zep v3 thread.get_user_context - returns pre-formatted context
-            memory_response = await self._client.thread.get_user_context(
-                thread_id=thread_id,
-                mode=mode
-            )
+            memory_response = await self._client.thread.get_user_context(thread_id=thread_id, mode=mode)
             # Return Zep's formatted context string directly
             return memory_response.context or ""
 
@@ -240,7 +230,7 @@ class ZepEditor(MemoryEditor):
         """
         # Warn if using default user_id
         if user_id == "default_NAT_user":
-            logger.warning(f"No user_id provided in Context, proceeding with user_id='{user_id}'")
+            logger.warning("No user_id provided in Context, using default value")
 
         if "thread_id" in kwargs:
             thread_id = kwargs.pop("thread_id")

@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import BaseModel, Field
 from langchain_core.messages import BaseMessage
+from pydantic import BaseModel
+from pydantic import Field
 
 
 class AutoMemoryWrapperState(BaseModel):
@@ -25,7 +26,5 @@ class AutoMemoryWrapperState(BaseModel):
     (ReActGraphState, ReWOOGraphState, etc.). The wrapper
     never sees or manipulates the inner agent's state.
     """
-    messages: list[BaseMessage] = Field(
-        default_factory=list,
-        description="Conversation messages with context injection"
-    )
+    messages: list[BaseMessage] = Field(default_factory=list,
+                                        description="Conversation messages with context injection")

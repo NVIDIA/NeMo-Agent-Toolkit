@@ -12,12 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Automatic memory wrapper for NAT agents."""
 
 from .agent import AutoMemoryWrapperGraph
+from .register import AutoMemoryAgentConfig
+from .register import auto_memory_agent
 from .state import AutoMemoryWrapperState
-from .register import AutoMemoryAgentConfig, auto_memory_agent
 
 __all__ = [
     "AutoMemoryWrapperGraph",

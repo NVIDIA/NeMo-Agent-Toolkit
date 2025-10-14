@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -80,28 +80,26 @@ async def test_add_items_empty_list(mem0_editor: Mem0Editor, mock_mem0_client: A
 async def test_retrieve_memory_success(mem0_editor: Mem0Editor, mock_mem0_client: AsyncMock):
     """Test retrieving formatted memory with valid query and user ID."""
     mock_mem0_client.search.return_value = {
-        "results": [
-            {
-                "input": [{
-                    "role": "system", "content": "Hello"
-                }, {
-                    "role": "system", "content": "Hi"
-                }],
-                "memory": "User is vegetarian",
-                "categories": ["dietary", "preferences"],
-                "metadata": {
-                    "key1": "value1"
-                }
-            },
-            {
-                "input": [{
-                    "role": "user", "content": "I like pizza"
-                }],
-                "memory": "User likes pizza",
-                "categories": ["food"],
-                "metadata": {}
+        "results": [{
+            "input": [{
+                "role": "system", "content": "Hello"
+            }, {
+                "role": "system", "content": "Hi"
+            }],
+            "memory": "User is vegetarian",
+            "categories": ["dietary", "preferences"],
+            "metadata": {
+                "key1": "value1"
             }
-        ]
+        },
+                    {
+                        "input": [{
+                            "role": "user", "content": "I like pizza"
+                        }],
+                        "memory": "User likes pizza",
+                        "categories": ["food"],
+                        "metadata": {}
+                    }]
     }
 
     result = await mem0_editor.retrieve_memory(query="test query", user_id="user123", top_k=2)

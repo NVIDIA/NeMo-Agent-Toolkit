@@ -78,7 +78,7 @@ class MemoryItem(BaseModel):
         "key (user or assistant. It must also have a \"content\" key.",
         default=None)
     tags: list[str] = Field(default_factory=list, description="List of tags applied to the item.")
-    metadata: dict[str, typing.Any] = Field(description="Metadata about the memory item.", default={})
+    metadata: dict[str, typing.Any] = Field(description="Metadata about the memory item.", default_factory=dict)
     memory: str | None = Field(default=None)
 
 
@@ -89,12 +89,11 @@ class SearchMemoryInput(BaseModel):
     Note: user_id is NOT included as a field. Memory search operations execute within a
     request context where the user ID is determined by the Context object (Context.get().user_id).
     """
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
+    model_config = ConfigDict(
+        json_schema_extra={"example": {
             "query": "What is the user's preferred programming language?",
             "top_k": 1,
-        }
-    })
+        }})
 
     query: str = Field(description="Search query for which to retrieve memory.")  # noqa: E501
     top_k: int = Field(description="Maximum number of memories to return")

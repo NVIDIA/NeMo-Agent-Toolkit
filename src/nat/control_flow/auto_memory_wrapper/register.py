@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import Field
 
@@ -22,7 +22,8 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
-from nat.data_models.component_ref import FunctionRef, MemoryRef
+from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import MemoryRef
 
 logger = logging.getLogger(__name__)
 
@@ -70,33 +71,20 @@ class AutoMemoryAgentConfig(AgentBaseConfig, name="auto_memory_agent"):
     """
 
     # Memory configuration
-    memory_name: MemoryRef = Field(
-        ...,
-        description="Name of the memory backend (from memory section of config)"
-    )
+    memory_name: MemoryRef = Field(..., description="Name of the memory backend (from memory section of config)")
 
     # Reference to inner agent by NAME (not inline config)
-    inner_agent_name: FunctionRef = Field(
-        ...,
-        description="Name of the agent workflow to wrap with automatic memory"
-    )
+    inner_agent_name: FunctionRef = Field(..., description="Name of the agent workflow to wrap with automatic memory")
 
     # Feature flags
     save_user_messages_to_memory: bool = Field(
-        default=True,
-        description="Automatically save user messages to memory before agent processing"
-    )
+        default=True, description="Automatically save user messages to memory before agent processing")
     retrieve_memory_for_every_response: bool = Field(
         default=True,
-        description=(
-            "Automatically retrieve memory context before agent processing. "
-            "Set to false for save-only mode or when using tool-based retrieval."
-        )
-    )
+        description=("Automatically retrieve memory context before agent processing. "
+                     "Set to false for save-only mode or when using tool-based retrieval."))
     save_ai_messages_to_memory: bool = Field(
-        default=True,
-        description="Automatically save AI agent responses to memory after generation"
-    )
+        default=True, description="Automatically save AI agent responses to memory after generation")
 
     # Memory retrieval configuration
     search_params: dict[str, Any] = Field(
@@ -106,9 +94,7 @@ class AutoMemoryAgentConfig(AgentBaseConfig, name="auto_memory_agent"):
             "Default parameters:\n"
             "  - top_k (int): Maximum results to return (default: 5)\n\n"
             "Additional parameters:\n"
-            "  - Any additional parameters that the chosen memory backend has in its NAT plug-in search function\n\n"
-        )
-    )
+            "  - Any additional parameters that the chosen memory backend has in its NAT plug-in search function\n\n"))
 
     # Memory addition configuration
     add_params: dict[str, Any] = Field(
@@ -117,14 +103,10 @@ class AutoMemoryAgentConfig(AgentBaseConfig, name="auto_memory_agent"):
             "Backend-specific parameters passed to memory_editor.add_items().\n"
             "Additional parameters:\n"
             "  - Any additional parameters that the chosen memory backend has in its NAT plug-in add_items function\n\n"
-        )
-    )
+        ))
 
 
-@register_function(
-    config_type=AutoMemoryAgentConfig,
-    framework_wrappers=[LLMFrameworkEnum.LANGCHAIN]
-)
+@register_function(config_type=AutoMemoryAgentConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder):
     """
     Build the auto-memory agent that wraps another agent.
@@ -153,23 +135,19 @@ async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder):
     # This is required to pass multiple messages (including system messages with memory context)
     inner_agent_config = builder.get_function_config(config.inner_agent_name)
     if hasattr(inner_agent_config, 'use_openai_api') and not inner_agent_config.use_openai_api:
-        raise ValueError(
-            f"Auto-memory wrapper requires inner agent '{config.inner_agent_name}' "
-            f"to have 'use_openai_api: true'. This is necessary to pass multiple "
-            f"messages (including system messages with memory context) to the inner agent. "
-            f"Please add 'use_openai_api: true' to your '{config.inner_agent_name}' configuration."
-        )
+        raise ValueError(f"Auto-memory wrapper requires inner agent '{config.inner_agent_name}' "
+                         f"to have 'use_openai_api: true'. This is necessary to pass multiple "
+                         f"messages (including system messages with memory context) to the inner agent. "
+                         f"Please add 'use_openai_api: true' to your '{config.inner_agent_name}' configuration.")
 
     # Create wrapper
-    wrapper_graph = AutoMemoryWrapperGraph(
-        inner_agent_fn=inner_agent_fn,
-        memory_editor=memory_editor,
-        save_user_messages=config.save_user_messages_to_memory,
-        retrieve_memory=config.retrieve_memory_for_every_response,
-        save_ai_responses=config.save_ai_messages_to_memory,
-        search_params=config.search_params,
-        add_params=config.add_params
-    )
+    wrapper_graph = AutoMemoryWrapperGraph(inner_agent_fn=inner_agent_fn,
+                                           memory_editor=memory_editor,
+                                           save_user_messages=config.save_user_messages_to_memory,
+                                           retrieve_memory=config.retrieve_memory_for_every_response,
+                                           save_ai_responses=config.save_ai_messages_to_memory,
+                                           search_params=config.search_params,
+                                           add_params=config.add_params)
 
     # Build the graph
     graph: CompiledStateGraph = wrapper_graph.build_graph()
