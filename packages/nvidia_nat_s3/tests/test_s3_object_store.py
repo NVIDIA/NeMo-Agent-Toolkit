@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from contextlib import asynccontextmanager
 
 import pytest
@@ -39,7 +38,6 @@ class TestS3ObjectStore(ObjectStoreTests):
 
     @asynccontextmanager
     async def _get_store(self):
-        host = os.getenv("NAT_CI_S3_HOST", "localhost")
         async with WorkflowBuilder() as builder:
             await builder.add_object_store(
                 "object_store_name",
