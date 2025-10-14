@@ -256,6 +256,11 @@ def root_repo_dir_fixture() -> Path:
     return locate_repo_root()
 
 
+@pytest.fixture(name="examples_dir", scope='session')
+def examples_dir_fixture(root_repo_dir: Path) -> Path:
+    return root_repo_dir / "examples"
+
+
 @pytest.fixture(name="require_etcd", scope="session")
 def require_etcd_fixture(fail_missing: bool = False) -> bool:
     """

@@ -71,7 +71,7 @@ async def test_token_usage_tool(df_path: Path):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_full_workflow(phoenix_url: str):
+async def test_full_workflow(phoenix_url: str, examples_dir: Path):
     from nat.runtime.loader import load_config
     from nat.test.utils import locate_example_config
     from nat.test.utils import run_workflow
@@ -79,8 +79,6 @@ async def test_full_workflow(phoenix_url: str):
     phoenix_trace_url = f"{phoenix_url}/v1/traces"
 
     # This workflow requires a prior trace to be ingested into Phoenix.
-    cur_dir = Path(__file__).parent
-    examples_dir = cur_dir.parent.parent.parent
     simple_calc_observe_config_file = (examples_dir /
                                        "observability/simple_calculator_observability/configs/config-phoenix.yml")
 
