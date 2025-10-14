@@ -20,9 +20,9 @@ import pytest
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_full_workflow(phoenix_trace_url: str, examples_dir: Path):
+async def test_full_workflow(redis_server: dict[str, str | int], phoenix_trace_url: str, examples_dir: Path):
+    from nat.plugins.redis.memory import RedisMemoryClientConfig
     from nat.runtime.loader import load_config
-    from nat.test.utils import locate_example_config
     from nat.test.utils import run_workflow
 
     config_file = (examples_dir / "memory/redis/configs/config.yml")
@@ -30,5 +30,13 @@ async def test_full_workflow(phoenix_trace_url: str, examples_dir: Path):
     config = load_config(config_file)
     config.general.telemetry.tracing["phoenix"].endpoint = phoenix_trace_url
 
+    existing_redis_config = config.memory['redis_memory']
+    redis_config = RedisMemoryClientConfig(host=redis_server["host"],
+                                           port=redis_server["port"],
+                                           db=redis_server["db"],
+                                           key_prefix=existing_redis_config.key_prefix,
+                                           embedder=existing_redis_config.embedder)
+
+    config.memory['redis_memory'] = redis_config
     await run_workflow(config=config, question="my favorite flavor is strawberry", expected_answer="strawberry")
     await run_workflow(config=config, question="what flavor of ice-cream should I get?", expected_answer="strawberry")
