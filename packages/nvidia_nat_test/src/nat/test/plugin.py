@@ -380,3 +380,12 @@ def phoenix_url_fixture(fail_missing: bool) -> str:
         if fail_missing:
             raise RuntimeError(reason)
         pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="phoenix_trace_url", scope="session")
+def phoenix_trace_url_fixture(phoenix_url: str) -> str:
+    """
+    Some of our tools expect the base url provided by the phoenix_url fixture, however the
+    general.telemetry.tracing["phoenix"].endpoint expects the trace url which is what this fixture provides.
+    """
+    return f"{phoenix_url}/v1/traces"
