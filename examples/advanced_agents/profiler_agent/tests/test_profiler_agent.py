@@ -71,12 +71,10 @@ async def test_token_usage_tool(df_path: Path):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_full_workflow(phoenix_url: str, examples_dir: Path):
+async def test_full_workflow(phoenix_url: str, phoenix_trace_url: str, examples_dir: Path):
     from nat.runtime.loader import load_config
     from nat.test.utils import locate_example_config
     from nat.test.utils import run_workflow
-
-    phoenix_trace_url = f"{phoenix_url}/v1/traces"
 
     # This workflow requires a prior trace to be ingested into Phoenix.
     simple_calc_observe_config_file = (examples_dir /
@@ -85,17 +83,11 @@ async def test_full_workflow(phoenix_url: str, examples_dir: Path):
     simple_calc_observe_config = load_config(simple_calc_observe_config_file)
     simple_calc_observe_config.general.telemetry.tracing["phoenix"].endpoint = phoenix_trace_url
 
-    await run_workflow(config_file=None,
-                       config=simple_calc_observe_config,
-                       question="multiply 3 and 2",
-                       expected_answer="6")
+    await run_workflow(config=simple_calc_observe_config, question="multiply 3 and 2", expected_answer="6")
 
     config_file: Path = locate_example_config(ProfilerAgentConfig)
     config = load_config(config_file)
     config.general.telemetry.tracing["phoenix"].endpoint = phoenix_trace_url
     config.functions["px_query"].phoenix_url = phoenix_url
 
-    await run_workflow(config_file=None,
-                       config=config,
-                       question="Show me the token usage of last run",
-                       expected_answer="tokens")
+    await run_workflow(config=config, question="Show me the token usage of last run", expected_answer="tokens")
