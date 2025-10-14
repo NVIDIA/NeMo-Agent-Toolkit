@@ -32,7 +32,7 @@ class TelemetryMetricsAnalysisAgentConfig(FunctionBaseConfig, name="telemetry_me
                              description="Description of the tool for the triage agent.")
     tool_names: list[str] = []
     llm_name: LLMRef
-    prompt: str | None = OptimizableField(
+    prompt: str = OptimizableField(
         default=TelemetryMetricsAnalysisAgentPrompts.PROMPT,
         description="The system prompt to use for the alert triage agent.",
         space=SearchSpace(

@@ -38,6 +38,9 @@ This example demonstrates how to build an intelligent alert triage system using 
     - [Evaluation](#evaluation)
       - [General](#general)
       - [Evaluators](#evaluators)
+    - [Optimization](#optimization)
+      - [Numeric Optimization](#numeric-optimization)
+      - [Prompt Optimization](#prompt-optimization)
 - [Example Usage](#example-usage)
   - [Running in a live environment](#running-in-a-live-environment)
     - [Credentials and Access](#credentials-and-access)
@@ -292,6 +295,102 @@ Each entry under `evaluators` defines a specific metric to evaluate the pipeline
 
 The list of evaluators can be extended or swapped out depending on your evaluation goals.
 
+#### Optimization
+
+An optional `optimizer` section can be found in [`configs/config_offline_optimizer.yml`](src/nat_alert_triage_agent/configs/config_offline_optimizer.yml). It enables automated hyperparameter tuning and prompt optimization to improve the agent's performance. The optimizer uses the evaluation metrics defined in the `eval` section to search for better configurations.
+
+```yaml
+optimizer:
+  output_path: .tmp/examples/advanced_agents/alert_triage_agent/optimizer/
+  reps_per_param_set: 2
+  eval_metrics:
+    rag_accuracy:
+      evaluator_name: rag_accuracy
+      direction: maximize
+    classification_accuracy:
+      evaluator_name: classification_accuracy
+      direction: maximize
+    
+  numeric:
+    enabled: true
+    n_trials: 3
+
+  prompt:
+    enabled: true
+    prompt_population_init_function: prompt_init
+    prompt_recombination_function: prompt_recombination
+    ga_generations: 3
+    ga_population_size: 3
+    ga_diversity_lambda: 0.3
+    ga_parallel_evaluations: 1
+```
+
+* `output_path`: Directory where optimization results, including trial configurations, scores, and best parameters, are saved.
+* `reps_per_param_set`: Number of times to evaluate each parameter configuration to account for variability in LLM outputs. Higher values provide more reliable metrics but increase evaluation time.
+* `eval_metrics`: Dictionary of metrics to optimize. Each entry includes:
+  * `evaluator_name`: Name of the evaluator from the `eval.evaluators` section.
+  * `direction`: Either `maximize` or `minimize`, indicating whether higher or lower scores are better.
+
+##### Numeric Optimization
+
+The `numeric` section enables automated hyperparameter tuning for numeric parameters like temperature, `top_p`, and `max_tokens`. The optimizer uses Optuna's Bayesian optimization to efficiently search the parameter space.
+
+* `enabled`: Set to `true` to enable numeric parameter optimization.
+* `n_trials`: Number of optimization trials to run. Each trial tests a different combination of hyperparameters. More trials allow for better exploration but require more evaluation time.
+
+To mark a numeric parameter as optimizable, add `optimizable_params` to the relevant configuration section. For example:
+
+```yaml
+llms:
+  ata_agent_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.2
+    max_tokens: 2048
+    optimizable_params:
+      - temperature
+      - top_p
+      - max_tokens
+```
+
+##### Prompt Optimization
+
+The `prompt` section of `optimizer` enables genetic algorithm-based prompt optimization to automatically improve prompt instructions.
+
+* `enabled`: Set to `true` to enable prompt optimization.
+* `prompt_population_init_function`: Function name (from the `functions` section) that generates the initial population of prompt variations.
+* `prompt_recombination_function`: Function name (from the `functions` section) that combines successful prompts to create new candidates.
+* `ga_generations`: Number of generations for the genetic algorithm.
+* `ga_population_size`: Size of the population for each generation.
+* `ga_diversity_lambda`: Diversity penalty strength to discourage duplicate prompt sets.
+* `ga_parallel_evaluations`: Maximum number of concurrent evaluations.
+
+For more detailed explanations of all genetic algorithm configuration options, see the [Optimizer Reference](../../../docs/source/reference/optimizer.md).
+
+To mark a prompt as optimizable, add `optimizable_params` to the relevant configuration section. For example:
+
+```yaml
+functions:
+  telemetry_metrics_analysis_agent:
+    _type: telemetry_metrics_analysis_agent
+    tool_names:
+      - telemetry_metrics_host_heartbeat_check
+      - telemetry_metrics_host_performance_check
+    llm_name: telemetry_metrics_analysis_agent_llm
+    optimizable_params:
+      - prompt
+
+workflow:
+  _type: alert_triage_agent
+  tool_names:
+    - hardware_check
+    - host_performance_check
+  llm_name: ata_agent_llm
+  optimizable_params:
+    - agent_prompt
+```
+
+Both numeric and prompt optimization can be enabled simultaneously. The optimizer will coordinate both optimization strategies in stages, finding the best overall configuration.
 
 ## Example Usage
 You can run the agent in [offline mode](#running-in-offline-mode) or [live mode](#running-live-with-a-http-server-listening-for-alerts). Offline mode allows you to evaluate the agent in a controlled, offline environment using synthetic data. Live mode allows you to run the agent in a real environment.
@@ -429,26 +528,26 @@ To use this mode, first ensure you have configured your live environment as desc
 Offline mode lets you evaluate the triage agent in a controlled, offline environment using synthetic data. Instead of calling real systems, the agent uses predefined inputs to simulate alerts and tool outputs, ideal for development, debugging, and tuning.
 
 To run in offline mode:
-1. **Set required environment variables**
+#### 1. **Set required environment variables**
 
    Make sure `offline_mode: true` is set in both the `workflow` section and individual tool sections of your config file (see [Understanding the configuration](#understanding-the-configuration) section).
 
-2. **How offline mode works:**
+#### 2. **How offline mode works:**
 
    - The **main CSV offline dataset** (`offline_data_path`) provides both alert details and a mock environment. For each alert, expected tool return values are included. These simulate how the environment would behave if the alert occurred on a real system.
    - The **JSON offline dataset** (`eval.general.dataset.filepath` in the config) contains a subset of the information from the main CSV: the alert inputs and their associated ground truth root causes. It is used to run `nat eval`, focusing only on the essential data needed for running the workflow, while the full CSV retains the complete mock environment context.
    - At runtime, the system links each alert in the JSON dataset to its corresponding context in the CSV using the unique host IDs included in both datasets.
    - The **benign fallback dataset** fills in tool responses when the agent calls a tool not explicitly defined in the alert's offline data. These fallback responses mimic healthy system behavior and help provide the "background scenery" without obscuring the true root cause.
 
-3. **Run the agent in offline mode**
-
-    To run the agent in offline mode with a test question, use the following command structure. Test questions can be found in `examples/advanced_agents/alert_triage_agent/data/offline_data.json`.
+#### 3. **Run the agent in offline mode**
+##### Single alert run
+To run the agent in offline mode with a test alert, use the following command structure. Test alert examples can be found in `examples/advanced_agents/alert_triage_agent/data/offline_data.json`.
 
    ```bash
    nat run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml --input "{your_alert_in_json_format}"
    ```
 
-   **Example:** To run the agent with a test question, use the following command:
+   **Example:** To run the agent with a test alert, use the following command:
 
    ```bash
    nat run \
@@ -515,7 +614,8 @@ To run in offline mode:
    2025-07-21 17:14:45,234 - nat_alert_triage_agent - INFO - Cleaning up
    ```
 
-   To evaluate the agent, use the following command:
+##### Evaluation of a dataset
+To evaluate the agent using the test dataset, use the following command:
 
    ```bash
    nat eval --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml
@@ -528,8 +628,20 @@ To run in offline mode:
    - Run evaluation for the metrics specified in the config `eval.evaluators`
    - Save the pipeline output along with the evaluation results to the path specified by `eval.output_dir`
 
-4. **Understanding the output**
-    The output file will be located in the `eval.output_dir` directory and will include a `workflow_output.json` file as part of the evaluation run (alongside other results from each evaluator). This file contains a list of JSON objects, each representing the result for a single data point. Each entry includes the original alert (`question`), the ground truth root cause classification from the dataset (`answer`), the detailed diagnostic report generated by the agentic system (`generated_answer`), and a trace of the agent’s internal reasoning and tool usage (`intermediate_steps`).
+##### Optimization over a dataset
+To optimize the agent over the test dataset, use the following command:
+
+   ```bash
+   nat optimize --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_optimizer.yml
+   ```
+
+  The agent will:
+   - Load alerts from the JSON dataset specified in the config `eval.general.dataset.filepath`
+   - Run optimization for the metrics specified in the config `optimizer.eval_metrics`
+   - Save the optimization results to the path specified by `optimizer.output_dir`
+
+#### 4. **Understanding the output**
+If you run `nat eval` over a dataset, the output file will be located in the `eval.output_dir` directory and will include a `workflow_output.json` file as part of the evaluation run (alongside other results from each evaluator). This file contains a list of JSON objects, each representing the result for a single data point. Each entry includes the original alert (`question`), the ground truth root cause classification from the dataset (`answer`), the detailed diagnostic report generated by the agentic system (`generated_answer`), and a trace of the agent’s internal reasoning and tool usage (`intermediate_steps`).
 
    **Sample Workflow Result**
 ```
