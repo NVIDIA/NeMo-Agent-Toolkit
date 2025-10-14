@@ -18,6 +18,7 @@ import logging
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.context import Context
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import MemoryRef
@@ -43,30 +44,37 @@ async def get_memory_tool(config: GetToolConfig, builder: Builder):
     """
     Function to get memory to a hosted memory platform.
     """
-
-    import json
-
     from langchain_core.tools import ToolException
 
     # First, retrieve the memory client
-    memory_editor = builder.get_memory_client(config.memory)
+    memory_editor = await builder.get_memory_client(config.memory)
 
     async def _arun(search_input: SearchMemoryInput) -> str:
         """
-        Asynchronous execution of collection of memories.
+        Asynchronous execution of memory retrieval.
+
+        Retrieves formatted memory from the memory provider, optimized for LLM consumption.
+        Each provider formats memory according to its specific capabilities (e.g., Zep includes
+        timestamps and knowledge graph structure, Redis includes similarity scores).
+
+        Note: user_id is automatically retrieved from Context and passed to the memory editor.
+        The LLM does not have access to user_id, ensuring security.
         """
         try:
-            memories = await memory_editor.search(
+            # Get user_id from Context (not from LLM input)
+            user_id = Context.get().user_id or "default_NAT_user"
+
+            # Retrieve formatted memory from memory provider
+            memory_string = await memory_editor.retrieve_memory(
                 query=search_input.query,
+                user_id=user_id,
                 top_k=search_input.top_k,
-                user_id=search_input.user_id,
             )
 
-            memory_str = f"Memories as a JSON: \n{json.dumps([mem.model_dump(mode='json') for mem in memories])}"
-            return memory_str
+            # Return memory directly or indicate if no memories found
+            return memory_string if memory_string else "No relevant memories found."
 
         except Exception as e:
-
             raise ToolException(f"Error retrieving memory: {e}") from e
 
     yield FunctionInfo.from_fn(_arun, description=config.description)

@@ -13,9 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
+from pydantic import BaseModel, Field
+from langchain_core.messages import BaseMessage
 
-# Import any control flows which need to be automatically registered here
-from . import sequential_executor
-from .router_agent import register
-from .auto_memory_wrapper import register
+
+class AutoMemoryWrapperState(BaseModel):
+    """
+    Simple wrapper state - only needs to track messages.
+
+    The inner agent manages its own complex state internally
+    (ReActGraphState, ReWOOGraphState, etc.). The wrapper
+    never sees or manipulates the inner agent's state.
+    """
+    messages: list[BaseMessage] = Field(
+        default_factory=list,
+        description="Conversation messages with context injection"
+    )

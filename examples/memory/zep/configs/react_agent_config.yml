@@ -1,0 +1,75 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: zep_memory_test
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 250
+
+functions:
+  wikipedia_search:
+    _type: wiki_search
+    max_results: 3
+  current_datetime:
+    _type: current_datetime
+  code_generation:
+    _type: code_generation
+    programming_language: "Python"
+    description: "Useful to generate Python code. For any questions about code generation, you must only use this tool!"
+    llm_name: nim_llm
+    verbose: true
+  # Define the inner ReAct agent (no memory tools needed!)
+  my_react_agent:
+    _type: react_agent
+    tool_names: [wikipedia_search, current_datetime, code_generation]
+    llm_name: nim_llm
+    verbose: true
+    parse_agent_response_max_retries: 2
+    use_openai_api: true
+
+memory:
+  zep_memory:
+    _type: nat.plugins.zep_cloud/zep_memory
+
+# Wrap the ReAct agent with automatic memory capture and retrieval
+workflow:
+  _type: auto_memory_agent
+  description: "ReAct agent with automatic memory capture and retrieval"
+  inner_agent_name: my_react_agent  # Reference to the agent defined above
+  memory_name: zep_memory           # Reference to Zep memory backend
+  llm_name: nim_llm                 # Required by AgentBaseConfig
+  verbose: true
+  save_user_messages_to_memory: true
+  retrieve_memory_for_every_response: true
+  save_ai_messages_to_memory: true
+  parse_agent_response_max_retries: 2
+  use_openai_api: true
+  # Zep-specific parameters for memory retrieval
+  search_params:
+    mode: "basic"  # Use "basic" for fast retrieval (P95 < 200ms) or "summary" for summarized/neater context
+  # Zep-specific parameters for adding memory
+  add_params:
+    ignore_roles: ["assistant"]  # Don't add assistant messages to graph memory (they'll still be used to contextualize user messages)
+

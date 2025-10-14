@@ -33,39 +33,51 @@ class MemoryEditor(ABC):
     """
 
     @abstractmethod
-    async def add_items(self, items: list[MemoryItem]) -> None:
+    async def add_items(self, items: list[MemoryItem], user_id: str, **kwargs) -> None:
         """
         Insert multiple MemoryItems into the memory.
 
         Args:
             items (list[MemoryItem]): The items to be added.
+            user_id (str): Required. The user ID for which to add memories.
+                Should be obtained deterministically from Context at the call site (not determined by LLM)
+            kwargs (dict): Provider-specific keyword arguments for adding items.
         """
         raise NotImplementedError
 
     @abstractmethod
-    async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:
+    async def retrieve_memory(self, query: str, user_id: str, **kwargs) -> str:
         """
-        Retrieve items relevant to the given query.
-        Relevance criteria depend on implementation.
+        Retrieve formatted memory relevant to the given query.
+
+        Each memory provider returns formatted memory specifically optimized
+        for LLM understanding, including provider-specific metadata,
+        timestamps, explanations, and structure.
 
         Args:
             query (str): The query string to match.
-            top_k (int): Maximum number of items to return.
-            kwargs (dict): Keyword arguments to pass to the search method.
+            user_id (str): Required. The user ID for which to retrieve memory.
+                Should be obtained deterministically from Context at the call site (not determined by LLM)
+            kwargs (dict): Provider-specific keyword arguments for memory retrieval.
+                Common kwargs:
+                - top_k (int): Maximum number of items to include in memory
+                - mode (str): Retrieval mode (provider-specific)
 
         Returns:
-            list[MemoryItem]: The most relevant MemoryItems.
+            str: Formatted memory string ready for LLM injection.
+                Returns empty string if no relevant memory found.
         """
         raise NotImplementedError
 
     @abstractmethod
-    async def remove_items(self, **kwargs) -> None:
+    async def remove_items(self, user_id: str, **kwargs) -> None:
         """
-        Remove items. Additional parameters
-        needed for deletion can be specified in keyword arguments.
+        Remove items for a specific user.
 
         Args:
-            kwargs (dict): Keyword arguments to pass to the remove-items method.
+            user_id (str): Required. The user ID for which to remove memories.
+                Should be obtained deterministically from Context at the call site (not determined by LLM)
+            kwargs (dict): Additional provider-specific keyword arguments.
         """
         raise NotImplementedError
 

@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Example: ReAct Agent with Automatic Memory (Zep Cloud)
+# This config demonstrates automatic memory capture and retrieval
+# without requiring the LLM to invoke memory tools.
+
+general:
+  telemetry:
+    enabled: false
+  logging:
+    level: DEBUG
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.7
+    max_tokens: 1024
+
+# Memory backend configuration
+memory:
+  zep_memory:
+    _type: nat.plugins.zep_cloud/zep_memory
+    # API credentials are loaded from environment variables:
+    # ZEP_API_KEY and ZEP_PROJECT_ID
+
+# Tools for the inner agent (no memory tools needed!)
+functions:
+  # Define the ReAct agent that will be wrapped
+  my_react_agent:
+    _type: react_agent
+    llm_name: nim_llm
+    tool_names: []  # No tools needed for memory test
+    system_prompt: "You are a helpful assistant."
+    verbose: true
+    use_openai_api: true
+
+# Wrap the ReAct agent with automatic memory
+workflow:
+  _type: auto_memory_agent
+  inner_agent_name: my_react_agent  # Reference to the agent defined above
+  memory_name: zep_memory           # Reference to the memory backend
+  llm_name: nim_llm                 # Required by AgentBaseConfig
+  verbose: true
+
+  # All feature flags default to true - memory save and retrieval are automatic!
+  # Optionally configure:
+  # save_user_messages_to_memory: true
+  # retrieve_memory_for_every_response: true
+  # save_ai_messages_to_memory: true
+  # search_params:
+  #   top_k: 5

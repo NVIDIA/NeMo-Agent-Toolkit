@@ -41,10 +41,15 @@ class Mem0Editor(MemoryEditor):
         """
         self._client = mem0_client
 
-    async def add_items(self, items: list[MemoryItem]) -> None:
+    async def add_items(self, items: list[MemoryItem], user_id: str, **kwargs) -> None:
         """
         Insert Multiple MemoryItems into the memory.
         Each MemoryItem is translated and uploaded.
+
+        Args:
+            items (list[MemoryItem]): The items to be added.
+            user_id (str): The user ID for which to add memories.
+            kwargs (dict): Provider-specific keyword arguments.
         """
 
         coroutines = []
@@ -54,7 +59,6 @@ class Mem0Editor(MemoryEditor):
             item_meta = memory_item.metadata
             content = memory_item.conversation
 
-            user_id = memory_item.user_id  # This must be specified
             run_id = item_meta.pop("run_id", None)
             tags = memory_item.tags
 
@@ -68,48 +72,66 @@ class Mem0Editor(MemoryEditor):
 
         await asyncio.gather(*coroutines)
 
-    async def search(self, query: str, top_k: int = 5, **kwargs) \
-            -> list[MemoryItem]:
+    async def retrieve_memory(self, query: str, user_id: str, **kwargs) -> str:
         """
-        Retrieve items relevant to the given query.
+        Retrieve formatted memory from Mem0 relevant to the given query.
+
+        Formats search results into structured memory with memory content
+        and optional metadata like categories.
 
         Args:
             query (str): The query string to match.
-            top_k (int): Maximum number of items to return.
-            kwargs: Other keyword arguments for search.
+            user_id (str): The user ID for which to retrieve memory.
+            kwargs: Mem0-specific keyword arguments.
+                - top_k (int, optional): Maximum number of memories to include. Defaults to 5.
+                - Other Mem0 search parameters
 
         Returns:
-            list[MemoryItem]: The most relevant
-            MemoryItems for the given query.
+            str: Formatted memory string with relevant memories, or empty string if no results.
         """
-
-        user_id = kwargs.pop("user_id")  # Ensure user ID is in keyword arguments
+        top_k = kwargs.pop("top_k", 5)
 
         search_result = await self._client.search(query, user_id=user_id, top_k=top_k, output_format="v1.1", **kwargs)
 
-        # Construct MemoryItem instances
-        memories = []
+        # Return empty string if no results
+        if not search_result.get("results"):
+            return ""
 
-        for res in search_result["results"]:
-            item_meta = res.pop("metadata", {})
+        # Format results into context string
+        context_parts = ["Relevant memories:"]
 
-            memories.append(
-                MemoryItem(conversation=res.pop("input", []),
-                           user_id=user_id,
-                           memory=res["memory"],
-                           tags=res.pop("categories", []) or [],
-                           metadata=item_meta))
+        for i, res in enumerate(search_result["results"], 1):
+            memory_text = res.get("memory", "")
+            categories = res.get("categories", [])
 
-        return memories
+            if not memory_text:
+                continue
 
-    async def remove_items(self, **kwargs):
+            # Format each memory with number
+            context_parts.append(f"\n{i}. {memory_text}")
 
+            # Add categories if present
+            if categories:
+                context_parts.append(f"   (Categories: {', '.join(categories)})")
+
+        # If only header remains (no actual memories), return empty string
+        if len(context_parts) == 1:
+            return ""
+
+        return "\n".join(context_parts)
+
+    async def remove_items(self, user_id: str, **kwargs):
+        """
+        Remove items for a specific user.
+
+        Args:
+            user_id (str): The user ID for which to remove memories.
+            kwargs: Additional parameters.
+                - memory_id (str): Optional specific memory ID to delete.
+        """
         if "memory_id" in kwargs:
-
             memory_id = kwargs.pop("memory_id")
             await self._client.delete(memory_id)
-
-        elif "user_id" in kwargs:
-
-            user_id = kwargs.pop("user_id")
+        else:
+            # Delete all memories for the user
             await self._client.delete_all(user_id=user_id)

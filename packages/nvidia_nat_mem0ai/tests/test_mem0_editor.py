@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -49,7 +49,6 @@ def sample_memory_item_fixture():
     ]
 
     return MemoryItem(conversation=conversation,
-                      user_id="user123",
                       memory="Sample memory",
                       metadata={"key1": "value1"},
                       tags=["tag1", "tag2"])
@@ -58,11 +57,13 @@ def sample_memory_item_fixture():
 async def test_add_items_success(mem0_editor: Mem0Editor, mock_mem0_client: AsyncMock, sample_memory_item: MemoryItem):
     """Test adding multiple MemoryItem objects successfully."""
     items = [sample_memory_item, sample_memory_item]
-    await mem0_editor.add_items(items)
+
+    # Pass user_id as positional argument
+    await mem0_editor.add_items(items, "user123")
 
     assert mock_mem0_client.add.call_count == len(items)
     mock_mem0_client.add.assert_any_call(sample_memory_item.conversation,
-                                         user_id=sample_memory_item.user_id,
+                                         user_id="user123",
                                          run_id=None,
                                          tags=sample_memory_item.tags,
                                          metadata=sample_memory_item.metadata,
@@ -71,46 +72,67 @@ async def test_add_items_success(mem0_editor: Mem0Editor, mock_mem0_client: Asyn
 
 async def test_add_items_empty_list(mem0_editor: Mem0Editor, mock_mem0_client: AsyncMock):
     """Test adding an empty list of MemoryItem objects."""
-    await mem0_editor.add_items([])
+    await mem0_editor.add_items([], "test_user")
 
     mock_mem0_client.add.assert_not_called()
 
 
-async def test_search_success(mem0_editor: Mem0Editor, mock_mem0_client: AsyncMock):
-    """Test searching with a valid query and user ID."""
+async def test_retrieve_memory_success(mem0_editor: Mem0Editor, mock_mem0_client: AsyncMock):
+    """Test retrieving formatted memory with valid query and user ID."""
     mock_mem0_client.search.return_value = {
-        "results": [{
-            "input": [{
-                "role": "system", "content": "Hello"
-            }, {
-                "role": "system", "content": "Hi"
-            }],
-            "memory": "Sample memory",
-            "categories": ["tag1", "tag2"],
-            "metadata": {
-                "key1": "value1"
+        "results": [
+            {
+                "input": [{
+                    "role": "system", "content": "Hello"
+                }, {
+                    "role": "system", "content": "Hi"
+                }],
+                "memory": "User is vegetarian",
+                "categories": ["dietary", "preferences"],
+                "metadata": {
+                    "key1": "value1"
+                }
+            },
+            {
+                "input": [{
+                    "role": "user", "content": "I like pizza"
+                }],
+                "memory": "User likes pizza",
+                "categories": ["food"],
+                "metadata": {}
             }
-        }]
+        ]
     }
 
-    result = await mem0_editor.search(query="test query", user_id="user123", top_k=1)
+    result = await mem0_editor.retrieve_memory(query="test query", user_id="user123", top_k=2)
 
-    assert len(result) == 1
-    assert result[0].conversation == [{"role": "system", "content": "Hello"}, {"role": "system", "content": "Hi"}]
-    assert result[0].memory == "Sample memory"
-    assert result[0].tags == ["tag1", "tag2"]
-    assert result[0].metadata == {"key1": "value1"}
+    assert isinstance(result, str)
+    assert len(result) > 0
+    assert "User is vegetarian" in result
+    assert "User likes pizza" in result
+    assert "Categories: dietary, preferences" in result
+    assert "Categories: food" in result
 
 
-async def test_search_missing_user_id(mem0_editor: Mem0Editor):
-    """Test searching without providing a user ID."""
-    with pytest.raises(KeyError, match="user_id"):
-        await mem0_editor.search(query="test query")
+async def test_retrieve_memory_no_results(mem0_editor: Mem0Editor, mock_mem0_client: AsyncMock):
+    """Test retrieving memory when no results are found."""
+    mock_mem0_client.search.return_value = {"results": []}
+
+    result = await mem0_editor.retrieve_memory(query="test query", user_id="user123")
+
+    assert isinstance(result, str)
+    assert result == ""
+
+
+async def test_retrieve_memory_missing_user_id(mem0_editor: Mem0Editor):
+    """Test retrieving memory without providing a user ID (should raise TypeError for missing positional arg)."""
+    with pytest.raises(TypeError):
+        await mem0_editor.retrieve_memory(query="test query")
 
 
 async def test_remove_items_by_memory_id(mem0_editor: Mem0Editor, mock_mem0_client: AsyncMock):
     """Test removing items by memory ID."""
-    await mem0_editor.remove_items(memory_id="memory123")
+    await mem0_editor.remove_items("user123", memory_id="memory123")
 
     mock_mem0_client.delete.assert_called_once_with("memory123")
 
@@ -123,7 +145,6 @@ async def test_remove_items_by_user_id(mem0_editor: Mem0Editor, mock_mem0_client
 
 
 async def test_remove_items_missing_arguments(mem0_editor: Mem0Editor):
-    """Test removing items with missing required arguments."""
-    result = await mem0_editor.remove_items()
-
-    assert result is None
+    """Test removing items with missing required arguments (should raise TypeError)."""
+    with pytest.raises(TypeError):
+        await mem0_editor.remove_items()

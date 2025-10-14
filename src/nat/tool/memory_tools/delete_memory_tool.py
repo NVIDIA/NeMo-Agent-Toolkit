@@ -18,6 +18,7 @@ import logging
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.context import Context
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import MemoryRef
@@ -49,14 +50,21 @@ async def delete_memory_tool(config: DeleteToolConfig, builder: Builder):
     # First, retrieve the memory client
     memory_editor = builder.get_memory_client(config.memory)
 
-    async def _arun(user_id: str) -> str:
+    async def _arun(delete_input: DeleteMemoryInput) -> str:
         """
         Asynchronous execution of deletion of memories.
+
+        Note: user_id is automatically retrieved from Context and passed to the memory editor.
+        The LLM does not have access to user_id, ensuring security and preventing accidental
+        deletion of other users' memories.
         """
 
         try:
+            # Get user_id from Context (not from LLM input)
+            user_id = Context.get().user_id or "default_NAT_user"
 
-            await memory_editor.remove_items(user_id=user_id, )
+            # Pass user_id to memory editor as positional argument
+            await memory_editor.remove_items(user_id)
 
             return "Memories deleted!"
 
@@ -64,4 +72,4 @@ async def delete_memory_tool(config: DeleteToolConfig, builder: Builder):
 
             raise ToolException(f"Error deleting memory: {e}") from e
 
-    yield FunctionInfo.from_fn(_arun, description=config.description, input_schema=DeleteMemoryInput)
+    yield FunctionInfo.from_fn(_arun, description=config.description)

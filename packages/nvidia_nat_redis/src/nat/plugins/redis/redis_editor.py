@@ -22,6 +22,7 @@ import redis.exceptions as redis_exceptions
 from langchain_core.embeddings import Embeddings
 from redis.commands.search.query import Query
 
+from nat.builder.context import Context
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
 
@@ -49,17 +50,21 @@ class RedisEditor(MemoryEditor):
         self._key_prefix: str = key_prefix
         self._embedder: Embeddings = embedder
 
-    async def add_items(self, items: list[MemoryItem]) -> None:
+    async def add_items(self, items: list[MemoryItem], user_id: str, **kwargs) -> None:
         """
         Insert Multiple MemoryItems into Redis.
         Each MemoryItem is stored with its metadata and tags.
+
+        Args:
+            items (list[MemoryItem]): The items to be added.
+            user_id (str): The user ID for which to add memories.
+            kwargs (dict): Provider-specific keyword arguments.
         """
         logger.debug("Attempting to add %d items to Redis", len(items))
 
         for memory_item in items:
             item_meta = memory_item.metadata
             conversation = memory_item.conversation
-            user_id = memory_item.user_id
             tags = memory_item.tags
             memory_id = secrets.token_hex(4)  # e.g. 02ba3fe9
 
@@ -101,25 +106,29 @@ class RedisEditor(MemoryEditor):
                 logger.error("Redis connection error while storing memory item: %s", e)
                 raise
 
-    async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:
+    async def retrieve_memory(self, query: str, user_id: str, **kwargs) -> str:
         """
-        Retrieve items relevant to the given query.
+        Retrieve formatted memory from Redis using vector similarity search.
+
+        Formats search results into structured memory with memory content,
+        tags, and similarity scores.
 
         Args:
             query (str): The query string to match.
-            top_k (int): Maximum number of items to return.
-            kwargs (dict): Keyword arguments to pass to the search method.
+            user_id (str): The user ID for which to retrieve memory.
+            kwargs (dict): Redis-specific keyword arguments.
+                - top_k (int, optional): Maximum number of memories to include. Defaults to 5.
+                - include_scores (bool, optional): Whether to include similarity scores. Defaults to True.
 
         Returns:
-            list[MemoryItem]: The most relevant MemoryItems for the given query.
+            str: Formatted memory string with relevant memories, or empty string if no results.
         """
-        logger.debug("Search called with query: %s, top_k: %d, kwargs: %s", query, top_k, kwargs)
+        top_k = kwargs.pop("top_k", 5)
+        include_scores = kwargs.pop("include_scores", True)
 
-        user_id = kwargs.get("user_id", "redis")  # TODO: remove this fallback username
-        logger.debug("Using user_id: %s", user_id)
+        logger.debug("retrieve_memory called with query: %s, user_id: %s, top_k: %d", query, user_id, top_k)
 
-        # Perform vector search using Redis search
-        logger.debug("Using embedder for vector search")
+        # Generate embedding for query
         try:
             logger.debug("Generating embedding for query: '%s'", query)
             query_vector = await self._embedder.aembed_query(query)
@@ -132,59 +141,66 @@ class RedisEditor(MemoryEditor):
         search_query = (
             Query(f"(@user_id:{user_id})=>[KNN {top_k} @embedding $vec AS score]").sort_by("score").return_fields(
                 "conversation", "user_id", "tags", "metadata", "memory", "score").dialect(2))
-        logger.debug("Created search query: %s", search_query)
-        logger.debug("Query string: %s", search_query.query_string())
+        logger.debug("Created search query: %s", search_query.query_string())
 
         # Convert query vector to bytes
         try:
-            logger.debug("Converting query vector to bytes")
             query_vector_bytes = np.array(query_vector, dtype=np.float32).tobytes()
-            logger.debug("Converted vector to bytes of length: %d", len(query_vector_bytes))
         except Exception as e:
             logger.error("Failed to convert vector to bytes: %s", e)
             raise
 
         try:
-            # Execute search with vector parameters
-            logger.debug("Executing Redis search with vector parameters")
-            logger.debug("Search query parameters: vec length=%d", len(query_vector_bytes))
-
-            # Log the actual query being executed
-            logger.debug("Full search query: %s", search_query.query_string())
-
-            # Check if there are any documents in the index
-            try:
-                total_docs = await self._client.ft(INDEX_NAME).info()
-                logger.debug("Total documents in index: %d", total_docs.get('num_docs', 0))
-            except Exception as e:
-                logger.exception("Failed to get index info: %s", e)
-
             # Execute the search
             results = await self._client.ft(INDEX_NAME).search(search_query, query_params={"vec": query_vector_bytes})
 
-            # Log detailed results information
             logger.debug("Search returned %d results", len(results.docs))
-            logger.debug("Total results found: %d", results.total)
 
-            # Convert results to MemoryItems
-            memories = []
-            for i, doc in enumerate(results.docs):
+            # Return empty string if no results
+            if not results.docs:
+                return ""
+
+            # Format results into context string
+            context_parts = ["Relevant memories (sorted by relevance):"]
+
+            for i, doc in enumerate(results.docs, 1):
                 try:
-                    logger.debug("Processing result %d/%d", i + 1, len(results.docs))
-                    logger.debug("Similarity score: %d", getattr(doc, 'score', 0))
-
                     # Get the full document data
                     full_doc = await self._client.json().get(doc.id)
-                    logger.debug("Extracted data for result %d: %s", i + 1, full_doc)
-                    memory_item = self._create_memory_item(dict(full_doc), user_id)
-                    memories.append(memory_item)
-                    logger.debug("Successfully created MemoryItem for result %d", i + 1)
-                except Exception as e:
-                    logger.error("Failed to process result %d: %s", i + 1, e)
-                    raise
+                    memory_text = full_doc.get("memory", "")
+                    tags = full_doc.get("tags", [])
+                    similarity_score = getattr(doc, 'score', None)
 
-            logger.debug("Successfully processed all %d results", len(memories))
-            return memories
+                    if not memory_text:
+                        continue
+
+                    # Format each memory with number
+                    context_parts.append(f"\n{i}. {memory_text}")
+
+                    # Add tags if present
+                    if tags:
+                        # Handle tags as string or list
+                        if isinstance(tags, str):
+                            context_parts.append(f"   (Tags: {tags})")
+                        elif isinstance(tags, list) and tags:
+                            context_parts.append(f"   (Tags: {', '.join(tags)})")
+
+                    # Add similarity score if requested
+                    if include_scores and similarity_score is not None:
+                        context_parts.append(f"   (Similarity: {similarity_score:.3f})")
+
+                    logger.debug("Formatted result %d", i)
+                except Exception as e:
+                    logger.error("Failed to process result %d: %s", i, e)
+                    # Continue with other results
+                    continue
+
+            # If only header remains (no actual memories), return empty string
+            if len(context_parts) == 1:
+                return ""
+
+            return "\n".join(context_parts)
+
         except redis_exceptions.ResponseError as e:
             logger.error("Search failed with ResponseError: %s", e)
             raise
@@ -196,7 +212,11 @@ class RedisEditor(MemoryEditor):
             raise
 
     def _create_memory_item(self, memory_data: dict, user_id: str) -> MemoryItem:
-        """Helper method to create a MemoryItem from Redis data."""
+        """Helper method to create a MemoryItem from Redis data.
+
+        Note: user_id parameter is kept for backwards compatibility but is not used
+        in MemoryItem construction since user_id is obtained from Context.
+        """
         # Ensure tags is always a list
         tags = memory_data.get("tags", [])
         # Not sure why but sometimes the tags are retrieved as a string
@@ -206,16 +226,21 @@ class RedisEditor(MemoryEditor):
             tags = []
 
         return MemoryItem(conversation=memory_data.get("conversation", []),
-                          user_id=user_id,
                           memory=memory_data.get("memory", ""),
                           tags=tags,
                           metadata=memory_data.get("metadata", {}))
 
-    async def remove_items(self, **kwargs):
+    async def remove_items(self, user_id: str, **kwargs):
         """
-        Remove memory items based on provided criteria.
+        Remove memory items for a specific user.
+
+        Args:
+            user_id (str): The user ID for which to remove memories (not currently used in filtering).
+            kwargs: Additional parameters.
         """
         try:
+            # Currently removes all memories with the key prefix
+            # TODO: Filter by user_id if needed
             pattern = f"{self._key_prefix}:memory:*"
             keys = await self._client.keys(pattern)
             if keys:

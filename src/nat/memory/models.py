@@ -24,12 +24,13 @@ class MemoryItem(BaseModel):
     """
     Represents a single memory item consisting of structured content and associated metadata.
 
+    Note: user_id is NOT included as a field. Memory operations execute within a request
+    context where the user ID is determined by the Context object (Context.get().user_id).
+
     Attributes
     ----------
     conversation : list[dict[str, str]]
         A list of dictionaries, each containing string key-value pairs.
-    user_id : str
-        Unique identifier for this MemoryItem's user.
     tags : list[str]
         A list of strings representing tags attached to the item.
     metadata : dict[str, typing.Any]
@@ -52,7 +53,6 @@ class MemoryItem(BaseModel):
                             "content": "Hello Alex! I've noted that you're a vegetarian and have a nut allergy."
                         }
                     ],
-                    "user_id": "user_abc",
                     "tags": ["diet", "allergy"],
                     "metadata": {
                         "key_value_pairs": {
@@ -63,7 +63,6 @@ class MemoryItem(BaseModel):
                 },
                 {
                     "memory": "User prefers expensive hotels and is vegan.",
-                    "user_id": "user_abc",
                     "tags": ["hotel", "restaurant"]
                 }
             ]
@@ -80,33 +79,33 @@ class MemoryItem(BaseModel):
         default=None)
     tags: list[str] = Field(default_factory=list, description="List of tags applied to the item.")
     metadata: dict[str, typing.Any] = Field(description="Metadata about the memory item.", default={})
-    user_id: str = Field(description="The user's ID.")
     memory: str | None = Field(default=None)
 
 
 class SearchMemoryInput(BaseModel):
     """
     Represents a search memory input structure.
+
+    Note: user_id is NOT included as a field. Memory search operations execute within a
+    request context where the user ID is determined by the Context object (Context.get().user_id).
     """
     model_config = ConfigDict(json_schema_extra={
         "example": {
             "query": "What is the user's preferred programming language?",
             "top_k": 1,
-            "user_id": "user_abc",
         }
     })
 
     query: str = Field(description="Search query for which to retrieve memory.")  # noqa: E501
     top_k: int = Field(description="Maximum number of memories to return")
-    user_id: str = Field(description="ID of the user to search for.")
 
 
 class DeleteMemoryInput(BaseModel):
     """
     Represents a delete memory input structure.
-    """
-    model_config = ConfigDict(json_schema_extra={"example": {"user_id": "user_abc", }})
 
-    user_id: str = Field(description="ID of the user to delete memory for. Careful when using "
-                         "this tool; make sure you use the "
-                         "username present in the conversation.")
+    Note: user_id is NOT included as a field. Memory delete operations execute within a
+    request context where the user ID is determined by the Context object (Context.get().user_id).
+    This prevents LLMs from accidentally deleting other users' memories.
+    """
+    model_config = ConfigDict(json_schema_extra={"example": {}})

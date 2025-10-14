@@ -67,6 +67,10 @@ class ContextState(metaclass=Singleton):
     def __init__(self):
         self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
         self.user_message_id: ContextVar[str | None] = ContextVar("user_message_id", default=None)
+        self.user_id: ContextVar[str | None] = ContextVar("user_id", default=None)
+        self.user_first_name: ContextVar[str | None] = ContextVar("user_first_name", default=None)
+        self.user_last_name: ContextVar[str | None] = ContextVar("user_last_name", default=None)
+        self.user_email: ContextVar[str | None] = ContextVar("user_email", default=None)
         self.workflow_run_id: ContextVar[str | None] = ContextVar("workflow_run_id", default=None)
         self.workflow_trace_id: ContextVar[int | None] = ContextVar("workflow_trace_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
@@ -197,6 +201,34 @@ class Context:
         This property retrieves the user message ID which is the unique identifier for the current user message.
         """
         return self._context_state.user_message_id.get()
+
+    @property
+    def user_id(self) -> str | None:
+        """
+        This property retrieves the user ID from the request header.
+        """
+        return self._context_state.user_id.get()
+
+    @property
+    def user_first_name(self) -> str | None:
+        """
+        This property retrieves the user's first name from the request header.
+        """
+        return self._context_state.user_first_name.get()
+
+    @property
+    def user_last_name(self) -> str | None:
+        """
+        This property retrieves the user's last name from the request header.
+        """
+        return self._context_state.user_last_name.get()
+
+    @property
+    def user_email(self) -> str | None:
+        """
+        This property retrieves the user's email from the request header.
+        """
+        return self._context_state.user_email.get()
 
     @property
     def workflow_run_id(self) -> str | None:

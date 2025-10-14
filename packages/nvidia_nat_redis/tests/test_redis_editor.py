@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.embeddings import Embeddings
@@ -87,7 +86,6 @@ def sample_memory_item_fixture():
     ]
 
     return MemoryItem(conversation=conversation,
-                      user_id="user123",
                       memory="Sample memory",
                       metadata={"key1": "value1"},
                       tags=["tag1", "tag2"])
@@ -98,7 +96,9 @@ async def test_add_items_success(redis_editor: RedisEditor,
                                  sample_memory_item: MemoryItem):
     """Test adding multiple MemoryItem objects successfully."""
     items = [sample_memory_item]
-    await redis_editor.add_items(items)
+
+    # Pass user_id as positional argument
+    await redis_editor.add_items(items, "user123")
 
     # Verify json().set was called once
     mock_redis_client.json().set.assert_called_once()
@@ -115,7 +115,7 @@ async def test_add_items_success(redis_editor: RedisEditor,
     # Third argument should be the memory data
     memory_data = call_args[2]
     assert memory_data["conversation"] == sample_memory_item.conversation
-    assert memory_data["user_id"] == sample_memory_item.user_id
+    assert memory_data["user_id"] == "user123"  # Now from Context, not MemoryItem
     assert memory_data["tags"] == sample_memory_item.tags
     assert memory_data["metadata"] == sample_memory_item.metadata
     assert memory_data["memory"] == sample_memory_item.memory
@@ -123,26 +123,26 @@ async def test_add_items_success(redis_editor: RedisEditor,
 
 async def test_add_items_empty_list(redis_editor: RedisEditor, mock_redis_client: AsyncMock):
     """Test adding an empty list of MemoryItem objects."""
-    await redis_editor.add_items([])
+    await redis_editor.add_items([], "test_user")
 
     mock_redis_client.add_items.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_search_success(redis_editor: RedisEditor, mock_redis_client: AsyncMock):
-    """Test searching with a valid query and user ID."""
-    # Create a mock document with the required attributes
-    mock_doc = MagicMock()
-    mock_doc.conversation = [{"role": "system", "content": "Hello"}, {"role": "system", "content": "Hi"}]
-    mock_doc.user_id = "user123"
-    mock_doc.tags = ["tag1", "tag2"]
-    mock_doc.metadata = {"key1": "value1"}
-    mock_doc.memory = "Sample memory"
-    mock_doc.score = 0.95
+async def test_retrieve_memory_success(redis_editor: RedisEditor, mock_redis_client: AsyncMock):
+    """Test retrieving formatted memory with valid query and user ID."""
+    # Create mock documents with the required attributes
+    mock_doc1 = MagicMock()
+    mock_doc1.id = "pytest:memory:001"
+    mock_doc1.score = 0.95
+
+    mock_doc2 = MagicMock()
+    mock_doc2.id = "pytest:memory:002"
+    mock_doc2.score = 0.87
 
     # Create a mock results object with a docs attribute
     mock_results = MagicMock()
-    mock_results.docs = [mock_doc]
+    mock_results.docs = [mock_doc1, mock_doc2]
 
     # Create a mock for the ft method that returns an object with the search method
     mock_ft_index = MagicMock()
@@ -151,19 +151,54 @@ async def test_search_success(redis_editor: RedisEditor, mock_redis_client: Asyn
     # Set up the client mock to return the ft mock
     mock_redis_client.ft = MagicMock(return_value=mock_ft_index)
 
-    # Mock Redis JSON get to return document data
-    mock_redis_client.json().get.return_value = {
-        "conversation": mock_doc.conversation,
-        "user_id": mock_doc.user_id,
-        "tags": mock_doc.tags,
-        "metadata": mock_doc.metadata,
-        "memory": mock_doc.memory
-    }
+    # Mock Redis JSON get to return document data for each doc
+    async def mock_json_get(doc_id):
+        if doc_id == "pytest:memory:001":
+            return {
+                "conversation": [{"role": "user", "content": "I like pizza"}],
+                "user_id": "user123",
+                "tags": ["food", "preferences"],
+                "metadata": {"key1": "value1"},
+                "memory": "User likes pizza"
+            }
+        elif doc_id == "pytest:memory:002":
+            return {
+                "conversation": [{"role": "user", "content": "I'm vegetarian"}],
+                "user_id": "user123",
+                "tags": ["dietary"],
+                "metadata": {},
+                "memory": "User is vegetarian"
+            }
+        return {}
 
-    result = await redis_editor.search(query="test query", user_id="user123", top_k=1)
+    mock_redis_client.json().get = AsyncMock(side_effect=mock_json_get)
 
-    assert len(result) == 1
-    assert result[0].conversation == [{"role": "system", "content": "Hello"}, {"role": "system", "content": "Hi"}]
-    assert result[0].memory == "Sample memory"
-    assert result[0].tags == ["tag1", "tag2"]
-    assert result[0].metadata == {"key1": "value1"}
+    result = await redis_editor.retrieve_memory(query="test query", user_id="user123", top_k=2)
+
+    assert isinstance(result, str)
+    assert len(result) > 0
+    assert "User likes pizza" in result
+    assert "User is vegetarian" in result
+    assert "Tags: food, preferences" in result
+    assert "Tags: dietary" in result
+    assert "Similarity: 0.950" in result
+    assert "Similarity: 0.870" in result
+
+
+@pytest.mark.asyncio
+async def test_retrieve_memory_no_results(redis_editor: RedisEditor, mock_redis_client: AsyncMock):
+    """Test retrieving memory when no results are found."""
+    # Create a mock results object with no docs
+    mock_results = MagicMock()
+    mock_results.docs = []
+
+    # Create a mock for the ft method
+    mock_ft_index = MagicMock()
+    mock_ft_index.search = AsyncMock(return_value=mock_results)
+
+    mock_redis_client.ft = MagicMock(return_value=mock_ft_index)
+
+    result = await redis_editor.retrieve_memory(query="test query", user_id="user123")
+
+    assert isinstance(result, str)
+    assert result == ""
