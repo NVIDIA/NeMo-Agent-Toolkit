@@ -353,3 +353,25 @@ def require_nest_asyncio_fixture():
     """
     import nest_asyncio
     nest_asyncio.apply()
+
+
+@pytest.fixture(name="phoenix_url", scope="session")
+def phoenix_url_fixture(fail_missing: bool) -> str:
+    """
+    To run these tests, a phoenix server must be running.
+    The phoenix server can be started by running the following command:
+    docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:latest
+    """
+    import requests
+
+    url = os.getenv("NAT_CI_PHOENIX_URL", "http://localhost:6006")
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+
+        return url
+    except Exception as e:
+        reason = f"Unable to connect to Phoenix server at {url}: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
