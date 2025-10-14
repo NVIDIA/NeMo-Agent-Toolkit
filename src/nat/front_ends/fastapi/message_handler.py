@@ -127,8 +127,11 @@ class WebSocketMessageHandler:
         """
         Converts a list of UserMessages to a ChatRequest.
 
-        :param user_messages: List of UserMessages from WebSocket content.
-        :return: ChatRequest with all messages converted.
+        Args:
+            user_messages: List of UserMessages from WebSocket content.
+
+        Returns:
+            ChatRequest with all messages converted.
         """
         messages = []
         for user_msg in user_messages:
@@ -140,9 +143,14 @@ class WebSocketMessageHandler:
         """
         Extracts the last user's TextContent from a list of messages.
 
-        :param messages: List of UserMessages.
-        :return: TextContent object from the last user message.
-        :raises ValueError: If no user text content is found.
+        Args:
+            messages: List of UserMessages.
+
+        Returns:
+            TextContent object from the last user message.
+
+        Raises:
+            ValueError: If no user text content is found.
         """
         for user_message in messages[::-1]:
             if user_message.role == "user":
@@ -157,8 +165,11 @@ class WebSocketMessageHandler:
         """
         Processes the contents of a user message based on schema type.
 
-        :param user_content: WebSocketUserMessage or WebSocketUserInteractionResponseMessage.
-        :return: Message content based on schema type.
+        Args:
+            user_content: WebSocketUserMessage or WebSocketUserInteractionResponseMessage.
+
+        Returns:
+            Message content based on schema type.
         """
         messages = user_content.content.messages
 
@@ -179,7 +190,8 @@ class WebSocketMessageHandler:
         """
         Process user messages and routes them appropriately.
 
-        :param user_message_as_validated_type: A WebSocketUserMessage Data Model instance.
+        Args:
+            user_message_as_validated_type: A WebSocketUserMessage Data Model instance.
         """
 
         try:
@@ -217,9 +229,10 @@ class WebSocketMessageHandler:
         """
         Creates a websocket message that will be ready for routing based on message type or data model.
 
-        :param data_model: Message content model.
-        :param message_type: Message content model.
-        :param status: Message content model.
+        Args:
+            data_model: Message content model.
+            message_type: Message content model.
+            status: Message content model.
         """
         try:
             message: BaseModel | None = None
@@ -229,7 +242,7 @@ class WebSocketMessageHandler:
 
             message_schema: type[BaseModel] = await self._message_validator.get_message_schema_by_type(message_type)
 
-            if 'id' in data_model.model_fields:
+            if hasattr(data_model, 'id'):
                 message_id: str = data_model.id
             else:
                 message_id = str(uuid.uuid4())
@@ -286,8 +299,11 @@ class WebSocketMessageHandler:
         Registered human interaction callback that processes human interactions and returns
         responses from websocket connection.
 
-        :param prompt: Incoming interaction content data model.
-        :return: A Text Content Base Pydantic model.
+        Args:
+            prompt: Incoming interaction content data model.
+
+        Returns:
+            A Text Content Base Pydantic model.
         """
 
         # First create a future from the loop for the human response
