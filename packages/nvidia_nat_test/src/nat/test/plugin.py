@@ -16,10 +16,12 @@
 import os
 import subprocess
 import typing
+from collections.abc import AsyncGenerator
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
 
 if typing.TYPE_CHECKING:
     from docker.client import DockerClient
@@ -414,3 +416,26 @@ def fixture_redis_server(fail_missing: bool) -> Generator[dict[str, str | int]]:
         if fail_missing:
             raise
         pytest.skip(f"Error connecting to Redis server: {e}, skipping redis tests")
+
+
+@pytest_asyncio.fixture(name="mysql_server", scope="module")
+async def fixture_mysql_server(fail_missing: bool) -> AsyncGenerator[dict[str, str | int]]:
+    """Fixture to safely skip MySQL based tests if MySQL is not running"""
+    host = os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1')
+    port = int(os.environ.get('NAT_CI_MYSQL_PORT', '3306'))
+    user = os.environ.get('NAT_CI_MYSQL_USER', 'root')
+    password = os.environ.get('MYSQL_ROOT_PASSWORD', 'my_password')
+    bucket_name = os.environ.get('NAT_CI_MYSQL_BUCKET_NAME', 'test')
+    try:
+        import aiomysql
+        conn = await aiomysql.connect(host=host, port=port, user=user, password=password)
+        yield {"host": host, "port": port, "username": user, "password": password, "bucket_name": bucket_name}
+        conn.close()
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("aiomysql not installed, skipping MySQL tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        pytest.skip(f"Error connecting to MySQL server: {e}, skipping MySQL tests")

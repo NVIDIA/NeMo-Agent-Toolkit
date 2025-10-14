@@ -13,12 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import pytest
-import pytest_asyncio
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.mysql.object_store import MySQLObjectStoreClientConfig
@@ -29,31 +26,8 @@ from nat.test.object_store_tests import ObjectStoreTests
 # docker run --rm -ti --name test-mysql -e MYSQL_ROOT_PASSWORD=my_password -d -p 3306:3306 mysql:9.3
 
 
-@pytest_asyncio.fixture(name="mysql_server", scope="module")
-async def fixture_mysql_server(fail_missing: bool) -> AsyncGenerator[dict[str, str | int]]:
-    """Fixture to safely skip MySQL based tests if MySQL is not running"""
-    host = os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1')
-    port = int(os.environ.get('NAT_CI_MYSQL_PORT', '3306'))
-    user = os.environ.get('NAT_CI_MYSQL_USER', 'root')
-    password = os.environ.get('MYSQL_ROOT_PASSWORD', 'my_password')
-    bucket_name = os.environ.get('NAT_CI_MYSQL_BUCKET_NAME', 'test')
-    try:
-        import aiomysql
-        conn = await aiomysql.connect(host=host, port=port, user=user, password=password)
-        yield {"host": host, "port": port, "username": user, "password": password, "bucket_name": bucket_name}
-        conn.close()
-    except ImportError:
-        if fail_missing:
-            raise
-        pytest.skip("aiomysql not installed, skipping MySQL tests")
-    except Exception as e:
-        if fail_missing:
-            raise
-        pytest.skip(f"Error connecting to MySQL server: {e}, skipping MySQL tests")
-
-
 @pytest.fixture(scope='class', autouse=True)
-def _mysql_server(request, mysql_server: dict[str, str | int]):
+async def _mysql_server(request, mysql_server: dict[str, str | int]):
     request.cls._mysql_server_info = mysql_server
 
 
