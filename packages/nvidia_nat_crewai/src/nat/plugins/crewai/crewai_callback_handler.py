@@ -154,12 +154,15 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
             seconds_between_calls = int(now - self.last_call_ts)
             model_name = kwargs.get('model', "")
 
-            model_input = ""
+            model_input = []
             try:
                 for message in kwargs.get('messages', []):
-                    model_input += message.get('content', "")
+                    content = message.get('content', "")
+                    model_input.append("" if content is None else str(content))
             except Exception as e:
                 logger.exception("Error getting model input: %s", e)
+
+            model_input = "".join(model_input)
 
             # Record the start event
             input_stats = IntermediateStepPayload(
@@ -177,13 +180,16 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
             # Call the original litellm.completion(...)
             output = original_func(*args, **kwargs)
 
-            model_output = ""
+            model_output = []
             try:
                 for choice in output.choices:
                     msg = choice.model_extra["message"]
-                    model_output += msg.get('content', "")
+                    content = msg.get('content', "")
+                    model_output.append("" if content is None else str(content))
             except Exception as e:
                 logger.exception("Error getting model output: %s", e)
+
+            model_output = "".join(model_output)
 
             now = time.time()
             # Record the end event

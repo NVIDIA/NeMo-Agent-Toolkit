@@ -43,8 +43,17 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
 
         @override
         def inject(self, messages: list[Message], *args, **kwargs) -> FunctionArgumentWrapper:
-            new_messages = [Message(role="system", content=self.system_prompt)] + messages
-            return FunctionArgumentWrapper(new_messages, *args, **kwargs)
+            # Attempt to inject the system prompt into the first system message
+            for i, message in enumerate(messages):
+                if message.role == "system":
+                    if self.system_prompt not in str(message.content):
+                        messages = list(messages)
+                        messages[i] = Message(role="system", content=f"{message.content}\n{self.system_prompt}")
+                    break
+            else:
+                messages = list(messages)
+                messages.insert(0, Message(role="system", content=self.system_prompt))
+            return FunctionArgumentWrapper(messages, *args, **kwargs)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,

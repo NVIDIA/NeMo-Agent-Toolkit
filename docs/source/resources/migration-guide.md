@@ -27,6 +27,19 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ## Version Specific Changes
 
+### v1.3.0
+
+#### API Changes
+
+The {py:mod}`nat.data_models.api_server` module has been updated to improve type safety and OpenAI API compatibility.
+
+* {py:class}`nat.data_models.api_server.Choice` has been split into two specialized models:
+  * {py:class}`nat.data_models.api_server.ChatResponseChoice` - for non-streaming responses (contains `message` field)
+  * {py:class}`nat.data_models.api_server.ChatResponseChunkChoice` - for streaming responses (contains `delta` field)
+  * {py:class}`nat.data_models.api_server.Choice` remains as a backward compatibility alias for `ChatResponseChoice`
+
+* {py:class}`nat.data_models.api_server.ChatResponse` now requires `usage` field (no longer optional)
+
 ### v1.2.0
 
 #### Package Changes

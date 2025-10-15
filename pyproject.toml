@@ -158,6 +158,7 @@ openai = [
 ]
 
 [tool.uv]
+managed = true
 config-settings = { editable_mode = "compat" }
 
 
