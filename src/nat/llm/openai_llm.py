@@ -46,6 +46,9 @@ class OpenAIModelConfig(LLMBaseConfig,
                             description="The OpenAI hosted model name.")
     seed: int | None = Field(default=None, description="Random seed to set for generation.")
     max_retries: int = Field(default=10, description="The max number of retries for the request.")
+    verify_ssl: bool = Field(default=True,
+                             description="Whether to verify SSL certificates. "
+                             "Set to False when using self-signed certificates.")
 
 
 @register_llm_provider(config_type=OpenAIModelConfig)

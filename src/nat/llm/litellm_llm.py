@@ -50,6 +50,9 @@ class LiteLlmModelConfig(
                             serialization_alias="model",
                             description="The LiteLlm hosted model name.")
     seed: int | None = Field(default=None, description="Random seed to set for generation.")
+    verify_ssl: bool = Field(default=True,
+                             description="Whether to verify SSL certificates. "
+                             "Set to False when using self-signed certificates.")
 
 
 @register_llm_provider(config_type=LiteLlmModelConfig)

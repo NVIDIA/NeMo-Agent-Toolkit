@@ -148,13 +148,26 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
+    # Prepare config excluding fields that shouldn't be passed to ChatOpenAI
+    config_dict = llm_config.model_dump(
+        exclude={"type", "thinking", "verify_ssl", "ssl_verify"},
+        by_alias=True,
+        exclude_none=True,
+    )
+
+    # Configure SSL verification if needed
+    if not llm_config.verify_ssl:
+        import httpx
+
+        # LangChain needs both sync and async clients
+        sync_client = httpx.Client(verify=False)
+        async_client = httpx.AsyncClient(verify=False)
+
+        config_dict["http_client"] = sync_client
+        config_dict["http_async_client"] = async_client
+
     # If stream_usage is specified, it will override the default value of True.
-    client = ChatOpenAI(stream_usage=True,
-                        **llm_config.model_dump(
-                            exclude={"type", "thinking"},
-                            by_alias=True,
-                            exclude_none=True,
-                        ))
+    client = ChatOpenAI(stream_usage=True, **config_dict)
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -162,7 +175,13 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def litellm_langchain(llm_config: LiteLlmModelConfig, _builder: Builder):
 
+    import os
+
     from langchain_litellm import ChatLiteLLM
+
+    # Configure SSL verification via LiteLLM environment variable if disabled
+    if hasattr(llm_config, "verify_ssl") and not llm_config.verify_ssl:
+        os.environ["LITELLM_SSL_VERIFY"] = "false"
 
     client = ChatLiteLLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
 

@@ -100,11 +100,16 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking"},
+            exclude={"type", "model_name", "thinking", "verify_ssl"},
             by_alias=True,
             exclude_none=True,
         ),
     }
+
+    # Configure SSL verification if needed
+    if not llm_config.verify_ssl:
+        import httpx
+        config_obj["http_client"] = httpx.Client(verify=False)
 
     client = OpenAIChat(**config_obj, id=llm_config.model_name)
 

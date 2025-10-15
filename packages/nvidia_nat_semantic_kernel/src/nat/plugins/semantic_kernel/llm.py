@@ -104,6 +104,28 @@ async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builde
 
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-    llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name)
+    # Prepare kwargs for OpenAIChatCompletion
+    kwargs = {"ai_model_id": llm_config.model_name}
+
+    # Add optional parameters if provided
+    if llm_config.api_key:
+        kwargs["api_key"] = llm_config.api_key
+    if llm_config.base_url:
+        kwargs["base_url"] = llm_config.base_url
+
+    # Configure SSL verification if needed by providing an AsyncOpenAI client
+    if not llm_config.verify_ssl:
+        import httpx
+        from openai import AsyncOpenAI
+
+        http_async_client = httpx.AsyncClient(verify=False)
+        async_openai_client = AsyncOpenAI(
+            api_key=llm_config.api_key,
+            base_url=llm_config.base_url,
+            http_client=http_async_client,
+        )
+        kwargs["async_client"] = async_openai_client
+
+    llm = OpenAIChatCompletion(**kwargs)
 
     yield _patch_llm_based_on_config(llm, llm_config)

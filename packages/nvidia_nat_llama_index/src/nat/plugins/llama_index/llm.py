@@ -113,7 +113,16 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from llama_index.llms.openai import OpenAI
 
-    llm = OpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+    # Prepare config excluding fields that shouldn't be passed to OpenAI
+    config_dict = llm_config.model_dump(exclude={"type", "thinking", "verify_ssl"}, by_alias=True, exclude_none=True)
+
+    # Configure SSL verification if needed
+    if not llm_config.verify_ssl:
+        import httpx
+        config_dict["http_client"] = httpx.Client(verify=False)
+        config_dict["http_async_client"] = httpx.AsyncClient(verify=False)
+
+    llm = OpenAI(**config_dict)
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -121,7 +130,13 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
 async def litellm_llama_index(llm_config: LiteLlmModelConfig, _builder: Builder):
 
+    import os
+
     from llama_index.llms.litellm import LiteLLM
+
+    # Configure SSL verification via LiteLLM environment variable if disabled
+    if hasattr(llm_config, "verify_ssl") and not llm_config.verify_ssl:
+        os.environ["LITELLM_SSL_VERIFY"] = "false"
 
     llm = LiteLLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
 

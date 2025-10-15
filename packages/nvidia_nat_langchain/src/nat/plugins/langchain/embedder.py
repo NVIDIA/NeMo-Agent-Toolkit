@@ -60,7 +60,16 @@ async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: 
 
     from langchain_openai import OpenAIEmbeddings
 
-    client = OpenAIEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
+    # Prepare config excluding fields that shouldn't be passed to OpenAIEmbeddings
+    config_dict = embedder_config.model_dump(exclude={"type", "verify_ssl"}, by_alias=True, exclude_none=True)
+
+    # Configure SSL verification if needed
+    if not embedder_config.verify_ssl:
+        import httpx
+        config_dict["http_client"] = httpx.Client(verify=False)
+        config_dict["http_async_client"] = httpx.AsyncClient(verify=False)
+
+    client = OpenAIEmbeddings(**config_dict)
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,

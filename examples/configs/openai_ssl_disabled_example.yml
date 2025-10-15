@@ -1,0 +1,59 @@
+# path-check-skip-file
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Example configuration for using OpenAI-compatible endpoints with self-signed certificates
+# This configuration demonstrates how to disable SSL verification when connecting to
+# OpenAI-compatible endpoints that use self-signed certificates.
+#
+# WARNING: Disabling SSL verification should only be used in trusted environments
+# or when you trust the endpoint and understand the security implications.
+
+workflow_name: openai_ssl_disabled_example
+framework: langchain
+
+llm:
+  type: openai
+  model_name: gpt-4
+  base_url: https://your-custom-endpoint.example.com/v1  # Your OpenAI-compatible endpoint
+  api_key: ${OPENAI_API_KEY}  # Or your custom API key
+  verify_ssl: false  # Disable SSL certificate verification
+  temperature: 0.7
+  max_tokens: 2000
+
+# Example with embedder
+embedder:
+  type: openai
+  model_name: text-embedding-ada-002
+  base_url: https://your-custom-endpoint.example.com/v1
+  api_key: ${OPENAI_API_KEY}
+  verify_ssl: false  # Disable SSL certificate verification
+
+# The verify_ssl parameter is supported across all frameworks:
+# - langchain
+# - llama_index
+# - agno
+# - semantic_kernel
+# - crewai
+# - adk
+
+# Example with a different framework (llama_index):
+# framework: llama_index
+# llm:
+#   type: openai
+#   model_name: gpt-4
+#   base_url: https://your-custom-endpoint.example.com/v1
+#   api_key: ${OPENAI_API_KEY}
+#   verify_ssl: false

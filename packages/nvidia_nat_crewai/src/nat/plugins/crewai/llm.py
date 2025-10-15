@@ -133,7 +133,15 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from crewai import LLM
 
-    client = LLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+    # Prepare config excluding fields that shouldn't be passed to LLM
+    config_dict = llm_config.model_dump(exclude={"type", "thinking", "verify_ssl"}, by_alias=True, exclude_none=True)
+
+    # Configure SSL verification if needed via LiteLLM environment variable
+    # CrewAI uses LiteLLM under the hood which respects this environment variable
+    if not llm_config.verify_ssl:
+        os.environ["LITELLM_SSL_VERIFY"] = "false"
+
+    client = LLM(**config_dict)
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -142,6 +150,10 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
 async def litellm_crewai(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     from crewai import LLM
+
+    # Configure SSL verification via LiteLLM environment variable if disabled
+    if hasattr(llm_config, "verify_ssl") and not llm_config.verify_ssl:
+        os.environ["LITELLM_SSL_VERIFY"] = "false"
 
     client = LLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
 
