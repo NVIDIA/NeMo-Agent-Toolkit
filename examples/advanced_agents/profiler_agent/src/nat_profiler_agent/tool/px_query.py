@@ -92,18 +92,13 @@ class PxQueryInput(BaseModel):
     )
 
 
-def get_px_client(config: PxQueryConfig):
-    """Get the Phoenix client."""
-    import phoenix as px
-
-    return px.Client(endpoint=config.phoenix_url)
-
-
 @register_function(config_type=PxQueryConfig)
-async def px_query(config: PxQueryConfig, builder: Builder):
+async def px_query(config: PxQueryConfig, _builder: Builder):
     """Query the Phoenix server for a dataframe of LLM traces"""
+    from phoenix.client import Client
 
-    px_client = get_px_client(config)
+    px_client = Client(base_url=config.phoenix_url)
+
     # Create a temporary directory for storing CSV files
     temp_dir = tempfile.mkdtemp(prefix="px_query_")
     logger.info("Created temporary directory for px_query: %s", temp_dir)
@@ -136,7 +131,7 @@ async def px_query(config: PxQueryConfig, builder: Builder):
 
         # filter out last n traces based, sorted by start time
         if px_api_input.last_n:
-            df = px_client.get_spans_dataframe(project_name=px_api_input.project_name)
+            df = px_client.spans.get_spans_dataframe(project_name=px_api_input.project_name)
             trace_latest_times = (df.groupby("context.trace_id")["start_time"].min().sort_values(
                 ascending=False).reset_index())
             if len(trace_latest_times) < px_api_input.last_n:
@@ -151,7 +146,7 @@ async def px_query(config: PxQueryConfig, builder: Builder):
             df = df[df["context.trace_id"].isin(last_n_trace_ids)]
             logger.info("Filtered dataframe to last %d traces", px_api_input.last_n)
         else:
-            df = px_client.get_spans_dataframe(
+            df = px_client.spans.get_spans_dataframe(
                 project_name=px_api_input.project_name,
                 start_time=px_api_input.start_time,
                 end_time=px_api_input.end_time,

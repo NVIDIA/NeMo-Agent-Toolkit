@@ -57,6 +57,7 @@ documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
 source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
 [tool.uv]
+managed = true
 config-settings = { editable_mode = "compat" }
 
 

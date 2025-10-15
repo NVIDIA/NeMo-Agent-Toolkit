@@ -46,7 +46,9 @@ async def test_full_workflow_e2e(opensearch_url: str) -> None:
     config = load_config(config_file)
     config.workflow.opensearch_url = opensearch_url
 
-    result = await run_workflow(None, "Give a short overview of this workflow.", "workflow", config=config)
+    result = await run_workflow(question="Give a short overview of this workflow.",
+                                expected_answer="workflow",
+                                config=config)
 
     assert isinstance(result, str)
     assert len(result) > 0
