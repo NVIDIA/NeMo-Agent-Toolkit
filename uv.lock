@@ -5152,16 +5152,6 @@ requires-dist = [
 ]
 
 [[package]]
-name = "nat-redact-pii"
-source = { editable = "examples/observability/redact_pii" }
-dependencies = [
-    { name = "nvidia-nat", extra = ["weave"] },
-]
-
-[package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["weave"], editable = "." }]
-
-[[package]]
 name = "nat-router-agent"
 source = { editable = "examples/control_flow/router_agent" }
 dependencies = [
@@ -5694,7 +5684,6 @@ examples = [
     { name = "nat-plot-charts" },
     { name = "nat-por-to-jiratickets" },
     { name = "nat-profiler-agent" },
-    { name = "nat-redact-pii" },
     { name = "nat-router-agent" },
     { name = "nat-semantic-kernel-demo" },
     { name = "nat-sequential-executor" },
@@ -5834,7 +5823,6 @@ requires-dist = [
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
     { name = "nat-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
     { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
-    { name = "nat-redact-pii", marker = "extra == 'examples'", editable = "examples/observability/redact_pii" },
     { name = "nat-router-agent", marker = "extra == 'examples'", editable = "examples/control_flow/router_agent" },
     { name = "nat-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
     { name = "nat-sequential-executor", marker = "extra == 'examples'", editable = "examples/control_flow/sequential_executor" },
