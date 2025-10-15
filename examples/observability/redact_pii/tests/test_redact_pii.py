@@ -23,6 +23,11 @@ import pytest
 
 @pytest.fixture(name="project_name", scope="module")
 async def fixture_project_name(weave: types.ModuleType) -> AsyncGenerator[str]:
+    # This currently has the following problems:
+    # 1. Ideally we would create a new project for each test run to avoid conflicts, and then delete the project.
+    #    However, W&B does not currently support deleting projects via the API.
+    # 2. We don't have a way (that I know of) to identifiy traces from this specific test run, such that we only delete
+    #    those traces.
     project_name = "redact_pii_e2e"
     yield project_name
 
@@ -58,6 +63,7 @@ async def test_agent_full_workflow(examples_dir: Path, project_name: str, weave:
     found_redacted_value = False
     for call in calls:
         call_str = str(call)
+        # This test is currently failing
         assert test_email not in call_str, f"Found unredacted email address in call: {call_str}"
         if not found_redacted_value:
             found_redacted_value = "<EMAIL_ADDRESS>" in call_str
