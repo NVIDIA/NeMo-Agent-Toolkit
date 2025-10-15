@@ -398,3 +398,323 @@ def test_exception_propagation_in_nested_calls():
     # Inner should be called twice (once per outer call, no nested retries)
     assert svc.outer_calls == 2
     assert svc.inner_calls == 2
+
+
+# ---------------------------------------------------------------------------
+# 4. Tests for memory optimizations
+# ---------------------------------------------------------------------------
+class MemoryTestService:
+    """Service for testing memory optimization features."""
+
+    def __init__(self):
+        self.call_count = 0
+        self.gc_was_called = False
+        self.last_args = None
+        self.last_kwargs = None
+
+    def method_with_mutable_args(self, data_list, data_dict):
+        """Method that receives mutable arguments."""
+        self.call_count += 1
+        self.last_args = (data_list, )
+        self.last_kwargs = {"data_dict": data_dict}
+
+        if self.call_count < 2:
+            # Modify the arguments to test shallow vs deep copy
+            data_list.append("modified")
+            data_dict["modified"] = True
+            raise APIError(503, "Service unavailable")
+
+        return f"success: list={data_list}, dict={data_dict}"
+
+    def method_that_creates_traceback(self):
+        """Method that creates a deep traceback."""
+        self.call_count += 1
+        if self.call_count < 2:
+            try:
+                # Create a nested exception with traceback
+                def nested1():
+
+                    def nested2():
+
+                        def nested3():
+                            raise ValueError("Deep error")
+
+                        nested3()
+
+                    nested2()
+
+                nested1()
+            except ValueError as e:
+                raise APIError(503, "Service error") from e
+        return "success"
+
+
+def test_traceback_clearing(monkeypatch):
+    """Test that exception traceback clearing is called during retries."""
+    clear_calls = []
+
+    # Store the original function
+    original_clear = ar._clear_exception_context
+
+    def mock_clear(exc):
+        """Track calls to clear_exception_context."""
+        clear_calls.append(exc)
+        # Still call the original to ensure it works
+        original_clear(exc)
+
+    monkeypatch.setattr(ar, "_clear_exception_context", mock_clear)
+
+    call_count = 0
+
+    @ar._retry_decorator(
+        retries=3,
+        base_delay=0,
+        retry_on=(APIError, ),
+        retry_codes=["5xx"],
+        clear_tracebacks=True,
+    )
+    def failing_function():
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            # Fail twice, then succeed
+            raise APIError(503, "Service error")
+        return "success"
+
+    result = failing_function()
+    assert result == "success"
+    assert call_count == 3
+
+    # Should have cleared tracebacks twice (once per failed attempt)
+    assert len(clear_calls) == 2
+    # Verify all cleared exceptions were APIErrors
+    assert all(isinstance(exc, APIError) for exc in clear_calls)
+
+
+def test_traceback_not_cleared_when_disabled(monkeypatch):
+    """Test that exception traceback clearing is NOT called when disabled."""
+    clear_calls = []
+
+    original_clear = ar._clear_exception_context
+
+    def mock_clear(exc):
+        """Track calls to clear_exception_context."""
+        clear_calls.append(exc)
+        original_clear(exc)
+
+    monkeypatch.setattr(ar, "_clear_exception_context", mock_clear)
+
+    call_count = 0
+
+    @ar._retry_decorator(
+        retries=3,
+        base_delay=0,
+        retry_on=(APIError, ),
+        retry_codes=["5xx"],
+        clear_tracebacks=False,  # Disabled
+    )
+    def failing_function():
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            # Fail twice, then succeed
+            raise APIError(503, "Service error")
+        return "success"
+
+    result = failing_function()
+    assert result == "success"
+    assert call_count == 3
+
+    # Should NOT have cleared any tracebacks
+    assert len(clear_calls) == 0
+
+
+def test_shallow_copy_by_default():
+    """Test that shallow copy is used by default (not deep copy)."""
+    svc = MemoryTestService()
+    svc = ar.patch_with_retry(
+        svc,
+        retries=2,
+        base_delay=0,
+        retry_codes=["5xx"],
+        deep_copy=False,  # This is the default (shallow copy)
+    )
+
+    # Create mutable arguments
+    test_list = ["original"]
+    test_dict = {"original": True}
+
+    svc.method_with_mutable_args(test_list, test_dict)
+
+    # With shallow copy, modifications in failed attempts affect the original
+    assert "modified" in test_list
+    assert test_dict.get("modified") is True
+    assert svc.call_count == 2
+
+
+def test_deep_copy_when_enabled():
+    """Test that deep copy works when enabled."""
+    svc = MemoryTestService()
+    svc = ar.patch_with_retry(
+        svc,
+        retries=2,
+        base_delay=0,
+        retry_codes=["5xx"],
+        deep_copy=True,  # Enable deep copy
+    )
+
+    # Create mutable arguments
+    test_list = ["original"]
+    test_dict = {"original": True}
+
+    svc.method_with_mutable_args(test_list, test_dict)
+
+    # With deep copy, modifications in failed attempts NOT affect original
+    assert "modified" not in test_list
+    assert test_dict.get("modified") is None
+    assert svc.call_count == 2
+
+
+def test_gc_frequency(monkeypatch):
+    """Test that garbage collection is called at the specified frequency."""
+    gc_calls = []
+
+    # Mock gc.collect to track calls
+    def mock_gc_collect():
+        gc_calls.append(1)
+        return 0
+
+    monkeypatch.setattr(ar.gc, "collect", mock_gc_collect)
+
+    @ar._retry_decorator(
+        retries=7,  # Multiple retries to trigger GC
+        base_delay=0,
+        retry_on=(APIError, ),
+        retry_codes=["5xx"],
+        gc_frequency=3,  # GC every 3 retries
+    )
+    def failing_function():
+        # Always fail to test all retries
+        raise APIError(503, "Service error")
+
+    try:
+        failing_function()
+    except APIError:
+        pass
+
+    # GC should be called on attempts 3 and 6 (not on 0)
+    # With 7 retries (attempts 0-6), we expect 2 GC calls
+    assert len(gc_calls) == 2
+
+
+def test_weak_reference_cleanup():
+    """Test that weak references allow objects to be garbage collected."""
+    import gc
+    import weakref
+
+    class TestObject:
+        """Object that supports weak references."""
+
+        def __init__(self):
+            self.method_calls = 0
+
+        def test_method(self):
+            self.method_calls += 1
+            if self.method_calls < 2:
+                raise APIError(503, "Failed")
+            return "success"
+
+    # Create object and weak reference
+    obj = TestObject()
+    weak_ref = weakref.ref(obj)
+
+    # Patch the object
+    obj = ar.patch_with_retry(
+        obj,
+        retries=3,
+        base_delay=0,
+        retry_codes=["5xx"],
+    )
+
+    # Use the method
+    result = obj.test_method()
+    assert result == "success"
+    assert obj.method_calls == 2
+
+    # Verify weak reference still works
+    assert weak_ref() is obj
+
+    # Delete the object
+    del obj
+    gc.collect()
+
+    # Weak reference should now be None
+    assert weak_ref() is None
+
+
+def test_memory_optimizations_with_generators():
+    """Test memory optimizations work with generator functions."""
+    call_count = 0
+
+    @ar._retry_decorator(
+        retries=3,
+        base_delay=0,
+        retry_on=(APIError, ),
+        retry_codes=["5xx"],
+        clear_tracebacks=True,
+        gc_frequency=2,
+    )
+    def gen_function():
+        nonlocal call_count
+        call_count += 1
+        if call_count < 2:
+            raise APIError(503, "Generator failed")
+        yield from range(3)
+
+    # Should succeed on second attempt
+    result = list(gen_function())
+    assert result == [0, 1, 2]
+    assert call_count == 2
+
+
+async def test_memory_optimizations_with_async():
+    """Test memory optimizations work with async functions."""
+    call_count = 0
+
+    @ar._retry_decorator(
+        retries=3,
+        base_delay=0,
+        retry_on=(APIError, ),
+        retry_codes=["5xx"],
+        clear_tracebacks=True,
+        gc_frequency=2,
+    )
+    async def async_function():
+        nonlocal call_count
+        call_count += 1
+        if call_count < 2:
+            raise APIError(503, "Async failed")
+        return "async-success"
+
+    # Should succeed on second attempt
+    result = await async_function()
+    assert result == "async-success"
+    assert call_count == 2
+
+
+def test_retry_context_with_non_weakref_objects():
+    """Test retry context handles objects that don't support weak references."""
+
+    # Some built-in types don't support weak references
+    test_list = ["item1", "item2"]
+
+    # This should not raise an error even though lists don't support weakrefs
+    patched = ar.patch_with_retry(
+        test_list,
+        retries=2,
+        base_delay=0,
+    )
+
+    # The patch should work on the list's methods
+    assert isinstance(patched, list)
+    assert patched == ["item1", "item2"]
