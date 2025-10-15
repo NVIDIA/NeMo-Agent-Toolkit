@@ -1,0 +1,79 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import types
+from collections.abc import AsyncGenerator
+from pathlib import Path
+
+import pytest
+
+from nat.runtime.loader import load_config
+from nat.test.utils import run_workflow
+
+
+@pytest.fixture(name="config_dir", scope="session")
+def config_dir_fixture(examples_dir: Path) -> Path:
+    return examples_dir / "observability/simple_calculator_observability/configs"
+
+
+@pytest.fixture(name="nvidia_api_key", autouse=True, scope='module')
+def nvidia_api_key_fixture(nvidia_api_key):
+    return nvidia_api_key
+
+
+@pytest.fixture(name="question", scope="module")
+def question_fixture() -> str:
+    return "What is 2 * 4?"
+
+
+@pytest.fixture(name="expected_answer", scope="module")
+def expected_answer_fixture() -> str:
+    return "8"
+
+
+@pytest.fixture(name="weave_project_name", scope="module")
+async def fixture_weave_project_name(weave: types.ModuleType, wandb_api_key) -> AsyncGenerator[str]:
+    # This currently has the following problems:
+    # 1. Ideally we would create a new project for each test run to avoid conflicts, and then delete the project.
+    #    However, W&B does not currently support deleting projects via the API.
+    # 2. We don't have a way (that I know of) to identifiy traces from this specific test run, such that we only delete
+    #    those traces.
+    project_name = "weave_test_e2e"
+    client = weave.init(project_name)
+    yield project_name
+
+    client.finish(use_progress_bar=False)
+    call_ids = [c.id for c in client.get_calls()]
+    if len(call_ids) > 0:
+        client.delete_calls(call_ids)
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("wandb_api_key")
+async def test_weave_full_workflow(config_dir: Path, weave_project_name: str, question: str, expected_answer: str):
+    config_file = config_dir / "config-weave.yml"
+    config = load_config(config_file)
+    config.general.telemetry.tracing["weave"].project = weave_project_name
+
+    await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+
+@pytest.mark.integration
+async def test_phoenix_full_workflow(config_dir: Path, phoenix_trace_url: str, question: str, expected_answer: str):
+    config_file = config_dir / "config-phoenix.yml"
+    config = load_config(config_file)
+    config.general.telemetry.tracing["phoenix"].endpoint = phoenix_trace_url
+
+    await run_workflow(config=config, question=question, expected_answer=expected_answer)
