@@ -318,9 +318,7 @@ texinfo_documents = [
 # -- Extension configuration -------------------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {
-    "python": ('https://docs.python.org/', None)
-}
+intersphinx_mapping = {"python": ('https://docs.python.org/', None)}
 
 # Set the default role for interpreted code (anything surrounded in `single
 # backticks`) to be a python object. See
