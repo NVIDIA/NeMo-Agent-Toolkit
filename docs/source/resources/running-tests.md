@@ -60,11 +60,11 @@ export AZURE_OPENAI_ENDPOINT="<your-custom-endpoint>"
 - `NAT_CI_ETCD_PORT`
 - `NAT_CI_MILVUS_HOST`
 - `NAT_CI_MILVUS_PORT`
+- `NAT_CI_MINIO_HOST`
 - `NAT_CI_MYSQL_HOST`
 - `NAT_CI_OPENSEARCH_URL`
 - `NAT_CI_PHOENIX_URL`
 - `NAT_CI_REDIS_HOST`
-- `NAT_CI_S3_HOST`
 
 
 ### Start the Required Services
