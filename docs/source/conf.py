@@ -160,6 +160,7 @@ numpydoc_class_members_toctree = False
 # Ignore openai.com links, as these always report a 403 when requested by the linkcheck agent
 # mysql.com  reports a 403 when requested by linkcheck
 # api.service.com is a placeholder for a service example
+# Ignore example.com/mcp as it unaccesible when building the docs
 # Once v1.2 is merged into main, remove the ignore for the banner.png
 linkcheck_ignore = [
     r'http://localhost:\d+/',
@@ -170,6 +171,7 @@ linkcheck_ignore = [
     r'https://code.visualstudio.com',
     r'https://www.mysql.com',
     r'https://api.service.com',
+    r'https?://example\.com/mcp/?',
     r'http://custom-server'
 ]
 
@@ -317,7 +319,7 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    "python": ('https://docs.python.org/', None), "scipy": ('https://docs.scipy.org/doc/scipy/reference', None)
+    "python": ('https://docs.python.org/', None)
 }
 
 # Set the default role for interpreted code (anything surrounded in `single
