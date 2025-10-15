@@ -50,6 +50,7 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
     from nat.control_flow.router_agent.agent import RouterAgentGraph
     from nat.control_flow.router_agent.agent import RouterAgentGraphState
     from nat.control_flow.router_agent.agent import create_router_agent_prompt
+    from nat.profiler.decorators.framework_wrapper import callback_handler_var
 
     prompt = create_router_agent_prompt(config)
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -71,7 +72,12 @@ async def router_agent_workflow(config: RouterAgentWorkflowConfig, builder: Buil
             message = HumanMessage(content=input_message)
             state = RouterAgentGraphState(forward_message=message)
 
-            result_dict = await graph.ainvoke(state)
+            invoke_config = {}
+            # Add callbacks to enable node-level tracking (on_chain_start/on_chain_end)
+            callback_handler = callback_handler_var.get()
+            if callback_handler:
+                invoke_config['callbacks'] = [callback_handler]
+            result_dict = await graph.ainvoke(state, config=invoke_config if invoke_config else None)
             result_state = RouterAgentGraphState(**result_dict)
 
             output_message = result_state.messages[-1]

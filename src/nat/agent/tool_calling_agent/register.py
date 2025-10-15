@@ -60,6 +60,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
     from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph
     from nat.agent.tool_calling_agent.agent import ToolCallAgentGraphState
     from nat.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
+    from nat.profiler.decorators.framework_wrapper import callback_handler_var
 
     prompt = create_tool_calling_agent_prompt(config)
     # we can choose an LLM for the ReAct agent in the config file
@@ -108,7 +109,12 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             state = ToolCallAgentGraphState(messages=messages)
 
             # run the Tool Calling Agent Graph
-            state = await graph.ainvoke(state, config={'recursion_limit': (config.max_iterations + 1) * 2})
+            invoke_config = {'recursion_limit': (config.max_iterations + 1) * 2}
+            # Add callbacks to enable node-level tracking (on_chain_start/on_chain_end)
+            callback_handler = callback_handler_var.get()
+            if callback_handler:
+                invoke_config['callbacks'] = [callback_handler]
+            state = await graph.ainvoke(state, config=invoke_config)
             # setting recursion_limit: 4 allows 1 tool call
             #   - allows the Tool Calling Agent to perform 1 cycle / call 1 single tool,
             #   - but stops the agent when it tries to call a tool a second time

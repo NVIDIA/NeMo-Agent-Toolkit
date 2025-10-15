@@ -91,6 +91,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from nat.agent.react_agent.agent import ReActAgentGraph
     from nat.agent.react_agent.agent import ReActGraphState
     from nat.agent.react_agent.agent import create_react_agent_prompt
+    from nat.profiler.decorators.framework_wrapper import callback_handler_var
 
     prompt = create_react_agent_prompt(config)
 
@@ -142,7 +143,12 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             state = ReActGraphState(messages=messages)
 
             # run the ReAct Agent Graph
-            state = await graph.ainvoke(state, config={'recursion_limit': (config.max_tool_calls + 1) * 2})
+            invoke_config = {'recursion_limit': (config.max_tool_calls + 1) * 2}
+            # Add callbacks to enable node-level tracking (on_chain_start/on_chain_end)
+            callback_handler = callback_handler_var.get()
+            if callback_handler:
+                invoke_config['callbacks'] = [callback_handler]
+            state = await graph.ainvoke(state, config=invoke_config)
             # setting recursion_limit: 4 allows 1 tool call
             #   - allows the ReAct Agent to perform 1 cycle / call 1 single tool,
             #   - but stops the agent when it tries to call a tool a second time
