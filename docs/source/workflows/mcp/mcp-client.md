@@ -342,14 +342,14 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
    nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
    ```
 
-2. Start the workflow (MCP client) with FastAPI on port 8080:
+2. Start the workflow (MCP client) with FastAPI:
    ```bash
-   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --port 8080
+   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml
    ```
 
 3. Call the endpoint and pretty-print the response:
    ```bash
-   curl -s http://localhost:8080/mcp/client/tool/list | jq
+   curl -s http://localhost:8000/mcp/client/tool/list | jq
    ```
 
 ### Endpoint
@@ -422,6 +422,31 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
   ]
 }
 ```
+
+## MCP Inspection via UI
+You can inspect the MCP tools available on the client side using the UI.
+
+### Steps
+
+1. Start the MCP server:
+   ```bash
+   nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
+   ```
+
+2. Start the workflow (MCP client) with FastAPI:
+   ```bash
+   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml
+   ```
+
+3. Launch the UI by following the instructions in the [Launching the UI](../../quick-start/launching-ui.md) documentation.
+
+4. Click on the MCP tab in the side panel to inspect the MCP tools available on the client side.
+
+### Sample Output
+![MCP Side Panel](../../_static/mcp_side_panel.png)
+
+![MCP Tools](../../_static/mcp_tools.png)
+
 
 ### Troubleshooting
 
