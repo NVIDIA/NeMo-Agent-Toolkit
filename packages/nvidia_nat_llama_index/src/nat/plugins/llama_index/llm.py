@@ -105,7 +105,15 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from llama_index.llms.openai import OpenAI
 
-    llm = OpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+    # Prepare config excluding fields that shouldn't be passed to OpenAI
+    config_dict = llm_config.model_dump(exclude={"type", "thinking", "verify_ssl"}, by_alias=True, exclude_none=True)
+
+    # Configure SSL verification if needed
+    if not llm_config.verify_ssl:
+        import httpx
+        config_dict["http_client"] = httpx.Client(verify=False)
+
+    llm = OpenAI(**config_dict)
 
     yield _patch_llm_based_on_config(llm, llm_config)
 

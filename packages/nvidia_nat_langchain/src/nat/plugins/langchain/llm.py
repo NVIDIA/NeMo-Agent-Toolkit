@@ -144,15 +144,30 @@ async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
+    import logging
+
     from langchain_openai import ChatOpenAI
 
+    # Prepare config excluding fields that shouldn't be passed to ChatOpenAI
+    config_dict = llm_config.model_dump(
+        exclude={"type", "thinking", "verify_ssl", "ssl_verify"},
+        by_alias=True,
+        exclude_none=True,
+    )
+
+    # Configure SSL verification if needed
+    if not llm_config.verify_ssl:
+        import httpx
+
+        # LangChain needs both sync and async clients
+        sync_client = httpx.Client(verify=False, timeout=httpx.Timeout(60.0, connect=10.0))
+        async_client = httpx.AsyncClient(verify=False, timeout=httpx.Timeout(60.0, connect=10.0))
+
+        config_dict["http_client"] = sync_client
+        config_dict["http_async_client"] = async_client
+
     # If stream_usage is specified, it will override the default value of True.
-    client = ChatOpenAI(stream_usage=True,
-                        **llm_config.model_dump(
-                            exclude={"type", "thinking"},
-                            by_alias=True,
-                            exclude_none=True,
-                        ))
+    client = ChatOpenAI(stream_usage=True, **config_dict)
 
     yield _patch_llm_based_on_config(client, llm_config)
 

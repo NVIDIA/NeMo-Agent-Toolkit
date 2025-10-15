@@ -98,11 +98,16 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
     from google.adk.models.lite_llm import LiteLlm
 
     config_dict = config.model_dump(
-        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url"},
+        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "verify_ssl"},
         by_alias=True,
         exclude_none=True,
     )
     if config.base_url:
         config_dict["api_base"] = config.base_url
+
+    # Configure SSL verification if needed via LiteLLM environment variable
+    # ADK uses LiteLLM under the hood which respects this environment variable
+    if not config.verify_ssl:
+        os.environ["LITELLM_SSL_VERIFY"] = "false"
 
     yield LiteLlm(config.model_name, **config_dict)
