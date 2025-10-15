@@ -240,8 +240,7 @@ class MessageValidator:
         thread_id: str = "default",
         parent_id: str = "default",
         conversation_id: str | None = None,
-        content: SystemResponseContent
-        | Error = SystemResponseContent(),
+        content: SystemResponseContent | Error = SystemResponseContent(),
         status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
         timestamp: str = str(datetime.datetime.now(datetime.UTC))
     ) -> WebSocketSystemResponseTokenMessage | None:
