@@ -65,32 +65,22 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
             Raises:
                 ValueError: If the messages are not a valid type for LanguageModelInput.
             """
-            system_message = SystemMessage(content=self.system_prompt)
-            if isinstance(messages, BaseMessage):
-                # Attempt to inject the system prompt into the first system message
-                if isinstance(messages, SystemMessage):
-                    messages.content = f"{self.system_prompt}\n\n{messages.content}"
-                    return FunctionArgumentWrapper(messages, *args, **kwargs)
-                # If no system message found, prepend a new one
-                new_messages = [system_message, messages]
-                return FunctionArgumentWrapper(new_messages, *args, **kwargs)
-            elif isinstance(messages, PromptValue):
-                new_messages = [system_message, *messages.to_messages()]
-                return FunctionArgumentWrapper(new_messages, *args, **kwargs)
+            if isinstance(messages, PromptValue):
+                messages = messages.to_messages()
             elif isinstance(messages, str):
-                new_messages = [system_message, HumanMessage(content=messages)]
-                return FunctionArgumentWrapper(new_messages, *args, **kwargs)
-            elif isinstance(messages, Sequence):
-                if all(isinstance(m, BaseMessage) for m in messages):
+                messages = [HumanMessage(content=messages)]
+
+            if isinstance(messages, Sequence) and all(isinstance(m, BaseMessage) for m in messages):
+                for i, message in enumerate(messages):
+                    if isinstance(message, SystemMessage):
+                        if self.system_prompt not in str(message.content):
+                            messages = list(messages)
+                            messages[i] = SystemMessage(content=f"{message.content}\n{self.system_prompt}")
+                        break
+                else:
                     messages = list(messages)
-                    # Attempt to inject the system prompt into the first system message
-                    for message in messages:
-                        if isinstance(message, SystemMessage):
-                            message.content = f"{self.system_prompt}\n\n{message.content}"
-                            return FunctionArgumentWrapper(messages, *args, **kwargs)
-                    # If no system message found, prepend a new one
-                    new_messages = [system_message, *messages]
-                    return FunctionArgumentWrapper(new_messages, *args, **kwargs)
+                    messages.insert(0, SystemMessage(content=self.system_prompt))
+                return FunctionArgumentWrapper(messages, *args, **kwargs)
             raise ValueError(f"Unsupported message type: {type(messages)}")
 
     if isinstance(llm_config, RetryMixin):
