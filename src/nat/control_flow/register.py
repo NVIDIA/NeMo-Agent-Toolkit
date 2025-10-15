@@ -17,5 +17,5 @@
 
 # Import any control flows which need to be automatically registered here
 from . import sequential_executor
-from .router_agent import register
-from .auto_memory_wrapper import register
+from .router_agent import register as register_router
+from .auto_memory_wrapper import register as register_auto_memory

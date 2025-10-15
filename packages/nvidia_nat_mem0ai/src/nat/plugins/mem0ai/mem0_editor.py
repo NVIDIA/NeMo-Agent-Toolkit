@@ -41,7 +41,7 @@ class Mem0Editor(MemoryEditor):
         """
         self._client = mem0_client
 
-    async def add_items(self, items: list[MemoryItem], user_id: str, **kwargs) -> None:
+    async def add_items(self, items: list[MemoryItem], user_id: str, **_kwargs) -> None:
         """
         Insert Multiple MemoryItems into the memory.
         Each MemoryItem is translated and uploaded.
@@ -49,7 +49,7 @@ class Mem0Editor(MemoryEditor):
         Args:
             items (list[MemoryItem]): The items to be added.
             user_id (str): The user ID for which to add memories.
-            kwargs (dict): Provider-specific keyword arguments.
+            _kwargs (dict): Provider-specific keyword arguments (unused but kept for interface compatibility).
         """
 
         coroutines = []

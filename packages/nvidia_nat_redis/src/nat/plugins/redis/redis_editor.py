@@ -30,6 +30,26 @@ logger = logging.getLogger(__name__)
 INDEX_NAME = "memory_idx"
 
 
+def _escape_redis_tag(value: str) -> str:
+    """
+    Escape RediSearch TAG special characters to prevent injection attacks.
+
+    RediSearch TAG fields use special characters for operators and delimiters.
+    This function escapes: , | { } ( ) ~ - @ = and whitespace.
+
+    Args:
+        value: The string value to escape
+
+    Returns:
+        Escaped string safe for use in TAG queries
+    """
+    special_chars = [',', '|', '{', '}', '(', ')', '~', '-', '@', '=', ' ', '\t', '\n', '\r']
+    escaped = value
+    for char in special_chars:
+        escaped = escaped.replace(char, f'\\{char}')
+    return escaped
+
+
 class RedisEditor(MemoryEditor):
     """
     Wrapper class that implements NAT interfaces for Redis memory storage.
@@ -136,9 +156,10 @@ class RedisEditor(MemoryEditor):
             logger.error("Failed to generate embedding: %s", e)
             raise
 
-        # Create vector search query
+        # Create vector search query with escaped user_id to prevent TAG injection
+        escaped_user_id = _escape_redis_tag(user_id)
         search_query = (
-            Query(f"(@user_id:{user_id})=>[KNN {top_k} @embedding $vec AS score]").sort_by("score").return_fields(
+            Query(f"(@user_id:{{{escaped_user_id}}})=>[KNN {top_k} @embedding $vec AS score]").sort_by("score").return_fields(
                 "conversation", "user_id", "tags", "metadata", "memory", "score").dialect(2))
         logger.debug("Created search query: %s", search_query.query_string())
 
@@ -190,7 +211,7 @@ class RedisEditor(MemoryEditor):
 
                     logger.debug("Formatted result %d", i)
                 except Exception as e:
-                    logger.error("Failed to process result %d: %s", i, e)
+                    logger.exception("Failed to process result %d: %s", i, e)
                     # Continue with other results
                     continue
 

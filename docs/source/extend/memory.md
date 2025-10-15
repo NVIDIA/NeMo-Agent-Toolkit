@@ -132,19 +132,20 @@ class MyCustomMemoryEditor(MemoryEditor):
         self._url = cfg.url
         self._token = cfg.token
 
-    async def add_items(self, user_id: str, items: list[MemoryItem]) -> None:
+    async def add_items(self, items: list[MemoryItem], user_id: str, **kwargs) -> None:
         # Insert memory items for the specified user
-        # user_id is passed as a required positional parameter for multi-tenant isolation
+        # user_id is a required parameter (after items) for multi-tenant isolation
         pass
 
-    async def retrieve_memory(self, user_id: str, query: str, top_k: int = 5, **kwargs) -> str:
+    async def retrieve_memory(self, query: str, user_id: str, top_k: int = 5, **kwargs) -> str:
         # Retrieve and format memory for the specified user
+        # user_id is a required parameter (after query) for multi-tenant isolation
         # Return formatted memory as a string optimized for LLM consumption
         pass
 
     async def remove_items(self, user_id: str, **kwargs) -> None:
         # Remove memory items for the specified user
-        # user_id is passed as a required positional parameter for multi-tenant isolation
+        # user_id is a required parameter for multi-tenant isolation
         pass
 ```
 

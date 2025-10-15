@@ -162,17 +162,17 @@ class SessionManager:
         if request.headers.get("user-message-id"):
             self._context_state.user_message_id.set(request.headers["user-message-id"])
 
-        if request.headers.get("user-id"):
-            self._context_state.user_id.set(request.headers["user-id"])
+        user_id = request.headers.get("user-id")
+        self._context_state.user_id.set(user_id)
 
-        if request.headers.get("user-first-name"):
-            self._context_state.user_first_name.set(request.headers["user-first-name"])
+        user_first_name = request.headers.get("user-first-name")
+        self._context_state.user_first_name.set(user_first_name)
 
-        if request.headers.get("user-last-name"):
-            self._context_state.user_last_name.set(request.headers["user-last-name"])
+        user_last_name = request.headers.get("user-last-name")
+        self._context_state.user_last_name.set(user_last_name)
 
-        if request.headers.get("user-email"):
-            self._context_state.user_email.set(request.headers["user-email"])
+        user_email = request.headers.get("user-email")
+        self._context_state.user_email.set(user_email)
 
         # W3C Trace Context header: traceparent: 00-<trace-id>-<span-id>-<flags>
         traceparent = request.headers.get("traceparent")
@@ -234,17 +234,10 @@ class SessionManager:
         if user_message_id is not None:
             self._context_state.user_message_id.set(user_message_id)
 
-        if user_id is not None:
-            self._context_state.user_id.set(user_id)
-
-        if user_first_name is not None:
-            self._context_state.user_first_name.set(user_first_name)
-
-        if user_last_name is not None:
-            self._context_state.user_last_name.set(user_last_name)
-
-        if user_email is not None:
-            self._context_state.user_email.set(user_email)
+        self._context_state.user_id.set(user_id)
+        self._context_state.user_first_name.set(user_first_name)
+        self._context_state.user_last_name.set(user_last_name)
+        self._context_state.user_email.set(user_email)
 
 
 # Compatibility aliases with previous releases

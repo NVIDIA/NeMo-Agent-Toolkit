@@ -14,13 +14,17 @@
 # limitations under the License.
 
 import logging
+from collections.abc import Awaitable
+from collections.abc import Callable
 from typing import Any
+from typing import Optional
 
 from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import SystemMessage
 from langgraph.graph import StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from nat.builder.context import Context
 from nat.data_models.api_server import ChatRequest
@@ -46,13 +50,13 @@ class AutoMemoryWrapperGraph:
 
     def __init__(
         self,
-        inner_agent_fn,  # Inner agent as a Function (receives ChatRequest with multiple messages)
+        inner_agent_fn: Callable[[ChatRequest], Awaitable[Any]],  # Inner agent as a Function (receives ChatRequest with multiple messages)
         memory_editor: MemoryEditor,  # Zep/Mem0/Redis memory client
         save_user_messages: bool = True,  # Auto-save user messages
         retrieve_memory: bool = True,  # Auto-retrieve before agent
         save_ai_responses: bool = True,  # Auto-save agent responses
-        search_params: dict[str, Any] | None = None,  # Backend-specific search parameters
-        add_params: dict[str, Any] | None = None  # Backend-specific add parameters
+        search_params: Optional[dict[str, Any]] = None,  # Backend-specific search parameters
+        add_params: Optional[dict[str, Any]] = None  # Backend-specific add parameters
     ):
         self.inner_agent_fn = inner_agent_fn
         self.memory_editor = memory_editor
@@ -82,7 +86,7 @@ class AutoMemoryWrapperGraph:
 
         return Message(role=role, content=str(lc_message.content))
 
-    async def capture_user_message_node(self, state: AutoMemoryWrapperState):
+    async def capture_user_message_node(self, state: AutoMemoryWrapperState) -> AutoMemoryWrapperState:
         """Captures user message to memory thread"""
         if not self.save_user_messages or not state.messages:
             return state
@@ -102,7 +106,7 @@ class AutoMemoryWrapperGraph:
                 **self.add_params)
         return state
 
-    async def memory_retrieve_node(self, state: AutoMemoryWrapperState):
+    async def memory_retrieve_node(self, state: AutoMemoryWrapperState) -> AutoMemoryWrapperState:
         """Retrieves relevant memory from memory store"""
         if not self.retrieve_memory or not state.messages:
             return state
@@ -128,7 +132,7 @@ class AutoMemoryWrapperGraph:
 
         return state
 
-    async def inner_agent_node(self, state: AutoMemoryWrapperState):
+    async def inner_agent_node(self, state: AutoMemoryWrapperState) -> AutoMemoryWrapperState:
         """
         Calls the inner agent with a ChatRequest containing all messages.
 
@@ -164,7 +168,7 @@ class AutoMemoryWrapperGraph:
         state.messages.append(AIMessage(content=response_text))
         return state
 
-    async def capture_ai_response_node(self, state: AutoMemoryWrapperState):
+    async def capture_ai_response_node(self, state: AutoMemoryWrapperState) -> AutoMemoryWrapperState:
         """Captures agent response to memory"""
         if not self.save_ai_responses or not state.messages:
             return state
@@ -184,7 +188,7 @@ class AutoMemoryWrapperGraph:
                 **self.add_params)
         return state
 
-    def build_graph(self):
+    def build_graph(self) -> CompiledStateGraph:
         """Wraps inner agent with memory nodes"""
         workflow = StateGraph(AutoMemoryWrapperState)
 

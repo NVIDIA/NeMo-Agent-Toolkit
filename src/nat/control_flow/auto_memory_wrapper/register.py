@@ -173,7 +173,7 @@ async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder):
             return str(output_message.content)
 
         except Exception as ex:
-            logger.exception("%s Auto-memory agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
+            logger.exception(f"{AGENT_LOG_PREFIX} Auto-memory agent failed with exception")
             if config.verbose:
                 return str(ex)
             return f"Auto-memory agent failed with exception: {ex}"

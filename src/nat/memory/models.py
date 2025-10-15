@@ -95,7 +95,7 @@ class SearchMemoryInput(BaseModel):
             "top_k": 1,
         }})
 
-    query: str = Field(description="Search query for which to retrieve memory.")  # noqa: E501
+    query: str = Field(description="Search query for which to retrieve memory.")
     top_k: int = Field(description="Maximum number of memories to return")
 
 
