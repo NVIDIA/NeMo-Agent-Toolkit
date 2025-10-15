@@ -82,13 +82,7 @@ python ./examples/text2sql/analyze_memory_leak.py \
 ### Customizing Test Parameters
 
 ```bash
-python ./examples/text2sql/run_text2sql_memory_leak_test.py \
-  --users 50 \          # Number of concurrent users
-  --calls 20 \          # Calls per user per round
-  --rounds 5 \          # Number of test rounds
-  --delay 15.0 \        # Delay between rounds (seconds)
-  --output_dir my_results
-  --config_file ./examples/text2sql/src/text2sql/configs/config_text2sql_mcp.yml
+python ./examples/text2sql/run_text2sql_memory_leak_test.py --users 50 --calls 20 --rounds 5 --delay 15.0 --output_dir my_results --config_file ./examples/text2sql/src/text2sql/configs/config_text2sql_mcp.yml
 ```
 
 ## Analyzing Results
