@@ -19,9 +19,6 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
-
-import psutil
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -68,6 +65,7 @@ class Text2SQLMemoryLeakTest:
         self.server_process = None
         self.monitor_process = None
         self.server_pid = None
+        self.monitor_log_file = None
 
         # Create output directory
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -76,6 +74,7 @@ class Text2SQLMemoryLeakTest:
         self.memory_csv = self.output_dir / f"text2sql_memory_{self.timestamp}.csv"
         self.load_test_log = self.output_dir / f"text2sql_load_test_{self.timestamp}.log"
         self.server_log = self.output_dir / f"text2sql_server_{self.timestamp}.log"
+        self.monitor_log = self.output_dir / f"text2sql_monitor_{self.timestamp}.log"
 
     def start_mcp_server(self) -> bool:
         """
@@ -168,8 +167,14 @@ class Text2SQLMemoryLeakTest:
         """
         logger.info("Starting memory monitor...")
 
-        # Build command - use the monitor from debug_tools
-        monitor_script = Path(__file__).parent.parent.parent / "debug_tools" / "monitor_memory.py"
+        # Build command - use the monitor script from the same directory
+        monitor_script = Path(__file__).parent / "monitor_memory.py"
+
+        # Check if monitor script exists
+        if not monitor_script.exists():
+            logger.error(f"Monitor script not found at: {monitor_script}")
+            logger.error("Please ensure monitor_memory.py exists in examples/text2sql/")
+            return False
 
         cmd = [
             sys.executable,
@@ -185,19 +190,48 @@ class Text2SQLMemoryLeakTest:
         logger.info(f"Command: {' '.join(cmd)}")
 
         try:
+            # Create a log file for monitor output
+            self.monitor_log_file = open(self.monitor_log, 'w')
+
             self.monitor_process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.PIPE,
+                stdout=self.monitor_log_file,
                 stderr=subprocess.STDOUT,
             )
 
             logger.info(f"Memory monitor started with PID: {self.monitor_process.pid}")
+            logger.info(f"Monitor log: {self.monitor_log}")
             time.sleep(2)
+
+            # Check if monitor process is still running
+            if self.monitor_process.poll() is not None:
+                logger.error("Monitor process terminated unexpectedly")
+                # Close the log file and read its contents
+                self.monitor_log_file.close()
+                if self.monitor_log.exists():
+                    with open(self.monitor_log) as f:
+                        error_output = f.read()
+                        if error_output:
+                            logger.error(f"Monitor output:\n{error_output}")
+                return False
+
+            # Give it a bit more time and verify CSV is being created
+            time.sleep(3)
+            if not self.memory_csv.exists():
+                logger.warning(f"Memory CSV not yet created at: {self.memory_csv}")
+                logger.warning("Monitor may be having issues, but continuing...")
+            else:
+                logger.info(f"Memory CSV created successfully: {self.memory_csv}")
 
             return True
 
         except Exception as e:
             logger.error(f"Failed to start memory monitor: {e}")
+            if self.monitor_log_file:
+                try:
+                    self.monitor_log_file.close()
+                except:
+                    pass
             return False
 
     async def run_load_tests(self):
@@ -226,7 +260,7 @@ class Text2SQLMemoryLeakTest:
 
         try:
             # Run load test with output to log file
-            with open(self.load_test_log, 'w') as log_file:
+            with open(self.load_test_log, 'w') as log_file:  # noqa: UP015
                 process = await asyncio.create_subprocess_exec(
                     *cmd,
                     stdout=log_file,
@@ -260,6 +294,13 @@ class Text2SQLMemoryLeakTest:
                     self.monitor_process.kill()
                 except:
                     pass
+            finally:
+                # Close monitor log file
+                if self.monitor_log_file:
+                    try:
+                        self.monitor_log_file.close()
+                    except:
+                        pass
 
         # Stop MCP server
         if self.server_process:
@@ -293,8 +334,8 @@ class Text2SQLMemoryLeakTest:
         # Check if memory CSV exists and analyze
         if self.memory_csv.exists():
             try:
-                import csv
-                with open(self.memory_csv, 'r') as f:
+                import csv  # noqa: PLC0415
+                with open(self.memory_csv) as f:
                     reader = csv.DictReader(f)
                     rows = list(reader)
 
@@ -303,7 +344,7 @@ class Text2SQLMemoryLeakTest:
                         final_memory = float(rows[-1]['rss_total_mb'])
                         max_memory = max(float(row['rss_total_mb']) for row in rows)
 
-                        logger.info(f"\nMemory Analysis:")
+                        logger.info("\nMemory Analysis:")
                         logger.info(f"  Initial memory:    {initial_memory:.2f} MB")
                         logger.info(f"  Final memory:      {final_memory:.2f} MB")
                         logger.info(f"  Peak memory:       {max_memory:.2f} MB")
@@ -314,19 +355,20 @@ class Text2SQLMemoryLeakTest:
                         # Check for potential memory leak
                         if final_memory > initial_memory * 1.5:
                             logger.warning("⚠️  POTENTIAL MEMORY LEAK DETECTED!")
-                            logger.warning(f"   Memory increased by >50% during test")
+                            logger.warning("   Memory increased by >50% during test")
                         elif final_memory > initial_memory * 1.2:
-                            logger.warning("⚠️  Significant memory growth detected (>20%)")
+                            logger.warning("⚠️ Significant memory growth detected (>20%)")
                         else:
-                            logger.info("✓  Memory growth appears normal (<20%)")
+                            logger.info("✓ Memory growth appears normal (<20%)")
 
             except Exception as e:
                 logger.error(f"Error analyzing memory data: {e}")
 
-        logger.info(f"\nOutput files:")
+        logger.info("\nOutput files:")
         logger.info(f"  Memory data:       {self.memory_csv}")
         logger.info(f"  Load test log:     {self.load_test_log}")
         logger.info(f"  Server log:        {self.server_log}")
+        logger.info(f"  Monitor log:       {self.monitor_log}")
         logger.info("=" * 70 + "\n")
 
     async def run(self):
@@ -395,23 +437,21 @@ def main():
 
     args = parser.parse_args()
 
-    # Check if psutil is available
+    # Check if required packages are available
     try:
-        import psutil
+        import psutil  # noqa: F401, PLC0415
     except ImportError:
         logger.error("psutil is required for memory monitoring. Install with: pip install psutil")
         sys.exit(1)
 
-    # Check if requests is available
     try:
-        import requests
+        import requests  # noqa: F401, PLC0415
     except ImportError:
         logger.error("requests is required. Install with: pip install requests")
         sys.exit(1)
 
-    # Check if aiohttp is available
     try:
-        import aiohttp
+        import aiohttp  # noqa: F401, PLC0415
     except ImportError:
         logger.error("aiohttp is required. Install with: pip install aiohttp")
         sys.exit(1)

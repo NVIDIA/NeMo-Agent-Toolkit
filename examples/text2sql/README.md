@@ -14,8 +14,7 @@ pip install psutil requests aiohttp
 
 1. **Install Text2SQL:**
 ```bash
-cd examples/text2sql
-uv pip install -e .
+uv pip install -e ./examples/text2sql
 ```
 
 2. **Set up Milvus** (for real Vanna tests only):
@@ -49,24 +48,13 @@ After training completes, set `train_on_startup: false` in the config.
 
 ## Running Load Tests
 
-### Standard Test (Real Vanna with Milvus)
-
-Run the complete integrated test suite:
-
-```bash
-cd examples/text2sql
-python run_text2sql_memory_leak_test.py
-```
-
-This automatically starts the server, monitors memory, runs load tests with 40 concurrent users across three rounds, and saves results to `test_results/`.
-
 ### Mock Test (Isolate Vanna/Milvus)
 
 To determine if memory leaks are in the Vanna/Milvus layer, run with mock mode:
 
 ```bash
-python run_text2sql_memory_leak_test.py \
-  --config_file examples/text2sql/src/text2sql/configs/config_text2sql_mock.yml
+python ./examples/text2sql/run_text2sql_memory_leak_test.py \
+  --config_file ./examples/text2sql/src/text2sql/configs/config_text2sql_mock.yml
 ```
 
 Mock mode bypasses all Milvus connections and returns instant mock SQL responses. If the memory leak disappears with mock mode, the leak is in the Vanna/Milvus layer. If it persists, the leak is elsewhere in the system.
@@ -75,17 +63,17 @@ Mock mode bypasses all Milvus connections and returns instant mock SQL responses
 
 ```bash
 # Test with real Vanna
-python run_text2sql_memory_leak_test.py \
-  --config_file examples/text2sql/src/text2sql/configs/config_text2sql_mcp.yml \
+python ./examples/text2sql/run_text2sql_memory_leak_test.py \
+  --config_file ./examples/text2sql/src/text2sql/configs/config_text2sql_mcp.yml \
   --output_dir test_results/real_vanna
 
 # Test with mock Vanna
-python run_text2sql_memory_leak_test.py \
-  --config_file examples/text2sql/src/text2sql/configs/config_text2sql_mock.yml \
+python ./examples/text2sql/run_text2sql_memory_leak_test.py \
+  --config_file ./examples/text2sql/src/text2sql/configs/config_text2sql_mock.yml \
   --output_dir test_results/mock_vanna
 
 # Compare results
-python analyze_memory_leak.py \
+python ./examples/text2sql/analyze_memory_leak.py \
   test_results/real_vanna/text2sql_memory_*.csv \
   test_results/mock_vanna/text2sql_memory_*.csv \
   --compare
@@ -94,12 +82,13 @@ python analyze_memory_leak.py \
 ### Customizing Test Parameters
 
 ```bash
-python run_text2sql_memory_leak_test.py \
+python ./examples/text2sql/run_text2sql_memory_leak_test.py \
   --users 50 \          # Number of concurrent users
   --calls 20 \          # Calls per user per round
   --rounds 5 \          # Number of test rounds
   --delay 15.0 \        # Delay between rounds (seconds)
   --output_dir my_results
+  --config_file ./examples/text2sql/src/text2sql/configs/config_text2sql_mcp.yml
 ```
 
 ## Analyzing Results
@@ -108,10 +97,10 @@ python run_text2sql_memory_leak_test.py \
 
 ```bash
 # Analyze a single test
-python analyze_memory_leak.py test_results/text2sql_memory_*.csv --recommendations
+python ./examples/text2sql/analyze_memory_leak.py test_results/text2sql_memory_*.csv --recommendations
 
 # Compare multiple tests
-python analyze_memory_leak.py \
+python ./examples/text2sql/analyze_memory_leak.py \
   test_results/real_vanna/text2sql_memory_*.csv \
   test_results/mock_vanna/text2sql_memory_*.csv \
   --compare
