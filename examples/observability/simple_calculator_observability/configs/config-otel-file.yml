@@ -14,30 +14,47 @@
 # limitations under the License.
 
 
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: WARN
+    tracing:
+      otel_file:
+        _type: file
+        output_path: nat_simple_calculator_traces.jsonl
+        project: simple_calculator
+        mode: append
+        enable_rolling: false
+
 functions:
-  doca_documents:
-    _type: text_file_ingest
-    ingest_glob: examples/documentation_guides/workflows/text_file_ingest/data/*.txt
-    description: "Search for information about DOCA and GPUNetIO. For any questions about DOCA and GPUNetIO, you must use this tool!"
-    embedder_name: nv-embedqa-e5-v5
-    chunk_size: 512
+  calculator_multiply:
+    _type: calculator_multiply
+  calculator_inequality:
+    _type: calculator_inequality
+  calculator_divide:
+    _type: calculator_divide
   current_datetime:
     _type: current_datetime
+  calculator_subtract:
+    _type: calculator_subtract
 
 llms:
   nim_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
-
-embedders:
-  nv-embedqa-e5-v5:
-    _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    max_tokens: 1024
 
 workflow:
   _type: react_agent
-  tool_names: [doca_documents, current_datetime]
+  tool_names:
+    - calculator_multiply
+    - calculator_inequality
+    - current_datetime
+    - calculator_divide
+    - calculator_subtract
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3
