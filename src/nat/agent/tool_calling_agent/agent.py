@@ -233,14 +233,10 @@ def create_tool_calling_agent_prompt(config: "ToolCallAgentWorkflowConfig") -> s
     """
     # the Tool Calling Agent prompt can be customized via config option system_prompt and additional_instructions.
 
-    if config.system_prompt:
-        prompt_str = [config.system_prompt]
-    else:
-        prompt_str = []
-
-    if config.additional_instructions:
-        prompt_str.append(f" {config.additional_instructions}")
-
-    if len(prompt_str) > 0:
-        return "".join(prompt_str)
+    prompt_strs = []
+    for msg in [config.system_prompt, config.additional_instructions]:
+        if msg is not None:
+            prompt_strs.append(msg)
+    if prompt_strs:
+        return " ".join(prompt_strs)
     return None
