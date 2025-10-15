@@ -160,7 +160,11 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
             "RunnablePassthrough",
             "RunnableLambda",
             "RunnableBranch",
-            "RunnableBinding"
+            "RunnableBinding",
+            "ChatPromptTemplate",
+            "PromptTemplate",
+            "MessagesPlaceholder",
+            "StringPromptTemplate"
         ]
 
         # If this looks like an internal runnable and doesn't match our patterns, skip it
