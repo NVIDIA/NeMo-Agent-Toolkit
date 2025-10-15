@@ -31,7 +31,7 @@ This documentation presumes familiarity with the NeMo Agent toolkit plugin archi
    - **HTTP headers**: In production deployments, user identity is set through HTTP headers (`user-id`, `user-first-name`, `user-last-name`, `user-email`) on incoming requests.
 
 * **Memory Interfaces**
-   - **{py:class}`~nat.memory.interfaces.MemoryEditor`** (abstract interface): The low-level API for adding, retrieving, and removing memory items. All methods require `user_id` as the first positional parameter.
+   - **{py:class}`~nat.memory.interfaces.MemoryEditor`** (abstract interface): The low-level API for adding, retrieving, and removing memory items. Methods like `add_items` and `retrieve_memory` accept the items/query first and `user_id` as the second positional parameter.
    - **{py:class}`~nat.memory.interfaces.MemoryReader`** and **{py:class}`~nat.memory.interfaces.MemoryWriter`** (abstract classes): Provide structured read/write logic on top of the `MemoryEditor`.
    - **{py:class}`~nat.memory.interfaces.MemoryManager`** (abstract interface): Manages higher-level memory operations such as summarization or reflection if needed.
 
@@ -43,7 +43,7 @@ This documentation presumes familiarity with the NeMo Agent toolkit plugin archi
      metadata: dict[str, Any]
      memory: str | None  # optional textual memory
      ```
-     > **Note**: The `user_id` is passed as a required positional parameter to memory editor methods, retrieved from the `Context` object to ensure proper security and multi-tenant isolation. It is not part of the `MemoryItem` object itself.
+     > **Note**: Methods like `MemoryEditor.add_items` and `retrieve_memory` accept the items/query first and `user_id` as the second positional parameter. The `user_id` is obtained from the `Context` object to ensure proper security and multi-tenant isolation. It is not part of the `MemoryItem` object itself.
    - Helper models for search or deletion input: **{py:class}`~nat.memory.models.SearchMemoryInput`**, **{py:class}`~nat.memory.models.DeleteMemoryInput`**.
 
 
@@ -219,9 +219,9 @@ This keeps automatic message capture while giving the agent explicit control ove
 ```python
 from nat.builder.context import Context
 
-memory_client = builder.get_memory_client(<memory_config_name>)
+memory_client = await builder.get_memory_client(<memory_config_name>)
 user_id = Context.get().user_id
-await memory_client.add_items(user_id, [MemoryItem(...), ...])
+await memory_client.add_items([MemoryItem(...), ...], user_id)
 ```
 
 or
@@ -230,7 +230,7 @@ or
 from nat.builder.context import Context
 
 user_id = Context.get().user_id
-formatted_memory = await memory_client.retrieve_memory(user_id, query="What did user prefer last time?", top_k=3)
+formatted_memory = await memory_client.retrieve_memory(query="What did user prefer last time?", user_id=user_id, top_k=3)
 ```
 
 **Inside Tools**: Tools that read or write memory retrieve the `user_id` from the `Context` object and pass it to memory client methods. For example:
@@ -241,10 +241,10 @@ from nat.memory.models import MemoryItem
 from langchain_core.tools import ToolException
 
 async def add_memory_tool_action(item: MemoryItem, memory_name: str):
-    memory_client = builder.get_memory_client(memory_name)
+    memory_client = await builder.get_memory_client(memory_name)
     user_id = Context.get().user_id
     try:
-        await memory_client.add_items(user_id, [item])
+        await memory_client.add_items([item], user_id)
         return "Memory added successfully"
     except Exception as e:
         raise ToolException(f"Error adding memory: {e}")

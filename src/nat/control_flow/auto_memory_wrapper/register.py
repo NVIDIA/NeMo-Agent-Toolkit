@@ -90,11 +90,11 @@ class AutoMemoryAgentConfig(AgentBaseConfig, name="auto_memory_agent"):
     search_params: dict[str, Any] = Field(
         default_factory=dict,
         description=(
-            "Backend-specific search parameters passed to memory_editor.search().\n"
+            "Backend-specific search parameters passed to memory_editor.retrieve_memory().\n"
             "Default parameters:\n"
             "  - top_k (int): Maximum results to return (default: 5)\n\n"
             "Additional parameters:\n"
-            "  - Any additional parameters that the chosen memory backend has in its NAT plug-in search function\n\n"))
+            "  - Any additional parameters that the chosen memory backend has in its NAT plug-in retrieve_memory function\n\n"))
 
     # Memory addition configuration
     add_params: dict[str, Any] = Field(

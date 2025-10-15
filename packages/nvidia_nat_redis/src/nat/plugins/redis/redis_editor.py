@@ -211,7 +211,7 @@ class RedisEditor(MemoryEditor):
 
                     logger.debug("Formatted result %d", i)
                 except Exception as e:
-                    logger.exception("Failed to process result %d: %s", i, e)
+                    logger.exception("Failed to process result %d", i)
                     # Continue with other results
                     continue
 
