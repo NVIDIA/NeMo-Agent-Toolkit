@@ -34,6 +34,9 @@ class OpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="openai"):
     model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
                             serialization_alias="model",
                             description="The OpenAI hosted model name.")
+    verify_ssl: bool = Field(default=True,
+                             description="Whether to verify SSL certificates. "
+                             "Set to False when using self-signed certificates.")
 
 
 @register_embedder_provider(config_type=OpenAIEmbedderModelConfig)
