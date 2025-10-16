@@ -31,12 +31,12 @@ from nat.builder.function_base import InputT
 from nat.builder.function_base import SingleOutputT
 from nat.builder.function_base import StreamingOutputT
 from nat.builder.function_info import FunctionInfo
-from nat.builder.function_intercept import FunctionIntercept
-from nat.builder.function_intercept import FunctionInterceptChain
-from nat.builder.function_intercept import FunctionInterceptContext
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
+from nat.intercepts.function_intercept import FunctionIntercept
+from nat.intercepts.function_intercept import FunctionInterceptChain
+from nat.intercepts.function_intercept import FunctionInterceptContext
 
 _InvokeFnT = Callable[[InputT], Awaitable[SingleOutputT]]
 _StreamFnT = Callable[[InputT], AsyncGenerator[StreamingOutputT]]

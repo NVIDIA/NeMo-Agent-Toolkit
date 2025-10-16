@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
 """Helpers for configuring per-function intercept chains.
 
 This module introduces the :class:`FunctionIntercept` ABC alongside utility
@@ -22,8 +21,8 @@ from abc import ABC
 from collections.abc import AsyncIterator
 from collections.abc import Awaitable
 from collections.abc import Callable
+from collections.abc import Sequence
 from typing import Any
-from typing import Sequence
 
 from pydantic import BaseModel
 
@@ -78,9 +77,7 @@ class FunctionIntercept(ABC):
 
         return self._is_final
 
-    async def intercept_invoke(self,
-                               value: Any,
-                               next_call: SingleInvokeCallable,
+    async def intercept_invoke(self, value: Any, next_call: SingleInvokeCallable,
                                context: FunctionInterceptContext) -> Any:
         """Intercept a single-output invocation.
 
@@ -92,9 +89,7 @@ class FunctionIntercept(ABC):
         del context  # Unused by the default implementation.
         return await next_call(value)
 
-    async def intercept_stream(self,
-                               value: Any,
-                               next_call: StreamInvokeCallable,
+    async def intercept_stream(self, value: Any, next_call: StreamInvokeCallable,
                                context: FunctionInterceptContext) -> AsyncIterator[Any]:
         """Intercept a streaming invocation.
 
@@ -111,9 +106,7 @@ class FunctionIntercept(ABC):
 class FunctionInterceptChain:
     """Utility that composes intercept callables for a function instance."""
 
-    def __init__(self, *,
-                 intercepts: Sequence[FunctionIntercept],
-                 context: FunctionInterceptContext) -> None:
+    def __init__(self, *, intercepts: Sequence[FunctionIntercept], context: FunctionInterceptContext) -> None:
         self._intercepts = tuple(intercepts)
         self._context = context
 

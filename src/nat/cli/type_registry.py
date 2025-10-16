@@ -38,7 +38,6 @@ from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.front_end import FrontEndBase
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
-from nat.builder.function_intercept import FunctionIntercept
 from nat.builder.function_base import FunctionBase
 from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
@@ -76,6 +75,7 @@ from nat.data_models.telemetry_exporter import TelemetryExporterConfigT
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfigT
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.intercepts.function_intercept import FunctionIntercept
 from nat.memory.interfaces import MemoryEditor
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter

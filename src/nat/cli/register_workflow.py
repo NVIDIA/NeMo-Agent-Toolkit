@@ -68,6 +68,8 @@ from nat.data_models.memory import MemoryBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfigT
 from nat.data_models.retriever import RetrieverBaseConfigT
+from nat.intercepts.function_intercept import FunctionIntercept
+from nat.intercepts.function_intercept import validate_intercepts
 
 
 def register_telemetry_exporter(config_type: type[TelemetryExporterConfigT]):
@@ -143,10 +145,6 @@ def register_front_end(config_type: type[FrontEndConfigT]):
         return context_manager_fn
 
     return register_front_end_inner
-
-
-from nat.builder.function_intercept import FunctionIntercept
-from nat.builder.function_intercept import validate_intercepts
 
 
 def register_function(config_type: type[FunctionConfigT],

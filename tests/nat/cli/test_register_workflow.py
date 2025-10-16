@@ -40,7 +40,7 @@ from nat.cli.register_workflow import register_registry_handler
 from nat.cli.register_workflow import register_tool_wrapper
 from nat.cli.type_registry import TypeRegistry
 from nat.data_models.function import FunctionBaseConfig
-from nat.builder.function_intercept import FunctionIntercept
+from nat.intercepts.function_intercept import FunctionIntercept
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
 from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
@@ -104,6 +104,7 @@ def test_register_function_final_intercept_validation():
         @register_function(config_type=FinalOrderConfig,
                            intercepts=[FunctionIntercept(is_final=True), FunctionIntercept()])
         async def _register(config: FinalOrderConfig, builder: Builder):
+
             async def _arun() -> None:
                 return None
 
@@ -120,6 +121,7 @@ def test_register_function_final_intercept_uniqueness():
         @register_function(config_type=FinalDupConfig,
                            intercepts=[FunctionIntercept(is_final=True), FunctionIntercept(is_final=True)])
         async def _register(config: FinalDupConfig, builder: Builder):
+
             async def _arun() -> None:
                 return None
 
@@ -135,6 +137,7 @@ def test_register_function_rejects_non_intercepts():
 
         @register_function(config_type=FinalTypeConfig, intercepts=[object()])  # type: ignore[list-item]
         async def _register(config: FinalTypeConfig, builder: Builder):
+
             async def _arun() -> None:
                 return None
 

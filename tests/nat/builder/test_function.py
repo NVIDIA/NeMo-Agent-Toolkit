@@ -24,10 +24,10 @@ from nat.builder.builder import Builder
 from nat.builder.function import Function
 from nat.builder.function import LambdaFunction
 from nat.builder.function_info import FunctionInfo
-from nat.builder.function_intercept import FunctionIntercept
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
+from nat.intercepts.function_intercept import FunctionIntercept
 
 
 class DummyConfig(FunctionBaseConfig, name="dummy"):
@@ -328,6 +328,7 @@ async def test_function_final_intercept_short_circuits():
 
         assert chunks == ["streamed"]
         assert stream_calls == 0
+
 
 async def test_functions_multi_pod_input_pod_output():
 
