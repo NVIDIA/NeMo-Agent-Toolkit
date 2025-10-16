@@ -37,4 +37,4 @@ async def test_full_workflow(milvus_uri: str) -> None:
     config.retrievers['retriever'].uri = HttpUrl(url=milvus_uri)
 
     # Unfortunately the workflow itself returns inconsistent results
-    await run_workflow(None, "List 5 subspecies of Aardvark?", "Aardvark", config=config)
+    await run_workflow(config=config, question="List 5 subspecies of Aardvark?", expected_answer="Aardvark")

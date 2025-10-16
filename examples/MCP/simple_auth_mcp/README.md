@@ -48,6 +48,10 @@ You can run the workflow using authenticated MCP tools. In this case, the workfl
    export CORPORATE_MCP_JIRA_URL="https://your-jira-server.com/mcp"
    ```
 
+   :::{warning}
+   **Important**: Set `CORPORATE_MCP_JIRA_URL` to your actual protected Jira MCP server URL, not the sample URL shown above. The sample URL is for demonstration purposes only and will not work with your actual Jira instance.
+   :::
+
 2. **Start the authentication flow**: The first time you run the workflow, it will initiate an OAuth2 authentication flow:
    ```bash
    nat run --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.yml --input "What is ticket AIQ-1935 about"
@@ -68,7 +72,11 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
 ```
 
 2. **Start the UI**:
-Start UI and connect to the URL `http://localhost:3000`. Ensure that `Websocket` mode is enabled by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out.
+
+   Start the UI by following the instructions in the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide. Connect to the URL http://localhost:3000.
+
+   > [!IMPORTANT]
+   > Ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. WebSocket connections are required for OAuth authentication workflows.
 
 3. **Send the input to the workflow via the UI**:
 ```text

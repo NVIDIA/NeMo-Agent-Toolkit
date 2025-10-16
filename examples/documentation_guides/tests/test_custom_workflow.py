@@ -44,7 +44,7 @@ def answer_fixture() -> str:
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_custom_full_workflow(custom_workflow_dir: Path, question: str, answer: str):
     config_file = custom_workflow_dir / "custom_config.yml"
-    await run_workflow(config_file, question, answer)
+    await run_workflow(config_file=config_file, question=question, expected_answer=answer)
 
 
 @pytest.mark.slow
@@ -53,4 +53,4 @@ async def test_custom_full_workflow(custom_workflow_dir: Path, question: str, an
 async def test_search_full_workflow(custom_workflow_dir: Path, question: str, answer: str):
     # Technically this is the same as the custom workflow test, but it requires a second key
     config_file = custom_workflow_dir / "search_config.yml"
-    await run_workflow(config_file, question, answer)
+    await run_workflow(config_file=config_file, question=question, expected_answer=answer)

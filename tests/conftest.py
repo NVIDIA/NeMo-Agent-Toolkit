@@ -582,3 +582,18 @@ def fixture_set_nat_job_store_db_url_env_var(restore_environ, db_url: str) -> st
     """
     os.environ["NAT_JOB_STORE_DB_URL"] = db_url
     return db_url
+
+
+@pytest.fixture(name="register_empty_function", scope="session", autouse=True)
+def register_empty_function_fixture():
+    from nat.builder.builder import Builder
+    from nat.cli.register_workflow import register_function
+    from nat.data_models.function import EmptyFunctionConfig
+
+    @register_function(config_type=EmptyFunctionConfig)
+    async def empty_function(config: EmptyFunctionConfig, builder: Builder):
+
+        async def inner(*_, **__):
+            return
+
+        yield inner

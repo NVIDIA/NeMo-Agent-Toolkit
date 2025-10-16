@@ -148,7 +148,7 @@ def execute_agno_tool(name: str,
         List of required fields for validation
     loop : asyncio.AbstractEventLoop
         The event loop to use for async execution
-    **kwargs : Any
+    kwargs : Any
         The arguments to pass to the function
 
     Returns

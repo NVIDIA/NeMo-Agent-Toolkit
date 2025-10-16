@@ -82,6 +82,12 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
     source .venv/bin/activate
     uv sync --all-groups --all-extras
     ```
+   :::{note}
+   You may encounter `Too many open files (os error 24)`. This error occurs when your system’s file descriptor limit is too low.
+
+   You can fix it by increasing the limit before running the build.
+   On Linux and macOS you can issue `ulimit -n 4096` in your current shell to increase your open file limit to 4096.
+   :::
 
 1. Install and configure pre-commit hooks (optional these can also be run manually).
 
@@ -145,6 +151,7 @@ We welcome contributions of new example workflows in this repository and in the 
         ```bash
         pytest
         ```
+      If you added an integration test, or changed code that is covered by an integration test, you will need to run the integration tests. Refer to the [Running Tests](./running-tests.md) guide for more information.
     * Optionally [run the entire CI pipeline locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command. This is useful if CI is failing in GitHub Actions and you want to debug the issue locally.
 1. When done, [create your pull request](https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.

@@ -17,6 +17,5 @@
 # flake8: noqa
 
 from . import adk_callback_handler
-from . import agent
 from . import llm
 from . import tool_wrapper

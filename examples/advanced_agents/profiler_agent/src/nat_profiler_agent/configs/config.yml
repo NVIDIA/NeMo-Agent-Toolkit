@@ -15,11 +15,12 @@
 
 
 general:
-  tracing:
-    phoenix:
-      _type: phoenix
-      endpoint: http://localhost:6006/v1/traces
-      project: profiler_agent
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: profiler_agent
 
 functions:
   px_query:

@@ -35,8 +35,6 @@ ModelType = TypeVar("ModelType")
 def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
 
     from semantic_kernel.contents.chat_history import ChatHistory
-    from semantic_kernel.contents.chat_message_content import ChatMessageContent
-    from semantic_kernel.contents.utils.author_role import AuthorRole
 
     class SemanticKernelThinkingInjector(BaseThinkingInjector):
 
@@ -61,8 +59,8 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
                 return FunctionArgumentWrapper(new_messages, *args, **kwargs)
             else:
                 new_messages = ChatHistory(
-                    [ChatMessageContent(role=AuthorRole.SYSTEM, content=self.system_prompt)] + chat_history.messages,
-                    system_message=chat_history.system_message,
+                    chat_history.messages,
+                    system_message=f"{self.system_prompt}\n\n{chat_history.system_message}",
                 )
                 return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 

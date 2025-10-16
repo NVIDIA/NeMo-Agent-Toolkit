@@ -19,9 +19,9 @@ limitations under the License.
 
 
 # NVIDIA NeMo Agent Toolkit MCP Subpackage
-Subpackage for MCP client integration in NeMo Agent toolkit.
+Subpackage for MCP integration in NeMo Agent toolkit.
 
-This package provides MCP (Model Context Protocol) client functionality, allowing NeMo Agent toolkit workflows to connect to external MCP servers and use their tools as functions.
+This package provides MCP (Model Context Protocol) functionality, allowing NeMo Agent toolkit workflows to connect to external MCP servers and use their tools as functions.
 
 ## Features
 

@@ -57,19 +57,46 @@ uv pip install -e examples/observability/simple_calculator_observability
 
 Phoenix provides local tracing capabilities perfect for development and testing.
 
-1. Start Phoenix in a separate terminal:
+1. Install Phoenix:
+```bash
+uv pip install arize-phoenix
+```
+
+2. Start Phoenix in a separate terminal:
 
 ```bash
 phoenix serve
 ```
 
-2. Run the workflow with tracing enabled:
+3. Run the workflow with tracing enabled:
 
 ```bash
 nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "What is 2 * 4?"
 ```
 
-3. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
+4. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
+
+### File-Based Tracing (Local Development)
+
+For simple local development and debugging, you can export traces directly to a local file without requiring any external services.
+
+1. Run the workflow with file-based tracing:
+
+```bash
+nat run --config_file examples/observability/simple_calculator_observability/configs/config-otel-file.yml --input "What is 2 * 4?"
+```
+
+2. View the traces in the generated file:
+
+```bash
+cat nat_simple_calculator_traces.jsonl
+```
+
+The traces are stored in JSON Lines format, with each line representing a complete trace. This is useful for:
+- Quick debugging during development
+- Offline analysis of workflow execution
+- Integration with custom analysis tools
+- Archiving traces for later review
 
 ### Production Monitoring Platforms
 
@@ -191,6 +218,7 @@ The example includes multiple configuration files for different observability pl
 | Configuration File | Platform | Best For |
 |-------------------|----------|----------|
 | `config-phoenix.yml` | Phoenix | Local development and testing |
+| `config-otel-file.yml` | File Export | Local file-based tracing for development and debugging |
 | `config-langfuse.yml` | Langfuse | Production monitoring and analytics |
 | `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |
 | `config-weave.yml` | Weave | Workflow-focused tracking |

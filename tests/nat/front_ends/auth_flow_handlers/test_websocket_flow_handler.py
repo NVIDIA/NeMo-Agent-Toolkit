@@ -177,6 +177,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
 # --------------------------------------------------------------------------- #
 # Error Recovery Tests                                                        #
 # --------------------------------------------------------------------------- #
+@pytest.mark.slow
 @pytest.mark.usefixtures("set_nat_config_file_env_var")
 async def test_websocket_oauth2_flow_error_handling(monkeypatch, mock_server, tmp_path):
     """Test that WebSocket flow does convert OAuth client creation errors to RuntimeError (consistent behavior)."""

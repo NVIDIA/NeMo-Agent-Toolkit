@@ -15,8 +15,6 @@
 
 # pylint: disable=import-outside-toplevel,redefined-outer-name
 
-from __future__ import annotations
-
 import importlib
 
 import pytest
@@ -325,6 +323,7 @@ workflow:
         (LLMFrameworkEnum.CREWAI.value, ["p", "q", "r"]),
         (LLMFrameworkEnum.SEMANTIC_KERNEL.value, ["s1", "s2", "s3"]),
         (LLMFrameworkEnum.AGNO.value, ["m", "n", "o"]),
+        (LLMFrameworkEnum.ADK.value, ["u", "v", "w"]),
     ],
 )
 async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_config_cls):
@@ -334,6 +333,8 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_co
         pytest.importorskip("semantic_kernel")
     if wrapper == LLMFrameworkEnum.LLAMA_INDEX.value:
         pytest.importorskip("llama_index")
+    if wrapper == LLMFrameworkEnum.ADK.value:
+        pytest.importorskip("google.adk")
 
     async with WorkflowBuilder() as builder:
         cfg = test_llm_config_cls(response_seq=list(seq), delay_ms=0)
@@ -391,6 +392,23 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_co
                 # Agno client returns str in our test client
                 assert isinstance(r, str)
                 outs.append(r)
+
+        elif wrapper == LLMFrameworkEnum.ADK.value:
+            from google.adk.models.llm_request import LlmRequest
+            from google.adk.models.llm_response import LlmResponse
+            for i in range(len(seq)):
+                request = LlmRequest.model_validate({"contents": [{"parts": [{"text": f"p{i}"}]}]})
+                gen = client.generate_content_async(request)
+                try:
+                    async for r in gen:
+                        assert isinstance(r, LlmResponse)
+                        assert r.content is not None
+                        assert r.content.parts is not None
+                        assert r.content.parts[0].text is not None
+                        outs.append(r.content.parts[0].text)
+                        break  # We only need the first response
+                finally:
+                    await gen.aclose()  # Ensure we properly close the generator
 
         else:
             pytest.skip(f"Unsupported wrapper: {wrapper}")

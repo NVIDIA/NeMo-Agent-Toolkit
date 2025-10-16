@@ -76,7 +76,7 @@ class Mem0Editor(MemoryEditor):
         Args:
             query (str): The query string to match.
             top_k (int): Maximum number of items to return.
-            **kwargs: Other keyword arguments for search.
+            kwargs: Other keyword arguments for search.
 
         Returns:
             list[MemoryItem]: The most relevant

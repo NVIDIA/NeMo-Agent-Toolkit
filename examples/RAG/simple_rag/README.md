@@ -66,12 +66,13 @@ uv pip install -e examples/RAG/simple_rag
 
 Start the docker compose [Skip this step if you already have Milvus running]
 ```bash
-docker compose -f examples/RAG/simple_rag/deploy/docker-compose.yaml up -d
+docker compose -f examples/deploy/docker-compose.milvus.yml up -d
 ```
-> Note: It can take some time for Milvus to start up. You can check the logs with:
-```bash
-docker compose -f examples/RAG/simple_rag/deploy/docker-compose.yaml logs --follow
-```
+> [!NOTE]
+> It can take some time for Milvus to start up. You can check the logs with:
+> ```bash
+> docker compose -f examples/deploy/docker-compose.milvus.yml logs --follow
+> ```
 
 #### Set Up API Keys
 

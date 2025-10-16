@@ -59,7 +59,7 @@ if [[ "${BUILD_NAT_COMPAT}" == "true" ]]; then
     done
 fi
 
-if [[ "${CI_COMMIT_BRANCH}" == "${CI_DEFAULT_BRANCH}" || "${CI_COMMIT_BRANCH}" == "main" ]]; then
+if [[ "${CI_COMMIT_BRANCH}" == "${CI_DEFAULT_BRANCH}" || "${CI_COMMIT_BRANCH}" == "main" || "${CI_COMMIT_BRANCH}" == "release/"* ]]; then
     rapids-logger "Uploading Wheels"
 
     # Find and upload all .whl files from nested directories

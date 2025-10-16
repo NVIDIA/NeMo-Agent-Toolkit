@@ -24,6 +24,7 @@ from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.interactive import HumanPromptText
@@ -161,7 +162,10 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
 
                 # If user doesn't approve, return error message
                 if not selected_option:
-                    return ChatResponse.from_string("I seem to be having a problem.")
+                    error_msg = "I seem to be having a problem."
+
+                    # Create usage statistics for error response
+                    return ChatResponse.from_string(error_msg, usage=Usage())
 
         # If we exhausted all retries, return the last response
         return response
@@ -202,11 +206,17 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
                 return await handle_recursion_error(input_message)
 
             # User declined - return error message
-            return ChatResponse.from_string("I seem to be having a problem.")
+            error_msg = "I seem to be having a problem."
+
+            # Create usage statistics for error response
+            return ChatResponse.from_string(error_msg, usage=Usage())
 
         except Exception:
             # Handle any other unexpected exceptions
-            return ChatResponse.from_string("I seem to be having a problem.")
+            error_msg = "I seem to be having a problem."
+
+            # Create usage statistics for error response
+            return ChatResponse.from_string(error_msg, usage=Usage())
 
     yield FunctionInfo.from_fn(_response_fn, description=config.description)
 

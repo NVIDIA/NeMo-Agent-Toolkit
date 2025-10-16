@@ -35,7 +35,8 @@ class OTLPSpanExporterMixin:
 
     This mixin is designed to be used with OtelSpanExporter as a base class:
 
-    Example:
+    Example::
+
         class MyOTLPExporter(OtelSpanExporter, OTLPSpanExporterMixin):
             def __init__(self, endpoint, headers, **kwargs):
                 super().__init__(endpoint=endpoint, headers=headers, **kwargs)

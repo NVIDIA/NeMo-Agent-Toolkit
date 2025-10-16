@@ -103,8 +103,6 @@ If modifying the prompt, see the limitations section below. The prompt must have
 
 * `max_history`:  Defaults to `15`. Maximum number of messages to keep in the conversation history.
 
-* `use_openai_api`: Defaults to `False`.  If set to `True`, the ReAct agent will output in OpenAI API spec. If set to `False`, strings will be used.
-
 * `include_tool_input_schema_in_tool_description`: Defaults to `True`.  If set to `True`, the ReAct agent will inspect its tools' input schemas, and append the following to each tool description:
   >. Arguments must be provided as a valid JSON object following this format: {tool_schema}
 

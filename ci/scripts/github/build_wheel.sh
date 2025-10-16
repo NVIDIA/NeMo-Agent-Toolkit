@@ -24,12 +24,6 @@ WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
 
 create_env extra:all
 
-
-function get_git_tag() {
-    # Get the latest Git tag, sorted by version, excluding lightweight tags
-    git describe --tags --abbrev=0 2>/dev/null || echo "no-tag"
-}
-
 GIT_TAG=$(get_git_tag)
 rapids-logger "Git Version: ${GIT_TAG}"
 

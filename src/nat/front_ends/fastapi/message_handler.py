@@ -25,6 +25,7 @@ from pydantic import ValidationError
 from starlette.websockets import WebSocketDisconnect
 
 from nat.authentication.interfaces import FlowHandlerBase
+from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Error
@@ -33,6 +34,8 @@ from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import ResponseSerializable
 from nat.data_models.api_server import SystemResponseContent
 from nat.data_models.api_server import TextContent
+from nat.data_models.api_server import UserMessageContentRoleType
+from nat.data_models.api_server import UserMessages
 from nat.data_models.api_server import WebSocketMessageStatus
 from nat.data_models.api_server import WebSocketMessageType
 from nat.data_models.api_server import WebSocketSystemInteractionMessage
@@ -64,12 +67,12 @@ class WebSocketMessageHandler:
         self._running_workflow_task: asyncio.Task | None = None
         self._message_parent_id: str = "default_id"
         self._conversation_id: str | None = None
-        self._workflow_schema_type: str = None
-        self._user_interaction_response: asyncio.Future[HumanResponse] | None = None
+        self._workflow_schema_type: str | None = None
+        self._user_interaction_response: asyncio.Future[TextContent] | None = None
 
         self._flow_handler: FlowHandlerBase | None = None
 
-        self._schema_output_mapping: dict[str, type[BaseModel] | None] = {
+        self._schema_output_mapping: dict[str, type[BaseModel] | type[None]] = {
             WorkflowSchemaType.GENERATE: self._session_manager.workflow.single_output_schema,
             WorkflowSchemaType.CHAT: ChatResponse,
             WorkflowSchemaType.CHAT_STREAM: ChatResponseChunk,
@@ -114,36 +117,58 @@ class WebSocketMessageHandler:
                     pass
 
                 elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
-                    user_content = await self.process_user_message_content(validated_message)
+                    user_content = await self._process_websocket_user_interaction_response_message(validated_message)
+                    assert self._user_interaction_response is not None
                     self._user_interaction_response.set_result(user_content)
             except (asyncio.CancelledError, WebSocketDisconnect):
                 # TODO: Handle the disconnect
                 break
 
-    async def process_user_message_content(
-            self, user_content: WebSocketUserMessage | WebSocketUserInteractionResponseMessage) -> BaseModel | None:
+    def _extract_last_user_message_content(self, messages: list[UserMessages]) -> TextContent:
         """
-        Processes the contents of a user message.
+        Extracts the last user's TextContent from a list of messages.
 
-        :param user_content: Incoming content data model.
-        :return: A validated Pydantic user content model or None if not found.
+        Args:
+            messages: List of UserMessages.
+
+        Returns:
+            TextContent object from the last user message.
+
+        Raises:
+            ValueError: If no user text content is found.
         """
-
-        for user_message in user_content.content.messages[::-1]:
-            if (user_message.role == "user"):
-
+        for user_message in messages[::-1]:
+            if user_message.role == UserMessageContentRoleType.USER:
                 for attachment in user_message.content:
-
                     if isinstance(attachment, TextContent):
                         return attachment
+        raise ValueError("No user text content found in messages.")
 
-        return None
+    async def _process_websocket_user_interaction_response_message(
+            self, user_content: WebSocketUserInteractionResponseMessage) -> TextContent:
+        """
+        Processes a WebSocketUserInteractionResponseMessage.
+        """
+        return self._extract_last_user_message_content(user_content.content.messages)
+
+    async def _process_websocket_user_message(self, user_content: WebSocketUserMessage) -> ChatRequest | str:
+        """
+        Processes a WebSocketUserMessage based on schema type.
+        """
+        if self._workflow_schema_type in [WorkflowSchemaType.CHAT, WorkflowSchemaType.CHAT_STREAM]:
+            return ChatRequest(**user_content.content.model_dump(include={"messages"}))
+
+        elif self._workflow_schema_type in [WorkflowSchemaType.GENERATE, WorkflowSchemaType.GENERATE_STREAM]:
+            return self._extract_last_user_message_content(user_content.content.messages).text
+
+        raise ValueError("Unsupported workflow schema type for WebSocketUserMessage")
 
     async def process_workflow_request(self, user_message_as_validated_type: WebSocketUserMessage) -> None:
         """
         Process user messages and routes them appropriately.
 
-        :param user_message_as_validated_type: A WebSocketUserMessage Data Model instance.
+        Args:
+            user_message_as_validated_type (WebSocketUserMessage): The validated user message to process.
         """
 
         try:
@@ -151,18 +176,15 @@ class WebSocketMessageHandler:
             self._workflow_schema_type = user_message_as_validated_type.schema_type
             self._conversation_id = user_message_as_validated_type.conversation_id
 
-            content: BaseModel | None = await self.process_user_message_content(user_message_as_validated_type)
+            message_content: typing.Any = await self._process_websocket_user_message(user_message_as_validated_type)
 
-            if content is None:
-                raise ValueError(f"User message content could not be found: {user_message_as_validated_type}")
+            if (self._running_workflow_task is None):
 
-            if isinstance(content, TextContent) and (self._running_workflow_task is None):
-
-                def _done_callback(task: asyncio.Task):
+                def _done_callback(_task: asyncio.Task):
                     self._running_workflow_task = None
 
                 self._running_workflow_task = asyncio.create_task(
-                    self._run_workflow(payload=content.text,
+                    self._run_workflow(payload=message_content,
                                        user_message_id=self._message_parent_id,
                                        conversation_id=self._conversation_id,
                                        result_type=self._schema_output_mapping[self._workflow_schema_type],
@@ -180,13 +202,14 @@ class WebSocketMessageHandler:
     async def create_websocket_message(self,
                                        data_model: BaseModel,
                                        message_type: str | None = None,
-                                       status: str = WebSocketMessageStatus.IN_PROGRESS) -> None:
+                                       status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS) -> None:
         """
         Creates a websocket message that will be ready for routing based on message type or data model.
 
-        :param data_model: Message content model.
-        :param message_type: Message content model.
-        :param status: Message content model.
+        Args:
+            data_model (BaseModel): Message content model.
+            message_type (str | None): Message content model.
+            status (WebSocketMessageStatus): Message content model.
         """
         try:
             message: BaseModel | None = None
@@ -196,8 +219,8 @@ class WebSocketMessageHandler:
 
             message_schema: type[BaseModel] = await self._message_validator.get_message_schema_by_type(message_type)
 
-            if 'id' in data_model.model_fields:
-                message_id: str = data_model.id
+            if hasattr(data_model, 'id'):
+                message_id: str = str(getattr(data_model, 'id'))
             else:
                 message_id = str(uuid.uuid4())
 
@@ -253,12 +276,15 @@ class WebSocketMessageHandler:
         Registered human interaction callback that processes human interactions and returns
         responses from websocket connection.
 
-        :param prompt: Incoming interaction content data model.
-        :return: A Text Content Base Pydantic model.
+        Args:
+            prompt: Incoming interaction content data model.
+
+        Returns:
+            A Text Content Base Pydantic model.
         """
 
         # First create a future from the loop for the human response
-        human_response_future: asyncio.Future[HumanResponse] = asyncio.get_running_loop().create_future()
+        human_response_future: asyncio.Future[TextContent] = asyncio.get_running_loop().create_future()
 
         # Then add the future to the outstanding human prompts dictionary
         self._user_interaction_response = human_response_future
@@ -274,10 +300,10 @@ class WebSocketMessageHandler:
                 return HumanResponseNotification()
 
             # Wait for the human response future to complete
-            interaction_response: HumanResponse = await human_response_future
+            text_content: TextContent = await human_response_future
 
             interaction_response: HumanResponse = await self._message_validator.convert_text_content_to_human_response(
-                interaction_response, prompt.content)
+                text_content, prompt.content)
 
             return interaction_response
 
@@ -293,13 +319,12 @@ class WebSocketMessageHandler:
                             output_type: type | None = None) -> None:
 
         try:
-            async with self._session_manager.session(
-                    user_message_id=user_message_id,
-                    conversation_id=conversation_id,
-                    http_connection=self._socket,
-                    user_input_callback=self.human_interaction_callback,
-                    user_authentication_callback=(self._flow_handler.authenticate
-                                                  if self._flow_handler else None)) as session:
+            auth_callback = self._flow_handler.authenticate if self._flow_handler else None
+            async with self._session_manager.session(user_message_id=user_message_id,
+                                                     conversation_id=conversation_id,
+                                                     http_connection=self._socket,
+                                                     user_input_callback=self.human_interaction_callback,
+                                                     user_authentication_callback=auth_callback) as session:
 
                 async for value in generate_streaming_response(payload,
                                                                session_manager=session,

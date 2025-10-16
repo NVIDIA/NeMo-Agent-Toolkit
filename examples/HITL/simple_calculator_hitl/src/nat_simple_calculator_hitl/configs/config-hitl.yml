@@ -49,10 +49,6 @@ llms:
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
     max_tokens: 1024
-  openai_llm:
-    _type: openai
-    model_name: gpt-3.5-turbo
-    max_tokens: 2000
 
 workflow:
   _type: retry_react_agent

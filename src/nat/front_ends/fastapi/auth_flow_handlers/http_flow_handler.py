@@ -24,4 +24,4 @@ class HTTPAuthenticationFlowHandler(FlowHandlerBase):
     async def authenticate(self, config: AuthProviderBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
 
         raise NotImplementedError(f"Authentication method '{method}' is not supported by the HTTP frontend."
-                                  f" Do you have Websockets enabled?")
+                                  f" Do you have WebSockets enabled?")

@@ -33,11 +33,15 @@ nat mcp serve --config_file examples/getting_started/simple_calculator/configs/c
 
 This will load the workflow configuration from the specified file, start an MCP server on the default host (localhost) and port (9901), and publish all tools from the workflow as MCP tools. The MCP server is available at `http://localhost:9901/mcp` using streamable-http transport.
 
-You can also use the `sse` (Server-Sent Events) transport for backwards compatibility via the `--transport` flag for example:
+You can also use the `sse` (Server-Sent Events) transport for backwards compatibility through the `--transport` flag, for example:
 ```bash
 nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --transport sse
 ```
 With this configuration, the MCP server is available at `http://localhost:9901/sse` using SSE transport.
+
+:::{warning}
+**SSE Transport Security Limitations**: The SSE transport does not support authentication. For production deployments, use `streamable-http` transport with authentication configured. SSE should only be used for local development on localhost or behind an authenticating reverse proxy.
+:::
 
 You can optionally specify the server settings using the following flags:
 ```bash
@@ -189,7 +193,38 @@ Server at http://localhost:9901/mcp is healthy (response time: 4.35ms)
 ```
 This is useful for health checks and monitoring.
 
+## Security Considerations
+
+### Transport Selection
+The NeMo Agent toolkit supports two MCP transport protocols:
+- **streamable-http** (recommended): Supports authentication and is recommended for production deployments
+- **SSE** (Server-Sent Events): Does not support authentication and should only be used for local development
+
+### Host Binding and Authentication
+When deploying MCP servers, consider the following security best practices:
+
+:::{warning}
+**Non-Localhost Deployment Without Authentication**: If you bind the MCP server to a non-localhost address (such as `0.0.0.0` or a public IP) without configuring authentication, the server will log a warning. This configuration exposes your server to unauthorized access and should be avoided in production environments.
+:::
+
+**For Production Deployments:**
+- Use `streamable-http` transport with authentication configured (see [MCP Authentication](./mcp-auth.md))
+- Bind to a specific interface or use a reverse proxy
+- Configure HTTPS with OAuth2, JWT, or mTLS
+- Never expose unauthenticated servers directly to the public internet
+
+**For Local Development:**
+- Use `localhost` or `127.0.0.1` as the host (default)
+- Both `streamable-http` and `sse` transports are acceptable for localhost-only access
+- No authentication is required for local-only development
+
+**For SSE Transport:**
+- SSE does not support authentication
+- Only use SSE on localhost for local development
+- For production, either:
+  - Switch to `streamable-http` transport with authentication
+  - Deploy behind an authenticating reverse proxy (HTTPS with OAuth2, JWT, or mTLS)
+
 ## Limitations
-- The `nat mcp serve` command currently starts an MCP server without built-in authentication. This is a temporary limitation; server-side authentication is planned for a future release.
-- NAT workflows can still connect to protected third-party MCP servers via the MCP client auth provider.
-- Recommendation: run `nat mcp serve` behind a trusted network or an authenticating reverse proxy (HTTPS with OAuth2, JWT or mTLS), and avoid exposing it directly to the public Internet.
+- SSE transport does not support authentication. Use `streamable-http` for authenticated deployments.
+- NeMo Agent toolkit workflows can connect to protected third-party MCP servers through the MCP client auth provider (see [MCP Authentication](./mcp-auth.md)).

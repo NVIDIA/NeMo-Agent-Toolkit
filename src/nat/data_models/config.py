@@ -187,7 +187,7 @@ class TelemetryConfig(BaseModel):
 
 class GeneralConfig(BaseModel):
 
-    model_config = ConfigDict(protected_namespaces=())
+    model_config = ConfigDict(protected_namespaces=(), extra="forbid")
 
     use_uvloop: bool | None = Field(
         default=None,

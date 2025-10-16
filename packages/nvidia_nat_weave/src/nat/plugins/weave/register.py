@@ -62,14 +62,9 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
 
     # Handle custom redact keys if specified
     if config.redact_keys and config.redact_pii:
-        # Need to create a new list combining default keys and custom ones
-        from weave.trace import sanitize
-        default_keys = sanitize.REDACT_KEYS
+        from weave.utils import sanitize
 
-        # Create a new list with all keys
-        all_keys = list(default_keys) + config.redact_keys
-
-        # Replace the default REDACT_KEYS with our extended list
-        sanitize.REDACT_KEYS = tuple(all_keys)
+        for key in config.redact_keys:
+            sanitize.add_redact_key(key)
 
     yield WeaveExporter(project=config.project, entity=config.entity, verbose=config.verbose)

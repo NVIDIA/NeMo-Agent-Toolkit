@@ -139,8 +139,10 @@ class MessageValidator:
                     text_content: str = str(data_model.payload)
                 validated_message_content = SystemResponseContent(text=text_content)
 
-            elif (isinstance(data_model, ChatResponse | ChatResponseChunk)):
+            elif isinstance(data_model, ChatResponse):
                 validated_message_content = SystemResponseContent(text=data_model.choices[0].message.content)
+            elif isinstance(data_model, ChatResponseChunk):
+                validated_message_content = SystemResponseContent(text=data_model.choices[0].delta.content)
 
             elif (isinstance(data_model, ResponseIntermediateStep)):
                 validated_message_content = SystemIntermediateStepContent(name=data_model.name,
@@ -238,8 +240,7 @@ class MessageValidator:
         thread_id: str = "default",
         parent_id: str = "default",
         conversation_id: str | None = None,
-        content: SystemResponseContent
-        | Error = SystemResponseContent(),
+        content: SystemResponseContent | Error = SystemResponseContent(),
         status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
         timestamp: str = str(datetime.datetime.now(datetime.UTC))
     ) -> WebSocketSystemResponseTokenMessage | None:

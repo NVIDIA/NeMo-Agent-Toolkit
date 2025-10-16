@@ -689,10 +689,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_openai_api_compatible(response: Response, request: Request, payload: request_type):
                 # Check if streaming is requested
+
+                response.headers["Content-Type"] = "application/json"
                 stream_requested = getattr(payload, 'stream', False)
 
                 async with session_manager.session(http_connection=request):
                     if stream_requested:
+
                         # Return streaming response
                         return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                                  content=generate_streaming_response_as_str(
@@ -703,40 +706,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                      result_type=ChatResponseChunk,
                                                      output_type=ChatResponseChunk))
 
-                    # Return single response - check if workflow supports non-streaming
-                    try:
-                        response.headers["Content-Type"] = "application/json"
-                        return await generate_single_response(payload, session_manager, result_type=ChatResponse)
-                    except ValueError as e:
-                        if "Cannot get a single output value for streaming workflows" in str(e):
-                            # Workflow only supports streaming, but client requested non-streaming
-                            # Fall back to streaming and collect the result
-                            chunks = []
-                            async for chunk_str in generate_streaming_response_as_str(
-                                    payload,
-                                    session_manager=session_manager,
-                                    streaming=True,
-                                    step_adaptor=self.get_step_adaptor(),
-                                    result_type=ChatResponseChunk,
-                                    output_type=ChatResponseChunk):
-                                if chunk_str.startswith("data: ") and not chunk_str.startswith("data: [DONE]"):
-                                    chunk_data = chunk_str[6:].strip()  # Remove "data: " prefix
-                                    if chunk_data:
-                                        try:
-                                            chunk_json = ChatResponseChunk.model_validate_json(chunk_data)
-                                            if (chunk_json.choices and len(chunk_json.choices) > 0
-                                                    and chunk_json.choices[0].delta
-                                                    and chunk_json.choices[0].delta.content is not None):
-                                                chunks.append(chunk_json.choices[0].delta.content)
-                                        except Exception:
-                                            continue
-
-                            # Create a single response from collected chunks
-                            content = "".join(chunks)
-                            single_response = ChatResponse.from_string(content)
-                            response.headers["Content-Type"] = "application/json"
-                            return single_response
-                        raise
+                    return await generate_single_response(payload, session_manager, result_type=ChatResponse)
 
             return post_openai_api_compatible
 
@@ -1128,7 +1098,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     if configured_group.config.type != "mcp_client":
                         continue
 
-                    from nat.plugins.mcp.client_impl import MCPClientConfig
+                    from nat.plugins.mcp.client_config import MCPClientConfig
 
                     config = configured_group.config
                     assert isinstance(config, MCPClientConfig)

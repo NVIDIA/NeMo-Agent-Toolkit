@@ -153,7 +153,7 @@ def recursive_componentref_discovery(cls: TypedBaseModel, value: typing.Any,
         for v in value.values():
             yield from recursive_componentref_discovery(cls, v, decomposed_type.args[1])
     elif (issubclass(type(value), BaseModel)):
-        for field, field_info in value.model_fields.items():
+        for field, field_info in type(value).model_fields.items():
             field_data = getattr(value, field)
             yield from recursive_componentref_discovery(cls, field_data, field_info.annotation)
     if (decomposed_type.is_union):

@@ -23,8 +23,8 @@ from pydantic import BaseModel
 
 from nat.data_models.span import Span
 from nat.data_models.span import SpanContext
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record import get_trace_container
-from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record import span_to_dfw_record
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw import get_trace_container
+from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw import span_to_dfw_record
 from nat.plugins.data_flywheel.observability.schema.trace_container import TraceContainer
 
 
@@ -205,7 +205,7 @@ class TestGetTraceContainer:
         assert result.source.get("input_value") is None
         assert result.source.get("metadata") is None
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.logger')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.logger')
     def test_get_trace_container_logs_successful_detection(self, mock_logger):
         """Test that get_trace_container logs successful schema detection."""
         # Use real TraceContainer functionality
@@ -215,7 +215,7 @@ class TestGetTraceContainer:
         # and the logger calls depend on internal implementation details
         # Consider removing this test or adapting it to test actual logging behavior
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceAdapterRegistry')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceAdapterRegistry')
     def test_get_trace_container_handles_schema_detection_failure(self, mock_registry):
         """Test that get_trace_container raises ValueError when schema detection fails."""
         # Setup mock registry data
@@ -223,7 +223,7 @@ class TestGetTraceContainer:
 
         # Make TraceContainer construction fail
         with patch(
-                'nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceContainer',
+                'nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceContainer',
                 side_effect=Exception("Schema detection failed")):
             with pytest.raises(ValueError) as exc_info:
                 get_trace_container(self.span, self.client_id)
@@ -236,7 +236,7 @@ class TestGetTraceContainer:
         assert "Ensure a schema is registered with @register_adapter()" in error_message
         assert "Original error: Schema detection failed" in error_message
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceAdapterRegistry')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceAdapterRegistry')
     def test_get_trace_container_error_includes_available_adapters(self, mock_registry):
         """Test that error message includes detailed adapter information."""
         # Setup mock registry with multiple adapters
@@ -255,7 +255,7 @@ class TestGetTraceContainer:
         }
 
         with patch(
-                'nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceContainer',
+                'nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceContainer',
                 side_effect=Exception("Failed")):
             with pytest.raises(ValueError) as exc_info:
                 get_trace_container(self.span, self.client_id)
@@ -307,8 +307,8 @@ class TestSpanToDfwRecord:
                          })
         self.target_type = MockDFWRecord
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.get_trace_container')
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceAdapterRegistry')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.get_trace_container')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceAdapterRegistry')
     def test_span_to_dfw_record_successful_conversion(self, mock_registry, mock_get_trace_container):
         """Test successful span to DFW record conversion."""
         # Setup mocks
@@ -329,8 +329,8 @@ class TestSpanToDfwRecord:
         mock_get_trace_container.assert_called_once_with(self.span, self.client_id)
         mock_registry.convert.assert_called_once_with(mock_trace_container, to_type=self.target_type)
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.get_trace_container')
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceAdapterRegistry')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.get_trace_container')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceAdapterRegistry')
     def test_span_to_dfw_record_passes_correct_parameters(self, mock_registry, mock_get_trace_container):
         """Test that span_to_dfw_record passes correct parameters to helper functions."""
         mock_trace_container = MagicMock(spec=TraceContainer)
@@ -345,8 +345,8 @@ class TestSpanToDfwRecord:
         # Verify registry convert was called with correct parameters
         mock_registry.convert.assert_called_once_with(mock_trace_container, to_type=self.target_type)
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.get_trace_container')
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceAdapterRegistry')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.get_trace_container')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceAdapterRegistry')
     def test_span_to_dfw_record_returns_none_when_conversion_fails(self, mock_registry, mock_get_trace_container):
         """Test that span_to_dfw_record returns None when conversion fails."""
         mock_trace_container = MagicMock(spec=TraceContainer)
@@ -357,8 +357,8 @@ class TestSpanToDfwRecord:
 
         assert result is None
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.get_trace_container')
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceAdapterRegistry')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.get_trace_container')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceAdapterRegistry')
     def test_span_to_dfw_record_propagates_conversion_errors(self, mock_registry, mock_get_trace_container):
         """Test that span_to_dfw_record propagates errors from registry conversion."""
         mock_trace_container = MagicMock(spec=TraceContainer)
@@ -370,7 +370,7 @@ class TestSpanToDfwRecord:
         with pytest.raises(ValueError, match="No converter available"):
             span_to_dfw_record(self.span, self.target_type, self.client_id)
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.get_trace_container')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.get_trace_container')
     def test_span_to_dfw_record_propagates_trace_container_errors(self, mock_get_trace_container):
         """Test that span_to_dfw_record propagates errors from get_trace_container."""
         container_error = ValueError("Trace container creation failed")
@@ -379,8 +379,8 @@ class TestSpanToDfwRecord:
         with pytest.raises(ValueError, match="Trace container creation failed"):
             span_to_dfw_record(self.span, self.target_type, self.client_id)
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.get_trace_container')
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceAdapterRegistry')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.get_trace_container')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceAdapterRegistry')
     def test_span_to_dfw_record_with_different_target_types(self, mock_registry, mock_get_trace_container):
         """Test span_to_dfw_record with different target types."""
 
@@ -399,8 +399,8 @@ class TestSpanToDfwRecord:
         assert result == expected_alt_record
         mock_registry.convert.assert_called_once_with(mock_trace_container, to_type=AlternativeTargetType)
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.get_trace_container')
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceAdapterRegistry')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.get_trace_container')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceAdapterRegistry')
     def test_span_to_dfw_record_with_different_client_ids(self, mock_registry, mock_get_trace_container):
         """Test span_to_dfw_record with different client IDs."""
         different_client_ids = ["client_1", "client_2", "very-long-client-id-with-special-123"]
@@ -448,7 +448,7 @@ class TestIntegrationScenarios:
         """Set up integration test fixtures."""
         self.client_id = "integration_client"
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceAdapterRegistry')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceAdapterRegistry')
     def test_enum_framework_extraction_integration(self, mock_registry):
         """Test integration scenario with enum framework value."""
         span_with_enum = Span(name="integration_test",
@@ -464,7 +464,7 @@ class TestIntegrationScenarios:
         assert isinstance(result, MockDFWRecord)
         assert result.framework == "openai"
 
-    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record.TraceAdapterRegistry')
+    @patch('nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw.TraceAdapterRegistry')
     def test_complete_span_processing_pipeline(self, mock_registry):
         """Test complete processing pipeline from span to DFW record."""
         complex_span = Span(name="complex_pipeline_test",
@@ -552,10 +552,10 @@ class TestErrorHandlingAndEdgeCases:
 
         # Verify they can be imported and used (basic smoke test)
         # pylint: disable=import-outside-toplevel, reimported
-        from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record import (
+        from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw import (
             get_trace_container as imported_get_container,
         )
-        from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw_record import (
+        from nat.plugins.data_flywheel.observability.processor.trace_conversion.span_to_dfw import (
             span_to_dfw_record as imported_convert,
         )
 

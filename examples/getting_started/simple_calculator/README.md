@@ -87,7 +87,7 @@ For a production deployment, use Docker:
 
 Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the NeMo Agent toolkit virtual environment.
 
-From the root directory of the Simple Calculator repository, build the Docker image:
+From the root directory of the NeMo Agent toolkit repository, build the Docker image:
 
 ```bash
 docker build --build-arg NAT_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_calculator/Dockerfile .

@@ -185,7 +185,8 @@ class RagaAICatalystMixin:
 
     This mixin is designed to be used with OtelSpanExporter as a base class:
 
-    Example:
+    Example::
+
         class MyCatalystExporter(OtelSpanExporter, RagaAICatalystMixin):
             def __init__(self, base_url, access_key, secret_key, project, dataset, **kwargs):
                 super().__init__(base_url=base_url, access_key=access_key,
@@ -211,9 +212,9 @@ class RagaAICatalystMixin:
             project: RagaAI Catalyst project name.
             dataset: RagaAI Catalyst dataset name.
             tracer_type: RagaAI Catalyst tracer type.
-            debug_mode: When False (default), creates local rag_agent_traces.json file.
-                       When True, skips local file creation for cleaner operation.
-            **kwargs: Additional keyword arguments passed to parent classes.
+            debug_mode: When False (default), creates local rag_agent_traces.json file. When True, skips local file
+            creation for cleaner operation.
+            kwargs: Additional keyword arguments passed to parent classes.
         """
         logger.info("RagaAICatalystMixin initialized with debug_mode=%s", debug_mode)
 

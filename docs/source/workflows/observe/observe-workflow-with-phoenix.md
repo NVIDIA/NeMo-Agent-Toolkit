@@ -22,12 +22,17 @@ This guide provides a step-by-step process to enable observability in a NeMo Age
 - Started the Phoenix server locally.
 - Ability to view traces in the Phoenix UI.
 
-### Step 1: Install the Phoenix Subpackage
+### Step 1: Install the Phoenix Subpackage and Phoenix Server
 
 Install the phoenix dependencies to enable tracing capabilities:
 
 ```bash
 uv pip install -e '.[phoenix]'
+```
+
+Then install the Phoenix server:
+```bash
+uv pip install arize-phoenix
 ```
 
 ### Step 2: Start the Phoenix Server
@@ -75,17 +80,5 @@ As the workflow runs, telemetry data will start showing up in Phoenix.
 - Inspect function execution details, latency, total tokens, request timelines and other info under Info and Attributes tab of an individual trace.
 
 ### Debugging
-
-If you encounter issues while downloading the Phoenix package, try uninstalling and installing:
-```bash
-uv pip uninstall arize-phoenix
-
-uv pip install arize-phoenix
-```
-
-After reinstalling, restart the Phoenix server:
-```bash
-phoenix serve
-```
 
 For more Arize-Phoenix details, view the documentation [here](https://arize.com/docs/phoenix).

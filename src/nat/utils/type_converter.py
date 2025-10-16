@@ -93,6 +93,14 @@ class TypeConverter:
         if to_type is None or decomposed.is_instance(data):
             return data
 
+        # 2) If data is a union type, try to convert to each type in the union
+        if decomposed.is_union:
+            for union_type in decomposed.args:
+                result = self._convert(data, union_type)
+                if result is not None:
+                    return result
+            return None
+
         root = decomposed.root
 
         # 2) Attempt direct in *this* converter

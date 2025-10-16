@@ -20,9 +20,13 @@ source ${SCRIPT_DIR}/common.sh
 
 install_rapids_gha_tools
 
-
 # Ensure the workspace tmp directory exists
 mkdir -p ${WORKSPACE_TMP}
 
 rapids-logger "Environment Variables"
 printenv | sort
+
+function get_git_tag() {
+    # Get the latest Git tag, sorted by version, excluding lightweight tags
+    git describe --first-parent --tags --abbrev=0 2>/dev/null || echo "no-tag"
+}

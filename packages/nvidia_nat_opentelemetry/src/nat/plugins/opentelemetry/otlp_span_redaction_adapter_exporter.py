@@ -55,7 +55,8 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
     - Grafana Tempo
     - Custom OTLP-compatible backends
 
-    Example:
+    Example::
+
         def should_redact(auth_key: str) -> bool:
             return auth_key in ["sensitive_user", "test_user"]
 
@@ -116,7 +117,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
             redaction_tag: Tag to add to spans when redaction occurs.
             endpoint: The endpoint for the OTLP service.
             headers: The headers for the OTLP service.
-            **otlp_kwargs: Additional keyword arguments for the OTLP service.
+            otlp_kwargs: Additional keyword arguments for the OTLP service.
         """
         super().__init__(context_state=context_state,
                          batch_size=batch_size,

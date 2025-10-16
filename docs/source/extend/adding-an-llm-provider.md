@@ -194,6 +194,7 @@ After implementing a new LLM provider, it's important to verify that it works co
 
 ```python
 @pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_nim_langchain_agent():
     """
     Test NIM LLM with LangChain/LangGraph agent. Requires NVIDIA_API_KEY to be set.
@@ -216,7 +217,7 @@ async def test_nim_langchain_agent():
         assert "3" in response.content.lower()
 ```
 
-Note: Since this test requires an API key, it's marked with `@pytest.mark.integration` to exclude it from CI runs. However, these tests are necessary for maintaining and verifying the functionality of LLM providers and their client integrations.
+Note: Since this test requires an API key, it's requesting the `nvidia_api_key` fixture, which checks for the `NVIDIA_API_KEY` environment variable. If the variable is not set, the test will be skipped. Additionally, the test is marked with `@pytest.mark.integration` this indicates that the test might take longer to run and may require external resources. Tests marked with `integration` will only run when the `--run_integration` flag is provided to `pytest`, allowing the test to be excluded from CI runs. However, these tests are necessary for maintaining and verifying the functionality of LLM providers and their client integrations.
 
 ## Packaging the Provider and Client
 

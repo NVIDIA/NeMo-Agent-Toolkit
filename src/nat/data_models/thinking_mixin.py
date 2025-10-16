@@ -51,7 +51,7 @@ class ThinkingMixin(
         Returns the system prompt to use for thinking.
         For NVIDIA Nemotron, returns "/think" if enabled, else "/no_think".
         For Llama Nemotron v1.5, returns "/think" if enabled, else "/no_think".
-        For Llama Nemotron v1.0, returns "detailed thinking on" if enabled, else "detailed thinking off".
+        For Llama Nemotron v1.0 or v1.1, returns "detailed thinking on" if enabled, else "detailed thinking off".
         If thinking is not supported on the model, returns None.
 
         Returns:
@@ -72,7 +72,7 @@ class ThinkingMixin(
                 return "/think" if self.thinking else "/no_think"
 
             if model.startswith("nvidia/llama"):
-                if "v1-0" in model or "v1-1" in model:
+                if "v1-0" in model or "v1-1" in model or model.endswith("v1"):
                     return f"detailed thinking {'on' if self.thinking else 'off'}"
 
                 if "v1-5" in model:

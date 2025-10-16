@@ -37,7 +37,7 @@ NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that 
 
 ## ✨ Key Features
 
-- 🧩 [**Framework Agnostic:**](./docs/source/quick-start/installing.md#framework-integrations) NeMo Agent toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), and [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
+- 🧩 [**Framework Agnostic:**](./docs/source/quick-start/installing.md#framework-integrations) NeMo Agent toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
 
 - 🔁 [**Reusability:**](./docs/source/extend/sharing-components.md) Every agent, tool, and agentic workflow in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
 
@@ -71,6 +71,13 @@ Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11, 3.1
 | Windows | aarch64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
 
 ### Stable Version
+
+Based on your system settings, you may need to configure and activate a Python virtual environment. On macOS or Linux, you can run the following commands:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
 To install the latest stable version of NeMo Agent Toolkit, run the following command:
 
@@ -108,7 +115,7 @@ More information on how to install the latest development version and contribute
    export NVIDIA_API_KEY=<your_api_key>
    ```
 
-2. Create the NeMo Agent toolkit workflow configuration file. This file will define the agents, tools, and workflows that will be used in the example. Save the following as `workflow.yaml`:
+2. Create the NeMo Agent toolkit workflow configuration file. This file will define the agents, tools, and workflows that will be used in the example. Save the following as `workflow.yml`:
 
    ```yaml
    functions:
@@ -137,10 +144,10 @@ More information on how to install the latest development version and contribute
       parse_agent_response_max_retries: 3
    ```
 
-3. Run the Hello World example using the `nat` CLI and the `workflow.yaml` file.
+3. Run the Hello World example using the `nat` CLI and the `workflow.yml` file.
 
    ```bash
-   nat run --config_file workflow.yaml --input "List five subspecies of Aardvarks"
+   nat run --config_file workflow.yml --input "List five subspecies of Aardvarks"
    ```
 
    This will run the workflow and output the results to the console.
@@ -168,9 +175,9 @@ The following diagram illustrates the key components of NeMo Agent toolkit and h
 ## 🛣️ Roadmap
 
 - [x] Integrate with [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel) for continuous model improvement from production data.
-- [ ] Add support for [Google ADK](https://google.github.io/adk-docs/) framework.
+- [x] Add support for [Google ADK](https://google.github.io/adk-docs/) framework.
 - [x] Add an agent optimizer to auto-tune hyperparameters and prompts to maximize performance.
-- [ ] MCP authorization and streamable HTTP support.
+- [x] MCP authorization and streamable HTTP support.
 - [ ] Integration with [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) to secure any function in an agent workflow.
 - [ ] End-to-end acceleration using intelligent integrations with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo).
 
@@ -184,9 +191,16 @@ We would like to thank the following open source projects that made NeMo Agent t
 
 - [CrewAI](https://github.com/crewAIInc/crewAI)
 - [FastAPI](https://github.com/tiangolo/fastapi)
+- [Google Agent Development Kit (ADK)](https://github.com/google/adk-python)
 - [LangChain](https://github.com/langchain-ai/langchain)
 - [Llama-Index](https://github.com/run-llama/llama_index)
 - [Mem0ai](https://github.com/mem0ai/mem0)
+- [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/modelcontextprotocol)
+- [MinIO](https://github.com/minio/minio)
+- [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-python)
+- [Phoenix](https://github.com/arize-ai/phoenix)
 - [Ragas](https://github.com/explodinggradients/ragas)
+- [Redis](https://github.com/redis/redis-py)
 - [Semantic Kernel](https://github.com/microsoft/semantic-kernel)
+- [Weave](https://github.com/wandb/weave)
 - [uv](https://github.com/astral-sh/uv)

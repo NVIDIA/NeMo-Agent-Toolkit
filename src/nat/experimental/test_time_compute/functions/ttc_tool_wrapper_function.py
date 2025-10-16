@@ -98,8 +98,8 @@ async def register_ttc_tool_wrapper_function(
 
         augmented_function_desc = config.tool_description
 
-    fn_input_schema: BaseModel = augmented_function.input_schema
-    fn_output_schema: BaseModel = augmented_function.single_output_schema
+    fn_input_schema: type[BaseModel] = augmented_function.input_schema
+    fn_output_schema: type[BaseModel] | type[None] = augmented_function.single_output_schema
 
     runnable_llm = input_llm.with_structured_output(schema=fn_input_schema)
 

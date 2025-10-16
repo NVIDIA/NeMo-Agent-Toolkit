@@ -86,9 +86,9 @@ async def test_mcp_client_tool_list_success_with_alias(app_worker):
     app, worker = app_worker
 
     # Build MCP client config with alias override
-    from nat.plugins.mcp.client_impl import MCPClientConfig
-    from nat.plugins.mcp.client_impl import MCPServerConfig
-    from nat.plugins.mcp.client_impl import MCPToolOverrideConfig
+    from nat.plugins.mcp.client_config import MCPClientConfig
+    from nat.plugins.mcp.client_config import MCPServerConfig
+    from nat.plugins.mcp.client_config import MCPToolOverrideConfig
 
     server_cfg = MCPServerConfig(transport="streamable-http", url="http://localhost:9901/mcp")
     cfg = MCPClientConfig(
@@ -131,8 +131,8 @@ async def test_mcp_client_tool_list_success_with_alias(app_worker):
 async def test_mcp_client_tool_list_unhealthy_marks_unavailable(app_worker):
     app, worker = app_worker
 
-    from nat.plugins.mcp.client_impl import MCPClientConfig
-    from nat.plugins.mcp.client_impl import MCPServerConfig
+    from nat.plugins.mcp.client_config import MCPClientConfig
+    from nat.plugins.mcp.client_config import MCPServerConfig
 
     server_cfg = MCPServerConfig(transport="streamable-http", url="http://localhost:9901/mcp")
     cfg = MCPClientConfig(server=server_cfg)

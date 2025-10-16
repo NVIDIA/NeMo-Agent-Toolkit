@@ -30,10 +30,10 @@ logger = logging.getLogger(__name__)
 class GetToolConfig(FunctionBaseConfig, name="get_memory"):
     """Function to get memory to a hosted memory platform."""
 
-    description: str = Field(default=("Tool to retrieve memory about a user's "
+    description: str = Field(default=("Tool to retrieve a memory about a user's "
                                       "interactions to help answer questions in a personalized way."),
                              description="The description of this function's use for tool calling agents.")
-    memory: MemoryRef = Field(default="saas_memory",
+    memory: MemoryRef = Field(default=MemoryRef("saas_memory"),
                               description=("Instance name of the memory client instance from the workflow "
                                            "configuration object."))
 
@@ -49,7 +49,7 @@ async def get_memory_tool(config: GetToolConfig, builder: Builder):
     from langchain_core.tools import ToolException
 
     # First, retrieve the memory client
-    memory_editor = builder.get_memory_client(config.memory)
+    memory_editor = await builder.get_memory_client(config.memory)
 
     async def _arun(search_input: SearchMemoryInput) -> str:
         """
@@ -67,6 +67,6 @@ async def get_memory_tool(config: GetToolConfig, builder: Builder):
 
         except Exception as e:
 
-            raise ToolException(f"Error retreiving memory: {e}") from e
+            raise ToolException(f"Error retrieving memory: {e}") from e
 
     yield FunctionInfo.from_fn(_arun, description=config.description)

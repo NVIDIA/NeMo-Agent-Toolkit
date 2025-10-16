@@ -43,11 +43,11 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
             max_queue_size: The maximum queue size for exporting spans.
             drop_on_overflow: Whether to drop spans on overflow.
             shutdown_timeout: The shutdown timeout in seconds.
-            **elasticsearch_kwargs: Additional arguments for ElasticsearchMixin:
-                - endpoint: The elasticsearch endpoint.
-                - index: The elasticsearch index name.
-                - elasticsearch_auth: The elasticsearch authentication credentials.
-                - headers: The elasticsearch headers.
+            elasticsearch_kwargs: Additional arguments for ElasticsearchMixin:
+            - endpoint: The elasticsearch endpoint.
+            - index: The elasticsearch index name.
+            - elasticsearch_auth: The elasticsearch authentication credentials.
+            - headers: The elasticsearch headers.
         """
         # Initialize both mixins - ElasticsearchMixin expects elasticsearch_kwargs,
         # DFWExporter expects the standard exporter parameters

@@ -38,6 +38,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
     A callback manager/handler for Google ADK that intercepts calls to:
       - Tools
       - LLMs
+
     to collect usage statistics (tokens, inputs, outputs, time intervals, etc.)
     and store them in NeMo Agent Toolkit's usage_stats queue for subsequent analysis.
     """

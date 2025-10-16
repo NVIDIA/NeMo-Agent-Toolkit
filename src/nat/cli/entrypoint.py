@@ -29,6 +29,7 @@ import time
 
 import click
 import nest_asyncio
+from dotenv import load_dotenv
 
 from nat.utils.log_levels import LOG_LEVELS
 
@@ -45,6 +46,9 @@ from .commands.uninstall import uninstall_command
 from .commands.validate import validate_command
 from .commands.workflow.workflow import workflow_command
 
+# Load environment variables from .env file, if it exists
+load_dotenv()
+
 # Apply at the beginning of the file to avoid issues with asyncio
 nest_asyncio.apply()
 
@@ -52,7 +56,11 @@ nest_asyncio.apply()
 def setup_logging(log_level: str):
     """Configure logging with the specified level"""
     numeric_level = LOG_LEVELS.get(log_level.upper(), logging.INFO)
-    logging.basicConfig(level=numeric_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=numeric_level,
+        format="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
     return numeric_level
 
 

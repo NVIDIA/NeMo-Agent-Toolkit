@@ -14,7 +14,8 @@
 # limitations under the License.
 
 
-# Uncomment the following to enable tracing. Run `phoenix serve` before launching
+# Uncomment the following to enable tracing.
+# Install `arize-phoenix` and run `phoenix serve` before launching
 # general:
 #   telemetry:
 #     tracing:
