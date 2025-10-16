@@ -133,11 +133,10 @@ Workflow Result:
 This example includes an optimization configuration that uses the NeMo Agent toolkit Optimizer to tune the workflow.
 
 ### What Is Being Optimized
-- **Tool parameters**: The `email_phishing_analyzer` exposes two optimizable fields on its config:
-  - **`llm`**: Categorical choice between `llama_3_405` and `llama_3_70`.
+- **Tool parameters**: The `email_phishing_analyzer` exposes one optimizable field in its config:
   - **`prompt`**: The prompt template used to analyze the email body (prompt optimization is disabled by default in this config; see below to enable).
 - **LLM hyperparameters**: For each LLM in `llms`, numeric hyperparameters are marked as optimizable:
-  - **`temperature`**, **`top_p`**, **`max_tokens`**.
+  - **`temperature`**, **`top_p`**, **`max_tokens`**, and **`model_name`**.
 
 Evaluation during optimization uses the dataset at `examples/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv` with `body` as the question and `label` as the ground truth.
 
@@ -151,42 +150,54 @@ Key parts of the config:
 functions:
   email_phishing_analyzer:
     _type: email_phishing_analyzer
+    llm: phishing_llm
     optimizable_params:
-      - llm
       - prompt
 
 llms:
-  llama_3_405:
+  phishing_llm:
     _type: nim
     model_name: meta/llama-3.1-405b-instruct
     temperature: 0.0
     max_tokens: 1024
-    optimizable_params: [temperature, top_p, max_tokens]
-  llama_3_70:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
-    max_tokens: 1024
-    optimizable_params: [temperature, top_p, max_tokens]
+    optimizable_params:
+      - temperature
+      - top_p
+      - max_tokens
+      - model_name
+    search_space:
+      model_name:
+        values:
+          - meta/llama-3.1-405b-instruct
+          - meta/llama-3.1-70b-instruct
 
 optimizer:
   output_path: ./.tmp/examples/evaluation_and_profiling/email_phishing_analyzer/optimizer/
   reps_per_param_set: 1
   eval_metrics:
-    rag_accuracy: { evaluator_name: rag_accuracy, direction: maximize }
-    rag_groundedness: { evaluator_name: rag_groundedness, direction: maximize }
-    token_efficiency: { evaluator_name: token_efficiency, direction: minimize }
-    latency: { evaluator_name: llm_latency, direction: minimize }
+    rag_accuracy:
+      evaluator_name: rag_accuracy
+      direction: maximize
+    rag_groundedness:
+      evaluator_name: rag_groundedness
+      direction: maximize
+    token_efficiency:
+      evaluator_name: token_efficiency
+      direction: minimize
+    latency:
+      evaluator_name: llm_latency
+      direction: minimize
 
   numeric:
     enabled: true
-    n_trials: 1
+    n_trials: 3
 
   prompt:
-    enabled: false
+    enabled: true
     prompt_population_init_function: prompt_init
     prompt_recombination_function: prompt_recombination
     ga_generations: 3
-    ga_population_size: 5
+    ga_population_size: 3
     ga_diversity_lambda: 0.3
     ga_parallel_evaluations: 1
 ```
