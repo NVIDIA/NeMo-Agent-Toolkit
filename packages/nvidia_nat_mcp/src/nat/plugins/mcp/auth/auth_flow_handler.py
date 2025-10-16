@@ -54,6 +54,8 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
         self._redirect_app: FastAPI | None = None
         self._server_lock = asyncio.Lock()
         self._oauth_client: AsyncOAuth2Client | None = None
+        self._redirect_host: str = "localhost"  # Default host, will be overridden from config
+        self._redirect_port: int = 8000  # Default port, will be overridden from config
 
     async def authenticate(self, config: AuthProviderBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
         """
@@ -87,6 +89,13 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
 
     async def _handle_oauth2_auth_code_flow(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
         logger.info("Starting MCP OAuth2 authorization code flow")
+
+        # Extract host and port from redirect_uri for callback server
+        from urllib.parse import urlparse
+        parsed_uri = urlparse(str(cfg.redirect_uri))
+        self._redirect_host = parsed_uri.hostname or "localhost"
+        self._redirect_port = parsed_uri.port or 8000
+        logger.debug("MCP redirect server will use %s:%d", self._redirect_host, self._redirect_port)
 
         state = secrets.token_urlsafe(16)
         flow_state = _FlowState()
@@ -142,3 +151,29 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
                 "raw_token": token,
             },
         )
+
+    async def _start_redirect_server(self) -> None:
+        """
+        Override to use the host and port from redirect_uri config instead of hardcoded localhost:8000.
+
+        This allows MCP authentication to work with custom redirect hosts and ports
+        specified in the configuration.
+        """
+        # If the server is already running, do nothing
+        if self._server_controller:
+            return
+        try:
+            if not self._redirect_app:
+                raise RuntimeError("Redirect app not built.")
+
+            self._server_controller = _FastApiFrontEndController(self._redirect_app)
+
+            asyncio.create_task(self._server_controller.start_server(host=self._redirect_host,
+                                                                     port=self._redirect_port))
+            logger.debug("MCP redirect server starting on %s:%d", self._redirect_host, self._redirect_port)
+
+            # Give the server a moment to bind sockets before we return
+            await asyncio.sleep(0.3)
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(
+                f"Failed to start MCP redirect server on {self._redirect_host}:{self._redirect_port}: {exc}") from exc
