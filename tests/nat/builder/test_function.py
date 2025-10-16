@@ -24,6 +24,7 @@ from nat.builder.builder import Builder
 from nat.builder.function import Function
 from nat.builder.function import LambdaFunction
 from nat.builder.function_info import FunctionInfo
+from nat.builder.function_intercept import FunctionIntercept
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
@@ -38,6 +39,14 @@ class LambdaFnConfig(FunctionBaseConfig, name="test_lambda"):
 
 
 class LambdaStreamFnConfig(FunctionBaseConfig, name="test_lambda_stream"):
+    pass
+
+
+class OrderedInterceptConfig(FunctionBaseConfig, name="test_ordered_intercept"):
+    pass
+
+
+class FinalInterceptConfig(FunctionBaseConfig, name="test_final_intercept"):
     pass
 
 
@@ -198,6 +207,127 @@ async def test_functions_single_dict_input_pod_output():
         }}), to_type=str) == "test3!"
 
 
+async def test_function_intercepts_are_invoked_in_order():
+    call_log: list[tuple[str, str, str]] = []
+
+    class RecordingIntercept(FunctionIntercept):
+
+        def __init__(self, label: str):
+            super().__init__()
+            self._label = label
+
+        async def intercept_invoke(self, value, next_call, context):  # noqa: D401 - inherit docs
+            call_log.append((self._label, "before_single", value))
+            result = await next_call(value)
+            call_log.append((self._label, "after_single", result))
+            return result
+
+        async def intercept_stream(self, value, next_call, context):  # noqa: D401 - inherit docs
+            call_log.append((self._label, "before_stream", value))
+            async for chunk in next_call(value):
+                call_log.append((self._label, "chunk", chunk))
+                yield chunk
+            call_log.append((self._label, "after_stream", value))
+
+    class InterceptTestFunction(Function[str, str, str]):
+
+        def __init__(self, config: OrderedInterceptConfig):
+            super().__init__(config=config, description="Intercept order test")
+
+        async def _ainvoke(self, value: str) -> str:
+            call_log.append(("function", "single", value))
+            return value + "!"
+
+        async def _astream(self, value: str):
+            call_log.append(("function", "stream_start", value))
+            yield value + "!"
+            call_log.append(("function", "stream_end", value))
+
+    intercepts = [RecordingIntercept("first"), RecordingIntercept("second")]
+
+    @register_function(config_type=OrderedInterceptConfig, intercepts=intercepts)
+    async def _register(config: OrderedInterceptConfig, b: Builder):
+        yield InterceptTestFunction(config)
+
+    async with WorkflowBuilder() as builder:
+        fn_obj = await builder.add_function(name="ordered", config=OrderedInterceptConfig())
+
+        assert await fn_obj.ainvoke("data", to_type=str) == "data!"
+        assert call_log[:5] == [
+            ("first", "before_single", "data"),
+            ("second", "before_single", "data"),
+            ("function", "single", "data"),
+            ("second", "after_single", "data!"),
+            ("first", "after_single", "data!"),
+        ]
+
+        call_log.clear()
+
+        output = []
+        async for chunk in fn_obj.astream("data"):
+            output.append(chunk)
+
+        assert output == ["data!"]
+        assert call_log == [
+            ("first", "before_stream", "data"),
+            ("second", "before_stream", "data"),
+            ("function", "stream_start", "data"),
+            ("second", "chunk", "data!"),
+            ("first", "chunk", "data!"),
+            ("function", "stream_end", "data"),
+            ("second", "after_stream", "data"),
+            ("first", "after_stream", "data"),
+        ]
+
+
+async def test_function_final_intercept_short_circuits():
+    single_calls = 0
+    stream_calls = 0
+
+    class FinalIntercept(FunctionIntercept):
+
+        def __init__(self):
+            super().__init__(is_final=True)
+
+        async def intercept_invoke(self, value, next_call, context):  # noqa: D401 - inherit docs
+            return "intercepted"
+
+        async def intercept_stream(self, value, next_call, context):  # noqa: D401 - inherit docs
+            yield "streamed"
+
+    class CountingFunction(Function[str, str, str]):
+
+        def __init__(self, config: FinalInterceptConfig):
+            super().__init__(config=config, description="Final intercept test")
+
+        async def _ainvoke(self, value: str) -> str:
+            nonlocal single_calls
+            single_calls += 1
+            return value
+
+        async def _astream(self, value: str):
+            nonlocal stream_calls
+            stream_calls += 1
+            yield value
+
+    @register_function(config_type=FinalInterceptConfig, intercepts=[FinalIntercept()])
+    async def _register(config: FinalInterceptConfig, b: Builder):
+        yield CountingFunction(config)
+
+    async with WorkflowBuilder() as builder:
+        fn_obj = await builder.add_function(name="final", config=FinalInterceptConfig())
+
+        assert fn_obj.intercepts and fn_obj.intercepts[0].is_final
+
+        assert await fn_obj.ainvoke("value", to_type=str) == "intercepted"
+        assert single_calls == 0
+
+        chunks = []
+        async for chunk in fn_obj.astream("value"):
+            chunks.append(chunk)
+
+        assert chunks == ["streamed"]
+        assert stream_calls == 0
 async def test_functions_multi_pod_input_pod_output():
 
     @register_function(config_type=DummyConfig)

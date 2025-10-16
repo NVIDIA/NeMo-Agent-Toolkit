@@ -38,6 +38,7 @@ from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.front_end import FrontEndBase
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
+from nat.builder.function_intercept import FunctionIntercept
 from nat.builder.function_base import FunctionBase
 from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
@@ -181,6 +182,7 @@ class RegisteredFunctionInfo(RegisteredInfo[FunctionBaseConfig]):
 
     build_fn: FunctionRegisteredCallableT = Field(repr=False)
     framework_wrappers: list[str] = Field(default_factory=list)
+    intercepts: tuple[FunctionIntercept, ...] = Field(default_factory=tuple, repr=False)
 
 
 class RegisteredFunctionGroupInfo(RegisteredInfo[FunctionGroupBaseConfig]):

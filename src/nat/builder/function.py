@@ -31,6 +31,9 @@ from nat.builder.function_base import InputT
 from nat.builder.function_base import SingleOutputT
 from nat.builder.function_base import StreamingOutputT
 from nat.builder.function_info import FunctionInfo
+from nat.builder.function_intercept import FunctionIntercept
+from nat.builder.function_intercept import FunctionInterceptChain
+from nat.builder.function_intercept import FunctionInterceptContext
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
@@ -64,6 +67,9 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         self.description = description
         self.instance_name = instance_name or config.type
         self._context = Context.get()
+        self._configured_intercepts: tuple[FunctionIntercept, ...] = tuple()
+        self._intercepted_single: _InvokeFnT | None = None
+        self._intercepted_stream: _StreamFnT | None = None
 
     def convert(self, value: typing.Any, to_type: type[_T]) -> _T:
         """
@@ -108,6 +114,36 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         """
         return self._converter.try_convert(value, to_type=to_type)
 
+    @property
+    def intercepts(self) -> tuple[FunctionIntercept, ...]:
+        """Return the currently configured intercept chain."""
+
+        return self._configured_intercepts
+
+    def configure_intercepts(self, intercepts: Sequence[FunctionIntercept] | None = None) -> None:
+        """Attach an ordered list of intercepts to this function instance."""
+
+        intercepts_tuple: tuple[FunctionIntercept, ...] = tuple(intercepts or ())
+
+        self._configured_intercepts = intercepts_tuple
+
+        if not intercepts_tuple:
+            self._intercepted_single = None
+            self._intercepted_stream = None
+            return
+
+        context = FunctionInterceptContext(name=self.instance_name,
+                                           config=self.config,
+                                           description=self.description,
+                                           input_schema=self.input_schema,
+                                           single_output_schema=self.single_output_schema,
+                                           stream_output_schema=self.streaming_output_schema)
+
+        chain = FunctionInterceptChain(intercepts=intercepts_tuple, context=context)
+
+        self._intercepted_single = chain.build_single(self._ainvoke) if self.has_single_output else None
+        self._intercepted_stream = chain.build_stream(self._astream) if self.has_streaming_output else None
+
     @abstractmethod
     async def _ainvoke(self, value: InputT) -> SingleOutputT:
         pass
@@ -150,7 +186,9 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             try:
                 converted_input: InputT = self._convert_input(value)
 
-                result = await self._ainvoke(converted_input)
+                invoke_callable = self._intercepted_single or self._ainvoke
+
+                result = await invoke_callable(converted_input)
 
                 if to_type is not None and not isinstance(result, to_type):
                     result = self.convert(result, to_type)
@@ -243,7 +281,9 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                 # Collect streaming outputs to capture the final result
                 final_output: list[typing.Any] = []
 
-                async for data in self._astream(converted_input):
+                stream_callable = self._intercepted_stream or self._astream
+
+                async for data in stream_callable(converted_input):
                     if to_type is not None and not isinstance(data, to_type):
                         converted_data = self.convert(data, to_type=to_type)
                         final_output.append(converted_data)

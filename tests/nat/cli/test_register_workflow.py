@@ -39,6 +39,8 @@ from nat.cli.register_workflow import register_object_store
 from nat.cli.register_workflow import register_registry_handler
 from nat.cli.register_workflow import register_tool_wrapper
 from nat.cli.type_registry import TypeRegistry
+from nat.data_models.function import FunctionBaseConfig
+from nat.builder.function_intercept import FunctionIntercept
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
 from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
@@ -90,6 +92,53 @@ def test_register_function(registry: TypeRegistry):
     assert func_info.local_name == FunctionTestConfig.static_type()
     assert func_info.config_type is FunctionTestConfig
     assert func_info.build_fn is build_fn
+
+
+def test_register_function_final_intercept_validation():
+
+    class FinalOrderConfig(FunctionBaseConfig, name="test_final_order_validation"):
+        pass
+
+    with pytest.raises(ValueError):
+
+        @register_function(config_type=FinalOrderConfig,
+                           intercepts=[FunctionIntercept(is_final=True), FunctionIntercept()])
+        async def _register(config: FinalOrderConfig, builder: Builder):
+            async def _arun() -> None:
+                return None
+
+            yield _arun
+
+
+def test_register_function_final_intercept_uniqueness():
+
+    class FinalDupConfig(FunctionBaseConfig, name="test_final_duplicate_validation"):
+        pass
+
+    with pytest.raises(ValueError):
+
+        @register_function(config_type=FinalDupConfig,
+                           intercepts=[FunctionIntercept(is_final=True), FunctionIntercept(is_final=True)])
+        async def _register(config: FinalDupConfig, builder: Builder):
+            async def _arun() -> None:
+                return None
+
+            yield _arun
+
+
+def test_register_function_rejects_non_intercepts():
+
+    class FinalTypeConfig(FunctionBaseConfig, name="test_invalid_intercept_type"):
+        pass
+
+    with pytest.raises(TypeError):
+
+        @register_function(config_type=FinalTypeConfig, intercepts=[object()])  # type: ignore[list-item]
+        async def _register(config: FinalTypeConfig, builder: Builder):
+            async def _arun() -> None:
+                return None
+
+            yield _arun
 
 
 def test_register_llm_provider(registry: TypeRegistry):

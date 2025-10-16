@@ -145,8 +145,13 @@ def register_front_end(config_type: type[FrontEndConfigT]):
     return register_front_end_inner
 
 
+from nat.builder.function_intercept import FunctionIntercept
+from nat.builder.function_intercept import validate_intercepts
+
+
 def register_function(config_type: type[FunctionConfigT],
-                      framework_wrappers: list[LLMFrameworkEnum | str] | None = None):
+                      framework_wrappers: list[LLMFrameworkEnum | str] | None = None,
+                      intercepts: list[FunctionIntercept] | None = None):
     """
     Register a workflow with optional framework_wrappers for automatic profiler hooking.
     """
@@ -159,6 +164,7 @@ def register_function(config_type: type[FunctionConfigT],
         context_manager_fn = asynccontextmanager(fn)
 
         framework_wrappers_list = list(framework_wrappers or [])
+        intercept_chain = validate_intercepts(intercepts)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
                                                                 component_type=ComponentEnum.FUNCTION)
@@ -169,6 +175,7 @@ def register_function(config_type: type[FunctionConfigT],
                 config_type=config_type,
                 build_fn=context_manager_fn,
                 framework_wrappers=framework_wrappers_list,
+                intercepts=intercept_chain,
                 discovery_metadata=discovery_metadata,
             ))
 
