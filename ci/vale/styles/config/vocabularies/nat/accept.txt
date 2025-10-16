@@ -17,6 +17,7 @@ Authlib
 [Bb]ackpressure
 [Bb]atcher
 [Bb]oolean
+[Bb]rev
 [Cc]allable(s?)
 # Documentation for ccache only capitalizes the name at the start of a sentence https://ccache.dev/
 [Cc]cache
@@ -24,13 +25,14 @@ Authlib
 [Cc]hatbot(s?)
 # clangd is never capitalized even at the start of a sentence https://clangd.llvm.org/
 clangd
+Colab
 CMake
 [Cc]omposability
 [Cc]omposable
 Conda
 concurrencies
 config
-Configurability
+[Cc]onfigurability
 [Cc]oroutine(s?)
 CPython
 [Cc]ryptocurrenc[y|ies]
@@ -44,16 +46,21 @@ Dask
 Databricks
 Datadog
 DB(s?)
+[Dd]enylist
 [Dd]eserialize
 [Dd]ev
 [Dd]evcontainer(s?)
 [Dd]ocstring(s?)
+Dynatrace
 [Ee]mbedder(s?)
 [Ee]ngineerable
+etcd
 [Ee]val
 [Ee]xplainability
 Faiss
+Gantt
 [Gg]eneratable
+GitHub
 glog
 GPU(s?)
 Grafana
@@ -61,7 +68,9 @@ groundedness
 [Gg]ranularities
 [Hh]ashable
 [Hh]yperparameter(s?)
+impactful
 [Ii]nferencing
+[Ii]nterquartile
 isort
 Jira
 jsonlines
@@ -69,6 +78,7 @@ Langfuse
 LangChain
 LangGraph
 LangSmith
+[Ll]aunchable(s?)
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
 LLM(s?)
@@ -76,7 +86,7 @@ LLM(s?)
 Loghub
 Mem0
 Milvus
-[Mm]ixin
+[Mm]ixin(s?)
 MLflow
 MLOps
 Morpheus
@@ -89,6 +99,7 @@ NIM(s?)
 npm
 NumPy
 NVIDIA
+Nemotron
 OAuth
 URIs
 OTel
@@ -96,6 +107,7 @@ onboarding
 [Oo]verfitting
 pandas
 [Pp]arallelization
+Pareto
 [Pp]arsable
 Patronus
 PCIe
@@ -107,6 +119,7 @@ Pydantic
 PyPI
 pytest
 [Rr]edis
+[Rr]eimplement(ing)?
 [Rr]einstall(s?)
 [Rr]eplatform(ing)?
 [Rr]epo
@@ -114,18 +127,22 @@ pytest
 [Rr]eusability
 [Rr]untime(s?)
 [Ss]erializable
+[Ss]treamable
 [Ss]ubclassing
 [Ss]ubcard(s?)
 [Ss]ubgraph(s?)
 [Ss]ubpackage(s?)
 [Ss]ubword(s?)
 [Ss]uperset(s?)
+SSE
+SQLAlchemy
 Tavily
 [Tt]eardown
 [Tt]imestamp(s?)
 [Tt]okenization
 [Tt]okenizer(s?)
 triages
+[Uu]ncomment
 [Uu]nencrypted
 [Uu]nittest(s?)
 [Uu]nprocessable
@@ -139,3 +156,6 @@ VectorDB
 XGBoost
 zsh
 Zep
+Optuna
+[Oo]ptimizable
+[Cc]heckpointed

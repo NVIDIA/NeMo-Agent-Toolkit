@@ -86,6 +86,8 @@ The configuration files specified below contain configurations for the NeMo Agen
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
+> **Note**: If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, try setting the `eval.general.max_concurrency` value either in the YAML directly or via the command line with: `--override eval.general.max_concurrency 1`.
+
 #### OpenAI Model Evaluation
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_openai.yml
@@ -109,34 +111,57 @@ nat eval --skip_workflow --config_file examples/evaluation_and_profiling/simple_
 
 #### Evaluation with Upload
 
-#### Setting up S3 Bucket for Upload
+##### Setting up S3 Bucket for Upload
 
 To enable the `eval_upload.yml` workflow, you must configure an S3-compatible bucket for both dataset input and result output. You can use AWS S3, MinIO, or another S3-compatible service.
 
+We recommend installing the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) to create and manage your S3 buckets, regardless of the S3-compatible service you use.
+
+**Set the bucket name:**
+
+```bash
+export S3_BUCKET_NAME=nat-simple-bucket
+```
+
 **Using AWS S3**
-1. Create a bucket by following instructions [here](https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html).
-2. Configure your AWS credentials:
+1. Configure your AWS credentials:
    ```bash
    export AWS_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
    export AWS_SECRET_ACCESS_KEY=<YOUR_SECRET_ACCESS_KEY>
    export AWS_DEFAULT_REGION=<your-region>
    ```
-3. In `eval_upload.yml`, update the `bucket`, `endpoint_url` (if using a custom endpoint), and credentials under both `eval.general.output.s3` and `eval.general.dataset.s3`.
 
 **Using MinIO**
-1. Start a local MinIO server or cloud instance.
-2. Create a bucket via the MinIO console or client by following instructions [here](https://min.io/docs/minio/linux/reference/minio-mc/mc-mb.html).
-3. Set environment variables:
+1. Start a local MinIO server or cloud instance. To start a local MinIO server, consult the [MinIO section](../../deploy/README.md#running-services) of the deployment guide.
+2. Set environment variables:
    ```bash
-   export AWS_ACCESS_KEY_ID=<MINIO_ACCESS_KEY>
-   export AWS_SECRET_ACCESS_KEY=<MINIO_SECRET_KEY>
-   export S3_ENDPOINT=http://<minio-host>:<port>
+   export AWS_ACCESS_KEY_ID=minioadmin
+   export AWS_SECRET_ACCESS_KEY=minioadmin
+   export S3_ENDPOINT_URL=http://localhost:9000
    ```
-4. In `eval_upload.yml`, configure `endpoint_url` to point to `$S3_ENDPOINT`, and set the `bucket`, `access_key`, and `secret_key` accordingly.
+
+**Creating the S3 bucket:**
+```bash
+aws s3 mb \
+  s3://${S3_BUCKET_NAME}
+  ${S3_ENDPOINT_URL:+--endpoint-url=${S3_ENDPOINT_URL}}
+```
 
 For more information about using remote files for evaluation, refer to the [evaluation guide](../../../docs/source/reference/evaluate.md).
 
-#### Running Evaluation
+##### Upload dataset to the S3 bucket
+To use the sample config file `eval_upload.yml`, you need to upload the following dataset files to the S3 bucket at path `input/`:
+- `examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json`
+
+For example, if you have the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed, you can use the following command to upload the dataset files to the S3 bucket:
+```bash
+aws s3 cp \
+  examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json \
+  s3://${S3_BUCKET_NAME}/input/langsmith.json \
+  ${S3_ENDPOINT_URL:+--endpoint-url=${S3_ENDPOINT_URL}}
+```
+
+##### Running Evaluation
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_upload.yml
 ```

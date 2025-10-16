@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import socket
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+
 from nat_alert_triage_agent.network_connectivity_check_tool import _check_service_banner
 
 
@@ -49,7 +49,7 @@ def test_successful_banner_read(mock_create_conn, mock_sock):
 @pytest.mark.parametrize(
     "side_effect, port, conn_to, read_to",
     [
-        (socket.timeout(), 80, 10, 10),
+        (TimeoutError(), 80, 10, 10),
         (ConnectionRefusedError(), 80, 10, 10),
         (OSError(), 1234, 5, 2),
     ],

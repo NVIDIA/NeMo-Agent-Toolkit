@@ -357,7 +357,7 @@ class BaseExporter(Exporter):
                 except Exception as e:
                     logger.warning("Error while canceling task %s: %s", task.get_name(), e)
 
-    async def _wait_for_tasks(self, timeout: float = 5.0):
+    async def wait_for_tasks(self, timeout: float = 5.0):
         """Wait for all tracked tasks to complete with a timeout.
 
         Note: This method is NOT called during normal stop() operation for performance.
@@ -372,10 +372,10 @@ class BaseExporter(Exporter):
         try:
             # Wait for all tasks to complete with a timeout
             await asyncio.wait_for(asyncio.gather(*self._tasks, return_exceptions=True), timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("%s: Some tasks did not complete within %s seconds", self.name, timeout)
         except Exception as e:
-            logger.error("%s: Error while waiting for tasks: %s", self.name, e, exc_info=True)
+            logger.exception("%s: Error while waiting for tasks: %s", self.name, e)
 
     @override
     async def stop(self):

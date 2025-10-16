@@ -39,7 +39,7 @@ async def text_file_ingest_tool(config: TextFileIngestFunctionConfig, builder: B
     from langchain.tools.retriever import create_retriever_tool
     from langchain_community.document_loaders import DirectoryLoader
     from langchain_community.document_loaders import TextLoader
-    from langchain_community.vectorstores import FAISS
+    from langchain_community.vectorstores import USearch
     from langchain_core.embeddings import Embeddings
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -53,7 +53,7 @@ async def text_file_ingest_tool(config: TextFileIngestFunctionConfig, builder: B
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=config.chunk_size)
     documents = text_splitter.split_documents(docs)
-    vector = await FAISS.afrom_documents(documents, embeddings)
+    vector = await USearch.afrom_documents(documents, embeddings)
 
     retriever = vector.as_retriever()
 

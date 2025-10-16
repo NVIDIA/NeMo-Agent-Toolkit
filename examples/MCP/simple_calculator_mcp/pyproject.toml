@@ -6,13 +6,19 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 packages = []
 
 [tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
 name = "nat_simple_calculator_mcp"
 dynamic = ["version"]
-dependencies = ["nvidia-nat[langchain]~=1.2", "nat_simple_calculator"]
-requires-python = ">=3.11,<3.13"
+dependencies = [
+    "nvidia-nat[langchain]~=1.4",
+    "nvidia-nat[mcp]~=1.4",
+    "nat_simple_calculator",
+    "mcp-server-time~=2025.8"
+]
+requires-python = ">=3.11,<3.14"
 description = "Simple Calculator MCP - demonstrates NeMo Agent toolkit Model Context Protocol integration"
 keywords = ["ai", "mcp", "protocol", "agents"]
 classifiers = ["Programming Language :: Python"]

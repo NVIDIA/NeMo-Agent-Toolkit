@@ -12,10 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=invalid-name
 
 import asyncio
 import logging
+from typing import TYPE_CHECKING
 from typing import Any
 
 from nat.eval.evaluator.evaluator_model import EvalInput
@@ -25,26 +25,28 @@ from nat.eval.usage_stats import UsageStats
 from nat.eval.usage_stats import UsageStatsItem
 from nat.profiler.data_models import ProfilerResults
 
+if TYPE_CHECKING:
+    from nat.eval.utils.eval_trace_ctx import EvalTraceContext
+
 logger = logging.getLogger(__name__)
 
 
-class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
+class WeaveEvaluationIntegration:
     """
     Class to handle all Weave integration functionality.
     """
 
-    def __init__(self):
+    def __init__(self, eval_trace_context: "EvalTraceContext"):
         self.available = False
         self.client = None
         self.eval_logger = None
         self.pred_loggers = {}
+        self.eval_trace_context = eval_trace_context
 
         try:
-            from weave.flow.eval_imperative import EvaluationLogger
-            from weave.flow.eval_imperative import ScoreLogger
+            from weave import EvaluationLogger
             from weave.trace.context import weave_client_context
-            self.EvaluationLogger = EvaluationLogger
-            self.ScoreLogger = ScoreLogger
+            self.evaluation_logger_cls = EvaluationLogger
             self.weave_client_context = weave_client_context
             self.available = True
         except ImportError:
@@ -90,8 +92,14 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             weave_dataset = self._get_weave_dataset(eval_input)
             config_dict = config.model_dump(mode="json")
             config_dict["name"] = workflow_alias
-            self.eval_logger = self.EvaluationLogger(model=config_dict, dataset=weave_dataset)
+            self.eval_logger = self.evaluation_logger_cls(model=config_dict,
+                                                          dataset=weave_dataset,
+                                                          name=workflow_alias,
+                                                          eval_attributes={})
             self.pred_loggers = {}
+
+            # Capture the current evaluation call for context propagation
+            self.eval_trace_context.set_eval_call(self.eval_logger._evaluate_call)
 
             return True
         except Exception as e:
@@ -119,22 +127,6 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         # log the total tokens for this item, per-llm tokens can be exported later if needed
         await self.pred_loggers[item.id].alog_score(scorer="wf_tokens", score=usage_stats_item.total_tokens)
 
-        # Compute total cached tokens and log it
-        total_cached_tokens = 0
-        for k in usage_stats_item.usage_stats_per_llm:
-            llm_stats = usage_stats_item.usage_stats_per_llm[k]
-            total_cached_tokens += llm_stats.cached_tokens
-
-        await self.pred_loggers[item.id].alog_score(scorer="total_cached_tokens", score=total_cached_tokens)
-
-        # Compute total reasoning tokens and log it
-        total_reasoning_tokens = 0
-        for k in usage_stats_item.usage_stats_per_llm:
-            llm_stats = usage_stats_item.usage_stats_per_llm[k]
-            total_reasoning_tokens += llm_stats.reasoning_tokens
-
-        await self.pred_loggers[item.id].alog_score(scorer="total_reasoning_tokens", score=total_reasoning_tokens)
-
     async def alog_score(self, eval_output: EvalOutput, evaluator_name: str):
         """Log scores for evaluation outputs."""
         if not self.eval_logger:
@@ -154,7 +146,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             await asyncio.gather(*coros)
 
     async def afinish_loggers(self):
-        """Finish all prediction loggers."""
+        """Finish all prediction loggers and wait for exports."""
         if not self.eval_logger:
             return
 
@@ -174,7 +166,6 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         if profiler_results.workflow_runtime_metrics:
             profile_metrics["wf_runtime_p95"] = profiler_results.workflow_runtime_metrics.p95
 
-        # Eventually get the LLM tokens from the usage stats and log them
         profile_metrics["total_runtime"] = usage_stats.total_runtime
 
         return profile_metrics
@@ -199,3 +190,4 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         # Log the summary to finish the evaluation, disable auto-summarize
         # as we will be adding profiler metrics to the summary
         self.eval_logger.log_summary(summary, auto_summarize=False)
+        logger.info("Logged Evaluation Summary to Weave")

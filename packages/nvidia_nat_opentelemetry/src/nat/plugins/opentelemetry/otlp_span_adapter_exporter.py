@@ -22,7 +22,7 @@ from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 logger = logging.getLogger(__name__)
 
 
-class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):  # pylint: disable=R0901
+class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
     """An OpenTelemetry OTLP span exporter for sending traces to OTLP-compatible services.
 
     This class combines the OtelSpanExporter base functionality with OTLP-specific
@@ -43,7 +43,8 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):  # pylin
     - Grafana Tempo
     - Custom OTLP-compatible backends
 
-    Example:
+    Example::
+
         exporter = OTLPSpanAdapterExporter(
             endpoint="https://api.service.com/v1/traces",
             headers={"Authorization": "Bearer your-token"},
@@ -79,7 +80,7 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):  # pylin
             resource_attributes: Additional resource attributes for spans.
             endpoint: The endpoint for the OTLP service.
             headers: The headers for the OTLP service.
-            **otlp_kwargs: Additional keyword arguments for the OTLP service.
+            otlp_kwargs: Additional keyword arguments for the OTLP service.
         """
         super().__init__(context_state=context_state,
                          batch_size=batch_size,

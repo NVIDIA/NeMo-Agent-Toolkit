@@ -84,7 +84,7 @@ async def _run_ansible_playbook_for_host_performance_check(config: HostPerforman
     return extracted_tasks
 
 
-async def _parse_stdout_lines(config, builder, stdout_lines):
+async def _parse_stdout_lines(config, builder, stdout_lines) -> str:
     """
     Parses the stdout_lines output using nvda_nim to extract structured JSON data.
 
@@ -103,8 +103,8 @@ async def _parse_stdout_lines(config, builder, stdout_lines):
 
         response = await utils.llm_ainvoke(config=config, builder=builder, user_prompt=prompt)
     except Exception as e:
-        response = ('{{"error": "Failed to parse stdout from the playbook run.", '
-                    '"exception": "{}", "raw_response": "{}"}}').format(str(e), response)
+        response = ('{"error": "Failed to parse stdout from the playbook run.", '
+                    f'"exception": "{str(e)}", "raw_response": "{response}"}}')
     return response
 
 
@@ -159,7 +159,7 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig, bu
 
         except Exception as e:
             utils.logger.error("Error during host performance check: %s", str(e))
-            raise e
+            raise
 
     yield FunctionInfo.from_fn(
         _arun,

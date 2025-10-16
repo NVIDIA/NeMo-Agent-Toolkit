@@ -14,9 +14,9 @@
 # limitations under the License.
 
 import asyncio
+import json
 import logging
 import os
-import time
 import typing
 from abc import ABC
 from abc import abstractmethod
@@ -25,19 +25,21 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import BackgroundTasks
+import httpx
+from authlib.common.errors import AuthlibBaseError as OAuthError
 from fastapi import Body
 from fastapi import FastAPI
+from fastapi import HTTPException
 from fastapi import Request
 from fastapi import Response
 from fastapi import UploadFile
-from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from pydantic import Field
 from starlette.websockets import WebSocket
 
+from nat.builder.function import Function
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -58,17 +60,29 @@ from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from nat.front_ends.fastapi.job_store import JobInfo
-from nat.front_ends.fastapi.job_store import JobStore
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 from nat.front_ends.fastapi.response_helpers import generate_single_response
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
+from nat.front_ends.fastapi.utils import get_config_file_path
 from nat.object_store.models import ObjectStoreItem
+from nat.runtime.loader import load_workflow
 from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
+
+_DASK_AVAILABLE = False
+
+try:
+    from nat.front_ends.fastapi.job_store import JobInfo
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
+    _DASK_AVAILABLE = True
+except ImportError:
+    JobInfo = None
+    JobStatus = None
+    JobStore = None
 
 
 class FastApiFrontEndPluginWorkerBase(ABC):
@@ -80,10 +94,29 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                           FastApiFrontEndConfig), ("Front end config is not FastApiFrontEndConfig")
 
         self._front_end_config = config.general.front_end
-
-        self._cleanup_tasks: list[str] = []
-        self._cleanup_tasks_lock = asyncio.Lock()
+        self._dask_available = False
+        self._job_store = None
         self._http_flow_handler: HTTPAuthenticationFlowHandler | None = HTTPAuthenticationFlowHandler()
+        self._scheduler_address = os.environ.get("NAT_DASK_SCHEDULER_ADDRESS")
+        self._db_url = os.environ.get("NAT_JOB_STORE_DB_URL")
+        self._config_file_path = get_config_file_path()
+
+        if self._scheduler_address is not None:
+            if not _DASK_AVAILABLE:
+                raise RuntimeError("Dask is not available, please install it to use the FastAPI front end with Dask.")
+
+            if self._db_url is None:
+                raise RuntimeError(
+                    "NAT_JOB_STORE_DB_URL must be set when using Dask (configure a persistent JobStore database).")
+
+            try:
+                self._job_store = JobStore(scheduler_address=self._scheduler_address, db_url=self._db_url)
+                self._dask_available = True
+                logger.debug("Connected to Dask scheduler at %s", self._scheduler_address)
+            except Exception as e:
+                raise RuntimeError(f"Failed to connect to Dask scheduler at {self._scheduler_address}: {e}") from e
+        else:
+            logger.debug("No Dask scheduler address provided, running without Dask support.")
 
     @property
     def config(self) -> Config:
@@ -106,20 +139,6 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                 await self.configure(starting_app, builder)
 
                 yield
-
-                # If a cleanup task is running, cancel it
-                async with self._cleanup_tasks_lock:
-
-                    # Cancel all cleanup tasks
-                    for task_name in self._cleanup_tasks:
-                        cleanup_task: asyncio.Task | None = getattr(starting_app.state, task_name, None)
-                        if cleanup_task is not None:
-                            logger.info("Cancelling %s cleanup task", task_name)
-                            cleanup_task.cancel()
-                        else:
-                            logger.warning("No cleanup task found for %s", task_name)
-
-                    self._cleanup_tasks.clear()
 
             logger.debug("Closing NAT server from process %s", os.getpid())
 
@@ -208,32 +227,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         self._outstanding_flows: dict[str, FlowState] = {}
         self._outstanding_flows_lock = asyncio.Lock()
 
-    @staticmethod
-    async def _periodic_cleanup(name: str, job_store: JobStore, sleep_time_sec: int = 300):
-        while True:
-            try:
-                job_store.cleanup_expired_jobs()
-                logger.debug("Expired %s jobs cleaned up", name)
-            except Exception as e:
-                logger.error("Error during %s job cleanup: %s", name, e)
-            await asyncio.sleep(sleep_time_sec)
-
-    async def create_cleanup_task(self, app: FastAPI, name: str, job_store: JobStore, sleep_time_sec: int = 300):
-        # Schedule periodic cleanup of expired jobs on first job creation
-        attr_name = f"{name}_cleanup_task"
-
-        # Cheap check, if it doesn't exist, we will need to re-check after we acquire the lock
-        if not hasattr(app.state, attr_name):
-            async with self._cleanup_tasks_lock:
-                if not hasattr(app.state, attr_name):
-                    logger.info("Starting %s periodic cleanup task", name)
-                    setattr(
-                        app.state,
-                        attr_name,
-                        asyncio.create_task(
-                            self._periodic_cleanup(name=name, job_store=job_store, sleep_time_sec=sleep_time_sec)))
-                    self._cleanup_tasks.append(attr_name)
-
     def get_step_adaptor(self) -> StepAdaptor:
 
         return StepAdaptor(self.front_end_config.step_adaptor)
@@ -247,14 +240,15 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
 
-        await self.add_default_route(app, SessionManager(builder.build()))
-        await self.add_evaluate_route(app, SessionManager(builder.build()))
+        await self.add_default_route(app, SessionManager(await builder.build()))
+        await self.add_evaluate_route(app, SessionManager(await builder.build()))
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
+        await self.add_mcp_client_tool_list_route(app, builder)
 
         for ep in self.front_end_config.endpoints:
 
-            entry_workflow = builder.build(entry_function=ep.function_name)
+            entry_workflow = await builder.build(entry_function=ep.function_name)
 
             await self.add_route(app, endpoint=ep, session_manager=SessionManager(entry_workflow))
 
@@ -276,52 +270,72 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             },
         }
 
-        # Create job store for tracking evaluation jobs
-        job_store = JobStore()
-        # Don't run multiple evaluations at the same time
-        evaluation_lock = asyncio.Lock()
-
-        async def run_evaluation(job_id: str, config_file: str, reps: int, session_manager: SessionManager):
+        # TODO: Find another way to limit the number of concurrent evaluations
+        async def run_evaluation(scheduler_address: str,
+                                 db_url: str,
+                                 workflow_config_file_path: str,
+                                 job_id: str,
+                                 eval_config_file: str,
+                                 reps: int):
             """Background task to run the evaluation."""
-            async with evaluation_lock:
-                try:
-                    # Create EvaluationRunConfig using the CLI defaults
-                    eval_config = EvaluationRunConfig(config_file=Path(config_file), dataset=None, reps=reps)
+            job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
 
-                    # Create a new EvaluationRun with the evaluation-specific config
-                    job_store.update_status(job_id, "running")
-                    eval_runner = EvaluationRun(eval_config)
-                    output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=session_manager,
-                                                                                     job_id=job_id)
-                    if output.workflow_interrupted:
-                        job_store.update_status(job_id, "interrupted")
-                    else:
-                        parent_dir = os.path.dirname(
-                            output.workflow_output_file) if output.workflow_output_file else None
+            try:
+                # We have two config files, one for the workflow and one for the evaluation
+                # Create EvaluationRunConfig using the CLI defaults
+                eval_config = EvaluationRunConfig(config_file=Path(eval_config_file), dataset=None, reps=reps)
 
-                        job_store.update_status(job_id, "success", output_path=str(parent_dir))
-                except Exception as e:
-                    logger.error("Error in evaluation job %s: %s", job_id, str(e))
-                    job_store.update_status(job_id, "failure", error=str(e))
+                # Create a new EvaluationRun with the evaluation-specific config
+                await job_store.update_status(job_id, JobStatus.RUNNING)
+                eval_runner = EvaluationRun(eval_config)
 
-        async def start_evaluation(request: EvaluateRequest, background_tasks: BackgroundTasks, http_request: Request):
+                async with load_workflow(workflow_config_file_path) as local_session_manager:
+                    output: EvaluationRunOutput = await eval_runner.run_and_evaluate(
+                        session_manager=local_session_manager, job_id=job_id)
+
+                if output.workflow_interrupted:
+                    await job_store.update_status(job_id, JobStatus.INTERRUPTED)
+                else:
+                    parent_dir = os.path.dirname(output.workflow_output_file) if output.workflow_output_file else None
+
+                    await job_store.update_status(job_id, JobStatus.SUCCESS, output_path=str(parent_dir))
+            except Exception as e:
+                logger.exception("Error in evaluation job %s", job_id)
+                await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
+
+        async def start_evaluation(request: EvaluateRequest, http_request: Request):
             """Handle evaluation requests."""
 
-            async with session_manager.session(request=http_request):
+            async with session_manager.session(http_connection=http_request):
 
                 # if job_id is present and already exists return the job info
+                # There is a race condition between this check and the actual job submission, however if the client is
+                # supplying their own job_ids, then it is their responsibility to ensure that the job_id is unique.
                 if request.job_id:
-                    job = job_store.get_job(request.job_id)
-                    if job:
-                        return EvaluateResponse(job_id=job.job_id, status=job.status)
+                    job_status = await self._job_store.get_status(request.job_id)
+                    if job_status != JobStatus.NOT_FOUND:
+                        return EvaluateResponse(job_id=request.job_id, status=job_status)
 
-                job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
-                await self.create_cleanup_task(app=app, name="async_evaluation", job_store=job_store)
-                background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
+                job_id = self._job_store.ensure_job_id(request.job_id)
 
-                return EvaluateResponse(job_id=job_id, status="submitted")
+                await self._job_store.submit_job(job_id=job_id,
+                                                 config_file=request.config_file,
+                                                 expiry_seconds=request.expiry_seconds,
+                                                 job_fn=run_evaluation,
+                                                 job_args=[
+                                                     self._scheduler_address,
+                                                     self._db_url,
+                                                     self._config_file_path,
+                                                     job_id,
+                                                     request.config_file,
+                                                     request.reps
+                                                 ])
 
-        def translate_job_to_response(job: JobInfo) -> EvaluateStatusResponse:
+                logger.info("Submitted evaluation job %s with config %s", job_id, request.config_file)
+
+                return EvaluateResponse(job_id=job_id, status=JobStatus.SUBMITTED)
+
+        def translate_job_to_response(job: "JobInfo") -> EvaluateStatusResponse:
             """Translate a JobInfo object to an EvaluateStatusResponse."""
             return EvaluateStatusResponse(job_id=job.job_id,
                                           status=job.status,
@@ -330,15 +344,15 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                           output_path=str(job.output_path),
                                           created_at=job.created_at,
                                           updated_at=job.updated_at,
-                                          expires_at=job_store.get_expires_at(job))
+                                          expires_at=self._job_store.get_expires_at(job))
 
         async def get_job_status(job_id: str, http_request: Request) -> EvaluateStatusResponse:
             """Get the status of an evaluation job."""
             logger.info("Getting status for job %s", job_id)
 
-            async with session_manager.session(request=http_request):
+            async with session_manager.session(http_connection=http_request):
 
-                job = job_store.get_job(job_id)
+                job = await self._job_store.get_job(job_id)
                 if not job:
                     logger.warning("Job %s not found", job_id)
                     raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
@@ -349,9 +363,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             """Get the status of the last created evaluation job."""
             logger.info("Getting last job status")
 
-            async with session_manager.session(request=http_request):
+            async with session_manager.session(http_connection=http_request):
 
-                job = job_store.get_last_job()
+                job = await self._job_store.get_last_job()
                 if not job:
                     logger.warning("No jobs found when requesting last job status")
                     raise HTTPException(status_code=404, detail="No jobs found")
@@ -361,65 +375,69 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         async def get_jobs(http_request: Request, status: str | None = None) -> list[EvaluateStatusResponse]:
             """Get all jobs, optionally filtered by status."""
 
-            async with session_manager.session(request=http_request):
+            async with session_manager.session(http_connection=http_request):
 
                 if status is None:
                     logger.info("Getting all jobs")
-                    jobs = job_store.get_all_jobs()
+                    jobs = await self._job_store.get_all_jobs()
                 else:
                     logger.info("Getting jobs with status %s", status)
-                    jobs = job_store.get_jobs_by_status(status)
+                    jobs = await self._job_store.get_jobs_by_status(JobStatus(status))
+
                 logger.info("Found %d jobs", len(jobs))
                 return [translate_job_to_response(job) for job in jobs]
 
         if self.front_end_config.evaluate.path:
-            # Add last job endpoint first (most specific)
-            app.add_api_route(
-                path=f"{self.front_end_config.evaluate.path}/job/last",
-                endpoint=get_last_job_status,
-                methods=["GET"],
-                response_model=EvaluateStatusResponse,
-                description="Get the status of the last created evaluation job",
-                responses={
-                    404: {
-                        "description": "No jobs found"
-                    }, 500: response_500
-                },
-            )
+            if self._dask_available:
+                # Add last job endpoint first (most specific)
+                app.add_api_route(
+                    path=f"{self.front_end_config.evaluate.path}/job/last",
+                    endpoint=get_last_job_status,
+                    methods=["GET"],
+                    response_model=EvaluateStatusResponse,
+                    description="Get the status of the last created evaluation job",
+                    responses={
+                        404: {
+                            "description": "No jobs found"
+                        }, 500: response_500
+                    },
+                )
 
-            # Add specific job endpoint (least specific)
-            app.add_api_route(
-                path=f"{self.front_end_config.evaluate.path}/job/{{job_id}}",
-                endpoint=get_job_status,
-                methods=["GET"],
-                response_model=EvaluateStatusResponse,
-                description="Get the status of an evaluation job",
-                responses={
-                    404: {
-                        "description": "Job not found"
-                    }, 500: response_500
-                },
-            )
+                # Add specific job endpoint (least specific)
+                app.add_api_route(
+                    path=f"{self.front_end_config.evaluate.path}/job/{{job_id}}",
+                    endpoint=get_job_status,
+                    methods=["GET"],
+                    response_model=EvaluateStatusResponse,
+                    description="Get the status of an evaluation job",
+                    responses={
+                        404: {
+                            "description": "Job not found"
+                        }, 500: response_500
+                    },
+                )
 
-            # Add jobs endpoint with optional status query parameter
-            app.add_api_route(
-                path=f"{self.front_end_config.evaluate.path}/jobs",
-                endpoint=get_jobs,
-                methods=["GET"],
-                response_model=list[EvaluateStatusResponse],
-                description="Get all jobs, optionally filtered by status",
-                responses={500: response_500},
-            )
+                # Add jobs endpoint with optional status query parameter
+                app.add_api_route(
+                    path=f"{self.front_end_config.evaluate.path}/jobs",
+                    endpoint=get_jobs,
+                    methods=["GET"],
+                    response_model=list[EvaluateStatusResponse],
+                    description="Get all jobs, optionally filtered by status",
+                    responses={500: response_500},
+                )
 
-            # Add HTTP endpoint for evaluation
-            app.add_api_route(
-                path=self.front_end_config.evaluate.path,
-                endpoint=start_evaluation,
-                methods=[self.front_end_config.evaluate.method],
-                response_model=EvaluateResponse,
-                description=self.front_end_config.evaluate.description,
-                responses={500: response_500},
-            )
+                # Add HTTP endpoint for evaluation
+                app.add_api_route(
+                    path=self.front_end_config.evaluate.path,
+                    endpoint=start_evaluation,
+                    methods=[self.front_end_config.evaluate.method],
+                    response_model=EvaluateResponse,
+                    description=self.front_end_config.evaluate.description,
+                    responses={500: response_500},
+                )
+            else:
+                logger.warning("Dask is not available, evaluation endpoints will not be added.")
 
     async def add_static_files_route(self, app: FastAPI, builder: WorkflowBuilder):
 
@@ -522,25 +540,27 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         workflow = session_manager.workflow
 
-        GenerateBodyType = workflow.input_schema  # pylint: disable=invalid-name
-        GenerateStreamResponseType = workflow.streaming_output_schema  # pylint: disable=invalid-name
-        GenerateSingleResponseType = workflow.single_output_schema  # pylint: disable=invalid-name
+        GenerateBodyType = workflow.input_schema
+        GenerateStreamResponseType = workflow.streaming_output_schema
+        GenerateSingleResponseType = workflow.single_output_schema
 
-        # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
-        # Consider prefixing these with "nat_" to avoid conflicts
-        class AsyncGenerateRequest(GenerateBodyType):
-            job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
-            sync_timeout: int = Field(
-                default=0,
-                ge=0,
-                le=300,
-                description="Attempt to perform the job synchronously up until `sync_timeout` sectonds, "
-                "if the job hasn't been completed by then a job_id will be returned with a status code of 202.")
-            expiry_seconds: int = Field(default=JobStore.DEFAULT_EXPIRY,
-                                        ge=JobStore.MIN_EXPIRY,
-                                        le=JobStore.MAX_EXPIRY,
-                                        description="Optional time (in seconds) before the job expires. "
-                                        "Clamped between 600 (10 min) and 86400 (24h).")
+        if self._dask_available:
+            # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
+            # Consider prefixing these with "nat_" to avoid conflicts
+
+            class AsyncGenerateRequest(GenerateBodyType):
+                job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
+                sync_timeout: int = Field(
+                    default=0,
+                    ge=0,
+                    le=300,
+                    description="Attempt to perform the job synchronously up until `sync_timeout` sectonds, "
+                    "if the job hasn't been completed by then a job_id will be returned with a status code of 202.")
+                expiry_seconds: int = Field(default=JobStore.DEFAULT_EXPIRY,
+                                            ge=JobStore.MIN_EXPIRY,
+                                            le=JobStore.MAX_EXPIRY,
+                                            description="Optional time (in seconds) before the job expires. "
+                                            "Clamped between 600 (10 min) and 86400 (24h).")
 
         # Ensure that the input is in the body. POD types are treated as query parameters
         if (not issubclass(GenerateBodyType, BaseModel)):
@@ -560,19 +580,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             },
         }
 
-        # Create job store for tracking async generation jobs
-        job_store = JobStore()
-
-        # Run up to max_running_async_jobs jobs at the same time
-        async_job_concurrency = asyncio.Semaphore(self._front_end_config.max_running_async_jobs)
-
         def get_single_endpoint(result_type: type | None):
 
             async def get_single(response: Response, request: Request):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(request=request,
+                async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return await generate_single_response(None, session_manager, result_type=result_type)
@@ -583,7 +597,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def get_stream(request: Request):
 
-                async with session_manager.session(request=request,
+                async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
@@ -618,7 +632,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(request=request,
+                async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return await generate_single_response(payload, session_manager, result_type=result_type)
@@ -632,7 +646,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(request: Request, payload: request_type):
 
-                async with session_manager.session(request=request,
+                async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
@@ -675,10 +689,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_openai_api_compatible(response: Response, request: Request, payload: request_type):
                 # Check if streaming is requested
+
+                response.headers["Content-Type"] = "application/json"
                 stream_requested = getattr(payload, 'stream', False)
 
-                async with session_manager.session(request=request):
+                async with session_manager.session(http_connection=request):
                     if stream_requested:
+
                         # Return streaming response
                         return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                                  content=generate_streaming_response_as_str(
@@ -688,115 +705,79 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                      step_adaptor=self.get_step_adaptor(),
                                                      result_type=ChatResponseChunk,
                                                      output_type=ChatResponseChunk))
-                    else:
-                        # Return single response - check if workflow supports non-streaming
-                        try:
-                            response.headers["Content-Type"] = "application/json"
-                            return await generate_single_response(payload, session_manager, result_type=ChatResponse)
-                        except ValueError as e:
-                            if "Cannot get a single output value for streaming workflows" in str(e):
-                                # Workflow only supports streaming, but client requested non-streaming
-                                # Fall back to streaming and collect the result
-                                chunks = []
-                                async for chunk_str in generate_streaming_response_as_str(
-                                        payload,
-                                        session_manager=session_manager,
-                                        streaming=True,
-                                        step_adaptor=self.get_step_adaptor(),
-                                        result_type=ChatResponseChunk,
-                                        output_type=ChatResponseChunk):
-                                    if chunk_str.startswith("data: ") and not chunk_str.startswith("data: [DONE]"):
-                                        chunk_data = chunk_str[6:].strip()  # Remove "data: " prefix
-                                        if chunk_data:
-                                            try:
-                                                chunk_json = ChatResponseChunk.model_validate_json(chunk_data)
-                                                if (chunk_json.choices and len(chunk_json.choices) > 0
-                                                        and chunk_json.choices[0].delta
-                                                        and chunk_json.choices[0].delta.content is not None):
-                                                    chunks.append(chunk_json.choices[0].delta.content)
-                                            except Exception:
-                                                continue
 
-                                # Create a single response from collected chunks
-                                content = "".join(chunks)
-                                single_response = ChatResponse.from_string(content)
-                                response.headers["Content-Type"] = "application/json"
-                                return single_response
-                            else:
-                                raise
+                    return await generate_single_response(payload, session_manager, result_type=ChatResponse)
 
             return post_openai_api_compatible
 
-        async def run_generation(job_id: str, payload: typing.Any, session_manager: SessionManager, result_type: type):
-            """Background task to run the evaluation."""
-            async with async_job_concurrency:
-                try:
-                    result = await generate_single_response(payload=payload,
-                                                            session_manager=session_manager,
-                                                            result_type=result_type)
-                    job_store.update_status(job_id, "success", output=result)
-                except Exception as e:
-                    logger.error("Error in evaluation job %s: %s", job_id, e)
-                    job_store.update_status(job_id, "failure", error=str(e))
-
-        def _job_status_to_response(job: JobInfo) -> AsyncGenerationStatusResponse:
+        def _job_status_to_response(job: "JobInfo") -> AsyncGenerationStatusResponse:
             job_output = job.output
             if job_output is not None:
-                job_output = job_output.model_dump()
+                try:
+                    job_output = json.loads(job_output)
+                except json.JSONDecodeError:
+                    logger.error("Failed to parse job output as JSON: %s", job_output)
+                    job_output = {"error": "Output parsing failed"}
+
             return AsyncGenerationStatusResponse(job_id=job.job_id,
                                                  status=job.status,
                                                  error=job.error,
                                                  output=job_output,
                                                  created_at=job.created_at,
                                                  updated_at=job.updated_at,
-                                                 expires_at=job_store.get_expires_at(job))
+                                                 expires_at=self._job_store.get_expires_at(job))
 
-        def post_async_generation(request_type: type, final_result_type: type):
+        async def run_generation(scheduler_address: str,
+                                 db_url: str,
+                                 config_file_path: str,
+                                 job_id: str,
+                                 payload: typing.Any):
+            """Background task to run the workflow."""
+            job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
+            try:
+                async with load_workflow(config_file_path) as local_session_manager:
+                    result = await generate_single_response(
+                        payload, local_session_manager, result_type=local_session_manager.workflow.single_output_schema)
+
+                await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
+            except Exception as e:
+                logger.exception("Error in async job %s", job_id)
+                await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
+
+        def post_async_generation(request_type: type):
 
             async def start_async_generation(
-                    request: request_type, background_tasks: BackgroundTasks, response: Response,
+                    request: request_type, response: Response,
                     http_request: Request) -> AsyncGenerateResponse | AsyncGenerationStatusResponse:
                 """Handle async generation requests."""
 
-                async with session_manager.session(request=http_request):
+                async with session_manager.session(http_connection=http_request):
 
                     # if job_id is present and already exists return the job info
                     if request.job_id:
-                        job = job_store.get_job(request.job_id)
+                        job = await self._job_store.get_job(request.job_id)
                         if job:
                             return AsyncGenerateResponse(job_id=job.job_id, status=job.status)
 
-                    job_id = job_store.create_job(job_id=request.job_id, expiry_seconds=request.expiry_seconds)
-                    await self.create_cleanup_task(app=app, name="async_generation", job_store=job_store)
+                    job_id = self._job_store.ensure_job_id(request.job_id)
+                    (_, job) = await self._job_store.submit_job(job_id=job_id,
+                                                                expiry_seconds=request.expiry_seconds,
+                                                                job_fn=run_generation,
+                                                                sync_timeout=request.sync_timeout,
+                                                                job_args=[
+                                                                    self._scheduler_address,
+                                                                    self._db_url,
+                                                                    self._config_file_path,
+                                                                    job_id,
+                                                                    request.model_dump(mode="json")
+                                                                ])
 
-                    # The fastapi/starlette background tasks won't begin executing until after the response is sent
-                    # to the client, so we need to wrap the task in a function, alowing us to start the task now,
-                    # and allowing the background task function to await the results.
-                    task = asyncio.create_task(
-                        run_generation(job_id=job_id,
-                                       payload=request,
-                                       session_manager=session_manager,
-                                       result_type=final_result_type))
-
-                    async def wrapped_task(t: asyncio.Task):
-                        return await t
-
-                    background_tasks.add_task(wrapped_task, task)
-
-                    now = time.time()
-                    sync_timeout = now + request.sync_timeout
-                    while time.time() < sync_timeout:
-                        job = job_store.get_job(job_id)
-                        if job is not None and job.status not in job_store.ACTIVE_STATUS:
-                            # If the job is done, return the result
-                            response.status_code = 200
-                            return _job_status_to_response(job)
-
-                        # Sleep for a short time before checking again
-                        await asyncio.sleep(0.1)
+                    if job is not None:
+                        response.status_code = 200
+                        return _job_status_to_response(job)
 
                     response.status_code = 202
-                    return AsyncGenerateResponse(job_id=job_id, status="submitted")
+                    return AsyncGenerateResponse(job_id=job_id, status=JobStatus.SUBMITTED)
 
             return start_async_generation
 
@@ -804,10 +785,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             """Get the status of an async job."""
             logger.info("Getting status for job %s", job_id)
 
-            async with session_manager.session(request=http_request):
+            async with session_manager.session(http_connection=http_request):
 
-                job = job_store.get_job(job_id)
-                if not job:
+                job = await self._job_store.get_job(job_id)
+                if job is None:
                     logger.warning("Job %s not found", job_id)
                     raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
@@ -935,30 +916,33 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     responses={500: response_500},
                 )
 
-                app.add_api_route(
-                    path=f"{endpoint.path}/async",
-                    endpoint=post_async_generation(request_type=AsyncGenerateRequest,
-                                                   final_result_type=GenerateSingleResponseType),
-                    methods=[endpoint.method],
-                    response_model=AsyncGenerateResponse | AsyncGenerationStatusResponse,
-                    description="Start an async generate job",
-                    responses={500: response_500},
-                )
+                if self._dask_available:
+                    app.add_api_route(
+                        path=f"{endpoint.path}/async",
+                        endpoint=post_async_generation(request_type=AsyncGenerateRequest),
+                        methods=[endpoint.method],
+                        response_model=AsyncGenerateResponse | AsyncGenerationStatusResponse,
+                        description="Start an async generate job",
+                        responses={500: response_500},
+                    )
+                else:
+                    logger.warning("Dask is not available, async generation endpoints will not be added.")
             else:
                 raise ValueError(f"Unsupported method {endpoint.method}")
 
-            app.add_api_route(
-                path=f"{endpoint.path}/async/job/{{job_id}}",
-                endpoint=get_async_job_status,
-                methods=["GET"],
-                response_model=AsyncGenerationStatusResponse,
-                description="Get the status of an async job",
-                responses={
-                    404: {
-                        "description": "Job not found"
-                    }, 500: response_500
-                },
-            )
+            if self._dask_available:
+                app.add_api_route(
+                    path=f"{endpoint.path}/async/job/{{job_id}}",
+                    endpoint=get_async_job_status,
+                    methods=["GET"],
+                    response_model=AsyncGenerationStatusResponse,
+                    description="Get the status of an async job",
+                    responses={
+                        404: {
+                            "description": "Job not found"
+                        }, 500: response_500
+                    },
+                )
 
         if (endpoint.openai_api_path):
             if (endpoint.method == "GET"):
@@ -1061,8 +1045,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                code_verifier=verifier,
                                                state=state)
                 flow_state.future.set_result(res)
+            except OAuthError as e:
+                flow_state.future.set_exception(
+                    RuntimeError(f"Authorization server rejected request: {e.error} ({e.description})"))
+            except httpx.HTTPError as e:
+                flow_state.future.set_exception(RuntimeError(f"Network error during token fetch: {e}"))
             except Exception as e:
-                flow_state.future.set_exception(e)
+                flow_state.future.set_exception(RuntimeError(f"Authentication failed: {e}"))
 
             return HTMLResponse(content=AUTH_REDIRECT_SUCCESS_HTML,
                                 status_code=200,
@@ -1078,6 +1067,183 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 methods=["GET"],
                 description="Handles the authorization code and state returned from the Authorization Code Grant Flow.")
 
+    async def add_mcp_client_tool_list_route(self, app: FastAPI, builder: WorkflowBuilder):
+        """Add the MCP client tool list endpoint to the FastAPI app."""
+        from typing import Any
+
+        from pydantic import BaseModel
+
+        class MCPToolInfo(BaseModel):
+            name: str
+            description: str
+            server: str
+            available: bool
+
+        class MCPClientToolListResponse(BaseModel):
+            mcp_clients: list[dict[str, Any]]
+
+        async def get_mcp_client_tool_list() -> MCPClientToolListResponse:
+            """
+            Get the list of MCP tools from all MCP clients in the workflow configuration.
+            Checks session health and compares with workflow function group configuration.
+            """
+            mcp_clients_info = []
+
+            try:
+                # Get all function groups from the builder
+                function_groups = builder._function_groups
+
+                # Find MCP client function groups
+                for group_name, configured_group in function_groups.items():
+                    if configured_group.config.type != "mcp_client":
+                        continue
+
+                    from nat.plugins.mcp.client_config import MCPClientConfig
+
+                    config = configured_group.config
+                    assert isinstance(config, MCPClientConfig)
+
+                    # Reuse the existing MCP client session stored on the function group instance
+                    group_instance = configured_group.instance
+
+                    client = group_instance.mcp_client
+                    if client is None:
+                        raise RuntimeError(f"MCP client not found for group {group_name}")
+
+                    try:
+                        session_healthy = False
+                        server_tools: dict[str, Any] = {}
+
+                        try:
+                            server_tools = await client.get_tools()
+                            session_healthy = True
+                        except Exception as e:
+                            logger.exception(f"Failed to connect to MCP server {client.server_name}: {e}")
+                            session_healthy = False
+
+                        # Get workflow function group configuration (configured client-side tools)
+                        configured_short_names: set[str] = set()
+                        configured_full_to_fn: dict[str, Function] = {}
+                        try:
+                            # Pass a no-op filter function to bypass any default filtering that might check
+                            # health status, preventing potential infinite recursion during health status checks.
+                            async def pass_through_filter(fn):
+                                return fn
+
+                            accessible_functions = await group_instance.get_accessible_functions(
+                                filter_fn=pass_through_filter)
+                            configured_full_to_fn = accessible_functions
+                            configured_short_names = {name.split('.', 1)[1] for name in accessible_functions.keys()}
+                        except Exception as e:
+                            logger.exception(f"Failed to get accessible functions for group {group_name}: {e}")
+
+                        # Build alias->original mapping and override configs from overrides
+                        alias_to_original: dict[str, str] = {}
+                        override_configs: dict[str, Any] = {}
+                        try:
+                            if config.tool_overrides is not None:
+                                for orig_name, override in config.tool_overrides.items():
+                                    if override.alias is not None:
+                                        alias_to_original[override.alias] = orig_name
+                                        override_configs[override.alias] = override
+                                    else:
+                                        override_configs[orig_name] = override
+                        except Exception:
+                            pass
+
+                        # Create tool info list (always return configured tools; mark availability)
+                        tools_info: list[dict[str, Any]] = []
+                        available_count = 0
+                        for wf_fn, fn_short in zip(configured_full_to_fn.values(), configured_short_names):
+                            orig_name = alias_to_original.get(fn_short, fn_short)
+                            available = session_healthy and (orig_name in server_tools)
+                            if available:
+                                available_count += 1
+
+                            # Prefer tool override description, then workflow function description,
+                            # then server description
+                            description = ""
+                            if fn_short in override_configs and override_configs[fn_short].description:
+                                description = override_configs[fn_short].description
+                            elif wf_fn.description:
+                                description = wf_fn.description
+                            elif available and orig_name in server_tools:
+                                description = server_tools[orig_name].description or ""
+
+                            tools_info.append(
+                                MCPToolInfo(name=fn_short,
+                                            description=description or "",
+                                            server=client.server_name,
+                                            available=available).model_dump())
+
+                        # Sort tools_info by name to maintain consistent ordering
+                        tools_info.sort(key=lambda x: x['name'])
+
+                        mcp_clients_info.append({
+                            "function_group": group_name,
+                            "server": client.server_name,
+                            "transport": config.server.transport,
+                            "session_healthy": session_healthy,
+                            "tools": tools_info,
+                            "total_tools": len(configured_short_names),
+                            "available_tools": available_count
+                        })
+
+                    except Exception as e:
+                        logger.error(f"Error processing MCP client {group_name}: {e}")
+                        mcp_clients_info.append({
+                            "function_group": group_name,
+                            "server": "unknown",
+                            "transport": config.server.transport if config.server else "unknown",
+                            "session_healthy": False,
+                            "error": str(e),
+                            "tools": [],
+                            "total_tools": 0,
+                            "workflow_tools": 0
+                        })
+
+                return MCPClientToolListResponse(mcp_clients=mcp_clients_info)
+
+            except Exception as e:
+                logger.error(f"Error in MCP client tool list endpoint: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to retrieve MCP client information: {str(e)}")
+
+        # Add the route to the FastAPI app
+        app.add_api_route(
+            path="/mcp/client/tool/list",
+            endpoint=get_mcp_client_tool_list,
+            methods=["GET"],
+            response_model=MCPClientToolListResponse,
+            description="Get list of MCP client tools with session health and workflow configuration comparison",
+            responses={
+                200: {
+                    "description": "Successfully retrieved MCP client tool information",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "mcp_clients": [{
+                                    "function_group": "mcp_tools",
+                                    "server": "streamable-http:http://localhost:9901/mcp",
+                                    "transport": "streamable-http",
+                                    "session_healthy": True,
+                                    "tools": [{
+                                        "name": "tool_a",
+                                        "description": "Tool A description",
+                                        "server": "streamable-http:http://localhost:9901/mcp",
+                                        "available": True
+                                    }],
+                                    "total_tools": 1,
+                                    "available_tools": 1
+                                }]
+                            }
+                        }
+                    }
+                },
+                500: {
+                    "description": "Internal Server Error"
+                }
+            })
+
     async def _add_flow(self, state: str, flow_state: FlowState):
         async with self._outstanding_flows_lock:
             self._outstanding_flows[state] = flow_state
@@ -1085,3 +1251,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
     async def _remove_flow(self, state: str):
         async with self._outstanding_flows_lock:
             del self._outstanding_flows[state]
+
+
+# Prevent Sphinx from documenting items not a part of the public API
+__all__ = ["FastApiFrontEndPluginWorkerBase", "FastApiFrontEndPluginWorker", "RouteInfo"]

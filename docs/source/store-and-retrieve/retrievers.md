@@ -105,7 +105,7 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
     # Build a Retriever
     retriever_tool = await builder.get_retriever(config.retriever)
 
-    # Build a langchain Retriever
+    # Build a LangChain/LangGraph Retriever
     langchain_retriever = await builder.get_retriever(config.retriever, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 ```
 

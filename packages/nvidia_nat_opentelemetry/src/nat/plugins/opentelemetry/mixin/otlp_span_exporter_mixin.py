@@ -15,9 +15,8 @@
 
 import logging
 
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
 from nat.plugins.opentelemetry.otel_span import OtelSpan
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,8 @@ class OTLPSpanExporterMixin:
 
     This mixin is designed to be used with OtelSpanExporter as a base class:
 
-    Example:
+    Example::
+
         class MyOTLPExporter(OtelSpanExporter, OTLPSpanExporterMixin):
             def __init__(self, endpoint, headers, **kwargs):
                 super().__init__(endpoint=endpoint, headers=headers, **kwargs)

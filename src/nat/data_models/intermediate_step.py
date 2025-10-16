@@ -150,7 +150,7 @@ class IntermediateStepPayload(BaseModel):
     UUID: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
     @property
-    def event_category(self) -> IntermediateStepCategory:  # pylint: disable=too-many-return-statements
+    def event_category(self) -> IntermediateStepCategory:
         match self.event_type:
             case IntermediateStepType.LLM_START:
                 return IntermediateStepCategory.LLM
@@ -188,7 +188,7 @@ class IntermediateStepPayload(BaseModel):
                 raise ValueError(f"Unknown event type: {self.event_type}")
 
     @property
-    def event_state(self) -> IntermediateStepState:  # pylint: disable=too-many-return-statements
+    def event_state(self) -> IntermediateStepState:
         match self.event_type:
             case IntermediateStepType.LLM_START:
                 return IntermediateStepState.START
@@ -298,7 +298,7 @@ class IntermediateStep(BaseModel):
         return self.payload.usage_info
 
     @property
-    def UUID(self) -> str:  # pylint: disable=invalid-name
+    def UUID(self) -> str:
         return self.payload.UUID
 
     @property

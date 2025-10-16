@@ -16,7 +16,12 @@
 import functools
 import inspect
 import logging
+from collections.abc import AsyncGenerator
+from collections.abc import Callable
+from collections.abc import Generator
 from typing import Any
+from typing import TypeVar
+from typing import overload
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +29,9 @@ BASE_WARNING_MESSAGE = ("is experimental and the API may change in future releas
                         "Future versions may introduce breaking changes without notice.")
 
 _warning_issued = set()
+
+# Type variables for overloads
+F = TypeVar('F', bound=Callable[..., Any])
 
 
 def issue_experimental_warning(function_name: str,
@@ -53,7 +61,20 @@ def issue_experimental_warning(function_name: str,
         _warning_issued.add(function_name)
 
 
-def experimental(func: Any = None, *, feature_name: str | None = None, metadata: dict[str, Any] | None = None):
+# Overloads for different function types
+@overload
+def experimental(func: F, *, feature_name: str | None = None, metadata: dict[str, Any] | None = None) -> F:
+    """Overload for when a function is passed directly."""
+    ...
+
+
+@overload
+def experimental(*, feature_name: str | None = None, metadata: dict[str, Any] | None = None) -> Callable[[F], F]:
+    """Overload for decorator factory usage (when called with parentheses)."""
+    ...
+
+
+def experimental(func: Any = None, *, feature_name: str | None = None, metadata: dict[str, Any] | None = None) -> Any:
     """
     Decorator that can wrap any type of function (sync, async, generator,
     async generator) and logs a warning that the function is experimental.
@@ -90,7 +111,7 @@ def experimental(func: Any = None, *, feature_name: str | None = None, metadata:
         # ---------------------
 
         @functools.wraps(func)
-        async def async_gen_wrapper(*args, **kwargs):
+        async def async_gen_wrapper(*args, **kwargs) -> AsyncGenerator[Any, Any]:
             issue_experimental_warning(function_name, feature_name, metadata)
             async for item in func(*args, **kwargs):
                 yield item  # yield the original item
@@ -102,7 +123,7 @@ def experimental(func: Any = None, *, feature_name: str | None = None, metadata:
         # ASYNC FUNCTION
         # ---------------------
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args, **kwargs) -> Any:
             issue_experimental_warning(function_name, feature_name, metadata)
             result = await func(*args, **kwargs)
             return result
@@ -114,15 +135,14 @@ def experimental(func: Any = None, *, feature_name: str | None = None, metadata:
         # SYNC GENERATOR
         # ---------------------
         @functools.wraps(func)
-        def sync_gen_wrapper(*args, **kwargs):
+        def sync_gen_wrapper(*args, **kwargs) -> Generator[Any, Any, Any]:
             issue_experimental_warning(function_name, feature_name, metadata)
-            for item in func(*args, **kwargs):
-                yield item  # yield the original item
+            yield from func(*args, **kwargs)  # yield the original item
 
         return sync_gen_wrapper
 
     @functools.wraps(func)
-    def sync_wrapper(*args, **kwargs):
+    def sync_wrapper(*args, **kwargs) -> Any:
         issue_experimental_warning(function_name, feature_name, metadata)
         result = func(*args, **kwargs)
         return result

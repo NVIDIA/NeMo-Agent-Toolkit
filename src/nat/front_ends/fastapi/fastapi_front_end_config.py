@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import logging
+import os
+import sys
 import typing
 from datetime import datetime
 from pathlib import Path
@@ -29,6 +31,20 @@ from nat.data_models.step_adaptor import StepAdaptorConfig
 logger = logging.getLogger(__name__)
 
 YAML_EXTENSIONS = (".yaml", ".yml")
+
+
+def _is_reserved(path: Path) -> bool:
+    """
+    Check if a path is reserved in the current Python version and platform.
+
+    On Windows, this function checks if the path is reserved in the current Python version.
+    On other platforms, returns False
+    """
+    if sys.platform != "win32":
+        return False
+    if sys.version_info >= (3, 13):
+        return os.path.isreserved(path)
+    return path.is_reserved()
 
 
 class EvaluateRequest(BaseModel):
@@ -51,7 +67,7 @@ class EvaluateRequest(BaseModel):
                 f"Job ID '{job_id}' contains invalid characters. Only alphanumeric characters and underscores are"
                 " allowed.")
 
-        if job_id_path.is_reserved():
+        if _is_reserved(job_id_path):
             # reserved names is Windows specific
             raise ValueError(f"Job ID '{job_id}' is a reserved name. Please choose a different name.")
 
@@ -68,7 +84,7 @@ class EvaluateRequest(BaseModel):
             raise ValueError(f"Config file '{config_file}' must be a YAML file with one of the following extensions: "
                              f"{', '.join(YAML_EXTENSIONS)}")
 
-        if config_file_path.is_reserved():
+        if _is_reserved(config_file_path):
             # reserved names is Windows specific
             raise ValueError(f"Config file '{config_file}' is a reserved name. Please choose a different name.")
 
@@ -181,9 +197,24 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     port: int = Field(default=8000, description="Port to bind the server to", ge=0, le=65535)
     reload: bool = Field(default=False, description="Enable auto-reload for development")
     workers: int = Field(default=1, description="Number of workers to run", ge=1)
-    max_running_async_jobs: int = Field(default=10,
-                                        description="Maximum number of async jobs to run concurrently",
-                                        ge=1)
+    scheduler_address: str | None = Field(
+        default=None,
+        description=("Address of the Dask scheduler to use for async jobs. If None, a Dask local cluster is created. "
+                     "Note: This requires the optional dask dependency to be installed."))
+    db_url: str | None = Field(
+        default=None,
+        description=
+        "SQLAlchemy database URL for storing async job metadata, if unset a temporary SQLite database is used.")
+    max_running_async_jobs: int = Field(
+        default=10,
+        description=(
+            "Maximum number of async jobs to run concurrently, this controls the number of dask workers created. "
+            "This parameter is only used when scheduler_address is `None` and a Dask local cluster is created."),
+        ge=1)
+    dask_log_level: str = Field(
+        default="WARNING",
+        description="Logging level for Dask.",
+    )
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(

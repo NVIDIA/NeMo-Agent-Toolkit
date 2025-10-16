@@ -3,16 +3,17 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
 name = "nat_semantic_kernel_demo"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[langchain,semantic-kernel,mem0ai]~=1.2",
-  "faiss-cpu==1.9.0",
+  "nvidia-nat[langchain,mem0ai,semantic-kernel]~=1.4",
+  "usearch==2.21.0",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "Semantic Kernel Example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]

@@ -61,11 +61,11 @@ async def automated_description_milvus_workflow(workflow_config: AutomatedDescri
     logger.info("Building necessary components for the Automated Description Generation Workflow")
     llm_n = await builder.get_llm(llm_name=workflow_config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-    # Description generation needs a Langchain retriever
+    # Description generation needs a LangChain/LangGraph retriever
     vs_retriever = await builder.get_retriever(retriever_name=workflow_config.retriever_name,
                                                wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     # Get the retriever tool
-    retriever_tool: Function = builder.get_function(workflow_config.retrieval_tool_name)
+    retriever_tool: Function = await builder.get_function(workflow_config.retrieval_tool_name)
 
     vectorstore = vs_retriever.vectorstore
 

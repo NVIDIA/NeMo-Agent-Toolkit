@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=redefined-outer-name
-
 import asyncio
 import re
 
@@ -138,7 +136,7 @@ class TestFileExportMixin:
         await exporter.export_processed(test_data)
 
         # Verify the data was written to the file
-        async with aiofiles.open(output_path, mode='r') as f:
+        async with aiofiles.open(output_path) as f:
             content = await f.read()
 
         assert test_data + "\n" == content
@@ -154,7 +152,7 @@ class TestFileExportMixin:
         await exporter.export_processed(test_data)
 
         # Verify all strings were written to the file
-        async with aiofiles.open(output_path, mode='r') as f:
+        async with aiofiles.open(output_path) as f:
             content = await f.read()
 
         expected_content = "first line\nsecond line\nthird line\n"
@@ -171,7 +169,7 @@ class TestFileExportMixin:
         await exporter.export_processed(test_data)
 
         # Verify no content was written for empty list
-        async with aiofiles.open(output_path, mode='r') as f:
+        async with aiofiles.open(output_path) as f:
             content = await f.read()
 
         assert content == ""
@@ -189,7 +187,7 @@ class TestFileExportMixin:
         await exporter.export_processed(second_data)
 
         # Verify both writes were appended
-        async with aiofiles.open(output_path, mode='r') as f:
+        async with aiofiles.open(output_path) as f:
             content = await f.read()
 
         expected_content = "first write\nsecond write\n"
@@ -210,7 +208,7 @@ class TestFileExportMixin:
         await asyncio.gather(*tasks)
 
         # Verify all strings were written
-        async with aiofiles.open(output_path, mode='r') as f:
+        async with aiofiles.open(output_path) as f:
             content = await f.read()
 
         lines = content.strip().split('\n')
@@ -248,7 +246,7 @@ class TestFileExportMixin:
         await asyncio.gather(*tasks)
 
         # Verify all lines were written
-        async with aiofiles.open(output_path, mode='r') as f:
+        async with aiofiles.open(output_path) as f:
             content = await f.read()
 
         lines = content.strip().split('\n')
@@ -294,7 +292,7 @@ class TestFileExportMixin:
         await exporter.export_processed("string with\nnewlines")
 
         # Verify content was written (not counting lines due to embedded newlines)
-        async with aiofiles.open(output_path, mode='r') as f:
+        async with aiofiles.open(output_path) as f:
             content = await f.read()
 
         # Just verify all content is present in some form
@@ -318,7 +316,7 @@ class TestFileExportMixin:
         await exporter.export_processed(["", "", ""])  # list of empty strings
 
         # Verify the file content
-        async with aiofiles.open(output_path, mode='r') as f:
+        async with aiofiles.open(output_path) as f:
             content = await f.read()
 
         # Empty list should write nothing, single item should write one line + \n,
@@ -339,7 +337,7 @@ class TestFileExportMixin:
         await exporter.export_processed(large_list)
 
         # Verify all lines were written
-        async with aiofiles.open(output_path, mode='r') as f:
+        async with aiofiles.open(output_path) as f:
             content = await f.read()
 
         lines = content.strip().split('\n')

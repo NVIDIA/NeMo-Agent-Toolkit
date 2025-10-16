@@ -22,11 +22,15 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 ## Table of Contents
 
 - [Key Features](#key-features)
+- [Function Groups Overview](#function-groups-overview)
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
-  - [Setting up MinIO (Optional)](#setting-up-minio-optional)
-  - [Setting up the MySQL Server (Optional)](#setting-up-the-mysql-server-optional)
+  - [Choose an Object Store](#choose-an-object-store)
+    - [Setting up MinIO](#setting-up-minio)
+    - [Setting up MySQL](#setting-up-mysql)
+    - [Setting up Redis](#setting-up-redis)
+  - [Loading Mock Data](#loading-mock-data)
 - [NeMo Agent Toolkit File Server](#nemo-agent-toolkit-file-server)
   - [Using the Object Store Backed File Server (Optional)](#using-the-object-store-backed-file-server-optional)
 - [Run the Workflow](#run-the-workflow)
@@ -37,11 +41,59 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 
 ## Key Features
 
+- **Function Group Implementation**: Demonstrates the new function groups feature in NeMo Agent toolkit for sharing configurations and resources across multiple functions.
+- **Shared Configuration**: All user report functions share the same object store reference and configuration settings.
+- **Resource Sharing**: Functions within the group share the same object store client connection, reducing resource overhead.
 - **Object Store Integration:** Demonstrates comprehensive integration with object storage systems including AWS S3 and MinIO for storing and retrieving user report data.
-- **Multi-Database Support:** Shows support for both object stores (S3-compatible) and relational databases (MySQL) for flexible data storage architectures.
+- **Multi-Database Support:** Shows support for object stores (S3-compatible), relational databases (MySQL), and key-value stores (Redis) for flexible data storage architectures.
 - **File Server Backend:** Provides a complete file server implementation with object store backing, supporting REST API operations for upload, download, update, and delete.
 - **Real-Time Report Management:** Enables dynamic creation, retrieval, and management of user reports through natural language interfaces with automatic timestamp handling.
 - **Mock Data Pipeline:** Includes complete setup scripts and mock data for testing object store workflows without requiring production data sources.
+
+## Function Groups Overview
+
+This example demonstrates the new function groups feature in NeMo Agent toolkit. Function groups allow you to:
+
+- **Share configurations** across multiple related functions
+- **Share resources** such as database connections or API clients
+- **Reduce duplication** in both Python code and YAML configurations
+- **Maintain compatibility** with existing function interfaces
+
+### How Function Groups Work
+
+The user report function group (`user_report`) contains four functions that all share the same configuration:
+
+- **Shared Configuration**: All functions use the same `object_store` reference and function descriptions
+- **Shared Resources**: All functions share the same object store client connection
+- **Individual Functions**: Each function (`get`, `put`, `update`, `delete`) has its own logic and description
+- **Naming Convention**: Functions are referenced as `user_report.get`, `user_report.put`, etc.
+
+### Configuration Structure
+
+```yaml
+function_groups:
+  user_report:
+    _type: user_report
+    expose: [get, put, update, delete]
+    object_store: report_object_store
+    get_description: "Description for get function..."
+    put_description: "Description for put function..."
+    update_description: "Description for update function..."
+    delete_description: "Description for delete function..."
+```
+
+### Function References
+
+In the workflow configuration, you can reference individual functions or the entire group:
+
+```yaml
+workflow:
+  _type: react_agent
+  # Reference individual functions
+  tool_names: [user_report.get, user_report.put, user_report.update, user_report.delete]
+  
+  # tool_names: [user_report]
+```
 
 ## Installation and Setup
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
@@ -61,138 +113,75 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-### Setting up MinIO (Optional)
+### Choose an Object Store
+
+You must choose an object store to use for this example. The in-memory object store is useful for transient use cases, but is not particularly useful for this example due to the lack of persistence.
+
+#### Setting up MinIO
+
 If you want to run this example in a local setup without creating a bucket in AWS, you can set up MinIO in your local machine. MinIO is an object storage system and acts as drop-in replacement for AWS S3.
 
-For the up-to-date installation instructions of MinIO, see [MinIO Page](https://github.com/minio/minio) and MinIO client see [MinIO Client Page](https://github.com/minio/mc)
-
-#### macOS
-To install MinIO on your macOS machine, run the following commands:
-<!-- path-check-skip-begin -->
-```bash
-brew install minio/stable/mc
-mc --help
-mc alias set myminio http://localhost:9000 minioadmin minioadmin
-
-brew install minio/stable/minio
-```
-<!-- path-check-skip-end -->
-
-#### Linux
-To install MinIO on your Linux machine, run the following commands:
-<!-- path-check-skip-begin -->
-```bash
-curl https://dl.min.io/client/mc/release/linux-amd64/mc \
-  --create-dirs \
-  -o $HOME/minio-binaries/mc
-
-chmod +x $HOME/minio-binaries/mc
-export PATH=$PATH:$HOME/minio-binaries/
-mc --help
-mc alias set myminio http://localhost:9000 minioadmin minioadmin
-
-wget https://dl.min.io/server/minio/release/linux-amd64/archive/minio_20250422221226.0.0_amd64.deb -O minio.deb
-sudo dpkg -i minio.deb
-```
-<!-- path-check-skip-end -->
-
-### Start the MinIO Server
-To start the MinIO server, run the following command:
-```bash
-minio server ~/.minio
-```
-
-### Useful MinIO Commands
-
-List buckets:
-```bash
-mc ls myminio
-```
-
-List all files in a bucket:
-<!-- path-check-skip-begin -->
-```bash
-mc ls --recursive myminio/my-bucket
-```
-<!-- path-check-skip-end -->
-
-### Load Mock Data to MiniIO
-To load mock data to minIO, use the `upload_to_minio.sh` script in this directory. For this example, we will load the mock user reports in the `data/object_store` directory.
+You can use the [docker-compose.minio.yml](../../deploy/docker-compose.minio.yml) file to start a MinIO server in a local docker container.
 
 ```bash
-cd examples/object_store/user_report/
-./upload_to_minio.sh data/object_store myminio my-bucket
+docker compose -f examples/deploy/docker-compose.minio.yml up -d
 ```
 
-### Setting up the MySQL Server (Optional)
+> [!NOTE]
+> This is not a secure configuration and should not be used in production systems.
 
-#### Linux (Ubuntu)
+#### Setting up MySQL
 
-1. Install MySQL Server:
-```bash
-sudo apt update
-sudo apt install mysql-server
-```
+If you want to use a MySQL server, you can use the [docker-compose.mysql.yml](../../deploy/docker-compose.mysql.yml) file to start a MySQL server in a local docker container.
 
-2. Verify installation:
-```
-sudo systemctl status mysql
-```
-
-Make sure that the service is `active (running)`.
-
-3. The default installation of the MySQL server allows root access only if you’re the system user "root" (socket-based authentication). To be able to connect using the root user and password, run the following command:
-```
-sudo mysql
-```
-
-4. Inside the MySQL console, run the following command (you can choose any password but make sure it matches the one used in the config):
-```
-ALTER USER 'root'@'localhost'
-  IDENTIFIED WITH mysql_native_password BY 'my_password';
-FLUSH PRIVILEGES;
-quit
-```
-
-Note: This is not a secure configuration and should not to be used in production systems.
-
-5. Back in the terminal:
-```bash
-sudo service mysql restart
-```
-
-### Load Mock Data to MySQL Server
-To load mock data to the MySQL server:
-
-1. Update the MYSQL configuration:
-```bash
-sudo tee /etc/mysql/my.cnf > /dev/null <<EOF
-[mysqld]
-secure_file_priv=""
-EOF
-```
-
-2. Append this rule to MySQL's AppArmor profile local override:
-```bash
-echo "/tmp/** r," | sudo tee -a /etc/apparmor.d/local/usr.sbin.mysqld
-```
-
-3. Reload the AppArmor policy:
-```bash
-sudo apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld
-```
-
-4. Restart the MySQL server:
-```bash
-sudo systemctl restart mysql
-```
-
-5. Use the `upload_to_mysql.sh` script in this directory. For this example, we will load the mock user reports in the `data/object_store` directory.
+You should first specify the `MYSQL_ROOT_PASSWORD` environment variable.
 
 ```bash
-cd examples/object_store/user_report/
-./upload_to_mysql.sh root my_password data/object_store my-bucket
+export MYSQL_ROOT_PASSWORD=<password>
 ```
+
+Then start the MySQL server.
+
+```bash
+docker compose -f examples/deploy/docker-compose.mysql.yml up -d
+```
+
+> [!NOTE]
+> This is not a secure configuration and should not be used in production systems.
+
+#### Setting up Redis
+
+If you want to use a Redis server, you can use the [docker-compose.redis.yml](../../deploy/docker-compose.redis.yml) file to start a Redis server in a local docker container.
+
+```bash
+docker compose -f examples/deploy/docker-compose.redis.yml up -d
+```
+
+> [!NOTE]
+> This is not a secure configuration and should not be used in production systems.
+
+### Loading Mock Data
+
+This example uses mock data to demonstrate the functionality of the object store. Mock data can be loaded to the object store by running the following commands based on the object store selected.
+
+```bash
+# Load mock data to MinIO
+nat object-store \
+  s3 --endpoint-url http://127.0.0.1:9000 --access-key minioadmin --secret-key minioadmin my-bucket \
+  upload ./examples/object_store/user_report/data/object_store/
+
+# Load mock data to MySQL
+nat object-store \
+  mysql --host 127.0.0.1 --username root --password ${MYSQL_ROOT_PASSWORD} --port 3306 my-bucket \
+  upload ./examples/object_store/user_report/data/object_store/
+
+# Load mock data to Redis
+nat object-store \
+  redis --host 127.0.0.1 --port 6379 --db 0 my-bucket \
+  upload ./examples/object_store/user_report/data/object_store/
+```
+
+There are additional command-line arguments that can be used to specify authentication credentials for some object stores.
 
 ## NeMo Agent Toolkit File Server
 
@@ -210,16 +199,21 @@ object_stores:
   ...
 ```
 
-You can start the server by running:
+You can start the file server by running the following command with the appropriate configuration file:
 ```bash
 nat serve --config_file examples/object_store/user_report/configs/config_s3.yml
 ```
 
+The above command will use the S3-compatible object store. Other configuration files are available in the `configs` directory for the different object stores.
+
+> [!NOTE]
+> The only way to populate the in-memory object store is through `nat serve` followed by the appropriate `PUT` or `POST` request. All subsequent interactions must be done through the REST API rather than through `nat run`.
+
 ### Using the Object Store Backed File Server (Optional)
 
-- Download an object: `curl -X GET http://<hostname>:<port>/static/{file_path}`
-- Upload an object: `curl -X POST http://<hostname>:<port>/static/{file_path}`
-- Upsert an object: `curl -X PUT http://<hostname>:<port>/static/{file_path}`
+- Download an object: `curl -X GET http://<hostname>:<port>/static/{file_path} -o {filename}`
+- Upload an object: `curl -X POST http://<hostname>:<port>/static/{file_path} --data-binary @{filename}`
+- Upsert an object: `curl -X PUT http://<hostname>:<port>/static/{file_path} --data-binary @{filename}`
 - Delete an object: `curl -X DELETE http://<hostname>:<port>/static/{file_path}`
 
 If any of the loading scripts were run and the files are in the object store, example commands are:
@@ -231,6 +225,15 @@ If any of the loading scripts were run and the files are in the object store, ex
 
 For each of the following examples, a command is provided to run the workflow with the specified input. Run the following command from the root of the NeMo Agent toolkit repo to execute the workflow.
 
+You have three options for running the workflow:
+1. Using the S3-compatible object store (`config_s3.yml`)
+2. Using the MySQL object store (`config_mysql.yml`)
+3. Using the Redis object store (`config_redis.yml`)
+
+The configuration file used in the examples below is `config_s3.yml` which uses an S3-compatible object store.
+You can change the configuration file by changing the `--config_file` argument to `config_mysql.yml` for the MySQL server
+or `config_redis.yml` for the Redis server.
+
 ### Get User Report
 ```
 nat run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
@@ -241,7 +244,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: get_user_report
+Calling tools: user_report.get
 Tool's input: {"user_id": "67890", "date": null}
 
 <snipped for brevity>
@@ -282,10 +285,10 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: put_user_report
+Calling tools: user_report.put
 Tool's input: {"report": "{\n    \"recommendations\": [\n        \"Update graphics driver\",\n        \"Check for overheating hardware\",\n        \"Enable automatic crash reporting\"\n    ]\n}", "user_id": "6789", "date": null}
 Tool's response:
-User report for 678901 with date latest added successfully
+User report for 6789 with date latest added successfully
 
 <snipped for brevity>
 
@@ -300,7 +303,7 @@ If you attempt to put a report for a user and date that already exists, the work
 <snipped for brevity>
 
 [AGENT]
-Calling tools: put_user_report
+Calling tools: user_report.put
 Tool's input: {"report": "{\"recommendations\": [\"Update graphics driver\", \"Check for overheating hardware\", \"Enable automatic crash reporting\"]}", "user_id": "6789", "date": null}
 Tool's response:
 User report for 6789 with date latest already exists
@@ -329,7 +332,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: update_user_report
+Calling tools: user_report.update
 Tool's input: {"report": "{\"recommendations\": [\"Update graphics driver\", \"Check for overheating hardware\", \"Reboot the system\"]}", "user_id": "6789", "date": null}
 Tool's response:
 User report for 6789 with date latest updated
@@ -350,7 +353,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: delete_user_report
+Calling tools: user_report.delete
 Tool's input: {"user_id": "6789", "date": null}
 Tool's response:
 User report for 6789 with date latest deleted
@@ -368,7 +371,7 @@ If you attempt to delete a report that does not exist, the workflow will return 
 <snipped for brevity>
 
 [AGENT]
-Calling tools: delete_user_report
+Calling tools: user_report.delete
 Tool's input: {"user_id": "6789", "date": null}
 Tool's response:
 Tool call failed after all retry attempts. Last error: No object found with key: /reports/6789/latest.json. An error occurred (NoSuchKey) when calling the GetObject operation: The specified key does not exist.

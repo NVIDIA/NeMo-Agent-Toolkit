@@ -160,7 +160,7 @@ Telemetry exporters in NeMo Agent toolkit are responsible for:
 
 The flexible telemetry export system routes workflow events through different exporter types to various destinations:
 
-```{mermaid}
+```mermaid
 graph TD
     A[Workflow Events] --> B[Event Stream]
     B --> C[Telemetry Exporter]
@@ -182,7 +182,7 @@ graph TD
 
 NeMo Agent toolkit supports several types of exporters based on the data they handle:
 
-```{mermaid}
+```mermaid
 graph LR
     A["IntermediateStep"] --> B["Raw Exporter"]
     A --> C["Span Exporter"]
@@ -266,14 +266,14 @@ Before creating a custom exporter, check if your observability service is alread
 | Service | Type | Installation | Configuration |
 |---------|------|-------------|---------------|
 | **File** | `file` | `pip install nvidia-nat` | local file or directory |
-| **Langfuse** | `langfuse` | `pip install nvidia-nat[opentelemetry]` | endpoint + API keys |
-| **LangSmith** | `langsmith` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
-| **OpenTelemetry Collector** | `otelcollector` | `pip install nvidia-nat[opentelemetry]` | endpoint + headers |
-| **Patronus** | `patronus` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
-| **Galileo** | `galileo` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
-| **Phoenix** | `phoenix` | `pip install nvidia-nat[phoenix]` | endpoint |
-| **RagaAI/Catalyst** | `catalyst` | `pip install nvidia-nat[ragaai]` | API key + project |
-| **Weave** | `weave` | `pip install nvidia-nat[weave]` | project name |
+| **Langfuse** | `langfuse` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API keys |
+| **LangSmith** | `langsmith` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
+| **OpenTelemetry Collector** | `otelcollector` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + headers |
+| **Patronus** | `patronus` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
+| **Galileo** | `galileo` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
+| **Phoenix** | `phoenix` | `pip install "nvidia-nat[phoenix]"` | endpoint |
+| **RagaAI/Catalyst** | `catalyst` | `pip install "nvidia-nat[ragaai]"` | API key + project |
+| **Weave** | `weave` | `pip install "nvidia-nat[weave]"` | project name |
 
 ### Simple Configuration Example
 
@@ -412,7 +412,7 @@ class CustomSpanExporter(SpanExporter[Span, dict]):
 > **Note**: OpenTelemetry exporters require the `nvidia-nat-opentelemetry` subpackage. Install it with:
 
 > ```bash
-> pip install nvidia-nat[opentelemetry]
+> pip install "nvidia-nat[opentelemetry]"
 > ```
 
 For most OTLP-compatible services, use the pre-built `OTLPSpanAdapterExporter`:
@@ -457,7 +457,7 @@ async def custom_telemetry_exporter(config: CustomTelemetryExporter, builder: Bu
         yield exporter
 
     except Exception as ex:
-        logger.error(f"Failed to create custom telemetry exporter: {ex}", exc_info=True)
+        logger.error(f"Failed to create custom telemetry exporter: {ex}")
         raise
 ```
 

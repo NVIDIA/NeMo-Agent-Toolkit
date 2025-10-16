@@ -42,7 +42,7 @@ from nat.runtime.session import SessionManager
 logger = logging.getLogger(__name__)
 
 
-class EvaluationRun:  # pylint: disable=too-many-public-methods
+class EvaluationRun:
     """
     Instantiated for each evaluation run and used to store data for that single run.
 
@@ -63,7 +63,16 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
-        self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration()
+
+        # Create evaluation trace context
+        try:
+            from nat.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
+            self.eval_trace_context = WeaveEvalTraceContext()
+        except Exception:
+            from nat.eval.utils.eval_trace_ctx import EvalTraceContext
+            self.eval_trace_context = EvalTraceContext()
+
+        self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration(self.eval_trace_context)
         # Metadata
         self.eval_input: EvalInput | None = None
         self.workflow_interrupted: bool = False
@@ -161,17 +170,17 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 intermediate_future = None
 
                 try:
-
                     # Start usage stats and intermediate steps collection in parallel
                     intermediate_future = pull_intermediate()
                     runner_result = runner.result()
                     base_output = await runner_result
                     intermediate_steps = await intermediate_future
                 except NotImplementedError as e:
+                    logger.error("Failed to run the workflow: %s", e)
                     # raise original error
-                    raise e
+                    raise
                 except Exception as e:
-                    logger.exception("Failed to run the workflow: %s", e, exc_info=True)
+                    logger.exception("Failed to run the workflow: %s", e)
                     # stop processing if a workflow error occurs
                     self.workflow_interrupted = True
 
@@ -310,9 +319,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 logger.info("Deleting old job directory: %s", dir_to_delete)
                 shutil.rmtree(dir_to_delete)
             except Exception as e:
-                logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e, exc_info=True)
+                logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e)
 
-    def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):  # pylint: disable=unused-argument  # noqa: E501
+    def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
         workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -360,7 +369,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
             await self.weave_eval.alog_score(eval_output, evaluator_name)
         except Exception as e:
-            logger.exception("An error occurred while running evaluator %s: %s", evaluator_name, e, exc_info=True)
+            logger.exception("An error occurred while running evaluator %s: %s", evaluator_name, e)
 
     async def run_evaluators(self, evaluators: dict[str, Any]):
         """Run all configured evaluators asynchronously."""
@@ -373,7 +382,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         try:
             await asyncio.gather(*tasks)
         except Exception as e:
-            logger.exception("An error occurred while running evaluators: %s", e, exc_info=True)
+            logger.error("An error occurred while running evaluators: %s", e)
             raise
         finally:
             # Finish prediction loggers in Weave
@@ -403,6 +412,33 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         return workflow_type
 
+    async def wait_for_all_export_tasks_local(self, session_manager: SessionManager, timeout: float) -> None:
+        """Wait for all trace export tasks to complete for local workflows.
+
+        This only works for local workflows where we have direct access to the
+        SessionManager and its underlying workflow with exporter manager.
+        """
+        try:
+            workflow = session_manager.workflow
+            all_exporters = await workflow.get_all_exporters()
+            if not all_exporters:
+                logger.debug("No exporters to wait for")
+                return
+
+            logger.info("Waiting for export tasks from %d local exporters (timeout: %ds)", len(all_exporters), timeout)
+
+            for name, exporter in all_exporters.items():
+                try:
+                    await exporter.wait_for_tasks(timeout=timeout)
+                    logger.info("Export tasks completed for exporter: %s", name)
+                except Exception as e:
+                    logger.warning("Error waiting for export tasks from %s: %s", name, e)
+
+            logger.info("All local export task waiting completed")
+
+        except Exception as e:
+            logger.warning("Failed to wait for local export tasks: %s", e)
+
     async def run_and_evaluate(self,
                                session_manager: SessionManager | None = None,
                                job_id: str | None = None) -> EvaluationRunOutput:
@@ -415,10 +451,14 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         from nat.runtime.loader import load_config
 
         # Load and override the config
-        if self.config.override:
+        config = None
+        if isinstance(self.config.config_file, BaseModel):
+            config = self.config.config_file
+        elif self.config.override:
             config = self.apply_overrides()
         else:
             config = load_config(self.config.config_file)
+
         self.eval_config = config.eval
         workflow_alias = self._get_workflow_alias(config.workflow.type)
         logger.debug("Loaded %s evaluation configuration: %s", workflow_alias, self.eval_config)
@@ -444,44 +484,59 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         dataset_config = self.eval_config.general.dataset  # Currently only one dataset is supported
         if not dataset_config:
             logger.info("No dataset found, nothing to evaluate")
-            return EvaluationRunOutput(
-                workflow_output_file=self.workflow_output_file,
-                evaluator_output_files=self.evaluator_output_files,
-                workflow_interrupted=self.workflow_interrupted,
-            )
+            return EvaluationRunOutput(workflow_output_file=self.workflow_output_file,
+                                       evaluator_output_files=self.evaluator_output_files,
+                                       workflow_interrupted=self.workflow_interrupted,
+                                       eval_input=EvalInput(eval_input_items=[]),
+                                       evaluation_results=[],
+                                       usage_stats=UsageStats(),
+                                       profiler_results=ProfilerResults())
 
+        custom_pre_eval_process_function = self.eval_config.general.output.custom_pre_eval_process_function \
+            if self.eval_config.general.output else None
         dataset_handler = DatasetHandler(dataset_config=dataset_config,
                                          reps=self.config.reps,
                                          concurrency=self.eval_config.general.max_concurrency,
                                          num_passes=self.config.num_passes,
-                                         adjust_dataset_size=self.config.adjust_dataset_size)
+                                         adjust_dataset_size=self.config.adjust_dataset_size,
+                                         custom_pre_eval_process_function=custom_pre_eval_process_function)
         self.eval_input = dataset_handler.get_eval_input_from_dataset(self.config.dataset)
         if not self.eval_input.eval_input_items:
             logger.info("Dataset is empty. Nothing to evaluate.")
-            return EvaluationRunOutput(
-                workflow_output_file=self.workflow_output_file,
-                evaluator_output_files=self.evaluator_output_files,
-                workflow_interrupted=self.workflow_interrupted,
-            )
+            return EvaluationRunOutput(workflow_output_file=self.workflow_output_file,
+                                       evaluator_output_files=self.evaluator_output_files,
+                                       workflow_interrupted=self.workflow_interrupted,
+                                       eval_input=self.eval_input,
+                                       evaluation_results=self.evaluation_results,
+                                       usage_stats=self.usage_stats,
+                                       profiler_results=ProfilerResults())
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
             # Initialize Weave integration
             self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config)
 
-            # Run workflow
-            if self.config.endpoint:
-                await self.run_workflow_remote()
-            else:
-                if not self.config.skip_workflow:
+            with self.eval_trace_context.evaluation_context():
+                # Run workflow
+                if self.config.endpoint:
+                    await self.run_workflow_remote()
+                elif not self.config.skip_workflow:
                     if session_manager is None:
-                        session_manager = SessionManager(eval_workflow.build(),
+                        workflow = await eval_workflow.build()
+                        session_manager = SessionManager(workflow,
                                                          max_concurrency=self.eval_config.general.max_concurrency)
                     await self.run_workflow_local(session_manager)
 
-            # Evaluate
-            evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
-            await self.run_evaluators(evaluators)
+                # Pre-evaluation process the workflow output
+                self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
+
+                # Evaluate
+                evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
+                await self.run_evaluators(evaluators)
+
+                # Wait for all trace export tasks to complete (local workflows only)
+                if session_manager and not self.config.endpoint:
+                    await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
 
         # Profile the workflow
         profiler_results = await self.profile_workflow()

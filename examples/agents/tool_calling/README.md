@@ -158,7 +158,7 @@ Once the server is running, you can make HTTP requests to interact with the work
 curl --request POST \
   --url http://localhost:8000/generate \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "What are LLMs?"}'
+  --data '{"messages": [{"role": "user", "content": "What are LLMs?"}]}'
 ```
 
 #### Streaming Requests
@@ -169,7 +169,7 @@ curl --request POST \
 curl --request POST \
   --url http://localhost:8000/generate/stream \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "What are LLMs?"}'
+  --data '{"messages": [{"role": "user", "content": "What are LLMs?"}]}'
 ```
 ---
 ### Evaluating the Tool Calling Agent Workflow

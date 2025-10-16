@@ -26,6 +26,11 @@ limitations under the License.
   - [Set Up API Keys](#set-up-api-keys)
 - [Example Usage](#example-usage)
   - [Run the Workflow](#run-the-workflow)
+- [Optimization](#optimization)
+  - [What Is Being Optimized](#what-is-being-optimized)
+  - [Optimization Configuration](#optimization-configuration)
+  - [Run the Optimizer](#run-the-optimizer)
+  - [Outputs](#outputs)
 - [Deployment-Oriented Setup](#deployment-oriented-setup)
   - [Build the Docker Image](#build-the-docker-image)
   - [Run the Docker Container](#run-the-docker-container)
@@ -123,6 +128,93 @@ Workflow Result:
 ['This email is likely a phishing attempt, as it requests sensitive personal information and exhibits other suspicious signals.']
 ```
 
+## Optimization
+
+This example includes an optimization configuration that uses the NeMo Agent toolkit Optimizer to tune the workflow.
+
+### What Is Being Optimized
+- **Tool parameters**: The `email_phishing_analyzer` exposes two optimizable fields on its config:
+  - **`llm`**: Categorical choice between `llama_3_405` and `llama_3_70`.
+  - **`prompt`**: The prompt template used to analyze the email body (prompt optimization is disabled by default in this config; see below to enable).
+- **LLM hyperparameters**: For each LLM in `llms`, numeric hyperparameters are marked as optimizable:
+  - **`temperature`**, **`top_p`**, **`max_tokens`**.
+
+Evaluation during optimization uses the dataset at `examples/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv` with `body` as the question and `label` as the ground truth.
+
+### Optimization Configuration
+The optimization-ready configuration is located at:
+`examples/evaluation_and_profiling/email_phishing_analyzer/configs/config_optimizer.yml`
+
+Key parts of the config:
+
+```yaml
+functions:
+  email_phishing_analyzer:
+    _type: email_phishing_analyzer
+    optimizable_params:
+      - llm
+      - prompt
+
+llms:
+  llama_3_405:
+    _type: nim
+    model_name: meta/llama-3.1-405b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+    optimizable_params: [temperature, top_p, max_tokens]
+  llama_3_70:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    max_tokens: 1024
+    optimizable_params: [temperature, top_p, max_tokens]
+
+optimizer:
+  output_path: ./.tmp/examples/evaluation_and_profiling/email_phishing_analyzer/optimizer/
+  reps_per_param_set: 1
+  eval_metrics:
+    rag_accuracy: { evaluator_name: rag_accuracy, direction: maximize }
+    rag_groundedness: { evaluator_name: rag_groundedness, direction: maximize }
+    token_efficiency: { evaluator_name: token_efficiency, direction: minimize }
+    latency: { evaluator_name: llm_latency, direction: minimize }
+
+  numeric:
+    enabled: true
+    n_trials: 1
+
+  prompt:
+    enabled: false
+    prompt_population_init_function: prompt_init
+    prompt_recombination_function: prompt_recombination
+    ga_generations: 3
+    ga_population_size: 5
+    ga_diversity_lambda: 0.3
+    ga_parallel_evaluations: 1
+```
+
+Notes:
+- Increase `optimizer.numeric.n_trials` for a deeper search (for example, 20–50).
+- To optimize prompts, set `optimizer.prompt.enabled: true`. The config already provides `prompt_init` and `prompt_recombination` functions.
+
+### Run the Optimizer
+From the repository root:
+
+```bash
+nat optimize --config_file examples/evaluation_and_profiling/email_phishing_analyzer/configs/config_optimizer.yml
+```
+
+Ensure `NVIDIA_API_KEY` is set in your environment.
+
+### Outputs
+Results are written to the path specified by `optimizer.output_path`. Expect artifacts such as:
+- `optimized_config.yml`: Tuned configuration derived from the selected trial.
+- You will also see a configuration file for each iteration of numeric trials. For example, `config_numeric_trial_0.yml`
+  will contain the configuration for the first numeric trial. This is helpful for selecting specific trials whose metrics
+  you may prefer to the optimizer selected trial.
+- `trials_dataframe_params.csv`: Full Optuna trials `dataframe` (`values`, `params`, `timings`, `rep_scores`).
+- `plots`: This directory will contain Pareto visualizations of the optimization results.
+- For prompt optimization (when enabled): `optimized_prompts.json` and per-generation prompt history. Per generation prompt
+  history files are named `optimized_prompts_gen{N}.json` where `{N}` is the generation number starting from 1. 
+
 ---
 
 ## Deployment-Oriented Setup
@@ -133,7 +225,7 @@ For a production deployment, use Docker:
 
 Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the NeMo Agent toolkit virtual environment.
 
-From the root directory of the Simple Calculator repository, build the Docker image:
+From the root directory of the NeMo Agent toolkit repository, build the Docker image:
 
 ```bash
 docker build --build-arg NAT_VERSION=$(python -m setuptools_scm) -t email_phishing_analyzer -f examples/evaluation_and_profiling/email_phishing_analyzer/Dockerfile .

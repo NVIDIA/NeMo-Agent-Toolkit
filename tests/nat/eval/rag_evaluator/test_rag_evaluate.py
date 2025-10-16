@@ -30,8 +30,6 @@ from ragas.metrics import Metric
 from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.rag_evaluator.evaluate import RAGEvaluator
 
-# pylint: disable=redefined-outer-name
-
 
 class ExampleModel(BaseModel):
     content: str

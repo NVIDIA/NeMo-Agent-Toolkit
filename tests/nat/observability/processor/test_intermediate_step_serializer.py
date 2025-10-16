@@ -50,7 +50,7 @@ class TestIntermediateStepSerializerBasicFunctionality:
         assert hasattr(serializer, 'input_type')
         assert hasattr(serializer, 'output_type')
         assert serializer.input_type == IntermediateStep
-        assert serializer.output_type == str
+        assert serializer.output_type is str
 
     def test_serializer_has_serialize_mixin(self):
         """Test that IntermediateStepSerializer has SerializeMixin functionality."""
@@ -389,9 +389,14 @@ class TestIntermediateStepSerializerTypeIntrospection:
         serializer = IntermediateStepSerializer()
 
         assert serializer.input_type == IntermediateStep
-        assert serializer.output_type == str
-        assert serializer.input_class == IntermediateStep
-        assert serializer.output_class == str
+        assert serializer.output_type is str
+
+        # Test Pydantic-based validation methods (preferred approach)
+        test_step = create_test_intermediate_step(event_type=IntermediateStepType.CUSTOM_START)
+        assert serializer.validate_input_type(test_step)
+        assert not serializer.validate_input_type("not_a_step")
+        assert serializer.validate_output_type("test_string")
+        assert not serializer.validate_output_type(123)
 
     def test_processor_inheritance_properties(self):
         """Test that all processor properties are available."""
@@ -400,8 +405,6 @@ class TestIntermediateStepSerializerTypeIntrospection:
         # Should have Processor properties
         assert hasattr(serializer, 'input_type')
         assert hasattr(serializer, 'output_type')
-        assert hasattr(serializer, 'input_class')
-        assert hasattr(serializer, 'output_class')
 
         # Should have SerializeMixin methods
         assert hasattr(serializer, '_serialize_payload')

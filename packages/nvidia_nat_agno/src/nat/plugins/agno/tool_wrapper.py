@@ -17,11 +17,9 @@ import asyncio
 import json
 import logging
 import textwrap
-import traceback
+from collections.abc import Awaitable
+from collections.abc import Callable
 from typing import Any
-from typing import Awaitable
-from typing import Callable
-from typing import List
 
 from agno.tools import tool
 
@@ -134,7 +132,7 @@ async def process_result(result: Any, name: str) -> str:
 
 def execute_agno_tool(name: str,
                       coroutine_fn: Callable[..., Awaitable[Any]],
-                      required_fields: List[str],
+                      required_fields: list[str],
                       loop: asyncio.AbstractEventLoop,
                       **kwargs: Any) -> Any:
     """
@@ -146,18 +144,17 @@ def execute_agno_tool(name: str,
         The name of the tool
     coroutine_fn : Callable
         The async function to invoke
-    required_fields : List[str]
+    required_fields : list[str]
         List of required fields for validation
     loop : asyncio.AbstractEventLoop
         The event loop to use for async execution
-    **kwargs : Any
+    kwargs : Any
         The arguments to pass to the function
 
     Returns
     -------
     The result of the function execution as a string
     """
-    global _tool_call_counters, _tool_initialization_done
 
     try:
         logger.debug(f"Running {name} with kwargs: {kwargs}")
@@ -288,9 +285,7 @@ def execute_agno_tool(name: str,
         return process_future.result(timeout=30)  # 30-second timeout for processing
 
     except Exception as e:
-        logger.exception(f"Error executing Agno tool {name}: {e}")
-        error_traceback = traceback.format_exc()
-        logger.error(f"Exception traceback: {error_traceback}")
+        logger.error("Error executing Agno tool %s: %s", name, e)
         raise
 
 
@@ -335,7 +330,7 @@ def agno_tool_wrapper(name: str, fn: Function, builder: Builder):
     if description:
         description = textwrap.dedent(description).strip()
 
-    # Input schema handling from LangChain-style
+    # Input schema handling from LangChain/LangGraph-style
     required_fields = []
     if fn.input_schema is not None:
         try:

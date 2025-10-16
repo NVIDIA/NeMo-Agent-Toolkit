@@ -3,17 +3,18 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
 name = "nat_simple_calculator_hitl"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[langchain]~=1.2",
+  "nvidia-nat[langchain]~=1.4",
   "nat_simple_calculator",
   "nat_por_to_jiratickets",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "Simple Calculator Evaluation and Profiling - demonstrates NeMo Agent toolkit evaluation capabilities"
 keywords = ["ai", "hitl", "human in the loop", "agents"]
 classifiers = ["Programming Language :: Python"]

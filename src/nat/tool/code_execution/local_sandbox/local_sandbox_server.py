@@ -62,7 +62,7 @@ class CodeExecutionResponse(Response):
         super().__init__(status=status_code, mimetype="application/json", response=result.model_dump_json())
 
     @classmethod
-    def with_error(cls, status_code: int, error_message: str) -> 'CodeExecutionResponse':
+    def with_error(cls, status_code: int, error_message: str) -> CodeExecutionResponse:
         return cls(status_code,
                    CodeExecutionResult(process_status=CodeExecutionStatus.ERROR, stdout="", stderr=error_message))
 
@@ -121,13 +121,13 @@ def execute_code_subprocess(generated_code: str, queue):
         resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
         resource.setrlimit(resource.RLIMIT_DATA, (limit, limit))
     except Exception as e:
-        logger.error("Failed to set resource limits, PID: %s, error: %s", os.getpid(), e)
+        logger.exception("Failed to set resource limits, PID: %s, error: %s", os.getpid(), e)
 
     stdout_capture = StringIO()
     stderr_capture = StringIO()
     try:
         with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
-            exec(generated_code, {})  # pylint: disable=W0122
+            exec(generated_code, {})
         logger.debug("execute_code_subprocess finished, PID: %s", os.getpid())
         queue.put(CodeExecutionResult(stdout=stdout_capture.getvalue(), stderr=stderr_capture.getvalue()))
     except Exception as e:

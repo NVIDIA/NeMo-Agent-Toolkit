@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=redefined-outer-name
-
 import asyncio
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
@@ -165,7 +163,7 @@ class TestFileExporterFunctionality:
         await exporter.export_processed(test_string)
 
         # Verify file content
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             content = f.read()
             assert content == test_string + '\n'
 
@@ -177,7 +175,7 @@ class TestFileExporterFunctionality:
         await exporter.export_processed(test_strings)
 
         # Verify file content
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             lines = f.readlines()
             assert len(lines) == 2
             assert lines[0].strip() == test_strings[0]
@@ -191,7 +189,7 @@ class TestFileExporterFunctionality:
         await exporter.export_processed('{"line": 2}')
 
         # Verify file content
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             lines = f.readlines()
             assert len(lines) == 2
             assert lines[0].strip() == '{"line": 1}'
@@ -202,7 +200,7 @@ class TestFileExporterFunctionality:
                                                         invalid_file_path):
         """Test error handling when file operations fail."""
         # Mock file operation to raise an exception
-        mock_aiofiles_open.side_effect = IOError("File write error")
+        mock_aiofiles_open.side_effect = OSError("File write error")
 
         exporter = FileExporter(context_state=mock_context_state,
                                 output_path=str(invalid_file_path),
@@ -212,7 +210,7 @@ class TestFileExporterFunctionality:
         with patch('nat.observability.mixin.file_mixin.logger') as mock_logger:
             await exporter.export_processed('{"test": "data"}')
             # Verify error was logged (implementation logs errors but doesn't re-raise)
-            mock_logger.error.assert_called()
+            mock_logger.exception.assert_called()
 
     def test_export_method_inheritance(self, mock_context_state, sample_intermediate_step, tmp_path):
         """Test that export method works through inheritance."""
@@ -305,7 +303,7 @@ class TestFileExporterEdgeCases:
         await exporter.export_processed('')
 
         # Verify file content
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             content = f.read()
             assert content == '\n'
 
@@ -316,7 +314,7 @@ class TestFileExporterEdgeCases:
         await exporter.export_processed([])
 
         # Verify file is empty (no writes for empty list)
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             content = f.read()
             assert content == ''
 
@@ -330,7 +328,7 @@ class TestFileExporterEdgeCases:
         await asyncio.gather(*tasks)
 
         # Verify all lines were written
-        with open(temp_file, 'r', encoding='utf-8') as f:
+        with open(temp_file, encoding='utf-8') as f:
             lines = f.readlines()
             assert len(lines) == 5
             # All lines should be valid (no corruption from concurrent writes)

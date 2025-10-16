@@ -19,13 +19,14 @@ limitations under the License.
 
 ## Supported LLM Providers
 
-NeMo Agent toolkit supports the following LLM providers:
+NVIDIA NeMo Agent toolkit supports the following LLM providers:
 | Provider | Type | Description |
 |----------|------|-------------|
 | [NVIDIA NIM](https://build.nvidia.com) | `nim` | NVIDIA Inference Microservice (NIM) |
 | [OpenAI](https://openai.com) | `openai` | OpenAI API |
 | [AWS Bedrock](https://aws.amazon.com/bedrock/) | `aws_bedrock` | AWS Bedrock API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
+| [LiteLLM](https://github.com/BerriAI/litellm) | `litellm` | LiteLLM API |
 
 
 ## LLM Configuration
@@ -47,6 +48,9 @@ llms:
   azure_openai_llm:
     _type: azure_openai
     azure_deployment: gpt-4o-mini
+  litellm_llm:
+    _type: litellm
+    model_name: gpt-4o
 ```
 
 ### NVIDIA NIM
@@ -66,6 +70,10 @@ The NIM LLM provider is defined by the {py:class}`~nat.llm.nim_llm.NIMModelConfi
 * `base_url` - The base URL to use for the model
 * `max_retries` - The maximum number of retries for the request
 
+:::{note}
+`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/gated-fields.md) for details.
+:::
+
 ### OpenAI
 
 You can use the following environment variables to configure the OpenAI LLM provider:
@@ -84,14 +92,19 @@ The OpenAI LLM provider is defined by the {py:class}`~nat.llm.openai_llm.OpenAIM
 * `base_url` - The base URL to use for the model
 * `max_retries` - The maximum number of retries for the request
 
+:::{note}
+`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/gated-fields.md) for details.
+:::
+
 ### AWS Bedrock
 
 The AWS Bedrock LLM provider is defined by the {py:class}`~nat.llm.aws_bedrock_llm.AWSBedrockModelConfig` class.
 
 * `model_name` - The name of the model to use
 * `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model. This field is ignored for LlamaIndex.
 * `max_tokens` - The maximum number of tokens to generate
-* `context_size` - The context size to use for the model
+* `context_size` - The maximum number of tokens available for input. This is only required for LlamaIndex. This field is ignored for LangChain/LangGraph.
 * `region_name` - The region to use for the model
 * `base_url` - The base URL to use for the model
 * `credentials_profile_name` - The credentials profile name to use for the model
@@ -115,6 +128,52 @@ The Azure OpenAI LLM provider is defined by the {py:class}`~nat.llm.azure_openai
 * `seed` - The seed to use for the model
 * `max_retries` - The maximum number of retries for the request
 
+:::{note}
+`temperature` is model-gated and may not be supported by all models. See [Gated Fields](../../extend/gated-fields.md) for details.
+:::
+
+### LiteLLM
+
+LiteLLM is a general purpose LLM provider that can be used with any model provider that is supported by LiteLLM.
+See the [LiteLLM provider documentation](https://docs.litellm.ai/docs/providers) for more information on how to use LiteLLM.
+
+The LiteLLM LLM provider is defined by the {py:class}`~nat.llm.litellm_llm.LiteLlmModelConfig` class.
+
+* `model_name` - The name of the model to use (dependent on the model provider)
+* `api_key` - The API key to use for the model (dependent on the model provider)
+* `base_url` - The base URL to use for the model
+* `seed` - The seed to use for the model
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model
+* `max_retries` - The maximum number of retries for the request
+
+
+## Testing Provider
+### `nat_test_llm`
+`nat_test_llm` is a development and testing provider intended for examples and CI. It is not intended for production use.
+
+* Installation: `uv pip install nvidia-nat-test`
+* Purpose: Deterministic cycling responses for quick validation
+* Not for production
+
+Minimal YAML example with `chat_completion`:
+
+```yaml
+llms:
+  main:
+    _type: nat_test_llm
+    response_seq: [alpha, beta, gamma]
+    delay_ms: 0
+workflow:
+  _type: chat_completion
+  llm_name: main
+  system_prompt: "Say only the answer."
+```
+
+* Learn how to add your own LLM provider: [Adding an LLM Provider](../../extend/adding-an-llm-provider.md)
+<!-- vale off -->
+* See a short tutorial using YAML and `nat_test_llm`: [Testing with nat_test_llm](../../tutorials/testing-with-nat-test-llm.md)
+<!-- vale on -->
 
 ```{toctree}
 :caption: LLMs

@@ -13,44 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib.resources
-import inspect
 import json
 import logging
 from pathlib import Path
 
-import nat_simple_web_query_eval
 import pytest
 
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
+from nat.test.utils import locate_example_config
+from nat.test.utils import validate_workflow_output
 
 logger = logging.getLogger(__name__)
-
-
-def validate_workflow_output(workflow_output_file: Path):
-    """
-    Validate the contents of the workflow output file.
-    WIP: output format should be published as a schema and this validation should be done against that schema.
-    """
-    # Ensure the workflow_output.json file was created
-    assert workflow_output_file.exists(), "The workflow_output.json file was not created"
-
-    # Read and validate the workflow_output.json file
-    try:
-        with open(workflow_output_file, "r", encoding="utf-8") as f:
-            result_json = json.load(f)
-    except json.JSONDecodeError:
-        pytest.fail("Failed to parse workflow_output.json as valid JSON")
-
-    assert isinstance(result_json, list), "The workflow_output.json file is not a list"
-    assert len(result_json) > 0, "The workflow_output.json file is empty"
-    assert isinstance(result_json[0], dict), "The workflow_output.json file is not a list of dictionaries"
-
-    # Ensure required keys exist
-    required_keys = ["id", "question", "answer", "generated_answer", "intermediate_steps"]
-    for key in required_keys:
-        assert all(item.get(key) for item in result_json), f"The '{key}' key is missing in workflow_output.json"
 
 
 def validate_rag_accuracy(rag_metric_output_file: Path, score: float):
@@ -62,7 +36,7 @@ def validate_rag_accuracy(rag_metric_output_file: Path, score: float):
     # Ensure the ile exists
     assert rag_metric_output_file and rag_metric_output_file.exists(), \
         f"The {rag_metric_output_file} was not created"
-    with open(rag_metric_output_file, "r", encoding="utf-8") as f:
+    with open(rag_metric_output_file, encoding="utf-8") as f:
         result = f.read()
         # load the json file
         try:
@@ -87,7 +61,7 @@ def validate_trajectory_accuracy(trajectory_output_file: Path):
     assert trajectory_output_file and trajectory_output_file.exists(), "The trajectory_output.json file was not created"
 
     trajectory_score_min = 0.1
-    with open(trajectory_output_file, "r", encoding="utf-8") as f:
+    with open(trajectory_output_file, encoding="utf-8") as f:
         result = f.read()
         # load the json file
         try:
@@ -101,7 +75,8 @@ def validate_trajectory_accuracy(trajectory_output_file: Path):
         f"The 'average_score' is less than {trajectory_score_min}"
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_eval():
     """
     1. nat-eval writes the workflow output to workflow_output.json
@@ -110,9 +85,10 @@ async def test_eval():
        a. the rag accuracy metric
        b. the trajectory score (if present)
     """
-    # Get package dynamically
-    package_name = inspect.getmodule(nat_simple_web_query_eval).__package__
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "eval_config.yml").absolute()
+    import nat_simple_web_query_eval
+
+    # Get config dynamically
+    config_file: Path = locate_example_config(nat_simple_web_query_eval, "eval_config.yml")
 
     # Create the configuration object for running the evaluation, single rep using the eval config in eval_config.yml
     # WIP: skip test if eval config is not present
@@ -123,9 +99,11 @@ async def test_eval():
         skip_workflow=False,
         skip_completed_entries=False,
         endpoint=None,
-        endpoint_timeout=300,
+        endpoint_timeout=30,
         reps=1,
+        override=(('eval.general.max_concurrency', '1'), ),
     )
+
     # Run evaluation
     eval_runner = EvaluationRun(config=config)
     output = await eval_runner.run_and_evaluate()

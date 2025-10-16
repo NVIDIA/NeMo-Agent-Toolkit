@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import multiprocessing
 from urllib.parse import urljoin
 
 import pytest
@@ -24,6 +25,15 @@ from nat.tool.code_execution import code_sandbox
 from nat.tool.code_execution.local_sandbox.local_sandbox_server import do_execute
 
 logger = logging.getLogger(__name__)
+
+
+@pytest.fixture(autouse=True)
+def set_mp_spawn():
+    """
+    By default this will attempt to use fork, however this can cause issues specifically since within the
+    context of pytest there may be several file descriptors open that the child process inherits.
+    """
+    multiprocessing.set_start_method("spawn", force=True)
 
 
 def test_client_init(uri: str = "http://localhost:6000"):
@@ -76,7 +86,6 @@ async def test_bad_response(httpserver: HTTPServer):
 
 
 async def test_code_gen(httpserver: HTTPServer):
-
     client = code_sandbox.get_sandbox("local", uri=httpserver.url_for("/execute"))
     httpserver.expect_request("/execute", method="POST").respond_with_handler(do_execute)
 

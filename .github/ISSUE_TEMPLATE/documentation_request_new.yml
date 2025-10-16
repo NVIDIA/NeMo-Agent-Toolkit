@@ -16,7 +16,7 @@
 name: Documentation - New Documentation Request
 description: Request additions to NeMo Agent toolkit documentation
 type: "Documentation"
-labels: ["doc"]
+labels: ["doc", "Needs Triage"]
 
 body:
   - type: markdown

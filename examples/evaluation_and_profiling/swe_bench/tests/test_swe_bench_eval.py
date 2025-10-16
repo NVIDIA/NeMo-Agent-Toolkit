@@ -13,17 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib.resources
-import inspect
 import json
 import logging
 from pathlib import Path
 
 import pytest
-from nat_swe_bench.register import SweBenchWorkflowConfig
 
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
+from nat.test.utils import locate_example_config
+from nat_swe_bench.config import SweBenchWorkflowConfig
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ def validate_workflow_output(workflow_output_file: Path):
 
     # Read and validate the workflow_output.json file
     try:
-        with open(workflow_output_file, "r", encoding="utf-8") as f:
+        with open(workflow_output_file, encoding="utf-8") as f:
             result_json = json.load(f)
     except json.JSONDecodeError:
         pytest.fail("Failed to parse workflow_output.json as valid JSON")
@@ -64,7 +63,7 @@ def validate_evaluation_output(eval_output_file: Path):
     # Ensure the file exists
     assert eval_output_file and eval_output_file.exists(), \
         f"The {eval_output_file} file was not created"
-    with open(eval_output_file, "r", encoding="utf-8") as f:
+    with open(eval_output_file, encoding="utf-8") as f:
         result = f.read()
         # load the json file
         try:
@@ -78,16 +77,16 @@ def validate_evaluation_output(eval_output_file: Path):
         f"The 'average_accuracy' is less than {score_min}"
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
+@pytest.mark.usefixtures("require_docker")
 async def test_eval():
     """
     Run the swe-bench evaluator with the golden patches and validate
     1. the workflow_output and
     2. swe_bench evaliation output
     """
-    # Get package dynamically
-    package_name = inspect.getmodule(SweBenchWorkflowConfig).__package__
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "config_gold.yml").absolute()
+    # Get config dynamically
+    config_file: Path = locate_example_config(SweBenchWorkflowConfig, "config_gold.yml")
 
     # Create the configuration object for running the evaluation, single rep using the eval config in config.yml
     # WIP: skip test if eval config is not present
@@ -101,6 +100,7 @@ async def test_eval():
         endpoint_timeout=300,
         reps=1,
     )
+
     # Run evaluation
     eval_runner = EvaluationRun(config=config)
     output = await eval_runner.run_and_evaluate()

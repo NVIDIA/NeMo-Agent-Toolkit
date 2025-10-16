@@ -23,10 +23,16 @@ from nat.test.object_store_tests import ObjectStoreTests
 
 # NOTE: This test requires a MySQL server to be running locally.
 # To launch a local server using docker, run the following command:
-# docker run --rm -ti --name test-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -d -p 3306:3306 mysql:9.3
+# docker run --rm -ti --name test-mysql -e MYSQL_ROOT_PASSWORD=my_password -d -p 3306:3306 mysql:9.3
+
+
+@pytest.fixture(scope='class', autouse=True)
+async def _mysql_server(request, mysql_server: dict[str, str | int]):
+    request.cls._mysql_server_info = mysql_server
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("mysql_server")
 class TestMySQLObjectStore(ObjectStoreTests):
 
     @asynccontextmanager
@@ -34,6 +40,7 @@ class TestMySQLObjectStore(ObjectStoreTests):
         async with WorkflowBuilder() as builder:
             await builder.add_object_store(
                 "object_store_name",
-                MySQLObjectStoreClientConfig(bucket_name="test", username="root", password="my-secret-pw"))
+                MySQLObjectStoreClientConfig(**self._mysql_server_info),
+            )
 
             yield await builder.get_object_store_client("object_store_name")

@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-general:
-  use_uvloop: true
-
 memory:
   saas_memory:
     _type: mem0_memory
@@ -58,7 +55,7 @@ functions:
       The question should be about user preferences which will help you format your response.
       For example: "How does the user like responses formatted?"
 
-  # To use these tools you will need to install the nvidia-nat[langchain] package
+  # To use these tools you will need to install the "nvidia-nat[langchain]" package
   web_search_tool:
     _type: tavily_internet_search
     max_results: 5
@@ -87,11 +84,11 @@ embedders:
 workflow:
   _type: react_agent
   tool_names:
-   - cuda_retriever_tool
-   - mcp_retriever_tool
-   - add_memory
-   - get_memory
-   - web_search_tool
-   - code_generation_tool
+    - cuda_retriever_tool
+    - mcp_retriever_tool
+    - add_memory
+    - get_memory
+    - web_search_tool
+    - code_generation_tool
   verbose: true
   llm_name: nim_llm

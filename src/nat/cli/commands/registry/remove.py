@@ -41,7 +41,7 @@ async def remove_artifact(registry_handler_config: RegistryHandlerBaseConfig, pa
         try:
             package_name_list = PackageNameVersionList(**{"packages": packages})
         except Exception as e:
-            logger.exception("Invalid package format: '%s'", e, exc_info=True)
+            logger.exception("Invalid package format: '%s'", e)
 
         await stack.enter_async_context(registry_handler.remove(packages=package_name_list))
 
@@ -102,7 +102,7 @@ def remove(channel: str, config_file: str, packages: str) -> None:
             logger.error("Remove channel '%s' has not been configured.", channel)
             return
     except Exception as e:
-        logger.exception("Error loading user settings: %s", e, exc_info=True)
+        logger.exception("Error loading user settings: %s", e)
         return
 
     asyncio.run(remove_artifact(registry_handler_config=remove_channel_config, packages=packages_versions))

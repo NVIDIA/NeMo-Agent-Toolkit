@@ -17,12 +17,26 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit API Server Endpoints
 
-There are currently four workflow transactions that can be initiated using HTTP or WebSocket when the NeMo Agent toolkit server is running: `generate non-streaming`,`generate streaming`, `chat non-streaming`, and `chat streaming`. The following are types of interfaces you can use to interact with your running workflows.
+There are currently five workflow transactions that can be initiated using HTTP or WebSocket when the NeMo Agent toolkit server is running: `generate non-streaming`, `generate async`, `generate streaming`, `chat non-streaming`, and `chat streaming`. The following are types of interfaces you can use to interact with your running workflows.
   - **Generate Interface:** Uses the transaction schema defined by your workflow. The interface documentation is accessible
     using Swagger while the server is running [`http://localhost:8000/docs`](http://localhost:8000/docs).
   - **Chat Interface:** [OpenAI API Documentation](https://platform.openai.com/docs/guides/text?api-mode=chat) provides
     details on chat formats compatible with the NeMo Agent toolkit server.
 
+
+## Start the NeMo Agent Toolkit Server
+This section describes how to start the NeMo Agent toolkit server.
+### Set Up API Keys
+If you have not already done so, follow the [Obtaining API Keys](../quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+```
+
+Before you use the following examples, ensure that the simple calculator workflow has been installed and is running on http://localhost:8000 by running the following commands:
+```bash
+uv pip install -e examples/getting_started/simple_calculator
+nat serve --config_file examples/getting_started/simple_calculator/configs/config.yml
+```
 
 ## Generate Non-Streaming Transaction
 - **Route:** `/generate`
@@ -37,10 +51,71 @@ result back to the client. The transaction schema is defined by the workflow.
       "input_message": "Is 4 + 4 greater than the current hour of the day"
     }'
   ```
-- **HTTP Response Example:**
+- **HTTP Response Example:** (actual response will vary based on the time of day)
   ```json
   {
     "value":"No, 4 + 4 is not greater than the current hour of the day."
+  }
+  ```
+
+## Asynchronous Generate
+The asynchronous generate endpoint allows clients to submit a workflow to run in the background and return a response immediately with a unique identifier for the workflow. This can be used to query the status and results of the workflow at a later time. This is useful for long-running workflows, which would otherwise cause the client to time out.
+
+This endpoint is only available when the `async_endpoints` optional dependency extra is installed. For users installing from source, this can be done by running `uv pip install -e '.[async_endpoints]'` from the root directory of the NeMo Agent toolkit library. Similarly, for users installing from PyPI, this can be done by running `pip install "nvidia-nat[async_endpoints]"`.
+
+Asynchronous jobs are managed using [Dask](https://docs.dask.org/en/stable/). By default, a local Dask cluster is created at start time, however you can also configure the server to connect to an existing Dask scheduler by setting the `scheduler_address` configuration parameter. The Dask scheduler is used to manage the execution of asynchronous jobs, and can be configured to run on a single machine or across a cluster of machines. Job history and metadata is stored in a SQL database using [SQLAlchemy](https://www.sqlalchemy.org/). By default, a temporary SQLite database is created at start time, however you can also configure the server to use a persistent database by setting the `db_url` configuration parameter. Refer to the [SQLAlchemy documentation](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) for the format of the `db_url` parameter. Any database supported by [SQLAlchemy's Asynchronous I/O extension](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html) can be used. Refer to [SQLAlchemy's Dialects](https://docs.sqlalchemy.org/en/20/dialects/index.html) for a complete list (many but not all of these support Asynchronous I/O).
+
+
+- **Route:** `/generate/async`
+- **Description:** A non-streaming transaction that submits a workflow to run in the background.
+- **Optional Fields:**
+  - `job_id`: A unique identifier for the job. If not provided, a UUID will be generated. It can be any string value. However, it is the caller's responsibility to ensure uniqueness. If `job_id` already exists, the server will return the latest status for that job.
+  - `sync_timeout`: The maximum time in seconds to wait for the job to complete before returning a response. If the job completes in less than `sync_timeout` seconds then the response will include the job result, otherwise the `job_id` and `status` is returned. The default is `0`, which causes the request to return immediately, and maximum value for this field is `300`.
+  - `expiry_seconds`: The amount of time in seconds after the job completes (either successfully or unsuccessfully), which any output files will be preserved before being deleted. Default is `3600` (1 hours), minimum value is `600` (10 minutes) and maximum value for this field is `86400` (24 hours). The text output in the response is not affected by this field.
+
+### Example Request and Response
+- HTTP Request Example:
+  ```bash
+  curl --request POST \
+    --url http://localhost:8000/generate/async \
+    --header 'Content-Type: application/json' \
+    --data '{
+      "input_message": "Is 4 + 4 greater than the current hour of the day"
+    }'
+  ```
+- **HTTP Response Example:**
+  ```json
+  {
+    "job_id": "8548a0e6-ecdc-44b0-a253-695cd746594c",
+    "status": "submitted"
+  }
+  ```
+
+### Example Request and Response with `sync_timeout`
+
+- HTTP Request Example:
+  ```bash
+  curl --request POST \
+    --url http://localhost:8000/generate/async \
+    --header 'Content-Type: application/json' \
+    --data '{
+      "input_message": "Is 4 + 4 greater than the current hour of the day",
+      "job_id": "example-job-123",
+      "sync_timeout": 10
+    }'
+  ```
+- **HTTP Response Example:**
+  ```json
+  {
+    "created_at": "2025-09-10T20:52:24.768066",
+    "error": null,
+    "expires_at": "2025-09-10T21:52:30.734659Z",
+    "job_id": "example-job-123",
+    "output": {
+      "value": "No, 4 + 4 is not greater than the current hour of the day."
+    },
+    "status": "success",
+    "updated_at": "2025-09-10T20:52:30.734659"
   }
   ```
 

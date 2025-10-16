@@ -27,7 +27,13 @@ from nat.test.object_store_tests import ObjectStoreTests
 #     server /data --console-address ":9001"
 
 
+@pytest.fixture(scope='class', autouse=True)
+def _minio_server(request, minio_server: dict[str, str | int]):
+    request.cls._minio_server_info = minio_server
+
+
 @pytest.mark.integration
+@pytest.mark.usefixtures("minio_server")
 class TestS3ObjectStore(ObjectStoreTests):
 
     @asynccontextmanager
@@ -35,9 +41,9 @@ class TestS3ObjectStore(ObjectStoreTests):
         async with WorkflowBuilder() as builder:
             await builder.add_object_store(
                 "object_store_name",
-                S3ObjectStoreClientConfig(bucket_name="test",
-                                          endpoint_url="http://localhost:9000",
-                                          access_key="minioadmin",
-                                          secret_key="minioadmin"))
+                S3ObjectStoreClientConfig(bucket_name=self._minio_server_info["bucket_name"],
+                                          endpoint_url=self._minio_server_info["endpoint_url"],
+                                          access_key=self._minio_server_info["aws_access_key_id"],
+                                          secret_key=self._minio_server_info["aws_secret_access_key"]))
 
             yield await builder.get_object_store_client("object_store_name")

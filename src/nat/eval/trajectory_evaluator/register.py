@@ -33,7 +33,7 @@ async def register_trajectory_evaluator(config: TrajectoryEvaluatorConfig, build
 
     from .evaluate import TrajectoryEvaluator
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    tools = builder.get_all_tools(wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools = await builder.get_all_tools(wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     _evaluator = TrajectoryEvaluator(llm, tools, builder.get_max_concurrency())
 

@@ -89,7 +89,7 @@ class CustomMilvusClient:
         data: list,
         limit: int,
         search_params: dict,
-        filter: str | None,  # pylint: disable=W0622
+        filter: str | None,
         output_fields: list[str] | None,
         timeout: float | None,
         anns_field: str,
@@ -104,7 +104,7 @@ class CustomMilvusClient:
             assert isinstance(output_fields, list)
             assert len(output_fields) > 0
         if timeout:
-            assert isinstance(timeout, (float, int))
+            assert isinstance(timeout, float | int)
         assert isinstance(search_params, dict)
         assert isinstance(anns_field, str)
         to_return = min(limit, 4)
@@ -131,7 +131,7 @@ class CustomMilvusClient:
         data: list,
         limit: int,
         batch_size: int,
-        filter: str | None,  # pylint: disable=W0622
+        filter: str | None,
         output_fields: list[str] | None,
         search_params: dict,
         timeout: float | None,

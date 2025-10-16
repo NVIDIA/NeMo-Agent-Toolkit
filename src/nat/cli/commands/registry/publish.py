@@ -40,7 +40,7 @@ async def publish_artifact(registry_handler_config: RegistryHandlerBaseConfig, p
         try:
             artifact = build_artifact(package_root=package_root)
         except Exception as e:
-            logger.exception("Error building artifact: %s", e, exc_info=True)
+            logger.exception("Error building artifact: %s", e)
             return
         await stack.enter_async_context(registry_handler.publish(artifact=artifact))
 
@@ -82,7 +82,7 @@ def publish(channel: str, config_file: str, package_root: str) -> None:
             logger.error("Publish channel '%s' has not been configured.", channel)
             return
     except Exception as e:
-        logger.exception("Error loading user settings: %s", e, exc_info=True)
+        logger.exception("Error loading user settings: %s", e)
         return
 
     asyncio.run(publish_artifact(registry_handler_config=publish_channel_config, package_root=package_root))

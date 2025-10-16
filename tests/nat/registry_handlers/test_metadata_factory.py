@@ -50,11 +50,10 @@ def test_metadata_factory(registry: TypeRegistry, use_wheel_data: bool):
 
         if (wheel_data is not None):
             assert len(component_metadata_items) > 0
+        elif (component_type == ComponentEnum.PACKAGE):
+            assert len(component_metadata_items) == 0
         else:
-            if (component_type == ComponentEnum.PACKAGE):
-                assert len(component_metadata_items) == 0
-            else:
-                assert len(component_metadata_items) > 0
+            assert len(component_metadata_items) > 0
 
         for metadata_item in component_metadata_items:
             assert metadata_item["status"] == "success"

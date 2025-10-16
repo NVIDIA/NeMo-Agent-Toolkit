@@ -3,19 +3,19 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
 name = "nat_email_phishing_analyzer"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[langchain]~=1.2",
-  "arize-phoenix==6.1.*",
+  "nvidia-nat[langchain,phoenix]~=1.4",
   "bs4==0.0.2",
   "networkx~=3.4",
   "openinference-instrumentation-langchain==0.1.29",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "Simple Phishing Email Analyzer NeMo Agent toolkit example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]

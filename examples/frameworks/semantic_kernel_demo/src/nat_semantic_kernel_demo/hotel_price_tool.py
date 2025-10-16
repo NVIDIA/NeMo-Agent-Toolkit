@@ -44,7 +44,7 @@ async def hotel_price(tool_config: HotelPriceToolConfig, builder: Builder):
 
     import json
 
-    with open(tool_config.data_path, 'r', encoding='utf-8') as f:
+    with open(tool_config.data_path, encoding='utf-8') as f:
         hotel_prices = json.load(f)
 
     search_date_format = tool_config.date_format

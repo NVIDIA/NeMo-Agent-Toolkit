@@ -39,7 +39,7 @@ def calculator(expression: str) -> str:
     """
     try:
         # Safely evaluate the expression
-        result = eval(expression)  # pylint: disable=eval-used
+        result = eval(expression)
         return str(result)
     except Exception as e:
         return f"Error calculating expression: {str(e)}"
@@ -62,6 +62,7 @@ async def create_minimal_agent(llm_name: str, llm_config: Any) -> ReActAgent:
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_nim_minimal_agent():
     """Test NIM LLM with minimal LlamaIndex agent. Requires NVIDIA_API_KEY to be set."""
     llm_config = NIMModelConfig(model_name="meta/llama-3.1-70b-instruct", temperature=0.0)
@@ -74,6 +75,7 @@ async def test_nim_minimal_agent():
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("openai_api_key")
 async def test_openai_minimal_agent():
     """Test OpenAI LLM with minimal LlamaIndex agent. Requires OPENAI_API_KEY to be set."""
     llm_config = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.0)
@@ -86,9 +88,10 @@ async def test_openai_minimal_agent():
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("aws_keys")
 async def test_aws_bedrock_minimal_agent():
     """
-    Test AWS Bedrock LLM with LangChain agent.
+    Test AWS Bedrock LLM with LangChain/LangGraph agent.
     Requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to be set.
     See https://docs.aws.amazon.com/bedrock/latest/userguide/setting-up.html for more information.
     """
@@ -106,6 +109,7 @@ async def test_aws_bedrock_minimal_agent():
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("azure_openai_keys")
 async def test_azure_openai_minimal_agent():
     """
     Test Azure OpenAI LLM with minimal LlamaIndex agent.
@@ -113,7 +117,9 @@ async def test_azure_openai_minimal_agent():
     The model can be changed by setting AZURE_OPENAI_DEPLOYMENT.
     See https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart for more information.
     """
-    llm_config = AzureOpenAIModelConfig(azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1"))
+    llm_config = AzureOpenAIModelConfig(azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1"),
+                                        azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+                                        api_key=os.environ.get("AZURE_OPENAI_API_KEY"))
     agent = await create_minimal_agent("azure_openai_llm", llm_config)
 
     response = await agent.achat("What is 1+2?")

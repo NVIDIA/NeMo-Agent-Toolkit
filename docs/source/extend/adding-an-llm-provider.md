@@ -22,7 +22,7 @@ In NeMo Agent toolkit the set of configuration parameters needed to interact wit
 nat info components -t llm_provider
 ```
 
-In NeMo Agent toolkit there are LLM providers, like NIM and OpenAI, and there are frameworks which need to use those providers, such as LangChain LlamaIndex with a client defined for each. To add support, we need to cover the combinations of providers to clients.
+In NeMo Agent toolkit there are LLM providers, like NIM and OpenAI, and there are frameworks which need to use those providers, such as LangChain/LangGraph LlamaIndex with a client defined for each. To add support, we need to cover the combinations of providers to clients.
 
 As an example, NeMo Agent toolkit contains multiple clients for interacting with the OpenAI API with different frameworks, each sharing the same provider configuration {class}`nat.llm.openai_llm.OpenAIModelConfig`. To view the full list of clients registered for the OpenAI LLM provider, run the following command:
 
@@ -56,6 +56,82 @@ class OpenAIModelConfig(LLMBaseConfig, name="openai"):
     max_retries: int = Field(default=10, description="The max number of retries for the request.")
 ```
 
+## Mixins
+
+Mixins are used to add additional fields to the provider configuration without needing to subclass or add additional fields to the provider configuration explicitly. Additionally, the toolkit can use the mixins for validation and opt-in functionality.
+
+### RetryMixin
+
+The {class}`nat.data_models.retry_mixin.RetryMixin` is a mixin that adds a `max_retries` field to the provider config. The `max_retries` field is an integer that specifies the maximum number of retries for the request.
+
+```python
+from nat.data_models.retry_mixin import RetryMixin
+
+class OpenAIModelConfig(LLMBaseConfig, RetryMixin, name="openai"):
+    """An OpenAI LLM provider to be used with an LLM client."""
+
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
+
+    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
+    base_url: str | None = Field(default=None, description="Base url to the hosted model.")
+    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
+                            serialization_alias="model",
+                            description="The OpenAI hosted model name.")
+    seed: int | None = Field(default=None, description="Random seed to set for generation.")
+```
+
+### Gated Field Mixins
+
+Some configuration parameters are only valid for certain models or may be dependent on other parameters. The toolkit provides built-in mixins that automatically validate and default these parameters based on a specified field. For details on the mechanism, see [Gated Fields](./gated-fields.md).
+
+- `TemperatureMixin`: adds a `temperature` field in [0, 1], with a default of `0.0` when supported by a model
+- `TopPMixin`: adds a `top_p` field in [0, 1], with a default of `1.0` when supported by a model
+- `ThinkingMixin`: adds a `thinking` field, with a default of `None` when supported by a model. If supported, the `thinking_system_prompt` property will return the system prompt to use for thinking.
+
+:::{note}
+The built-in mixins may reject certain fields for models that do not support them (for example, GPT-5 models currently reject `temperature` and `top_p`). If a gated field is explicitly set on an unsupported model, validation will fail.
+:::
+
+#### TemperatureMixin
+
+The {class}`nat.data_models.temperature_mixin.TemperatureMixin` is a mixin that adds a `temperature` field to the provider config. The `temperature` field is a float in [0, 1] that specifies the sampling temperature for the model.
+
+```python
+from nat.data_models.temperature_mixin import TemperatureMixin
+
+
+class OpenAIModelConfig(LLMBaseConfig, TemperatureMixin, name="openai"):
+    """An OpenAI LLM provider to be used with an LLM client."""
+
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
+
+
+    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
+    base_url: str | None = Field(default=None, description="Base url to the hosted model.")
+    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
+                            serialization_alias="model",
+                            description="The OpenAI hosted model name.")
+    seed: int | None = Field(default=None, description="Random seed to set for generation.")
+```
+
+#### TopPMixin
+
+The {class}`nat.data_models.top_p_mixin.TopPMixin` is a mixin that adds a `top_p` field to the provider config. The `top_p` field is a float in [0, 1] that specifies the top-p for distribution sampling.
+
+```python
+from nat.data_models.top_p_mixin import TopPMixin
+
+class OpenAIModelConfig(LLMBaseConfig, TopPMixin, name="openai"):
+    """An OpenAI LLM provider to be used with an LLM client."""
+
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
+
+    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
+    base_url: str | None = Field(default=None, description="Base url to the hosted model.")
+    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
+                            serialization_alias="model",
+                            description="The OpenAI hosted model name.")
+```
 
 ### Registering the Provider
 An asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_provider` is used to register the provider with NeMo Agent toolkit by yielding an instance of {class}`nat.builder.llm.LLMProviderInfo`.
@@ -94,7 +170,7 @@ Registering an embedder or retriever client is similar. However, the function sh
 
 The wrapped function in turn receives two required positional arguments: an instance of the configuration class of the provider, and an instance of {class}`nat.builder.builder.Builder`. The function should then yield a client suitable for the given provider and framework. The exact type is dictated by the framework itself and not by NeMo Agent toolkit.
 
-Since many frameworks provide clients for many of the common LLM APIs, in NeMo Agent toolkit, the client registration functions are often simple factory methods. For example, the OpenAI client registration function for LangChain is as follows:
+Since many frameworks provide clients for many of the common LLM APIs, in NeMo Agent toolkit, the client registration functions are often simple factory methods. For example, the OpenAI client registration function for LangChain/LangGraph is as follows:
 
 `packages/nvidia_nat_langchain/src/nat/plugins/langchain/llm.py`:
 ```python
@@ -103,7 +179,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
-    yield ChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+    yield ChatOpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True))
 ```
 
 Similar to the registration function for the provider, the client registration function can perform any necessary setup actions before yielding the client, along with cleanup actions after the `yield` statement.
@@ -114,13 +190,14 @@ In the above example, the `ChatOpenAI` class is imported lazily, allowing for th
 
 ## Test the Combination of LLM Provider and Client
 
-After implementing a new LLM provider, it's important to verify that it works correctly with all existing LLM clients. This can be done by writing integration tests. Here's an example of how to test the integration between the NIM LLM provider and the LangChain framework:
+After implementing a new LLM provider, it's important to verify that it works correctly with all existing LLM clients. This can be done by writing integration tests. Here's an example of how to test the integration between the NIM LLM provider and the LangChain/LangGraph framework:
 
 ```python
 @pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_nim_langchain_agent():
     """
-    Test NIM LLM with LangChain agent. Requires NVIDIA_API_KEY to be set.
+    Test NIM LLM with LangChain/LangGraph agent. Requires NVIDIA_API_KEY to be set.
     """
 
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
@@ -140,7 +217,7 @@ async def test_nim_langchain_agent():
         assert "3" in response.content.lower()
 ```
 
-Note: Since this test requires an API key, it's marked with `@pytest.mark.integration` to exclude it from CI runs. However, these tests are necessary for maintaining and verifying the functionality of LLM providers and their client integrations.
+Note: Since this test requires an API key, it's requesting the `nvidia_api_key` fixture, which checks for the `NVIDIA_API_KEY` environment variable. If the variable is not set, the test will be skipped. Additionally, the test is marked with `@pytest.mark.integration` this indicates that the test might take longer to run and may require external resources. Tests marked with `integration` will only run when the `--run_integration` flag is provided to `pytest`, allowing the test to be excluded from CI runs. However, these tests are necessary for maintaining and verifying the functionality of LLM providers and their client integrations.
 
 ## Packaging the Provider and Client
 

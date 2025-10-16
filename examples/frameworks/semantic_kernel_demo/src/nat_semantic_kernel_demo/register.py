@@ -72,7 +72,7 @@ async def semantic_kernel_travel_planning_workflow(config: SKTravelPlanningWorkf
 
     kernel.add_service(chat_service)
 
-    tools = builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
+    tools = await builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
 
     # Zip config.tool names and tools for kernel add plugin
     for tool_name, tool in zip(config.tool_names, tools):
@@ -125,6 +125,6 @@ async def semantic_kernel_travel_planning_workflow(config: SKTravelPlanningWorkf
     try:
         yield FunctionInfo.create(single_fn=_response_fn, converters=[convert_dict_to_str])
     except GeneratorExit:
-        logger.exception("Exited early!", exc_info=True)
+        logger.exception("Exited early!")
     finally:
         logger.debug("Cleaning up")

@@ -22,6 +22,14 @@ authentication to use. Particularly, this example highlights how to use the `OAu
 with a demonstrative `OAuth 2.0` provider and then return information from the authorization server's demonstrative `/api/me` endpoint
 which provides information about the authenticated user.
 
+## Installation
+
+First, install the `simple_auth` example:
+
+```bash
+uv pip install -e examples/front_ends/simple_auth
+```
+
 ## How the OAuth2.0 Authorization‑Code Flow Works
 
 1. **Agent launches login** – it sends the user’s browser to the OAuth provider’s
@@ -111,8 +119,7 @@ Browse to **`http://localhost:5001/`** – you should see the demo home page. Si
 
 ## Deploy the NeMo Agent Toolkit UI
 
-Follow the instructions at the GitHub repository to deploy the [NeMo Agent Toolkit UI](https://github.com/NVIDIA/NeMo-Agent-Toolkit-UI)
-to deploy the UI that works with the agent in this example. Configure it according to the instructions in the README.
+Follow the instructions in the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide to set up and launch the NeMo Agent Toolkit UI.
 
 ## Update Your Environment Variables
 
@@ -136,16 +143,18 @@ handles authentication.
 
 ## Query the Agent
 
-Open the NeMo Agent Toolkit UI in your browser at `http://localhost:3000`. Ensure settings are configured correctly to point to your agent's API endpoint at `http://localhost:8000` and
-the WebSocket URL at `ws://localhost:8000/websocket`.
+Open the NeMo Agent Toolkit UI in your browser at http://localhost:3000.
 
-Close the settings window. In your chat window, ensure that `Websocket` mode is enabled by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out.
+By default, the UI is configured to connect to your agent's API endpoint at `http://localhost:8000` and the WebSocket URL at `ws://localhost:8000/websocket`. These default values can be changed using environment variables. See the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide for environment variable configuration details.
 
-Once you've successfully connected to the websocket, you can start querying the agent. Asking the agent the following query should initiate the demonstrative authentication flow and then return
-information about the authenticated user:
+> [!IMPORTANT]
+> In your chat window, ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. This is required for the OAuth 2.0 authentication flow to work properly.
+
+Once you've successfully connected to the WebSocket, you can start querying the agent. Asking the agent the following query should initiate the demonstrative authentication flow and then return information about the authenticated user:
 
 ```text
 Who am I logged in as?
 ```
 
-**Tip**: Remember to enable pop-ups in your browser to allow the OAuth 2.0 provider to open a new window for authentication.
+> [!TIP]
+> If you encounter errors, verify that WebSocket mode is enabled. HTTP requests are the default method of communication, but human-in-the-loop functionality (including OAuth authentication) is not supported through HTTP.

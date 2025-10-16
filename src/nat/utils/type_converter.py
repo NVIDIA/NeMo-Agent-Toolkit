@@ -90,8 +90,16 @@ class TypeConverter:
         decomposed = DecomposedType(to_type)
 
         # 1) If data is already correct type, return it
-        if to_type is None or decomposed.is_instance((data, to_type)):
+        if to_type is None or decomposed.is_instance(data):
             return data
+
+        # 2) If data is a union type, try to convert to each type in the union
+        if decomposed.is_union:
+            for union_type in decomposed.args:
+                result = self._convert(data, union_type)
+                if result is not None:
+                    return result
+            return None
 
         root = decomposed.root
 
@@ -198,16 +206,17 @@ class TypeConverter:
         """
         visited = set()
         final = self._try_indirect_conversion(data, to_type, visited)
+        src_type = type(data)
         if final is not None:
             # Warn once if found a chain
-            self._maybe_warn_indirect(type(data), to_type)
+            self._maybe_warn_indirect(src_type, to_type)
             return final
 
         # If no success, try parent's indirect
         if self._parent is not None:
             parent_final = self._parent._try_indirect_convert(data, to_type)
             if parent_final is not None:
-                self._maybe_warn_indirect(type(data), to_type)
+                self._maybe_warn_indirect(src_type, to_type)
                 return parent_final
 
         return None

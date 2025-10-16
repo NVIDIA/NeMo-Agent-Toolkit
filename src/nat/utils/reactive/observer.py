@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 # Contravariant type param: An Observer that can accept type X can also
 # accept any supertype of X.
-_T_in_contra = TypeVar("_T_in_contra", contravariant=True)  # pylint: disable=invalid-name
-_T = TypeVar("_T")  # pylint: disable=invalid-name
+_T_in_contra = TypeVar("_T_in_contra", contravariant=True)
+_T = TypeVar("_T")
 
 OnNext = Callable[[_T], None]
 OnError = Callable[[Exception], None]
@@ -64,7 +64,7 @@ class Observer(ObserverBase[_T_in_contra]):
                 try:
                     self._on_error(exc)
                 except Exception as e:
-                    logger.exception("Error in on_error callback: %s", e, exc_info=True)
+                    logger.exception("Error in on_error callback: %s", e)
 
     def on_complete(self) -> None:
         if not self._stopped:
@@ -73,4 +73,4 @@ class Observer(ObserverBase[_T_in_contra]):
                 try:
                     self._on_complete()
                 except Exception as e:
-                    logger.exception("Error in on_complete callback: %s", e, exc_info=True)
+                    logger.exception("Error in on_complete callback: %s", e)

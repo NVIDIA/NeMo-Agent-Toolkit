@@ -23,6 +23,7 @@ class FunctionDependencies(BaseModel):
     A class to represent the dependencies of a function.
     """
     functions: set[str] = Field(default_factory=set)
+    function_groups: set[str] = Field(default_factory=set)
     llms: set[str] = Field(default_factory=set)
     embedders: set[str] = Field(default_factory=set)
     memory_clients: set[str] = Field(default_factory=set)
@@ -31,6 +32,10 @@ class FunctionDependencies(BaseModel):
 
     @field_serializer("functions", when_used="json")
     def serialize_functions(self, v: set[str]) -> list[str]:
+        return list(v)
+
+    @field_serializer("function_groups", when_used="json")
+    def serialize_function_groups(self, v: set[str]) -> list[str]:
         return list(v)
 
     @field_serializer("llms", when_used="json")
@@ -54,19 +59,22 @@ class FunctionDependencies(BaseModel):
         return list(v)
 
     def add_function(self, function: str):
-        self.functions.add(function)  # pylint: disable=no-member
+        self.functions.add(function)
+
+    def add_function_group(self, function_group: str):
+        self.function_groups.add(function_group)  # pylint: disable=no-member
 
     def add_llm(self, llm: str):
-        self.llms.add(llm)  # pylint: disable=no-member
+        self.llms.add(llm)
 
     def add_embedder(self, embedder: str):
-        self.embedders.add(embedder)  # pylint: disable=no-member
+        self.embedders.add(embedder)
 
     def add_memory_client(self, memory_client: str):
-        self.memory_clients.add(memory_client)  # pylint: disable=no-member
+        self.memory_clients.add(memory_client)
 
     def add_object_store(self, object_store: str):
-        self.object_stores.add(object_store)  # pylint: disable=no-member
+        self.object_stores.add(object_store)
 
     def add_retriever(self, retriever: str):
-        self.retrievers.add(retriever)  # pylint: disable=no-member
+        self.retrievers.add(retriever)

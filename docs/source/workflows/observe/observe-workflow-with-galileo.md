@@ -105,4 +105,4 @@ As the workflow runs, telemetry data will start showing up in Galileo.
 
 
 
-For additional help, see the [Galileo OpenTelemetry integration docs](https://v2docs.galileo.ai/integrations/otel).
+For additional help, see the [Galileo OpenTelemetry integration docs](https://v2docs.galileo.ai/how-to-guides/third-party-integrations/otel).

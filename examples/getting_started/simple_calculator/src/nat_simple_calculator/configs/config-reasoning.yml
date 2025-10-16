@@ -14,15 +14,15 @@
 # limitations under the License.
 
 
-general:
-  use_uvloop: true
-# Uncomment the following to enable tracing. Run `phoenix serve` before launching
-#  telemetry:
-#    tracing:
-#      phoenix:
-#        _type: phoenix
-#        endpoint: http://localhost:6006/v1/traces
-#        project: simple_calculator
+# Uncomment the following to enable tracing.
+# Install `arize-phoenix` and run `phoenix serve` before launching
+# general:
+#   telemetry:
+#     tracing:
+#       phoenix:
+#         _type: phoenix
+#         endpoint: http://localhost:6006/v1/traces
+#         project: simple_calculator
 
 functions:
   calculator_multiply:

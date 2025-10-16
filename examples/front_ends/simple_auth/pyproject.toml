@@ -3,16 +3,17 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
 name = "nat_simple_auth"
 dynamic = ["version"]
 dependencies = [
-    "nvidia-nat[langchain]~=1.2",
+    "nvidia-nat[langchain]~=1.4",
     "httpx",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 description = "Custom NeMo Agent toolkit workflow demonstrating auth"
 classifiers = ["Programming Language :: Python"]
 

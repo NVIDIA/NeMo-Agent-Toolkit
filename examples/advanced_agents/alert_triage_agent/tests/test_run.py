@@ -17,6 +17,7 @@ import json
 from unittest.mock import patch
 
 import pytest
+
 from nat_alert_triage_agent import run
 
 

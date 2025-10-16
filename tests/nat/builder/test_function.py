@@ -125,7 +125,7 @@ async def test_functions_call_functions():
     @register_function(config_type=ChainedFnConfig)
     async def _register(config: ChainedFnConfig, b: Builder):
 
-        other_fn = b.get_function(config.function_name)
+        other_fn = await b.get_function(config.function_name)
 
         async def _inner(some_input: str) -> str:
             return await other_fn.ainvoke(some_input, to_type=str) + "!"
@@ -187,9 +187,9 @@ async def test_functions_single_dict_input_pod_output():
         fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
 
         assert fn_obj.input_type == dict[int, typing.Any]
-        assert fn_obj.input_class == dict
-        assert fn_obj.single_output_type == str
-        assert fn_obj.streaming_output_type == str
+        assert fn_obj.input_class is dict
+        assert fn_obj.single_output_type is str
+        assert fn_obj.streaming_output_type is str
 
         assert await fn_obj.ainvoke({0: "test"}, to_type=str) == "test!"
 
@@ -312,9 +312,9 @@ async def test_stream_functions_single_dict_input_pod_output():
         fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
 
         assert fn_obj.input_type == dict[int, typing.Any]
-        assert fn_obj.input_class == dict
+        assert fn_obj.input_class is dict
         assert fn_obj.single_output_type == NoneType
-        assert fn_obj.streaming_output_type == str
+        assert fn_obj.streaming_output_type is str
 
         # Stream output with input which is not convertible
         result: None | str = None

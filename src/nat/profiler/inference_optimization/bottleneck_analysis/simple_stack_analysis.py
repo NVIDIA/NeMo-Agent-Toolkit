@@ -195,7 +195,7 @@ def profile_workflow_bottlenecks(all_steps: list[list[IntermediateStep]]) -> Sim
         c_max = 0
         for ts, delta in events_sub:
             c_curr += delta
-            if c_curr > c_max:  # pylint: disable=consider-using-max-builtin
+            if c_curr > c_max:  # noqa: PLR1730 - don't use max built-in
                 c_max = c_curr
         max_concurrency_by_name[op_name] = c_max
 

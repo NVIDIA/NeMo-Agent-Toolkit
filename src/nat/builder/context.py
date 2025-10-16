@@ -31,6 +31,7 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
 from nat.runtime.user_metadata import RequestAttributes
 from nat.utils.reactive.subject import Subject
@@ -38,13 +39,13 @@ from nat.utils.reactive.subject import Subject
 
 class Singleton(type):
 
-    def __init__(cls, name, bases, dict):  # pylint: disable=W0622
-        super(Singleton, cls).__init__(name, bases, dict)
+    def __init__(cls, name, bases, dict):
+        super().__init__(name, bases, dict)
         cls.instance = None
 
     def __call__(cls, *args, **kw):
         if cls.instance is None:
-            cls.instance = super(Singleton, cls).__call__(*args, **kw)
+            cls.instance = super().__call__(*args, **kw)
         return cls.instance
 
 
@@ -65,14 +66,15 @@ class ContextState(metaclass=Singleton):
 
     def __init__(self):
         self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
+        self.user_message_id: ContextVar[str | None] = ContextVar("user_message_id", default=None)
+        self.workflow_run_id: ContextVar[str | None] = ContextVar("workflow_run_id", default=None)
+        self.workflow_trace_id: ContextVar[int | None] = ContextVar("workflow_trace_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
-        self.metadata: ContextVar[RequestAttributes] = ContextVar("request_attributes", default=RequestAttributes())
-        self.event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=Subject())
-        self.active_function: ContextVar[InvocationNode] = ContextVar("active_function",
-                                                                      default=InvocationNode(function_id="root",
-                                                                                             function_name="root"))
-        self.active_span_id_stack: ContextVar[list[str]] = ContextVar("active_span_id_stack", default=["root"])
+        self._metadata: ContextVar[RequestAttributes | None] = ContextVar("request_attributes", default=None)
+        self._event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=None)
+        self._active_function: ContextVar[InvocationNode | None] = ContextVar("active_function", default=None)
+        self._active_span_id_stack: ContextVar[list[str] | None] = ContextVar("active_span_id_stack", default=None)
 
         # Default is a lambda no-op which returns NoneType
         self.user_input_callback: ContextVar[Callable[[InteractionPrompt], Awaitable[HumanResponse | None]]
@@ -82,6 +84,30 @@ class ContextState(metaclass=Singleton):
         self.user_auth_callback: ContextVar[Callable[[AuthProviderBaseConfig, AuthFlowType],
                                                      Awaitable[AuthenticatedContext]]
                                             | None] = ContextVar("user_auth_callback", default=None)
+
+    @property
+    def metadata(self) -> ContextVar[RequestAttributes]:
+        if self._metadata.get() is None:
+            self._metadata.set(RequestAttributes())
+        return typing.cast(ContextVar[RequestAttributes], self._metadata)
+
+    @property
+    def active_function(self) -> ContextVar[InvocationNode]:
+        if self._active_function.get() is None:
+            self._active_function.set(InvocationNode(function_id="root", function_name="root"))
+        return typing.cast(ContextVar[InvocationNode], self._active_function)
+
+    @property
+    def event_stream(self) -> ContextVar[Subject[IntermediateStep]]:
+        if self._event_stream.get() is None:
+            self._event_stream.set(Subject())
+        return typing.cast(ContextVar[Subject[IntermediateStep]], self._event_stream)
+
+    @property
+    def active_span_id_stack(self) -> ContextVar[list[str]]:
+        if self._active_span_id_stack.get() is None:
+            self._active_span_id_stack.set(["root"])
+        return typing.cast(ContextVar[list[str]], self._active_span_id_stack)
 
     @staticmethod
     def get() -> "ContextState":
@@ -96,14 +122,14 @@ class Context:
     @property
     def input_message(self):
         """
-            Retrieves the input message from the context state.
+        Retrieves the input message from the context state.
 
-            The input_message property is used to access the message stored in the
-            context state. This property returns the message as it is currently
-            maintained in the context.
+        The input_message property is used to access the message stored in the
+        context state. This property returns the message as it is currently
+        maintained in the context.
 
-            Returns:
-                str: The input message retrieved from the context state.
+        Returns:
+            str: The input message retrieved from the context state.
         """
         return self._context_state.input_message.get()
 
@@ -165,8 +191,32 @@ class Context:
         """
         return self._context_state.conversation_id.get()
 
+    @property
+    def user_message_id(self) -> str | None:
+        """
+        This property retrieves the user message ID which is the unique identifier for the current user message.
+        """
+        return self._context_state.user_message_id.get()
+
+    @property
+    def workflow_run_id(self) -> str | None:
+        """
+        Returns a stable identifier for the current workflow/agent invocation (UUID string).
+        """
+        return self._context_state.workflow_run_id.get()
+
+    @property
+    def workflow_trace_id(self) -> int | None:
+        """
+        Returns the 128-bit trace identifier for the current run, used as the OpenTelemetry trace_id.
+        """
+        return self._context_state.workflow_trace_id.get()
+
     @contextmanager
-    def push_active_function(self, function_name: str, input_data: typing.Any | None):
+    def push_active_function(self,
+                             function_name: str,
+                             input_data: typing.Any | None,
+                             metadata: dict[str, typing.Any] | TraceMetadata | None = None):
         """
         Set the 'active_function' in context, push an invocation node,
         AND create an OTel child span for that function call.
@@ -187,7 +237,8 @@ class Context:
             IntermediateStepPayload(UUID=current_function_id,
                                     event_type=IntermediateStepType.FUNCTION_START,
                                     name=function_name,
-                                    data=StreamEventData(input=input_data)))
+                                    data=StreamEventData(input=input_data),
+                                    metadata=metadata))
 
         manager = ActiveFunctionContextManager()
 

@@ -13,18 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import io
 import time
-from contextlib import asynccontextmanager
 
 import pytest
-from asgi_lifespan import LifespanManager
 from fastapi import FastAPI
-from httpx import ASGITransport
-from httpx import AsyncClient
 from httpx_sse import aconnect_sse
 
+from _utils.dask_utils import await_job
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -37,6 +33,7 @@ from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontE
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
 from nat.test.functions import EchoFunctionConfig
 from nat.test.functions import StreamingEchoFunctionConfig
+from nat.test.utils import build_nat_client
 from nat.utils.type_utils import override
 
 
@@ -51,18 +48,6 @@ class CustomWorker(FastApiFrontEndPluginWorker):
         @app.get("/custom")
         async def custom_route():
             return {"message": "This is a custom route"}
-
-
-@asynccontextmanager
-async def _build_client(config: Config, worker_class: type[FastApiFrontEndPluginWorker] = FastApiFrontEndPluginWorker):
-
-    worker = worker_class(config)
-
-    app = worker.build_app()
-
-    async with LifespanManager(app):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            yield client
 
 
 @pytest.mark.parametrize("fn_use_openai_api", [True, False])
@@ -81,7 +66,7 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
     assert workflow_path is not None
     assert oai_path is not None
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
 
         # Test both the function accepting OAI and also using the OAI API
         if (fn_use_openai_api):
@@ -126,7 +111,7 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
     assert workflow_path is not None
     assert oai_path is not None
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
 
         response = []
 
@@ -137,7 +122,7 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
                                     json=ChatRequest(messages=[Message(content=x, role="user")
                                                                for x in values]).model_dump()) as event_source:
                 async for sse in event_source.aiter_sse():
-                    response.append(ChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
+                    response.append(ChatResponseChunk.model_validate(sse.json()).choices[0].delta.content or "")
 
                 assert event_source.response.status_code == 200
                 assert response == values
@@ -159,7 +144,7 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
                                 json=ChatRequest(messages=[Message(content=x, role="user")
                                                            for x in values]).model_dump()) as event_source:
             async for sse in event_source.aiter_sse():
-                response_oai.append(ChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
+                response_oai.append(ChatResponseChunk.model_validate(sse.json()).choices[0].delta.content or "")
 
             assert event_source.response.status_code == 200
             assert response_oai == values
@@ -172,7 +157,7 @@ async def test_custom_endpoint():
         workflow=EchoFunctionConfig(),
     )
 
-    async with _build_client(config, worker_class=CustomWorker) as client:
+    async with build_nat_client(config, worker_class=CustomWorker) as client:
         response = await client.get("/custom")
 
         assert response.status_code == 200
@@ -195,7 +180,7 @@ async def test_specified_endpoints():
         workflow=EchoFunctionConfig(),
     )
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         # response = await client.get("/constant_get")
 
         # assert response.status_code == 200
@@ -207,8 +192,9 @@ async def test_specified_endpoints():
         assert response.json() == {"value": "Hello"}
 
 
+@pytest.mark.parametrize("use_sync_timeout", [True, False])
 @pytest.mark.parametrize("fn_use_openai_api", [True, False])
-async def test_generate_async(fn_use_openai_api: bool):
+async def test_generate_async(fn_use_openai_api: bool, use_sync_timeout: bool):
     if (fn_use_openai_api):
         pytest.skip("Async support for OpenAI API is not implemented yet")
 
@@ -219,9 +205,11 @@ async def test_generate_async(fn_use_openai_api: bool):
         workflow=EchoFunctionConfig(use_openai_api=fn_use_openai_api),
     )
 
+    job_id = f"test_generate_async_{use_sync_timeout}_{fn_use_openai_api}"
+
     workflow_path = f"{front_end_config.workflow.path}/async"
     # oai_path = front_end_config.workflow.openai_api_path
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
 
         # Test both the function accepting OAI and also using the OAI API
         if (fn_use_openai_api):
@@ -233,16 +221,28 @@ async def test_generate_async(fn_use_openai_api: bool):
             assert True  # TODO: Implement async support in the EchoFunctionConfig
 
         else:
-            response = await client.post(workflow_path, json={"message": "Hello", "job_id": "1"})
+            payload = {"message": "Hello", "job_id": job_id}
+            if use_sync_timeout:
+                payload["sync_timeout"] = 10
 
-            assert response.status_code == 202
-            assert response.json() == {"job_id": "1", "status": "submitted"}
+            response = await client.post(workflow_path, json=payload)
+
+            if use_sync_timeout:
+                assert response.status_code == 200
+                response_body = response.json()
+                assert response_body["job_id"] == job_id
+                assert response_body["status"] == "success"
+                assert response_body["output"] == {"value": "Hello"}
+            else:
+                assert response.status_code == 202
+                assert response.json() == {"job_id": job_id, "status": "submitted"}
 
         expected_status_values = ("running", "success", "submitted")
-        status_path = f"{workflow_path}/job/1"
+        status_path = f"{workflow_path}/job/{job_id}"
 
         status = None
-        deadline = time.time() + 10  # Wait for up to 10 seconds
+        timeout = 10  # Wait for up to 10 seconds
+        deadline = time.time() + timeout
         while status != "success":
             response = await client.get(status_path)
 
@@ -251,9 +251,9 @@ async def test_generate_async(fn_use_openai_api: bool):
             status = data["status"]
 
             assert status in expected_status_values
-            assert time.time() < deadline, "Job did not complete in time"
             if status != "success":
-                await asyncio.sleep(0.1)
+                assert time.time() < deadline, "Job did not complete in time"
+                await await_job(job_id, timeout=timeout)
 
 
 async def test_async_job_status_not_found():
@@ -266,7 +266,7 @@ async def test_async_job_status_not_found():
 
     workflow_path = f"{front_end_config.workflow.path}/async"
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         status_path = f"{workflow_path}/job/non_existent_job"
 
         response = await client.get(status_path)
@@ -288,7 +288,7 @@ async def test_static_file_endpoints():
         workflow=EchoFunctionConfig(),  # Dummy workflow, not used here
     )
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         # POST: Upload a new file
         response = await client.post(
             f"/static/{file_path}",

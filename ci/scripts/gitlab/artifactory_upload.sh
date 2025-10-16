@@ -22,7 +22,7 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
 GIT_TAG=$(get_git_tag)
-IS_TAGGED=$(is_current_commit_tagged)
+IS_TAGGED=$(is_current_commit_release_tagged)
 rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
 # change this to ready to publish. this should be done programmatically once
@@ -37,7 +37,9 @@ fi
 NAT_ARCH="any"
 NAT_OS="any"
 
-NAT_COMPONENTS=("nvidia-nat" "aiqtoolkit")
+# nvidia-nat itself and all of the plugins are under "nvidia-nat", while the compatibility packages are under "nat"
+NAT_COMPONENTS=("nvidia-nat" "nat")
+
 # We need to fix the name of the component in artifactory to aiqtoolkit
 ARTIFACTORY_COMPONENT_FIXED_NAME="aiqtoolkit"
 
@@ -110,7 +112,7 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
                 # Extract relative path to preserve directory structure, but replacing the first dir with aiqtoolkit
                 # as this is an already established path in artifactory
                 RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
-                RELATIVE_PATH=$(echo "${RELATIVE_PATH}" | sed -e 's|^nvidia-nat/|aiqtoolkit/|')
+                RELATIVE_PATH=$(echo "${RELATIVE_PATH}" | sed -e 's|^nvidia-nat/|aiqtoolkit/|' | sed -e 's|^nat/|aiqtoolkit/|')
                 ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
 
                 echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."

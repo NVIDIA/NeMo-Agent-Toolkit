@@ -80,7 +80,7 @@ The evaluator logic is implemented in the `SimilarityEvaluator` class described 
 To ensure the evaluator is registered at runtime, import the evaluator function in the example project's register.py file — even if the function is not called directly.
 `examples/getting_started/simple_web_query/src/nat_simple_web_query/register.py`:
 ```python
-from .evaluator_register import register_similarity_evaluator  # pylint: disable=unused-import
+from .evaluator_register import register_similarity_evaluator
 ```
 
 ### Understanding `EvalInputItem` and `EvalOutputItem`

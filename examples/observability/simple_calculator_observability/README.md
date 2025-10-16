@@ -21,7 +21,7 @@ This example demonstrates how to implement **observability and tracing capabilit
 
 ## Key Features
 
-- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Langfuse, LangSmith, Weave, Patronus, and RagAI Catalyst for comprehensive monitoring options.
+- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Langfuse, LangSmith, Weave, Patronus, and RagaAI Catalyst for comprehensive monitoring options.
 - **Distributed Tracing Implementation:** Shows how to track agent execution flow across components with detailed trace visualization including agent reasoning, tool calls, and LLM interactions.
 - **Performance Monitoring:** Demonstrates capturing latency metrics, token usage, resource consumption, and error tracking for production-ready AI system monitoring.
 - **Development and Production Patterns:** Provides examples for both local development tracing (Phoenix) and production monitoring setups with various enterprise observability platforms.
@@ -57,19 +57,46 @@ uv pip install -e examples/observability/simple_calculator_observability
 
 Phoenix provides local tracing capabilities perfect for development and testing.
 
-1. Start Phoenix in a separate terminal:
+1. Install Phoenix:
+```bash
+uv pip install arize-phoenix
+```
+
+2. Start Phoenix in a separate terminal:
 
 ```bash
 phoenix serve
 ```
 
-2. Run the workflow with tracing enabled:
+3. Run the workflow with tracing enabled:
 
 ```bash
 nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "What is 2 * 4?"
 ```
 
-3. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
+4. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
+
+### File-Based Tracing (Local Development)
+
+For simple local development and debugging, you can export traces directly to a local file without requiring any external services.
+
+1. Run the workflow with file-based tracing:
+
+```bash
+nat run --config_file examples/observability/simple_calculator_observability/configs/config-otel-file.yml --input "What is 2 * 4?"
+```
+
+2. View the traces in the generated file:
+
+```bash
+cat nat_simple_calculator_traces.jsonl
+```
+
+The traces are stored in JSON Lines format, with each line representing a complete trace. This is useful for:
+- Quick debugging during development
+- Offline analysis of workflow execution
+- Integration with custom analysis tools
+- Archiving traces for later review
 
 ### Production Monitoring Platforms
 
@@ -95,7 +122,7 @@ nat run --config_file examples/observability/simple_calculator_observability/con
 
 #### LangSmith Integration
 
-LangSmith offers comprehensive monitoring within the LangChain ecosystem.
+LangSmith offers comprehensive monitoring within the LangChain/LangGraph ecosystem.
 
 1. Set your LangSmith credentials:
 
@@ -144,9 +171,9 @@ export PATRONUS_API_KEY=<your_api_key>
 nat run --config_file examples/observability/simple_calculator_observability/configs/config-patronus.yml --input "Divide 144 by 12"
 ```
 
-#### RagAI Catalyst Integration
+#### RagaAI Catalyst Integration
 
-Transmit traces to RagAI Catalyst.
+Transmit traces to RagaAI Catalyst.
 
 1. Set your Catalyst API key:
 
@@ -191,8 +218,9 @@ The example includes multiple configuration files for different observability pl
 | Configuration File | Platform | Best For |
 |-------------------|----------|----------|
 | `config-phoenix.yml` | Phoenix | Local development and testing |
+| `config-otel-file.yml` | File Export | Local file-based tracing for development and debugging |
 | `config-langfuse.yml` | Langfuse | Production monitoring and analytics |
-| `config-langsmith.yml` | LangSmith | LangChain ecosystem integration |
+| `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |
 | `config-weave.yml` | Weave | Workflow-focused tracking |
 | `config-patronus.yml` | Patronus | AI safety and compliance monitoring |
 | `config-catalyst.yml` | Catalyst | RagaAI Catalyst integration |

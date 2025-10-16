@@ -42,7 +42,7 @@ class DataFrameRow(BaseModel):
     framework: str | None
 
     @field_validator('llm_text_input', 'llm_text_output', 'llm_new_token', mode='before')
-    def cast_to_str(cls, v):  # pylint: disable=no-self-argument
+    def cast_to_str(cls, v):
         if v is None:
             return v
         try:

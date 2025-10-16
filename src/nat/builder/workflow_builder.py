@@ -13,13 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import dataclasses
 import inspect
 import logging
+import typing
 import warnings
+from collections.abc import Sequence
 from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
+from typing import cast
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
@@ -31,6 +35,7 @@ from nat.builder.context import ContextState
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.builder.function import LambdaFunction
 from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
@@ -42,6 +47,7 @@ from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.component import ComponentGroup
 from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.component_ref import EmbedderRef
+from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import MemoryRef
@@ -52,6 +58,7 @@ from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
@@ -68,6 +75,7 @@ from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from nat.profiler.utils import detect_llm_frameworks_in_build_fn
+from nat.retriever.interface import Retriever
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
@@ -83,6 +91,12 @@ class ConfiguredTelemetryExporter:
 class ConfiguredFunction:
     config: FunctionBaseConfig
     instance: Function
+
+
+@dataclasses.dataclass
+class ConfiguredFunctionGroup:
+    config: FunctionGroupBaseConfig
+    instance: FunctionGroup
 
 
 @dataclasses.dataclass
@@ -127,7 +141,6 @@ class ConfiguredTTCStrategy:
     instance: StrategyBase
 
 
-# pylint: disable=too-many-public-methods
 class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     def __init__(self, *, general_config: GeneralConfig | None = None, registry: TypeRegistry | None = None):
@@ -143,9 +156,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._registry = registry
 
         self._logging_handlers: dict[str, logging.Handler] = {}
+        self._removed_root_handlers: list[tuple[logging.Handler, int]] = []
         self._telemetry_exporters: dict[str, ConfiguredTelemetryExporter] = {}
 
         self._functions: dict[str, ConfiguredFunction] = {}
+        self._function_groups: dict[str, ConfiguredFunctionGroup] = {}
         self._workflow: ConfiguredFunction | None = None
 
         self._llms: dict[str, ConfiguredLLM] = {}
@@ -162,7 +177,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         # Create a mapping to track function name -> other function names it depends on
         self.function_dependencies: dict[str, FunctionDependencies] = {}
+        self.function_group_dependencies: dict[str, FunctionDependencies] = {}
         self.current_function_building: str | None = None
+        self.current_function_group_building: str | None = None
 
     async def __aenter__(self):
 
@@ -170,6 +187,15 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         # Get the telemetry info from the config
         telemetry_config = self.general_config.telemetry
+
+        # If we have logging configuration, we need to manage the root logger properly
+        root_logger = logging.getLogger()
+
+        # Collect configured handler types to determine if we need to adjust existing handlers
+        # This is somewhat of a hack by inspecting the class name of the config object
+        has_console_handler = any(
+            hasattr(config, "__class__") and "console" in config.__class__.__name__.lower()
+            for config in telemetry_config.logging.values())
 
         for key, logging_config in telemetry_config.logging.items():
             # Use the same pattern as tracing, but for logging
@@ -184,7 +210,31 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             self._logging_handlers[key] = handler
 
             # Now attach to NAT's root logger
-            logging.getLogger().addHandler(handler)
+            root_logger.addHandler(handler)
+
+        # If we added logging handlers, manage existing handlers appropriately
+        if self._logging_handlers:
+            min_handler_level = min((handler.level for handler in root_logger.handlers), default=logging.CRITICAL)
+
+            # Ensure the root logger level allows messages through
+            root_logger.level = max(root_logger.level, min_handler_level)
+
+            # If a console handler is configured, adjust or remove default CLI handlers
+            # to avoid duplicate output while preserving workflow visibility
+            if has_console_handler:
+                # Remove existing StreamHandlers that are not the newly configured ones
+                for handler in root_logger.handlers[:]:
+                    if type(handler) is logging.StreamHandler and handler not in self._logging_handlers.values():
+                        self._removed_root_handlers.append((handler, handler.level))
+                        root_logger.removeHandler(handler)
+            else:
+                # No console handler configured, but adjust existing handler levels
+                # to respect the minimum configured level for file/other handlers
+                for handler in root_logger.handlers[:]:
+                    if type(handler) is logging.StreamHandler:
+                        old_level = handler.level
+                        handler.setLevel(min_handler_level)
+                        self._removed_root_handlers.append((handler, old_level))
 
         # Add the telemetry exporters
         for key, telemetry_exporter_config in telemetry_config.tracing.items():
@@ -196,12 +246,21 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         assert self._exit_stack is not None, "Exit stack not initialized"
 
-        for _, handler in self._logging_handlers.items():
-            logging.getLogger().removeHandler(handler)
+        root_logger = logging.getLogger()
+
+        # Remove custom logging handlers
+        for handler in self._logging_handlers.values():
+            root_logger.removeHandler(handler)
+
+        # Restore original handlers and their levels
+        for handler, old_level in self._removed_root_handlers:
+            if handler not in root_logger.handlers:
+                root_logger.addHandler(handler)
+            handler.setLevel(old_level)
 
         await self._exit_stack.__aexit__(*exc_details)
 
-    def build(self, entry_function: str | None = None) -> Workflow:
+    async def build(self, entry_function: str | None = None) -> Workflow:
         """
         Creates an instance of a workflow object using the added components and the desired entry function.
 
@@ -225,12 +284,32 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         if (self._workflow is None):
             raise ValueError("Must set a workflow before building")
 
+        # Set of all functions which are "included" by function groups
+        included_functions = set()
+        # Dictionary of function configs
+        function_configs = dict()
+        # Dictionary of function group configs
+        function_group_configs = dict()
+        # Dictionary of function instances
+        function_instances = dict()
+        # Dictionary of function group instances
+        function_group_instances = dict()
+
+        for k, v in self._function_groups.items():
+            included_functions.update((await v.instance.get_included_functions()).keys())
+            function_group_configs[k] = v.config
+            function_group_instances[k] = v.instance
+
+        # Function configs need to be restricted to only the functions that are not in a function group
+        for k, v in self._functions.items():
+            if k not in included_functions:
+                function_configs[k] = v.config
+                function_instances[k] = v.instance
+
         # Build the config from the added objects
         config = Config(general=self.general_config,
-                        functions={
-                            k: v.config
-                            for k, v in self._functions.items()
-                        },
+                        functions=function_configs,
+                        function_groups=function_group_configs,
                         workflow=self._workflow.config,
                         llms={
                             k: v.config
@@ -260,14 +339,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         if (entry_function is None):
             entry_fn_obj = self.get_workflow()
         else:
-            entry_fn_obj = self.get_function(entry_function)
+            entry_fn_obj = await self.get_function(entry_function)
 
         workflow = Workflow.from_entry_fn(config=config,
                                           entry_fn=entry_fn_obj,
-                                          functions={
-                                              k: v.instance
-                                              for k, v in self._functions.items()
-                                          },
+                                          functions=function_instances,
+                                          function_groups=function_group_instances,
                                           llms={
                                               k: v.instance
                                               for k, v in self._llms.items()
@@ -348,11 +425,53 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return ConfiguredFunction(config=config, instance=build_result)
 
+    async def _build_function_group(self, name: str, config: FunctionGroupBaseConfig) -> ConfiguredFunctionGroup:
+        """Build a function group from the provided configuration.
+
+        Args:
+            name: The name of the function group
+            config: The function group configuration
+
+        Returns:
+            ConfiguredFunctionGroup: The built function group
+
+        Raises:
+            ValueError: If the function group builder returns invalid results
+        """
+        registration = self._registry.get_function_group(type(config))
+
+        inner_builder = ChildBuilder(self)
+
+        # Build the function group - use the same wrapping pattern as _build_function
+        llms = {k: v.instance for k, v in self._llms.items()}
+        function_frameworks = detect_llm_frameworks_in_build_fn(registration)
+
+        build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
+
+        # Set the currently building function group so the ChildBuilder can track dependencies
+        self.current_function_group_building = config.type
+        # Empty set of dependencies for the current function group
+        self.function_group_dependencies[config.type] = FunctionDependencies()
+
+        build_result = await self._get_exit_stack().enter_async_context(build_fn(config, inner_builder))
+
+        self.function_group_dependencies[name] = inner_builder.dependencies
+
+        if not isinstance(build_result, FunctionGroup):
+            raise ValueError("Expected a FunctionGroup object to be returned from the function group builder. "
+                             f"Got {type(build_result)}")
+
+        # set the instance name for the function group based on the workflow-provided name
+        build_result.set_instance_name(name)
+        return ConfiguredFunctionGroup(config=config, instance=build_result)
+
     @override
     async def add_function(self, name: str | FunctionRef, config: FunctionBaseConfig) -> Function:
+        if isinstance(name, FunctionRef):
+            name = str(name)
 
-        if (name in self._functions):
-            raise ValueError(f"Function `{name}` already exists in the list of functions")
+        if (name in self._functions or name in self._function_groups):
+            raise ValueError(f"Function `{name}` already exists in the list of functions or function groups")
 
         build_result = await self._build_function(name=name, config=config)
 
@@ -361,19 +480,66 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return build_result.instance
 
     @override
-    def get_function(self, name: str | FunctionRef) -> Function:
+    async def add_function_group(self, name: str | FunctionGroupRef, config: FunctionGroupBaseConfig) -> FunctionGroup:
+        if isinstance(name, FunctionGroupRef):
+            name = str(name)
 
+        if (name in self._function_groups or name in self._functions):
+            raise ValueError(f"Function group `{name}` already exists in the list of function groups or functions")
+
+        # Build the function group
+        build_result = await self._build_function_group(name=name, config=config)
+
+        self._function_groups[name] = build_result
+
+        # If the function group exposes functions, add them to the global function registry
+        # If the function group exposes functions, record and add them to the registry
+        included_functions = await build_result.instance.get_included_functions()
+        for k in included_functions:
+            if k in self._functions:
+                raise ValueError(f"Exposed function `{k}` from group `{name}` conflicts with an existing function")
+        self._functions.update({
+            k: ConfiguredFunction(config=v.config, instance=v)
+            for k, v in included_functions.items()
+        })
+
+        return build_result.instance
+
+    @override
+    async def get_function(self, name: str | FunctionRef) -> Function:
+        if isinstance(name, FunctionRef):
+            name = str(name)
         if name not in self._functions:
             raise ValueError(f"Function `{name}` not found")
 
         return self._functions[name].instance
 
     @override
+    async def get_function_group(self, name: str | FunctionGroupRef) -> FunctionGroup:
+        if isinstance(name, FunctionGroupRef):
+            name = str(name)
+        if name not in self._function_groups:
+            raise ValueError(f"Function group `{name}` not found")
+
+        return self._function_groups[name].instance
+
+    @override
     def get_function_config(self, name: str | FunctionRef) -> FunctionBaseConfig:
+        if isinstance(name, FunctionRef):
+            name = str(name)
         if name not in self._functions:
             raise ValueError(f"Function `{name}` not found")
 
         return self._functions[name].config
+
+    @override
+    def get_function_group_config(self, name: str | FunctionGroupRef) -> FunctionGroupBaseConfig:
+        if isinstance(name, FunctionGroupRef):
+            name = str(name)
+        if name not in self._function_groups:
+            raise ValueError(f"Function group `{name}` not found")
+
+        return self._function_groups[name].config
 
     @override
     async def set_workflow(self, config: FunctionBaseConfig) -> Function:
@@ -404,16 +570,57 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @override
     def get_function_dependencies(self, fn_name: str | FunctionRef) -> FunctionDependencies:
+        if isinstance(fn_name, FunctionRef):
+            fn_name = str(fn_name)
         return self.function_dependencies[fn_name]
 
     @override
-    def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str):
+    def get_function_group_dependencies(self, fn_name: str | FunctionGroupRef) -> FunctionDependencies:
+        if isinstance(fn_name, FunctionGroupRef):
+            fn_name = str(fn_name)
+        return self.function_group_dependencies[fn_name]
 
+    @override
+    async def get_tools(self,
+                        tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
+                        wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
+
+        unique = set(tool_names)
+        if len(unique) != len(tool_names):
+            raise ValueError("Tool names must be unique")
+
+        async def _get_tools(n: str | FunctionRef | FunctionGroupRef):
+            tools = []
+            is_function_group_ref = isinstance(n, FunctionGroupRef)
+            if isinstance(n, FunctionRef) or is_function_group_ref:
+                n = str(n)
+            if n not in self._function_groups:
+                # the passed tool name is probably a function, but first check if it's a function group
+                if is_function_group_ref:
+                    raise ValueError(f"Function group `{n}` not found in the list of function groups")
+                tools.append(await self.get_tool(n, wrapper_type))
+            else:
+                tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
+                current_function_group = self._function_groups[n]
+                for fn_name, fn_instance in (await current_function_group.instance.get_accessible_functions()).items():
+                    try:
+                        tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
+                    except Exception:
+                        logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
+                        raise
+            return tools
+
+        tool_lists = await asyncio.gather(*[_get_tools(n) for n in tool_names])
+        # Flatten the list of lists into a single list
+        return [tool for tools in tool_lists for tool in tools]
+
+    @override
+    async def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
+        if isinstance(fn_name, FunctionRef):
+            fn_name = str(fn_name)
         if fn_name not in self._functions:
             raise ValueError(f"Function `{fn_name}` not found in list of functions")
-
         fn = self._functions[fn_name]
-
         try:
             # Using the registry, get the tool wrapper for the requested framework
             tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
@@ -421,11 +628,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Wrap in the correct wrapper
             return tool_wrapper_reg.build_fn(fn_name, fn.instance, self)
         except Exception as e:
-            logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
-            raise e
+            logger.error("Error fetching tool `%s`: %s", fn_name, e)
+            raise
 
     @override
-    async def add_llm(self, name: str | LLMRef, config: LLMBaseConfig):
+    async def add_llm(self, name: str | LLMRef, config: LLMBaseConfig) -> None:
 
         if (name in self._llms):
             raise ValueError(f"LLM `{name}` already exists in the list of LLMs")
@@ -437,11 +644,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             self._llms[name] = ConfiguredLLM(config=config, instance=info_obj)
         except Exception as e:
-            logger.error("Error adding llm `%s` with config `%s`", name, config, exc_info=True)
-            raise e
+            logger.error("Error adding llm `%s` with config `%s`: %s", name, config, e)
+            raise
 
     @override
-    async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str):
+    async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
 
         if (llm_name not in self._llms):
             raise ValueError(f"LLM `{llm_name}` not found")
@@ -458,8 +665,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Return a frameworks specific client
             return client
         except Exception as e:
-            logger.error("Error getting llm `%s` with wrapper `%s`", llm_name, wrapper_type, exc_info=True)
-            raise e
+            logger.error("Error getting llm `%s` with wrapper `%s`: %s", llm_name, wrapper_type, e)
+            raise
 
     @override
     def get_llm_config(self, llm_name: str | LLMRef) -> LLMBaseConfig:
@@ -509,8 +716,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             return info_obj
         except Exception as e:
-            logger.error("Error adding authentication `%s` with config `%s`", name, config, exc_info=True)
-            raise e
+            logger.error("Error adding authentication `%s` with config `%s`: %s", name, config, e)
+            raise
 
     @override
     async def get_auth_provider(self, auth_provider_name: str) -> AuthProviderBase:
@@ -541,7 +748,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._auth_providers[auth_provider_name].instance
 
     @override
-    async def add_embedder(self, name: str | EmbedderRef, config: EmbedderBaseConfig):
+    async def add_embedder(self, name: str | EmbedderRef, config: EmbedderBaseConfig) -> None:
 
         if (name in self._embedders):
             raise ValueError(f"Embedder `{name}` already exists in the list of embedders")
@@ -553,9 +760,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             self._embedders[name] = ConfiguredEmbedder(config=config, instance=info_obj)
         except Exception as e:
-            logger.error("Error adding embedder `%s` with config `%s`", name, config, exc_info=True)
-
-            raise e
+            logger.error("Error adding embedder `%s` with config `%s`: %s", name, config, e)
+            raise
 
     @override
     async def get_embedder(self, embedder_name: str | EmbedderRef, wrapper_type: LLMFrameworkEnum | str):
@@ -575,8 +781,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Return a frameworks specific client
             return client
         except Exception as e:
-            logger.error("Error getting embedder `%s` with wrapper `%s`", embedder_name, wrapper_type, exc_info=True)
-            raise e
+            logger.error("Error getting embedder `%s` with wrapper `%s`: %s", embedder_name, wrapper_type, e)
+            raise
 
     @override
     def get_embedder_config(self, embedder_name: str | EmbedderRef) -> EmbedderBaseConfig:
@@ -602,7 +808,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return info_obj
 
     @override
-    def get_memory_client(self, memory_name: str | MemoryRef) -> MemoryEditor:
+    async def get_memory_client(self, memory_name: str | MemoryRef) -> MemoryEditor:
         """
         Return the instantiated memory client for the given name.
         """
@@ -648,7 +854,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._object_stores[object_store_name].config
 
     @override
-    async def add_retriever(self, name: str | RetrieverRef, config: RetrieverBaseConfig):
+    async def add_retriever(self, name: str | RetrieverRef, config: RetrieverBaseConfig) -> None:
 
         if (name in self._retrievers):
             raise ValueError(f"Retriever '{name}' already exists in the list of retrievers")
@@ -661,11 +867,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             self._retrievers[name] = ConfiguredRetriever(config=config, instance=info_obj)
 
         except Exception as e:
-            logger.error("Error adding retriever `%s` with config `%s`", name, config, exc_info=True)
-
-            raise e
-
-        # return info_obj
+            logger.error("Error adding retriever `%s` with config `%s`: %s", name, config, e)
+            raise
 
     @override
     async def get_retriever(self,
@@ -688,8 +891,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Return a frameworks specific client
             return client
         except Exception as e:
-            logger.error("Error getting retriever `%s` with wrapper `%s`", retriever_name, wrapper_type, exc_info=True)
-            raise e
+            logger.error("Error getting retriever `%s` with wrapper `%s`: %s", retriever_name, wrapper_type, e)
+            raise
 
     @override
     async def get_retriever_config(self, retriever_name: str | RetrieverRef) -> RetrieverBaseConfig:
@@ -699,9 +902,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._retrievers[retriever_name].config
 
-    @experimental(feature_name="TTC")
     @override
-    async def add_ttc_strategy(self, name: str | str, config: TTCStrategyBaseConfig):
+    @experimental(feature_name="TTC")
+    async def add_ttc_strategy(self, name: str | TTCStrategyRef, config: TTCStrategyBaseConfig) -> None:
         if (name in self._ttc_strategies):
             raise ValueError(f"TTC strategy '{name}' already exists in the list of TTC strategies")
 
@@ -713,9 +916,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             self._ttc_strategies[name] = ConfiguredTTCStrategy(config=config, instance=info_obj)
 
         except Exception as e:
-            logger.error("Error adding TTC strategy `%s` with config `%s`", name, config, exc_info=True)
-
-            raise e
+            logger.error("Error adding TTC strategy `%s` with config `%s`: %s", name, config, e)
+            raise
 
     @override
     async def get_ttc_strategy(self,
@@ -743,8 +945,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             return instance
         except Exception as e:
-            logger.error("Error getting TTC strategy `%s`", strategy_name, exc_info=True)
-            raise e
+            logger.error("Error getting TTC strategy `%s`: %s", strategy_name, e)
+            raise
 
     @override
     async def get_ttc_strategy_config(self,
@@ -821,7 +1023,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         else:
             logger.error("No remaining components to build")
 
-        logger.error("Original error:", exc_info=original_error)
+        logger.error("Original error: %s", original_error, exc_info=True)
 
     def _log_build_failure_component(self,
                                      failing_component: ComponentInstanceData,
@@ -889,29 +1091,40 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
                 # Instantiate a the llm
                 if component_instance.component_group == ComponentGroup.LLMS:
-                    await self.add_llm(component_instance.name, component_instance.config)
+                    await self.add_llm(component_instance.name, cast(LLMBaseConfig, component_instance.config))
                 # Instantiate a the embedder
                 elif component_instance.component_group == ComponentGroup.EMBEDDERS:
-                    await self.add_embedder(component_instance.name, component_instance.config)
+                    await self.add_embedder(component_instance.name,
+                                            cast(EmbedderBaseConfig, component_instance.config))
                 # Instantiate a memory client
                 elif component_instance.component_group == ComponentGroup.MEMORY:
-                    await self.add_memory_client(component_instance.name, component_instance.config)
-            # Instantiate a object store client
+                    await self.add_memory_client(component_instance.name,
+                                                 cast(MemoryBaseConfig, component_instance.config))
+                # Instantiate a object store client
                 elif component_instance.component_group == ComponentGroup.OBJECT_STORES:
-                    await self.add_object_store(component_instance.name, component_instance.config)
+                    await self.add_object_store(component_instance.name,
+                                                cast(ObjectStoreBaseConfig, component_instance.config))
                 # Instantiate a retriever client
                 elif component_instance.component_group == ComponentGroup.RETRIEVERS:
-                    await self.add_retriever(component_instance.name, component_instance.config)
+                    await self.add_retriever(component_instance.name,
+                                             cast(RetrieverBaseConfig, component_instance.config))
+                # Instantiate a function group
+                elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
+                    await self.add_function_group(component_instance.name,
+                                                  cast(FunctionGroupBaseConfig, component_instance.config))
                 # Instantiate a function
                 elif component_instance.component_group == ComponentGroup.FUNCTIONS:
                     # If the function is the root, set it as the workflow later
                     if (not component_instance.is_root):
-                        await self.add_function(component_instance.name, component_instance.config)
+                        await self.add_function(component_instance.name,
+                                                cast(FunctionBaseConfig, component_instance.config))
                 elif component_instance.component_group == ComponentGroup.TTC_STRATEGIES:
-                    await self.add_ttc_strategy(component_instance.name, component_instance.config)
+                    await self.add_ttc_strategy(component_instance.name,
+                                                cast(TTCStrategyBaseConfig, component_instance.config))
 
                 elif component_instance.component_group == ComponentGroup.AUTHENTICATION:
-                    await self.add_auth_provider(component_instance.name, component_instance.config)
+                    await self.add_auth_provider(component_instance.name,
+                                                 cast(AuthProviderBaseConfig, component_instance.config))
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
@@ -961,17 +1174,34 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.add_function(name, config)
 
     @override
-    def get_function(self, name: str) -> Function:
+    async def add_function_group(self, name: str, config: FunctionGroupBaseConfig) -> FunctionGroup:
+        return await self._workflow_builder.add_function_group(name, config)
+
+    @override
+    async def get_function(self, name: str) -> Function:
         # If a function tries to get another function, we assume it uses it
-        fn = self._workflow_builder.get_function(name)
+        fn = await self._workflow_builder.get_function(name)
 
         self._dependencies.add_function(name)
 
         return fn
 
     @override
+    async def get_function_group(self, name: str) -> FunctionGroup:
+        # If a function tries to get a function group, we assume it uses it
+        function_group = await self._workflow_builder.get_function_group(name)
+
+        self._dependencies.add_function_group(name)
+
+        return function_group
+
+    @override
     def get_function_config(self, name: str) -> FunctionBaseConfig:
         return self._workflow_builder.get_function_config(name)
+
+    @override
+    def get_function_group_config(self, name: str) -> FunctionGroupBaseConfig:
+        return self._workflow_builder.get_function_group_config(name)
 
     @override
     async def set_workflow(self, config: FunctionBaseConfig) -> Function:
@@ -986,20 +1216,33 @@ class ChildBuilder(Builder):
         return self._workflow_builder.get_workflow_config()
 
     @override
-    def get_tool(self, fn_name: str, wrapper_type: LLMFrameworkEnum | str):
+    async def get_tools(self,
+                        tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
+                        wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
+        tools = await self._workflow_builder.get_tools(tool_names, wrapper_type)
+        for tool_name in tool_names:
+            if tool_name in self._workflow_builder._function_groups:
+                self._dependencies.add_function_group(tool_name)
+            else:
+                self._dependencies.add_function(tool_name)
+        return tools
+
+    @override
+    async def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str):
         # If a function tries to get another function as a tool, we assume it uses it
-        fn = self._workflow_builder.get_tool(fn_name, wrapper_type)
+        fn = await self._workflow_builder.get_tool(fn_name, wrapper_type)
 
         self._dependencies.add_function(fn_name)
 
         return fn
 
     @override
-    async def add_llm(self, name: str, config: LLMBaseConfig):
+    async def add_llm(self, name: str, config: LLMBaseConfig) -> None:
         return await self._workflow_builder.add_llm(name, config)
 
+    @experimental(feature_name="Authentication")
     @override
-    async def add_auth_provider(self, name: str, config: AuthProviderBaseConfig):
+    async def add_auth_provider(self, name: str, config: AuthProviderBaseConfig) -> AuthProviderBase:
         return await self._workflow_builder.add_auth_provider(name, config)
 
     @override
@@ -1007,7 +1250,7 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.get_auth_provider(auth_provider_name)
 
     @override
-    async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum | str):
+    async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
         llm = await self._workflow_builder.get_llm(llm_name, wrapper_type)
 
         self._dependencies.add_llm(llm_name)
@@ -1019,11 +1262,11 @@ class ChildBuilder(Builder):
         return self._workflow_builder.get_llm_config(llm_name)
 
     @override
-    async def add_embedder(self, name: str, config: EmbedderBaseConfig):
-        return await self._workflow_builder.add_embedder(name, config)
+    async def add_embedder(self, name: str, config: EmbedderBaseConfig) -> None:
+        await self._workflow_builder.add_embedder(name, config)
 
     @override
-    async def get_embedder(self, embedder_name: str, wrapper_type: LLMFrameworkEnum | str):
+    async def get_embedder(self, embedder_name: str, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
         embedder = await self._workflow_builder.get_embedder(embedder_name, wrapper_type)
 
         self._dependencies.add_embedder(embedder_name)
@@ -1039,11 +1282,11 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.add_memory_client(name, config)
 
     @override
-    def get_memory_client(self, memory_name: str) -> MemoryEditor:
+    async def get_memory_client(self, memory_name: str) -> MemoryEditor:
         """
         Return the instantiated memory client for the given name.
         """
-        memory_client = self._workflow_builder.get_memory_client(memory_name)
+        memory_client = await self._workflow_builder.get_memory_client(memory_name)
 
         self._dependencies.add_memory_client(memory_name)
 
@@ -1073,8 +1316,9 @@ class ChildBuilder(Builder):
         return self._workflow_builder.get_object_store_config(object_store_name)
 
     @override
-    async def add_ttc_strategy(self, name: str, config: TTCStrategyBaseConfig):
-        return await self._workflow_builder.add_ttc_strategy(name, config)
+    @experimental(feature_name="TTC")
+    async def add_ttc_strategy(self, name: str, config: TTCStrategyBaseConfig) -> None:
+        await self._workflow_builder.add_ttc_strategy(name, config)
 
     @override
     async def get_ttc_strategy(self,
@@ -1095,11 +1339,11 @@ class ChildBuilder(Builder):
                                                                     stage_type=stage_type)
 
     @override
-    async def add_retriever(self, name: str, config: RetrieverBaseConfig):
-        return await self._workflow_builder.add_retriever(name, config)
+    async def add_retriever(self, name: str, config: RetrieverBaseConfig) -> None:
+        await self._workflow_builder.add_retriever(name, config)
 
     @override
-    async def get_retriever(self, retriever_name: str, wrapper_type: LLMFrameworkEnum | str | None = None):
+    async def get_retriever(self, retriever_name: str, wrapper_type: LLMFrameworkEnum | str | None = None) -> Retriever:
         if not wrapper_type:
             return await self._workflow_builder.get_retriever(retriever_name=retriever_name)
         return await self._workflow_builder.get_retriever(retriever_name=retriever_name, wrapper_type=wrapper_type)
@@ -1115,3 +1359,7 @@ class ChildBuilder(Builder):
     @override
     def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
         return self._workflow_builder.get_function_dependencies(fn_name)
+
+    @override
+    def get_function_group_dependencies(self, fn_name: str) -> FunctionDependencies:
+        return self._workflow_builder.get_function_group_dependencies(fn_name)
