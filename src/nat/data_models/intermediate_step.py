@@ -115,7 +115,7 @@ class TraceMetadata(BaseModel):
     chat_responses: typing.Any | None = None
     chat_inputs: typing.Any | None = None
     tool_inputs: typing.Any | None = None
-    tool_outputs: ServerToolUseSchema | typing.Any | None = None
+    tool_outputs: list[ServerToolUseSchema] | typing.Any | None = None
     tool_info: typing.Any | None = None
     span_inputs: typing.Any | None = None
     span_outputs: typing.Any | None = None
