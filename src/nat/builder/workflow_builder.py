@@ -423,6 +423,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError("Expected a function, FunctionInfo object, or FunctionBase object to be "
                              f"returned from the function builder. Got {type(build_result)}")
 
+        build_result.configure_intercepts(registration.intercepts)
+
         return ConfiguredFunction(config=config, instance=build_result)
 
     async def _build_function_group(self, name: str, config: FunctionGroupBaseConfig) -> ConfiguredFunctionGroup:
