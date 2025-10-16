@@ -210,7 +210,7 @@ Key fields in `config-responses-api.yml`:
 llms:
   openai_llm:
     _type: openai
-    model_name: gpt-5-mini-2025-08-07
+    model_name: gpt-5-mini
     # Setting the `api_type` to responses uses the Responses API
     api_type: responses
 

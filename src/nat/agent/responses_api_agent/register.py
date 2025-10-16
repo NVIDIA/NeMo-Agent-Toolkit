@@ -62,7 +62,6 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
     from langchain_core.messages.human import HumanMessage
     from langchain_core.runnables import Runnable
     from langchain_openai import ChatOpenAI
-    from langgraph.graph.graph import CompiledGraph
 
     from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph
     from nat.agent.tool_calling_agent.agent import ToolCallAgentGraphState
@@ -72,7 +71,7 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
 
     # Get tools
     tools = []
-    nat_tools = builder.get_tools(tool_names=config.nat_tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    nat_tools = await builder.get_tools(tool_names=config.nat_tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     tools.extend(nat_tools)
     # MCP tools are optional, if provided they will be used by the agent
     tools.extend([m.model_dump() for m in config.mcp_tools])
@@ -92,7 +91,7 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
         detailed_logs=config.verbose,
         handle_tool_errors=config.handle_tool_errors)
 
-    graph: CompiledGraph = await agent.build_graph()
+    graph = await agent.build_graph()
 
     async def _response_fn(input_message: str) -> str:
         try:

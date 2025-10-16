@@ -18,8 +18,8 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
-from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.llm import APITypeEnum
+from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.litellm_llm import LiteLlmModelConfig
@@ -82,6 +82,8 @@ async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
 
     from agno.models.nvidia import Nvidia
 
+    validate_no_responses_api(llm_config)
+
     config_obj = {
         **llm_config.model_dump(
             exclude={"type", "model_name", "thinking"},
@@ -121,6 +123,8 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 async def litellm_agno(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     from agno.models.litellm.chat import LiteLLM
+
+    validate_no_responses_api(llm_config)
 
     client = LiteLLM(
         **llm_config.model_dump(

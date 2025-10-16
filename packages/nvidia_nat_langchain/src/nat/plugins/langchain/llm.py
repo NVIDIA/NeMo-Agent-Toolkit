@@ -15,7 +15,6 @@
 # pylint: disable=unused-argument
 
 import logging
-
 from collections.abc import Sequence
 from typing import TypeVar
 
@@ -49,7 +48,6 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
     from langchain_core.messages import HumanMessage
     from langchain_core.messages import SystemMessage
     from langchain_core.prompt_values import PromptValue
-
 
     class LangchainThinkingInjector(BaseThinkingInjector):
 

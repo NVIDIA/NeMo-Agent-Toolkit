@@ -31,7 +31,7 @@ class _MockBuilder:
         # match interface and avoid unused warnings
         return self._llm
 
-    def get_tools(self, tool_names, wrapper_type):
+    async def get_tools(self, tool_names, wrapper_type):
         # match interface and avoid unused warnings
         return self._tools
 
@@ -43,12 +43,22 @@ def _augment_llm_for_responses(llm):
     setattr(klass, "use_responses_api", True)
     setattr(klass, "model_name", "mock-openai")
 
-    def bind_tools(self, *, tools, parallel_tool_calls=False, strict=True):  # noqa: D401
+    def bind_tools(self, tools, parallel_tool_calls=False, strict=True):  # noqa: D401
         # Store on class to avoid Pydantic instance attribute restrictions
         klass = type(self)
-        setattr(klass, "bound_tools", tools)
-        setattr(klass, "bound_parallel", parallel_tool_calls)
-        setattr(klass, "bound_strict", strict)
+        # Preserve previously bound tools and merge with new ones
+        existing_tools = getattr(klass, "bound_tools", [])
+        # Create a set to track tool identity (by id for objects, by value for dicts)
+        all_tools = list(existing_tools)
+        for tool in tools:
+            if tool not in all_tools:
+                all_tools.append(tool)
+        setattr(klass, "bound_tools", all_tools)
+        # Preserve True values for parallel_tool_calls and strict (once True, stays True)
+        existing_parallel = getattr(klass, "bound_parallel", False)
+        existing_strict = getattr(klass, "bound_strict", False)
+        setattr(klass, "bound_parallel", existing_parallel or parallel_tool_calls)
+        setattr(klass, "bound_strict", existing_strict or strict)
         return self
 
     setattr(klass, "bind_tools", bind_tools)

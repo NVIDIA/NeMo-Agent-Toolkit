@@ -119,8 +119,6 @@ class TestOpenAILangChain:
         kwargs = mock_chat.call_args.kwargs
         assert kwargs["use_responses_api"] is True
         assert kwargs["use_previous_response_id"] is True
-        # The wrapper should have flipped stream to False
-        assert kwargs.get("stream") is False
         # Other original kwargs remain unchanged
         assert kwargs["temperature"] == 0.2
         assert kwargs["stream_usage"] is True

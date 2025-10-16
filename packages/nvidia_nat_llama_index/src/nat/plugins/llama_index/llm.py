@@ -19,8 +19,8 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
-from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.llm import APITypeEnum
+from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
@@ -128,13 +128,9 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
     from llama_index.llms.openai import OpenAIResponses
 
     if llm_config.api_type == APITypeEnum.RESPONSES:
-        llm = OpenAIResponses(
-            **llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True)
-        )
+        llm = OpenAIResponses(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
     else:
-        llm = OpenAI(
-            **llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True)
-        )
+        llm = OpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
