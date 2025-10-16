@@ -53,7 +53,7 @@ uv pip install -e examples/observability/simple_calculator_observability
 
 ## Getting Started
 
-### Phoenix Tracing (Local Development)
+### Phoenix Tracing
 
 Phoenix provides local tracing capabilities perfect for development and testing.
 
@@ -76,7 +76,7 @@ nat run --config_file examples/observability/simple_calculator_observability/con
 
 4. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
 
-### File-Based Tracing (Local Development)
+### File-Based Tracing
 
 For simple local development and debugging, you can export traces directly to a local file without requiring any external services.
 
@@ -98,13 +98,9 @@ The traces are stored in JSON Lines format, with each line representing a comple
 - Integration with custom analysis tools
 - Archiving traces for later review
 
-### Production Monitoring Platforms
-
-For production deployments, you can integrate with these observability platforms:
-
 #### Langfuse Integration
 
-Langfuse provides production-ready monitoring and analytics.
+[Langfuse](https://langfuse.com/) provides production-ready monitoring and analytics.
 
 1. Set your Langfuse credentials:
 
