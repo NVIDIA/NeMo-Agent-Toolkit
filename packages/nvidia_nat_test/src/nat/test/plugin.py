@@ -457,7 +457,7 @@ def fixture_redis_server(fail_missing: bool) -> Generator[dict[str, str | int]]:
         pytest.skip(f"Error connecting to Redis server: {e}, skipping redis tests")
 
 
-@pytest_asyncio.fixture(name="mysql_server", scope="module")
+@pytest_asyncio.fixture(name="mysql_server", scope="session")
 async def fixture_mysql_server(fail_missing: bool) -> AsyncGenerator[dict[str, str | int]]:
     """Fixture to safely skip MySQL based tests if MySQL is not running"""
     host = os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1')
@@ -480,7 +480,7 @@ async def fixture_mysql_server(fail_missing: bool) -> AsyncGenerator[dict[str, s
         pytest.skip(f"Error connecting to MySQL server: {e}, skipping MySQL tests")
 
 
-@pytest.fixture(name="minio_server", scope="module")
+@pytest.fixture(name="minio_server", scope="session")
 def minio_server_fixture(fail_missing: bool) -> Generator[dict[str, str | int]]:
     """Fixture to safely skip MinIO based tests if MinIO is not running"""
     host = os.getenv("NAT_CI_MINIO_HOST", "localhost")
@@ -507,24 +507,51 @@ def minio_server_fixture(fail_missing: bool) -> Generator[dict[str, str | int]]:
                                        aws_access_key_id=aws_access_key_id,
                                        aws_secret_access_key=aws_secret_access_key,
                                        endpoint_url=endpoint_url)
-        client.head_bucket(Bucket=bucket_name)
+        client.list_buckets()
         yield minio_info
     except ImportError:
         if fail_missing:
             raise
         pytest.skip("aioboto3 not installed, skipping MinIO tests")
     except Exception as e:
-        import botocore.exceptions
-        if isinstance(e, botocore.exceptions.ClientError) and e.response['Error']['Code'] == '404':
-            yield minio_info  # Bucket does not exist, but server is reachable
-        elif fail_missing:
+        if fail_missing:
+            raise
+        else:
+            pytest.skip(f"Error connecting to MinIO server: {e}, skipping MinIO tests")
+
+
+@pytest.fixture(name="langfuse_bucket", scope="session")
+def langfuse_bucket_fixture(fail_missing: bool, minio_server: dict[str, str | int]) -> Generator[str]:
+
+    bucket_name = os.getenv("NAT_CI_LANGFUSE_BUCKET", "langfuse")
+    try:
+        import botocore.session
+        session = botocore.session.get_session()
+
+        client = session.create_client("s3",
+                                       aws_access_key_id=minio_server["aws_access_key_id"],
+                                       aws_secret_access_key=minio_server["aws_secret_access_key"],
+                                       endpoint_url=minio_server["endpoint_url"])
+
+        buckets = client.list_buckets()
+        bucket_names = [b['Name'] for b in buckets['Buckets']]
+        if bucket_name not in bucket_names:
+            client.create_bucket(Bucket=bucket_name)
+
+        yield bucket_name
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("aioboto3 not installed, skipping MinIO tests")
+    except Exception as e:
+        if fail_missing:
             raise
         else:
             pytest.skip(f"Error connecting to MinIO server: {e}, skipping MinIO tests")
 
 
 @pytest.fixture(name="langfuse_url", scope="session")
-def langfuse_url_fixture(fail_missing: bool) -> str:
+def langfuse_url_fixture(fail_missing: bool, langfuse_bucket: str) -> str:
     """
     To run these tests, a langfuse server must be running.
     """

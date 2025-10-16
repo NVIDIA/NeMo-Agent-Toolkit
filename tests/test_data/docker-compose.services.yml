@@ -142,11 +142,10 @@ services:
   minio:
     image: minio/minio:RELEASE.2025-07-18T21-56-31Z
     container_name: test-minio
+    command: server /data --console-address ":9001"
     ports:
       - 9000:9000
       - 9001:9001
-    # create the 'langfuse' bucket before starting the service
-    entrypoint: ["/usr/bin/bash", "-c", 'mkdir -p /data/langfuse && /usr/bin/docker-entrypoint.sh server /data --console-address ":9001"']
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
