@@ -17,6 +17,8 @@ import json
 import logging
 from typing import Any
 
+from pydantic import Field
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
@@ -35,9 +37,7 @@ logger = logging.getLogger(__name__)
 
 class EmailPhishingAnalyzerConfig(FunctionBaseConfig, OptimizableMixin, name="email_phishing_analyzer"):
     _type: str = "email_phishing_analyzer"
-    llm: LLMRef = OptimizableField(description="The LLM to use for email phishing analysis.",
-                                   default="llama_3_405",
-                                   space=SearchSpace(values=["llama_3_405", "llama_3_70"]))
+    llm: LLMRef = Field(description="The LLM to use for email phishing analysis.")
     prompt: str = OptimizableField(
         description="The prompt template for analyzing email phishing. Use {body} to insert the email text.",
         default=phishing_prompt,

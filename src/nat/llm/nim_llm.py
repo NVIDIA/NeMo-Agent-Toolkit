@@ -44,9 +44,9 @@ class NIMModelConfig(LLMBaseConfig,
 
     api_key: str | None = Field(default=None, description="NVIDIA API key to interact with hosted NIM.")
     base_url: str | None = Field(default=None, description="Base url to the hosted NIM.")
-    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
-                            serialization_alias="model",
-                            description="The model name for the hosted NIM.")
+    model_name: str = OptimizableField(validation_alias=AliasChoices("model_name", "model"),
+                                       serialization_alias="model",
+                                       description="The model name for the hosted NIM.")
     max_tokens: PositiveInt = OptimizableField(default=300,
                                                description="Maximum number of tokens to generate.",
                                                space=SearchSpace(high=2176, low=128, step=512))
