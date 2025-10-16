@@ -99,7 +99,7 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      SALT: ${SALT:-mysalt}
+      SALT: ${LANGFUSE_SALT:-mysalt}
 
 
   langfuse-web:
@@ -117,7 +117,7 @@ services:
       LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-lf_sk_1234567890}
       LANGFUSE_INIT_USER_EMAIL: test@localhost.dev
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_USER_PW:-password123}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-mysecret}
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-mysecret}
 
   milvus:
     container_name: test-milvus-standalone
