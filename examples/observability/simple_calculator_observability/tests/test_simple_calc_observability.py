@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import types
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -77,3 +78,30 @@ async def test_phoenix_full_workflow(config_dir: Path, phoenix_trace_url: str, q
     config.general.telemetry.tracing["phoenix"].endpoint = phoenix_trace_url
 
     await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+
+@pytest.mark.integration
+async def test_otel_full_workflow(tmp_path: Path, config_dir: Path, question: str, expected_answer: str):
+    otel_file = tmp_path / "otel-trace.jsonl"
+
+    config_file = config_dir / "config-otel-file.yml"
+    config = load_config(config_file)
+    config.general.telemetry.tracing["otel_file"].output_path = str(otel_file.absolute())
+
+    await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+    assert otel_file.exists()
+
+    traces = []
+    called_multiply = False
+    with open(otel_file, encoding="utf-8") as fh:
+        for line in fh:
+            trace = json.loads(line)
+            traces.append(trace)
+
+            if not called_multiply:
+                function_name = trace.get('function_ancestry', {}).get('function_name')
+                called_multiply = function_name == "calculator_multiply"
+
+    assert len(traces) > 0
+    assert called_multiply
