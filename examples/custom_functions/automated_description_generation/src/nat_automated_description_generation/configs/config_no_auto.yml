@@ -18,7 +18,6 @@ llms:
   nim_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
-    base_url: https://integrate.api.nvidia.com/v1
     temperature: 0.0
     max_tokens: 10000
 
@@ -32,7 +31,7 @@ retrievers:
   retriever:
     _type: milvus_retriever
     uri: http://localhost:19530
-    collection_name: "wikipedia_docs"
+    collection_name: wikipedia_docs
     embedding_model: milvus_embedder
     top_k: 10
 
@@ -42,7 +41,7 @@ functions:
     retriever: retriever
     # Intentionally mislabelled to show the effects of poor descriptions
     topic: NVIDIA CUDA
-    description: Only to search about NVIDIA CUDA
+    description: This tool retrieves information about NVIDIA's CUDA library
 
 workflow:
   _type: react_agent

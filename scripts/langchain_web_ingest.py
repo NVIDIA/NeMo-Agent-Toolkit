@@ -124,11 +124,17 @@ if __name__ == "__main__":
     DEFAULT_URI = "http://localhost:19530"
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--urls", default=CUDA_URLS, action="append", help="Urls to scrape for RAG context")
+    parser.add_argument("--urls",
+                        default=[],
+                        action="append",
+                        help="Urls to scrape for RAG context. Defaults to built-in URLs for NVIDIA CUDA documentation.")
     parser.add_argument("--collection_name", "-n", default=CUDA_COLLECTION_NAME, help="Collection name for the data.")
     parser.add_argument("--milvus_uri", "-u", default=DEFAULT_URI, help="Milvus host URI")
     parser.add_argument("--clean_cache", default=False, help="If true, deletes local files", action="store_true")
     args = parser.parse_args()
+
+    if len(args.urls) == 0:
+        args.urls = CUDA_URLS
 
     asyncio.run(
         main(
