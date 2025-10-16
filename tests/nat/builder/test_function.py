@@ -328,6 +328,7 @@ async def test_function_final_intercept_short_circuits():
 
         assert chunks == ["streamed"]
         assert stream_calls == 0
+
 async def test_functions_multi_pod_input_pod_output():
 
     @register_function(config_type=DummyConfig)

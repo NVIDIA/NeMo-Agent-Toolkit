@@ -180,6 +180,8 @@ class RegisteredFunctionInfo(RegisteredInfo[FunctionBaseConfig]):
     and a description.
     """
 
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
     build_fn: FunctionRegisteredCallableT = Field(repr=False)
     framework_wrappers: list[str] = Field(default_factory=list)
     intercepts: tuple[FunctionIntercept, ...] = Field(default_factory=tuple, repr=False)
