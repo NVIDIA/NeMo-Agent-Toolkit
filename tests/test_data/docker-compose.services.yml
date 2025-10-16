@@ -20,7 +20,8 @@ services:
     image: docker.io/clickhouse/clickhouse-server
     restart: always
     user: "101:101"
-    # Override the default tcp port of 9000 to avoid conflicts with minio
+    # Override the default tcp port of 9000 to avoid conflicts with minio.
+    # For some reason mapping 9090:9000 doesn't work, so we have to change the port in the config file.
     entrypoint: [
       "/usr/bin/bash", "-c", "/usr/bin/sed -i -e 's|<tcp_port>9000</tcp_port>|<tcp_port>9090</tcp_port>|' /etc/clickhouse-server/config.xml &&  /entrypoint.sh"
     ]
@@ -66,8 +67,11 @@ services:
       CLICKHOUSE_URL: ${CLICKHOUSE_URL:-http://clickhouse:8123}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse} # CHANGEME
-      CLICKHOUSE_CLUSTER_ENABLED: ${CLICKHOUSE_CLUSTER_ENABLED:-false}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/postgres}
+      CLICKHOUSE_CLUSTER_ENABLED: false
+      DATABASE_HOST: postgres
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DATABASE_NAME: ${POSTGRES_DB:-postgres}
       LANGFUSE_USE_AZURE_BLOB: ${LANGFUSE_USE_AZURE_BLOB:-false}
       LANGFUSE_S3_EVENT_UPLOAD_BUCKET: ${LANGFUSE_S3_EVENT_UPLOAD_BUCKET:-langfuse}
       LANGFUSE_S3_EVENT_UPLOAD_REGION: ${LANGFUSE_S3_EVENT_UPLOAD_REGION:-auto}
@@ -109,10 +113,10 @@ services:
       <<: *langfuse-worker-env
       LANGFUSE_INIT_ORG_ID: test-org
       LANGFUSE_INIT_PROJECT_ID: test-project
-      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: lf_pk_1234567890
-      LANGFUSE_INIT_PROJECT_SECRET_KEY: lf_sk_1234567890
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-lf_pk_1234567890}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-lf_sk_1234567890}
       LANGFUSE_INIT_USER_EMAIL: test@localhost.dev
-      LANGFUSE_INIT_USER_PASSWORD: password123
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_USER_PW:-password123}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-mysecret}
 
   milvus:
