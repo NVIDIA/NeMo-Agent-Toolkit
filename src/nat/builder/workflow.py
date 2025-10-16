@@ -94,7 +94,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         return self._exporter_manager.get()
 
     @asynccontextmanager
-    async def run(self, message: InputT):
+    async def run(self, message: InputT, is_evaluating: bool = False):
         """
         Called each time we start a new workflow run. We'll create
         a new top-level workflow span here.
@@ -103,7 +103,8 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         async with Runner(input_message=message,
                           entry_fn=self._entry_fn,
                           context_state=self._context_state,
-                          exporter_manager=self.exporter_manager) as runner:
+                          exporter_manager=self.exporter_manager,
+                          is_evaluating=is_evaluating) as runner:
 
             # The caller can `yield runner` so they can do `runner.result()` or `runner.result_stream()`
             yield runner

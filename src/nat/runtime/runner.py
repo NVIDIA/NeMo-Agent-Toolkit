@@ -53,7 +53,8 @@ class Runner:
                  input_message: typing.Any,
                  entry_fn: Function,
                  context_state: ContextState,
-                 exporter_manager: ExporterManager):
+                 exporter_manager: ExporterManager,
+                 is_evaluating: bool = False):
         """
         The Runner class is used to run a workflow. It handles converting input and output data types and running the
         workflow with the specified concurrency.
@@ -68,6 +69,9 @@ class Runner:
             The context state to use
         exporter_manager : ExporterManager
             The exporter manager to use
+        is_evaluating : bool, optional
+            Whether the runner is being used for evaluation. If True, some context
+            variables are set, by default False
         """
 
         if (entry_fn is None):
@@ -85,6 +89,8 @@ class Runner:
         self._input_message = input_message
 
         self._exporter_manager = exporter_manager
+
+        self._is_evaluating = is_evaluating
 
     @property
     def context(self) -> Context:
@@ -105,6 +111,9 @@ class Runner:
             function_id="root",
         ))
 
+        if self._is_evaluating:
+            self._context_state.is_evaluating.set(True)
+
         if (self._state == RunnerState.UNINITIALIZED):
             self._state = RunnerState.INITIALIZED
         else:
@@ -118,6 +127,8 @@ class Runner:
             raise ValueError("Cannot exit the context without entering it")
 
         self._context_state.input_message.reset(self._input_message_token)
+
+        self._context_state.is_evaluating.set(False)
 
         if (self._state not in (RunnerState.COMPLETED, RunnerState.FAILED)):
             raise ValueError("Cannot exit the context without completing the workflow")

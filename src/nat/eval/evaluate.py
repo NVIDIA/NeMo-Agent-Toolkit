@@ -159,7 +159,7 @@ class EvaluationRun:
             if stop_event.is_set():
                 return "", []
 
-            async with session_manager.run(item.input_obj) as runner:
+            async with session_manager.run(item.input_obj, is_evaluating=True) as runner:
                 if not session_manager.workflow.has_single_output:
                     # raise an error if the workflow has multiple outputs
                     raise NotImplementedError("Multiple outputs are not supported")
