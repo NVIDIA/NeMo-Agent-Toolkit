@@ -53,7 +53,7 @@ uv pip install -e examples/observability/simple_calculator_observability
 
 ## Getting Started
 
-### Phoenix Tracing (Local Development)
+### Phoenix Tracing
 
 Phoenix provides local tracing capabilities perfect for development and testing.
 
@@ -76,7 +76,7 @@ nat run --config_file examples/observability/simple_calculator_observability/con
 
 4. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
 
-### File-Based Tracing (Local Development)
+### File-Based Tracing
 
 For simple local development and debugging, you can export traces directly to a local file without requiring any external services.
 
@@ -98,13 +98,9 @@ The traces are stored in JSON Lines format, with each line representing a comple
 - Integration with custom analysis tools
 - Archiving traces for later review
 
-### Production Monitoring Platforms
+### Langfuse Integration
 
-For production deployments, you can integrate with these observability platforms:
-
-#### Langfuse Integration
-
-Langfuse provides production-ready monitoring and analytics.
+[Langfuse](https://langfuse.com/) provides production-ready monitoring and analytics.
 
 1. Set your Langfuse credentials:
 
@@ -120,7 +116,7 @@ export LANGFUSE_HOST=<your_host>
 nat run --config_file examples/observability/simple_calculator_observability/configs/config-langfuse.yml --input "Calculate 15 + 23"
 ```
 
-#### LangSmith Integration
+### LangSmith Integration
 
 LangSmith offers comprehensive monitoring within the LangChain/LangGraph ecosystem.
 
@@ -137,7 +133,7 @@ export LANGSMITH_PROJECT=<your_project>
 nat run --config_file examples/observability/simple_calculator_observability/configs/config-langsmith.yml --input "Is 100 > 50?"
 ```
 
-#### Weave Integration
+### Weave Integration
 
 Weave provides detailed workflow tracking and visualization.
 
@@ -155,7 +151,7 @@ nat run --config_file examples/observability/simple_calculator_observability/con
 
 For detailed Weave setup instructions, see the [Fine-grained Tracing with Weave](../../../docs/source/workflows/observe/observe-workflow-with-weave.md) guide.
 
-#### AI Safety Monitoring with Patronus
+### AI Safety Monitoring with Patronus
 
 Patronus enables AI safety monitoring and compliance tracking.
 
@@ -171,7 +167,7 @@ export PATRONUS_API_KEY=<your_api_key>
 nat run --config_file examples/observability/simple_calculator_observability/configs/config-patronus.yml --input "Divide 144 by 12"
 ```
 
-#### RagaAI Catalyst Integration
+### RagaAI Catalyst Integration
 
 Transmit traces to RagaAI Catalyst.
 
@@ -189,7 +185,7 @@ export CATALYST_ENDPOINT=<your_endpoint>
 nat run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "Divide 144 by 12"
 ```
 
-#### Galileo Integration
+### Galileo Integration
 
 Transmit traces to Galileo for workflow observability.
 
@@ -217,9 +213,9 @@ The example includes multiple configuration files for different observability pl
 
 | Configuration File | Platform | Best For |
 |-------------------|----------|----------|
-| `config-phoenix.yml` | Phoenix | Local development and testing |
+| `config-phoenix.yml` | Phoenix | Tracing with Phoenix |
 | `config-otel-file.yml` | File Export | Local file-based tracing for development and debugging |
-| `config-langfuse.yml` | Langfuse | Production monitoring and analytics |
+| `config-langfuse.yml` | Langfuse | Langfuse monitoring and analytics |
 | `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |
 | `config-weave.yml` | Weave | Workflow-focused tracking |
 | `config-patronus.yml` | Patronus | AI safety and compliance monitoring |
