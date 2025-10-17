@@ -106,7 +106,7 @@ Each exporter has its own detailed configuration guide with complete setup instr
 
 - **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
 - **Custom Exporters** - See [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
-- **[NVIDIA Data Flywheel](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel)** - See [Observing with Data Flywheel](./observe-workflow-with-data-flywheel.md)
+- **[NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel)** - See [Observing with Data Flywheel](./observe-workflow-with-data-flywheel.md)
 - **[Dynatrace](https://dynatrace.com/)** - See [Observing with Dynatrace](./observe-workflow-with-dynatrace.md)
 - **File Export** - Built-in file-based tracing for local development and debugging
 - **[Galileo](https://galileo.ai/)** - See [Observing with Galileo](./observe-workflow-with-galileo.md)

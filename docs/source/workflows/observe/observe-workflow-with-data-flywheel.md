@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with NVIDIA Data Flywheel
 
-This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow that exports runtime traces to NVIDIA Data Flywheel. This integration enables LLM distillation and optimization derived from your workflow's runtime traces, allowing you to deploy more efficient models with lower latency.
+This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow that exports runtime traces to an ElasticSearch instance that is part of the [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel). The Data Flywheel Blueprint can then leverage the traces to fine-tune and evaluate smaller models which can be deployed to replace the original model to reduce latency.
 
 The Data Flywheel integration supports LangChain/LangGraph based workflows with `nim` and `openai` LLM providers and can be enabled with just a few lines of configuration.
 
@@ -35,7 +35,6 @@ The integration captures `LLM_START` events for completions and tool calls when 
 Before using the Data Flywheel integration, ensure you have:
 
 - NVIDIA Data Flywheel Blueprint deployed and configured
-- Access to an Elasticsearch instance that Data Flywheel can read from
 - Valid Elasticsearch credentials (username and password)
 
 ## Step 2: Install the Data Flywheel Plugin
@@ -137,5 +136,5 @@ For more information about NVIDIA Data Flywheel:
 
 - [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel)
 - [NVIDIA Data Flywheel Blueprint Brev.dev Launchable](https://brev.nvidia.com/launchable/deploy/now?launchableID=env-2wggjBvDlVp4pLQD8ytZySh5m8W)
-- [Data Flywheel GitHub Repository](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
+- [NVIDIA Data Flywheel GitHub Repository](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
 - [NeMo Agent toolkit Observability Guide](./index.md)
