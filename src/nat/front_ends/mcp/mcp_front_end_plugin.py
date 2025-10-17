@@ -105,9 +105,12 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
 
             # Start the MCP server with configurable transport
             # streamable-http is the default, but users can choose sse if preferred
-            if self.front_end_config.transport == "sse":
-                logger.info("Starting MCP server with SSE endpoint at /sse")
-                await mcp.run_sse_async()
-            else:  # streamable-http
-                logger.info("Starting MCP server with streamable-http endpoint at /mcp/")
-                await mcp.run_streamable_http_async()
+            try:
+                if self.front_end_config.transport == "sse":
+                    logger.info("Starting MCP server with SSE endpoint at /sse")
+                    await mcp.run_sse_async()
+                else:  # streamable-http
+                    logger.info("Starting MCP server with streamable-http endpoint at /mcp/")
+                    await mcp.run_streamable_http_async()
+            except KeyboardInterrupt:
+                logger.info("MCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
