@@ -56,8 +56,8 @@ def rewoo_answer_fixture(request: pytest.FixtureRequest, rewoo_data: list[dict])
 
 @pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")
 @pytest.mark.integration
-@pytest.mark.parametrize("rewoo_question, rewoo_answer", [(i, i) for i in range(4)],
-                         ids=[f"qa_{i+1}" for i in range(4)],
+@pytest.mark.parametrize("rewoo_question, rewoo_answer", [(i, i) for i in range(5)],
+                         ids=[f"qa_{i+1}" for i in range(5)],
                          indirect=True)
 async def test_rewoo_full_workflow(agents_dir: Path, rewoo_question: str, rewoo_answer: str):
     config_file = agents_dir / "rewoo/configs/config.yml"
@@ -73,10 +73,14 @@ async def test_rewoo_full_workflow(agents_dir: Path, rewoo_question: str, rewoo_
         # These are all expected to be relative to the agents_dir
         "mixture_of_agents/configs/config.yml",
         "react/configs/config.yml",
-        "react/configs/config-reasoning.yml",
-        "tool_calling/configs/config.yml",
-        "tool_calling/configs/config-reasoning.yml",
+        # Both of the reasoning agents are currently returning 504 errors issue #1034
+        # "react/configs/config-reasoning.yml",
+        "tool_calling/configs/config.yml",  # "tool_calling/configs/config-reasoning.yml",
     ],
-    ids=["mixture_of_agents", "react", "react-reasoning", "tool_calling", "tool_calling-reasoning"])
+    ids=[
+        "mixture_of_agents",
+        "react",  #"react-reasoning",
+        "tool_calling",  #"tool_calling-reasoning"
+    ])
 async def test_agent_full_workflow(agents_dir: Path, config_file: str, question: str, answer: str):
     await run_workflow(config_file=agents_dir / config_file, question=question, expected_answer=answer)

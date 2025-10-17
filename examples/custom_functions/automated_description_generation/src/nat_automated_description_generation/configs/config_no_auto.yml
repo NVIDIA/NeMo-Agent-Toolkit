@@ -25,6 +25,7 @@ embedders:
   milvus_embedder:
     _type: nim
     model_name: nvidia/nv-embedqa-e5-v5
+    temperature: 0.0
     truncate: "END"
 
 retrievers:
@@ -41,7 +42,7 @@ functions:
     retriever: retriever
     # Intentionally mislabelled to show the effects of poor descriptions
     topic: NVIDIA CUDA
-    description: This tool retrieves information about NVIDIA's CUDA library
+    description: This tool can only retrieve information about NVIDIA's CUDA library.
 
 workflow:
   _type: react_agent
