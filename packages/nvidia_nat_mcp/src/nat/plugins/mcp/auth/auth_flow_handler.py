@@ -56,6 +56,7 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
         self._oauth_client: AsyncOAuth2Client | None = None
         self._redirect_host: str = "localhost"  # Default host, will be overridden from config
         self._redirect_port: int = 8000  # Default port, will be overridden from config
+        self._server_task: asyncio.Task | None = None
 
     async def authenticate(self, config: AuthProviderBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
         """
@@ -168,12 +169,12 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
 
             self._server_controller = _FastApiFrontEndController(self._redirect_app)
 
-            asyncio.create_task(self._server_controller.start_server(host=self._redirect_host,
+            self._server_task = asyncio.create_task(self._server_controller.start_server(host=self._redirect_host,
                                                                      port=self._redirect_port))
             logger.debug("MCP redirect server starting on %s:%d", self._redirect_host, self._redirect_port)
 
             # Give the server a moment to bind sockets before we return
             await asyncio.sleep(0.3)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise RuntimeError(
                 f"Failed to start MCP redirect server on {self._redirect_host}:{self._redirect_port}: {exc}") from exc
