@@ -73,9 +73,9 @@ async def test_rewoo_full_workflow(agents_dir: Path, rewoo_question: str, rewoo_
         # These are all expected to be relative to the agents_dir
         "mixture_of_agents/configs/config.yml",
         "react/configs/config.yml",
-        "react/configs/config-reasoning.yml",
-        "tool_calling/configs/config.yml",
-        "tool_calling/configs/config-reasoning.yml",
+        # Both of the reasoning agents are currently returning 504 errors
+        # "react/configs/config-reasoning.yml",
+        "tool_calling/configs/config.yml",  # "tool_calling/configs/config-reasoning.yml",
     ],
     ids=["mixture_of_agents", "react", "react-reasoning", "tool_calling", "tool_calling-reasoning"])
 async def test_agent_full_workflow(agents_dir: Path, config_file: str, question: str, answer: str):
