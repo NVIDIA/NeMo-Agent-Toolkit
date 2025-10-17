@@ -112,7 +112,8 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
         if scheme == "https" and parsed_uri.port is None:
             logger.warning(
                 "redirect_uri uses https without an explicit port; binding to %d (plain HTTP). "
-                "Terminate TLS at a reverse proxy and forward to this port.", port)
+                "Terminate TLS at a reverse proxy and forward to this port.",
+                port)
 
         self._redirect_host = host
         self._redirect_port = port
