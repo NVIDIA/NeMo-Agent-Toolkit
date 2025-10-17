@@ -77,6 +77,10 @@ async def test_rewoo_full_workflow(agents_dir: Path, rewoo_question: str, rewoo_
         # "react/configs/config-reasoning.yml",
         "tool_calling/configs/config.yml",  # "tool_calling/configs/config-reasoning.yml",
     ],
-    ids=["mixture_of_agents", "react", "react-reasoning", "tool_calling", "tool_calling-reasoning"])
+    ids=[
+        "mixture_of_agents",
+        "react",  #"react-reasoning",
+        "tool_calling",  #"tool_calling-reasoning"
+    ])
 async def test_agent_full_workflow(agents_dir: Path, config_file: str, question: str, answer: str):
     await run_workflow(config_file=agents_dir / config_file, question=question, expected_answer=answer)
