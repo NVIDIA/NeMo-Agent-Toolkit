@@ -75,6 +75,8 @@ class ContextState(metaclass=Singleton):
         self._event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=None)
         self._active_function: ContextVar[InvocationNode | None] = ContextVar("active_function", default=None)
         self._active_span_id_stack: ContextVar[list[str] | None] = ContextVar("active_span_id_stack", default=None)
+        self._intermediate_step_manager: ContextVar[IntermediateStepManager | None] = ContextVar(
+            "intermediate_step_manager", default=None)
 
         # Default is a lambda no-op which returns NoneType
         self.user_input_callback: ContextVar[Callable[[InteractionPrompt], Awaitable[HumanResponse | None]]
@@ -108,6 +110,12 @@ class ContextState(metaclass=Singleton):
         if self._active_span_id_stack.get() is None:
             self._active_span_id_stack.set(["root"])
         return typing.cast(ContextVar[list[str]], self._active_span_id_stack)
+
+    @property
+    def intermediate_step_manager(self) -> ContextVar[IntermediateStepManager]:
+        if self._intermediate_step_manager.get() is None:
+            self._intermediate_step_manager.set(IntermediateStepManager(self))
+        return typing.cast(ContextVar[IntermediateStepManager], self._intermediate_step_manager)
 
     @staticmethod
     def get() -> "ContextState":
@@ -179,7 +187,7 @@ class Context:
             IntermediateStepManager: The instance of the intermediate step manager retrieved
                 from the context state.
         """
-        return IntermediateStepManager(self._context_state)
+        return self._context_state.intermediate_step_manager.get()
 
     @property
     def conversation_id(self) -> str | None:
