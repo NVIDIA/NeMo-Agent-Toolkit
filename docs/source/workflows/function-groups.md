@@ -594,7 +594,7 @@ group = FunctionGroup(config=config, instance_name="database_operations")
 
 #### Use Environment Variables for Secrets
 
-Never hardcode credentials in configuration files:
+Never embed credentials in configuration files:
 
 ```yaml
 function_groups:

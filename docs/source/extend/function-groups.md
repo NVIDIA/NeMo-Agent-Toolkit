@@ -447,7 +447,6 @@ Most function groups don't need filters. Use `include`/`exclude` lists for stati
 - Feature flags that change at runtime
 - User permission-based access control
 - A/B testing different function sets
-- Gradual rollouts of new functions
 
 **Use include/exclude for**:
 - Static function exposure that doesn't change
