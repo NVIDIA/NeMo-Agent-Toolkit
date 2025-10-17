@@ -58,7 +58,7 @@ Instead of manually testing hundreds of combinations, the optimizer can find the
 ### What This Guide Covers
 
 This guide will walk you through:
-1. Understanding the core concepts (OptimizableFields and SearchSpaces)
+1. Understanding the core concepts (`OptimizableField` and `SearchSpace`)
 2. Configuring which parameters to optimize
 3. Setting up the optimization process
 4. Running the optimizer
@@ -68,8 +68,10 @@ This guide will walk you through:
 
 The NeMo Agent toolkit Optimizer uses a combination of techniques to find the best parameters for your workflow:
 
-- Numerical hyperparameter optimization uses [Optuna](https://optuna.org/).
-- Prompt optimization uses a genetic algorithm (GA) that evolves a population of prompt candidates over multiple generations using LLM-powered mutation and optional recombination.
+- Numerical Values
+  - [Optuna](https://optuna.org/) is used to optimize numerical values.
+- Prompts
+  - A custom genetic algorithm (GA) is used to optimize prompts. It evolves a population of prompt candidates over multiple generations using LLM-powered mutation and optional recombination.
 
 ![Optimizer Flow Chart](../_static/optimizer_flow_chart.png)
 
@@ -97,13 +99,13 @@ The optimization process follows the steps outlined in the diagram above:
 
 Before diving into configuration, let's understand the fundamental concepts that make parameters optimizable.
 
-## Core Concepts: OptimizableFields and SearchSpaces
+## Core Concepts: `OptimizableField` and `SearchSpace`
 
 The optimizer needs to know two things about each parameter:
-1. **Which parameters can be optimized** (OptimizableFields)
-2. **What values to try** (SearchSpaces)
+1. **Which parameters can be optimized** (`OptimizableField`)
+2. **What values to try** (`SearchSpace`)
 
-### Understanding OptimizableFields
+### Understanding `OptimizableField`
 
 An `OptimizableField` is a special type of field in your workflow configuration that tells the optimizer "this parameter can be tuned." It's like putting a label on certain knobs saying "you can adjust this."
 
@@ -130,7 +132,7 @@ When you mark a field as optimizable and define its search space, you're telling
 
 The optimizer will then systematically explore these search spaces to find the optimal combination.
 
-## Implementing OptimizableFields
+## Implementing `OptimizableField`
 
 To make a parameter in your workflow optimizable, you need to use the `OptimizableField` function instead of Pydantic's standard `Field`. This allows you to attach search space metadata to the field. You may omit the `space` argument to mark a field as optimizable and supply its search space later in the configuration file.
 
@@ -147,7 +149,7 @@ The `SearchSpace` Pydantic model is used to define the range or set of possible 
 -   `prompt: str`: The base prompt to be optimized.
 -   `prompt_purpose: str`: A description of what the prompt is for, used to guide the LLM-based prompt optimizer.
 
-### OptimizableField Function
+### `OptimizableField` Function
 
 This function is a drop-in replacement for `pydantic.Field` that optionally takes a `space` argument.
 
@@ -215,7 +217,7 @@ Behavior for prompt-optimized fields:
 
 Once `OptimizableField`s have been created in your workflow's data models, you need to enable optimization for these fields in your workflow configuration file.
 This can be enabled using the `optimizable_params` field of your configuration file.
-    
+
 For example:
 ```yaml
 
