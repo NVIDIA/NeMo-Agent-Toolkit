@@ -29,11 +29,11 @@ NeMo Agent toolkit MCP authentication provides the capabilities required to acce
 Sample configuration:
 ```yaml
 authentication:
-  auth_provider_mcp:
+  mcp_oauth2_jira:
     _type: mcp_oauth2
-    server_url: "http://localhost:9901/mcp"
-    redirect_uri: http://localhost:8000/auth/redirect
-    default_user_id: ${NAT_USER_ID}
+    server_url: ${CORPORATE_MCP_JIRA_URL}
+    redirect_uri: http://${NAT_SERVER_HOST:-localhost}:${NAT_SERVER_PORT:-8000}/auth/redirect
+    default_user_id: ${CORPORATE_MCP_JIRA_URL}
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 Configuration options:
@@ -51,6 +51,8 @@ To view all configuration options for the `mcp_oauth2` authentication provider, 
 Some configuration values are commonly provided through environment variables:
 - `NAT_USER_ID`: Used as `default_user_id` to cache the authenticating user during setup and optionally for tool calls. Defaults to the `server_url` if not provided.
 - `ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS`: Controls whether the default user can invoke tools. Defaults to `true` if not provided.
+- `NAT_SERVER_HOST`: The host of the NAT server. Defaults to `localhost` if not provided.
+- `NAT_SERVER_PORT`: The port of the NAT server. Defaults to `8000` if not provided.
 
 Set them for your current shell:
 ```bash
@@ -100,8 +102,8 @@ authentication:
   mcp_oauth2_jira:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
-    redirect_uri: http://localhost:8000/auth/redirect
-    default_user_id: ${NAT_USER_ID}
+    redirect_uri: http://${NAT_SERVER_HOST:-localhost}:${NAT_SERVER_PORT:-8000}/auth/redirect
+    default_user_id: ${CORPORATE_MCP_JIRA_URL}
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 
@@ -176,6 +178,39 @@ Ensure that `WebSocket` mode is enabled by navigating to the top-right corner an
 What is ticket AIQ-1935 about
 ```
 At this point, a consent window is displayed again. The `UI` user must authorize the workflow to access the MCP server and call the tool. This user's information is cached separately using the `WebSocket` session cookie as the user ID.
+
+### Running the Workflow on a Remote Server
+
+When running the NeMo Agent toolkit on a remote server accessible from your local browser, you must configure the `redirect_uri` to use the remote server's network address instead of `localhost`.
+
+#### Why This Is Required
+
+OAuth2 authentication redirects your browser to the `redirect_uri` after you approve access. If the `redirect_uri` uses `localhost`, your browser will try to connect to your local machine instead of the remote server, causing the authentication to fail.
+
+#### Configuration
+
+Set the environment variables to match your remote server's host and port:
+```bash
+export NAT_SERVER_HOST="192.168.1.100"
+export NAT_SERVER_PORT="8080"
+```
+These are example values for a remote server at `192.168.1.100` running on port `8080`. You should replace these with the actual values for your remote server.
+
+Configure the authentication provider in the workflow configuration:
+```yaml
+authentication:
+  mcp_oauth2_jira:
+    _type: mcp_oauth2
+    server_url: ${CORPORATE_MCP_JIRA_URL}
+    redirect_uri: http://${NAT_SERVER_HOST}:${NAT_SERVER_PORT}/auth/redirect
+    default_user_id: ${NAT_USER_ID}
+    allow_default_user_id_for_tool_calls: false
+```
+
+The `redirect_uri` must use the same host and port where you run `nat serve`. The `/auth/redirect` endpoint is automatically registered on the main NAT server for handling OAuth callbacks. So in this case the server should be started with
+```bash
+nat serve --host ${NAT_SERVER_HOST} --port ${NAT_SERVER_PORT}
+```
 
 ## Displaying Protected MCP Tools through the CLI
 MCP client CLI can be used to display and call MCP tools on a remote MCP server. To use a protected MCP server, you need to provide the `--auth` flag:
