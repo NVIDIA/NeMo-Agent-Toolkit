@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
 import typing
 
@@ -113,5 +112,5 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
                 else:  # streamable-http
                     logger.info("Starting MCP server with streamable-http endpoint at /mcp/")
                     await mcp.run_streamable_http_async()
-            except (KeyboardInterrupt, asyncio.CancelledError):
+            except KeyboardInterrupt:
                 logger.info("MCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
