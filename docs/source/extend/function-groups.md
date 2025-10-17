@@ -21,7 +21,7 @@ limitations under the License.
 Read the [Function Groups](../workflows/function-groups.md) guide first to understand how function groups work before creating your own.
 :::
 
-This guide shows you how to create custom function groups for the NeMo Agent toolkit. Function groups bundle related functions that share configuration, resources, and runtime context.
+This guide shows you how to create custom function groups for the NVIDIA NeMo Agent toolkit. Function groups bundle related functions that share configuration, resources, and runtime context.
 
 ## When to Write a Custom Function Group
 

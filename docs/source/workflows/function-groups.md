@@ -17,7 +17,7 @@ limitations under the License.
 
 # Function Groups
 
-Function groups let you package multiple related functions together so they can share configuration, context, and resources within the NeMo Agent toolkit.
+Function groups let you package multiple related functions together so they can share configuration, context, and resources within the NVIDIA NeMo Agent toolkit.
 
 ## Why Use Function Groups?
 
@@ -32,9 +32,30 @@ Function groups solve these problems by allowing related functions to share a si
 
 ### Example: Without Function Groups
 
-Consider three functions that work with an object store. Without function groups, each function creates its own connection:
+Consider three functions that work with an object store. Without function groups, each function needs its own configuration and creates its own connection:
 
 ```python
+class SaveFileConfig(FunctionBaseConfig, name="save_file"):
+    endpoint: str = Field(description="The S3 endpoint URL")
+    access_key: str = Field(description="The S3 access key")
+    secret_key: str = Field(description="The S3 secret key")
+    bucket: str = Field(description="The S3 bucket name")
+
+
+class LoadFileConfig(FunctionBaseConfig, name="load_file"):
+    endpoint: str = Field(description="The S3 endpoint URL")
+    access_key: str = Field(description="The S3 access key")
+    secret_key: str = Field(description="The S3 secret key")
+    bucket: str = Field(description="The S3 bucket name")
+
+
+class DeleteFileConfig(FunctionBaseConfig, name="delete_file"):
+    endpoint: str = Field(description="The S3 endpoint URL")
+    access_key: str = Field(description="The S3 access key")
+    secret_key: str = Field(description="The S3 secret key")
+    bucket: str = Field(description="The S3 bucket name")
+
+
 @register_function(config_type=SaveFileConfig)
 async def build_save_file(config: SaveFileConfig, _builder: Builder):
     # Each function creates its own S3 client
@@ -115,6 +136,13 @@ functions:
 Using a function group, all three functions share a single S3 client and configuration:
 
 ```python
+class ObjectStoreConfig(FunctionGroupBaseConfig, name="object_store"):
+    endpoint: str = Field(description="The S3 endpoint URL")
+    access_key: str = Field(description="The S3 access key")
+    secret_key: str = Field(description="The S3 secret key")
+    bucket: str = Field(description="The S3 bucket name")
+
+
 @register_function_group(config_type=ObjectStoreConfig)
 async def build_object_store(config: ObjectStoreConfig, _builder: Builder):
     # Create ONE shared S3 client
@@ -157,7 +185,7 @@ function_groups:
 
 workflow:
   _type: react_agent
-  tool_names: storage
+  tool_names: [storage]
   llm_name: my_llm
 ```
 
@@ -192,6 +220,43 @@ Use individual functions when:
 Function groups are built with a single configuration object and share the runtime context. This enables efficient reuse of connections, caches, and other resources across all functions in the group.
 
 For example, if you create a database connection in your function group, all functions in that group can use the same connection instead of each creating their own.
+
+If we have a collection of math functions, we can create a function group to share the configuration and context for all the functions in the group.
+
+**Python code**:
+```python
+class MathGroupConfig(FunctionGroupBaseConfig, name="math_group"):
+    pass
+
+@register_function_group(config_type=MathGroupConfig)
+async def build_math_group(config: MathGroupConfig, _builder: Builder):
+    group = FunctionGroup(config=config)
+
+    async def add(a: float, b: float) -> float:
+        return a + b
+    
+    async def multiply(a: float, b: float) -> float:
+        return a * b
+
+    async def divide(a: float, b: float) -> float:
+        if b == 0:
+            raise ValueError("Cannot divide by zero")
+        return a / b
+
+    group.add_function(name="add", fn=add, description="Add two numbers")
+    group.add_function(name="multiply", fn=multiply, description="Multiply two numbers")
+    group.add_function(name="divide", fn=divide, description="Divide two numbers")
+
+    yield group
+```
+
+**Configuration file**:
+
+```yaml
+function_groups:
+  math:
+    _type: math_group
+```
 
 ### Function Naming and Namespacing
 
@@ -242,8 +307,8 @@ Function groups provide different levels of access control. Understanding these 
 
     ```yaml
     workflow:
-    _type: react_agent
-    tool_names: [math.add]  # Agent can use this function
+      _type: react_agent
+      tool_names: [math.add]  # Agent can only use this function (not multiply)
     ```
 
 #### Controlling Access with `include` and `exclude`
@@ -269,7 +334,7 @@ function_groups:
 function_groups:
   math:
     _type: math_group
-    exclude: [div]  # Make unsafe operations unavailable to agents
+    exclude: [divide]  # Make unsafe operations unavailable to agents
 ```
 
 **Neither specified**: Functions are programmatically accessible through the group but not individually addressable or wrapped as tools by default.
@@ -280,11 +345,11 @@ function_groups:
 
 #### Quick Reference
 
-| Configuration | Programmatically Accessible | Global Registry | Agent Tools |
-|---------------|----------------------------|-----------------|-------------|
-| No include/exclude | ✓ (via group) | ✗ | ✗ |
-| `include: [add]` | ✓ (all functions) | ✓ (only `add`) | ✓ (only `add`) |
-| `exclude: [div]` | ✓ (all functions) | ✓ (except `div`) | ✓ (except `div`) |
+| Configuration         | Programmatically Accessible | Global Registry     | Agent Tools         |
+|-----------------------|-----------------------------|---------------------|---------------------|
+| No include/exclude    | ✓ (via group)               | ✗                   | ✗                   |
+| `include: [add]`      | ✓ (all functions)           | ✓ (only `add`)      | ✓ (only `add`)      |
+| `exclude: [divide]`   | ✓ (all functions)           | ✗                   | ✓ (except `divide`) |
 
 ## Using Function Groups
 
@@ -357,7 +422,7 @@ workflow:
   llm_name: my_llm
 ```
 
-All functions except `divide` are available to the agent. The excluded function remains programmatically accessible via the function group object.
+All functions except `divide` are available to the agent. Functions are not in the global registry and are not individually addressable. The excluded function remains programmatically accessible via the function group object.
 
 #### Example 4: Mixing Group and Individual References
 
