@@ -17,36 +17,122 @@ limitations under the License.
 
 # Writing Custom Function Groups
 
-It is strongly recommended to first read the [Function Groups](../workflows/function-groups.md) guide before reading this guide.
-
-Function groups bundle related functions that share configuration and runtime context.
-Use them to centralize resource management (for example, database connections) and to group functions by namespace.
-It is also possible to selectively include and exclude functions, from the function group. Selective inclusion enables namespace isolation of functions within the group and makes them addressable as ordinary functions.
-
-## Define the Configuration
-
-Create a configuration class that inherits from {py:class}`~nat.data_models.function.FunctionGroupBaseConfig`. Use Pydantic fields for validation and documentation.
-
-The optional `include` list controls which functions in the group become globally addressable and accessible to the workflow builder. If any function from the group is not listed in `include`, it will not be added to the global registry.
-The optional `exclude` list controls which functions in the group should not be addressable and accessible to the workflow builder and also not be wrapped as tools.
-If both `include` and `exclude` are empty, no functions are globally added, but you can still access the group and its functions programmatically.
-
 :::{note}
-`include` and `exclude` are mutually exclusive. If both are provided, a `ValueError` will be raised.
+Read the [Function Groups](../workflows/function-groups.md) guide first to understand how function groups work before creating your own.
 :::
+
+This guide shows you how to create custom function groups for the NeMo Agent toolkit. Function groups bundle related functions that share configuration, resources, and runtime context.
+
+## When to Write a Custom Function Group
+
+Create a custom function group when you need to:
+
+- **Share expensive resources**: Database connections, API clients, cache instances, or connection pools across multiple related functions
+- **Bundle related operations**: Group CRUD operations, file operations, or API endpoints that belong together
+- **Centralize configuration**: Manage credentials, endpoints, and settings in one place for multiple functions
+- **Create reusable components**: Package functionality that can be used across multiple workflows
+- **Namespace functions**: Organize functions into logical groups (such as `db.query`, `db.insert`, `api.get`, `api.post`)
+
+## What You'll Learn
+
+This guide covers:
+
+1. Defining configuration for your function group
+2. Registering and implementing the function group
+3. Managing shared resources with context managers
+4. Controlling function exposure with include/exclude
+5. Implementing dynamic filtering for runtime control
+6. Best practices for production-ready function groups
+
+## Step 1: Define the Configuration
+
+Every function group needs a configuration class that inherits from {py:class}`~nat.data_models.function.FunctionGroupBaseConfig`.
+
+### Minimal Configuration
+
+Start with the simplest possible configuration:
+
+```python
+from nat.data_models.function import FunctionGroupBaseConfig
+
+class MyGroupConfig(FunctionGroupBaseConfig, name="my_group"):
+    """Configuration for my custom function group."""
+    pass
+```
+
+The `name` parameter (`my_group`) is the type identifier used in YAML configurations as `_type: my_group`.
+
+### Adding Configuration Fields
+
+Add fields for any settings your functions need to share:
 
 ```python
 from pydantic import Field
 from nat.data_models.function import FunctionGroupBaseConfig
 
-
-class MyGroupConfig(FunctionGroupBaseConfig, name="my_group"):
-    pass
+class DatabaseGroupConfig(FunctionGroupBaseConfig, name="database_group"):
+    """Configuration for database operations."""
+    host: str = Field(description="Database host address")
+    port: int = Field(default=5432, description="Database port")
+    database: str = Field(description="Database name")
+    user: str = Field(description="Database user")
+    password: str = Field(description="Database password")
+    max_connections: int = Field(default=10, description="Maximum pool size")
 ```
 
-## Register the Function Group
+These fields become available in your YAML configuration:
 
-Register using {py:func}`nat.cli.register_workflow.register_function_group`. The registered coroutine should yield a {py:class}`~nat.builder.function.FunctionGroup` instance.
+```yaml
+function_groups:
+  db:
+    _type: database_group
+    host: "localhost"
+    port: 5432
+    database: "mydb"
+    user: "${DB_USER}"
+    password: "${DB_PASSWORD}"
+    max_connections: 20
+```
+
+### Controlling Function Exposure
+
+Use optional `include` or `exclude` lists to control which functions are exposed:
+
+```python
+class APIGroupConfig(FunctionGroupBaseConfig, name="api_group"):
+    """Configuration for API operations."""
+    base_url: str = Field(description="API base URL")
+    api_key: str = Field(description="API authentication key")
+    
+    # Optional: specify which functions to expose
+    include: list[str] = Field(
+        default_factory=list,
+        description="Functions to expose globally"
+    )
+    
+    # Or alternatively, specify which to hide
+    exclude: list[str] = Field(
+        default_factory=list,
+        description="Functions to keep private"
+    )
+```
+
+:::{note}
+`include` and `exclude` are mutually exclusive. If both are provided, a `ValueError` will be raised.
+:::
+
+**When to use each**:
+- Use `include` when you want to explicitly list exposed functions (allowlist approach)
+- Use `exclude` when most functions are public but some are private (blocklist approach)
+- Omit both when all functions should be accessible through the group reference only
+
+## Step 2: Register and Implement the Function Group
+
+Use the {py:deco}`~nat.cli.register_workflow.register_function_group` decorator to register your function group builder.
+
+### Basic Implementation
+
+Here's the simplest function group implementation:
 
 ```python
 from nat.cli.register_workflow import register_function_group
@@ -55,181 +141,844 @@ from nat.builder.function import FunctionGroup
 
 @register_function_group(config_type=MyGroupConfig)
 async def build_my_group(config: MyGroupConfig, _builder: Builder):
+    # Create the function group with an instance name
     group = FunctionGroup(config=config, instance_name="my")
-
+    
+    # Define your functions
     async def greet_fn(name: str) -> str:
         """Return a friendly greeting given a name."""
         return f"Hello, {name}!"
-
-    async def shout_fn(message: str) -> str:
-        """Return a message in uppercase."""
-        return message.upper()
-
+    
+    async def farewell_fn(name: str) -> str:
+        """Return a farewell message given a name."""
+        return f"Goodbye, {name}!"
+    
+    # Add functions to the group
     group.add_function(name="greet", fn=greet_fn, description=greet_fn.__doc__)
-    group.add_function(name="shout", fn=shout_fn, description=shout_fn.__doc__)
-
+    group.add_function(name="farewell", fn=farewell_fn, description=farewell_fn.__doc__)
+    
+    # Yield the group to make it available
     yield group
 ```
 
-## Referencing Functions within a Function Group
+**Key components**:
+- **Decorator**: `@register_function_group(config_type=MyGroupConfig)` registers the builder
+- **Instance name**: `instance_name="my"` creates the namespace (`my.greet`, `my.farewell`)
+- **Function definitions**: Define async functions that implement your logic
+- **Add to group**: Use `group.add_function()` to register each function
+- **Yield**: `yield group` makes the group available to workflows
 
-Functions are referenced as `instance_name.function_name` (for example, `my.greet`).
+### Sharing Resources with Context Managers
+
+For functions that need shared resources (connections, clients, etc.), use context managers:
+
+```python
+import asyncpg
+
+from nat.cli.register_workflow import register_function_group
+from nat.builder.workflow_builder import Builder
+from nat.builder.function import FunctionGroup
+
+@register_function_group(config_type=DatabaseGroupConfig)
+async def build_database_group(config: DatabaseGroupConfig, _builder: Builder):
+    # Create a shared connection pool
+    async with asyncpg.create_pool(
+        host=config.host,
+        port=config.port,
+        database=config.database,
+        user=config.user,
+        password=config.password,
+        min_size=1,
+        max_size=config.max_connections
+    ) as pool:
+        # Create the function group
+        group = FunctionGroup(config=config, instance_name="db")
+        
+        # All functions can access the shared pool
+        async def query_fn(sql: str) -> list[dict]:
+            """Execute a SQL query and return results as dictionaries."""
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(sql)
+                return [dict(row) for row in rows]
+        
+        async def execute_fn(sql: str) -> str:
+            """Execute a SQL statement (INSERT, UPDATE, DELETE)."""
+            async with pool.acquire() as conn:
+                await conn.execute(sql)
+                return "Statement executed successfully"
+        
+        async def count_fn(table: str) -> int:
+            """Count rows in a table."""
+            async with pool.acquire() as conn:
+                result = await conn.fetchval(f"SELECT COUNT(*) FROM {table}")
+                return result
+        
+        # Add all functions to the group
+        group.add_function(name="query", fn=query_fn, description=query_fn.__doc__)
+        group.add_function(name="execute", fn=execute_fn, description=execute_fn.__doc__)
+        group.add_function(name="count", fn=count_fn, description=count_fn.__doc__)
+        
+        # Yield within the context manager to keep pool alive
+        yield group
+    # Pool automatically closes when workflow ends
+```
+
+**Why use context managers**:
+- Resource lifecycle management (automatic cleanup)
+- Connection pooling efficiency
+- Proper error handling
+- Prevents resource leaks
+
+### Using Configuration Values
+
+Access configuration values in your functions to customize behavior:
+
+```python
+import httpx
+from nat.cli.register_workflow import register_function_group
+
+@register_function_group(config_type=APIGroupConfig)
+async def build_api_group(config: APIGroupConfig, _builder: Builder):
+    # Create authenticated HTTP client using config
+    async with httpx.AsyncClient(
+        base_url=config.base_url,
+        headers={"Authorization": f"Bearer {config.api_key}"},
+        timeout=30.0
+    ) as client:
+        group = FunctionGroup(config=config, instance_name="api")
+        
+        async def get_user_fn(user_id: int) -> dict:
+            """Get user details by ID."""
+            response = await client.get(f"/users/{user_id}")
+            response.raise_for_status()
+            return response.json()
+        
+        async def create_item_fn(name: str, description: str) -> dict:
+            """Create a new item."""
+            response = await client.post(
+                "/items",
+                json={"name": name, "description": description}
+            )
+            response.raise_for_status()
+            return response.json()
+        
+        group.add_function(name="get_user", fn=get_user_fn, description=get_user_fn.__doc__)
+        group.add_function(name="create_item", fn=create_item_fn, description=create_item_fn.__doc__)
+        
+        yield group
+```
+
+## Step 3: Customizing Function Schemas
+
+The toolkit automatically infers input and output schemas from your function type hints. You can customize these schemas for better validation and documentation.
+
+### Automatic Schema Inference
+
+By default, schemas are inferred from function signatures:
+
+```python
+async def query_fn(sql: str, params: list[str] | None = None) -> list[dict]:
+    """Execute a parameterized SQL query."""
+    # Implementation
+    pass
+
+# Schema is automatically inferred from type hints
+group.add_function(name="query", fn=query_fn, description=query_fn.__doc__)
+```
+
+### Custom Input Schemas
+
+Override the input schema for better validation and documentation:
+
+```python
+from pydantic import BaseModel, Field
+
+class QueryInput(BaseModel):
+    """Input schema for database queries."""
+    sql: str = Field(description="SQL query to execute", min_length=1)
+    params: list[str] | None = Field(default=None, description="Query parameters")
+    timeout: int = Field(default=30, gt=0, description="Query timeout in seconds")
+
+async def query_fn(sql: str, params: list[str] | None = None, timeout: int = 30) -> list[dict]:
+    """Execute a parameterized SQL query with timeout."""
+    # Implementation
+    pass
+
+# Use custom schema for enhanced validation
+group.add_function(
+    name="query",
+    fn=query_fn,
+    input_schema=QueryInput,
+    description="Execute a SQL query with parameters and timeout"
+)
+```
+
+**Benefits of custom schemas**:
+- Field-level validation (min/max values, string patterns, etc.)
+- Better documentation for AI agents
+- Default values with validation
+- Rich error messages
+
+### Complex Input Types
+
+Use Pydantic models for complex structured inputs:
+
+```python
+from enum import Enum
+from pydantic import BaseModel, Field, HttpUrl
+
+class RequestMethod(str, Enum):
+    """Supported HTTP methods."""
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    DELETE = "DELETE"
+
+class APIRequestInput(BaseModel):
+    """Input schema for API requests."""
+    endpoint: str = Field(description="API endpoint path", pattern="^/.*")
+    method: RequestMethod = Field(default=RequestMethod.GET, description="HTTP method")
+    headers: dict[str, str] = Field(default_factory=dict, description="Request headers")
+    body: dict | None = Field(default=None, description="Request body for POST/PUT")
+
+async def api_request_fn(endpoint: str, method: RequestMethod = RequestMethod.GET, 
+                        headers: dict[str, str] | None = None, body: dict | None = None) -> dict:
+    """Make an API request."""
+    # Implementation goes here
+    pass
+
+group.add_function(
+    name="request",
+    fn=api_request_fn,
+    input_schema=APIRequestInput,
+    description="Make an HTTP API request"
+)
+```
+
+## Step 4: Working with Function Groups Programmatically
+
+After creating your function group, you can work with it programmatically in your workflows.
+
+### Accessing Functions
+
+Functions are referenced as `instance_name.function_name`:
+
+```python
+from nat.builder.workflow_builder import WorkflowBuilder
+
+async with WorkflowBuilder() as builder:
+    # Add the function group with specific functions included
+    await builder.add_function_group("my", MyGroupConfig(include=["greet", "farewell"]))
+    
+    # Access individual function by fully qualified name
+    greet = await builder.get_function("my.greet")
+    result = await greet.ainvoke("World")
+    print(result)  # "Hello, World!"
+```
+
+### Getting Functions from the Group
+
+Access the function group object to work with multiple functions:
 
 ```python
 async with WorkflowBuilder() as builder:
     await builder.add_function_group("my", MyGroupConfig(include=["greet"]))
-
-    # Able to reference the function directly by its fully qualified name
-    greet = await builder.get_function("my.greet")
-    print(await greet.ainvoke("World"))
-
-    my_group = await builder.get_function_group("my")
-
-    # Get all accessible functions in the function group.
-    # If the function group is configured to:
-    # - include some functions, this will return only the included functions.
-    # - not include or exclude any function, this will return all functions in the group.
-    # - exclude some functions, this will return all functions in the group except the excluded functions.
-    accessible_functions = await my_group.get_accessible_functions()
     
-    # Get all functions in the group.
-    # This will return all functions in the group, regardless of whether they are included or excluded.
-    all_functions = await my_group.get_all_functions()
-
-    # Or only the included functions (which have also been registered globally as ordinary functions)
-    included_functions = await my_group.get_included_functions()
-
-    # Or only the excluded functions
-    excluded_functions = await my_group.get_excluded_functions()
+    # Get the function group object
+    my_group = await builder.get_function_group("my")
+    
+    # Get accessible functions (respects include/exclude)
+    accessible = await my_group.get_accessible_functions()
+    # Returns: {"greet": <function>}
+    
+    # Get all functions (ignores include/exclude)
+    all_funcs = await my_group.get_all_functions()
+    # Returns: {"greet": <function>, "farewell": <function>}
+    
+    # Get only included functions
+    included = await my_group.get_included_functions()
+    # Returns: {"greet": <function>}
+    
+    # Get only excluded functions
+    excluded = await my_group.get_excluded_functions()
+    # Returns: {"farewell": <function>}
 ```
 
-## Input Schemas
+### Testing Your Function Group
 
-When you add a function with {py:meth}`~nat.builder.function.FunctionGroup.add_function`, the toolkit infers input/output schemas from the callable's type hints. You can override the input schema and attach converters if needed:
+Test individual functions through the group:
 
 ```python
-from pydantic import BaseModel, Field
-from nat.builder.function_info import FunctionInfo
+import pytest
+from nat.builder.workflow_builder import WorkflowBuilder
 
-
-class GreetingInput(BaseModel):
-    name: str = Field(description="Name to greet", min_length=1)
-
-
-async def greet_fn(name: str) -> str:
-    return f"Hello, {name}!"
-
-
-group.add_function(name="greet",
-                   fn=greet_fn,
-                   input_schema=GreetingInput,
-                   description="Return a friendly greeting")
+@pytest.mark.asyncio
+async def test_my_function_group():
+    async with WorkflowBuilder() as builder:
+        await builder.add_function_group("my", MyGroupConfig())
+        my_group = await builder.get_function_group("my")
+        
+        # Test each function
+        all_funcs = await my_group.get_all_functions()
+        
+        # Test greet function
+        greet = all_funcs["greet"]
+        result = await greet.ainvoke("Alice")
+        assert result == "Hello, Alice!"
+        
+        # Test farewell function
+        farewell = all_funcs["farewell"]
+        result = await farewell.ainvoke("Bob")
+        assert result == "Goodbye, Bob!"
 ```
 
-## Using Filters
+## Step 5: Advanced - Dynamic Filtering (Optional)
 
-Function groups support dynamic filtering to control which functions are accessible at runtime. Filters are applied when functions are accessed, not when they are added to the group.
+Dynamic filters provide runtime control over which functions are accessible. Use filters when function availability needs to depend on runtime conditions like environment, feature flags, or user permissions.
+
+:::{note}
+Most function groups don't need filters. Use `include`/`exclude` lists for static function control. Only use filters when you need dynamic runtime behavior.
+:::
+
+### When to Use Filters
+
+**Use filters for**:
+- Environment-based function availability (development vs. production)
+- Feature flags that change at runtime
+- User permission-based access control
+- A/B testing different function sets
+- Gradual rollouts of new functions
+
+**Use include/exclude for**:
+- Static function exposure that doesn't change
+- Hiding internal helper functions
+- Permanently excluding unsafe operations
 
 ### Group-Level Filters
 
-Group-level filters receive a list of function names and return a filtered list. Set them during group creation or use {py:meth}`~nat.builder.function.FunctionGroup.set_filter_fn`:
+Group-level filters receive a list of function names and return a filtered list:
+
+```python
+from collections.abc import Sequence
+from nat.cli.register_workflow import register_function_group
+from nat.builder.function import FunctionGroup
+
+class EnvironmentGroupConfig(FunctionGroupBaseConfig, name="env_group"):
+    """Configuration with environment setting."""
+    environment: str = Field(default="development", description="Deployment environment")
+
+@register_function_group(config_type=EnvironmentGroupConfig)
+async def build_env_group(config: EnvironmentGroupConfig, _builder: Builder):
+    # Define a group-level filter based on environment
+    async def environment_filter(function_names: Sequence[str]) -> Sequence[str]:
+        """Only expose admin functions in development."""
+        if config.environment == "production":
+            # In production, exclude admin functions
+            return [name for name in function_names if not name.startswith("admin_")]
+        # In development, allow all functions
+        return function_names
+    
+    # Create group with the filter
+    group = FunctionGroup(config=config, instance_name="ops", filter_fn=environment_filter)
+    
+    # Add admin and user functions
+    async def admin_reset_fn() -> str:
+        """Reset system (admin only)."""
+        return "System reset"
+    
+    async def admin_config_fn(key: str, value: str) -> str:
+        """Update config (admin only)."""
+        return f"Config updated: {key}={value}"
+    
+    async def user_status_fn() -> dict:
+        """Get system status (available to all)."""
+        return {"status": "healthy", "uptime": 12345}
+    
+    group.add_function("admin_reset", admin_reset_fn, description=admin_reset_fn.__doc__)
+    group.add_function("admin_config", admin_config_fn, description=admin_config_fn.__doc__)
+    group.add_function("user_status", user_status_fn, description=user_status_fn.__doc__)
+    
+    yield group
+```
+
+**Result**:
+- Development: All three functions available
+- Production: Only `user_status` available (admin functions filtered out)
+
+### Per-Function Filters
+
+Per-function filters are applied to individual functions and determine whether that specific function should be included:
+
+```python
+class FeatureFlagConfig(FunctionGroupBaseConfig, name="feature_flag_group"):
+    enable_experimental: bool = Field(default=False, description="Enable experimental features")
+    enable_beta: bool = Field(default=False, description="Enable beta features")
+
+@register_function_group(config_type=FeatureFlagConfig)
+async def build_feature_group(config: FeatureFlagConfig, _builder: Builder):
+    group = FunctionGroup(config=config, instance_name="features")
+    
+    # Filters for different feature types
+    async def experimental_only(name: str) -> bool:
+        """Only include if experimental features are enabled."""
+        return config.enable_experimental
+    
+    async def beta_only(name: str) -> bool:
+        """Only include if beta features are enabled."""
+        return config.enable_beta
+    
+    # Stable function (always available)
+    async def stable_feature_fn() -> str:
+        """A stable, production-ready feature."""
+        return "Stable feature"
+    
+    # Beta function (conditionally available)
+    async def beta_feature_fn() -> str:
+        """A beta feature under testing."""
+        return "Beta feature"
+    
+    # Experimental function (conditionally available)
+    async def experimental_feature_fn() -> str:
+        """An experimental feature in early development."""
+        return "Experimental feature"
+    
+    # Add functions with appropriate filters
+    group.add_function("stable", stable_feature_fn, description=stable_feature_fn.__doc__)
+    group.add_function("beta", beta_feature_fn, description=beta_feature_fn.__doc__, 
+                      filter_fn=beta_only)
+    group.add_function("experimental", experimental_feature_fn, 
+                      description=experimental_feature_fn.__doc__, 
+                      filter_fn=experimental_only)
+    
+    yield group
+```
+
+**Configuration in YAML**:
+```yaml
+function_groups:
+  features:
+    _type: feature_flag_group
+    enable_experimental: false  # Experimental functions hidden
+    enable_beta: true           # Beta functions available
+```
+
+### Filter Execution Order
+
+Filters work in combination with `include` and `exclude` configuration in a specific order:
+
+1. **Configuration filtering** (`include`/`exclude` lists) - applied first
+2. **Group-level filtering** - applied to the result of step 1
+3. **Per-function filtering** - applied to each function from step 2
+
+**Example**:
 
 ```python
 from collections.abc import Sequence
 
-@register_function_group(config_type=MyGroupConfig)
-async def build_my_group(config: MyGroupConfig, _builder: Builder):
-    # Define a group-level filter
-    async def admin_filter(function_names: Sequence[str]) -> Sequence[str]:
-        # Only include admin functions in production
-        if config.environment == "production":
-            return [name for name in function_names if name.startswith("admin_")]
-        return function_names
-    
-    # Create group with filter
-    group = FunctionGroup(config=config, instance_name="my", filter_fn=admin_filter)
-    
-    # Or set filter later
-    # group.set_filter_fn(admin_filter)
-    
-    # Add functions as normal
-    group.add_function("admin_reset", reset_fn)
-    group.add_function("user_greet", greet_fn)
-    
-    yield group
-```
+class ComplexFilterConfig(FunctionGroupBaseConfig, name="complex_filter_group"):
+    include: list[str] = Field(default_factory=lambda: ["func1", "func2", "func3", "test_func4"])
+    environment: str = Field(default="development")
+    enable_experimental: bool = Field(default=False)
 
-### Per-Function Filters
-
-Per-function filters are set on individual functions and receive the function name. They determine whether that specific function should be included:
-
-```python
-@register_function_group(config_type=MyGroupConfig)
-async def build_my_group(config: MyGroupConfig, _builder: Builder):
-    group = FunctionGroup(config=config, instance_name="my")
-    
-    # Define per-function filter
-    async def debug_only(name: str) -> bool:
-        return config.debug_mode  # Only include if debug mode is enabled
-    
-    async def debug_fn(message: str) -> str:
-        return f"DEBUG: {message}"
-    
-    # Add function with per-function filter
-    group.add_function(name="debug", 
-                       fn=debug_fn, 
-                       filter_fn=debug_only)
-    
-    # Or set filter after adding
-    # group.set_per_function_filter_fn("debug", debug_only)
-    
-    yield group
-```
-
-### Filter Interaction
-
-Filters work in combination with `include` and `exclude` configuration:
-
-1. **Configuration filtering**: Applied first based on `include`/`exclude` lists
-2. **Group-level filtering**: Applied to the result of configuration filtering  
-3. **Per-function filtering**: Applied to each remaining function individually
-
-```python
-class FilteredGroupConfig(FunctionGroupBaseConfig, name="filtered_group"):
-    include: list[str] = ["func1", "func2", "func3"]
-    environment: str = "development"
-
-@register_function_group(config_type=FilteredGroupConfig)
-async def build_filtered_group(config: FilteredGroupConfig, _builder: Builder):
-    # Group filter: only production-ready functions in production
+@register_function_group(config_type=ComplexFilterConfig)
+async def build_complex_group(config: ComplexFilterConfig, _builder: Builder):
+    # Group-level filter: Remove test functions in production
     async def env_filter(names: Sequence[str]) -> Sequence[str]:
         if config.environment == "production":
             return [name for name in names if not name.startswith("test_")]
         return names
     
-    # Per-function filter: exclude experimental features
-    async def stable_only(name: str) -> bool:
-        return not name.endswith("_experimental")
+    # Per-function filter: Only include experimental if flag is set
+    async def experimental_gate(name: str) -> bool:
+        return config.enable_experimental
     
     group = FunctionGroup(config=config, filter_fn=env_filter)
     
-    group.add_function("func1", fn1)  # Included by config
-    group.add_function("test_func2", fn2)  # Included by config, but filtered by env_filter in production
-    group.add_function("func3_experimental", fn3, filter_fn=stable_only)  # Excluded by per-function filter
+    # Add functions
+    group.add_function("func1", fn1)           # Always included
+    group.add_function("func2", fn2)           # Always included
+    group.add_function("func3_experimental",   # Conditionally included
+                      fn3, 
+                      filter_fn=experimental_gate)
+    group.add_function("test_func4", fn4)     # Removed in production by group filter
+    group.add_function("func5", fn5)          # NOT in include list, so never accessible
     
     yield group
 ```
 
+**Result in production** (`environment="production"`, `enable_experimental=False`):
+1. Start with: `["func1", "func2", "func3_experimental", "test_func4"]` (include list)
+2. After group filter: `["func1", "func2", "func3_experimental"]` (test_func4 removed)
+3. After per-function filter: `["func1", "func2"]` (func3_experimental removed)
+
+**Result in development** (`environment="development"`, `enable_experimental=True`):
+1. Start with: `["func1", "func2", "func3_experimental", "test_func4"]` (include list)
+2. After group filter: `["func1", "func2", "func3_experimental", "test_func4"]` (all pass)
+3. After per-function filter: `["func1", "func2", "func3_experimental", "test_func4"]` (all pass)
+
 ## Best Practices
 
-- Keep group instance names short and descriptive; they become part of function names.
-- Share expensive resources (for example, clients, caches) through the group context instead of recreating them per function.
-- Validate inputs with Pydantic schemas for robust error handling.
-- Use group-level filters for environment-based or broad categorical filtering (for example, production readiness, feature flags).
-- Use per-function filters for function-specific conditions (for example, user permissions, feature availability).
-- Apply filters that depend on runtime configuration rather than static conditions that could be handled by `include`/`exclude` lists.
-- Test filter logic thoroughly, as filters are applied dynamically and can change function availability based on runtime conditions.
+### Naming Conventions
+
+**Keep instance names short and descriptive**:
+```python
+# Good - concise and clear
+group = FunctionGroup(config=config, instance_name="db")
+# Results in: db.query, db.insert
+
+# Less ideal - too verbose
+group = FunctionGroup(config=config, instance_name="database_operations")
+# Results in: database_operations.query, database_operations.insert
+```
+
+**Use consistent naming patterns**:
+- Database operations: `db.*`
+- API operations: `api.*`
+- File operations: `file.*` or `storage.*`
+- Cache operations: `cache.*`
+
+### Resource Management
+
+**Always use context managers for resources**:
+```python
+# Good - proper cleanup guaranteed
+async with create_pool(config) as pool:
+    group = FunctionGroup(config=config, instance_name="db")
+    # Add functions
+    yield group
+
+# Bad - resources may leak
+pool = await create_pool(config)
+group = FunctionGroup(config=config, instance_name="db")
+yield group  # Pool never closes!
+```
+
+**Share expensive resources**:
+```python
+# Good - one shared client
+@register_function_group(config_type=Config)
+async def build_group(config: Config, _builder: Builder):
+    client = create_expensive_client()  # Created once
+    # All functions use the same client
+    
+# Bad - each function creates its own
+async def fn1():
+    client = create_expensive_client()  # Wasteful!
+```
+
+### Configuration Best Practices
+
+**Use environment variables for secrets**:
+```python
+class SecureConfig(FunctionGroupBaseConfig, name="secure_group"):
+    api_key: str = Field(description="API key from environment")
+    
+# In YAML
+function_groups:
+  secure:
+    _type: secure_group
+    api_key: "${API_KEY}"  # From environment
+```
+
+**Provide sensible defaults**:
+```python
+class CacheConfig(FunctionGroupBaseConfig, name="cache_group"):
+    ttl: int = Field(default=3600, description="Cache TTL in seconds")
+    max_size: int = Field(default=1000, description="Max cache entries")
+```
+
+**Validate configuration values**:
+```python
+from pydantic import field_validator
+
+class DatabaseConfig(FunctionGroupBaseConfig, name="db_group"):
+    port: int = Field(description="Database port")
+    max_connections: int = Field(gt=0, le=100, description="Max connections")
+    
+    @field_validator('port')
+    @classmethod
+    def validate_port(cls, v):
+        if not (1 <= v <= 65535):
+            raise ValueError("Port must be between 1 and 65535")
+        return v
+```
+
+### Schema and Documentation
+
+**Use custom schemas for complex inputs**:
+```python
+# Instead of multiple parameters
+async def query_fn(sql: str, timeout: int, retries: int, params: list):
+    pass
+
+# Use a Pydantic model
+class QueryInput(BaseModel):
+    sql: str = Field(description="SQL query")
+    timeout: int = Field(default=30, gt=0)
+    retries: int = Field(default=3, ge=0)
+    params: list[str] = Field(default_factory=list)
+
+async def query_fn(input: QueryInput) -> list[dict]:
+    pass
+```
+
+**Write clear docstrings**:
+```python
+async def query_fn(sql: str) -> list[dict]:
+    """
+    Execute a SQL query and return results.
+    
+    Args:
+        sql: SQL query to execute. Must be a valid SELECT statement.
+        
+    Returns:
+        List of rows as dictionaries with column names as keys.
+        
+    Raises:
+        ValueError: If SQL is empty or invalid.
+        DatabaseError: If query execution fails.
+    """
+    pass
+```
+
+### Error Handling
+
+**Handle errors gracefully**:
+```python
+@register_function_group(config_type=APIConfig)
+async def build_api_group(config: APIConfig, _builder: Builder):
+    async with httpx.AsyncClient(base_url=config.base_url) as client:
+        group = FunctionGroup(config=config, instance_name="api")
+        
+        async def get_user_fn(user_id: int) -> dict:
+            """Get user by ID with error handling."""
+            try:
+                response = await client.get(f"/users/{user_id}")
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    raise ValueError(f"User {user_id} not found")
+                raise
+            except httpx.RequestError as e:
+                raise ConnectionError(f"Failed to connect to API: {e}")
+        
+        group.add_function("get_user", get_user_fn, description=get_user_fn.__doc__)
+        yield group
+```
+
+### Filter Guidelines
+
+**Prefer include/exclude over filters for static control**:
+```python
+# Good - static control with include/exclude
+function_groups:
+  admin:
+    _type: admin_group
+    exclude: [dangerous_operation]
+
+# Less ideal - using filter for something static
+async def static_filter(names):
+    return [n for n in names if n != "dangerous_operation"]
+```
+
+**Use filters for dynamic runtime control**:
+```python
+# Good - dynamic based on runtime config
+async def env_filter(names: Sequence[str]) -> Sequence[str]:
+    if os.getenv("ENVIRONMENT") == "production":
+        return [n for n in names if not n.startswith("debug_")]
+    return names
+```
+
+### Testing
+
+**Test each function individually**:
+```python
+@pytest.mark.asyncio
+async def test_database_functions():
+    config = DatabaseConfig(
+        host="localhost",
+        database="testdb",
+        user="test",
+        password="test"
+    )
+    
+    async with WorkflowBuilder() as builder:
+        await builder.add_function_group("db", config)
+        db_group = await builder.get_function_group("db")
+        
+        # Test query function
+        query_fn = (await db_group.get_all_functions())["query"]
+        result = await query_fn.ainvoke("SELECT 1")
+        assert len(result) == 1
+```
+
+**Test filter logic**:
+```python
+@pytest.mark.asyncio
+async def test_environment_filter():
+    # Test production environment
+    config = EnvConfig(environment="production")
+    async with WorkflowBuilder() as builder:
+        await builder.add_function_group("ops", config)
+        ops = await builder.get_function_group("ops")
+        accessible = await ops.get_accessible_functions()
+        assert "admin_reset" not in accessible
+        assert "user_status" in accessible
+```
+
+## Common Patterns
+
+### Pattern 1: Database Connection Pool
+
+```python
+@register_function_group(config_type=DatabaseConfig)
+async def build_db_group(config: DatabaseConfig, _builder: Builder):
+    async with asyncpg.create_pool(...) as pool:
+        group = FunctionGroup(config=config, instance_name="db")
+        
+        async def query(sql: str) -> list[dict]:
+            async with pool.acquire() as conn:
+                return [dict(r) for r in await conn.fetch(sql)]
+        
+        async def execute(sql: str) -> int:
+            async with pool.acquire() as conn:
+                result = await conn.execute(sql)
+                return int(result.split()[-1])  # Return affected rows
+        
+        group.add_function("query", query)
+        group.add_function("execute", execute)
+        yield group
+```
+
+### Pattern 2: Authenticated API Client
+
+```python
+@register_function_group(config_type=APIConfig)
+async def build_api_group(config: APIConfig, _builder: Builder):
+    headers = {"Authorization": f"Bearer {config.api_key}"}
+    async with httpx.AsyncClient(base_url=config.base_url, headers=headers) as client:
+        group = FunctionGroup(config=config, instance_name="api")
+        
+        async def get(endpoint: str) -> dict:
+            response = await client.get(endpoint)
+            response.raise_for_status()
+            return response.json()
+        
+        async def post(endpoint: str, data: dict) -> dict:
+            response = await client.post(endpoint, json=data)
+            response.raise_for_status()
+            return response.json()
+        
+        group.add_function("get", get)
+        group.add_function("post", post)
+        yield group
+```
+
+### Pattern 3: Stateful Cache
+
+```python
+@register_function_group(config_type=CacheConfig)
+async def build_cache_group(config: CacheConfig, _builder: Builder):
+    # Shared cache state
+    cache: dict[str, tuple[Any, float]] = {}
+    
+    group = FunctionGroup(config=config, instance_name="cache")
+    
+    async def set_value(key: str, value: Any) -> str:
+        """Set a cache value with TTL."""
+        cache[key] = (value, time.time() + config.ttl)
+        return f"Cached: {key}"
+    
+    async def get_value(key: str) -> Any | None:
+        """Get a cache value if not expired."""
+        if key in cache:
+            value, expires = cache[key]
+            if time.time() < expires:
+                return value
+            del cache[key]
+        return None
+    
+    async def clear_cache() -> str:
+        """Clear all cache entries."""
+        cache.clear()
+        return "Cache cleared"
+    
+    group.add_function("set", set_value)
+    group.add_function("get", get_value)
+    group.add_function("clear", clear_cache)
+    yield group
+```
+
+## Troubleshooting
+
+### Issue: Functions Not Appearing in Workflow
+
+**Problem**: Functions aren't available even though they're added to the group.
+
+**Solution**: Check your `include` list configuration:
+```yaml
+function_groups:
+  mygroup:
+    _type: my_group
+    include: [func1, func2]  # Must list functions explicitly
+```
+
+Or reference the entire group:
+```yaml
+workflow:
+  tool_names: [mygroup]  # Use group name, not individual functions
+```
+
+### Issue: Resource Leaks
+
+**Problem**: Database connections or other resources aren't being cleaned up.
+
+**Solution**: Always yield within the context manager:
+```python
+# Correct
+async with create_pool() as pool:
+    group = FunctionGroup(...)
+    yield group  # Inside context
+
+# Wrong
+async with create_pool() as pool:
+    group = FunctionGroup(...)
+yield group  # Outside context - pool already closed!
+```
+
+### Issue: Filter Not Working
+
+**Problem**: Filter function isn't affecting which functions are available.
+
+**Solution**: Ensure filter is set before accessing functions and check the filter logic:
+```python
+# Make sure filter is applied to the group
+group = FunctionGroup(config=config, instance_name="my", filter_fn=my_filter)
+
+# Or set it after creation
+group.set_filter_fn(my_filter)
+
+# Debug: Check what's being filtered
+accessible = await group.get_accessible_functions()
+print(f"Accessible functions: {list(accessible.keys())}")
+```
+
+### Issue: Type Validation Errors
+
+**Problem**: Function input validation fails unexpectedly.
+
+**Solution**: Ensure your Pydantic schema matches function signature:
+```python
+# Schema and function must match
+class MyInput(BaseModel):
+    value: int  # Must match parameter type
+
+async def my_fn(value: int) -> str:  # Types must align
+    return str(value)
+```
 
 ## Next Steps
 
-- Review [Writing Custom Functions](./functions.md) for details that also apply to functions inside groups (type safety, streaming vs. single outputs, converters).
+- Review [Writing Custom Functions](./functions.md) for details that also apply to functions inside groups (type safety, streaming vs. single outputs, converters)
