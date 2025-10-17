@@ -544,7 +544,7 @@ This plot helps identify parameter relationships:
 - **Solution**: Increase `reps_per_param_set`, ensure consistent evaluation conditions
 
 **Problem**: Optimization is too expensive
-- **Solution**: Reduce search space, use `step` for discreet parameters, set `target` for early stopping
+- **Solution**: Reduce search space, use `step` for discrete parameters, set `target` for early stopping
 
 **Problem**: Prompt optimization produces similar outputs
 - **Solution**: Increase `ga_diversity_lambda`, ensure `prompt_purpose` is specific and actionable
@@ -569,14 +569,14 @@ This plot helps identify parameter relationships:
 ### Workflow-Specific Tips
 
 **For Classification Tasks**:
-- Prioritize `accuracy/F1` score with high weight (0.7-0.9)
+- Prioritize accuracy or score with high weight (0.7-0.9)
 - Include latency with lower weight (0.1-0.3)
-- Use 5-10 `repos` to handle class imbalance
+- Use 5-10 `reps` to handle class imbalance
 
 **For Generation Tasks**:
 - Balance quality metrics (coherence, relevance) equally
 - Include diversity metrics to avoid mode collapse
-- Use prompt optimization for `style/tone` control
+- Use prompt optimization for style or tone control
 
 **For Real-time Applications**:
 - Set strict latency targets
@@ -586,7 +586,7 @@ This plot helps identify parameter relationships:
 ### Advanced Techniques
 
 **Staged Optimization**:
-1. First optimize prompts with small `population/generations`
+1. First optimize prompts with small population or generations
 2. Fix best prompts, then optimize numeric parameters
 3. Finally, fine-tune both together
 
