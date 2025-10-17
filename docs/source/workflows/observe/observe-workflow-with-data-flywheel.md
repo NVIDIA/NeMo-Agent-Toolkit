@@ -19,7 +19,7 @@ limitations under the License.
 
 This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow that exports runtime traces to NVIDIA Data Flywheel. This integration enables LLM distillation and optimization derived from your workflow's runtime traces, allowing you to deploy more efficient models with lower latency.
 
-The Data Flywheel integration supports LangChain/LangGraph based workflows with NIM/OpenAI LLM providers and can be enabled with just a few lines of configuration.
+The Data Flywheel integration supports LangChain/LangGraph based workflows with `nim` and `openai` LLM providers and can be enabled with just a few lines of configuration.
 
 ## Supported Framework and Provider Combinations
 
@@ -28,7 +28,7 @@ The Data Flywheel integration currently supports LangChain (as used in LangChain
 - `_type: openai` - OpenAI provider
 - `_type: nim` - NVIDIA NIM provider
 
-The integration captures `LLM_START` events for completions and tool calls when using these specific combinations. Other framework/provider combinations are not currently supported.
+The integration captures `LLM_START` events for completions and tool calls when using these specific combinations. Other framework and provider combinations are not currently supported.
 
 ## Step 1: Prerequisites
 
