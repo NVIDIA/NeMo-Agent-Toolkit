@@ -35,13 +35,13 @@ def test_hitl_workflow(response: str, expected_result: str):
     # 1) The HITL callback function requires a hook which is only available using the console front-end
     # 2) Pytest sets stdin to NULL by default
     cmd = ["nat", "run", "--config_file", str(config_file.absolute()), "--input", '"Is 2 * 4 greater than 5?"']
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-    (stdout, stderr) = proc.communicate(input=f"{response}\n", timeout=60)
+    (stdout, _) = proc.communicate(input=f"{response}\n", timeout=60)
     assert proc.returncode == 0, \
-        f"Process failed with return code {proc.returncode}\nstdout: {stdout}\nstderr: {stderr}"
+        f"Process failed with return code {proc.returncode}\noutput: {stdout}"
     assert expected_prompt in stdout
 
     result_pattern = re.compile(f"Workflow Result:.*{expected_result}", re.IGNORECASE | re.MULTILINE | re.DOTALL)
-    assert result_pattern.search(stderr) is not None, \
-        f"Expected result '{expected_result}' not found in stderr: {stderr}"
+    assert result_pattern.search(stdout) is not None, \
+        f"Expected result '{expected_result}' not found in output: {stdout}"
