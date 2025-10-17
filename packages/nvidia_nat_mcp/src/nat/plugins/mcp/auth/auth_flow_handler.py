@@ -91,12 +91,51 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
     async def _handle_oauth2_auth_code_flow(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
         logger.info("Starting MCP OAuth2 authorization code flow")
 
-        # Extract host and port from redirect_uri for callback server
+        # Extract and validate host and port from redirect_uri for callback server
         from urllib.parse import urlparse
         parsed_uri = urlparse(str(cfg.redirect_uri))
-        self._redirect_host = parsed_uri.hostname or "localhost"
-        self._redirect_port = parsed_uri.port or 8000
-        logger.debug("MCP redirect server will use %s:%d", self._redirect_host, self._redirect_port)
+
+        # Default fallback values
+        host = "localhost"
+        port = 8000
+
+        # Validate scheme
+        scheme = (parsed_uri.scheme or "http").lower()
+        if scheme not in ("http", "https"):
+            logger.error(
+                "MCP redirect_uri must use http or https scheme, got '%s'. "
+                "Falling back to localhost:8000. Use http://<host>:<port>/auth/redirect for local servers.",
+                scheme)
+        # Validate hostname
+        elif not parsed_uri.hostname:
+            logger.error("redirect_uri must include a hostname, for example http://localhost:8000/auth/redirect. "
+                         "Falling back to localhost:8000.")
+        else:
+            host = parsed_uri.hostname
+            # Extract port with scheme-appropriate defaults
+            if parsed_uri.port:
+                if not (0 < parsed_uri.port < 65536):
+                    logger.error("Invalid redirect port: %d. Expected 1-65535. Falling back to localhost:8000.",
+                                 parsed_uri.port)
+                    host = "localhost"
+                    port = 8000
+                else:
+                    port = parsed_uri.port
+            else:
+                # Use default port for the scheme
+                port = 443 if scheme == "https" else 80
+
+            # Warn about HTTPS usage - typically requires reverse proxy
+            if scheme == "https":
+                logger.warning(
+                    "redirect_uri uses https scheme. The MCP redirect server will attempt to bind to port %d. "
+                    "For production deployments, use a reverse proxy (such as nginx) to handle TLS termination "
+                    "and forward to the NAT server on an internal port.",
+                    port)
+
+        self._redirect_host = host
+        self._redirect_port = port
+        logger.info("MCP redirect server will use %s:%d", self._redirect_host, self._redirect_port)
 
         state = secrets.token_urlsafe(16)
         flow_state = _FlowState()
