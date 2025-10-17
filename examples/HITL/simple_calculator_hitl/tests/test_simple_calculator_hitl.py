@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -34,8 +35,16 @@ def test_hitl_workflow(response: str, expected_result: str):
     # Use subprocess to run the NAT CLI rather than using the API for two reasons:
     # 1) The HITL callback function requires a hook which is only available using the console front-end
     # 2) Pytest sets stdin to NULL by default
+    # 3) The CI environment has NAT_LOG_LEVEL=WARNING which prevents the workflow result from being printed to stderr
+    env = os.environ.copy()
+    env.pop("NAT_LOG_LEVEL")
     cmd = ["nat", "run", "--config_file", str(config_file.absolute()), "--input", '"Is 2 * 4 greater than 5?"']
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    proc = subprocess.Popen(cmd,
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            text=True,
+                            env=env)
 
     (stdout, _) = proc.communicate(input=f"{response}\n", timeout=60)
     assert proc.returncode == 0, f"Process failed with return code {proc.returncode}\noutput: {stdout}"
