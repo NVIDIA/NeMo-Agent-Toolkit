@@ -51,7 +51,7 @@ To view all configuration options for the `mcp_oauth2` authentication provider, 
 Some configuration values are commonly provided through environment variables:
 - `NAT_USER_ID`: Used as `default_user_id` to cache the authenticating user during setup and optionally for tool calls. Defaults to the `server_url` if not provided.
 - `ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS`: Controls whether the default user can invoke tools. Defaults to `true` if not provided.
-- `NAT_REDIRECT_URI`: The full redirect URI for OAuth2 callbacks. Defaults to `http://localhost:8000/auth/redirect` if not provided. For remote servers or production deployments, set this to match the address where your NAT server is accessible from your browser.
+- `NAT_REDIRECT_URI`: The full redirect URI for OAuth2 callbacks. Defaults to `http://localhost:8000/auth/redirect` if not provided. For remote servers or production deployments, set this to match the address where your NAT server is accessible from your browser. **Note**: If no port is specified in the URI, the server will bind to port 8000 by default.
 
 Set them for your current shell:
 ```bash
@@ -195,10 +195,14 @@ export NAT_REDIRECT_URI="http://192.168.1.100:8080/auth/redirect"
 ```
 This is an example value for a remote server at `192.168.1.100` running on port `8080`. Replace this with the actual network address where your NAT server is accessible from your browser.
 
-For production environments without an explicit port, you can use:
+For production environments using a reverse proxy, specify the public HTTPS URL:
 ```bash
 export NAT_REDIRECT_URI="https://myapp.example.com/auth/redirect"
 ```
+
+:::{important}
+When `redirect_uri` does not include an explicit port, the NAT server will bind to port **8000** by default (not port 80 or 443). For HTTPS redirect URIs, you must use a reverse proxy to handle TLS termination on port 443 and forward requests to the NAT server on port 8000.
+:::
 
 Configure the authentication provider in the workflow configuration:
 ```yaml
