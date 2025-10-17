@@ -314,9 +314,7 @@ There are two key differences in the workflow execution:
 
 1. The generated description correctly reflected the contents of the collection.
 
-    > ```
     > Generated the dynamic description: Ask questions about the following collection of text: This collection appears to be a comprehensive repository of information on the aardvark, storing a wide range of data types including text, images, and taxonomic classifications, with the primary purpose of providing a detailed and authoritative reference on the biology, behavior, and conservation of the aardvark species.
-    > ```
 
 2. We see that the agent called the `retrieve_tool`.
 
