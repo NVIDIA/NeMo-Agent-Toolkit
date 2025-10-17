@@ -94,7 +94,7 @@ function_groups:
     server:
       transport: streamable-http
       url: ${CORPORATE_MCP_JIRA_URL}
-    auth_provider: mcp_oauth2_jira
+      auth_provider: mcp_oauth2_jira
 
 authentication:
   mcp_oauth2_jira:
