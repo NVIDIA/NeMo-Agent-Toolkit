@@ -41,7 +41,7 @@ authentication:
   mcp_oauth2_jira:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
-    redirect_uri: http://localhost:8000/auth/redirect
+    redirect_uri: http://${NAT_SERVER_HOST:-localhost}:${NAT_SERVER_PORT:-8000}/auth/redirect
     default_user_id: ${CORPORATE_MCP_JIRA_URL}
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 
