@@ -38,8 +38,7 @@ def test_hitl_workflow(response: str, expected_result: str):
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
     (stdout, _) = proc.communicate(input=f"{response}\n", timeout=60)
-    assert proc.returncode == 0, \
-        f"Process failed with return code {proc.returncode}\noutput: {stdout}"
+    assert proc.returncode == 0, f"Process failed with return code {proc.returncode}\noutput: {stdout}"
     assert expected_prompt in stdout
 
     result_pattern = re.compile(f"Workflow Result:.*{expected_result}", re.IGNORECASE | re.MULTILINE | re.DOTALL)
