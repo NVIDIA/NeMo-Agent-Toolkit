@@ -47,8 +47,10 @@ class ParetoVisualizer:
         fig, ax = plt.subplots(figsize=figsize)
 
         # Extract metric values - support both old (values_0) and new (values_metricname) formats
-        x_col = f"values_{self.metric_names[0]}" if f"values_{self.metric_names[0]}" in trials_df.columns else f"values_{0}"
-        y_col = f"values_{self.metric_names[1]}" if f"values_{self.metric_names[1]}" in trials_df.columns else f"values_{1}"
+        x_col = f"values_{self.metric_names[0]}" \
+            if f"values_{self.metric_names[0]}" in trials_df.columns else f"values_{0}"
+        y_col = f"values_{self.metric_names[1]}"\
+            if f"values_{self.metric_names[1]}" in trials_df.columns else f"values_{1}"
         x_vals = trials_df[x_col].values
         y_vals = trials_df[y_col].values
 
@@ -148,7 +150,8 @@ class ParetoVisualizer:
         all_values = []
         for i in range(n_metrics):
             # Support both old (values_0) and new (values_metricname) formats
-            col_name = f"values_{self.metric_names[i]}" if f"values_{self.metric_names[i]}" in trials_df.columns else f"values_{i}"
+            col_name = f"values_{self.metric_names[i]}"\
+                if f"values_{self.metric_names[i]}" in trials_df.columns else f"values_{i}"
             all_values.append(trials_df[col_name].values)
 
         # Normalize each metric to [0, 1] for parallel coordinates
@@ -226,7 +229,8 @@ class ParetoVisualizer:
                 if i == j:
                     # Diagonal: histograms
                     # Support both old (values_0) and new (values_metricname) formats
-                    col_name = f"values_{self.metric_names[i]}" if f"values_{self.metric_names[i]}" in trials_df.columns else f"values_{i}"
+                    col_name = f"values_{self.metric_names[i]}"\
+                        if f"values_{self.metric_names[i]}" in trials_df.columns else f"values_{i}"
                     values = trials_df[col_name].values
                     ax.hist(values, bins=20, alpha=0.7, color='lightblue', edgecolor='navy')
                     if pareto_trials_df is not None and not pareto_trials_df.empty:
@@ -237,8 +241,10 @@ class ParetoVisualizer:
                 else:
                     # Off-diagonal: scatter plots
                     # Support both old (values_0) and new (values_metricname) formats
-                    x_col = f"values_{self.metric_names[j]}" if f"values_{self.metric_names[j]}" in trials_df.columns else f"values_{j}"
-                    y_col = f"values_{self.metric_names[i]}" if f"values_{self.metric_names[i]}" in trials_df.columns else f"values_{i}"
+                    x_col = f"values_{self.metric_names[j]}"\
+                        if f"values_{self.metric_names[j]}" in trials_df.columns else f"values_{j}"
+                    y_col = f"values_{self.metric_names[i]}"\
+                        if f"values_{self.metric_names[i]}" in trials_df.columns else f"values_{i}"
                     x_vals = trials_df[x_col].values
                     y_vals = trials_df[y_col].values
 
