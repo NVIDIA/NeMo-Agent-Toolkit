@@ -110,10 +110,6 @@ class ContextState(metaclass=Singleton):
             self._active_span_id_stack.set(["root"])
         return typing.cast(ContextVar[list[str]], self._active_span_id_stack)
 
-    @cached_property
-    def intermediate_step_manager(self) -> IntermediateStepManager:
-        return IntermediateStepManager(self)
-
     @staticmethod
     def get() -> "ContextState":
         return ContextState()
@@ -172,7 +168,7 @@ class Context:
         """
         return UserInteractionManager(self._context_state)
 
-    @property
+    @cached_property
     def intermediate_step_manager(self) -> IntermediateStepManager:
         """
         Retrieves the intermediate step manager instance from the current context state.
@@ -184,7 +180,7 @@ class Context:
             IntermediateStepManager: The instance of the intermediate step manager retrieved
                 from the context state.
         """
-        return self._context_state.intermediate_step_manager
+        return IntermediateStepManager(self._context_state)
 
     @property
     def conversation_id(self) -> str | None:
