@@ -289,25 +289,6 @@ To get detailed information about a specific tool, use the `--tool` flag:
 nat mcp client tool list --url http://localhost:9901/mcp --tool calculator_multiply
 ```
 
-### Call a Tool
-
-To call a tool and get its output:
-
-```bash
-# Pass arguments as JSON
-nat mcp client tool call calculator_multiply \
-  --url http://localhost:9901/mcp \
-  --json-args '{"text": "2 * 3"}'
-```
-
-### Using Protected MCP Servers
-
-To use a protected MCP server, you need to provide the `--auth` flag:
-```bash
-nat mcp client tool list --url http://example.com/mcp --auth
-```
-This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Authentication](./mcp-auth.md).
-
 Sample output:
 ```text
 Tool: calculator_multiply
@@ -329,6 +310,24 @@ Input Schema:
 }
 ------------------------------------------------------------
 ```
+### Call a Tool
+
+To call a tool and get its output:
+
+```bash
+# Pass arguments as JSON
+nat mcp client tool call calculator_multiply \
+  --url http://localhost:9901/mcp \
+  --json-args '{"text": "2 * 3"}'
+```
+
+### Using Protected MCP Servers
+
+To use a protected MCP server, you need to provide the `--auth` flag:
+```bash
+nat mcp client tool list --url http://example.com/mcp --auth
+```
+This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Authentication](./mcp-auth.md).
 
 ## List MCP Client Tools using the HTTP endpoint
 This is useful when you want to inspect the tools configured on the client side and whether each tool is available on the connected server.
