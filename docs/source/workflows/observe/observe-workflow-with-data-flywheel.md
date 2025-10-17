@@ -84,7 +84,7 @@ The Data Flywheel integration supports the following core configuration paramete
 Run your workflow using the updated configuration file:
 
 ```bash
-nat run --config_file path/to/config-data-flywheel.yml --input "Your workflow input here"
+nat run --config_file config-data-flywheel.yml --input "Your workflow input here"
 ```
 
 ## Step 5: Monitor Trace Export
