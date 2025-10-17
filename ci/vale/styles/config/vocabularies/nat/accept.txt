@@ -91,7 +91,7 @@ MLflow
 MLOps
 Morpheus
 [Mm]ultimodal
-[Nn]amespace(d?|s|ing)
+[Nn]amespac(e|ed|es|ing)
 NeMo
 nginx
 NIC
