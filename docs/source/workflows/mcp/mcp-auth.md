@@ -32,13 +32,13 @@ authentication:
   mcp_oauth2_jira:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
-    redirect_uri: http://${NAT_SERVER_HOST:-localhost}:${NAT_SERVER_PORT:-8000}/auth/redirect
+    redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
     default_user_id: ${CORPORATE_MCP_JIRA_URL}
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 Configuration options:
 - `server_url`: The URL of the MCP server that requires authentication.
-- `redirect_uri`: The redirect URI for the OAuth2 flow.
+- `redirect_uri`: The redirect URI for the OAuth2 flow. This must match the address where your NAT server is accessible from your browser.
 - `default_user_id`: The user ID for discovering and adding tools to the workflow at startup. The `default_user_id` can be any string and is used as the key to cache the user's information. It defaults to the `server_url` if not provided.
 - `allow_default_user_id_for_tool_calls`: Whether to allow the default user ID for tool calls. This is typically enabled for single-user workflows, for example, a workflow that is launched using the `nat run` CLI command. For multi-user workflows, this should be disabled to avoid accidental tool calls by unauthorized users.
 
@@ -51,13 +51,13 @@ To view all configuration options for the `mcp_oauth2` authentication provider, 
 Some configuration values are commonly provided through environment variables:
 - `NAT_USER_ID`: Used as `default_user_id` to cache the authenticating user during setup and optionally for tool calls. Defaults to the `server_url` if not provided.
 - `ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS`: Controls whether the default user can invoke tools. Defaults to `true` if not provided.
-- `NAT_SERVER_HOST`: The host of the NAT server. Defaults to `localhost` if not provided.
-- `NAT_SERVER_PORT`: The port of the NAT server. Defaults to `8000` if not provided.
+- `NAT_REDIRECT_URI`: The full redirect URI for OAuth2 callbacks. Defaults to `http://localhost:8000/auth/redirect` if not provided. For remote servers or production deployments, set this to match the address where your NAT server is accessible from your browser.
 
 Set them for your current shell:
 ```bash
 export NAT_USER_ID="dev-user"
 export ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS=true
+export NAT_REDIRECT_URI="http://localhost:8000/auth/redirect"
 ```
 ## Referencing Auth Providers in Clients
 The authentication provider is referenced by name through the `auth_provider` parameter in the MCP client configuration.
@@ -102,7 +102,7 @@ authentication:
   mcp_oauth2_jira:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
-    redirect_uri: http://${NAT_SERVER_HOST:-localhost}:${NAT_SERVER_PORT:-8000}/auth/redirect
+    redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
     default_user_id: ${CORPORATE_MCP_JIRA_URL}
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
@@ -189,12 +189,16 @@ OAuth2 authentication redirects your browser to the `redirect_uri` after you app
 
 #### Configuration
 
-Set the environment variables to match your remote server's host and port:
+Set the `NAT_REDIRECT_URI` environment variable to match your remote server's address:
 ```bash
-export NAT_SERVER_HOST="192.168.1.100"
-export NAT_SERVER_PORT="8080"
+export NAT_REDIRECT_URI="http://192.168.1.100:8080/auth/redirect"
 ```
-These are example values for a remote server at `192.168.1.100` running on port `8080`. You should replace these with the actual values for your remote server.
+This is an example value for a remote server at `192.168.1.100` running on port `8080`. Replace this with the actual network address where your NAT server is accessible from your browser.
+
+For production environments without an explicit port, you can use:
+```bash
+export NAT_REDIRECT_URI="https://myapp.example.com/auth/redirect"
+```
 
 Configure the authentication provider in the workflow configuration:
 ```yaml
@@ -202,15 +206,25 @@ authentication:
   mcp_oauth2_jira:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
-    redirect_uri: http://${NAT_SERVER_HOST}:${NAT_SERVER_PORT}/auth/redirect
+    redirect_uri: ${NAT_REDIRECT_URI}
     default_user_id: ${NAT_USER_ID}
     allow_default_user_id_for_tool_calls: false
 ```
 
-The `redirect_uri` must use the same host and port where you run `nat serve`. The `/auth/redirect` endpoint is automatically registered on the main NAT server for handling OAuth callbacks. So in this case the server should be started with
+The `redirect_uri` must match the address where your NAT server is accessible from your browser. The `/auth/redirect` endpoint is automatically registered on the main NAT server for handling OAuth callbacks.
+
+Start the server using the `--host` and `--port` flags that match your `redirect_uri`:
 ```bash
-nat serve --host ${NAT_SERVER_HOST} --port ${NAT_SERVER_PORT}
+# For the remote server example above
+nat serve --host 192.168.1.100 --port 8080
+
+# Or for production with a reverse proxy
+nat serve --host 0.0.0.0 --port 8000
 ```
+
+:::{note}
+For production deployments with HTTPS, you typically run NAT behind a reverse proxy (such as nginx) that handles TLS termination. In this case, set `NAT_REDIRECT_URI` to your public HTTPS address, and configure the reverse proxy to forward requests to your NAT server's internal address and port.
+:::
 
 ## Displaying Protected MCP Tools through the CLI
 MCP client CLI can be used to display and call MCP tools on a remote MCP server. To use a protected MCP server, you need to provide the `--auth` flag:
