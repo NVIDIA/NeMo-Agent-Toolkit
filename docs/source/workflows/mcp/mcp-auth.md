@@ -33,7 +33,7 @@ authentication:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
     redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
-    default_user_id: ${CORPORATE_MCP_JIRA_URL}
+    default_user_id: ${NAT_USER_ID}
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 Configuration options:
@@ -103,7 +103,7 @@ authentication:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
     redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
-    default_user_id: ${CORPORATE_MCP_JIRA_URL}
+    default_user_id: ${NAT_USER_ID}
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 
