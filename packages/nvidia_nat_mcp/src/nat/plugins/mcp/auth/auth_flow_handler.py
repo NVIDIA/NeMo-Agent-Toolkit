@@ -169,8 +169,8 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
 
             self._server_controller = _FastApiFrontEndController(self._redirect_app)
 
-            self._server_task = asyncio.create_task(self._server_controller.start_server(host=self._redirect_host,
-                                                                     port=self._redirect_port))
+            self._server_task = asyncio.create_task(
+                self._server_controller.start_server(host=self._redirect_host, port=self._redirect_port))
             logger.debug("MCP redirect server starting on %s:%d", self._redirect_host, self._redirect_port)
 
             # Give the server a moment to bind sockets before we return
