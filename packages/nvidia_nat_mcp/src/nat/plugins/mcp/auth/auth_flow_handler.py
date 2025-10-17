@@ -95,43 +95,24 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
         from urllib.parse import urlparse
         parsed_uri = urlparse(str(cfg.redirect_uri))
 
-        # Default fallback values
-        host = "localhost"
-        port = 8000
-
-        # Validate scheme
+        # Validate scheme/host and choose a safe non-privileged bind port
         scheme = (parsed_uri.scheme or "http").lower()
         if scheme not in ("http", "https"):
-            logger.error(
-                "MCP redirect_uri must use http or https scheme, got '%s'. "
-                "Falling back to localhost:8000. Use http://<host>:<port>/auth/redirect for local servers.",
-                scheme)
-        # Validate hostname
-        elif not parsed_uri.hostname:
-            logger.error("redirect_uri must include a hostname, for example http://localhost:8000/auth/redirect. "
-                         "Falling back to localhost:8000.")
-        else:
-            host = parsed_uri.hostname
-            # Extract port with scheme-appropriate defaults
-            if parsed_uri.port:
-                if not (0 < parsed_uri.port < 65536):
-                    logger.error("Invalid redirect port: %d. Expected 1-65535. Falling back to localhost:8000.",
-                                 parsed_uri.port)
-                    host = "localhost"
-                    port = 8000
-                else:
-                    port = parsed_uri.port
-            else:
-                # Use default port for the scheme
-                port = 443 if scheme == "https" else 80
+            raise ValueError(f"redirect_uri must use http or https scheme, got '{scheme}'")
 
-            # Warn about HTTPS usage - typically requires reverse proxy
-            if scheme == "https":
-                logger.warning(
-                    "redirect_uri uses https scheme. The MCP redirect server will attempt to bind to port %d. "
-                    "For production deployments, use a reverse proxy (such as nginx) to handle TLS termination "
-                    "and forward to the NAT server on an internal port.",
-                    port)
+        host = parsed_uri.hostname
+        if not host:
+            raise ValueError("redirect_uri must include a hostname, for example http://localhost:8000/auth/redirect")
+
+        # Never auto-bind to 80/443; default to 8000 when port is not specified
+        port = parsed_uri.port or 8000
+        if not (1 <= port <= 65535):
+            raise ValueError(f"Invalid redirect port: {port}. Expected 1-65535.")
+
+        if scheme == "https" and parsed_uri.port is None:
+            logger.warning(
+                "redirect_uri uses https without an explicit port; binding to %d (plain HTTP). "
+                "Terminate TLS at a reverse proxy and forward to this port.", port)
 
         self._redirect_host = host
         self._redirect_port = port
