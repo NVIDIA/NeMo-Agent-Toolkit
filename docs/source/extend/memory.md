@@ -147,7 +147,7 @@ Then either:
 **At runtime**, you typically see code like:
 
 ```python
-memory_client = builder.get_memory_client(<memory_config_name>)
+memory_client = await builder.get_memory_client(<memory_config_name>)
 await memory_client.add_items([MemoryItem(...), ...])
 ```
 
@@ -164,7 +164,7 @@ from nat.memory.models import MemoryItem
 from langchain_core.tools import ToolException
 
 async def add_memory_tool_action(item: MemoryItem, memory_name: str):
-    memory_client = builder.get_memory_client(memory_name)
+    memory_client = await builder.get_memory_client(memory_name)
     try:
         await memory_client.add_items([item])
         return "Memory added successfully"
