@@ -251,8 +251,8 @@ Results are written to the path specified by `optimizer.output_path`. Expect art
 - You will also see a configuration file for each iteration of numeric trials. For example, `config_numeric_trial_0.yml`
   will contain the configuration for the first numeric trial. This is helpful for selecting specific trials whose metrics
   you may prefer to the optimizer selected trial.
-- `trials_dataframe_params.csv`: Full Optuna trials dataframe with columns:
-  - `values_accuracy`, `values_token_efficiency`, `values_latency`: Metric scores (named after your eval_metrics)
+- `trials_dataframe_params.csv`: Full Optuna trials `dataframe` with columns:
+  - `values_accuracy`, `values_token_efficiency`, `values_latency`: Metric scores (named after your `eval_metrics`)
   - `params_*`: Parameter values for each trial
   - `datetime_start`, `datetime_complete`, `duration`: Timing information
   - `rep_scores`: Raw scores for each repetition

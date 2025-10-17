@@ -24,7 +24,7 @@ Welcome to the NeMo Agent toolkit Optimizer guide. This document provides a comp
 
 Parameter optimization is the process of automatically finding the best combination of settings (parameters) for your NeMo Agent toolkit workflows. Think of it like tuning a musical instrument – you adjust different knobs and strings until you achieve the perfect sound. Similarly, AI workflows have various "knobs" you can adjust:
 
-- **Hyperparameters**: Numerical settings that control model behavior (such as temperature, top_p, max_tokens)
+- **Hyperparameters**: Numerical settings that control model behavior (such as `temperature`, `top_p`, `max_tokens`)
 - **Prompts**: The instructions and context you provide to language models
 - **Model choices**: Which specific AI models to use for different tasks
 - **Processing parameters**: Settings that affect how data flows through your workflow
@@ -544,7 +544,7 @@ This plot helps identify parameter relationships:
 - **Solution**: Increase `reps_per_param_set`, ensure consistent evaluation conditions
 
 **Problem**: Optimization is too expensive
-- **Solution**: Reduce search space, use `step` parameter for discretization, set `target` for early stopping
+- **Solution**: Reduce search space, use `step` for discreet parameters, set `target` for early stopping
 
 **Problem**: Prompt optimization produces similar outputs
 - **Solution**: Increase `ga_diversity_lambda`, ensure `prompt_purpose` is specific and actionable
@@ -561,7 +561,7 @@ This plot helps identify parameter relationships:
 - Allows compensation (good in one metric offsets bad in another)
 - Use when total performance matters more than balance
 
-**Chebyshev**:
+**`Chebyshev`**:
 - Minimizes worst-case deviation from ideal
 - Good for risk-averse optimization
 - Ensures no metric is too far from optimal
@@ -580,7 +580,7 @@ This plot helps identify parameter relationships:
 
 **For Real-time Applications**:
 - Set strict latency targets
-- Use Chebyshev combination to ensure consistency
+- Use `Chebyshev` combination to ensure consistency
 - Consider p95 latency instead of mean
 
 ### Advanced Techniques
