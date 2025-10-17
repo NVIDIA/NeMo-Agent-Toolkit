@@ -471,7 +471,7 @@ By examining these output files, you can understand the results of the optimizat
 
 ## A Complete Example of Optimization
 
-For a complete example of using the optimizer, see the [`email_phishing_analyzer`](../../../examples/evaluation_and_profiling/email_phishing_analyzer/) example's section on optimization.
+For a complete example of using the optimizer, see the `email_phishing_analyzer` example in the `evaluation_and_profiling` section of the examples in the NeMo Agent toolkit repository.
 
 ## Best Practices and Tuning Guide
 
