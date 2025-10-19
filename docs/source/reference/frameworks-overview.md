@@ -55,7 +55,7 @@ The following table summarizes the current support level for each framework:
 
 | Framework        | LLM Providers        | Embedder Providers     | Retriever Providers      | Tool Calling          | Profiling             |
 |------------------|----------------------|------------------------|--------------------------|-----------------------|-----------------------|
-| Google ADK       | ✅ Yes               | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
+| ADK              | ✅ Yes               | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
 | Agno             | ⚠️ Limited           | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
 | CrewAI           | ✅ Yes               | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
 | LangChain        | ✅ Yes               | ✅ Yes                 | ✅ Yes                   | ✅ Yes                 | ✅ Yes                |
@@ -70,13 +70,13 @@ Google's Agent Development Kit (ADK) is a framework for building AI agents with 
 
 For more information, visit the [ADK website](https://google.github.io/adk-docs/).
 
-| Capability           | Providers / Details                                                                 |
-|----------------------|-------------------------------------------------------------------------------------|
-| **LLM Providers**    | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
-| **Embedder Providers** | None (use framework-agnostic embedders if needed)                                  |
-| **Retriever Providers** | None (use ADK native tools)                                                     |
-| **Tool Calling**     | Fully supported through ADK's tool interface                                       |
-| **Profiling**        | Comprehensive profiling support with instrumentation                                |
+| Capability              | Providers / Details                                                                 |
+|-------------------------|-------------------------------------------------------------------------------------|
+| **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
+| **Embedder Providers**  | None (use framework-agnostic embedders if needed)                                   |
+| **Retriever Providers** | None (use ADK native tools)                                                         |
+| **Tool Calling**        | Fully supported through ADK's tool interface                                        |
+| **Profiling**           | Comprehensive profiling support with instrumentation                                |
 
 **Installation:**
 ```bash
@@ -89,13 +89,13 @@ Agno is a lightweight framework for building AI agents. It provides a set of too
 
 For more information, visit the [Agno website](https://agno.com/).
 
-| Capability           | Providers / Details                                                                 |
-|----------------------|-------------------------------------------------------------------------------------|
-| **LLM Providers**    | NVIDIA NIM, OpenAI, LiteLLM                                                        |
-| **Embedder Providers** | None (use framework-agnostic embedders if needed)                                  |
-| **Retriever Providers** | None (use Agno native tools)                                                     |
-| **Tool Calling**     | Fully supported through Agno's tool interface                                       |
-| **Profiling**        | Comprehensive profiling support with instrumentation                                |
+| Capability              | Providers / Details                                                                 |
+|-------------------------|-------------------------------------------------------------------------------------|
+| **LLM Providers**       | NVIDIA NIM, OpenAI, LiteLLM                                                         |
+| **Embedder Providers**  | None (use framework-agnostic embedders if needed)                                   |
+| **Retriever Providers** | None (use Agno native tools)                                                        |
+| **Tool Calling**        | Fully supported through Agno's tool interface                                       |
+| **Profiling**           | Comprehensive profiling support with instrumentation                                |
 
 **Installation:**
 ```bash
@@ -108,13 +108,13 @@ CrewAI is a framework designed for orchestrating teams of role-playing AI agents
 
 For more information, visit the [CrewAI website](https://www.crewai.com/).
 
-| Capability           | Providers / Details                                                                 |
-|----------------------|-------------------------------------------------------------------------------------|
-| **LLM Providers**    | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
-| **Embedder Providers** | None (use framework-agnostic embedders if needed)                                  |
-| **Retriever Providers** | None (use CrewAI native tools)                                                     |
-| **Tool Calling**     | Fully supported through CrewAI's tool system                                         |
-| **Profiling**        | Comprehensive profiling support with instrumentation                                |
+| Capability              | Providers / Details                                                                 |
+|-------------------------|-------------------------------------------------------------------------------------|
+| **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
+| **Embedder Providers**  | None (use framework-agnostic embedders if needed)                                   |
+| **Retriever Providers** | None (use CrewAI native tools)                                                      |
+| **Tool Calling**        | Fully supported through CrewAI's tool system                                        |
+| **Profiling**           | Comprehensive profiling support with instrumentation                                |
 
 **Installation:**
 ```bash
@@ -128,13 +128,13 @@ LangChain is a framework for building applications that utilize large language m
 For more information, visit the [LangChain website](https://www.langchain.com/).
 
 
-| Capability           | Providers / Details                                                                 |
-|----------------------|-------------------------------------------------------------------------------------|
-| **LLM Providers**    | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
-| **Embedder Providers** | NVIDIA NIM, OpenAI, Azure OpenAI                                                  |
-| **Retriever Providers** | NeMo Retriever, Milvus                                                           |
-| **Tool Calling**     | Fully supported through LangChain's `StructuredTool` interface                      |
-| **Profiling**        | Comprehensive profiling support with callback handlers                              |
+| Capability              | Providers / Details                                                                 |
+|-------------------------|-------------------------------------------------------------------------------------|
+| **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
+| **Embedder Providers**  | NVIDIA NIM, OpenAI, Azure OpenAI                                                    |
+| **Retriever Providers** | NeMo Retriever, Milvus                                                              |
+| **Tool Calling**        | Fully supported through LangChain's `StructuredTool` interface                      |
+| **Profiling**           | Comprehensive profiling support with callback handlers                              |
 
 
 **Installation:**
@@ -148,13 +148,13 @@ LlamaIndex is a powerful framework for building applications that utilize large 
 
 For more information, visit the [LlamaIndex website](https://www.llamaindex.ai/).
 
-| Capability           | Providers / Details                                                                 |
-|----------------------|-------------------------------------------------------------------------------------|
-| **LLM Providers**    | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
-| **Embedder Providers** | NVIDIA NIM, OpenAI, Azure OpenAI                                                  |
-| **Retriever Providers** | NeMo Retriever, Milvus                                                           |
-| **Tool Calling**     | Fully supported through LlamaIndex's `Tool` interface                              |
-| **Profiling**        | Comprehensive profiling support with callback handlers                              |
+| Capability              | Providers / Details                                                                 |
+|-------------------------|-------------------------------------------------------------------------------------|
+| **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
+| **Embedder Providers**  | NVIDIA NIM, OpenAI, Azure OpenAI                                                    |
+| **Retriever Providers** | None (Use LlamaIndex native retrievers)                                             |
+| **Tool Calling**        | Fully supported through LlamaIndex's `FunctionTool` interface                       |
+| **Profiling**           | Comprehensive profiling support with callback handlers                              |
 
 **Installation:**
 ```bash
@@ -167,13 +167,13 @@ Microsoft's Semantic Kernel is a framework for building applications that utiliz
 
 For more information, visit the [Semantic Kernel website](https://learn.microsoft.com/en-us/semantic-kernel/).
 
-| Capability           | Providers / Details                                                                 |
-|----------------------|-------------------------------------------------------------------------------------|
-| **LLM Providers**    | OpenAI, Azure OpenAI                                                            |
-| **Embedder Providers** | None (use framework-agnostic embedders if needed)                                  |
-| **Retriever Providers** | None (use Semantic Kernel native connectors)                                     |
-| **Tool Calling**     | Fully supported through Semantic Kernel's function calling                        |
-| **Profiling**        | Comprehensive profiling support with instrumentation                                |
+| Capability              | Providers / Details                                                                 |
+|-------------------------|-------------------------------------------------------------------------------------|
+| **LLM Providers**       | OpenAI, Azure OpenAI                                                                |
+| **Embedder Providers**  | None (use framework-agnostic embedders if needed)                                   |
+| **Retriever Providers** | None (use Semantic Kernel native connectors)                                        |
+| **Tool Calling**        | Fully supported through Semantic Kernel's function calling                          |
+| **Profiling**           | Comprehensive profiling support with instrumentation                                |
 
 **Installation:**
 ```bash
