@@ -17,7 +17,7 @@ limitations under the License.
 
 # Frameworks Overview
 
-NVIDIA NeMo Agent toolkit provides comprehensive support for multiple agentic frameworks, allowing you to use your preferred development tools while leveraging NeMo Agent toolkit's capabilities. This document describes the framework integrations available and their respective levels of support.
+NVIDIA NeMo Agent toolkit (NAT) provides comprehensive support for multiple agentic frameworks, allowing you to use your preferred development tools while leveraging the capabilities of NAT. This document describes the framework integrations available and their respective levels of support.
 
 ## Supported Frameworks
 
@@ -75,7 +75,7 @@ For more information, visit the [ADK website](https://google.github.io/adk-docs/
 | **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
 | **Embedder Providers**  | None (use framework-agnostic embedders if needed)                                   |
 | **Retriever Providers** | None (use ADK native tools)                                                         |
-| **Tool Calling**        | Fully supported through ADK's tool interface                                        |
+| **Tool Calling**        | Fully supported through the ADK `FunctionTool` interface                            |
 | **Profiling**           | Comprehensive profiling support with instrumentation                                |
 
 **Installation:**
