@@ -162,6 +162,9 @@ asyncio.run(main())
 
 Expected output:
 ```
+# Ingest DDL and synthesize query-SQL pairs for training
+Training Vanna...
+
 # ReWOO Agent Planning Phase
 Plan 1: Generate SQL query from natural language
   Tool: text2sql
@@ -194,6 +197,13 @@ Results: 42 customers found
 | `training_documentation` | list[str] | Contextual information | null |
 | `initial_prompt` | str | Custom system prompt | null |
 | `n_results` | int | Number of similar examples | 5 |
+| `milvus_search_limit` | int | Maximum limit for vector search operations | 1000 |
+| `reasoning_models` | set[str] | Models requiring think tag removal | See below |
+| `chat_models` | set[str] | Models using standard response handling | See below |
+
+**Default reasoning models**: `nvidia/llama-3.1-nemotron-ultra-253b-v1`, `nvidia/llama-3.3-nemotron-super-49b-v1.5`, `deepseek-ai/deepseek-v3.1`, `deepseek-ai/deepseek-r1`
+
+**Default chat models**: `meta/llama-3.1-70b-instruct`
 
 ### Database Configuration
 
