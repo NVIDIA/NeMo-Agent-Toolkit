@@ -18,13 +18,15 @@ import uuid
 from collections.abc import AsyncGenerator
 from typing import Any
 
+from pydantic import BaseModel
+from pydantic import Field
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.function import FunctionBaseConfig
-from pydantic import BaseModel, Field, TypeAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -56,19 +58,11 @@ class ExecuteDBQueryOutput(BaseModel):
     columns: list[str] = Field(default_factory=list, description="Column names")
     row_count: int = Field(default=0, description="Total rows returned")
     sql_query: str = Field(description="Original SQL query")
-    query_executed: str | None = Field(
-        default=None, description="Actual SQL query executed (with prefixes)"
-    )
-    dataframe_records: list[dict[str, Any]] = Field(
-        default_factory=list, description="Results as list of dicts"
-    )
-    dataframe_info: DataFrameInfo | None = Field(
-        default=None, description="DataFrame metadata"
-    )
-    error: str | None = Field(default=None, description="Error message if failed")
-    limited_to: int | None = Field(
-        default=None, description="Number of rows limited to"
-    )
+    query_executed: str | None = Field(default=None, description="Actual SQL query executed (with prefixes)")
+    dataframe_records: list[dict[str, Any]] = Field(default_factory=list, description="Results as list of dicts")
+    dataframe_info: DataFrameInfo | None = Field(default=None, description="DataFrame metadata")
+    failure_reason: str | None = Field(default=None, description="Reason for failure if query failed")
+    limited_to: int | None = Field(default=None, description="Number of rows limited to")
     truncated: bool | None = Field(default=None, description="Whether truncated")
 
 
@@ -88,15 +82,9 @@ class ExecuteDBQueryConfig(FunctionBaseConfig, name="execute_db_query"):
     db_schema: str | None = Field(default=None, description="Database schema")
 
     # Databricks-specific
-    databricks_server_hostname: str | None = Field(
-        default=None, description="Databricks server hostname"
-    )
-    databricks_http_path: str | None = Field(
-        default=None, description="Databricks HTTP path"
-    )
-    databricks_access_token: str | None = Field(
-        default=None, description="Databricks access token"
-    )
+    databricks_server_hostname: str | None = Field(default=None, description="Databricks server hostname")
+    databricks_http_path: str | None = Field(default=None, description="Databricks HTTP path")
+    databricks_access_token: str | None = Field(default=None, description="Databricks access token")
 
     # Query configuration
     max_rows: int = Field(default=100, description="Maximum rows to return")
@@ -111,20 +99,16 @@ async def execute_db_query(
     builder: Builder,
 ):
     """Register the Execute DB Query function."""
-    import pandas as pd
 
-    from nat.plugins.vanna.db_utils import (
-        async_execute_query,
-        connect_to_database,
-        extract_sql_from_message,
-    )
+    from nat.plugins.vanna.db_utils import async_execute_query
+    from nat.plugins.vanna.db_utils import connect_to_database
+    from nat.plugins.vanna.db_utils import extract_sql_from_message
 
     logger.info("Initializing Execute DB Query function")
 
     # Streaming version
     async def _execute_sql_query_stream(
-        input_data: ExecuteDBQueryInput,
-    ) -> AsyncGenerator[ResponseIntermediateStep | ExecuteDBQueryOutput, None]:
+        input_data: ExecuteDBQueryInput, ) -> AsyncGenerator[ResponseIntermediateStep | ExecuteDBQueryOutput, None]:
         """Stream SQL query execution progress and results."""
         sql_query = extract_sql_from_message(input_data.sql_query)
         logger.info(f"Executing SQL: {sql_query}")
@@ -150,16 +134,14 @@ async def execute_db_query(
 
             # Connect to database
             if config.database_type == "databricks":
-                if not all(
-                    [
+                if not all([
                         config.databricks_server_hostname,
                         config.databricks_http_path,
                         config.databricks_access_token,
-                    ]
-                ):
+                ]):
                     yield ExecuteDBQueryOutput(
                         success=False,
-                        error="Missing Databricks connection parameters",
+                        failure_reason="Missing Databricks connection parameters",
                         sql_query=sql_query,
                         dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
                     )
@@ -176,7 +158,7 @@ async def execute_db_query(
                 if not all([config.db_host, config.db_name]):
                     yield ExecuteDBQueryOutput(
                         success=False,
-                        error="Missing database connection parameters",
+                        failure_reason="Missing database connection parameters",
                         sql_query=sql_query,
                         dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
                     )
@@ -194,7 +176,7 @@ async def execute_db_query(
             if connection is None:
                 yield ExecuteDBQueryOutput(
                     success=False,
-                    error="Failed to connect to database",
+                    failure_reason="Failed to connect to database",
                     sql_query=sql_query,
                     dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
                 )
@@ -203,9 +185,11 @@ async def execute_db_query(
             # Ensure connection is always closed
             try:
                 # Execute query
-                df = await async_execute_query(
-                    connection, sql_query, config.db_catalog, config.db_schema, config.database_type
-                )
+                df = await async_execute_query(connection,
+                                               sql_query,
+                                               config.db_catalog,
+                                               config.db_schema,
+                                               config.database_type)
 
                 # Store original row count before limiting
                 original_row_count = len(df)
@@ -217,11 +201,10 @@ async def execute_db_query(
                 # Create response
                 dataframe_info = DataFrameInfo(
                     shape=[len(df), len(df.columns)] if not df.empty else [0, 0],
-                    dtypes=(
-                        {str(k): str(v) for k, v in df.dtypes.to_dict().items()}
-                        if not df.empty
-                        else {}
-                    ),
+                    dtypes=({
+                        str(k): str(v)
+                        for k, v in df.dtypes.to_dict().items()
+                    } if not df.empty else {}),
                     columns=df.columns.tolist() if not df.empty else [],
                 )
 
@@ -250,7 +233,7 @@ async def execute_db_query(
             logger.error(f"Error executing SQL query: {e}")
             yield ExecuteDBQueryOutput(
                 success=False,
-                error=str(e),
+                failure_reason=str(e),
                 sql_query=sql_query,
                 dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
             )
@@ -268,16 +251,14 @@ async def execute_db_query(
         # Fallback if no result found
         return ExecuteDBQueryOutput(
             success=False,
-            error="No result returned",
+            failure_reason="No result returned",
             sql_query="",
             dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
         )
 
-    description = (
-        f"Execute SQL queries on {config.database_type} and return results. "
-        "Connects to the database, executes the provided SQL query, "
-        "and returns results in a structured format."
-    )
+    description = (f"Execute SQL queries on {config.database_type} and return results. "
+                   "Connects to the database, executes the provided SQL query, "
+                   "and returns results in a structured format.")
 
     yield FunctionInfo.create(
         single_fn=_execute_sql_query,

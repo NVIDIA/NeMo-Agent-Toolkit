@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# yapf: disable
+# ruff: noqa: E501
+
 # DDL statements for training
 # Define your database schema here to help the model understand table structures
 VANNA_TRAINING_DDL: list[str] = [
@@ -47,20 +50,17 @@ VANNA_TRAINING_EXAMPLES: list[dict[str, str]] = [
 ]
 
 # Remove from PR
-VANNA_ACTIVE_TABLES = [
-    'catalog.schema.table_a',
-    'catalog.schema.table_b'
-]
+VANNA_ACTIVE_TABLES = ['catalog.schema.table_a', 'catalog.schema.table_b']
 
 # Default prompts
-VANNA_RESPONSE_GUIDELINES = f"""
+VANNA_RESPONSE_GUIDELINES = """
 Response Guidelines:
-1. Carefully analyze the question to understand the user’s intent, target columns, filters, and any aggregation or grouping requirements.
+1. Carefully analyze the question to understand the user's intent, target columns, filters, and any aggregation or grouping requirements.
 2. Output only JSON:
-{{
+{
     "sql": "<valid SQL query>",
     "explanation": "<brief description>",
-}}
+}
 """
 
 VANNA_TRAINING_PROMPT = """
