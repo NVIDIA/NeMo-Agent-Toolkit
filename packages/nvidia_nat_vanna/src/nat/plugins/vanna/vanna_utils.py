@@ -1,8 +1,17 @@
-"""Vanna-based Text-to-SQL implementation utilities.
-
-This module provides generic Vanna framework integration for text-to-SQL conversion,
-supporting multiple database backends and vector stores.
-"""
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import asyncio
 import logging
@@ -11,13 +20,12 @@ import uuid
 from vanna.base import VannaBase
 from vanna.milvus import Milvus_VectorStore
 
-from nat.plugins.vanna.constants import REASONING_MODEL_VALUES, MAX_LIMIT_SIZE
 from nat.plugins.vanna.db_schema import (
-    RESPONSE_GUIDELINES,
-    TRAINING_PROMPT,
-    TRAINING_EXAMPLES,
-    TRAINING_DDL,
-    TRAINING_DOCUMENTATION,
+    VANNA_RESPONSE_GUIDELINES,
+    VANNA_TRAINING_PROMPT,
+    VANNA_TRAINING_EXAMPLES,
+    VANNA_TRAINING_DDL,
+    VANNA_TRAINING_DOCUMENTATION,
 )
 
 logger = logging.getLogger(__name__)
@@ -69,19 +77,20 @@ def extract_json_from_string(content: str) -> dict:
             raise ValueError("Could not extract valid JSON from response") from e
 
 
-def remove_think_tags(text: str, model_name: str) -> str:
+def remove_think_tags(text: str, model_name: str, reasoning_models: set[str]) -> str:
     """Remove think tags from reasoning model output based on model type.
 
     Args:
         text: Text potentially containing think tags
         model_name: Name of the model
+        reasoning_models: Set of model names that require think tag removal
 
     Returns:
         Text with think tags removed if applicable
     """
     if "openai/gpt-oss" in model_name:
         return text
-    elif model_name in REASONING_MODEL_VALUES:
+    elif model_name in reasoning_models:
         from nat.utils.io.model_processing import remove_r1_think_tags
 
         return remove_r1_think_tags(text)
@@ -108,6 +117,16 @@ class VannaLangChainLLM(VannaBase):
         self.config = config or {}
         self.dialect = self.config.get("dialect", "SQL")
         self.model = getattr(self.client, "model", "unknown")
+
+        # Store configurable values
+        self.milvus_search_limit = self.config.get("milvus_search_limit", 1000)
+        self.reasoning_models = self.config.get("reasoning_models", {
+            "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+            "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+            "deepseek-ai/deepseek-v3.1",
+            "deepseek-ai/deepseek-r1",
+        })
+        self.chat_models = self.config.get("chat_models", {"meta/llama-3.1-70b-instruct"})
 
     def system_message(self, message: str) -> dict:
         """Create system message."""
@@ -147,7 +166,7 @@ class VannaLangChainLLM(VannaBase):
         )
 
         # Add response guidelines
-        initial_prompt += TRAINING_PROMPT
+        initial_prompt += VANNA_TRAINING_PROMPT
 
         # Build message log
         message_log = [self.system_message(initial_prompt)]
@@ -187,7 +206,7 @@ class VannaLangChainLLM(VannaBase):
         )
 
         # Add response guidelines
-        initial_prompt += RESPONSE_GUIDELINES
+        initial_prompt += VANNA_RESPONSE_GUIDELINES
         initial_prompt += (
             f"3. Ensure that the output SQL is {self.dialect}-compliant "
             "and executable, and free of syntax errors.\n"
@@ -223,11 +242,11 @@ class VannaLangChainLLM(VannaBase):
                 ) or getattr(self.client, 'model', 'unknown')
 
             # Get LLM response (with streaming for reasoning models)
-            if llm_name in REASONING_MODEL_VALUES:
+            if llm_name in self.reasoning_models:
                 llm_output = ""
                 async for chunk in self.client.astream(prompt):
                     llm_output += chunk.content
-                llm_response = remove_think_tags(llm_output, llm_name)
+                llm_response = remove_think_tags(llm_output, llm_name, self.reasoning_models)
             else:
                 llm_response = (await self.client.ainvoke(prompt)).content
 
@@ -442,7 +461,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             records = await self.async_milvus_client.query(
                 collection_name=collection_name,
                 output_fields=[output_field],
-                limit=MAX_LIMIT_SIZE,
+                limit=self.milvus_search_limit,
             )
             for record in records:
                 record_list.append(record[output_field])
@@ -655,6 +674,9 @@ async def get_vanna_instance(
     ddl_collection: str = "vanna_ddl",
     doc_collection: str = "vanna_documentation",
     owns_sync_client: bool = True,
+    milvus_search_limit: int = 1000,
+    reasoning_models: set[str] | None = None,
+    chat_models: set[str] | None = None,
 ) -> VannaLangChain:
     """Get or create a singleton Vanna instance.
 
@@ -670,6 +692,9 @@ async def get_vanna_instance(
         ddl_collection: Collection name for DDL
         doc_collection: Collection name for documentation
         owns_sync_client: Whether we own the sync client for cleanup
+        milvus_search_limit: Maximum limit size for vector search operations
+        reasoning_models: Models requiring special handling for think tags
+        chat_models: Models using standard response handling
 
     Returns:
         Initialized Vanna instance
@@ -691,6 +716,17 @@ async def get_vanna_instance(
             logger.info("Vanna instance already exists")
             return _vanna_instance
 
+        # Set default values for model sets if not provided
+        if reasoning_models is None:
+            reasoning_models = {
+                "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+                "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+                "deepseek-ai/deepseek-v3.1",
+                "deepseek-ai/deepseek-r1",
+            }
+        if chat_models is None:
+            chat_models = {"meta/llama-3.1-70b-instruct"}
+
         config = {
             "milvus_client": milvus_client,
             "async_milvus_client": async_milvus_client,
@@ -702,6 +738,9 @@ async def get_vanna_instance(
             "ddl_collection": ddl_collection,
             "doc_collection": doc_collection,
             "owns_sync_client": owns_sync_client,
+            "milvus_search_limit": milvus_search_limit,
+            "reasoning_models": reasoning_models,
+            "chat_models": chat_models,
         }
 
         logger.info(f"Creating new Vanna instance with LangChain (dialect: {dialect})")
@@ -736,27 +775,27 @@ async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
 
     # Train with DDL
     if auto_extract_ddl:
-        from nat.plugins.vanna.db_schema import ACTIVE_TABLES
+        from nat.plugins.vanna.db_schema import VANNA_ACTIVE_TABLES
 
         dialect = vn.dialect.lower()
         ddls = []
 
         if dialect == 'databricks':
-            for table in ACTIVE_TABLES:
+            for table in VANNA_ACTIVE_TABLES:
                 ddl_sql = f"SHOW CREATE TABLE {table}"
                 ddl = await vn.run_sql(ddl_sql)
                 ddl = ddl.to_string()  # Convert DataFrame to string
                 ddls.append(ddl)
 
         elif dialect == 'mysql':
-            for table in ACTIVE_TABLES:
+            for table in VANNA_ACTIVE_TABLES:
                 ddl_sql = f"SHOW CREATE TABLE {table};"
                 ddl = await vn.run_sql(ddl_sql)
                 ddl = ddl.to_string()  # Convert DataFrame to string
                 ddls.append(ddl)
 
         elif dialect == 'sqlite':
-            for table in ACTIVE_TABLES:
+            for table in VANNA_ACTIVE_TABLES:
                 ddl_sql = f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table}';"
                 ddl = await vn.run_sql(ddl_sql)
                 ddl = ddl.to_string()  # Convert DataFrame to string
@@ -771,13 +810,13 @@ async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
             logger.error(error_msg)
             raise NotImplementedError(error_msg)
     else:
-        ddls = TRAINING_DDL
+        ddls = VANNA_TRAINING_DDL
 
     for ddl in ddls:
         vn.train(ddl=ddl)
 
     # Train with documentation
-    for doc in TRAINING_DOCUMENTATION:
+    for doc in VANNA_TRAINING_DOCUMENTATION:
         vn.train(documentation=doc)
 
     # Retrieve relevant context in parallel
@@ -797,7 +836,7 @@ async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
 
     # Validate and collect all examples
     examples = []
-    examples.extend(TRAINING_EXAMPLES)
+    examples.extend(VANNA_TRAINING_EXAMPLES)
 
     # Validate LLM-generated examples
     try:

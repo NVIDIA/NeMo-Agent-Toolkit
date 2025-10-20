@@ -1,4 +1,17 @@
-"""Database query execution function for NeMo Agent Toolkit."""
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import logging
 import uuid
@@ -60,9 +73,9 @@ class ExecuteDBQueryOutput(BaseModel):
 
 
 class ExecuteDBQueryConfig(FunctionBaseConfig, name="execute_db_query"):
-    """Database query execution configuration."""
-
-    _type: str = "execute_db_query"
+    """
+    Database query execution configuration.
+    """
 
     # Database configuration
     database_type: str = Field(default="databricks", description="Database type")
@@ -101,7 +114,7 @@ async def execute_db_query(
     import pandas as pd
 
     from nat.plugins.vanna.db_utils import (
-        async_query,
+        async_execute_query,
         connect_to_database,
         extract_sql_from_message,
     )
@@ -119,14 +132,6 @@ async def execute_db_query(
         # Generate parent_id for this function call
         parent_id = str(uuid.uuid4())
 
-        yield ResponseIntermediateStep(
-            id=str(uuid.uuid4()),
-            parent_id=parent_id,
-            type="markdown",
-            name="execute_db_query_status",
-            payload=StatusPayload(message="Starting SQL query execution...").model_dump_json(),
-        )
-
         try:
             # Clean up query
             sql_query = sql_query.strip()
@@ -140,7 +145,7 @@ async def execute_db_query(
                 parent_id=parent_id,
                 type="markdown",
                 name="execute_db_query_status",
-                payload=StatusPayload(message="Connecting to database...").model_dump_json(),
+                payload=StatusPayload(message="Connecting to database and executing query...").model_dump_json(),
             )
 
             # Connect to database
@@ -197,25 +202,9 @@ async def execute_db_query(
 
             # Ensure connection is always closed
             try:
-                yield ResponseIntermediateStep(
-                    id=str(uuid.uuid4()),
-                    parent_id=parent_id,
-                    type="markdown",
-                    name="execute_db_query_status",
-                    payload=StatusPayload(message="Executing SQL query...").model_dump_json(),
-                )
-
                 # Execute query
-                df = await async_query(
+                df = await async_execute_query(
                     connection, sql_query, config.db_catalog, config.db_schema, config.database_type
-                )
-
-                yield ResponseIntermediateStep(
-                    id=str(uuid.uuid4()),
-                    parent_id=parent_id,
-                    type="markdown",
-                    name="execute_db_query_status",
-                    payload=StatusPayload(message="Processing results...").model_dump_json(),
                 )
 
                 # Store original row count before limiting
