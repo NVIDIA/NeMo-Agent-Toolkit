@@ -391,24 +391,24 @@ class TestMCPSessionManagement:
         """Test that concurrent session creation is handled properly."""
         session_id = "session-123"
 
-        async def create_session():
-            with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
-                mock_session_client = AsyncMock()
-                mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
-                mock_client_class.return_value = mock_session_client
+        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+            mock_session_client = AsyncMock()
+            mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
+            mock_client_class.return_value = mock_session_client
 
+            async def create_session():
                 return await function_group._get_session_client(session_id)
 
-        # Create multiple concurrent tasks
-        tasks = [create_session() for _ in range(5)]
-        clients = await asyncio.gather(*tasks)
+            # Create multiple concurrent tasks
+            tasks = [create_session() for _ in range(5)]
+            clients = await asyncio.gather(*tasks)
 
-        # All should return the same client instance
-        assert all(client == clients[0] for client in clients)
+            # All should return the same client instance
+            assert all(client == clients[0] for client in clients)
 
-        # Only one client should be created
-        assert len(function_group._sessions) == 1
-        assert session_id in function_group._sessions
+            # Only one client should be created
+            assert len(function_group._sessions) == 1
+            assert session_id in function_group._sessions
 
         # Clean up session
         await self.cleanup_sessions(function_group)
