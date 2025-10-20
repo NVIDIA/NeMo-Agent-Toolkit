@@ -21,6 +21,7 @@ from datetime import timedelta
 
 import aiorwlock
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 
 from nat.builder.workflow import Workflow
@@ -41,25 +42,16 @@ class UserWorkflowData(BaseModel):
     """
 
     user_id: str = Field(description="Unique identifier for the user")
-
     workflow: Workflow = Field(description="The user's workflow instance")
-
     session_manager: SessionManager = Field(description="Session manager for handling requests")
-
     builder: WorkflowBuilder = Field(description="Builder instance kept alive for cleanup")
-
     last_activity: datetime = Field(description="Timestamp of last request from this user")
-
     ref_count: int = Field(default=0, description="Number of active requests using this workflow")
-
     lock: asyncio.Lock = Field(default_factory=asyncio.Lock, description="Lock for thread-safe ref_count updates")
-
     stop_event: asyncio.Event = Field(default_factory=asyncio.Event, description="Event to signal workflow shutdown")
-
     lifetime_task: asyncio.Task | None = Field(default=None, description="Task managing workflow lifecycle")
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class WorkflowManager:
