@@ -34,6 +34,7 @@ from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
@@ -115,12 +116,10 @@ async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, _builder: Bui
 
     from langchain_aws import ChatBedrockConverse
 
-    if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
-        raise ValueError("AWS Bedrock only supports chat completion API type. "
-                         f"Received: {llm_config.api_type}")
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
     client = ChatBedrockConverse(**llm_config.model_dump(
-        exclude={"type", "context_size", "thinking"},
+        exclude={"type", "context_size", "thinking", "api_type"},
         by_alias=True,
         exclude_none=True,
     ))
@@ -133,11 +132,10 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     from langchain_openai import AzureChatOpenAI
 
-    if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
-        raise ValueError("Azure OpenAI only supports chat completion API type. "
-                         f"Received: {llm_config.api_type}")
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    client = AzureChatOpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+    client = AzureChatOpenAI(
+        **llm_config.model_dump(exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -147,13 +145,13 @@ async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
 
     from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
-    if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
-        raise ValueError("NVIDIA AI Endpoints only supports chat completion API type. "
-                         f"Received: {llm_config.api_type}")
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
     # prefer max_completion_tokens over max_tokens
     client = ChatNVIDIA(
-        **llm_config.model_dump(exclude={"type", "max_tokens", "thinking"}, by_alias=True, exclude_none=True),
+        **llm_config.model_dump(exclude={"type", "max_tokens", "thinking", "api_type"},
+                                by_alias=True,
+                                exclude_none=True),
         max_completion_tokens=llm_config.max_tokens,
     )
 
@@ -170,7 +168,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
                             use_responses_api=True,
                             use_previous_response_id=True,
                             **llm_config.model_dump(
-                                exclude={"type", "thinking"},
+                                exclude={"type", "thinking", "api_type"},
                                 by_alias=True,
                                 exclude_none=True,
                             ))
@@ -178,7 +176,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
         # If stream_usage is specified, it will override the default value of True.
         client = ChatOpenAI(stream_usage=True,
                             **llm_config.model_dump(
-                                exclude={"type", "thinking"},
+                                exclude={"type", "thinking", "api_type"},
                                 by_alias=True,
                                 exclude_none=True,
                             ))
@@ -191,6 +189,9 @@ async def litellm_langchain(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     from langchain_litellm import ChatLiteLLM
 
-    client = ChatLiteLLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
+
+    client = ChatLiteLLM(
+        **llm_config.model_dump(exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(client, llm_config)

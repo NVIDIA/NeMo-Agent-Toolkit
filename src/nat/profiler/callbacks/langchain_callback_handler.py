@@ -100,16 +100,10 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
             prompt_tokens = usage_metadata.get("input_tokens", 0)
             completion_tokens = usage_metadata.get("output_tokens", 0)
             total_tokens = usage_metadata.get("total_tokens", 0)
-            cache_tokens = 0
-            reasoning_tokens = 0
 
-            if "input_token_details" in usage_metadata:
-                if "cache_read" in usage_metadata["input_token_details"]:
-                    cache_tokens = usage_metadata["input_token_details"]["cache_read"]
+            cache_tokens = usage_metadata.get("input_token_details", {}).get("cache_read", 0)
 
-            if "output_token_details" in usage_metadata:
-                if "reasoning" in usage_metadata["output_token_details"]:
-                    reasoning_tokens = usage_metadata["output_token_details"]["reasoning"]
+            reasoning_tokens = usage_metadata.get("output_token_details", {}).get("reasoning", 0)
 
             return TokenUsageBaseModel(prompt_tokens=prompt_tokens,
                                        completion_tokens=completion_tokens,

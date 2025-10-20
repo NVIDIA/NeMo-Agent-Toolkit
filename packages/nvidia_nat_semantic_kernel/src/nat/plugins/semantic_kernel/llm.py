@@ -90,7 +90,7 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
 
     from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 
-    validate_no_responses_api(llm_config)
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
 
     llm = AzureChatCompletion(
         api_key=llm_config.api_key,
@@ -107,7 +107,7 @@ async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builde
 
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-    validate_no_responses_api(llm_config)
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
 
     llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name)
 

@@ -82,11 +82,11 @@ async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
 
     from agno.models.nvidia import Nvidia
 
-    validate_no_responses_api(llm_config)
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.AGNO)
 
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking"},
+            exclude={"type", "model_name", "thinking", "api_type"},
             by_alias=True,
             exclude_none=True,
         ),
@@ -105,7 +105,7 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking"},
+            exclude={"type", "model_name", "thinking", "api_type"},
             by_alias=True,
             exclude_none=True,
         ),
@@ -124,11 +124,11 @@ async def litellm_agno(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     from agno.models.litellm.chat import LiteLLM
 
-    validate_no_responses_api(llm_config)
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.AGNO)
 
     client = LiteLLM(
         **llm_config.model_dump(
-            exclude={"type", "thinking", "model_name"},
+            exclude={"type", "thinking", "model_name", "api_type"},
             by_alias=True,
             exclude_none=True,
         ),

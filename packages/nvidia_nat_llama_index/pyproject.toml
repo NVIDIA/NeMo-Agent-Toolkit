@@ -31,7 +31,7 @@ dependencies = [
   "llama-index-llms-bedrock~=0.3.8",
   "llama-index-llms-litellm~=0.5.1",
   "llama-index-llms-nvidia~=0.3.4",
-  "llama-index-llms-openai>=0.4.2",
+  "llama-index-llms-openai>=0.4.2,<1.0.0",
   "llama-index-readers-file~=0.4.4",
   "llama-index~=0.12.40",
 ]

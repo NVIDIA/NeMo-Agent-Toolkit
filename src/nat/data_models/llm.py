@@ -35,8 +35,7 @@ class LLMBaseConfig(TypedBaseModel, BaseModelRegistryTag):
                                   json_schema_extra={
                                       "enum": [e.value for e in APITypeEnum],
                                       "examples": [e.value for e in APITypeEnum],
-                                  },
-                                  exclude=True)
+                                  })
 
 
 LLMBaseConfigT = typing.TypeVar("LLMBaseConfigT", bound=LLMBaseConfig)

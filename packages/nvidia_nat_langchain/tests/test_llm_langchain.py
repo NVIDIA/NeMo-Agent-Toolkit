@@ -65,7 +65,7 @@ class TestNimLangChain:
     @patch("langchain_nvidia_ai_endpoints.ChatNVIDIA")
     async def test_api_type_validation(self, mock_chat, nim_cfg_wrong_api, mock_builder):
         """Non-chat-completion API types must raise a ValueError."""
-        with pytest.raises(ValueError, match="only supports chat completion"):
+        with pytest.raises(ValueError):
             async with nim_langchain(nim_cfg_wrong_api, mock_builder):
                 pass
         mock_chat.assert_not_called()
@@ -154,7 +154,7 @@ class TestBedrockLangChain:
 
     @patch("langchain_aws.ChatBedrockConverse")
     async def test_api_type_validation(self, mock_chat, bedrock_cfg_wrong_api, mock_builder):
-        with pytest.raises(ValueError, match="only supports chat completion"):
+        with pytest.raises(ValueError):
             async with aws_bedrock_langchain(bedrock_cfg_wrong_api, mock_builder):
                 pass
         mock_chat.assert_not_called()

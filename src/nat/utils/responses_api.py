@@ -14,12 +14,13 @@
 # limitations under the License.
 # pylint: disable=raising-format-tuple
 
+from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 
 
-def validate_no_responses_api(llm_config):
+def validate_no_responses_api(llm_config, framework: LLMFrameworkEnum):
     """Validate that the LLM config does not use the Responses API."""
 
     if llm_config.api_type == APITypeEnum.RESPONSES:
-        raise ValueError("Responses API is not supported for config %s. Please use a different API type.",
-                         str(llm_config))
+        raise ValueError(f"Responses API is not supported for config {str(type(llm_config))} in framework {framework}. "
+                         f"Please use a different API type.")

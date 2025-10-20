@@ -6108,7 +6108,7 @@ requires-dist = [
     { name = "llama-index-llms-bedrock", specifier = "~=0.3.8" },
     { name = "llama-index-llms-litellm", specifier = "~=0.5.1" },
     { name = "llama-index-llms-nvidia", specifier = "~=0.3.4" },
-    { name = "llama-index-llms-openai", specifier = ">=0.4.2" },
+    { name = "llama-index-llms-openai", specifier = ">=0.4.2,<1.0.0" },
     { name = "llama-index-readers-file", specifier = "~=0.4.4" },
     { name = "nvidia-nat", editable = "." },
 ]
