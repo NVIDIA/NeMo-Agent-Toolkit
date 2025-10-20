@@ -127,7 +127,6 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`user_report`](object_store/user_report/README.md)**: User report generation and storage system using object store (S3, MySQL, and/or memory)
 
 ### Observability
-- **[`redact_pii`](observability/redact_pii/README.md)**: Demonstrates how to use Weights & Biases (W&B) Weave with PII redaction
 - **[`simple_calculator_observability`](observability/simple_calculator_observability/README.md)**: Basic simple calculator with integrated monitoring, telemetry, and observability features
 
 ### Retrieval Augmented Generation (RAG)

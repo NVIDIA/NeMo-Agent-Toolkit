@@ -394,17 +394,17 @@ This pass results in workflow interrupted warning. You can then do another pass.
 
 Pass-2:
 ```bash
-cp .tmp/nat/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
+cp .tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval/workflow_output.json .tmp/simple_workflow_output.json
 nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
 ```
 
 ## Running evaluation offline
 You can evaluate a dataset with previously generated answers via the `--skip_workflow` option. In this case the dataset has both the expected `answer` and the `generated_answer`.
 ```bash
-cp .tmp/nat/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
+cp .tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval/workflow_output.json .tmp/simple_workflow_output.json
 nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
 ```
-This assumes that the workflow output was previously generated and stored in `.tmp/nat/examples/getting_started/simple_web_query/workflow_output.json`
+This assumes that the workflow output was previously generated and stored in `.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval/workflow_output.json`
 
 ## Running the workflow over a dataset without evaluation
 You can do this by running `nat eval` with a workflow configuration file that includes an `eval` section with no `evaluators`.

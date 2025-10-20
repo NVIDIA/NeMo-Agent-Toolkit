@@ -50,12 +50,12 @@ general:
         project: "nat-demo"
 ```
 
-This setup enables logging trace data to W&B weave. The weave integration requires one parameter and one optional parameter:
+This setup enables logging trace data to W&B weave. The weave integration only requires the `project` parameter to be set.
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
 | `project` | The name of your W&B Weave project | `"nat-demo"` |
-| `entity` (optional) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
+| `entity` (deprecated) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
 
 ### Step 4: Run Your Workflow
 Install `simple_calculator` example using the instructions in the `examples/observability/simple_calculator_observability/README.md` guide.

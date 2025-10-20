@@ -17,7 +17,7 @@ limitations under the License.
 <!-- path-check-skip-file -->
 # Google Agent Development Kit (ADK) Example
 
-A minimal example using Agent Development Kit showcasing a simple weather time agent that can call tools (a function tool and an MCP tool).
+A minimal example using Agent Development Kit showcasing a simple weather and time agent that can call multiple tools.
 
 ## Installation and Setup
 
@@ -42,19 +42,9 @@ export OPENAI_API_BASE="<your_openai_base_url>"
 
 Google ADK support within NeMo Agent toolkit currently only supports OpenAI and Azure OpenAI models for tool calling.
 
-### Set up the MCP Server
-
-This example also demonstrates how NAT can interact with MCP servers on behalf of ADK.
-
-First run the MCP server with this command.
-
-```bash
-nat mcp serve --config_file examples/frameworks/adk_demo/configs/config.yml --host 0.0.0.0 --port 9901 --name "My MCP Server"
-```
-
 ## Run the Workflow
 
-Then run the workflow with the NAT CLI
+Run the workflow with the NAT CLI
 
 ```bash
 nat run --config_file examples/frameworks/adk_demo/configs/config.yml --input "What is the weather and time in New York today?"
