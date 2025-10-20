@@ -87,6 +87,13 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
+
+If you will be using the Responses API, also export your model's API key as the `OPENAI_API_KEY` as shown below. 
+
+```bash
+export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
+```
+
 ---
 
 ## Run the Workflow
@@ -188,13 +195,6 @@ OpenAI's Responses API is a unified endpoint for reasoning models that supports 
 - Connect to remote tools exposed over the Model Context Protocol (MCP).
 
 For current capabilities and model support, see OpenAI's documentation for the Responses API.
-
-#### Prerequisites
-- Set your OpenAI API key in the environment:
-  ```bash
-  export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
-  ```
-- Use an OpenAI model that supports the Responses API and the tools you enable (for example, `o3`, `o4-mini`, or a compatible `gpt-*` model that advertises Responses support).
 
 #### Run the Responses API agent
 An example configuration is provided at `examples/agents/tool_calling/configs/config-responses-api.yml`. Run it from the NeMo Agent toolkit repo root:
