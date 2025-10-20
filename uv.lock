@@ -5753,6 +5753,7 @@ semantic-kernel = [
     { name = "nvidia-nat-semantic-kernel" },
 ]
 telemetry = [
+    { name = "nvidia-nat-data-flywheel" },
     { name = "nvidia-nat-opentelemetry" },
     { name = "nvidia-nat-phoenix" },
     { name = "nvidia-nat-ragaai" },
@@ -5849,6 +5850,7 @@ requires-dist = [
     { name = "nvidia-nat-all", marker = "extra == 'all'", editable = "packages/nvidia_nat_all" },
     { name = "nvidia-nat-crewai", marker = "extra == 'crewai'", editable = "packages/nvidia_nat_crewai" },
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'data-flywheel'", editable = "packages/nvidia_nat_data_flywheel" },
+    { name = "nvidia-nat-data-flywheel", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-ingestion", marker = "extra == 'ingestion'", editable = "packages/nvidia_nat_ingestion" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-llama-index", marker = "extra == 'llama-index'", editable = "packages/nvidia_nat_llama_index" },
