@@ -33,17 +33,6 @@ Create a custom function group when you need to:
 - **Create reusable components**: Package functionality that can be used across multiple workflows
 - **Namespace functions**: Organize functions into logical groups, such as `db.query`, `db.insert`, `api.get`, and `api.post`
 
-## What You'll Learn
-
-This guide covers:
-
-1. Defining configuration for your function group
-2. Registering and implementing the function group
-3. Managing shared resources with context managers
-4. Controlling function exposure with include/exclude
-5. Implementing dynamic filtering for runtime control
-6. Best practices for production-ready function groups
-
 ## Step 1: Define the Configuration
 
 Every function group needs a configuration class that inherits from {py:class}`~nat.data_models.function.FunctionGroupBaseConfig`.
@@ -96,7 +85,11 @@ function_groups:
 
 ### Controlling Function Exposure
 
-Use optional `include` or `exclude` lists to control which functions are exposed:
+The {py:class}`~nat.data_models.function.FunctionGroupBaseConfig` configuration class has two optional fields: `include` and `exclude`. These fields are used to control which functions are exposed through the function group or excluded from the function group.
+
+If your function group is intended to override the default behavior of the function group, you can use the `include` field to specify which functions to expose and the `exclude` field to specify which functions to exclude.
+
+If your function group is intended to be a simple wrapper around a set of functions, you can omit both fields and all functions will be exposed through the function group.
 
 ```python
 class APIGroupConfig(FunctionGroupBaseConfig, name="api_group"):
@@ -135,9 +128,14 @@ Use the {py:deco}`~nat.cli.register_workflow.register_function_group` decorator 
 Here's the simplest function group implementation:
 
 ```python
-from nat.cli.register_workflow import register_function_group
 from nat.builder.workflow_builder import Builder
 from nat.builder.function import FunctionGroup
+from nat.cli.register_workflow import register_function_group
+from nat.data_models.function import FunctionGroupBaseConfig
+
+class MyGroupConfig(FunctionGroupBaseConfig, name="my_group"):
+    """Configuration for my custom function group."""
+    pass
 
 @register_function_group(config_type=MyGroupConfig)
 async def build_my_group(config: MyGroupConfig, _builder: Builder):
@@ -270,90 +268,7 @@ async def build_api_group(config: APIGroupConfig, _builder: Builder):
 
 ## Step 3: Customize Function Schemas
 
-The toolkit automatically infers input and output schemas from your function type hints. You can customize these schemas for better validation and documentation.
-
-### Automatic Schema Inference
-
-By default, schemas are inferred from function signatures:
-
-```python
-async def query_fn(sql: str, params: list[str] | None = None) -> list[dict]:
-    """Execute a parameterized SQL query."""
-    # Implementation
-    pass
-
-# Schema is automatically inferred from type hints
-group.add_function(name="query", fn=query_fn, description=query_fn.__doc__)
-```
-
-### Custom Input Schemas
-
-Override the input schema for better validation and documentation:
-
-```python
-from pydantic import BaseModel, Field
-
-class QueryInput(BaseModel):
-    """Input schema for database queries."""
-    sql: str = Field(description="SQL query to execute", min_length=1)
-    params: list[str] | None = Field(default=None, description="Query parameters")
-    timeout: int = Field(default=30, gt=0, description="Query timeout in seconds")
-
-async def query_fn(sql: str, params: list[str] | None = None, timeout: int = 30) -> list[dict]:
-    """Execute a parameterized SQL query with timeout."""
-    # Implementation
-    pass
-
-# Use custom schema for enhanced validation
-group.add_function(
-    name="query",
-    fn=query_fn,
-    input_schema=QueryInput,
-    description="Execute a SQL query with parameters and timeout"
-)
-```
-
-**Benefits of custom schemas**:
-- Field-level validation (min/max values, string patterns, etc.)
-- Better documentation for AI agents
-- Default values with validation
-- Rich error messages
-
-### Complex Input Types
-
-Use Pydantic models for complex structured inputs:
-
-```python
-from enum import Enum
-from pydantic import BaseModel, Field, HttpUrl
-
-class RequestMethod(str, Enum):
-    """Supported HTTP methods."""
-    GET = "GET"
-    POST = "POST"
-    PUT = "PUT"
-    DELETE = "DELETE"
-
-class APIRequestInput(BaseModel):
-    """Input schema for API requests."""
-    endpoint: str = Field(description="API endpoint path", pattern="^/.*")
-    method: RequestMethod = Field(default=RequestMethod.GET, description="HTTP method")
-    headers: dict[str, str] = Field(default_factory=dict, description="Request headers")
-    body: dict | None = Field(default=None, description="Request body for POST/PUT")
-
-async def api_request_fn(endpoint: str, method: RequestMethod = RequestMethod.GET, 
-                        headers: dict[str, str] | None = None, body: dict | None = None) -> dict:
-    """Make an API request."""
-    # Implementation goes here
-    pass
-
-group.add_function(
-    name="request",
-    fn=api_request_fn,
-    input_schema=APIRequestInput,
-    description="Make an HTTP API request"
-)
-```
+The toolkit automatically infers input and output schemas from your function type hints. You can customize these schemas for better validation and documentation. See the [Writing Custom Functions](./functions.md) guide for more information.
 
 ## Step 4: Work with Function Groups Programmatically
 
@@ -614,218 +529,6 @@ async def build_complex_group(config: ComplexFilterConfig, _builder: Builder):
 1. Start with: `["func1", "func2", "func3_experimental", "test_func4"]` (include list)
 2. After group filter: `["func1", "func2", "func3_experimental", "test_func4"]` (all pass)
 3. After per-function filter: `["func1", "func2", "func3_experimental", "test_func4"]` (all pass)
-
-## Best Practices
-
-### Naming Conventions
-
-**Keep instance names short and descriptive**:
-```python
-# Good - concise and clear
-group = FunctionGroup(config=config, instance_name="db")
-# Results in: db.query, db.insert
-
-# Less ideal - too verbose
-group = FunctionGroup(config=config, instance_name="database_operations")
-# Results in: database_operations.query, database_operations.insert
-```
-
-**Use consistent naming patterns**:
-- Database operations: `db.*`
-- API operations: `api.*`
-- File operations: `file.*` or `storage.*`
-- Cache operations: `cache.*`
-
-### Resource Management
-
-**Always use context managers for resources**:
-```python
-# Good - proper cleanup guaranteed
-async with create_pool(config) as pool:
-    group = FunctionGroup(config=config, instance_name="db")
-    # Add functions
-    yield group
-
-# Bad - resources may leak
-pool = await create_pool(config)
-group = FunctionGroup(config=config, instance_name="db")
-yield group  # Pool never closes!
-```
-
-**Share expensive resources**:
-```python
-# Good - one shared client
-@register_function_group(config_type=Config)
-async def build_group(config: Config, _builder: Builder):
-    client = create_expensive_client()  # Created once
-    # All functions use the same client
-    
-# Bad - each function creates its own
-async def fn1():
-    client = create_expensive_client()  # Wasteful!
-```
-
-### Configuration Best Practices
-
-**Use environment variables for secrets**:
-```python
-class SecureConfig(FunctionGroupBaseConfig, name="secure_group"):
-    api_key: str = Field(description="API key from environment")
-    
-# In YAML
-function_groups:
-  secure:
-    _type: secure_group
-    api_key: "${API_KEY}"  # From environment
-```
-
-**Provide sensible defaults**:
-```python
-class CacheConfig(FunctionGroupBaseConfig, name="cache_group"):
-    ttl: int = Field(default=3600, description="Cache TTL in seconds")
-    max_size: int = Field(default=1000, description="Max cache entries")
-```
-
-**Validate configuration values**:
-```python
-from pydantic import field_validator
-
-class DatabaseConfig(FunctionGroupBaseConfig, name="db_group"):
-    port: int = Field(description="Database port")
-    max_connections: int = Field(gt=0, le=100, description="Max connections")
-    
-    @field_validator('port')
-    @classmethod
-    def validate_port(cls, v):
-        if not (1 <= v <= 65535):
-            raise ValueError("Port must be between 1 and 65535")
-        return v
-```
-
-### Schema and Documentation
-
-**Use custom schemas for complex inputs**:
-```python
-# Instead of multiple parameters
-async def query_fn(sql: str, timeout: int, retries: int, params: list):
-    pass
-
-# Use a Pydantic model
-class QueryInput(BaseModel):
-    sql: str = Field(description="SQL query")
-    timeout: int = Field(default=30, gt=0)
-    retries: int = Field(default=3, ge=0)
-    params: list[str] = Field(default_factory=list)
-
-async def query_fn(input: QueryInput) -> list[dict]:
-    pass
-```
-
-**Write clear docstrings**:
-```python
-async def query_fn(sql: str) -> list[dict]:
-    """
-    Execute a SQL query and return results.
-    
-    Args:
-        sql: SQL query to execute. Must be a valid SELECT statement.
-        
-    Returns:
-        List of rows as dictionaries with column names as keys.
-        
-    Raises:
-        ValueError: If SQL is empty or invalid.
-        DatabaseError: If query execution fails.
-    """
-    pass
-```
-
-### Error Handling
-
-**Handle errors gracefully**:
-```python
-@register_function_group(config_type=APIConfig)
-async def build_api_group(config: APIConfig, _builder: Builder):
-    async with httpx.AsyncClient(base_url=config.base_url) as client:
-        group = FunctionGroup(config=config, instance_name="api")
-        
-        async def get_user_fn(user_id: int) -> dict:
-            """Get user by ID with error handling."""
-            try:
-                response = await client.get(f"/users/{user_id}")
-                response.raise_for_status()
-                return response.json()
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code == 404:
-                    raise ValueError(f"User {user_id} not found")
-                raise
-            except httpx.RequestError as e:
-                raise ConnectionError(f"Failed to connect to API: {e}")
-        
-        group.add_function("get_user", get_user_fn, description=get_user_fn.__doc__)
-        yield group
-```
-
-### Filter Guidelines
-
-**Prefer include/exclude over filters for static control**:
-```python
-# Good - static control with include/exclude
-function_groups:
-  admin:
-    _type: admin_group
-    exclude: [dangerous_operation]
-
-# Less ideal - using filter for something static
-async def static_filter(names):
-    return [n for n in names if n != "dangerous_operation"]
-```
-
-**Use filters for dynamic runtime control**:
-```python
-# Good - dynamic based on runtime config
-async def env_filter(names: Sequence[str]) -> Sequence[str]:
-    if os.getenv("ENVIRONMENT") == "production":
-        return [n for n in names if not n.startswith("debug_")]
-    return names
-```
-
-### Testing
-
-**Test each function individually**:
-```python
-@pytest.mark.asyncio
-async def test_database_functions():
-    config = DatabaseConfig(
-        host="localhost",
-        database="testdb",
-        user="test",
-        password="test"
-    )
-    
-    async with WorkflowBuilder() as builder:
-        await builder.add_function_group("db", config)
-        db_group = await builder.get_function_group("db")
-        
-        # Test query function
-        query_fn = (await db_group.get_all_functions())["query"]
-        result = await query_fn.ainvoke("SELECT 1")
-        assert len(result) == 1
-```
-
-**Test filter logic**:
-```python
-@pytest.mark.asyncio
-async def test_environment_filter():
-    # Test production environment
-    config = EnvConfig(environment="production")
-    async with WorkflowBuilder() as builder:
-        await builder.add_function_group("ops", config)
-        ops = await builder.get_function_group("ops")
-        accessible = await ops.get_accessible_functions()
-        assert "admin_reset" not in accessible
-        assert "user_status" in accessible
-```
 
 ## Common Patterns
 

@@ -28,8 +28,6 @@ By allowing related functions to share a single configuration object and runtime
 - **Scattered logic**: Related operations are defined separately, making code harder to maintain
 - **Inconsistent state**: Functions that should share context maintain separate state
 
-Function groups solve these problems by allowing related functions to share a single configuration object and runtime context.
-
 ### Example: Without Function Groups
 
 Consider three functions that work with an object store. Without function groups, each function needs its own configuration and creates its own connection:
@@ -198,20 +196,11 @@ workflow:
 
 ## When to Use Function Groups
 
-Use function groups when:
-
 - **Multiple functions need the same connection** (database, API client, cache)
 - **Functions share configuration** (credentials, endpoints, settings)
-- **You want to namespace related functions** (math.add, math.multiply)
+- **You want to namespace related functions** (`math.add`, `math.multiply`)
 - **Functions need to share state** (session data, counters, caches)
 - **You have a family of operations** (CRUD operations, data transformations)
-
-Use individual functions when:
-
-- Each function is completely independent
-- Functions have no shared resources or configuration
-- You only need one or two simple functions
-- Functions serve different purposes with no relationship
 
 ## Key Concepts
 
@@ -257,6 +246,39 @@ function_groups:
   math:
     _type: math_group
 ```
+
+### Accessing a Function Group
+
+#### From the Configuration File
+Accessing a function group from the configuration file is done by its name. This is the same name you use in the `function_groups` section of your workflow configuration.
+
+For example, if your function group is configured as follows:
+
+```yaml
+function_groups:
+  math:
+    _type: math_group
+```
+
+You can access it from the configuration file using the name `math`.
+
+#### Programmatically
+
+You can access a function group programmatically using the {py:meth}`~nat.builder.workflow_builder.WorkflowBuilder.get_function_group` method.
+
+```python
+math_group = await builder.get_function_group("math")
+```
+
+This will return a {py:class}`~nat.builder.function.FunctionGroup` object.
+
+The {py:meth}`~nat.builder.workflow_builder.WorkflowBuilder.get_tools` method can accept a function group name as a tool name in the `tool_names` list.
+
+```python
+tools = await builder.get_tools(["math"], wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+```
+
+This will return a list of all accessible functions in the function group that are wrapped for the specified framework.
 
 ### Function Naming and Namespacing
 
@@ -311,7 +333,7 @@ Function groups provide different levels of access control. Understanding these 
       tool_names: [math.add]  # Agent can only use this function (not multiply)
     ```
 
-#### Controlling Access with `include` and `exclude`
+#### Filtering Functions with `include` and `exclude`
 
 Use these optional configuration fields to control which functions are exposed:
 
@@ -330,6 +352,8 @@ function_groups:
 - Wrapped as tools for agents
 - But they remain programmatically accessible via the function group object
 
+If a function is excluded, it is not added to the global registry and is not available as an accessible tool for agents.
+
 ```yaml
 function_groups:
   math:
@@ -337,7 +361,7 @@ function_groups:
     exclude: [divide]  # Make unsafe operations unavailable to agents
 ```
 
-**Neither specified**: Functions are programmatically accessible through the group but not individually addressable or wrapped as tools by default.
+**Neither specified**: Functions are programmatically accessible through the group but not individually addressable.
 
 :::{note}
 `include` and `exclude` are mutually exclusive. Use one or the other, not both.
@@ -345,22 +369,24 @@ function_groups:
 
 #### Quick Reference
 
-| Configuration         | Programmatically Accessible | Global Registry     | Agent Tools         |
-|-----------------------|-----------------------------|---------------------|---------------------|
-| No include/exclude    | ✓ (via group)               | ✗                   | ✗                   |
-| `include: [add]`      | ✓ (all functions)           | ✓ (only `add`)      | ✓ (only `add`)      |
-| `exclude: [divide]`   | ✓ (all functions)           | ✗                   | ✓ (except `divide`) |
+| Configuration         | Programmatically Accessible | Global Registry     | Agent Tools                 |
+|-----------------------|-----------------------------|---------------------|-----------------------------|
+| No include/exclude    | ✓ (via group)               | ✗                   | ✓ (all available functions) |
+| `include: [add]`      | ✓ (all functions)           | ✓ (only `add`)      | ✓ (only `add`)              |
+| `exclude: [divide]`   | ✓ (all functions)           | ✗                   | ✓ (except `divide`)         |
 
 ## Using Function Groups
 
 ### Creating Custom Function Groups
+
+This section describes how to create and add function groups.
 
 To create your own custom function groups, see the [Writing Custom Function Groups](../extend/function-groups.md) guide, which covers:
 
 - Defining configuration classes with Pydantic fields
 - Registering function groups with decorators
 - Implementing builder functions
-- Sharing resources with context managers (database connections, API clients, etc.)
+- Sharing resources with context managers (for example, database connections and API clients)
 - Customizing input schemas for better validation
 - Implementing dynamic filtering for runtime control
 - Best practices, common patterns, and troubleshooting
@@ -498,18 +524,14 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 
 async with WorkflowBuilder() as builder:
     await builder.add_function_group("math", MathGroupConfig(include=["add", "multiply"]))
-    
-    # Get tools wrapped for LangChain
-    tools = await builder.get_tools(
-        [FunctionGroupRef("math")], 
-        wrapper_type=LLMFrameworkEnum.LANGCHAIN
-    )
-    
-    # Or use the simpler string reference
+
+    # Get tools wrapped for the specified framework
     tools = await builder.get_tools(["math"], wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 ```
 
 ## Advanced Features
+
+Use advanced features like dynamic, group-level, and per-function filters to control which functions are accessible at runtime.
 
 ### Dynamic Filtering
 
@@ -551,6 +573,8 @@ Filters work in combination with `include` and `exclude` configuration as descri
 3. Per-function filters are applied to each remaining function
 
 ## Best Practices
+
+This section describes best practices when using function groups.
 
 ### When to Use Function Groups
 
