@@ -18,7 +18,7 @@ limitations under the License.
 # Writing Custom Function Groups
 
 :::{note}
-Read the [Function Groups](../workflows/function-groups.md) guide first to understand how function groups work before creating your own.
+Before creating your own function groups, ensure you read the [Function Groups](../workflows/function-groups.md) guide to understand how function groups work.
 :::
 
 This guide shows you how to create custom function groups for the NVIDIA NeMo Agent toolkit. Function groups bundle related functions that share configuration, resources, and runtime context.
@@ -31,7 +31,7 @@ Create a custom function group when you need to:
 - **Bundle related operations**: Group CRUD operations, file operations, or API endpoints that belong together
 - **Centralize configuration**: Manage credentials, endpoints, and settings in one place for multiple functions
 - **Create reusable components**: Package functionality that can be used across multiple workflows
-- **Namespace functions**: Organize functions into logical groups (such as `db.query`, `db.insert`, `api.get`, `api.post`)
+- **Namespace functions**: Organize functions into logical groups, such as `db.query`, `db.insert`, `api.get`, and `api.post`
 
 ## What You'll Learn
 
@@ -121,7 +121,7 @@ class APIGroupConfig(FunctionGroupBaseConfig, name="api_group"):
 `include` and `exclude` are mutually exclusive. If both are provided, a `ValueError` will be raised.
 :::
 
-**When to use each**:
+When to use `include`, `exclude`, or neither:
 - Use `include` when you want to explicitly list exposed functions (allowlist approach)
 - Use `exclude` when most functions are public but some are private (blocklist approach)
 - Omit both when all functions should be accessible through the group reference only
@@ -170,7 +170,7 @@ async def build_my_group(config: MyGroupConfig, _builder: Builder):
 
 ### Sharing Resources with Context Managers
 
-For functions that need shared resources (connections, clients, etc.), use context managers:
+For functions that need shared resources (for example, connections and clients), use context managers:
 
 ```python
 import asyncpg
@@ -268,7 +268,7 @@ async def build_api_group(config: APIGroupConfig, _builder: Builder):
         yield group
 ```
 
-## Step 3: Customizing Function Schemas
+## Step 3: Customize Function Schemas
 
 The toolkit automatically infers input and output schemas from your function type hints. You can customize these schemas for better validation and documentation.
 
@@ -355,7 +355,7 @@ group.add_function(
 )
 ```
 
-## Step 4: Working with Function Groups Programmatically
+## Step 4: Work with Function Groups Programmatically
 
 After creating your function group, you can work with it programmatically in your workflows.
 
@@ -914,7 +914,7 @@ async def build_cache_group(config: CacheConfig, _builder: Builder):
 
 ### Issue: Functions Not Appearing in Workflow
 
-**Problem**: Functions aren't available even though they're added to the group.
+**Problem**: Functions are not available even though they are added to the group.
 
 **Solution**: Check your `include` list configuration:
 ```yaml
@@ -932,7 +932,7 @@ workflow:
 
 ### Issue: Resource Leaks
 
-**Problem**: Database connections or other resources aren't being cleaned up.
+**Problem**: Database connections or other resources are not being cleaned up.
 
 **Solution**: Always yield within the context manager:
 ```python
@@ -949,7 +949,7 @@ yield group  # Outside context - pool already closed!
 
 ### Issue: Filter Not Working
 
-**Problem**: Filter function isn't affecting which functions are available.
+**Problem**: Filter function is not affecting available functions.
 
 **Solution**: Ensure filter is set before accessing functions and check the filter logic:
 ```python

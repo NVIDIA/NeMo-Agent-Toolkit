@@ -19,9 +19,9 @@ limitations under the License.
 
 Function groups let you package multiple related functions together so they can share configuration, context, and resources within the NVIDIA NeMo Agent toolkit.
 
-## Why Use Function Groups?
+## Overview of Function Groups
 
-When building workflows with multiple functions, you often face these challenges:
+By allowing related functions to share a single configuration object and runtime context, function groups solve the following issues you may face when building workflows with multiple functions:
 
 - **Duplicated configuration**: Each function requires the same connection details, credentials, or settings
 - **Resource waste**: Creating separate database connections, API clients, or cache instances for each function
@@ -274,7 +274,7 @@ Function groups provide different levels of access control. Understanding these 
 
 #### Three Levels of Access
 
-1. Programmatically Accessible (Always Available)
+- Programmatically Accessible (Always Available)
 
     All functions added to a function group are always accessible through the group object itself, regardless of include/exclude settings.
 
@@ -286,7 +286,7 @@ Function groups provide different levels of access control. Understanding these 
     all_functions = await my_group.get_all_functions()
     ```
 
-2. Global Registry (Individually Addressable)
+- Global Registry (Individually Addressable)
 
     Functions in the `include` list are added to the global function registry. This means you can:
     - Reference them by their fully qualified name (`math.add`)
@@ -298,7 +298,7 @@ Function groups provide different levels of access control. Understanding these 
     add_function = await builder.get_function("math.add")
     ```
 
-3. Workflow Builder Tools (Agent-Accessible)
+- Workflow Builder Tools (Agent-Accessible)
 
     Functions that are not in the `exclude` list can be wrapped as tools for agents. This makes them:
     - Available to AI agents
@@ -422,7 +422,7 @@ workflow:
   llm_name: my_llm
 ```
 
-All functions except `divide` are available to the agent. Functions are not in the global registry and are not individually addressable. The excluded function remains programmatically accessible via the function group object.
+All functions except `divide` are available to the agent. Functions are not in the global registry and are not individually addressable. The excluded function remains programmatically accessible using the function group object.
 
 #### Example 4: Mixing Group and Individual References
 
@@ -544,7 +544,7 @@ Per-function filters are applied to individual functions during group creation. 
 
 #### Filter Interaction
 
-Filters work in combination with `include` and `exclude` configuration:
+Filters work in combination with `include` and `exclude` configuration as described in the following workflow:
 
 1. Configuration filtering is applied first (`include`/`exclude`)
 2. Group-level filters are applied to the result
@@ -567,6 +567,7 @@ Filters work in combination with `include` and `exclude` configuration:
 - The overhead of creating a group isn't justified
 
 ### Common Patterns
+This section describes common patterns when using function groups.
 
 #### Pattern 1: Database Operations
 
@@ -642,7 +643,7 @@ workflow:
 ```
 
 ### Configuration Best Practices
-
+Ensure you adhere to the configuration best practices when using function groups.
 #### Keep Instance Names Short
 
 Instance names become part of function names, so keep them concise:
