@@ -195,36 +195,17 @@ This is useful for health checks and monitoring.
 
 ## Security Considerations
 
-### Transport Selection
-The NeMo Agent toolkit supports two MCP transport protocols:
-- **streamable-http** (recommended): Supports authentication and is recommended for production deployments
-- **SSE** (Server-Sent Events): Does not support authentication and should only be used for local development
+### Authentication Limitations
+- The `nat mcp serve` command currently starts an MCP server without built-in authentication. Server-side authentication is planned for a future release.
+- NeMo Agent toolkit workflows can still connect to protected third-party MCP servers through the MCP client auth provider. See the [MCP Authentication](./mcp-auth.md) documentation for more information.
 
-### Host Binding and Authentication
-When deploying MCP servers, consider the following security best practices:
+### Local Development
+For local development, you can use `localhost` or `127.0.0.1` as the host (default). This limits access to your local machine only.
 
-:::{warning}
-**Non-Localhost Deployment Without Authentication**: If you bind the MCP server to a non-localhost address (such as `0.0.0.0` or a public IP) without configuring authentication, the server will log a warning. This configuration exposes your server to unauthorized access and should be avoided in production environments.
-:::
+### Production Deployment
+For production environments:
+- Run `nat mcp serve` behind a trusted network or an authenticating reverse proxy with HTTPS (OAuth2, JWT, or mTLS)
+- Do not expose the server directly to the public Internet
+- Do not bind to non-localhost addresses (such as `0.0.0.0` or public IPs) without authentication
 
-**For Production Deployments:**
-- Use `streamable-http` transport with authentication configured (see [MCP Authentication](./mcp-auth.md))
-- Bind to a specific interface or use a reverse proxy
-- Configure HTTPS with OAuth2, JWT, or mTLS
-- Never expose unauthenticated servers directly to the public internet
-
-**For Local Development:**
-- Use `localhost` or `127.0.0.1` as the host (default)
-- Both `streamable-http` and `sse` transports are acceptable for localhost-only access
-- No authentication is required for local-only development
-
-**For SSE Transport:**
-- SSE does not support authentication
-- Only use SSE on localhost for local development
-- For production, either:
-  - Switch to `streamable-http` transport with authentication
-  - Deploy behind an authenticating reverse proxy (HTTPS with OAuth2, JWT, or mTLS)
-
-## Limitations
-- SSE transport does not support authentication. Use `streamable-http` for authenticated deployments.
-- NeMo Agent toolkit workflows can connect to protected third-party MCP servers through the MCP client auth provider (see [MCP Authentication](./mcp-auth.md)).
+If you bind the MCP server to a non-localhost address without configuring authentication, the server will log a warning. This configuration exposes your server to unauthorized access.
