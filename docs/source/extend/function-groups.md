@@ -166,6 +166,45 @@ async def build_my_group(config: MyGroupConfig, _builder: Builder):
 - **Add to group**: Use `group.add_function()` to register each function
 - **Yield**: `yield group` makes the group available to workflows
 
+### Using Configuration Values
+
+Access configuration values in your functions to customize behavior:
+
+```python
+import httpx
+from nat.cli.register_workflow import register_function_group
+
+@register_function_group(config_type=APIGroupConfig)
+async def build_api_group(config: APIGroupConfig, _builder: Builder):
+    # Create authenticated HTTP client using config
+    async with httpx.AsyncClient(
+        base_url=config.base_url,
+        headers={"Authorization": f"Bearer {config.api_key}"},
+        timeout=30.0
+    ) as client:
+        group = FunctionGroup(config=config, instance_name="api")
+        
+        async def get_user_fn(user_id: int) -> dict:
+            """Get user details by ID."""
+            response = await client.get(f"/users/{user_id}")
+            response.raise_for_status()
+            return response.json()
+        
+        async def create_item_fn(name: str, description: str) -> dict:
+            """Create a new item."""
+            response = await client.post(
+                "/items",
+                json={"name": name, "description": description}
+            )
+            response.raise_for_status()
+            return response.json()
+        
+        group.add_function(name="get_user", fn=get_user_fn, description=get_user_fn.__doc__)
+        group.add_function(name="create_item", fn=create_item_fn, description=create_item_fn.__doc__)
+        
+        yield group
+```
+
 ### Sharing Resources with Context Managers
 
 For functions that need shared resources (for example, connections and clients), use context managers:
@@ -226,45 +265,6 @@ async def build_database_group(config: DatabaseGroupConfig, _builder: Builder):
 - Connection pooling efficiency
 - Proper error handling
 - Prevents resource leaks
-
-### Using Configuration Values
-
-Access configuration values in your functions to customize behavior:
-
-```python
-import httpx
-from nat.cli.register_workflow import register_function_group
-
-@register_function_group(config_type=APIGroupConfig)
-async def build_api_group(config: APIGroupConfig, _builder: Builder):
-    # Create authenticated HTTP client using config
-    async with httpx.AsyncClient(
-        base_url=config.base_url,
-        headers={"Authorization": f"Bearer {config.api_key}"},
-        timeout=30.0
-    ) as client:
-        group = FunctionGroup(config=config, instance_name="api")
-        
-        async def get_user_fn(user_id: int) -> dict:
-            """Get user details by ID."""
-            response = await client.get(f"/users/{user_id}")
-            response.raise_for_status()
-            return response.json()
-        
-        async def create_item_fn(name: str, description: str) -> dict:
-            """Create a new item."""
-            response = await client.post(
-                "/items",
-                json={"name": name, "description": description}
-            )
-            response.raise_for_status()
-            return response.json()
-        
-        group.add_function(name="get_user", fn=get_user_fn, description=get_user_fn.__doc__)
-        group.add_function(name="create_item", fn=create_item_fn, description=create_item_fn.__doc__)
-        
-        yield group
-```
 
 ## Step 3: Customize Function Schemas
 
