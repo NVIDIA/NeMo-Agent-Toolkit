@@ -206,6 +206,6 @@ For local development, you can use `localhost` or `127.0.0.1` as the host (defau
 For production environments:
 - Run `nat mcp serve` behind a trusted network or an authenticating reverse proxy with HTTPS (OAuth2, JWT, or mTLS)
 - Do not expose the server directly to the public Internet
-- Do not bind to non-localhost addresses (such as `0.0.0.0` or public IPs) without authentication
+- Do not bind to non-localhost addresses (such as `0.0.0.0` or public IP addresses) without authentication
 
 If you bind the MCP server to a non-localhost address without configuring authentication, the server will log a warning. This configuration exposes your server to unauthorized access.
