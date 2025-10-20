@@ -44,11 +44,11 @@ If you have already installed the NeMo Agent toolkit from source, you can instal
 uv pip install -e '.[telemetry]'
 
 # Install specific telemetry extras
+uv pip install -e '.[data-flywheel]'
 uv pip install -e '.[opentelemetry]'
 uv pip install -e '.[phoenix]'
 uv pip install -e '.[weave]'
 uv pip install -e '.[ragaai]'
-uv pip install -e '.[data-flywheel]'
 ```
 
 If you have not installed the NeMo Agent toolkit from source, you can install package extras with the following commands:
@@ -58,6 +58,7 @@ If you have not installed the NeMo Agent toolkit from source, you can install pa
 uv pip install "nvidia-nat[telemetry]"
 
 # Install specific telemetry extras
+uv pip install "nvidia-nat[data-flywheel]"
 uv pip install "nvidia-nat[opentelemetry]"
 uv pip install "nvidia-nat[phoenix]"
 uv pip install "nvidia-nat[weave]"
@@ -110,6 +111,16 @@ The `logging` section contains one or more logging providers. Each provider has 
 
 - `console`: Writes logs to the console.
 - `file`: Writes logs to a file.
+
+Available log levels:
+
+- `DEBUG`: Detailed information for debugging.
+- `INFO`: General information about the workflow.
+- `WARNING`: Potential issues that should be addressed.
+- `ERROR`: Issues that affect the workflow from running correctly.
+- `CRITICAL`: Severe issues that prevent the workflow from continuing to run.
+
+If a log level is specified, all logs at or above that level will be logged. For example, if the log level is set to `WARNING`, all logs at or above that level will be logged. If the log level is set to `ERROR`, all logs at or above that level will be logged.
 
 ### **Tracing Configuration**
 
