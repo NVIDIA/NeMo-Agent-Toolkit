@@ -43,6 +43,9 @@ async def simple_calc_mcp_process_fixture(nat_mcp_host: str, nat_mcp_port: str) 
     from nat_simple_calculator.register import DivisionToolConfig
 
     config_file: Path = locate_example_config(DivisionToolConfig)
+
+    env = os.environ.copy()
+    env.pop("NAT_LOG_LEVEL", None)
     cmd = [
         "nat",
         "mcp",
@@ -54,7 +57,7 @@ async def simple_calc_mcp_process_fixture(nat_mcp_host: str, nat_mcp_port: str) 
         "--port",
         nat_mcp_port
     ]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
     assert proc.poll() is None, f"MCP server process failed to start: {proc.stdout.read()}"
 
     yield proc

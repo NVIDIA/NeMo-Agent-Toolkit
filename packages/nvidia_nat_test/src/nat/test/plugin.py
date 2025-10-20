@@ -15,6 +15,7 @@
 
 import os
 import subprocess
+import types
 import typing
 from collections.abc import AsyncGenerator
 from collections.abc import Generator
@@ -223,6 +224,32 @@ def azure_openai_keys_fixture(fail_missing: bool):
         fail_missing=fail_missing)
 
 
+@pytest.fixture(name="wandb_api_key", scope='session')
+def wandb_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Weights & Biases API key.
+    """
+    yield require_env_variables(
+        varnames=["WANDB_API_KEY"],
+        reason="Weights & Biases integration tests require the `WANDB_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="weave", scope='session')
+def require_weave_fixture(fail_missing: bool) -> types.ModuleType:
+    """
+    Use for integration tests that require Weave to be running.
+    """
+    try:
+        import weave
+        return weave
+    except Exception as e:
+        reason = "Weave must be installed to run weave based tests"
+        if fail_missing:
+            raise RuntimeError(reason) from e
+        pytest.skip(reason=reason)
+
+
 @pytest.fixture(name="require_docker", scope='session')
 def require_docker_fixture(fail_missing: bool) -> "DockerClient":
     """
@@ -262,6 +289,13 @@ def root_repo_dir_fixture() -> Path:
 @pytest.fixture(name="examples_dir", scope='session')
 def examples_dir_fixture(root_repo_dir: Path) -> Path:
     return root_repo_dir / "examples"
+
+
+@pytest.fixture(name="env_without_nat_log_level", scope='function')
+def env_without_nat_log_level_fixture() -> dict[str, str]:
+    env = os.environ.copy()
+    env.pop("NAT_LOG_LEVEL", None)
+    return env
 
 
 @pytest.fixture(name="require_etcd", scope="session")
