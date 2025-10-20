@@ -32,10 +32,16 @@ A sequential executor is a control flow component that chains multiple functions
 ## Requirements
 The sequential executor is part of the core NeMo Agent toolkit and does not require additional plugin installations.
 
-After you've performed a source code checkout, install this with the following command:
+If you have performed a source code checkout, install this with the following command:
 
 ```bash
 uv pip install -e .
+```
+
+If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+
+```bash
+uv pip install "nvidia-nat"
 ```
 
 ## Configuration

@@ -303,6 +303,13 @@ def examples_dir_fixture(root_repo_dir: Path) -> Path:
     return root_repo_dir / "examples"
 
 
+@pytest.fixture(name="env_without_nat_log_level", scope='function')
+def env_without_nat_log_level_fixture() -> dict[str, str]:
+    env = os.environ.copy()
+    env.pop("NAT_LOG_LEVEL", None)
+    return env
+
+
 @pytest.fixture(name="require_etcd", scope="session")
 def require_etcd_fixture(fail_missing: bool = False) -> bool:
     """
