@@ -21,6 +21,7 @@ import pytest
 
 from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import EventStatus
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
@@ -246,9 +247,7 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
     """
     pytest.importorskip("litellm")
 
-    from nat.builder.context import Context
     from nat.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
-    from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
     # Create handler and set up collection of results
     all_stats = []
@@ -466,7 +465,6 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     Note: This test simulates how tool execution is tracked in the tool_wrapper.py
     since AgnoProfilerHandler doesn't directly patch tool execution.
     """
-    from nat.builder.context import Context
     from nat.data_models.intermediate_step import IntermediateStep
     from nat.data_models.invocation_node import InvocationNode
     from nat.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
@@ -611,3 +609,305 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     assert end_event.payload.name == "TestTool"
     assert "result" in end_event.payload.metadata.tool_outputs
     assert end_event.payload.metadata.tool_outputs["result"] == "Tool execution result"
+
+
+async def test_langchain_handler_on_llm_error(reactive_stream: Subject):
+    """
+    Test that the LangchainProfilerHandler properly handles LLM errors:
+    - Should generate LLM_END event with ERROR status when on_llm_error is called
+    - Should capture error details including message, exception type, and traceback
+    - Should clean up state properly after error
+    """
+    from uuid import UUID
+
+    all_stats = []
+    handler = LangchainProfilerHandler()
+    _ = reactive_stream.subscribe(all_stats.append)
+
+    # Simulate an LLM start event first
+    prompts = ["Tell me about AI"]
+    run_id = str(uuid4())
+    run_uuid = UUID(run_id)
+
+    await handler.on_llm_start(serialized={}, prompts=prompts, run_id=run_uuid)
+
+    # Create a test exception
+    test_error = ValueError("LLM service temporarily unavailable")
+
+    # Simulate an LLM error
+    await handler.on_llm_error(error=test_error, run_id=run_uuid)
+
+    # Verify we have 2 events: start and error
+    assert len(all_stats) == 2, f"Expected 2 events, got {len(all_stats)}"
+
+    # Check the start event
+    start_event = all_stats[0]
+    assert start_event.payload.event_type == IntermediateStepType.LLM_START
+    assert start_event.payload.status == EventStatus.SUCCESS
+
+    # Check the error event
+    error_event = all_stats[1]
+    assert error_event.payload.event_type == IntermediateStepType.LLM_END
+    assert error_event.payload.status == EventStatus.ERROR
+    assert error_event.payload.UUID == run_id
+
+    # Verify error details are captured
+    assert error_event.payload.metadata.error_details is not None
+    assert error_event.payload.metadata.error_details.message == "LLM service temporarily unavailable"
+    assert error_event.payload.metadata.error_details.exception_type == "ValueError"
+    assert "LLM service temporarily unavailable" in error_event.payload.metadata.error_details.traceback
+
+    # Verify input is preserved from the start event
+    assert error_event.payload.data.input == prompts[-1]
+
+    # Verify usage info is included with empty token usage
+    assert error_event.payload.usage_info is not None
+    assert error_event.payload.usage_info.token_usage.prompt_tokens == 0
+    assert error_event.payload.usage_info.token_usage.completion_tokens == 0
+
+    # Verify state cleanup - these should be empty after error handling
+    assert run_id not in handler._run_id_to_model_name
+    assert run_id not in handler._run_id_to_llm_input
+    assert run_id not in handler._run_id_to_start_time
+
+
+async def test_langchain_handler_on_llm_error_without_start(reactive_stream: Subject):
+    """
+    Test on_llm_error when called without a preceding on_llm_start:
+    - The IntermediateStepManager should not push events without matching start events
+    - This tests that the error handler gracefully handles missing state
+    """
+    from uuid import UUID
+
+    all_stats = []
+    handler = LangchainProfilerHandler()
+    _ = reactive_stream.subscribe(all_stats.append)
+
+    # Create a test exception
+    test_error = RuntimeError("Unexpected LLM failure")
+    run_id = str(uuid4())
+    run_uuid = UUID(run_id)
+
+    # Call on_llm_error without preceding on_llm_start
+    await handler.on_llm_error(error=test_error, run_id=run_uuid)
+
+    # Verify no events are pushed since there was no matching start event
+    # This is the correct behavior - the IntermediateStepManager logs a warning and returns
+    assert len(all_stats) == 0, f"Expected 0 events (no matching start), got {len(all_stats)}"
+
+    # Verify state cleanup still works (should be empty since nothing was added)
+    assert run_id not in handler._run_id_to_model_name
+    assert run_id not in handler._run_id_to_llm_input
+    assert run_id not in handler._run_id_to_start_time
+
+
+async def test_langchain_handler_on_tool_error(reactive_stream: Subject):
+    """
+    Test that the LangchainProfilerHandler properly handles tool errors:
+    - Should generate TOOL_END event with ERROR status when on_tool_error is called
+    - Should capture error details including message, exception type, and traceback
+    - Should clean up state properly after error
+    """
+    from uuid import UUID
+
+    all_stats = []
+    handler = LangchainProfilerHandler()
+    _ = reactive_stream.subscribe(all_stats.append)
+
+    # Simulate a tool start event first
+    tool_input = "search for latest AI research"
+    run_id = str(uuid4())
+    run_uuid = UUID(run_id)
+    serialized = {"name": "web_search", "description": "Search the web for information"}
+    inputs = {"query": "latest AI research", "max_results": 5}
+
+    await handler.on_tool_start(serialized=serialized, input_str=tool_input, run_id=run_uuid, inputs=inputs)
+
+    # Create a test exception
+    test_error = ConnectionError("Failed to connect to search API")
+
+    # Simulate a tool error
+    await handler.on_tool_error(error=test_error, run_id=run_uuid, name="web_search")
+
+    # Verify we have 2 events: start and error
+    assert len(all_stats) == 2, f"Expected 2 events, got {len(all_stats)}"
+
+    # Check the start event
+    start_event = all_stats[0]
+    assert start_event.payload.event_type == IntermediateStepType.TOOL_START
+    assert start_event.payload.status == EventStatus.SUCCESS
+    assert start_event.payload.name == "web_search"
+
+    # Check the error event
+    error_event = all_stats[1]
+    assert error_event.payload.event_type == IntermediateStepType.TOOL_END
+    assert error_event.payload.status == EventStatus.ERROR
+    assert error_event.payload.UUID == run_id
+    assert error_event.payload.name == "web_search"
+
+    # Verify error details are captured
+    assert error_event.payload.metadata.error_details is not None
+    assert error_event.payload.metadata.error_details.message == "Failed to connect to search API"
+    assert error_event.payload.metadata.error_details.exception_type == "ConnectionError"
+    assert "Failed to connect to search API" in error_event.payload.metadata.error_details.traceback
+
+    # Verify input is preserved from the start event
+    assert error_event.payload.data.input == tool_input
+
+    # Verify usage info is included with empty token usage
+    assert error_event.payload.usage_info is not None
+    assert error_event.payload.usage_info.token_usage.prompt_tokens == 0
+    assert error_event.payload.usage_info.token_usage.completion_tokens == 0
+
+    # Verify state cleanup
+    assert run_id not in handler._run_id_to_tool_input
+    assert run_id not in handler._run_id_to_start_time
+
+
+async def test_langchain_handler_on_tool_error_without_start(reactive_stream: Subject):
+    """
+    Test on_tool_error when called without a preceding on_tool_start:
+    - The IntermediateStepManager should not push events without matching start events
+    - This tests that the error handler gracefully handles missing state
+    """
+    from uuid import UUID
+
+    all_stats = []
+    handler = LangchainProfilerHandler()
+    _ = reactive_stream.subscribe(all_stats.append)
+
+    # Create a test exception
+    test_error = TimeoutError("Tool execution timed out")
+    run_id = str(uuid4())
+    run_uuid = UUID(run_id)
+
+    # Call on_tool_error without preceding on_tool_start
+    await handler.on_tool_error(error=test_error, run_id=run_uuid, name="timeout_tool")
+
+    # Verify no events are pushed since there was no matching start event
+    # This is the correct behavior - the IntermediateStepManager logs a warning and returns
+    assert len(all_stats) == 0, f"Expected 0 events (no matching start), got {len(all_stats)}"
+
+    # Verify state cleanup still works (should be empty since nothing was added)
+    assert run_id not in handler._run_id_to_tool_input
+    assert run_id not in handler._run_id_to_start_time
+
+
+async def test_langchain_handler_error_with_complex_exception(reactive_stream: Subject):
+    """
+    Test error handling with a complex exception that has nested causes:
+    - Should capture full traceback information
+    - Should handle exceptions with custom attributes
+    """
+    from uuid import UUID
+
+    all_stats = []
+    handler = LangchainProfilerHandler()
+    _ = reactive_stream.subscribe(all_stats.append)
+
+    # Create a complex exception with cause chain
+    root_cause = ValueError("Invalid API key")
+    wrapper_error = RuntimeError("Authentication failed")
+    wrapper_error.__cause__ = root_cause
+
+    run_id = str(uuid4())
+    run_uuid = UUID(run_id)
+
+    # Set up some state first
+    await handler.on_llm_start(serialized={}, prompts=["test"], run_id=run_uuid)
+
+    # Test LLM error with complex exception
+    await handler.on_llm_error(error=wrapper_error, run_id=run_uuid)
+
+    assert len(all_stats) == 2
+    error_event = all_stats[1]
+
+    # Verify the wrapper exception is captured
+    assert error_event.payload.metadata.error_details.message == "Authentication failed"
+    assert error_event.payload.metadata.error_details.exception_type == "RuntimeError"
+
+    # Verify traceback contains information about the cause chain
+    traceback_str = error_event.payload.metadata.error_details.traceback
+    assert "RuntimeError: Authentication failed" in traceback_str
+    # The exact format of cause chains in tracebacks may vary, but we should see the root cause
+    assert "ValueError: Invalid API key" in traceback_str
+
+
+async def test_langchain_handler_concurrent_error_handling(reactive_stream: Subject):
+    """
+    Test that error handling works correctly with concurrent requests:
+    - Multiple LLM calls with different run_ids
+    - Some succeed, some fail
+    - State cleanup should be isolated per run_id
+    """
+    from uuid import UUID
+
+    all_stats = []
+    handler = LangchainProfilerHandler()
+    _ = reactive_stream.subscribe(all_stats.append)
+
+    # Create multiple concurrent requests
+    run_id_1 = str(uuid4())
+    run_id_2 = str(uuid4())
+    run_id_3 = str(uuid4())
+
+    # Start all three requests
+    await asyncio.gather(handler.on_llm_start(serialized={}, prompts=["prompt 1"], run_id=UUID(run_id_1)),
+                         handler.on_llm_start(serialized={}, prompts=["prompt 2"], run_id=UUID(run_id_2)),
+                         handler.on_llm_start(serialized={}, prompts=["prompt 3"], run_id=UUID(run_id_3)))
+
+    # Let two succeed and one fail
+    from langchain_core.messages import AIMessage
+    from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import LLMResult
+
+    # Success for run_id_1
+    generation_1 = ChatGeneration(message=AIMessage(content="Response 1"))
+    llm_result_1 = LLMResult(generations=[[generation_1]])
+
+    # Error for run_id_2
+    error_2 = ValueError("Model overloaded")
+
+    # Success for run_id_3
+    generation_3 = ChatGeneration(message=AIMessage(content="Response 3"))
+    llm_result_3 = LLMResult(generations=[[generation_3]])
+
+    # Process end events
+    await asyncio.gather(handler.on_llm_end(response=llm_result_1, run_id=UUID(run_id_1)),
+                         handler.on_llm_error(error=error_2, run_id=UUID(run_id_2)),
+                         handler.on_llm_end(response=llm_result_3, run_id=UUID(run_id_3)))
+
+    # Should have 6 events total: 3 starts + 2 ends + 1 error
+    assert len(all_stats) == 6
+
+    # Find events by run_id
+    events_by_run_id = {}
+    for event in all_stats:
+        run_id = event.payload.UUID
+        if run_id not in events_by_run_id:
+            events_by_run_id[run_id] = []
+        events_by_run_id[run_id].append(event)
+
+    # Verify run_id_1 (success)
+    assert len(events_by_run_id[run_id_1]) == 2
+    assert events_by_run_id[run_id_1][0].payload.event_type == IntermediateStepType.LLM_START
+    assert events_by_run_id[run_id_1][1].payload.event_type == IntermediateStepType.LLM_END
+    assert events_by_run_id[run_id_1][1].payload.status == EventStatus.SUCCESS
+
+    # Verify run_id_2 (error)
+    assert len(events_by_run_id[run_id_2]) == 2
+    assert events_by_run_id[run_id_2][0].payload.event_type == IntermediateStepType.LLM_START
+    assert events_by_run_id[run_id_2][1].payload.event_type == IntermediateStepType.LLM_END
+    assert events_by_run_id[run_id_2][1].payload.status == EventStatus.ERROR
+    assert events_by_run_id[run_id_2][1].payload.metadata.error_details.message == "Model overloaded"
+
+    # Verify run_id_3 (success)
+    assert len(events_by_run_id[run_id_3]) == 2
+    assert events_by_run_id[run_id_3][0].payload.event_type == IntermediateStepType.LLM_START
+    assert events_by_run_id[run_id_3][1].payload.event_type == IntermediateStepType.LLM_END
+    assert events_by_run_id[run_id_3][1].payload.status == EventStatus.SUCCESS
+
+    # Verify all state has been cleaned up
+    assert len(handler._run_id_to_model_name) == 0
+    assert len(handler._run_id_to_llm_input) == 0
+    assert len(handler._run_id_to_start_time) == 0

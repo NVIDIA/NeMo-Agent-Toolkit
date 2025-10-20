@@ -16,11 +16,15 @@
 import os
 import uuid
 from datetime import datetime
+from typing import Any
+from typing import cast
 from unittest.mock import patch
 
 import pytest
 
 from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import ErrorDetails
+from nat.data_models.intermediate_step import EventStatus
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -375,7 +379,7 @@ class TestSpanExporterFunctionality:
             # Test when end_metadata is not a dict or TraceMetadata after creation
             end_event = start_event.model_copy()
             end_event.payload.event_type = IntermediateStepType.LLM_END
-            end_event.payload.metadata = "invalid_metadata_string"  # This is invalid type
+            end_event.payload.metadata = cast(Any, "invalid_metadata_string")  # This is invalid type
 
             span_exporter.export(end_event)
             mock_logger.warning.assert_called()
@@ -432,6 +436,50 @@ class TestSpanExporterFunctionality:
         assert len(span_exporter._outstanding_spans) == 0
         assert len(span_exporter._span_stack) == 0
         assert len(span_exporter._metadata_stack) == 0
+
+    async def test_process_end_event_error_no_output(self, span_exporter):
+        """Error END events set status="error", avoid OUTPUT_VALUE, and include error_details in metadata."""
+        event_id = str(uuid.uuid4())
+
+        # Start event
+        start_event = create_intermediate_step(UUID=event_id,
+                                               event_type=IntermediateStepType.TOOL_START,
+                                               framework=LLMFrameworkEnum.LANGCHAIN,
+                                               name="tool_call",
+                                               event_timestamp=datetime.now().timestamp(),
+                                               data=StreamEventData(input={"arg": 1}),
+                                               metadata={"start": True})
+
+        # Error END event (no output)
+        error_meta = TraceMetadata(error_details=ErrorDetails(message="boom", exception_type="ValueError"))
+        end_event = create_intermediate_step(UUID=event_id,
+                                             event_type=IntermediateStepType.TOOL_END,
+                                             framework=LLMFrameworkEnum.LANGCHAIN,
+                                             name="tool_call",
+                                             event_timestamp=datetime.now().timestamp(),
+                                             span_event_timestamp=datetime.now().timestamp(),
+                                             status=EventStatus.ERROR,
+                                             data=StreamEventData(),
+                                             metadata=error_meta)
+
+        async with span_exporter.start():
+            span_exporter.export(start_event)
+            span_exporter.export(end_event)
+            await span_exporter.wait_for_tasks()
+
+            assert len(span_exporter.exported_spans) == 1
+            exported_span = span_exporter.exported_spans[0]
+
+            # status attribute reflects error
+            assert exported_span.attributes.get("nat.status") == "error"
+
+            # no OUTPUT_VALUE attribute for error case without output
+            assert SpanAttributes.OUTPUT_VALUE.value not in exported_span.attributes
+
+            # metadata contains error_details
+            serialized_meta = exported_span.attributes.get("nat.metadata", "")
+            assert "error_details" in serialized_meta
+            assert "\"message\": \"boom\"" in serialized_meta
 
     def test_span_attribute_setting(self, span_exporter, sample_start_event):
         """Test various span attribute settings."""

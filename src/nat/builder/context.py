@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+import traceback
 import typing
 import uuid
 from collections.abc import Awaitable
@@ -27,6 +29,8 @@ from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import InteractionPrompt
+from nat.data_models.intermediate_step import ErrorDetails
+from nat.data_models.intermediate_step import EventStatus
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -219,7 +223,7 @@ class Context:
                              metadata: dict[str, typing.Any] | TraceMetadata | None = None):
         """
         Set the 'active_function' in context, push an invocation node,
-        AND create an OTel child span for that function call.
+        AND create a child step for that function call.
         """
         parent_function_node = self._context_state.active_function.get()
         current_function_id = str(uuid.uuid4())
@@ -236,25 +240,41 @@ class Context:
         step_manager.push_intermediate_step(
             IntermediateStepPayload(UUID=current_function_id,
                                     event_type=IntermediateStepType.FUNCTION_START,
+                                    status=EventStatus.SUCCESS,
                                     name=function_name,
                                     data=StreamEventData(input=input_data),
                                     metadata=metadata))
 
         manager = ActiveFunctionContextManager()
 
-        try:
-            yield manager  # run the function body
-        finally:
-            # 3) Record function end
+        start_time = time.time()
 
-            data = StreamEventData(input=input_data, output=manager.output)
-
+        def _emit_end(status: EventStatus,
+                      output_value: typing.Any | None = None,
+                      trace_metadata: dict[str, typing.Any] | TraceMetadata | None = None) -> None:
             step_manager.push_intermediate_step(
                 IntermediateStepPayload(UUID=current_function_id,
                                         event_type=IntermediateStepType.FUNCTION_END,
+                                        status=status,
+                                        span_event_timestamp=start_time,
                                         name=function_name,
-                                        data=data))
+                                        data=StreamEventData(input=input_data, output=output_value),
+                                        metadata=trace_metadata))
 
+        try:
+            yield manager  # run the function body
+        except Exception as e:
+            # 3) Record function end
+            # push failure event and re-raise
+            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            error_metadata = TraceMetadata(
+                error_details=ErrorDetails(message=str(e), exception_type=type(e).__name__, traceback=tb_str))
+            _emit_end(EventStatus.ERROR, None, error_metadata)
+            raise
+        else:
+            # 3) Record function end
+            _emit_end(EventStatus.SUCCESS, manager.output, None)  # push success event
+        finally:
             # 4) Unset the function contextvar
             self._context_state.active_function.reset(fn_token)
 

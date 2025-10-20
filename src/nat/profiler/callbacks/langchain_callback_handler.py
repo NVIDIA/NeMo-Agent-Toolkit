@@ -19,6 +19,7 @@ import copy
 import logging
 import threading
 import time
+import traceback
 from typing import Any
 from uuid import UUID
 from uuid import uuid4
@@ -31,6 +32,8 @@ from langchain_core.outputs import LLMResult
 
 from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import ErrorDetails
+from nat.data_models.intermediate_step import EventStatus
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
@@ -112,6 +115,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self._run_id_to_model_name[run_id] = model_name
 
         stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
+                                        status=EventStatus.SUCCESS,
                                         framework=LLMFrameworkEnum.LANGCHAIN,
                                         name=model_name,
                                         UUID=run_id,
@@ -128,17 +132,15 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self.last_call_ts = time.time()
         self._run_id_to_start_time[run_id] = time.time()
 
-    async def on_chat_model_start(
-        self,
-        serialized: dict[str, Any],
-        messages: list[list[BaseMessage]],
-        *,
-        run_id: UUID,
-        parent_run_id: UUID | None = None,
-        tags: list[str] | None = None,
-        metadata: dict[str, Any] | None = None,
-        **kwargs: Any,
-    ) -> Any:
+    async def on_chat_model_start(self,
+                                  serialized: dict[str, Any],
+                                  messages: list[list[BaseMessage]],
+                                  *,
+                                  run_id: UUID,
+                                  parent_run_id: UUID | None = None,
+                                  tags: list[str] | None = None,
+                                  metadata: dict[str, Any] | None = None,
+                                  **kwargs: Any) -> Any:
 
         model_name = ""
         try:
@@ -151,6 +153,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
 
         stats = IntermediateStepPayload(
             event_type=IntermediateStepType.LLM_START,
+            status=EventStatus.SUCCESS,
             framework=LLMFrameworkEnum.LANGCHAIN,
             name=model_name,
             UUID=run_id,
@@ -183,6 +186,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
 
         stats = IntermediateStepPayload(
             event_type=IntermediateStepType.LLM_NEW_TOKEN,
+            status=EventStatus.SUCCESS,
             framework=LLMFrameworkEnum.LANGCHAIN,
             name=model_name,
             UUID=str(kwargs.get("run_id", str(uuid4()))),
@@ -200,11 +204,13 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         usage_metadata = {}
 
         model_name = ""
+        run_id_str = str(kwargs.get("run_id", ""))
+
         try:
             model_name = response.llm_output["model_name"]
         except Exception as e:
             try:
-                model_name = self._run_id_to_model_name.get(str(kwargs.get("run_id", "")), "")
+                model_name = self._run_id_to_model_name.get(run_id_str, "")
             except Exception as e_inner:
                 logger.exception("Error getting model name: %s from outer error %s", e_inner, e)
 
@@ -235,19 +241,55 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         # update shared state behind lock
         with self._lock:
             usage_stat = IntermediateStepPayload(
-                span_event_timestamp=self._run_id_to_start_time.get(str(kwargs.get("run_id", "")), time.time()),
+                span_event_timestamp=self._run_id_to_start_time.get(run_id_str, time.time()),
                 event_type=IntermediateStepType.LLM_END,
+                status=EventStatus.SUCCESS,
                 framework=LLMFrameworkEnum.LANGCHAIN,
                 name=model_name,
                 UUID=str(kwargs.get("run_id", str(uuid4()))),
-                data=StreamEventData(input=self._run_id_to_llm_input.get(str(kwargs.get("run_id", "")), ""),
-                                     output=llm_text_output),
+                data=StreamEventData(input=self._run_id_to_llm_input.get(run_id_str, ""), output=llm_text_output),
                 usage_info=UsageInfo(token_usage=self._extract_token_base_model(usage_metadata)),
                 metadata=TraceMetadata(chat_responses=[generation] if generation else []))
 
             self.step_manager.push_intermediate_step(usage_stat)
 
         self._state = IntermediateStepType.LLM_END
+
+        # Cleanup LLM state to prevent memory growth
+        self._run_id_to_model_name.pop(run_id_str, None)
+        self._run_id_to_llm_input.pop(run_id_str, None)
+        self._run_id_to_start_time.pop(run_id_str, None)
+
+    async def on_llm_error(self,
+                           error: BaseException,
+                           *,
+                           run_id: UUID,
+                           parent_run_id: UUID | None = None,
+                           **kwargs: Any) -> Any:
+
+        run_id_str = str(run_id)
+        model_name = self._run_id_to_model_name.get(run_id_str, "")
+
+        tb_str = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+
+        stats = IntermediateStepPayload(
+            event_type=IntermediateStepType.LLM_END,
+            status=EventStatus.ERROR,
+            span_event_timestamp=self._run_id_to_start_time.get(run_id_str, time.time()),
+            framework=LLMFrameworkEnum.LANGCHAIN,
+            name=model_name,
+            UUID=run_id_str,
+            data=StreamEventData(input=self._run_id_to_llm_input.get(run_id_str, "")),
+            metadata=TraceMetadata(
+                error_details=ErrorDetails(message=str(error), exception_type=type(error).__name__, traceback=tb_str)),
+            usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
+
+        self.step_manager.push_intermediate_step(stats)
+
+        # Cleanup LLM state to prevent memory growth
+        self._run_id_to_model_name.pop(run_id_str, None)
+        self._run_id_to_llm_input.pop(run_id_str, None)
+        self._run_id_to_start_time.pop(run_id_str, None)
 
     async def on_tool_start(
         self,
@@ -263,6 +305,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
     ) -> Any:
 
         stats = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
+                                        status=EventStatus.SUCCESS,
                                         framework=LLMFrameworkEnum.LANGCHAIN,
                                         name=serialized.get("name", ""),
                                         UUID=str(run_id),
@@ -275,23 +318,53 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self._run_id_to_tool_input[str(run_id)] = input_str
         self._run_id_to_start_time[str(run_id)] = time.time()
 
-    async def on_tool_end(
-        self,
-        output: Any,
-        *,
-        run_id: UUID,
-        parent_run_id: UUID | None = None,
-        **kwargs: Any,
-    ) -> Any:
+    async def on_tool_end(self, output: Any, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
+
+        run_id_str = str(run_id)
 
         stats = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
-                                        span_event_timestamp=self._run_id_to_start_time.get(str(run_id), time.time()),
+                                        status=EventStatus.SUCCESS,
+                                        span_event_timestamp=self._run_id_to_start_time.get(run_id_str, time.time()),
                                         framework=LLMFrameworkEnum.LANGCHAIN,
                                         name=kwargs.get("name", ""),
-                                        UUID=str(run_id),
+                                        UUID=run_id_str,
                                         metadata=TraceMetadata(tool_outputs=output),
                                         usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
-                                        data=StreamEventData(input=self._run_id_to_tool_input.get(str(run_id), ""),
+                                        data=StreamEventData(input=self._run_id_to_tool_input.get(run_id_str, ""),
                                                              output=output))
 
         self.step_manager.push_intermediate_step(stats)
+
+        # Cleanup tool state to prevent memory growth
+        self._run_id_to_tool_input.pop(run_id_str, None)
+        self._run_id_to_start_time.pop(run_id_str, None)
+
+    async def on_tool_error(self,
+                            error: BaseException,
+                            *,
+                            run_id: UUID,
+                            parent_run_id: UUID | None = None,
+                            **kwargs: Any) -> Any:
+
+        run_id_str = str(run_id)
+
+        tb_str = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+
+        stats = IntermediateStepPayload(
+            event_type=IntermediateStepType.TOOL_END,
+            status=EventStatus.ERROR,
+            span_event_timestamp=self._run_id_to_start_time.get(run_id_str, time.time()),
+            framework=LLMFrameworkEnum.LANGCHAIN,
+            name=kwargs.get("name", ""),
+            UUID=run_id_str,
+            metadata=TraceMetadata(
+                error_details=ErrorDetails(message=str(error), exception_type=type(error).__name__, traceback=tb_str)),
+            usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
+            data=StreamEventData(input=self._run_id_to_tool_input.get(run_id_str, "")))
+
+        # push error event
+        self.step_manager.push_intermediate_step(stats)
+
+        # Cleanup tool state to prevent memory growth
+        self._run_id_to_tool_input.pop(run_id_str, None)
+        self._run_id_to_start_time.pop(run_id_str, None)
