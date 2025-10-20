@@ -72,8 +72,19 @@ export AZURE_OPENAI_ENDPOINT="<your-custom-endpoint>"
 A Docker Compose YAML file is provided to start the required services located at `tests/test_data/docker-compose.services.yml`. The services at time of writing include Arize Phoenix, etcd, Milvus, MinIO, MySQL, OpenSearch, and Redis.
 
 ```bash
-# The exact value isn't important, however it should be a secure password.
-export MYSQL_ROOT_PASSWORD="$(pwgen -n 64 1)"
+# Creatge temporary passwords for the services
+function mk_pw() {
+  pwgen -n 64 1
+}
+
+export CLICKHOUSE_PASSWORD="$(mk_pw)"
+export LANGFUSE_NEXTAUTH_SECRET="$(mk_pw)"
+export LANGFUSE_PUBLIC_KEY="lf_pk_$(mk_pw)"
+export LANGFUSE_SALT="$(mk_pw)"
+export LANGFUSE_SECRET_KEY="lf_sk_$(mk_pw)"
+export LANGFUSE_USER_PW="$(mk_pw)"
+export MYSQL_ROOT_PASSWORD="$(mk_pw)"
+export POSTGRES_PASSWORD="$(mk_pw)"
 
 # Start the services in detached mode
 docker compose -f tests/test_data/docker-compose.services.yml up -d
