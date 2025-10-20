@@ -28,6 +28,8 @@ A tool calling agent is an AI system that directly invokes external tools based 
 - **Agentic Workflows**: Fully configurable via YAML for flexibility and productivity.
 - **Ease of Use**: Simplifies developer experience and deployment.
 
+---
+
 ## Requirements
 The tool calling agent requires the `nvidia-nat[langchain]` plugin to be installed.
 
