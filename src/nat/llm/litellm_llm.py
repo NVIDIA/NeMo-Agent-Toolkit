@@ -23,6 +23,8 @@ from nat.builder.builder import Builder
 from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.optimizable import OptimizableField
+from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.temperature_mixin import TemperatureMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
@@ -31,6 +33,7 @@ from nat.data_models.top_p_mixin import TopPMixin
 
 class LiteLlmModelConfig(
         LLMBaseConfig,
+        OptimizableMixin,
         RetryMixin,
         TemperatureMixin,
         TopPMixin,
@@ -46,9 +49,9 @@ class LiteLlmModelConfig(
                                  description="Base url to the hosted model.",
                                  validation_alias=AliasChoices("base_url", "api_base"),
                                  serialization_alias="api_base")
-    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
-                            serialization_alias="model",
-                            description="The LiteLlm hosted model name.")
+    model_name: str = OptimizableField(validation_alias=AliasChoices("model_name", "model"),
+                                       serialization_alias="model",
+                                       description="The LiteLlm hosted model name.")
     seed: int | None = Field(default=None, description="Random seed to set for generation.")
 
 
