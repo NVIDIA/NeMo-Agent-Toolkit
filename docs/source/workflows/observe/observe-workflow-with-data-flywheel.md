@@ -19,7 +19,7 @@ limitations under the License.
 
 This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow that exports runtime traces to an ElasticSearch instance that is part of the [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel). The Data Flywheel Blueprint can then leverage the traces to fine-tune and evaluate smaller models which can be deployed to replace the original model to reduce latency.
 
-The Data Flywheel integration supports LangChain/LangGraph based workflows with `nim` and `openai` LLM providers and can be enabled with just a few lines of configuration.
+The Data Flywheel integration supports LangChain/LangGraph-based workflows with `nim` and `openai` LLM providers and can be enabled with just a few lines of configuration.
 
 ## Supported Framework and Provider Combinations
 
