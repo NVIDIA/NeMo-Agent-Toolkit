@@ -19,8 +19,6 @@ limitations under the License.
 
 The reasoning agent is an AI system that directly invokes an underlying function while performing reasoning on top. Unlike ReAct agents, it does not reason between steps but instead through planning ahead of time. However, an LLM that support reasoning needs to be chosen for use with a reasoning agent.
 
----
-
 ## Features
 - **Pre-built Tools**: Leverages core library agent and tools.
 - **Reasoning on top of an Agent:** Leverages an underlying function, and performs reasoning on top.
@@ -29,6 +27,21 @@ The reasoning agent is an AI system that directly invokes an underlying function
 - **Ease of Use**: Simplifies developer experience and deployment.
 
 ---
+
+## Requirements
+The Reasoning agent requires the `nvidia-nat[langchain]` plugin to be installed.
+
+If you have performed a source code checkout, you can install this with the following command:
+
+```bash
+uv pip install -e '.[langchain]'
+```
+
+If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+
+```bash
+uv pip install "nvidia-nat[langchain]"
+```
 
 ## Configuration
 

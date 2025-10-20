@@ -35,7 +35,9 @@ export NAT_SPAN_PREFIX=aiq
 
 ## Installation
 
-The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras:
+The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras.
+
+If you have already installed the NeMo Agent toolkit from source, you can install package extras with the following commands:
 
 ```bash
 # Install all optional telemetry extras
@@ -46,6 +48,19 @@ uv pip install -e '.[opentelemetry]'
 uv pip install -e '.[phoenix]'
 uv pip install -e '.[weave]'
 uv pip install -e '.[ragaai]'
+```
+
+If you have not installed the NeMo Agent toolkit from source, you can install package extras with the following commands:
+
+```bash
+# Install all optional telemetry extras
+uv pip install "nvidia-nat[telemetry]"
+
+# Install specific telemetry extras
+uv pip install "nvidia-nat[opentelemetry]"
+uv pip install "nvidia-nat[phoenix]"
+uv pip install "nvidia-nat[weave]"
+uv pip install "nvidia-nat[ragaai]"
 ```
 
 ## Configurable Components
