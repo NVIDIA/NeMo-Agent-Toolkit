@@ -69,6 +69,7 @@ For details on workflow configuration, including sections not utilized in the ab
 ReAct Agent <./react-agent.md>
 Reasoning Agent <./reasoning-agent.md>
 ReWOO Agent <./rewoo-agent.md>
+Responses API and Agent <./responses-api-and-agent.md>
 Router Agent <./router-agent.md>
 Sequential Executor <./sequential-executor.md>
 Tool Calling Agent <./tool-calling-agent.md>

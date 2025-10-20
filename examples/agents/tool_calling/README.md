@@ -35,6 +35,7 @@ A configurable Tool Calling agent. This agent leverages the NeMo Agent toolkit p
   - [Starting the NeMo Agent Toolkit Server](#starting-the-nemo-agent-toolkit-server)
   - [Making Requests to the NeMo Agent Toolkit Server](#making-requests-to-the-nemo-agent-toolkit-server)
   - [Evaluating the Tool Calling Agent Workflow](#evaluating-the-tool-calling-agent-workflow)
+- [Using Tool Calling with the OpenAI Responses API](#using-tool-calling-with-the-openai-responses-api)
 
 ## Key Features
 
@@ -86,6 +87,13 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
+
+If you will be using the Responses API, also export your model's API key as the `OPENAI_API_KEY` as shown below. 
+
+```bash
+export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
+```
+
 ---
 
 ## Run the Workflow
@@ -177,3 +185,98 @@ curl --request POST \
 ```bash
 nat eval --config_file=examples/agents/tool_calling/configs/config.yml
 ```
+
+### Using Tool Calling with the OpenAI Responses API
+The NeMo Agent toolkit also provides an agent implementation that uses OpenAI's Responses API to enable built-in tools (such as Code Interpreter) and remote tools via Model Context Protocol (MCP).
+
+#### What is the Responses API?
+OpenAI's Responses API is a unified endpoint for reasoning models that supports built-in tools and external tool integrations. Compared to Chat Completions, Responses focuses on agentic behaviors like multi-step tool use, background tasks, and streaming of intermediate items. With Responses, models can:
+- Use built-in tools such as Code Interpreter; some models also support file search and image generation.
+- Connect to remote tools exposed over the Model Context Protocol (MCP).
+
+For current capabilities and model support, see OpenAI's documentation for the Responses API.
+
+#### Run the Responses API agent
+An example configuration is provided at `examples/agents/tool_calling/configs/config-responses-api.yml`. Run it from the NeMo Agent toolkit repo root:
+
+```bash
+nat run --config_file=examples/agents/tool_calling/configs/config-responses-api.yml --input "How many 0s are in the current time?"
+```
+
+#### Configure the agent for Responses
+Key fields in `config-responses-api.yml`:
+
+```yaml
+llms:
+  openai_llm:
+    _type: openai
+    model_name: gpt-5-mini
+    # Setting the `api_type` to responses uses the Responses API
+    api_type: responses
+
+workflow:
+  _type: responses_api_agent
+  llm_name: openai_llm
+  verbose: true
+  handle_tool_errors: true
+  # Tools exposed to the agent:
+  nat_tools: [current_datetime]     # NAT tools executed by the agent graph
+  builtin_tools:                    # Built-in OpenAI tools bound directly to the LLM
+    - type: code_interpreter
+      container:
+        type: "auto"
+  mcp_tools: []                     # Optional: remote tools over MCP (see below)
+```
+
+- **`nat_tools`**: Tools implemented in NeMo Agent toolkit (for example, `current_datetime`). These run via the tool node in the agent graph.
+- **`builtin_tools`**: Tools provided by OpenAI's Responses API and executed by the model runtime. The agent binds them to the LLM; the graph does not run them directly.
+- **`mcp_tools`**: Remote tools exposed via MCP. The agent passes the schema to the LLM; the model orchestrates calls to the remote server.
+
+#### Built-in tools for OpenAI models
+Built-in tool availability depends on model and account features. Common built-ins include:
+- **Code Interpreter**: Execute Python for data analysis, math, and code execution. In this repo, configure it as:
+  ```yaml
+  builtin_tools:
+    - type: code_interpreter
+      container:
+        type: "auto"
+  ```
+- **File search** and **image generation** may be supported by some models in Responses. Refer to OpenAI docs for the latest tool names and required parameters if you choose to add them to `builtin_tools`.
+
+Notes:
+- This agent enforces that the selected LLM uses the Responses API.
+- When `builtin_tools` or `mcp_tools` are provided, they are bound on the LLM with `strict=True` and optional `parallel_tool_calls` support.
+
+#### Configure MCP tools
+You can allow the model to call tools from a remote MCP server by adding entries under `mcp_tools`. The schema is defined in `src/nat/data_models/openai_mcp.py`.
+
+Example:
+
+```yaml
+workflow:
+  _type: responses_api_agent
+  llm_name: openai_llm
+  # ...
+  mcp_tools:
+    - type: mcp
+      server_label: deepwiki
+      server_url: https://mcp.deepwiki.com/mcp
+      allowed_tools: [read_wiki_structure, read_wiki_contents]
+      require_approval: never   # one of: never, always, auto
+      headers:
+        Authorization: Bearer <TOKEN_IF_REQUIRED>
+```
+
+Field reference (MCP):
+- **type**: Must be `mcp`.
+- **`server_label`**: A short label for the server. Used in model outputs and logs.
+- **`server_url`**: The MCP server endpoint URL.
+- **`allowed_tools`**: Optional allowlist of tool names the model may call. Omit or set empty to allow all server tools.
+- **`require_approval`**: `never`, `always`, or `auto` (defaults to `never`). Controls whether tool invocations require approval.
+- **headers**: Optional HTTP headers to include on MCP requests.
+
+#### Tips and troubleshooting
+- Ensure your model supports the specific built-in tools you enable.
+- Some built-ins (for example, file search) may require separate setup in your OpenAI account (vector stores, file uploads). Consult OpenAI documentation for current requirements.
+- If tool calls error and `handle_tool_errors` is `true`, the agent will surface an informative message instead of raising.
+

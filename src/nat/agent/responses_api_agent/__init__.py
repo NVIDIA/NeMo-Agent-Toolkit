@@ -12,18 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from pydantic import BaseModel
-from pydantic import Field
-
-
-class TokenUsageBaseModel(BaseModel):
-    """
-    Base model for token usage callbacks.
-    """
-
-    prompt_tokens: int = Field(default=0, description="Number of tokens in the prompt.")
-    completion_tokens: int = Field(default=0, description="Number of tokens in the completion.")
-    cached_tokens: int = Field(default=0, description="Number of tokens read from cache.")
-    reasoning_tokens: int = Field(default=0, description="Number of tokens used for reasoning.")
-    total_tokens: int = Field(default=0, description="Number of tokens total.")

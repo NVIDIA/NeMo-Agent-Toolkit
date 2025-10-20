@@ -12,18 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=raising-format-tuple
 
-from pydantic import BaseModel
-from pydantic import Field
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.llm import APITypeEnum
 
 
-class TokenUsageBaseModel(BaseModel):
-    """
-    Base model for token usage callbacks.
-    """
+def validate_no_responses_api(llm_config, framework: LLMFrameworkEnum):
+    """Validate that the LLM config does not use the Responses API."""
 
-    prompt_tokens: int = Field(default=0, description="Number of tokens in the prompt.")
-    completion_tokens: int = Field(default=0, description="Number of tokens in the completion.")
-    cached_tokens: int = Field(default=0, description="Number of tokens read from cache.")
-    reasoning_tokens: int = Field(default=0, description="Number of tokens used for reasoning.")
-    total_tokens: int = Field(default=0, description="Number of tokens total.")
+    if llm_config.api_type == APITypeEnum.RESPONSES:
+        raise ValueError(f"Responses API is not supported for config {str(type(llm_config))} in framework {framework}. "
+                         f"Please use a different API type.")
