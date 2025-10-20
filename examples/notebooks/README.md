@@ -23,8 +23,9 @@ We showcase the building blocks that make up the agentic system, including tools
 
 1. [Getting Started](1_getting_started_with_nat.ipynb)
 2. [Bringing Your Own Agent](2_bringing_your_own_agent.ipynb)
-3. [Adding Tools and Agents](3_adding_tools_and_agents.ipynb)
-4. [Observability, Evaluation, and Profiling](4_observability_evaluation_and_profiling.ipynb)
+3. [Adding Tools to Agents](3_adding_tools_to_agents.ipynb)
+4. [Multi-Agent Orchestration](4_multi_agent_orchestration.ipynb)
+5. [Observability, Evaluation, and Profiling](5_observability_evaluation_and_profiling.ipynb)
 
 We recommend opening these notebooks in a Jupyter Lab environment or Google Colab environment.
 
