@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import model_validator
+from pydantic_core import PydanticUndefined
 
 T = TypeVar("T", int, float, bool, str)
 
@@ -66,7 +67,7 @@ class SearchSpace(BaseModel, Generic[T]):
 
 
 def OptimizableField(
-    default: Any,
+    default: Any = PydanticUndefined,
     *,
     space: SearchSpace | None = None,
     merge_conflict: str = "overwrite",
