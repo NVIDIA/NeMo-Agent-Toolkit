@@ -32,7 +32,7 @@ from nat.runtime.session import SessionManager
 logger = logging.getLogger(__name__)
 
 
-class UserWorkflowData(BaseModel):
+class WorkflowInfo(BaseModel):
     """
     Container for all user-specific workflow resources.
 
@@ -85,7 +85,7 @@ class WorkflowManager:
             max_users: int = 100,
             max_concurrent_requests: int = 1000,
             max_requests_per_user: int = 8,
-            user_idle_timeout: timedelta = timedelta(hours=1),
+            workflow_idle_timeout: timedelta = timedelta(hours=1),
             cleanup_check_interval: timedelta = timedelta(minutes=5),
     ):
         """
@@ -96,22 +96,22 @@ class WorkflowManager:
             max_users: Maximum concurrent user workflows allowed
             max_concurrent_requests: Maximum concurrent requests across all users
             max_requests_per_user: Maximum concurrent requests per user (for SessionManager)
-            user_idle_timeout: Time after which inactive workflows are cleaned
+            workflow_idle_timeout: Time after which inactive workflows are cleaned
             cleanup_check_interval: Interval for periodic cleanup checks
         """
         self._config = config
         self._max_users = max_users
         self._max_concurrent_requests = max_concurrent_requests
         self._max_requests_per_user = max_requests_per_user
-        self._user_idle_timeout = user_idle_timeout
+        self._workflow_idle_timeout = workflow_idle_timeout
         self._cleanup_check_interval = cleanup_check_interval
 
         # Per-user workflow storage
-        self._user_workflows: dict[str, UserWorkflowData] = {}
-        self._user_rwlock = aiorwlock.RWLock()
+        self._workflows: dict[str, WorkflowInfo] = {}
+        self._rwlock = aiorwlock.RWLock()
 
         # Cleanup control
-        self._last_cleanup_check: datetime = datetime.now()
+        self._last_cleanup: datetime = datetime.now()
 
         # Global request limiting
         if max_concurrent_requests > 0:
@@ -121,10 +121,10 @@ class WorkflowManager:
 
         logger.info(
             "WorkflowManager initialized: max_users=%d, max_concurrent_requests=%d, "
-            "user_idle_timeout=%s, cleanup_interval=%s",
+            "workflow_idle_timeout=%s, cleanup_interval=%s",
             max_users,
             max_concurrent_requests,
-            user_idle_timeout,
+            workflow_idle_timeout,
             cleanup_check_interval,
         )
 
@@ -163,34 +163,34 @@ class WorkflowManager:
 
         # Throttled cleanup on access
         now = datetime.now()
-        if now - self._last_cleanup_check > self._cleanup_check_interval:
+        if now - self._last_cleanup > self._cleanup_check_interval:
             await self._cleanup_inactive_workflows()
-            self._last_cleanup_check = now
+            self._last_cleanup = now
 
         # Fast path: workflow exists (reader lock for concurrent access)
-        async with self._user_rwlock.reader:
-            if user_id in self._user_workflows:
-                user_data = self._user_workflows[user_id]
-                user_data.last_activity = datetime.now()
+        async with self._rwlock.reader:
+            if user_id in self._workflows:
+                workflow_info = self._workflows[user_id]
+                workflow_info.last_activity = datetime.now()
                 logger.debug("Found existing workflow for user: %s", self._truncate_user_id(user_id))
-                return user_data.workflow, user_data.session_manager
+                return workflow_info.workflow, workflow_info.session_manager
 
         # Check limit before creating
-        if len(self._user_workflows) >= self._max_users:
+        if len(self._workflows) >= self._max_users:
             logger.info("User limit reached (%d), attempting cleanup", self._max_users)
             await self._cleanup_inactive_workflows()
 
         # Slow path: create workflow (writer lock for exclusive access)
-        async with self._user_rwlock.writer:
+        async with self._rwlock.writer:
             # Double-check after acquiring writer lock (race condition prevention)
-            if user_id in self._user_workflows:
-                user_data = self._user_workflows[user_id]
-                user_data.last_activity = datetime.now()
+            if user_id in self._workflows:
+                workflow_info = self._workflows[user_id]
+                workflow_info.last_activity = datetime.now()
                 logger.debug("Workflow created by concurrent request for user: %s", self._truncate_user_id(user_id))
-                return user_data.workflow, user_data.session_manager
+                return workflow_info.workflow, workflow_info.session_manager
 
             # Re-check limit inside writer lock
-            if len(self._user_workflows) >= self._max_users:
+            if len(self._workflows) >= self._max_users:
                 logger.warning("User limit reached (%d), rejecting new user: %s",
                                self._max_users,
                                self._truncate_user_id(user_id))
@@ -209,7 +209,7 @@ class WorkflowManager:
                 init_duration,
             )
 
-            user_data = UserWorkflowData(
+            workflow_info = WorkflowInfo(
                 user_id=user_id,
                 workflow=workflow,
                 session_manager=session_manager,
@@ -219,8 +219,8 @@ class WorkflowManager:
                 stop_event=stop_event,
             )
 
-            self._user_workflows[user_id] = user_data
-            logger.info("Total active users: %d", len(self._user_workflows))
+            self._workflows[user_id] = workflow_info
+            logger.info("Total active users: %d", len(self._workflows))
 
             return workflow, session_manager
 
@@ -377,33 +377,33 @@ class WorkflowManager:
         Returns:
             Number of workflows cleaned up
         """
-        to_close: list[tuple[str, UserWorkflowData]] = []
+        to_close: list[tuple[str, WorkflowInfo]] = []
 
-        async with self._user_rwlock.writer:
+        async with self._rwlock.writer:
             current_time = datetime.now()
             inactive_users = []
 
-            for user_id, user_data in self._user_workflows.items():
+            for user_id, user_data in self._workflows.items():
                 # Skip cleanup if workflow is actively being used
                 if user_data.ref_count > 0:
                     continue
 
                 idle_time = current_time - user_data.last_activity
-                if idle_time > self._user_idle_timeout:
+                if idle_time > self._workflow_idle_timeout:
                     inactive_users.append(user_id)
 
             for user_id in inactive_users:
                 logger.info(
                     "Cleaning up workflow for inactive user: %s (idle: %ds)",
                     self._truncate_user_id(user_id),
-                    (current_time - self._user_workflows[user_id].last_activity).total_seconds(),
+                    (current_time - self._workflows[user_id].last_activity).total_seconds(),
                 )
-                user_data = self._user_workflows.pop(user_id, None)
+                user_data = self._workflows.pop(user_id, None)
                 if user_data:
                     to_close.append((user_id, user_data))
 
             if inactive_users:
-                logger.info("Total active users after cleanup: %d", len(self._user_workflows))
+                logger.info("Total active users after cleanup: %d", len(self._workflows))
 
         # Close workflows outside the lock
         for user_id, user_data in to_close:
@@ -440,7 +440,7 @@ class WorkflowManager:
         logger.info("Shutting down WorkflowManager...")
 
         # Get all workflows
-        user_workflows = list(self._user_workflows.values())
+        user_workflows = list(self._workflows.values())
 
         # Signal all to stop
         for user_data in user_workflows:
@@ -457,7 +457,7 @@ class WorkflowManager:
                                self._truncate_user_id(user_data.user_id),
                                e)
 
-        self._user_workflows.clear()
+        self._workflows.clear()
         logger.info("WorkflowManager shutdown complete")
 
     async def acquire_request_slot(self) -> None:
@@ -498,7 +498,7 @@ class WorkflowManager:
         Returns:
             Count of users with workflows in memory
         """
-        return len(self._user_workflows)
+        return len(self._workflows)
 
     @property
     def user_limit(self) -> int:
