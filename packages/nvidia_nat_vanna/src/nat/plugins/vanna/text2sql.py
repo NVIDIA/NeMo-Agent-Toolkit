@@ -136,30 +136,35 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
     """Register the Text2SQL function with Vanna integration."""
     from nat.plugins.vanna.db_utils import setup_vanna_db_connection
     from nat.plugins.vanna.milvus_utils import create_milvus_client
-    from nat.plugins.vanna.vanna_utils import get_vanna_instance, train_vanna, _vanna_instance
+    from nat.plugins.vanna.vanna_utils import VannaSingleton, train_vanna
 
     logger.info("Initializing Text2SQL function")
-
-    # Get LLM and embedder
-    llm_client = await builder.get_llm(
-        config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN
-    )
-    embedder_client = await builder.get_embedder(
-        config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN
-    )
 
     # Track database connection for cleanup
     db_connection = None
 
-    # Create Milvus clients only if singleton doesn't exist
-    # This avoids creating orphaned clients when reusing singleton
-    if _vanna_instance is None:
-        owns_sync_client = True  # Track if we own the sync client
+    # Check if singleton exists to avoid unnecessary client creation
+    existing_instance = VannaSingleton.instance()
+    if existing_instance is not None:
+        logger.info("Reusing existing Vanna singleton instance")
+        vanna_instance = existing_instance
+    else:
+        # Create all clients only when initializing new singleton
+        logger.info("Creating new Vanna singleton instance")
+
+        # Get LLM and embedder
+        llm_client = await builder.get_llm(
+            config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN
+        )
+        embedder_client = await builder.get_embedder(
+            config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN
+        )
+
+        # Create Milvus clients
         if config.milvus_retriever:
             logger.info("Using milvus_retriever for Milvus connection")
             retriever = await builder.get_retriever(config.milvus_retriever)
             milvus_client = retriever._client  # type: ignore[attr-defined]
-            owns_sync_client = False  # Managed by retriever
         else:
             milvus_client = create_milvus_client(
                 host=config.milvus_host,
@@ -169,6 +174,7 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
                 db_name=config.milvus_db_name,
                 is_async=False,
             )
+
         # Create async client with same config
         # TODO: Replace with async NAT milvus_retriever
         async_milvus_client = create_milvus_client(
@@ -179,29 +185,23 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
             db_name=config.milvus_db_name,
             is_async=True,
         )
-    else:
-        # Reuse existing singleton's clients
-        milvus_client = _vanna_instance.milvus_client
-        async_milvus_client = _vanna_instance.async_milvus_client
-        owns_sync_client = _vanna_instance._owns_sync_client
 
-    # Initialize Vanna instance (singleton pattern)
-    vanna_instance = await get_vanna_instance(
-        llm_client=llm_client,
-        embedder_client=embedder_client,
-        milvus_client=milvus_client,
-        async_milvus_client=async_milvus_client,
-        dialect=config.database_type,
-        initial_prompt=config.initial_prompt,
-        n_results=config.n_results,
-        sql_collection=config.sql_collection,
-        ddl_collection=config.ddl_collection,
-        doc_collection=config.doc_collection,
-        owns_sync_client=owns_sync_client,
-        milvus_search_limit=config.milvus_search_limit,
-        reasoning_models=config.reasoning_models,
-        chat_models=config.chat_models,
-    )
+        # Initialize Vanna instance (singleton pattern)
+        vanna_instance = await VannaSingleton.get_instance(
+            llm_client=llm_client,
+            embedder_client=embedder_client,
+            milvus_client=milvus_client,
+            async_milvus_client=async_milvus_client,
+            dialect=config.database_type,
+            initial_prompt=config.initial_prompt,
+            n_results=config.n_results,
+            sql_collection=config.sql_collection,
+            ddl_collection=config.ddl_collection,
+            doc_collection=config.doc_collection,
+            milvus_search_limit=config.milvus_search_limit,
+            reasoning_models=config.reasoning_models,
+            chat_models=config.chat_models,
+        )
 
     # Setup database connection
     db_connection = setup_vanna_db_connection(
