@@ -66,10 +66,8 @@ def create_milvus_client(
 
             return AsyncMilvusClient(**client_config)
         except ImportError:
-            logger.warning(
-                "AsyncMilvusClient not available, using sync client. "
-                "Consider upgrading pymilvus."
-            )
+            logger.warning("AsyncMilvusClient not available, using sync client. "
+                           "Consider upgrading pymilvus.")
             return MilvusClient(**client_config)
     else:
         return MilvusClient(**client_config)

@@ -16,16 +16,19 @@
 import logging
 import uuid
 from collections.abc import AsyncGenerator
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel
+from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.api_server import ResponseIntermediateStep
-from nat.data_models.component_ref import EmbedderRef, LLMRef, RetrieverRef
+from nat.data_models.component_ref import EmbedderRef
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.component_ref import RetrieverRef
 from nat.data_models.function import FunctionBaseConfig
-
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +56,9 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     # Milvus retriever (backward compatibility)
     milvus_retriever: RetrieverRef | None = Field(
         default=None,
-        description="Optional milvus_retriever reference for backward compatibility. If provided, uses the retriever's client for sync operations. Milvus connection details are still needed for async operations."
-    )
+        description=("Optional milvus_retriever reference for backward compatibility. "
+                     "If provided, uses the retriever's client for sync operations. "
+                     "Milvus connection details are still needed for async operations."))
 
     # Database configuration
     database_type: str = Field(default="databricks", description="Database type")
@@ -67,15 +71,9 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     db_schema: str | None = Field(default=None, description="Database schema")
 
     # Databricks-specific
-    databricks_server_hostname: str | None = Field(
-        default=None, description="Databricks server hostname"
-    )
-    databricks_http_path: str | None = Field(
-        default=None, description="Databricks HTTP path"
-    )
-    databricks_access_token: str | None = Field(
-        default=None, description="Databricks access token"
-    )
+    databricks_server_hostname: str | None = Field(default=None, description="Databricks server hostname")
+    databricks_http_path: str | None = Field(default=None, description="Databricks HTTP path")
+    databricks_access_token: str | None = Field(default=None, description="Databricks access token")
 
     # Milvus configuration
     milvus_host: str | None = Field(default=None, description="Milvus host")
@@ -83,34 +81,19 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     milvus_user: str | None = Field(default=None, description="Milvus username")
     milvus_password: str | None = Field(default=None, description="Milvus password")
     milvus_db_name: str | None = Field(default=None, description="Milvus database")
-    milvus_search_limit: int = Field(
-        default=1000,
-        description="Maximum limit size for vector search operations in Milvus"
-    )
+    milvus_search_limit: int = Field(default=1000,
+                                     description="Maximum limit size for vector search operations in Milvus")
 
     # Vanna configuration
-    allow_llm_to_see_data: bool = Field(
-        default=False, description="Allow LLM to see data for intermediate queries"
-    )
-    execute_sql: bool = Field(
-        default=False, description="Execute SQL or just return query string"
-    )
-    train_on_startup: bool = Field(
-        default=False, description="Train Vanna on startup (uses training data from db_schema.py)"
-    )
-    initial_prompt: str | None = Field(
-        default=None, description="Custom system prompt"
-    )
+    allow_llm_to_see_data: bool = Field(default=False, description="Allow LLM to see data for intermediate queries")
+    execute_sql: bool = Field(default=False, description="Execute SQL or just return query string")
+    train_on_startup: bool = Field(default=False,
+                                   description="Train Vanna on startup (uses training data from db_schema.py)")
+    initial_prompt: str | None = Field(default=None, description="Custom system prompt")
     n_results: int = Field(default=5, description="Number of similar examples")
-    sql_collection: str = Field(
-        default="vanna_sql", description="Milvus collection for SQL examples"
-    )
-    ddl_collection: str = Field(
-        default="vanna_ddl", description="Milvus collection for DDL"
-    )
-    doc_collection: str = Field(
-        default="vanna_documentation", description="Milvus collection for docs"
-    )
+    sql_collection: str = Field(default="vanna_sql", description="Milvus collection for SQL examples")
+    ddl_collection: str = Field(default="vanna_ddl", description="Milvus collection for DDL")
+    doc_collection: str = Field(default="vanna_documentation", description="Milvus collection for docs")
 
     # Model-specific configuration
     reasoning_models: set[str] = Field(
@@ -120,23 +103,19 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
             "deepseek-ai/deepseek-v3.1",
             "deepseek-ai/deepseek-r1",
         },
-        description="Models that require special handling for think tags removal and JSON extraction"
-    )
+        description="Models that require special handling for think tags removal and JSON extraction")
 
-    chat_models: set[str] = Field(
-        default={"meta/llama-3.1-70b-instruct"},
-        description="Models using standard response handling without think tags"
-    )
+    chat_models: set[str] = Field(default={"meta/llama-3.1-70b-instruct"},
+                                  description="Models using standard response handling without think tags")
 
 
-@register_function(
-    config_type=Text2SQLConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN]
-)
+@register_function(config_type=Text2SQLConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def text2sql(config: Text2SQLConfig, builder: Builder):
     """Register the Text2SQL function with Vanna integration."""
     from nat.plugins.vanna.db_utils import setup_vanna_db_connection
     from nat.plugins.vanna.milvus_utils import create_milvus_client
-    from nat.plugins.vanna.vanna_utils import VannaSingleton, train_vanna
+    from nat.plugins.vanna.vanna_utils import VannaSingleton
+    from nat.plugins.vanna.vanna_utils import train_vanna
 
     logger.info("Initializing Text2SQL function")
 
@@ -153,12 +132,8 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         logger.info("Creating new Vanna singleton instance")
 
         # Get LLM and embedder
-        llm_client = await builder.get_llm(
-            config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN
-        )
-        embedder_client = await builder.get_embedder(
-            config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN
-        )
+        llm_client = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        embedder_client = await builder.get_embedder(config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
         # Create Milvus clients
         if config.milvus_retriever:
@@ -224,9 +199,7 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         await train_vanna(vanna_instance, auto_extract_ddl=True)
 
     # Streaming version
-    async def _generate_sql_stream(
-        question: str,
-    ) -> AsyncGenerator[ResponseIntermediateStep | Text2SQLOutput, None]:
+    async def _generate_sql_stream(question: str, ) -> AsyncGenerator[ResponseIntermediateStep | Text2SQLOutput, None]:
         """Stream SQL generation progress and results."""
         logger.info(f"Text2SQL input: {question}")
 
@@ -294,11 +267,9 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         # Fallback if no result found
         return Text2SQLOutput(sql="", explanation=None)
 
-    description = (
-        "Generate SQL queries from natural language questions using AI. "
-        "Leverages similar question-SQL pairs, DDL information, and "
-        "documentation to generate accurate SQL queries."
-    )
+    description = ("Generate SQL queries from natural language questions using AI. "
+                   "Leverages similar question-SQL pairs, DDL information, and "
+                   "documentation to generate accurate SQL queries.")
 
     if config.execute_sql:
         description += " Also executes queries and returns results."

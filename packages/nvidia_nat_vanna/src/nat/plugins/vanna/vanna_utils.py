@@ -17,16 +17,13 @@ import asyncio
 import logging
 import uuid
 
+from nat.plugins.vanna.db_schema import VANNA_RESPONSE_GUIDELINES
+from nat.plugins.vanna.db_schema import VANNA_TRAINING_DDL
+from nat.plugins.vanna.db_schema import VANNA_TRAINING_DOCUMENTATION
+from nat.plugins.vanna.db_schema import VANNA_TRAINING_EXAMPLES
+from nat.plugins.vanna.db_schema import VANNA_TRAINING_PROMPT
 from vanna.base import VannaBase
 from vanna.milvus import Milvus_VectorStore
-
-from nat.plugins.vanna.db_schema import (
-    VANNA_RESPONSE_GUIDELINES,
-    VANNA_TRAINING_PROMPT,
-    VANNA_TRAINING_EXAMPLES,
-    VANNA_TRAINING_DDL,
-    VANNA_TRAINING_DOCUMENTATION,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -93,9 +90,12 @@ def remove_think_tags(text: str, model_name: str, reasoning_models: set[str]) ->
     else:
         return text
 
+
 def to_langchain_msgs(msgs):
     """Convert message dicts to LangChain message objects."""
-    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+    from langchain_core.messages import AIMessage
+    from langchain_core.messages import HumanMessage
+    from langchain_core.messages import SystemMessage
 
     role2cls = {"system": SystemMessage, "user": HumanMessage, "assistant": AIMessage}
     return [role2cls[m["role"]](content=m["content"]) for m in msgs]
@@ -137,24 +137,19 @@ class VannaLangChainLLM(VannaBase):
         doc_list: list,
     ) -> list:
         """Generate prompt for synthetic question-SQL pairs."""
-        initial_prompt = (
-            f"You are a {self.dialect} expert. "
-            "Please generate diverse question–SQL pairs where each SQL statement starts with either `SELECT` or `WITH`. "
-            "Your response should follow the response guidelines and format instructions."
-        )
+        initial_prompt = (f"You are a {self.dialect} expert. "
+                          "Please generate diverse question–SQL pairs where each SQL "
+                          "statement starts with either `SELECT` or `WITH`. "
+                          "Your response should follow the response guidelines and format instructions.")
 
         # Add DDL information
-        initial_prompt = self.add_ddl_to_prompt(
-            initial_prompt, ddl_list, max_tokens=self.max_tokens
-        )
+        initial_prompt = self.add_ddl_to_prompt(initial_prompt, ddl_list, max_tokens=self.max_tokens)
 
         # Add documentation
         if self.static_documentation != "":
             doc_list.append(self.static_documentation)
 
-        initial_prompt = self.add_documentation_to_prompt(
-            initial_prompt, doc_list, max_tokens=self.max_tokens
-        )
+        initial_prompt = self.add_documentation_to_prompt(initial_prompt, doc_list, max_tokens=self.max_tokens)
 
         # Add response guidelines
         initial_prompt += VANNA_TRAINING_PROMPT
@@ -176,42 +171,32 @@ class VannaLangChainLLM(VannaBase):
     ) -> list:
         """Generate prompt for SQL generation."""
         if initial_prompt is None:
-            initial_prompt = (
-                f"You are a {self.dialect} expert. "
-                "Please help to generate a SQL query to answer the question. "
-                "Your response should ONLY be based on the given context "
-                "and follow the response guidelines and format instructions."
-            )
+            initial_prompt = (f"You are a {self.dialect} expert. "
+                              "Please help to generate a SQL query to answer the question. "
+                              "Your response should ONLY be based on the given context "
+                              "and follow the response guidelines and format instructions.")
 
         # Add DDL information
-        initial_prompt = self.add_ddl_to_prompt(
-            initial_prompt, ddl_list, max_tokens=self.max_tokens
-        )
+        initial_prompt = self.add_ddl_to_prompt(initial_prompt, ddl_list, max_tokens=self.max_tokens)
 
         # Add documentation
         if self.static_documentation != "":
             doc_list.append(self.static_documentation)
 
-        initial_prompt = self.add_documentation_to_prompt(
-            initial_prompt, doc_list, max_tokens=self.max_tokens
-        )
+        initial_prompt = self.add_documentation_to_prompt(initial_prompt, doc_list, max_tokens=self.max_tokens)
 
         # Add response guidelines
         initial_prompt += VANNA_RESPONSE_GUIDELINES
-        initial_prompt += (
-            f"3. Ensure that the output SQL is {self.dialect}-compliant "
-            "and executable, and free of syntax errors.\n"
-        )
+        initial_prompt += (f"3. Ensure that the output SQL is {self.dialect}-compliant "
+                           "and executable, and free of syntax errors.\n")
 
         # Add error message if provided
         if error_message is not None:
-            initial_prompt += (
-                f"4. For question: {question}. "
-                "\tPrevious SQL attempt failed with error: "
-                f"{error_message['sql_error']}\n"
-                f"\tPrevious SQL was: {error_message['previous_sql']}\n"
-                "\tPlease fix the SQL syntax/logic error and regenerate."
-            )
+            initial_prompt += (f"4. For question: {question}. "
+                               "\tPrevious SQL attempt failed with error: "
+                               f"{error_message['sql_error']}\n"
+                               f"\tPrevious SQL was: {error_message['previous_sql']}\n"
+                               "\tPlease fix the SQL syntax/logic error and regenerate.")
 
         # Build message log with examples
         message_log = [self.system_message(initial_prompt)]
@@ -228,9 +213,7 @@ class VannaLangChainLLM(VannaBase):
         """Submit prompt to LLM."""
         try:
             # Determine model name
-            llm_name = getattr(
-                self.client, 'model_name', None
-                ) or getattr(self.client, 'model', 'unknown')
+            llm_name = getattr(self.client, 'model_name', None) or getattr(self.client, 'model', 'unknown')
 
             # Get LLM response (with streaming for reasoning models)
             if llm_name in self.reasoning_models:
@@ -293,7 +276,8 @@ class MilvusVectorStore(Milvus_VectorStore):
 
     def _create_sql_collection(self, name: str):
         """Create SQL collection."""
-        from pymilvus import DataType, MilvusClient
+        from pymilvus import DataType
+        from pymilvus import MilvusClient
 
         if not self.milvus_client.has_collection(collection_name=name):
             schema = MilvusClient.create_schema(
@@ -306,12 +290,8 @@ class MilvusVectorStore(Milvus_VectorStore):
                 is_primary=True,
                 max_length=65535,
             )
-            schema.add_field(
-                field_name="text", datatype=DataType.VARCHAR, max_length=65535
-            )
-            schema.add_field(
-                field_name="sql", datatype=DataType.VARCHAR, max_length=65535
-            )
+            schema.add_field(field_name="text", datatype=DataType.VARCHAR, max_length=65535)
+            schema.add_field(field_name="sql", datatype=DataType.VARCHAR, max_length=65535)
             schema.add_field(
                 field_name="vector",
                 datatype=DataType.FLOAT_VECTOR,
@@ -319,9 +299,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             )
 
             index_params = MilvusClient.prepare_index_params()
-            index_params.add_index(
-                field_name="vector", index_type="AUTOINDEX", metric_type="L2"
-            )
+            index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
             self.milvus_client.create_collection(
                 collection_name=name,
                 schema=schema,
@@ -331,7 +309,8 @@ class MilvusVectorStore(Milvus_VectorStore):
 
     def _create_ddl_collection(self, name: str):
         """Create DDL collection."""
-        from pymilvus import DataType, MilvusClient
+        from pymilvus import DataType
+        from pymilvus import MilvusClient
 
         if not self.milvus_client.has_collection(collection_name=name):
             schema = MilvusClient.create_schema(
@@ -344,9 +323,7 @@ class MilvusVectorStore(Milvus_VectorStore):
                 is_primary=True,
                 max_length=65535,
             )
-            schema.add_field(
-                field_name="ddl", datatype=DataType.VARCHAR, max_length=65535
-            )
+            schema.add_field(field_name="ddl", datatype=DataType.VARCHAR, max_length=65535)
             schema.add_field(
                 field_name="vector",
                 datatype=DataType.FLOAT_VECTOR,
@@ -354,9 +331,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             )
 
             index_params = MilvusClient.prepare_index_params()
-            index_params.add_index(
-                field_name="vector", index_type="AUTOINDEX", metric_type="L2"
-            )
+            index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
             self.milvus_client.create_collection(
                 collection_name=name,
                 schema=schema,
@@ -366,7 +341,8 @@ class MilvusVectorStore(Milvus_VectorStore):
 
     def _create_doc_collection(self, name: str):
         """Create documentation collection."""
-        from pymilvus import DataType, MilvusClient
+        from pymilvus import DataType
+        from pymilvus import MilvusClient
 
         if not self.milvus_client.has_collection(collection_name=name):
             schema = MilvusClient.create_schema(
@@ -379,9 +355,7 @@ class MilvusVectorStore(Milvus_VectorStore):
                 is_primary=True,
                 max_length=65535,
             )
-            schema.add_field(
-                field_name="doc", datatype=DataType.VARCHAR, max_length=65535
-            )
+            schema.add_field(field_name="doc", datatype=DataType.VARCHAR, max_length=65535)
             schema.add_field(
                 field_name="vector",
                 datatype=DataType.FLOAT_VECTOR,
@@ -389,9 +363,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             )
 
             index_params = MilvusClient.prepare_index_params()
-            index_params.add_index(
-                field_name="vector", index_type="AUTOINDEX", metric_type="L2"
-            )
+            index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
             self.milvus_client.create_collection(
                 collection_name=name,
                 schema=schema,
@@ -419,7 +391,9 @@ class MilvusVectorStore(Milvus_VectorStore):
         embedding = self.embedder.embed_documents([ddl])[0]
         self.milvus_client.insert(
             collection_name=self.ddl_collection,
-            data={"id": _id, "ddl": ddl, "vector": embedding},
+            data={
+                "id": _id, "ddl": ddl, "vector": embedding
+            },
         )
         return _id
 
@@ -432,7 +406,9 @@ class MilvusVectorStore(Milvus_VectorStore):
         embedding = self.embedder.embed_documents([documentation])[0]
         self.milvus_client.insert(
             collection_name=self.doc_collection,
-            data={"id": _id, "doc": documentation, "vector": embedding},
+            data={
+                "id": _id, "doc": documentation, "vector": embedding
+            },
         )
         return _id
 
@@ -495,47 +471,35 @@ class MilvusVectorStore(Milvus_VectorStore):
         df = pd.DataFrame()
 
         # Get SQL data
-        sql_data = self.milvus_client.query(
-            collection_name=self.sql_collection, output_fields=["*"], limit=1000
-        )
+        sql_data = self.milvus_client.query(collection_name=self.sql_collection, output_fields=["*"], limit=1000)
         if sql_data:
-            df_sql = pd.DataFrame(
-                {
-                    "id": [doc["id"] for doc in sql_data],
-                    "question": [doc["text"] for doc in sql_data],
-                    "content": [doc["sql"] for doc in sql_data],
-                }
-            )
+            df_sql = pd.DataFrame({
+                "id": [doc["id"] for doc in sql_data],
+                "question": [doc["text"] for doc in sql_data],
+                "content": [doc["sql"] for doc in sql_data],
+            })
             df_sql["training_data_type"] = "sql"
             df = pd.concat([df, df_sql])
 
         # Get DDL data
-        ddl_data = self.milvus_client.query(
-            collection_name=self.ddl_collection, output_fields=["*"], limit=1000
-        )
+        ddl_data = self.milvus_client.query(collection_name=self.ddl_collection, output_fields=["*"], limit=1000)
         if ddl_data:
-            df_ddl = pd.DataFrame(
-                {
-                    "id": [doc["id"] for doc in ddl_data],
-                    "question": [None for doc in ddl_data],
-                    "content": [doc["ddl"] for doc in ddl_data],
-                }
-            )
+            df_ddl = pd.DataFrame({
+                "id": [doc["id"] for doc in ddl_data],
+                "question": [None for doc in ddl_data],
+                "content": [doc["ddl"] for doc in ddl_data],
+            })
             df_ddl["training_data_type"] = "ddl"
             df = pd.concat([df, df_ddl])
 
         # Get documentation data
-        doc_data = self.milvus_client.query(
-            collection_name=self.doc_collection, output_fields=["*"], limit=1000
-        )
+        doc_data = self.milvus_client.query(collection_name=self.doc_collection, output_fields=["*"], limit=1000)
         if doc_data:
-            df_doc = pd.DataFrame(
-                {
-                    "id": [doc["id"] for doc in doc_data],
-                    "question": [None for doc in doc_data],
-                    "content": [doc["doc"] for doc in doc_data],
-                }
-            )
+            df_doc = pd.DataFrame({
+                "id": [doc["id"] for doc in doc_data],
+                "question": [None for doc in doc_data],
+                "content": [doc["doc"] for doc in doc_data],
+            })
             df_doc["training_data_type"] = "documentation"
             df = pd.concat([df, df_doc])
 
@@ -635,10 +599,7 @@ class VannaLangChain(MilvusVectorStore, VannaLangChainLLM):
             explanation_text = None
 
         sql = self.extract_sql(sql_text)
-        return {
-            "sql": sql.replace("\\_", "_"),
-            "explanation": explanation_text
-        }
+        return {"sql": sql.replace("\\_", "_"), "explanation": explanation_text}
 
 
 class VannaSingleton:
@@ -778,11 +739,9 @@ async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
                 ddls.append(ddl)
 
         else:
-            error_msg = (
-                f"Auto-extraction of DDL is not implemented for dialect: {vn.dialect}. "
-                "Supported dialects: 'databricks', 'mysql', 'sqlite'. "
-                "Please either set auto_extract_ddl=False or use a supported dialect."
-            )
+            error_msg = (f"Auto-extraction of DDL is not implemented for dialect: {vn.dialect}. "
+                         "Supported dialects: 'databricks', 'mysql', 'sqlite'. "
+                         "Please either set auto_extract_ddl=False or use a supported dialect.")
             logger.error(error_msg)
             raise NotImplementedError(error_msg)
     else:
@@ -796,10 +755,7 @@ async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
         vn.train(documentation=doc)
 
     # Retrieve relevant context in parallel
-    retrieval_tasks = [
-        vn.get_related_record(vn.ddl_collection),
-        vn.get_related_record(vn.doc_collection)
-    ]
+    retrieval_tasks = [vn.get_related_record(vn.ddl_collection), vn.get_related_record(vn.doc_collection)]
 
     ddl_list, doc_list = await asyncio.gather(*retrieval_tasks)
 

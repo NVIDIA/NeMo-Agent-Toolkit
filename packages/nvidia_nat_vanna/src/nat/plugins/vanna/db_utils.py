@@ -17,7 +17,8 @@ import logging
 import re
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import Field
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +26,8 @@ logger = logging.getLogger(__name__)
 class QueryResult(BaseModel):
     """Result from executing a database query."""
 
-    results: list[tuple[Any, ...]] = Field(
-        description="List of tuples representing rows returned from the query"
-    )
-    column_names: list[str] = Field(
-        description="List of column names for the result set"
-    )
+    results: list[tuple[Any, ...]] = Field(description="List of tuples representing rows returned from the query")
+    column_names: list[str] = Field(description="List of column names for the result set")
 
     def to_dataframe(self) -> Any:
         """Convert query results to a pandas DataFrame."""
@@ -40,10 +37,7 @@ class QueryResult(BaseModel):
 
     def to_records(self) -> list[dict[str, Any]]:
         """Convert query results to a list of dictionaries."""
-        return [
-            dict(zip(self.column_names, row, strict=False))
-            for row in self.results
-        ]
+        return [dict(zip(self.column_names, row, strict=False)) for row in self.results]
 
     @property
     def row_count(self) -> int:
@@ -127,9 +121,7 @@ def extract_sql_from_message(sql_query: str | Any) -> str:
     return sql_query
 
 
-def connect_to_databricks(
-    server_hostname: str, http_path: str, access_token: str
-) -> Any:
+def connect_to_databricks(server_hostname: str, http_path: str, access_token: str) -> Any:
     """Connect to Databricks SQL Warehouse.
 
     Args:
@@ -190,7 +182,7 @@ def connect_to_database(
             access_token=kwargs.get("access_token", password),
         )
 
-    elif database_type == "postgres" or database_type == "postgresql":
+    elif database_type in {"postgres", "postgresql"}:
         try:
             import psycopg2
 
@@ -290,9 +282,7 @@ def execute_query(
             cursor.execute(query)
 
             results = cursor.fetchall()
-            columns = (
-                [desc[0] for desc in cursor.description] if cursor.description else []
-            )
+            columns = ([desc[0] for desc in cursor.description] if cursor.description else [])
 
             logger.info(f"Query completed, retrieved {len(results)} rows")
             return QueryResult(results=results, column_names=columns)
@@ -325,9 +315,7 @@ async def async_execute_query(
 
     # Run synchronous query in executor
     loop = asyncio.get_event_loop()
-    query_result = await loop.run_in_executor(
-        None, execute_query, connection, query, catalog, schema, database_type
-    )
+    query_result = await loop.run_in_executor(None, execute_query, connection, query, catalog, schema, database_type)
 
     return query_result.to_dataframe()
 
@@ -385,9 +373,7 @@ def setup_vanna_db_connection(
     async def run_sql(sql_query: str) -> pd.DataFrame:
         """Execute SQL asynchronously and return DataFrame."""
         try:
-            return await async_execute_query(
-                connection, sql_query, catalog, schema, database_type
-            )
+            return await async_execute_query(connection, sql_query, catalog, schema, database_type)
         except Exception as e:
             logger.error(f"Error executing SQL: {e}")
             raise
