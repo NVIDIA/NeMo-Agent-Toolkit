@@ -46,6 +46,7 @@ uv pip install -e '.[opentelemetry]'
 uv pip install -e '.[phoenix]'
 uv pip install -e '.[weave]'
 uv pip install -e '.[ragaai]'
+uv pip install -e '.[data-flywheel]'
 ```
 
 ## Configurable Components
@@ -105,6 +106,7 @@ Each exporter has its own detailed configuration guide with complete setup instr
 
 - **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
 - **Custom Exporters** - See [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
+- **[NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel)** - See [Observing with Data Flywheel](./observe-workflow-with-data-flywheel.md)
 - **[Dynatrace](https://dynatrace.com/)** - See [Observing with Dynatrace](./observe-workflow-with-dynatrace.md)
 - **File Export** - Built-in file-based tracing for local development and debugging
 - **[Galileo](https://galileo.ai/)** - See [Observing with Galileo](./observe-workflow-with-galileo.md)
@@ -158,6 +160,7 @@ For complete information about developing and integrating custom telemetry expor
 :caption: Observe Workflows
 
 Observing with Catalyst <./observe-workflow-with-catalyst.md>
+Observing with Data Flywheel <./observe-workflow-with-data-flywheel.md>
 Observing with Dynatrace <./observe-workflow-with-dynatrace.md>
 Observing with Galileo <./observe-workflow-with-galileo.md>
 Observing with OTEL Collector <./observe-workflow-with-otel-collector.md>
