@@ -1,13 +1,58 @@
-"""Database utilities for multi-database support.
-
-Supports Databricks, PostgreSQL, MySQL, and other databases.
-"""
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import logging
 import re
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 logger = logging.getLogger(__name__)
+
+
+class QueryResult(BaseModel):
+    """Result from executing a database query."""
+
+    results: list[tuple[Any, ...]] = Field(
+        description="List of tuples representing rows returned from the query"
+    )
+    column_names: list[str] = Field(
+        description="List of column names for the result set"
+    )
+
+    def to_dataframe(self) -> Any:
+        """Convert query results to a pandas DataFrame."""
+        import pandas as pd
+
+        return pd.DataFrame(self.results, columns=self.column_names)
+
+    def to_records(self) -> list[dict[str, Any]]:
+        """Convert query results to a list of dictionaries."""
+        return [
+            dict(zip(self.column_names, row, strict=False))
+            for row in self.results
+        ]
+
+    @property
+    def row_count(self) -> int:
+        """Get the number of rows in the result set.
+
+        Returns:
+            Number of rows
+        """
+        return len(self.results)
 
 
 def extract_sql_from_message(sql_query: str | Any) -> str:
@@ -80,46 +125,6 @@ def extract_sql_from_message(sql_query: str | Any) -> str:
             return match.group(1)
 
     return sql_query
-
-
-def add_table_prefix(sql_query: str, prefix: str = "") -> str:
-    """Add catalog.schema prefix to table names in SQL query.
-
-    Args:
-        sql_query: SQL query string
-        prefix: Prefix to add (e.g., 'catalog.schema')
-
-    Returns:
-        SQL query with prefixed table names
-    """
-    import sqlglot
-    from sqlglot.expressions import Table
-
-    if not prefix:
-        return sql_query
-
-    try:
-        # Parse SQL
-        parsed = sqlglot.parse_one(sql_query)
-
-        # Find all table references
-        for table in parsed.find_all(Table):
-            # Skip if table already has a catalog/schema prefix
-            if table.catalog or table.db:
-                continue
-
-            # Split prefix into catalog and schema
-            parts = prefix.split(".", 1)
-            if len(parts) == 2:
-                table.set("catalog", parts[0])
-                table.set("db", parts[1])
-            elif len(parts) == 1:
-                table.set("db", parts[0])
-
-        return parsed.sql()
-    except Exception as e:
-        logger.error(f"Error adding table prefix: {e}")
-        return sql_query
 
 
 def connect_to_databricks(
@@ -241,7 +246,7 @@ def execute_query(
     catalog: str | None = None,
     schema: str | None = None,
     database_type: str | None = None,
-) -> tuple[list[tuple[Any, ...]], list[str]]:
+) -> QueryResult:
     """Execute a query and return results.
 
     Args:
@@ -252,7 +257,7 @@ def execute_query(
         database_type: Type of database for proper catalog/schema handling
 
     Returns:
-        Tuple of (results, column_names)
+        QueryResult object containing results and column names
     """
     try:
         with connection.cursor() as cursor:
@@ -290,14 +295,14 @@ def execute_query(
             )
 
             logger.info(f"Query completed, retrieved {len(results)} rows")
-            return results, columns
+            return QueryResult(results=results, column_names=columns)
 
     except Exception as e:
         logger.error(f"Error executing query: {e}")
         raise
 
 
-async def async_query(
+async def async_execute_query(
     connection: Any,
     query: str,
     catalog: str | None = None,
@@ -318,15 +323,13 @@ async def async_query(
     """
     import asyncio
 
-    import pandas as pd
-
     # Run synchronous query in executor
     loop = asyncio.get_event_loop()
-    results, columns = await loop.run_in_executor(
+    query_result = await loop.run_in_executor(
         None, execute_query, connection, query, catalog, schema, database_type
     )
 
-    return pd.DataFrame(results, columns=columns)
+    return query_result.to_dataframe()
 
 
 def setup_vanna_db_connection(
@@ -382,7 +385,7 @@ def setup_vanna_db_connection(
     async def run_sql(sql_query: str) -> pd.DataFrame:
         """Execute SQL asynchronously and return DataFrame."""
         try:
-            return await async_query(
+            return await async_execute_query(
                 connection, sql_query, catalog, schema, database_type
             )
         except Exception as e:

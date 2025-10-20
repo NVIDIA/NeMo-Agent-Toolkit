@@ -30,10 +30,6 @@ from nat.plugins.vanna.db_schema import (
 
 logger = logging.getLogger(__name__)
 
-# Global instances for singleton pattern
-_vanna_instance = None
-_init_lock = None
-
 
 def extract_json_from_string(content: str) -> dict:
     """Extract JSON from a string that may contain additional content.
@@ -120,13 +116,8 @@ class VannaLangChainLLM(VannaBase):
 
         # Store configurable values
         self.milvus_search_limit = self.config.get("milvus_search_limit", 1000)
-        self.reasoning_models = self.config.get("reasoning_models", {
-            "nvidia/llama-3.1-nemotron-ultra-253b-v1",
-            "nvidia/llama-3.3-nemotron-super-49b-v1.5",
-            "deepseek-ai/deepseek-v3.1",
-            "deepseek-ai/deepseek-r1",
-        })
-        self.chat_models = self.config.get("chat_models", {"meta/llama-3.1-70b-instruct"})
+        self.reasoning_models = self.config["reasoning_models"]
+        self.chat_models = self.config["chat_models"]
 
     def system_message(self, message: str) -> dict:
         """Create system message."""
@@ -268,7 +259,6 @@ class MilvusVectorStore(Milvus_VectorStore):
             self.milvus_client = config["milvus_client"]
             self.async_milvus_client = config["async_milvus_client"]
             self.n_results = config.get("n_results", 5)
-            self._owns_sync_client = config.get("owns_sync_client", True)
 
             # Use configured embedder
             if config.get("embedder_client") is not None:
@@ -554,7 +544,6 @@ class MilvusVectorStore(Milvus_VectorStore):
     async def close(self):
         """Close Milvus client connections."""
         try:
-            # Close async client (always owned by us)
             if hasattr(self, 'async_milvus_client') and self.async_milvus_client is not None:
                 await self.async_milvus_client.close()
                 logger.info("Closed async Milvus client")
@@ -562,11 +551,9 @@ class MilvusVectorStore(Milvus_VectorStore):
             logger.warning(f"Error closing async Milvus client: {e}")
 
         try:
-            # Close sync client only if we own it
-            if hasattr(self, '_owns_sync_client') and self._owns_sync_client:
-                if hasattr(self, 'milvus_client') and self.milvus_client is not None:
-                    self.milvus_client.close()
-                    logger.info("Closed sync Milvus client")
+            if hasattr(self, 'milvus_client') and self.milvus_client is not None:
+                self.milvus_client.close()
+                logger.info("Closed sync Milvus client")
         except Exception as e:
             logger.warning(f"Error closing sync Milvus client: {e}")
 
@@ -654,114 +641,103 @@ class VannaLangChain(MilvusVectorStore, VannaLangChainLLM):
         }
 
 
-async def get_lock():
-    """Get or create the initialization lock."""
-    global _init_lock
-    if _init_lock is None:
-        _init_lock = asyncio.Lock()
-    return _init_lock
+class VannaSingleton:
+    """Singleton manager for Vanna instances."""
 
+    _instance: VannaLangChain | None = None
+    _lock: asyncio.Lock = asyncio.Lock()
 
-async def get_vanna_instance(
-    llm_client,
-    embedder_client,
-    milvus_client,
-    async_milvus_client,
-    dialect: str = "SQLite",
-    initial_prompt: str | None = None,
-    n_results: int = 5,
-    sql_collection: str = "vanna_sql",
-    ddl_collection: str = "vanna_ddl",
-    doc_collection: str = "vanna_documentation",
-    owns_sync_client: bool = True,
-    milvus_search_limit: int = 1000,
-    reasoning_models: set[str] | None = None,
-    chat_models: set[str] | None = None,
-) -> VannaLangChain:
-    """Get or create a singleton Vanna instance.
+    @classmethod
+    def instance(cls) -> VannaLangChain | None:
+        """Get current instance without creating one.
 
-    Args:
-        llm_client: LangChain LLM client for SQL generation
-        embedder_client: LangChain embedder for vector operations
-        milvus_client: Sync Milvus client
-        async_milvus_client: Async Milvus client
-        dialect: SQL dialect (e.g., 'databricks', 'postgres', 'mysql')
-        initial_prompt: Optional custom system prompt
-        n_results: Number of similar examples to retrieve
-        sql_collection: Collection name for SQL examples
-        ddl_collection: Collection name for DDL
-        doc_collection: Collection name for documentation
-        owns_sync_client: Whether we own the sync client for cleanup
-        milvus_search_limit: Maximum limit size for vector search operations
-        reasoning_models: Models requiring special handling for think tags
-        chat_models: Models using standard response handling
+        Returns:
+            Current Vanna instance or None if not initialized
+        """
+        return cls._instance
 
-    Returns:
-        Initialized Vanna instance
-    """
-    global _vanna_instance
+    @classmethod
+    async def get_instance(
+        cls,
+        llm_client,
+        embedder_client,
+        milvus_client,
+        async_milvus_client,
+        dialect: str = "SQLite",
+        initial_prompt: str | None = None,
+        n_results: int = 5,
+        sql_collection: str = "vanna_sql",
+        ddl_collection: str = "vanna_ddl",
+        doc_collection: str = "vanna_documentation",
+        milvus_search_limit: int = 1000,
+        reasoning_models: set[str] | None = None,
+        chat_models: set[str] | None = None,
+    ) -> VannaLangChain:
+        """Get or create a singleton Vanna instance.
 
-    logger.info("Setting up Vanna instance...")
+        Args:
+            llm_client: LangChain LLM client for SQL generation
+            embedder_client: LangChain embedder for vector operations
+            milvus_client: Sync Milvus client
+            async_milvus_client: Async Milvus client
+            dialect: SQL dialect (e.g., 'databricks', 'postgres', 'mysql')
+            initial_prompt: Optional custom system prompt
+            n_results: Number of similar examples to retrieve
+            sql_collection: Collection name for SQL examples
+            ddl_collection: Collection name for DDL
+            doc_collection: Collection name for documentation
+            milvus_search_limit: Maximum limit size for vector search operations
+            reasoning_models: Models requiring special handling for think tags (defaults handled by VannaLangChainLLM)
+            chat_models: Models using standard response handling (defaults handled by VannaLangChainLLM)
 
-    # Fast path - return existing instance
-    if _vanna_instance is not None:
-        logger.info("Vanna instance already exists")
-        return _vanna_instance
+        Returns:
+            Initialized Vanna instance
+        """
+        logger.info("Setting up Vanna instance...")
 
-    # Slow path - create new instance
-    init_lock = await get_lock()
-    async with init_lock:
-        # Double check after acquiring lock
-        if _vanna_instance is not None:
+        # Fast path - return existing instance
+        if cls._instance is not None:
             logger.info("Vanna instance already exists")
-            return _vanna_instance
+            return cls._instance
 
-        # Set default values for model sets if not provided
-        if reasoning_models is None:
-            reasoning_models = {
-                "nvidia/llama-3.1-nemotron-ultra-253b-v1",
-                "nvidia/llama-3.3-nemotron-super-49b-v1.5",
-                "deepseek-ai/deepseek-v3.1",
-                "deepseek-ai/deepseek-r1",
+        # Slow path - create new instance
+        async with cls._lock:
+            # Double check after acquiring lock
+            if cls._instance is not None:
+                logger.info("Vanna instance already exists")
+                return cls._instance
+
+            config = {
+                "milvus_client": milvus_client,
+                "async_milvus_client": async_milvus_client,
+                "embedder_client": embedder_client,
+                "dialect": dialect,
+                "initial_prompt": initial_prompt,
+                "n_results": n_results,
+                "sql_collection": sql_collection,
+                "ddl_collection": ddl_collection,
+                "doc_collection": doc_collection,
+                "milvus_search_limit": milvus_search_limit,
+                "reasoning_models": reasoning_models,
+                "chat_models": chat_models,
             }
-        if chat_models is None:
-            chat_models = {"meta/llama-3.1-70b-instruct"}
 
-        config = {
-            "milvus_client": milvus_client,
-            "async_milvus_client": async_milvus_client,
-            "embedder_client": embedder_client,
-            "dialect": dialect,
-            "initial_prompt": initial_prompt,
-            "n_results": n_results,
-            "sql_collection": sql_collection,
-            "ddl_collection": ddl_collection,
-            "doc_collection": doc_collection,
-            "owns_sync_client": owns_sync_client,
-            "milvus_search_limit": milvus_search_limit,
-            "reasoning_models": reasoning_models,
-            "chat_models": chat_models,
-        }
+            logger.info(f"Creating new Vanna instance with LangChain (dialect: {dialect})")
+            cls._instance = VannaLangChain(client=llm_client, config=config)
+            return cls._instance
 
-        logger.info(f"Creating new Vanna instance with LangChain (dialect: {dialect})")
-        vn = VannaLangChain(client=llm_client, config=config)
+    @classmethod
+    async def reset(cls):
+        """Reset the singleton Vanna instance.
 
-        _vanna_instance = vn
-        return _vanna_instance
-
-
-async def reset_vanna_instance():
-    """Reset the singleton Vanna instance.
-
-    Useful for testing or when configuration changes.
-    """
-    global _vanna_instance
-    if _vanna_instance is not None:
-        try:
-            await _vanna_instance.close()
-        except Exception as e:
-            logger.warning(f"Error closing Vanna instance: {e}")
-    _vanna_instance = None
+        Useful for testing or when configuration changes.
+        """
+        if cls._instance is not None:
+            try:
+                await cls._instance.close()
+            except Exception as e:
+                logger.warning(f"Error closing Vanna instance: {e}")
+        cls._instance = None
 
 
 async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
