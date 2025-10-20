@@ -1,9 +1,22 @@
-"""Text-to-SQL function for NeMo Agent Toolkit with Vanna integration."""
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import logging
 import uuid
 from collections.abc import AsyncGenerator
-from typing import Any
+from pydantic import BaseModel, Field
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -12,7 +25,7 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.component_ref import EmbedderRef, LLMRef, RetrieverRef
 from nat.data_models.function import FunctionBaseConfig
-from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +42,9 @@ class Text2SQLOutput(BaseModel):
 
 
 class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
-    """Text2SQL configuration with Vanna integration."""
-
-    _type: str = "text2sql"
+    """
+    Text2SQL configuration with Vanna integration.
+    """
 
     # LLM and Embedder
     llm_name: LLMRef = Field(description="LLM for SQL generation")
@@ -70,6 +83,10 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     milvus_user: str | None = Field(default=None, description="Milvus username")
     milvus_password: str | None = Field(default=None, description="Milvus password")
     milvus_db_name: str | None = Field(default=None, description="Milvus database")
+    milvus_search_limit: int = Field(
+        default=1000,
+        description="Maximum limit size for vector search operations in Milvus"
+    )
 
     # Vanna configuration
     allow_llm_to_see_data: bool = Field(
@@ -93,6 +110,22 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     )
     doc_collection: str = Field(
         default="vanna_documentation", description="Milvus collection for docs"
+    )
+
+    # Model-specific configuration
+    reasoning_models: set[str] = Field(
+        default={
+            "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+            "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+            "deepseek-ai/deepseek-v3.1",
+            "deepseek-ai/deepseek-r1",
+        },
+        description="Models that require special handling for think tags removal and JSON extraction"
+    )
+
+    chat_models: set[str] = Field(
+        default={"meta/llama-3.1-70b-instruct"},
+        description="Models using standard response handling without think tags"
     )
 
 
@@ -165,6 +198,9 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         ddl_collection=config.ddl_collection,
         doc_collection=config.doc_collection,
         owns_sync_client=owns_sync_client,
+        milvus_search_limit=config.milvus_search_limit,
+        reasoning_models=config.reasoning_models,
+        chat_models=config.chat_models,
     )
 
     # Setup database connection
