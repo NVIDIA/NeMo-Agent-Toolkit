@@ -213,3 +213,5 @@ async def test_full_workflow(milvus_uri: str) -> None:
 ```
 
 Of note here is that an additional fixture `populate_milvus` is used to ensure that the Milvus instance is populated with test data before this test is run. Additionally the `examples/custom_functions/automated_description_generation/configs/config.yml` configuration file specifies a Milvus URL of `http://localhost:19530`, which is replaced at runtime with the actual URL provided by the `milvus_uri` fixture. This allows the test to run against a Milvus instance running in a different environment if needed.
+
+Finally the new service should be added to the Docker Compose YAML file located at `tests/test_data/docker-compose.services.yml` to allow easy startup of the service when running integration tests locally.
