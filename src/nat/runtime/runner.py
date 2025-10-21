@@ -170,7 +170,8 @@ class Runner:
                     IntermediateStepPayload(UUID=workflow_step_uuid,
                                             event_type=IntermediateStepType.WORKFLOW_START,
                                             name=workflow_name,
-                                            metadata=start_metadata))
+                                            metadata=start_metadata,
+                                            data=StreamEventData(input=self._input_message)))
 
                 result = await self._entry_fn.ainvoke(self._input_message, to_type=to_type)  # type: ignore
 
@@ -249,7 +250,8 @@ class Runner:
                     IntermediateStepPayload(UUID=workflow_step_uuid,
                                             event_type=IntermediateStepType.WORKFLOW_START,
                                             name=workflow_name,
-                                            metadata=start_metadata))
+                                            metadata=start_metadata,
+                                            data=StreamEventData(input=self._input_message)))
 
                 async for m in self._entry_fn.astream(self._input_message, to_type=to_type):  # type: ignore
                     yield m
