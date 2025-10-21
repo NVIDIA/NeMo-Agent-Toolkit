@@ -17,6 +17,7 @@ import json
 import random
 import time
 import types
+import typing
 from collections.abc import Generator
 from pathlib import Path
 
@@ -24,6 +25,9 @@ import pytest
 
 from nat.runtime.loader import load_config
 from nat.test.utils import run_workflow
+
+if typing.TYPE_CHECKING:
+    from weave.trace.weave_client import WeaveClient
 
 
 @pytest.fixture(name="config_dir", scope="session")
@@ -59,17 +63,23 @@ def weave_identifier_fixture() -> str:
 
 
 @pytest.fixture(name="weave_project_name")
-def fixture_weave_project_name(weave: types.ModuleType,
-                               wandb_api_key: str,
-                               weave_attribute_key: str,
-                               weave_identifier: str) -> Generator[str]:
-    project_name = "weave_test_e2e"
-    client = weave.init(project_name)
-    yield project_name
+def fixture_weave_project_name() -> str:
+    return "weave_test_e2e"
+
+
+@pytest.fixture(name="weave_query")
+def fixture_weave_query(weave_attribute_key: str, weave_identifier: str) -> dict:
+    return {"$expr": {"$eq": [{"$getField": f"attributes.{weave_attribute_key}"}, {"$literal": weave_identifier}]}}
+
+
+@pytest.fixture(name="weave_client")
+def fixture_weave_client(weave: types.ModuleType, weave_project_name: str, wandb_api_key: str,
+                         weave_query: dict) -> "Generator[WeaveClient]":
+    client = weave.init(weave_project_name)
+    yield client
 
     client.flush()
-    query = {"$expr": {"$eq": [{"$getField": f"attributes.{weave_attribute_key}"}, {"$literal": weave_identifier}]}}
-    calls = client.get_calls(query=query)
+    calls = client.get_calls(query=weave_query)
     call_ids = [c.id for c in calls]
     if len(call_ids) > 0:
         client.delete_calls(call_ids)
@@ -81,14 +91,23 @@ async def test_weave_full_workflow(config_dir: Path,
                                    weave_project_name: str,
                                    weave_attribute_key: str,
                                    weave_identifier: str,
+                                   weave_client: "WeaveClient",
+                                   weave_query: dict,
                                    question: str,
                                    expected_answer: str):
     config_file = config_dir / "config-weave.yml"
     config = load_config(config_file)
     config.general.telemetry.tracing["weave"].project = weave_project_name
-    config.general.telemetry.tracing["weave"].attributes = {weave_attribute_key: weave_identifier}
+    config.general.telemetry.tracing["weave"].attributes = {weave_attribute_key: weave_identifier, "other_attr": 123}
 
     await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+    weave_client.flush()
+    calls = weave_client.get_calls(query=weave_query)
+    assert len(calls) > 0
+    for call in calls:
+        assert call.attributes is not None
+        assert call.attributes.get("other_attr") == 123
 
 
 @pytest.mark.integration
