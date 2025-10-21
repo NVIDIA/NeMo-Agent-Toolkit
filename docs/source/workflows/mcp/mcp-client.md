@@ -72,7 +72,7 @@ A tool within a function group can also be referenced by its name using the foll
 :::{note}
 This requires that the tool name is explicitly listed under the optional `include` list of the function group configuration.
 
-See [../../function-groups.md#understanding-function-accessibility](Function Group Accessiblity] for more details.
+See [Function Group Accessiblity](../function-groups.md#understanding-function-accessibility) for more details.
 :::
 Example:
 ```yaml
