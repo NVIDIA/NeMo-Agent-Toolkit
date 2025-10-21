@@ -354,7 +354,17 @@ This model defines a single metric to be used in the optimization.
 -   `direction: str`: The direction of optimization. Must be either `maximize` or `minimize`.
 -   `weight: float`: The weight of this metric in the multi-objective optimization. The weights will be normalized. Defaults to `1.0`.
 
-## Understanding Genetic Algorithm Terminology
+
+### How Genetic Prompt Optimization Works in Practice
+
+1. Start with an initial population of prompt variations
+2. Evaluate each prompt's performance using your metrics
+3. Select the best performers as parents
+4. Create new prompts through mutation and crossover
+5. Replace the old population with the new one
+6. Repeat until you find optimal prompts
+
+This evolutionary approach is particularly effective for prompt optimization because it can explore creative combinations while gradually improving performance.
 
 Before diving into prompt optimization, let's clarify the genetic algorithm (GA) terminology used throughout this guide. Genetic algorithms are inspired by natural evolution and use biological metaphors:
 
@@ -382,17 +392,6 @@ Before diving into prompt optimization, let's clarify the genetic algorithm (GA)
 - **Tournament Selection**: Randomly select a small group and choose the best performer
 - **Roulette Selection**: Select individuals with probability proportional to their fitness
 
-### How It Works in Practice
-
-1. Start with an initial population of prompt variations
-2. Evaluate each prompt's performance using your metrics
-3. Select the best performers as parents
-4. Create new prompts through mutation and crossover
-5. Replace the old population with the new one
-6. Repeat until you find optimal prompts
-
-This evolutionary approach is particularly effective for prompt optimization because it can explore creative combinations while gradually improving performance.
-
 ## Prompt Optimization with Genetic Algorithm (GA)
 
 This section explains how the GA evolves prompt parameters when `do_prompt_optimization` is enabled.
@@ -415,14 +414,36 @@ This section explains how the GA evolves prompt parameters when `do_prompt_optim
 
 All LLM calls and evaluations are executed asynchronously with a concurrency limit of `ga_parallel_evaluations`.
 
-### Tuning Guidance
+---
 
-- Population and generations (`ga_population_size`, `ga_generations`): increase to explore more of the search space at higher cost.
-- Crossover (`ga_crossover_rate`) and mutation (`ga_mutation_rate`): higher mutation increases exploration; higher crossover helps combine good parts of prompts.
-- Elitism (`ga_elitism`): preserves top performers; too high can reduce diversity.
-- Selection (`ga_selection_method`, `ga_tournament_size`): tournament is robust; larger tournaments increase selection pressure.
-- Diversity (`ga_diversity_lambda`): penalizes duplicate prompt sets to encourage variety.
-- Concurrency (`ga_parallel_evaluations`): tune based on your environment to balance throughput and rate limits.
+> ### 🎯 Tuning Guidance
+>
+> **Population and Generations**
+> - `ga_population_size`, `ga_generations`: Increase to explore more of the search space at higher cost.
+> - **Tip**: Start with 10-16 population size and 5-8 generations for quick testing.
+>
+> **Crossover and Mutation**
+> - `ga_crossover_rate`: Higher crossover helps combine good parts of prompts.
+> - `ga_mutation_rate`: Higher mutation increases exploration.
+> - **Tip**: Use 0.7 for crossover and 0.2 for mutation as balanced starting points.
+>
+> **Elitism**
+> - `ga_elitism`: Preserves top performers; too high can reduce diversity.
+> - **Tip**: Keep at 1-2 for most cases.
+>
+> **Selection Method**
+> - `ga_selection_method`, `ga_tournament_size`: Tournament is robust; larger tournaments increase selection pressure.
+> - **Tip**: Use tournament selection with size 3 for balanced exploration.
+>
+> **Diversity**
+> - `ga_diversity_lambda`: Penalizes duplicate prompt sets to encourage variety.
+> - **Tip**: Start at 0.0, increase to 0.2 if seeing too many similar prompts.
+>
+> **Concurrency**
+> - `ga_parallel_evaluations`: Tune based on your environment to balance throughput and rate limits.
+> - **Tip**: Start with 8 and increase until hitting rate limits.
+
+---
 
 ### Outputs
 
