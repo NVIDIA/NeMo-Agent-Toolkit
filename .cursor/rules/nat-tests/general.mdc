@@ -3,6 +3,7 @@ description: Follow these rules when the user's request involves writing, creati
 globs:
 alwaysApply: false
 ---
+
 # Testing Guidelines for NeMo Agent Toolkit
 
 Follow these rules when writing, creating, or modifying tests for NeMo Agent toolkit.
@@ -10,7 +11,8 @@ Follow these rules when writing, creating, or modifying tests for NeMo Agent too
 ## Referenced Documentation
 
 - **Running Tests Guide**: [running-tests.md](mdc:docs/source/resources/running-tests.md) - Complete guide for running unit and integration tests
-- **Test Utilities**: [plugin.py](mdc:packages/nvidia_nat_test/src/nat/test/plugin.py) - Test fixtures and utilities
+- **Test Fixtures**: [plugin.py](mdc:packages/nvidia_nat_test/src/nat/test/plugin.py) - Test fixtures
+- **Test Utilities**: [utils.py](mdc:packages/nvidia_nat_test/src/nat/test/utils.py) - Test utilities
 - **Docker Services**: [docker-compose.services.yml](mdc:tests/test_data/docker-compose.services.yml) - Services for integration testing
 
 ## General Testing Rules
@@ -32,6 +34,7 @@ For workflows that require actual LLM services or external services, follow the 
 **See**: [Integration Testing Guidelines](mdc:.cursor/rules/nat-tests/integration-tests.mdc)
 
 Key requirements:
+
 - Use `@pytest.mark.slow` and `@pytest.mark.integration` decorators
 - Use API key fixtures from `nvidia-nat-test` package
 - Use `locate_example_config()` and `run_workflow()` utilities
@@ -44,27 +47,11 @@ For deterministic testing without requiring actual LLM API calls, use the `nat_t
 **See**: [Test LLM Guidelines](mdc:.cursor/rules/nat-tests/nat-test-llm.mdc)
 
 Key features:
+
 - Stub LLM responses with predictable sequences
 - No API keys or external services required
 - Configurable artificial latency for testing timing scenarios
 - Works with all framework wrappers (LangChain, LlamaIndex, CrewAI, etc.)
-
-
-### Test Organization
-
-```
-example_workflow/
-├── src/
-│   └── workflow_package/
-│       ├── __init__.py
-│       └── register.py
-├── configs/
-│   └── config.yml
-├── tests/
-│   ├── __init__.py
-│   └── test_workflow.py
-└── pyproject.toml
-```
 
 ### Running Tests
 
@@ -80,9 +67,6 @@ pytest --run_integration
 
 # All tests
 pytest --run_slow --run_integration
-
-# Fail instead of skip when services unavailable
-pytest --fail_missing
 ```
 
 ## Related Rules
@@ -94,16 +78,19 @@ pytest --fail_missing
 ## Quick Reference
 
 ### Test Decorators
+
 - `@pytest.mark.slow` - Tests taking >30 seconds
 - `@pytest.mark.integration` - Tests requiring external services
-- `@pytest.mark.usefixtures("api_key_name")` - Required fixtures
+- `@pytest.mark.usefixtures("api_key_name")` - Test requires a specific API key to be set in the environment
 
 ### Test Utilities
+
 - `locate_example_config(ConfigClass)` - Find config files
 - `run_workflow(config_file, question, expected_answer)` - Run and validate workflows
 - `load_config(config_file)` - Load configuration objects
 
 ### Available Fixtures
+
 **API Keys**: `nvidia_api_key`, `openai_api_key`, `tavily_api_key`, `mem0_api_key`
 
 **Services**: `milvus_uri`, `redis_url`, `mysql_connection_info`, `phoenix_url`
@@ -111,5 +98,6 @@ pytest --fail_missing
 **Directories**: `root_repo_dir`, `examples_dir` (NAT repo only)
 
 ### Test LLM
+
 - `_type: nat_test_llm` - Use in YAML configs to stub LLM responses
 - `TestLLMConfig(response_seq=[...], delay_ms=0)` - Programmatic test LLM configuration
