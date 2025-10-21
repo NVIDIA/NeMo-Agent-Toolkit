@@ -184,7 +184,7 @@ def milvus_uri_fixture(etcd_url: str, fail_missing: bool = False) -> str:
         pytest.skip(reason=reason)
 ```
 
-The above fixture is scoped to the session, ensuring it will only be run once per test session. The `pymilvus` library is imported lazily within the body of the fixture, this avoids unessasary imports to be performed during test collection. This is especially immportant in this case as the `pymilvus` library is an optional dependency of NeMo Agent toolkit, and may not be installed in all environments. Since the import is performed within a try/except block, if the library is not installed the test will be skipped (unless the user also ran pytest with the `--fail_missing` flag).
+The above fixture is scoped to the session, ensuring it will only be run once per test session. The `pymilvus` library is imported lazily within the body of the fixture, this avoids unnecessary imports to be performed during test collection. This is especially important in this case as the `pymilvus` library is an optional dependency of NeMo Agent toolkit, and may not be installed in all environments. Since the import is performed within a try/except block, if the library is not installed the test will be skipped (unless the user also ran pytest with the `--fail_missing` flag).
 
 Of note is that the host and port of the service can be configured via environment variables, this allows the test to connect to services running in different environments.
 
