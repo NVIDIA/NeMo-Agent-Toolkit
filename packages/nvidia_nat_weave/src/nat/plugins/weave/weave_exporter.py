@@ -23,6 +23,7 @@ from nat.data_models.span import Span
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.utils.log_utils import LogFilter
+from nat.utils.string_utils import truncate_string
 from nat.utils.type_utils import override
 from weave.trace.context import weave_client_context
 from weave.trace.context.call_context import get_current_call
@@ -198,7 +199,7 @@ class WeaveExporter(SpanExporter[Span, Span]):
         # Handle direct "choices" attribute (non-streaming: output.choices[0].message.content)
         choices = getattr(output_data, 'choices', None)
         if choices:
-            outputs["output_message"] = choices[0].message.content
+            outputs["output_message"] = truncate_string(choices[0].message.content)
             return
 
         # Handle list-based output (streaming or websocket) – content may be in the following formats:
@@ -214,13 +215,13 @@ class WeaveExporter(SpanExporter[Span, Span]):
             delta = getattr(choices[0], 'delta', None)
 
             if message:
-                outputs["output_message"] = getattr(message, 'content', None)
+                outputs["output_message"] = truncate_string(getattr(message, 'content', None))
             elif delta:
-                outputs["output_preview"] = getattr(delta, 'content', None)
+                outputs["output_preview"] = truncate_string(getattr(delta, 'content', None))
         else:
             value = getattr(output_data[0], 'value', None)
             if value:
-                outputs["output_preview"] = value
+                outputs["output_preview"] = truncate_string(str(value))
 
     def _finish_weave_call(self, step: IntermediateStep) -> None:
         """
