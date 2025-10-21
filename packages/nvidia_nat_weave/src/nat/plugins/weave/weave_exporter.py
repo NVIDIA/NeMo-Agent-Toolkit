@@ -16,6 +16,7 @@
 import logging
 from collections.abc import Generator
 from contextlib import contextmanager
+from typing import Any
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.span import Span
@@ -186,6 +187,41 @@ class WeaveExporter(SpanExporter[Span, Span]):
 
         return call
 
+    def _extract_output_message(self, output_data: Any, outputs: dict[str, Any]) -> None:
+        """
+        Extract message content from various response formats and add to outputs dictionary.
+
+        Args:
+            output_data: The raw output data from the response
+            outputs: Dictionary to populate with extracted message content
+        """
+        # Handle direct "choices" attribute (non-streaming: output.choices[0].message.content)
+        choices = getattr(output_data, 'choices', None)
+        if choices:
+            outputs["output_message"] = choices[0].message.content
+            return
+
+        # Handle list-based output (streaming or websocket) – content may be in the following formats:
+        # output[0].choices[0].message.content
+        # output[0].choices[0].delta.content
+        # output[0].value
+        if not isinstance(output_data, list) or not output_data:
+            return
+
+        choices = getattr(output_data[0], 'choices', None)
+        if choices:
+            message = getattr(choices[0], 'message', None)
+            delta = getattr(choices[0], 'delta', None)
+
+            if message:
+                outputs["output_message"] = getattr(message, 'content', None)
+            elif delta:
+                outputs["output_preview"] = getattr(delta, 'content', None)
+        else:
+            value = getattr(output_data[0], 'value', None)
+            if value:
+                outputs["output_preview"] = value
+
     def _finish_weave_call(self, step: IntermediateStep) -> None:
         """
         Finish a previously created Weave call.
@@ -206,33 +242,7 @@ class WeaveExporter(SpanExporter[Span, Span]):
             try:
                 # Add the output to the Weave call
                 outputs["output"] = step.payload.data.output
-
-                # Extract message content based on response format
-                # Non-streaming: output.choices[0].message.content
-                choices = getattr(step.payload.data.output, 'choices', None)
-                if choices:
-                    outputs["output_message"] = choices[0].message.content
-                # List format (websocket/streaming):
-                # output[0].choices[0].message.content or
-                # output[0].choices[0].delta.content
-                elif isinstance(step.payload.data.output, list) and len(step.payload.data.output) > 0:
-                    first_item = step.payload.data.output[0]
-                    choices = getattr(first_item, 'choices', None)
-                    if choices and len(choices) > 0:
-                        # Try websocket format: choices[0].message.content
-                        message = getattr(choices[0], 'message', None)
-                        if message:
-                            outputs["output_message"] = getattr(message, 'content', None)
-                        # Try streaming format: choices[0].delta.content
-                        else:
-                            delta = getattr(choices[0], 'delta', None)
-                            if delta:
-                                outputs["output_preview"] = getattr(delta, 'content', None)
-                    # Generate endpoint: output[0].value
-                    else:
-                        value = getattr(first_item, 'value', None)
-                        if value:
-                            outputs["output_preview"] = value
+                self._extract_output_message(step.payload.data.output, outputs)
             except Exception:
                 # If serialization fails, use string representation
                 outputs["output"] = str(step.payload.data.output)
