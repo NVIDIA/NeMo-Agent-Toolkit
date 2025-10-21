@@ -43,7 +43,7 @@ from . import utils
 # Import custom evaluator
 from .classification_evaluator import register_classification_evaluator
 from .prompts import ALERT_TRIAGE_AGENT_PROMPT
-from .optimizer_prompt import OptimizerPrompts
+from .optimizer_prompts import OptimizerPrompts
 
 
 class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agent"):
