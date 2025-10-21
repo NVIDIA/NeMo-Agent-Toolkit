@@ -13,29 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-from pathlib import Path
-
 import pytest
-
-from nat.runtime.loader import load_workflow
-from nat.test.utils import locate_example_config
-from nat_multi_frameworks.register import MultiFrameworksWorkflowConfig
-
-logger = logging.getLogger(__name__)
 
 
 @pytest.mark.usefixtures("nvidia_api_key")
 @pytest.mark.integration
 async def test_full_workflow():
+    from nat.test.utils import locate_example_config
+    from nat.test.utils import run_workflow
+    from nat_multi_frameworks.register import MultiFrameworksWorkflowConfig
 
-    config_file: Path = locate_example_config(MultiFrameworksWorkflowConfig)
+    config_file = locate_example_config(MultiFrameworksWorkflowConfig)
 
-    async with load_workflow(config_file) as workflow:
-
-        async with workflow.run("tell me about this workflow") as runner:
-
-            result = await runner.result(to_type=str)
-
-        result = result.lower()
-        assert "workflow" in result
+    await run_workflow(config_file=config_file, question="tell me about this workflow", expected_answer="workflow")
