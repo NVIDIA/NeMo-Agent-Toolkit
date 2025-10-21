@@ -310,8 +310,8 @@ def env_without_nat_log_level_fixture() -> dict[str, str]:
     return env
 
 
-@pytest.fixture(name="require_etcd", scope="session")
-def require_etcd_fixture(fail_missing: bool = False) -> bool:
+@pytest.fixture(name="etcd_url", scope="session")
+def etcd_url_fixture(fail_missing: bool = False) -> str:
     """
     To run these tests, an etcd server must be running
     """
@@ -319,21 +319,22 @@ def require_etcd_fixture(fail_missing: bool = False) -> bool:
 
     host = os.getenv("NAT_CI_ETCD_HOST", "localhost")
     port = os.getenv("NAT_CI_ETCD_PORT", "2379")
-    health_url = f"http://{host}:{port}/health"
+    url = f"http://{host}:{port}"
+    health_url = f"{url}/health"
 
     try:
         response = requests.get(health_url, timeout=5)
         response.raise_for_status()
-        return True
+        return url
     except:  # noqa: E722
-        failure_reason = f"Unable to connect to etcd server at {health_url}"
+        failure_reason = f"Unable to connect to etcd server at {url}"
         if fail_missing:
             raise RuntimeError(failure_reason)
         pytest.skip(reason=failure_reason)
 
 
 @pytest.fixture(name="milvus_uri", scope="session")
-def milvus_uri_fixture(require_etcd: bool, fail_missing: bool = False) -> str:
+def milvus_uri_fixture(etcd_url: str, fail_missing: bool = False) -> str:
     """
     To run these tests, a Milvus server must be running
     """
