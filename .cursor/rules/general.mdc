@@ -110,6 +110,7 @@ These are the overarching standards that every **source, test, documentation and
 - Maintain **≥ 80 %** coverage; add or update tests when introducing changes.
 - Mock external services with `pytest_httpserver` or `unittest.mock` instead of hitting live endpoints.
 - Mark expensive tests with `@pytest.mark.slow` or `@pytest.mark.integration` so they can be skipped in the default test suite.
+- **Integration tests**: For workflows requiring LLM services or external services, follow the integration testing guidelines in the nat-tests rules.
 
 ## Security
 
