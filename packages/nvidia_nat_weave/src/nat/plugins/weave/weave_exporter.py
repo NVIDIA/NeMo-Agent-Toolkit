@@ -146,9 +146,9 @@ class WeaveExporter(SpanExporter[Span, Span]):
         # Generate a meaningful operation name based on event type
         event_type = step.payload.event_type.split(".")[-1]
         if step.payload.name:
-            op_name = f"aiq.{event_type}.{step.payload.name}"
+            op_name = f"nat.{event_type}.{step.payload.name}"
         else:
-            op_name = f"aiq.{event_type}"
+            op_name = f"nat.{event_type}"
 
         # Create input dictionary
         inputs = {}
