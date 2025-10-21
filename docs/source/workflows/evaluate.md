@@ -85,7 +85,7 @@ eval:
 The dataset section specifies the dataset to use for running the workflow. The dataset can be of type `json`, `jsonl`, `csv`, `xls`, or `parquet`. The dataset file path is specified using the `file_path` key.
 
 ## Evaluation outputs (what you will get)
-Running `nat eval` produces a set of artifacts in the configured output directory. These files fall into three groups: workflow outputs, evaluator outputs, and profiler/observability outputs.
+Running `nat eval` produces a set of artifacts in the configured output directory. These files fall into three groups: workflow outputs, evaluator outputs, and profiler observability outputs.
 
 ### Workflow outputs (always available)
 - `workflow_output.json`: Per-sample execution results including question, expected `answer`, `generated_answer`, and `intermediate_steps`. Use this to inspect or debug individual runs.
