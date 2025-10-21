@@ -130,7 +130,8 @@ Workflow Result:
 
 ## Optimization
 
-This example includes an optimization configuration that uses the NeMo Agent toolkit Optimizer to tune the workflow.
+This example includes an optimization configuration that uses the NeMo Agent toolkit Optimizer to tune the workflow. For detailed information 
+about the NeMo Agent Toolkit Optimizer, refer to the [Optimizer Documentation](../../../docs/source/reference/optimizer.md).
 
 ### What Is Being Optimized
 - **Tool parameters**: The `email_phishing_analyzer` exposes two optimizable fields on its config:
