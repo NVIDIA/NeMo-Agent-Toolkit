@@ -152,6 +152,11 @@ class WeaveExporter(SpanExporter[Span, Span]):
             try:
                 # Add the input to the Weave call
                 inputs["input"] = step.payload.data.input
+
+                # Extract message content if input has messages attribute
+                messages = getattr(step.payload.data.input, 'messages', [])
+                if messages:
+                    inputs["input_message"] = messages[0].content
             except Exception:
                 # If serialization fails, use string representation
                 inputs["input"] = str(step.payload.data.input)
@@ -196,6 +201,11 @@ class WeaveExporter(SpanExporter[Span, Span]):
             try:
                 # Add the output to the Weave call
                 outputs["output"] = step.payload.data.output
+
+                # Extract message content if output has choices attribute
+                choices = getattr(step.payload.data.output, 'choices', [])
+                if choices and hasattr(choices[0], 'message'):
+                    outputs["output_message"] = choices[0].message.content
             except Exception:
                 # If serialization fails, use string representation
                 outputs["output"] = str(step.payload.data.output)
