@@ -214,9 +214,15 @@ class WeaveExporter(SpanExporter[Span, Span]):
                     outputs["output_message"] = choices[0].message.content
                 # Streaming/websocket: output[0].choices[0].delta.content
                 else:
-                    choices_streaming = getattr(step.payload.data.output[0], 'choices', None)
-                    if choices_streaming:
-                        outputs["output_preview"] = choices_streaming[0].delta.content
+                    # Streaming/websocket: output[0].choices[0].delta.content
+                    choices = getattr(step.payload.data.output[0], 'choices', None)
+                    if choices:
+                        outputs["output_preview"] = choices[0].delta.content
+                    # Generate endpoint: output[0].value
+                    else:
+                        value = getattr(step.payload.data.output[0], 'value', None)
+                        if value:
+                            outputs["output_preview"] = value
             except Exception:
                 # If serialization fails, use string representation
                 outputs["output"] = str(step.payload.data.output)
