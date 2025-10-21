@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import json
+import random
+import time
 import types
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -46,17 +48,18 @@ def expected_answer_fixture() -> str:
 
 @pytest.fixture(name="weave_project_name", scope="module")
 async def fixture_weave_project_name(weave: types.ModuleType, wandb_api_key) -> AsyncGenerator[str]:
-    # This currently has the following problems:
-    # 1. Ideally we would create a new project for each test run to avoid conflicts, and then delete the project.
-    #    However, W&B does not currently support deleting projects via the API.
-    # 2. We don't have a way (that I know of) to identifiy traces from this specific test run, such that we only delete
-    #    those traces.
     project_name = "weave_test_e2e"
-    client = weave.init(project_name)
-    yield project_name
 
-    client.finish(use_progress_bar=False)
-    call_ids = [c.id for c in client.get_calls()]
+    # Create a unique identifier for this test run, and use it as an attribute on all traces
+    test_ident = f'test_run_{time.time()}_{random.random()}'
+    client = weave.init(project_name)
+    with weave.attributes({'test_run': test_ident}):
+        yield project_name
+
+    client.flush()
+    query = {"$expr": {"$eq": [{"$getField": "attributes.test_run"}, {"$literal": test_ident}]}}
+    calls = client.get_calls(query=query)
+    call_ids = [c.id for c in calls]
     if len(call_ids) > 0:
         client.delete_calls(call_ids)
 
