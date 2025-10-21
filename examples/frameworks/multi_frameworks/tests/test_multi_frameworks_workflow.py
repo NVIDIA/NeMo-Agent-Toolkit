@@ -16,8 +16,9 @@
 import pytest
 
 
-@pytest.mark.usefixtures("nvidia_api_key")
+@pytest.mark.slow
 @pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_full_workflow():
     from nat.test.utils import locate_example_config
     from nat.test.utils import run_workflow
