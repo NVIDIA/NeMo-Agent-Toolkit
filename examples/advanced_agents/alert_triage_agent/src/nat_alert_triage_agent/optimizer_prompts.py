@@ -12,6 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Prompt purpose descriptions for the alert triage agent's prompt optimizer.
+
+This module defines prompt purposes used by the optimizer to understand and improve
+system prompts for the alert triage workflow and its sub-agents.
+"""
+
 
 class OptimizerPrompts:
     """

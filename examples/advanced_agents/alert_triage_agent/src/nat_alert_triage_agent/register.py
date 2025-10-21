@@ -64,15 +64,13 @@ class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agen
     benign_fallback_data_path: str | None = Field(
         default="examples/advanced_agents/alert_triage_agent/data/benign_fallback_offline_data.json",
         description="Path to the JSON file with baseline/normal system behavior data")
-    agent_prompt: str = OptimizableField(
-        default=ALERT_TRIAGE_AGENT_PROMPT,
-        description="The system prompt to use for the alert triage agent.",
-        space=SearchSpace(
-            is_prompt=True,
-            prompt=ALERT_TRIAGE_AGENT_PROMPT,
-            prompt_purpose=OptimizerPrompts.AGENT_PROMPT_PURPOSE,
-        )
-    )
+    agent_prompt: str = OptimizableField(default=ALERT_TRIAGE_AGENT_PROMPT,
+                                         description="The system prompt to use for the alert triage agent.",
+                                         space=SearchSpace(
+                                             is_prompt=True,
+                                             prompt=ALERT_TRIAGE_AGENT_PROMPT,
+                                             prompt_purpose=OptimizerPrompts.AGENT_PROMPT_PURPOSE,
+                                         ))
 
 
 @register_function(config_type=AlertTriageAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])

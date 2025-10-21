@@ -23,24 +23,25 @@ from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import SearchSpace
+
 from . import utils
+from .optimizer_prompts import OptimizerPrompts
 from .prompts import TelemetryMetricsAnalysisAgentPrompts
-from .optimizer_prompt import OptimizerPrompts
+
 
 class TelemetryMetricsAnalysisAgentConfig(FunctionBaseConfig, name="telemetry_metrics_analysis_agent"):
     description: str = Field(default=TelemetryMetricsAnalysisAgentPrompts.TOOL_DESCRIPTION,
                              description="Description of the tool for the triage agent.")
-    tool_names: list[str] = []
+    tool_names: list[str] = Field(default_factory=list,
+                                  description="List of tool names to use for the telemetry metrics analysis agent.")
     llm_name: LLMRef
-    prompt: str = OptimizableField(
-        default=TelemetryMetricsAnalysisAgentPrompts.PROMPT,
-        description="The system prompt to use for the alert triage agent.",
-        space=SearchSpace(
-            is_prompt=True,
-            prompt=TelemetryMetricsAnalysisAgentPrompts.PROMPT,
-            prompt_purpose=OptimizerPrompts.TELEMETRY_AGENT_PROMPT_PURPOSE,
-        )
-    )
+    prompt: str = OptimizableField(default=TelemetryMetricsAnalysisAgentPrompts.PROMPT,
+                                   description="The system prompt to use for the alert triage agent.",
+                                   space=SearchSpace(
+                                       is_prompt=True,
+                                       prompt=TelemetryMetricsAnalysisAgentPrompts.PROMPT,
+                                       prompt_purpose=OptimizerPrompts.TELEMETRY_AGENT_PROMPT_PURPOSE,
+                                   ))
 
 
 @register_function(config_type=TelemetryMetricsAnalysisAgentConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
