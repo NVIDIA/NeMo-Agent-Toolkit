@@ -72,7 +72,7 @@ export AZURE_OPENAI_ENDPOINT="<your-custom-endpoint>"
 A Docker Compose YAML file is provided to start the required services located at `tests/test_data/docker-compose.services.yml`. The services at time of writing include Arize Phoenix, etcd, Milvus, MinIO, MySQL, OpenSearch, and Redis.
 
 ```bash
-# Creatge temporary passwords for the services
+# Create temporary passwords for the services
 function mk_pw() {
   pwgen -n 64 1
 }
