@@ -200,7 +200,10 @@ class WeaveExporter(SpanExporter[Span, Span]):
     def _extract_output_message(self, output_data: Any, outputs: dict[str, Any]) -> None:
         """
         Extract message content from various response formats and add a preview to the outputs dictionary.
+        No data is added to the outputs dictionary if the output format is not supported.
+
         Supported output formats for message content include:
+
         - output.choices[0].message.content     /chat endpoint
         - output.value                          /generate endpoint
         - output[0].choices[0].message.content  chat WS schema
@@ -210,7 +213,6 @@ class WeaveExporter(SpanExporter[Span, Span]):
         Args:
             output_data: The raw output data from the response
             outputs: Dictionary to populate with extracted message content.
-                     No data is added to the outputs dictionary if the output format is not supported.
         """
         # Handle choices-keyed output object for /chat completion endpoint
         choices = getattr(output_data, 'choices', None)
