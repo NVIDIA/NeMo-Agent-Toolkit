@@ -190,38 +190,53 @@ class WeaveExporter(SpanExporter[Span, Span]):
 
     def _extract_output_message(self, output_data: Any, outputs: dict[str, Any]) -> None:
         """
-        Extract message content from various response formats and add to outputs dictionary.
+        Extract message content from various response formats and add a preview to the outputs dictionary.
+        Supported output formats for message content include:
+        - output.choices[0].message.content     /chat endpoint
+        - output.value                          /generate endpoint
+        - output[0].choices[0].message.content  chat WS schema
+        - output[0].choices[0].delta.content    chat_stream WS schema, /chat/stream endpoint
+        - output[0].value                       generate & generate_stream WS schema, /generate/stream endpoint
 
         Args:
             output_data: The raw output data from the response
-            outputs: Dictionary to populate with extracted message content
+            outputs: Dictionary to populate with extracted message content.
+                     No data is added to the outputs dictionary if the output format is not supported.
         """
-        # Handle direct "choices" attribute (non-streaming: output.choices[0].message.content)
+        # Handle choices-keyed output object for /chat completion endpoint
         choices = getattr(output_data, 'choices', None)
         if choices:
             outputs["output_message"] = truncate_string(choices[0].message.content)
             return
 
-        # Handle list-based output (streaming or websocket) – content may be in the following formats:
-        # output[0].choices[0].message.content
-        # output[0].choices[0].delta.content
-        # output[0].value
+        # Handle value-keyed output object for union types common for /generate completion endpoint
+        value = getattr(output_data, 'value', None)
+        if value:
+            outputs["output_message"] = truncate_string(value)
+            return
+
+        # Handle list-based outputs (streaming or websocket)
         if not isinstance(output_data, list) or not output_data:
             return
 
         choices = getattr(output_data[0], 'choices', None)
         if choices:
+            # chat websocket schema
             message = getattr(choices[0], 'message', None)
-            delta = getattr(choices[0], 'delta', None)
-
             if message:
                 outputs["output_message"] = truncate_string(getattr(message, 'content', None))
-            elif delta:
+                return
+
+            # chat_stream websocket schema and /chat/stream completion endpoint
+            delta = getattr(choices[0], 'delta', None)
+            if delta:
                 outputs["output_preview"] = truncate_string(getattr(delta, 'content', None))
-        else:
-            value = getattr(output_data[0], 'value', None)
-            if value:
-                outputs["output_preview"] = truncate_string(str(value))
+                return
+
+        # generate & generate_stream websocket schema, and /generate/stream completion endpoint
+        value = getattr(output_data[0], 'value', None)
+        if value:
+            outputs["output_preview"] = truncate_string(str(value))
 
     def _finish_weave_call(self, step: IntermediateStep) -> None:
         """
