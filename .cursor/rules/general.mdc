@@ -3,13 +3,15 @@ description: Follow these rules when creating, modifying, or generating any code
 globs:
 alwaysApply: false
 ---
+
 # NeMo Agent Toolkit General Coding Guidelines
 
-These are the overarching standards that every **source, test, documentation and CI file** in this repository must follow.  Adhering to these rules locally ensures the project's automated checks and pipelines succeed on your first push.
+These are the overarching standards that every **source, test, documentation and CI file** in this repository must follow. Adhering to these rules locally ensures the project's automated checks and pipelines succeed on your first push.
 
 ---
 
 ## Terminology and Naming
+
 - Make sure to follow this naming convention for all the documentation. If there is any documentation not following this rule, you MUST update it.
 - **Full name on first use**: "NVIDIA NeMo Agent toolkit"
 - **Subsequent references**: "NeMo Agent toolkit"
@@ -109,7 +111,9 @@ These are the overarching standards that every **source, test, documentation and
     ```
 - Maintain **≥ 80 %** coverage; add or update tests when introducing changes.
 - Mock external services with `pytest_httpserver` or `unittest.mock` instead of hitting live endpoints.
-- Mark expensive tests with `@pytest.mark.slow` or `@pytest.mark.integration` so they can be skipped in the default test suite.
+- Mark slow tests with `@pytest.mark.slow` so they can be skipped in the default test suite.
+- Mark integration tests which require external services with `@pytest.mark.integration` so they can be skipped in the default test suite, follow the integration testing guidelines in the nat-tests/integration-tests.mdc rules.
+- Refer to the nat-tests/general.mdc rules for more information on testing.
 
 ## Security
 
@@ -128,7 +132,7 @@ These are the overarching standards that every **source, test, documentation and
 
 ## Versioning
 
-- The project follows **semantic versioning** (MAJOR.MINOR.PATCH).  Patch releases must remain backward-compatible.
+- The project follows **semantic versioning** (MAJOR.MINOR.PATCH). Patch releases must remain backward-compatible.
 - Version numbers are derived automatically by `setuptools-scm`; never hard-code them in code or docs.
 - Add user-visible changes to `CHANGELOG.md` under the appropriate section.
 

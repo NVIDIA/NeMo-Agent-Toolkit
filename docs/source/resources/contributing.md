@@ -140,7 +140,7 @@ We welcome contributions of new example workflows in this repository and in the 
 1. Comment on the issue stating that you are going to work on it.
 1. [Fork the NeMo Agent toolkit repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit/fork)
 1. Code!
-    - Make sure to update unit tests!
+    - Make sure to update existing unit tests!
     - Ensure the [license headers are set properly](./licensing.md).
 1. Verify your changes:
     * Run the style and lint checks, from the root of the repository run:
@@ -151,7 +151,7 @@ We welcome contributions of new example workflows in this repository and in the 
         ```bash
         pytest
         ```
-      If you added an integration test, or changed code that is covered by an integration test, you will need to run the integration tests. Refer to the [Running Tests](./running-tests.md) guide for more information.
+      If you added an integration test, or changed code that is covered by an integration test, you will need to run the integration tests. Refer to the [Running Tests](./running-tests.md) guide for more information on running integration tests, along with the [Writing Integration Tests](./running-tests.md#writing-integration-tests) section.
     * Optionally [run the entire CI pipeline locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command. This is useful if CI is failing in GitHub Actions and you want to debug the issue locally.
 1. When done, [create your pull request](https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
