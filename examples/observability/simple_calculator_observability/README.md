@@ -103,7 +103,7 @@ For simple local development and debugging, you can export traces directly to a 
 
 [Langfuse](https://langfuse.com/) provides production-ready monitoring and analytics.
 
-0. Get your Langfuse credentials:
+1. Get your Langfuse credentials:
 
     Under your project settings, you can create your API key. Doing this will give you three credentials:
     - Secret Key
@@ -112,7 +112,7 @@ For simple local development and debugging, you can export traces directly to a 
 
     Take note of these credentials as you will need them to run the workflow.
 
-1. Set your Langfuse credentials:
+2. Set your Langfuse credentials:
 
     ```bash
     export LANGFUSE_PUBLIC_KEY=<your_key>
@@ -120,7 +120,7 @@ For simple local development and debugging, you can export traces directly to a 
     export LANGFUSE_HOST=<your_host>
     ```
 
-2. Run the workflow:
+3. Run the workflow:
 
     ```bash
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-langfuse.yml --input "Calculate 15 + 23"
