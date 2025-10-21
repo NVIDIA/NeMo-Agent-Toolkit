@@ -106,3 +106,39 @@ To stop the services, run:
 ```bash
 docker compose -f tests/test_data/docker-compose.services.yml down
 ```
+
+## Writing Integration Tests
+Many of the example workflows cannot be fully tested with unit tests alone, as they typically require an actual LLM service and potentially other services to be running.
+
+### Typical example of an integration test
+```python
+import json
+from pathlib import Path
+
+import pytest
+
+from nat.test.utils import run_workflow
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_react_agent_full_workflow(examples_dir: Path):
+    config_file = examples_dir / "agents/react/configs/config.yml"
+    await run_workflow(config_file=config_file, question="What are LLMs?", expected_answer="Large Language Model")
+```
+
+In the above example, the `@pytest.mark.integration` decorator marks the test as an integration test, this will cause the test to be skipped unless the `--run_integration` flag is provided when running pytest.
+
+The workflow being run requires a valid NVIDIA API key to be set in the `NVIDIA_API_KEY` environment variable, the `@pytest.mark.usefixtures("nvidia_api_key")` decorator ensures that the test is skipped if the API key is not set. This fixture along with many others are defined in `packages/nvidia_nat_test/src/nat/test/plugin.py`, and are available for use in tests if the `nvidia-nat-test` package is installed. Most of the API keys used in NeMo Agent toolkit workflows have corresponding fixtures defined there (for example: `openai_api_key`, `tavily_api_key`, `mem0_api_key`, and others).
+
+The `examples_dir` fixture provides the path to the `examples/` directory, which is used to locate the configuration file for the workflow.
+
+> **Note:** While most of the fixtures defined in the `nvidia-nat-test` package are available for use in tests in third-party packages, a few such as `root_repo_dir` and `examples_dir` only function correctly when used within the NeMo Agent toolkit repository itself.
+
+The `run_workflow` utility function is used to run the workflow with the specified configuration file, question, and expected answer. Since the results of LLM calls can vary it is best to use simple questions and expected answers that are likely to be returned consistently. By default a case-insensitive match is used for the `expected_answer`. Alternately the `assert_expected_answer` parameter can be set to `False` allowing the test to perform custom validation of the answer returned by the workflow:
+```python
+    result = await run_workflow(config_file=config_file,
+                                question="What are LLMs?",
+                                expected_answer="",
+                                assert_expected_answer=False)
+    assert re.match(r".*large language model.*", result, re.IGNORECASE) is not None
+```
