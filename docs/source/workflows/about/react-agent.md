@@ -42,6 +42,12 @@ If you have performed a source code checkout, you can install this with the foll
 uv pip install -e '.[langchain]'
 ```
 
+If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+
+```bash
+uv pip install "nvidia-nat[langchain]"
+```
+
 ## Configuration
 
 The ReAct agent may be utilized as a workflow or a function.

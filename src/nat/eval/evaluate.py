@@ -104,6 +104,8 @@ class EvaluationRun:
                 usage_stats_per_llm[llm_name].prompt_tokens += step.token_usage.prompt_tokens
                 usage_stats_per_llm[llm_name].completion_tokens += step.token_usage.completion_tokens
                 usage_stats_per_llm[llm_name].total_tokens += step.token_usage.total_tokens
+                usage_stats_per_llm[llm_name].reasoning_tokens += step.token_usage.reasoning_tokens
+                usage_stats_per_llm[llm_name].cached_tokens += step.token_usage.cached_tokens
                 total_tokens += step.token_usage.total_tokens
 
         # find min and max event timestamps

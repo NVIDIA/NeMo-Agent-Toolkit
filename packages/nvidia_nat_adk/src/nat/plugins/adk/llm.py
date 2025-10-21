@@ -23,6 +23,7 @@ from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.utils.responses_api import validate_no_responses_api
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +38,12 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
     """
     from google.adk.models.lite_llm import LiteLlm
 
+    validate_no_responses_api(config, LLMFrameworkEnum.ADK)
+
     config_dict = config.model_dump(
-        exclude={"type", "max_retries", "thinking", "azure_endpoint", "azure_deployment", "model_name", "model"},
+        exclude={
+            "type", "max_retries", "thinking", "azure_endpoint", "azure_deployment", "model_name", "model", "api_type"
+        },
         by_alias=True,
         exclude_none=True,
     )
@@ -51,8 +56,11 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
 async def litellm_adk(litellm_config: LiteLlmModelConfig, _builder: Builder):
     from google.adk.models.lite_llm import LiteLlm
+
+    validate_no_responses_api(litellm_config, LLMFrameworkEnum.ADK)
+
     yield LiteLlm(**litellm_config.model_dump(
-        exclude={"type", "max_retries", "thinking"},
+        exclude={"type", "max_retries", "thinking", "api_type"},
         by_alias=True,
         exclude_none=True,
     ))
@@ -69,6 +77,8 @@ async def nim_adk(config: NIMModelConfig, _builder: Builder):
     import litellm
     from google.adk.models.lite_llm import LiteLlm
 
+    validate_no_responses_api(config, LLMFrameworkEnum.ADK)
+
     logger.warning("NIMs do not currently support tools with ADK. Tools will be ignored.")
     litellm.add_function_to_prompt = True
     litellm.drop_params = True
@@ -77,7 +87,7 @@ async def nim_adk(config: NIMModelConfig, _builder: Builder):
         os.environ["NVIDIA_NIM_API_KEY"] = api_key
 
     config_dict = config.model_dump(
-        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url"},
+        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type"},
         by_alias=True,
         exclude_none=True,
     )
@@ -97,8 +107,10 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
     """
     from google.adk.models.lite_llm import LiteLlm
 
+    validate_no_responses_api(config, LLMFrameworkEnum.ADK)
+
     config_dict = config.model_dump(
-        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url"},
+        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type"},
         by_alias=True,
         exclude_none=True,
     )

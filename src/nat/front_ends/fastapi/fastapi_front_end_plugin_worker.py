@@ -1184,6 +1184,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             "server": client.server_name,
                             "transport": config.server.transport,
                             "session_healthy": session_healthy,
+                            "protected": True if config.server.auth_provider is not None else False,
                             "tools": tools_info,
                             "total_tools": len(configured_short_names),
                             "available_tools": available_count
@@ -1196,6 +1197,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             "server": "unknown",
                             "transport": config.server.transport if config.server else "unknown",
                             "session_healthy": False,
+                            "protected": False,
                             "error": str(e),
                             "tools": [],
                             "total_tools": 0,
@@ -1226,6 +1228,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                     "server": "streamable-http:http://localhost:9901/mcp",
                                     "transport": "streamable-http",
                                     "session_healthy": True,
+                                    "protected": False,
                                     "tools": [{
                                         "name": "tool_a",
                                         "description": "Tool A description",

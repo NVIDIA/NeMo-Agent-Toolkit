@@ -102,11 +102,11 @@ class BaseAgent(ABC):
         AIMessage
             The LLM response
         """
-        output_message = ""
+        output_message = []
         async for event in runnable.astream(inputs, config=config):
-            output_message += event.content
+            output_message.append(event.content)
 
-        return AIMessage(content=output_message)
+        return AIMessage(content="".join(output_message))
 
     async def _call_llm(self, llm: Runnable, inputs: dict[str, Any], config: RunnableConfig | None = None) -> AIMessage:
         """

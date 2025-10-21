@@ -17,5 +17,5 @@
 # flake8: noqa
 
 from . import agent
-from . import nat_time_mcp_tool
+from . import nat_time_tool
 from . import weather_update_tool

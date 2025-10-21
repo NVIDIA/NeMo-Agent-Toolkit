@@ -27,6 +27,7 @@ from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
 ModelType = TypeVar("ModelType")
@@ -89,6 +90,8 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
 
     from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
+
     llm = AzureChatCompletion(
         api_key=llm_config.api_key,
         api_version=llm_config.api_version,
@@ -103,6 +106,8 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
 async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
 
     llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name)
 

@@ -129,6 +129,7 @@ Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
 
 ./api/index.rst
 API Authentication <./reference/api-authentication.md>
+Frameworks Overview <./reference/frameworks-overview.md>
 Interactive Models <./reference/interactive-models.md>
 API Server Endpoints <./reference/api-server-endpoints.md>
 WebSockets <./reference/websockets.md>

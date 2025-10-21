@@ -27,7 +27,11 @@ logger = logging.getLogger(__name__)
 class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
     project: str = Field(description="The W&B project name.")
-    entity: str | None = Field(default=None, description="The W&B username or team name.")
+    entity: str | None = Field(default=None,
+                               description="The W&B username or team name.",
+                               deprecated=('This field is deprecated and will be removed in future versions. '
+                                           'This value is set automatically by the weave library, and setting it will '
+                                           'have no effect.'))
     redact_pii: bool = Field(default=False, description="Whether to redact PII from the traces.")
     redact_pii_fields: list[str] | None = Field(
         default=None,

@@ -149,7 +149,15 @@ package:wheel:
       # Match  the transitional wheels
       - .tmp/wheels/nat/*/*/*.whl
     expire_in: 1 week
-
+  rules:
+    - if: $CI_CRON_NIGHTLY == "1"
+      when: always
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == 'develop-test'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH =~ /^release\/.*$/
 
 upload:artifactory:
   stage: upload

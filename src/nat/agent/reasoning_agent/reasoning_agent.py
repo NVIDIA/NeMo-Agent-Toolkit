@@ -157,12 +157,12 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
             prompt = prompt.to_string()
 
             # Get the reasoning output from the LLM
-            reasoning_output = ""
+            reasoning_output = []
 
             async for chunk in llm.astream(prompt):
-                reasoning_output += chunk.content
+                reasoning_output.append(chunk.content)
 
-            reasoning_output = remove_r1_think_tags(reasoning_output)
+            reasoning_output = remove_r1_think_tags("".join(reasoning_output))
 
             output = await downstream_template.ainvoke(input={
                 "input_text": input_text, "reasoning_output": reasoning_output
@@ -200,12 +200,12 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
             prompt = prompt.to_string()
 
             # Get the reasoning output from the LLM
-            reasoning_output = ""
+            reasoning_output = []
 
             async for chunk in llm.astream(prompt):
-                reasoning_output += chunk.content
+                reasoning_output.append(chunk.content)
 
-            reasoning_output = remove_r1_think_tags(reasoning_output)
+            reasoning_output = remove_r1_think_tags("".join(reasoning_output))
 
             output = await downstream_template.ainvoke(input={
                 "input_text": input_text, "reasoning_output": reasoning_output

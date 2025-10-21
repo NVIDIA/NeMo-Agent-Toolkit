@@ -170,7 +170,8 @@ class Runner:
                     IntermediateStepPayload(UUID=workflow_step_uuid,
                                             event_type=IntermediateStepType.WORKFLOW_START,
                                             name=workflow_name,
-                                            metadata=start_metadata))
+                                            metadata=start_metadata,
+                                            data=StreamEventData(input=self._input_message)))
 
                 result = await self._entry_fn.ainvoke(self._input_message, to_type=to_type)  # type: ignore
 
@@ -249,9 +250,15 @@ class Runner:
                     IntermediateStepPayload(UUID=workflow_step_uuid,
                                             event_type=IntermediateStepType.WORKFLOW_START,
                                             name=workflow_name,
-                                            metadata=start_metadata))
+                                            metadata=start_metadata,
+                                            data=StreamEventData(input=self._input_message)))
+
+                # Collect preview of streaming results for the WORKFLOW_END event
+                output_preview = []
 
                 async for m in self._entry_fn.astream(self._input_message, to_type=to_type):  # type: ignore
+                    if len(output_preview) < 50:
+                        output_preview.append(m)
                     yield m
 
                 # Emit WORKFLOW_END
@@ -265,7 +272,8 @@ class Runner:
                     IntermediateStepPayload(UUID=workflow_step_uuid,
                                             event_type=IntermediateStepType.WORKFLOW_END,
                                             name=workflow_name,
-                                            metadata=end_metadata))
+                                            metadata=end_metadata,
+                                            data=StreamEventData(output=output_preview)))
                 self._state = RunnerState.COMPLETED
 
                 # Close the intermediate stream

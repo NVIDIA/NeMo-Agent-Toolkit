@@ -19,8 +19,6 @@ limitations under the License.
 
 The reasoning agent is an AI system that directly invokes an underlying function while performing reasoning on top. Unlike ReAct agents, it does not reason between steps but instead through planning ahead of time. However, an LLM that support reasoning needs to be chosen for use with a reasoning agent.
 
----
-
 ## Features
 - **Pre-built Tools**: Leverages core library agent and tools.
 - **Reasoning on top of an Agent:** Leverages an underlying function, and performs reasoning on top.
@@ -29,6 +27,21 @@ The reasoning agent is an AI system that directly invokes an underlying function
 - **Ease of Use**: Simplifies developer experience and deployment.
 
 ---
+
+## Requirements
+The Reasoning agent requires the `nvidia-nat[langchain]` plugin to be installed.
+
+If you have performed a source code checkout, you can install this with the following command:
+
+```bash
+uv pip install -e '.[langchain]'
+```
+
+If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+
+```bash
+uv pip install "nvidia-nat[langchain]"
+```
 
 ## Configuration
 
@@ -39,7 +52,7 @@ In your YAML file, to use the reasoning agent as a workflow:
 ```yaml
 workflow:
   _type: reasoning_agent
-  llm_name: deepseek_r1_model
+  llm_name: nemotron_model
   # The augmented_fn is the nat Function that the execution plan is passed to. Usually an agent entry point.
   augmented_fn: react_agent
   verbose: true
@@ -49,7 +62,7 @@ workflow:
 
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the Reasoning agent is configured as a workflow and need to expose a customized name as a tool.
 
-* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
+* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file. The LLM must support thinking tags.
 
 * `verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the agent will log input, output, and intermediate steps.
 
@@ -57,32 +70,47 @@ workflow:
 
 * `reasoning_prompt_template`: The prompt used in the first step of the reasoning agent. Defaults to:
   ```python
-  "You are an expert reasoning model task with creating a detailed execution plan"
-  " for a system that has the following description:\n\n"
-  "**Description:** \n{augmented_function_desc}\n\n"
-  "Given the following input and a list of available tools, please provide a detailed step-by-step plan"
-  " that an instruction following system can use to address the input. Ensure the plan includes:\n\n"
-  "1. Identifying the key components of the input.\n"
-  "2. Determining the most suitable tools for each task.\n"
-  "3. Outlining the sequence of actions to be taken.\n\n"
-  "**Input:** \n{input_text}\n\n"
-  "**Tools and description of the tool:** \n{tools}\n\n"
-  "An example plan could look like this:\n\n"
-  "1. Call tool A with input X\n"
-  "2. Call tool B with input Y\n"
-  "3. Interpret the output of tool A and B\n"
-  "4. Return the final result"
-  "\n\n **PLAN:**\n"
+  """
+  You are an expert reasoning model task with creating a detailed execution plan for a system that has the following description
+
+  **Description:**
+  {augmented_function_desc}
+  
+  Given the following input and a list of available tools, please provide a detailed step-by-step plan that an instruction following system can use to address the input. Ensure the plan includes:
+  1. Identifying the key components of the input.
+  2. Determining the most suitable tools for each task.
+  3. Outlining the sequence of actions to be taken.
+  
+  **Input:**
+  {input_text}
+  
+  **Tools and description of the tool:**
+  {tools}
+  
+  An example plan could look like this:
+  1. Call tool A with input X
+  2. Call tool B with input Y
+  3. Interpret the output of tool A and B
+  4. Return the final result
+  
+  **PLAN:**
+  {plan}
+  """
   ```
 
 
 * `instruction_prompt_template`: The prompt used in the final step of the reasoning agent.  Defaults to:
   ```python
-  "Answer the following question based on message history: {input_text}"
-  "\n\nHere is a plan for execution that you could use to guide you if you wanted to:"
-  "\n\n{reasoning_output}"
-  "\n\nNOTE: Remember to follow your guidance on how to format output, etc."
-  "\n\n You must respond with the answer to the original question directly to the user."
+  """
+  Answer the following question based on message history: {input_text}
+  
+  Here is a plan for execution that you could use to guide you if you wanted to:
+  {reasoning_output}
+  
+  NOTE: Remember to follow your guidance on how to format output, etc.
+  
+  You must respond with the answer to the original question directly to the user.
+  """
   ```
 
 ---

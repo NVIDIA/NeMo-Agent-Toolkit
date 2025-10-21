@@ -23,17 +23,17 @@ dependencies = [
   "nvidia-nat~=1.4",
   # We ran into pydantic validation errors with newer versions of llama-index, not sure which version introduced the
   # error
-  "llama-index-core~=0.12.21",
+  "llama-index-core~=0.12.40",
   "llama-index-embeddings-azure-openai~=0.3.9",
   "llama-index-embeddings-nvidia~=0.3.1",
   "llama-index-embeddings-openai~=0.3.1",
   "llama-index-llms-azure-openai~=0.3.2",
   "llama-index-llms-bedrock~=0.3.8",
   "llama-index-llms-litellm~=0.5.1",
-  "llama-index-llms-nvidia~=0.3.1",
-  "llama-index-llms-openai~=0.3.42",
+  "llama-index-llms-nvidia~=0.3.4",
+  "llama-index-llms-openai>=0.4.2,<1.0.0",
   "llama-index-readers-file~=0.4.4",
-  "llama-index~=0.12.21",
+  "llama-index~=0.12.40",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for Llama-Index integration in NeMo Agent toolkit"

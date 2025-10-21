@@ -56,8 +56,8 @@ def rewoo_answer_fixture(request: pytest.FixtureRequest, rewoo_data: list[dict])
 
 @pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")
 @pytest.mark.integration
-@pytest.mark.parametrize("rewoo_question, rewoo_answer", [(i, i) for i in range(4)],
-                         ids=[f"qa_{i+1}" for i in range(4)],
+@pytest.mark.parametrize("rewoo_question, rewoo_answer", [(i, i) for i in range(5)],
+                         ids=[f"qa_{i+1}" for i in range(5)],
                          indirect=True)
 async def test_rewoo_full_workflow(agents_dir: Path, rewoo_question: str, rewoo_answer: str):
     config_file = agents_dir / "rewoo/configs/config.yml"

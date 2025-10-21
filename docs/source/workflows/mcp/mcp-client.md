@@ -289,25 +289,6 @@ To get detailed information about a specific tool, use the `--tool` flag:
 nat mcp client tool list --url http://localhost:9901/mcp --tool calculator_multiply
 ```
 
-### Call a Tool
-
-To call a tool and get its output:
-
-```bash
-# Pass arguments as JSON
-nat mcp client tool call calculator_multiply \
-  --url http://localhost:9901/mcp \
-  --json-args '{"text": "2 * 3"}'
-```
-
-### Using Protected MCP Servers
-
-To use a protected MCP server, you need to provide the `--auth` flag:
-```bash
-nat mcp client tool list --url http://example.com/mcp --auth
-```
-This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Authentication](./mcp-auth.md).
-
 Sample output:
 ```text
 Tool: calculator_multiply
@@ -329,6 +310,24 @@ Input Schema:
 }
 ------------------------------------------------------------
 ```
+### Call a Tool
+
+To call a tool and get its output:
+
+```bash
+# Pass arguments as JSON
+nat mcp client tool call calculator_multiply \
+  --url http://localhost:9901/mcp \
+  --json-args '{"text": "2 * 3"}'
+```
+
+### Using Protected MCP Servers
+
+To use a protected MCP server, you need to provide the `--auth` flag:
+```bash
+nat mcp client tool list --url http://example.com/mcp --auth
+```
+This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Authentication](./mcp-auth.md).
 
 ## List MCP Client Tools using the HTTP endpoint
 This is useful when you want to inspect the tools configured on the client side and whether each tool is available on the connected server.
@@ -342,14 +341,14 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
    nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
    ```
 
-2. Start the workflow (MCP client) with FastAPI on port 8080:
+2. Start the workflow (MCP client) with FastAPI:
    ```bash
-   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --port 8080
+   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml
    ```
 
 3. Call the endpoint and pretty-print the response:
    ```bash
-   curl -s http://localhost:8080/mcp/client/tool/list | jq
+   curl -s http://localhost:8000/mcp/client/tool/list | jq
    ```
 
 ### Endpoint
@@ -422,6 +421,31 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
   ]
 }
 ```
+
+## MCP Inspection via UI
+You can inspect the MCP tools available on the client side using the UI.
+
+### Steps
+
+1. Start the MCP server:
+   ```bash
+   nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
+   ```
+
+2. Start the workflow (MCP client) with FastAPI:
+   ```bash
+   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml
+   ```
+
+3. Launch the UI by following the instructions in the [Launching the UI](../../quick-start/launching-ui.md) documentation.
+
+4. Click on the MCP tab in the side panel to inspect the MCP tools available on the client side.
+
+### Sample Output
+![MCP Side Panel](../../_static/mcp_side_panel.png)
+
+![MCP Tools](../../_static/mcp_tools.png)
+
 
 ### Troubleshooting
 

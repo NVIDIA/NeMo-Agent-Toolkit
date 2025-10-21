@@ -36,3 +36,19 @@ def convert_to_str(value: Any) -> str:
         return str(value)
     else:
         raise ValueError(f"Unsupported type for conversion to string: {type(value)}")
+
+
+def truncate_string(text: str | None, max_length: int = 100) -> str | None:
+    """
+    Truncate a string to a maximum length, adding ellipsis if truncated.
+
+    Args:
+        text: The text to truncate (can be None)
+        max_length: Maximum allowed length (default: 100)
+
+    Returns:
+        The truncated text with ellipsis if needed, or None if input was None
+    """
+    if not text or len(text) <= max_length:
+        return text
+    return text[:max_length - 3] + "..."
