@@ -157,10 +157,11 @@ async def test_react_agent_full_workflow(examples_dir: Path):
     config_file = examples_dir / "agents/react/configs/config.yml"
     await run_workflow(config_file=config_file, question="What are LLMs?", expected_answer="Large Language Model")
 ```
-<!-- path-check-skip-end -->
 
-<!-- path-check-skip-next-line -->
-> **Note:** While most of the fixtures defined in the `nvidia-nat-test` package are available for use in tests in third-party packages, a few such as `root_repo_dir` and `examples_dir` only function correctly when used within the NeMo Agent toolkit repository itself. As an alternative, a configuration file can be located relative to the test file using: `config_file = Path(__file__).parent / "configs/config.yml"`.
+:::{note}
+While most of the fixtures defined in the `nvidia-nat-test` package are available for use in tests in third-party packages, a few such as `root_repo_dir` and `examples_dir` only function correctly when used within the NeMo Agent toolkit repository itself. As an alternative, a configuration file can be located relative to the test file using: `config_file = Path(__file__).parent / "configs/config.yml"`.
+:::
+<!-- path-check-skip-end -->
 
 #### Workflows Requiring a Service
 Many of the existing services that NeMo Agent toolkit workflows can interact with have corresponding fixtures defined in the `nvidia-nat-test` package to ensure that the service is running before the test is run, these are defined in `packages/nvidia_nat_test/src/nat/test/plugin.py`.
