@@ -212,15 +212,25 @@ class WeaveExporter(SpanExporter[Span, Span]):
                 choices = getattr(step.payload.data.output, 'choices', None)
                 if choices:
                     outputs["output_message"] = choices[0].message.content
-                # Streaming/websocket: output[0].choices[0].delta.content
-                else:
-                    # Streaming/websocket: output[0].choices[0].delta.content
-                    choices = getattr(step.payload.data.output[0], 'choices', None)
-                    if choices:
-                        outputs["output_preview"] = choices[0].delta.content
+                # List format (websocket/streaming):
+                # output[0].choices[0].message.content or
+                # output[0].choices[0].delta.content
+                elif isinstance(step.payload.data.output, list) and len(step.payload.data.output) > 0:
+                    first_item = step.payload.data.output[0]
+                    choices = getattr(first_item, 'choices', None)
+                    if choices and len(choices) > 0:
+                        # Try websocket format: choices[0].message.content
+                        message = getattr(choices[0], 'message', None)
+                        if message:
+                            outputs["output_message"] = getattr(message, 'content', None)
+                        # Try streaming format: choices[0].delta.content
+                        else:
+                            delta = getattr(choices[0], 'delta', None)
+                            if delta:
+                                outputs["output_preview"] = getattr(delta, 'content', None)
                     # Generate endpoint: output[0].value
                     else:
-                        value = getattr(step.payload.data.output[0], 'value', None)
+                        value = getattr(first_item, 'value', None)
                         if value:
                             outputs["output_preview"] = value
             except Exception:
