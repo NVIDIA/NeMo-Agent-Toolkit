@@ -154,9 +154,14 @@ class WeaveExporter(SpanExporter[Span, Span]):
                 inputs["input"] = step.payload.data.input
 
                 # Extract message content if input has messages attribute
+                # When websocket mode is enabled, the message is located at messages[0].content[0].text,
                 messages = getattr(step.payload.data.input, 'messages', [])
                 if messages:
-                    inputs["input_message"] = messages[0].content
+                    content = messages[0].content
+                    if isinstance(content, list) and content:
+                        inputs["input_message"] = getattr(content[0], 'text', content[0])
+                    else:
+                        inputs["input_message"] = content
             except Exception:
                 # If serialization fails, use string representation
                 inputs["input"] = str(step.payload.data.input)
