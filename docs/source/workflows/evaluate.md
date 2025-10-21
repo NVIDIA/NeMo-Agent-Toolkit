@@ -40,6 +40,8 @@ uv pip install "nvidia-nat[profiling]"
 ## Evaluating a Workflow
 To evaluate a workflow, you can use the `nat eval` command. The `nat eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
 
+Note: If you would like to set up visualization dashboards for this initial evaluation, please refer to the **Visualizing Evaluation Results** section below.
+
 To run and evaluate the simple example workflow, use the following command:
 ```bash
 nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
