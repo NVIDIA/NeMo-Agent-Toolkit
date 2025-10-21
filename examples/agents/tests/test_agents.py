@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -80,3 +81,23 @@ async def test_rewoo_full_workflow(agents_dir: Path, rewoo_question: str, rewoo_
     ids=["mixture_of_agents", "react", "react-reasoning", "tool_calling", "tool_calling-reasoning"])
 async def test_agent_full_workflow(agents_dir: Path, config_file: str, question: str, answer: str):
     await run_workflow(config_file=agents_dir / config_file, question=question, expected_answer=answer)
+
+
+# Code examples from `docs/source/resources/running-tests.md`
+# Intentionally not using the fixtures defined above to keep the examples clear
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_react_agent_full_workflow(examples_dir: Path):
+    config_file = examples_dir / "agents/react/configs/config.yml"
+    await run_workflow(config_file=config_file, question="What are LLMs?", expected_answer="Large Language Model")
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_react_agent_full_workflow_validate_re(examples_dir: Path):
+    config_file = examples_dir / "agents/react/configs/config.yml"
+    result = await run_workflow(config_file=config_file,
+                                question="What are LLMs?",
+                                expected_answer="",
+                                assert_expected_answer=False)
+    assert re.match(r".*large language model.*", result, re.IGNORECASE) is not None

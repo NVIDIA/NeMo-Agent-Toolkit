@@ -114,6 +114,8 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 
 **[Building an Agentic System](notebooks/README.md)**: Series of notebooks demonstrating how to build, connect, evaluate, profile and deploy an agentic system using the NeMo Agent toolkit
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NVIDIA/NeMo-Agent-Toolkit/)
+
 1. [Getting Started](notebooks/1_getting_started_with_nat.ipynb) - Getting started with the NeMo Agent toolkit
 2. [Bringing Your Own Agent](notebooks/2_bringing_your_own_agent.ipynb) - Bringing your own agent to the NeMo Agent toolkit
 3. [Adding Tools and Agents](notebooks/3_adding_tools_to_agents.ipynb) - Adding tools to your agentic workflow

@@ -27,6 +27,7 @@ llms:
 
 eval:
   general:
+    max_concurrency: 1
     output:
       dir: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval_only/
       cleanup: true
