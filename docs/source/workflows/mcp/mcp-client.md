@@ -67,6 +67,16 @@ The function group supports filtering using the `include` and `exclude` paramete
 
 The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers. Refer to [Function Groups](../function-groups.md) for more information about function group capabilities.
 
+A tool within a function group can also be referenced by its name using the following syntax: `<function_group_name>.<tool_name>`.
+Example:
+```yaml
+workflows:
+  _type: react_agent
+  tool_names:
+    - mcp_tools.tool_a
+```
+This is useful when you need to build a custom tool that uses a tool from an MCP server as a sub-tool.
+
 #### Configuration Options
 
 The `mcp_client` function group supports the following configuration options:
