@@ -174,9 +174,9 @@ Evaluation is dependent on the judge LLM's ability to accurately evaluate the ge
 ```
     1) nvidia/Llama-3_3-Nemotron-Super-49B-v1
     2) mistralai/mixtral-8x22b-instruct-v0.1
-    3)- mistralai/mixtral-8x7b-instruct-v0.1
-    4)- meta/llama-3.1-70b-instruct
-    5)- meta/llama-3.3-70b-instruct
+    3) mistralai/mixtral-8x7b-instruct-v0.1
+    4) meta/llama-3.1-70b-instruct
+    5) meta/llama-3.3-70b-instruct
 ```
 <!-- Update the link here when ragas is updated -->
 For a complete list of up-to-date judge LLMs, refer to the [RAGAS NV metrics leadership board](https://docs.ragas.io/en/latest/references/metrics/#ragas.metrics.AnswerAccuracy)
