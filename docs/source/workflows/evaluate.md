@@ -45,6 +45,23 @@ To run and evaluate the simple example workflow, use the following command:
 nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
+> **Note**: If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, you have two options:
+>
+> 1. **Reduce concurrency**: Set the `eval.general.max_concurrency` value either in the YAML directly or through the command line with: `--override eval.general.max_concurrency 1`.
+>
+> 2. **Deploy NIM locally**: Download and deploy NIM on your local machine to avoid rate limitations entirely. To deploy NIM locally:
+>    - Follow the [NVIDIA NIM deployment guide](https://docs.nvidia.com/nim/large-language-models/latest/getting-started.html) to download and run NIM containers locally
+>    - Update your configuration to point to your local NIM endpoint by setting the `base_url` parameter in the LLM configuration:
+>      ```yaml
+>      llms:
+>        nim_rag_eval_llm:
+>          _type: nim
+>          model_name: meta/llama-3.1-70b-instruct
+>          max_tokens: 8
+>          base_url: http://localhost:8000/v1
+>      ```
+>    - Local deployment provides unlimited throughput and eliminates external API rate limits
+
 ## Understanding the Evaluation Configuration
 The `eval` section in the configuration file specifies the dataset and the evaluators to use. The following is an example of an `eval` section in a configuration file:
 
