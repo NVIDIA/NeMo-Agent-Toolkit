@@ -154,16 +154,7 @@ class WeaveExporter(SpanExporter[Span, Span]):
             try:
                 # Add the input to the Weave call
                 inputs["input"] = step.payload.data.input
-
-                # Extract message content if input has messages attribute
-                # When websocket mode is enabled, the message is located at messages[0].content[0].text,
-                messages = getattr(step.payload.data.input, 'messages', [])
-                if messages:
-                    content = messages[0].content
-                    if isinstance(content, list) and content:
-                        inputs["input_message"] = getattr(content[0], 'text', content[0])
-                    else:
-                        inputs["input_message"] = content
+                self._extract_input_message(step.payload.data.input, inputs)
             except Exception:
                 # If serialization fails, use string representation
                 inputs["input"] = str(step.payload.data.input)
@@ -187,6 +178,24 @@ class WeaveExporter(SpanExporter[Span, Span]):
             logger.warning("Span has no context, skipping span_id setting")
 
         return call
+
+    def _extract_input_message(self, input_data: Any, inputs: dict[str, Any]) -> None:
+        """
+        Extract message content from input data and add to inputs dictionary.
+        Also handles websocket mode where message is located at messages[0].content[0].text.
+
+        Args:
+            input_data: The raw input data from the request
+            inputs: Dictionary to populate with extracted message content
+        """
+        # Extract message content if input has messages attribute
+        messages = getattr(input_data, 'messages', [])
+        if messages:
+            content = messages[0].content
+            if isinstance(content, list) and content:
+                inputs["input_message"] = getattr(content[0], 'text', content[0])
+            else:
+                inputs["input_message"] = content
 
     def _extract_output_message(self, output_data: Any, outputs: dict[str, Any]) -> None:
         """
