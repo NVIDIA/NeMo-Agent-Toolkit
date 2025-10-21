@@ -87,11 +87,19 @@ The dataset section specifies the dataset to use for running the workflow. The d
 ## Evaluation outputs (what you will get)
 Running `nat eval` produces a set of artifacts in the configured output directory. These files fall into three groups: workflow outputs, evaluator outputs, and profiler/observability outputs.
 
-- `workflow_output.json`: Per-sample execution results including question, expected answer, generated_answer, and intermediate_steps. Use this to inspect or debug individual runs.
+### Workflow outputs (always available)
+- `workflow_output.json`: Per-sample execution results including question, expected `answer`, `generated_answer`, and `intermediate_steps`. Use this to inspect or debug individual runs.
+
+### Evaluator outputs (only when configured)
+Each evaluator produces a separate output file only when that evaluator is explicitly configured in `eval.evaluators`:
 - `trajectory_accuracy_output.json`: Scores and reasoning from the trajectory evaluator for each dataset entry, plus an average score.
 - `rag_accuracy_output.json`: RAGAS AnswerAccuracy scores and reasoning per entry, plus an average score.
 - `rag_groundedness_output.json`: RAGAS ResponseGroundedness scores and reasoning per entry, plus an average score.
 - `rag_relevance_output.json`: RAGAS ContextRelevance scores and reasoning per entry, plus an average score.
+
+### Profiler and observability outputs (only when profiler is enabled)
+These files are generated when profiler settings are configured under `eval.profiler`:
+
 - `standardized_data_all.csv`: One row per request with standardized profiler metrics (latency, token counts, model names, error flags). Load this in pandas for quick analysis.
 - `workflow_profiling_metrics.json`: Aggregated profiler metrics (means, percentiles, and summary statistics) across the run. Describes operations types, operational periods, concurrency scores, and bottleneck scores.
 - `workflow_profiling_report.txt`: Human-readable profiler summary including latency, token efficiency, and bottleneck highlights. Highlights key metrics with a nested call profiling report and concurrency spike analysis.
@@ -179,7 +187,7 @@ Evaluation is dependent on the judge LLM's ability to accurately evaluate the ge
     5) meta/llama-3.3-70b-instruct
 ```
 <!-- Update the link here when ragas is updated -->
-For a complete list of up-to-date judge LLMs, refer to the [RAGAS NV metrics leadership board](https://docs.ragas.io/en/latest/references/metrics/#ragas.metrics.AnswerAccuracy)
+For a complete list of up-to-date judge LLMs, refer to the [RAGAS NV metrics leadership board](https://github.com/explodinggradients/ragas/blob/main/src/ragas/metrics/_nv_metrics.py)
 
 For more information on the prompt used by the judge LLM, refer to the [RAGAS NV metrics](https://github.com/explodinggradients/ragas/blob/v0.2.14/src/ragas/metrics/_nv_metrics.py). The prompt for these metrics is not configurable. If you need a custom prompt, you can use the [Tunable RAG Evaluator](../reference/evaluate.md#tunable-rag-evaluator) or implement your own evaluator using the [Custom Evaluator](../extend/custom-evaluator.md) documentation.
 
