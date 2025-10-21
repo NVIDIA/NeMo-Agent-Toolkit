@@ -17,7 +17,7 @@ import json
 import random
 import time
 import types
-from collections.abc import AsyncGenerator
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -46,18 +46,29 @@ def expected_answer_fixture() -> str:
     return "8"
 
 
-@pytest.fixture(name="weave_project_name", scope="module")
-async def fixture_weave_project_name(weave: types.ModuleType, wandb_api_key) -> AsyncGenerator[str]:
-    project_name = "weave_test_e2e"
-
+@pytest.fixture(name="weave_attribute_key")
+def weave_attribute_key_fixture() -> str:
     # Create a unique identifier for this test run, and use it as an attribute on all traces
-    test_ident = f'test_run_{time.time()}_{random.random()}'
+    return "test_run"
+
+
+@pytest.fixture(name="weave_identifier")
+def weave_identifier_fixture() -> str:
+    # Create a unique identifier for this test run, and use it as an attribute on all traces
+    return f'test_run_{time.time()}_{random.random()}'
+
+
+@pytest.fixture(name="weave_project_name")
+def fixture_weave_project_name(weave: types.ModuleType,
+                               wandb_api_key: str,
+                               weave_attribute_key: str,
+                               weave_identifier: str) -> Generator[str]:
+    project_name = "weave_test_e2e"
     client = weave.init(project_name)
-    with weave.attributes({'test_run': test_ident}):
-        yield project_name
+    yield project_name
 
     client.flush()
-    query = {"$expr": {"$eq": [{"$getField": "attributes.test_run"}, {"$literal": test_ident}]}}
+    query = {"$expr": {"$eq": [{"$getField": f"attributes.{weave_attribute_key}"}, {"$literal": weave_identifier}]}}
     calls = client.get_calls(query=query)
     call_ids = [c.id for c in calls]
     if len(call_ids) > 0:
@@ -66,10 +77,16 @@ async def fixture_weave_project_name(weave: types.ModuleType, wandb_api_key) -> 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("wandb_api_key")
-async def test_weave_full_workflow(config_dir: Path, weave_project_name: str, question: str, expected_answer: str):
+async def test_weave_full_workflow(config_dir: Path,
+                                   weave_project_name: str,
+                                   weave_attribute_key: str,
+                                   weave_identifier: str,
+                                   question: str,
+                                   expected_answer: str):
     config_file = config_dir / "config-weave.yml"
     config = load_config(config_file)
     config.general.telemetry.tracing["weave"].project = weave_project_name
+    config.general.telemetry.tracing["weave"].attributes = {weave_attribute_key: weave_identifier}
 
     await run_workflow(config=config, question=question, expected_answer=expected_answer)
 
