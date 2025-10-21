@@ -145,6 +145,21 @@ Each exporter has its own detailed configuration guide with complete setup instr
 
 For complete configuration examples and setup instructions, refer to the individual guides linked above or check the `examples/observability/` directory.
 
+#### Observability Support by Providers
+
+| Provider | Supported Features|
+|----------|-----------|
+| Catalyst | Logging, Tracing |
+| Data Flywheel | Logging, Tracing |
+| Dynatrace | Logging, Tracing |
+| Galileo | Logging, Tracing |
+| Langfuse | Logging, Tracing |
+| LangSmith | Logging, Tracing |
+| OpenTelemetry Collector | Logging, Tracing |
+| Patronus | Logging, Tracing |
+| Phoenix | Logging, Tracing |
+| W&B Weave | Logging, Tracing, W&B Weave Redaction, Evaluation Metrics |
+
 ### NeMo Agent Toolkit Observability Components
 
 The NeMo Agent toolkit observability system uses a generic, plugin-based architecture built on the Subject-Observer pattern. The system consists of several key components working together to provide comprehensive workflow monitoring:
