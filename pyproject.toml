@@ -91,10 +91,11 @@ redis = ["nvidia-nat-redis"]
 s3 = ["nvidia-nat-s3"]
 semantic-kernel = ["nvidia-nat-semantic-kernel"]
 telemetry = [
+  "nvidia-nat-data-flywheel",
   "nvidia-nat-opentelemetry",
   "nvidia-nat-phoenix",
-  "nvidia-nat-weave",
   "nvidia-nat-ragaai",
+  "nvidia-nat-weave",
 ]
 weave = ["nvidia-nat-weave"]
 zep-cloud = ["nvidia-nat-zep-cloud"]

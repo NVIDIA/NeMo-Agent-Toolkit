@@ -74,7 +74,7 @@ The user report function group (`user_report`) contains four functions that all 
 function_groups:
   user_report:
     _type: user_report
-    expose: [get, put, update, delete]
+    include: [get, put, update, delete]
     object_store: report_object_store
     get_description: "Description for get function..."
     put_description: "Description for put function..."

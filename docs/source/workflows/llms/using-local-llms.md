@@ -17,7 +17,7 @@ limitations under the License.
 
 # Using Local LLMs
 
-NeMo Agent toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
+NeMo Agent toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/), though any locally hosted LLM with an OpenAI-compatible API can be used.
 
 ## Using NIM
 <!-- path-check-skip-next-line -->
@@ -217,4 +217,18 @@ workflow:
 To run the workflow using the locally hosted LLMs, run the following command:
 ```bash
 nat run --config_file examples/documentation_guides/locally_hosted_llms/vllm_config.yml --input "What is LangSmith?"
+```
+
+## Other Locally Hosted LLMs
+
+Any locally hosted LLM with an OpenAI-compatible API can be used with the NeMo Agent toolkit. The only changes needed are to define the `base_url` for the LLM and embedding models, along with the names of the models to use.
+
+For example, to use the `gpt-oss-20b` model, the following configuration can be used:
+```yaml
+llms:
+  gpt-oss:
+    _type: openai
+    api_key: "EMPTY"
+    base_url: "http://localhost:8000/v1"
+    model_name: gpt-oss-20b
 ```
