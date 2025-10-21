@@ -207,10 +207,16 @@ class WeaveExporter(SpanExporter[Span, Span]):
                 # Add the output to the Weave call
                 outputs["output"] = step.payload.data.output
 
-                # Extract message content if output has choices attribute
-                choices = getattr(step.payload.data.output, 'choices', [])
-                if choices and hasattr(choices[0], 'message'):
+                # Extract message content based on response format
+                # Non-streaming: output.choices[0].message.content
+                choices = getattr(step.payload.data.output, 'choices', None)
+                if choices:
                     outputs["output_message"] = choices[0].message.content
+                # Streaming/websocket: output[0].choices[0].delta.content
+                else:
+                    choices_streaming = getattr(step.payload.data.output[0], 'choices', None)
+                    if choices_streaming:
+                        outputs["output_preview"] = choices_streaming[0].delta.content
             except Exception:
                 # If serialization fails, use string representation
                 outputs["output"] = str(step.payload.data.output)
