@@ -92,7 +92,7 @@ Running `nat eval` produces a set of artifacts in the configured output director
 - `rag_accuracy_output.json`: RAGAS AnswerAccuracy scores and reasoning per entry, plus an average score.
 - `rag_groundedness_output.json`: RAGAS ResponseGroundedness scores and reasoning per entry, plus an average score.
 - `rag_relevance_output.json`: RAGAS ContextRelevance scores and reasoning per entry, plus an average score.
-- Standardized_data_all.csv: One row per request with standardized profiler metrics (latency, token counts, model names, error flags). Load this in pandas for quick analysis.
+- `standardized_data_all.csv`: One row per request with standardized profiler metrics (latency, token counts, model names, error flags). Load this in pandas for quick analysis.
 - `workflow_profiling_metrics.json`: Aggregated profiler metrics (means, percentiles, and summary statistics) across the run. Describes operations types, operational periods, concurrency scores, and bottleneck scores.
 - `workflow_profiling_report.txt`: Human-readable profiler summary including latency, token efficiency, and bottleneck highlights. Highlights key metrics with a nested call profiling report and concurrency spike analysis.
 - `gantt_chart.png`: A timeline (Gantt) visualization of events for the run (LLM/tool spans). Useful for quick performance inspections and presentations.
