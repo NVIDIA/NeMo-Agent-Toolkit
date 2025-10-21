@@ -46,9 +46,13 @@ class ParetoVisualizer:
 
         fig, ax = plt.subplots(figsize=figsize)
 
-        # Extract metric values
-        x_vals = trials_df[f"values_{0}"].values
-        y_vals = trials_df[f"values_{1}"].values
+        # Extract metric values - support both old (values_0) and new (values_metricname) formats
+        x_col = f"values_{self.metric_names[0]}" \
+            if f"values_{self.metric_names[0]}" in trials_df.columns else f"values_{0}"
+        y_col = f"values_{self.metric_names[1]}"\
+            if f"values_{self.metric_names[1]}" in trials_df.columns else f"values_{1}"
+        x_vals = trials_df[x_col].values
+        y_vals = trials_df[y_col].values
 
         # Plot all trials
         ax.scatter(x_vals,
@@ -62,8 +66,8 @@ class ParetoVisualizer:
 
         # Plot Pareto optimal trials if provided
         if pareto_trials_df is not None and not pareto_trials_df.empty:
-            pareto_x = pareto_trials_df[f"values_{0}"].values
-            pareto_y = pareto_trials_df[f"values_{1}"].values
+            pareto_x = pareto_trials_df[x_col].values
+            pareto_y = pareto_trials_df[y_col].values
 
             ax.scatter(pareto_x,
                        pareto_y,
@@ -145,7 +149,10 @@ class ParetoVisualizer:
         # Normalize values for better visualization
         all_values = []
         for i in range(n_metrics):
-            all_values.append(trials_df[f"values_{i}"].values)
+            # Support both old (values_0) and new (values_metricname) formats
+            col_name = f"values_{self.metric_names[i]}"\
+                if f"values_{self.metric_names[i]}" in trials_df.columns else f"values_{i}"
+            all_values.append(trials_df[col_name].values)
 
         # Normalize each metric to [0, 1] for parallel coordinates
         normalized_values = []
@@ -221,23 +228,31 @@ class ParetoVisualizer:
 
                 if i == j:
                     # Diagonal: histograms
-                    values = trials_df[f"values_{i}"].values
+                    # Support both old (values_0) and new (values_metricname) formats
+                    col_name = f"values_{self.metric_names[i]}"\
+                        if f"values_{self.metric_names[i]}" in trials_df.columns else f"values_{i}"
+                    values = trials_df[col_name].values
                     ax.hist(values, bins=20, alpha=0.7, color='lightblue', edgecolor='navy')
                     if pareto_trials_df is not None and not pareto_trials_df.empty:
-                        pareto_values = pareto_trials_df[f"values_{i}"].values
+                        pareto_values = pareto_trials_df[col_name].values
                         ax.hist(pareto_values, bins=20, alpha=0.8, color='red', edgecolor='darkred')
                     ax.set_xlabel(f"{self.metric_names[i]}")
                     ax.set_ylabel("Frequency")
                 else:
                     # Off-diagonal: scatter plots
-                    x_vals = trials_df[f"values_{j}"].values
-                    y_vals = trials_df[f"values_{i}"].values
+                    # Support both old (values_0) and new (values_metricname) formats
+                    x_col = f"values_{self.metric_names[j]}"\
+                        if f"values_{self.metric_names[j]}" in trials_df.columns else f"values_{j}"
+                    y_col = f"values_{self.metric_names[i]}"\
+                        if f"values_{self.metric_names[i]}" in trials_df.columns else f"values_{i}"
+                    x_vals = trials_df[x_col].values
+                    y_vals = trials_df[y_col].values
 
                     ax.scatter(x_vals, y_vals, alpha=0.6, s=30, c='lightblue', edgecolors='navy', linewidths=0.5)
 
                     if pareto_trials_df is not None and not pareto_trials_df.empty:
-                        pareto_x = pareto_trials_df[f"values_{j}"].values
-                        pareto_y = pareto_trials_df[f"values_{i}"].values
+                        pareto_x = pareto_trials_df[x_col].values
+                        pareto_y = pareto_trials_df[y_col].values
                         ax.scatter(pareto_x,
                                    pareto_y,
                                    alpha=0.9,
