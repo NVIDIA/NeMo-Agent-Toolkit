@@ -218,7 +218,9 @@ Remember, if you are unsure about anything, don't hesitate to comment on issues 
 
 Once you have gotten your feet wet and are more comfortable with the code, you can review the prioritized issues for our next release in our [project boards](https://github.com/NVIDIA/NeMo-Agent-Toolkit/projects).
 
-> **Pro Tip:** Always review the release board with the highest number for issues to work on. This is where NeMo Agent toolkit developers also focus their efforts.
+:::{tip}
+Always review the release board with the highest number for issues to work on. This is where NeMo Agent toolkit developers also focus their efforts.
+:::
 
 Review the unassigned issues and choose an issue that you are comfortable contributing. Ensure you comment on the issue before you begin to inform others that you are working on it. If you have questions about implementing the issue, comment your questions in the issue instead of the PR.
 
