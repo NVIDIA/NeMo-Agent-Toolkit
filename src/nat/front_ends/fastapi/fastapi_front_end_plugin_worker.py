@@ -39,6 +39,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from starlette.websockets import WebSocket
 
+from nat.builder.context import Context
 from nat.builder.eval_builder import WorkflowEvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.function import Function
@@ -694,6 +695,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         GenerateStreamResponseType = session_manager.get_workflow_streaming_output_schema()
         GenerateSingleResponseType = session_manager.get_workflow_single_output_schema()
 
+        def add_context_headers_to_response(response: Response) -> None:
+            """Add context-based headers to response if available."""
+            weave_call_id = Context.get().weave_call_id
+            if weave_call_id:
+                response.headers["Weave-Call-Id"] = weave_call_id
+
         # Skip async generation for custom routes (those with function_name)
         if self._dask_available and not hasattr(endpoint, 'function_name'):
             # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
@@ -745,7 +752,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         http_connection=request,
                         user_authentication_callback=self._http_flow_handler.authenticate) as session:
 
-                    return await generate_single_response(None, session, result_type=result_type)
+                    result = await generate_single_response(None, session, result_type=result_type)
+                    add_context_headers_to_response(response)
+                    return result
 
             return get_single
 
@@ -793,7 +802,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         http_connection=request,
                         user_authentication_callback=self._http_flow_handler.authenticate) as session:
 
-                    return await generate_single_response(payload, session, result_type=result_type)
+                    result = await generate_single_response(payload, session, result_type=result_type)
+                    add_context_headers_to_response(response)
+                    return result
 
             return post_single
 
@@ -865,7 +876,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                      result_type=ChatResponseChunk,
                                                      output_type=ChatResponseChunk))
 
-                    return await generate_single_response(payload, session, result_type=ChatResponse)
+                    result = await generate_single_response(payload, session, result_type=ChatResponse)
+                    add_context_headers_to_response(response)
+                    return result
 
             return post_openai_api_compatible
 
