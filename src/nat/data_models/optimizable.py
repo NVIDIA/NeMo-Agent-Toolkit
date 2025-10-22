@@ -90,7 +90,7 @@ class SearchSpace(BaseModel, Generic[T]):
             return trial.suggest_int(name, self.low, self.high, log=self.log, step=self.step)
         return trial.suggest_float(name, self.low, self.high, log=self.log, step=self.step)
 
-    def to_grid_values(self) -> list:
+    def to_grid_values(self) -> list[Any]:
         """
         Convert SearchSpace to a list of values for GridSampler.
 
@@ -134,7 +134,7 @@ class SearchSpace(BaseModel, Generic[T]):
                 raise ValueError("Log scale is not supported for integer ranges in grid search. "
                                  "Please use linear scale or provide explicit values.")
             values = list(range(self.low, self.high + 1, step))
-            if values[-1] != self.high:
+            if values and values[-1] != self.high:
                 values.append(self.high)
             return values
 
