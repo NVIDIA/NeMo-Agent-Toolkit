@@ -241,11 +241,16 @@ class TestSearchSpaceToGridValues:
         assert result[0] == pytest.approx(0.0)
         assert result[-1] == pytest.approx(0.1)
 
-    def test_integer_range_with_non_integral_step_raises_error(self):
-        """Test that non-integral step for integer range raises clear error."""
+    def test_integer_range_with_non_integral_step_returns_floats(self):
+        """Test that non-integral step for integer range returns float values."""
         space = SearchSpace(low=0, high=10, step=1.5)
-        with pytest.raises(ValueError, match="Integer grid search requires an integral step value; got step=1.5"):
-            space.to_grid_values()
+        result = space.to_grid_values()
+        # Should get float values: 0.0, 1.5, 3.0, 4.5, 6.0, 7.5, 9.0, 10.0
+        assert len(result) == 8
+        assert all(isinstance(v, float) for v in result)
+        assert result[0] == pytest.approx(0.0)
+        assert result[1] == pytest.approx(1.5)
+        assert result[-1] == pytest.approx(10.0)
 
     def test_integer_range_with_negative_step_raises_error(self):
         """Test that negative step raises clear error."""

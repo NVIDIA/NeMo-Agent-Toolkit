@@ -69,8 +69,12 @@ def optimize_parameters(
         grid_search_space = {param_name: search_space.to_grid_values() for param_name, search_space in space.items()}
         sampler = optuna.samplers.GridSampler(grid_search_space)
         logger.info("Using Grid sampler for numeric optimization")
+    if sampler_type == "bayesian":
+        logger.info(
+            "Using Optuna default sampler types: TPESampler for single-objective, NSGAIISampler for multi-objective")
+        sampler = None
     else:
-        logger.warning(
+        logger.info(
             "Using Optuna default sampler types: TPESampler for single-objective, NSGAIISampler for multi-objective")
         sampler = None
 

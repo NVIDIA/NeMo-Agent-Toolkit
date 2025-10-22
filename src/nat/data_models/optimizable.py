@@ -95,18 +95,15 @@ class SearchSpace(BaseModel, Generic[T]):
                 f"Grid search with range (low={self.low}, high={self.high}) requires 'step' to be specified. "
                 "Please define the step size to discretize the range, for example: step=0.1")
 
+        # Validate step is positive
+        step_float = float(self.step)
+        if step_float <= 0:
+            raise ValueError(f"Grid search step must be positive; got step={self.step}")
+
         # Generate grid values from range with step
-        if isinstance(self.low, int) and isinstance(self.high, int):
-            # Validate step for integer ranges
-            step_float = float(self.step)
-
-            if step_float <= 0:
-                raise ValueError(f"Grid search step must be positive; got step={self.step}")
-
-            if not step_float.is_integer():
-                raise ValueError(f"Integer grid search requires an integral step value; got step={self.step}. "
-                                 "For non-integral steps, use float low/high values instead.")
-
+        # Use integer range only if low, high, and step are all integral
+        if (isinstance(self.low, int) and isinstance(self.high, int) and 
+            step_float.is_integer()):
             step = int(step_float)
 
             if self.log:
@@ -114,10 +111,10 @@ class SearchSpace(BaseModel, Generic[T]):
                                  "Please use linear scale or provide explicit values.")
             return list(range(self.low, self.high + 1, step))
 
-        # Float range
+        # Float range (including integer low/high with float step)
         low_val = float(self.low)
         high_val = float(self.high)
-        step_val = float(self.step)
+        step_val = step_float
 
         if self.log:
             raise ValueError("Log scale is not yet supported for grid search with ranges. "

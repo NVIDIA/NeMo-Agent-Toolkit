@@ -417,10 +417,14 @@ class TestSamplerSelection:
 
         sampler_instance = None
 
-        def capture_sampler(**kwargs):
+        # Save original GridSampler before patching
+        import optuna
+        original_grid_sampler = optuna.samplers.GridSampler
+
+        def capture_grid_sampler(search_space):
             nonlocal sampler_instance
-            sampler_instance = kwargs.get("sampler")
-            return _FakeStudy(kwargs.get("directions", []))
+            sampler_instance = original_grid_sampler(search_space)
+            return sampler_instance
 
         class _DummyEvalRun:
 
@@ -433,8 +437,10 @@ class TestSamplerSelection:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
-                   side_effect=capture_sampler), \
+        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
+                   side_effect=capture_grid_sampler), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+                   return_value=_FakeStudy(["maximize", "minimize"])), \
              patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
                    _DummyEvalRun), \
              patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
@@ -449,7 +455,6 @@ class TestSamplerSelection:
                                 opt_run_config=run_cfg)
 
         # Should create a GridSampler instance
-        import optuna
         assert isinstance(sampler_instance, optuna.samplers.GridSampler)
 
     def test_case_insensitive_sampler_type(self, tmp_path: Path):
@@ -464,9 +469,60 @@ class TestSamplerSelection:
 
         sampler_instance = None
 
-        def capture_sampler(**kwargs):
+        # Save original GridSampler before patching
+        import optuna
+        original_grid_sampler = optuna.samplers.GridSampler
+
+        def capture_grid_sampler(search_space):
             nonlocal sampler_instance
-            sampler_instance = kwargs.get("sampler")
+            sampler_instance = original_grid_sampler(search_space)
+            return sampler_instance
+
+        class _DummyEvalRun:
+
+            def __init__(self, config):  # noqa: ANN001
+                self.config = config
+
+            async def run_and_evaluate(self):
+                return SimpleNamespace(evaluation_results=[
+                    ("Accuracy", SimpleNamespace(average_score=0.8)),
+                    ("Latency", SimpleNamespace(average_score=0.5)),
+                ])
+
+        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
+                   side_effect=capture_grid_sampler), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+                   return_value=_FakeStudy(["maximize", "minimize"])), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
+                   _DummyEvalRun), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+                   return_value=base_cfg), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+                   return_value=SimpleNamespace(params={})), \
+             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
+
+        assert isinstance(sampler_instance, optuna.samplers.GridSampler)
+
+    def test_bayesian_sampler_passes_none_to_optuna(self, tmp_path: Path):
+        """Test that 'bayesian' sampler explicitly passes None to Optuna."""
+        base_cfg = Config()
+        optimizer_config = _make_optimizer_config(tmp_path / "opt")
+        optimizer_config.numeric.sampler = "bayesian"
+        optimizer_config.numeric.n_trials = 1
+
+        full_space = {"param": SearchSpace(values=[1, 2])}
+        run_cfg = _make_run_config(base_cfg)
+
+        sampler_arg = None
+
+        def capture_sampler(**kwargs):
+            nonlocal sampler_arg
+            sampler_arg = kwargs.get("sampler")
             return _FakeStudy(kwargs.get("directions", []))
 
         class _DummyEvalRun:
@@ -495,8 +551,164 @@ class TestSamplerSelection:
                                 optimizer_config=optimizer_config,
                                 opt_run_config=run_cfg)
 
-        import optuna
-        assert isinstance(sampler_instance, optuna.samplers.GridSampler)
+        # "bayesian" should pass None to let Optuna choose (TPE or NSGA-II)
+        assert sampler_arg is None
+
+    def test_bayesian_sampler_single_objective(self, tmp_path: Path):
+        """Test that 'bayesian' sampler with single objective lets Optuna use TPE."""
+        base_cfg = Config()
+        optimizer_config = OptimizerConfig(
+            output_path=tmp_path / "opt",
+            eval_metrics={
+                "acc": OptimizerMetric(evaluator_name="Accuracy", direction="maximize", weight=1.0),
+            },
+            reps_per_param_set=1,
+        )
+        optimizer_config.numeric.sampler = "bayesian"
+        optimizer_config.numeric.n_trials = 1
+
+        full_space = {"param": SearchSpace(values=[1, 2])}
+        run_cfg = _make_run_config(base_cfg)
+
+        sampler_arg = None
+        directions_arg = None
+
+        def capture_sampler(**kwargs):
+            nonlocal sampler_arg, directions_arg
+            sampler_arg = kwargs.get("sampler")
+            directions_arg = kwargs.get("directions", [])
+            return _FakeStudy(directions_arg)
+
+        class _DummyEvalRun:
+
+            def __init__(self, config):  # noqa: ANN001
+                self.config = config
+
+            async def run_and_evaluate(self):
+                return SimpleNamespace(evaluation_results=[
+                    ("Accuracy", SimpleNamespace(average_score=0.8)),
+                ])
+
+        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+                   side_effect=capture_sampler), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
+                   _DummyEvalRun), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+                   return_value=base_cfg), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+                   return_value=SimpleNamespace(params={})), \
+             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
+
+        # Single objective with "bayesian": should pass None for TPE
+        assert sampler_arg is None
+        assert directions_arg == ["maximize"]
+
+    def test_bayesian_sampler_multi_objective(self, tmp_path: Path):
+        """Test that 'bayesian' sampler with multi-objective lets Optuna use NSGA-II."""
+        base_cfg = Config()
+        optimizer_config = OptimizerConfig(
+            output_path=tmp_path / "opt",
+            eval_metrics={
+                "acc": OptimizerMetric(evaluator_name="Accuracy", direction="maximize", weight=1.0),
+                "lat": OptimizerMetric(evaluator_name="Latency", direction="minimize", weight=0.5),
+            },
+            reps_per_param_set=1,
+        )
+        optimizer_config.numeric.sampler = "bayesian"
+        optimizer_config.numeric.n_trials = 1
+
+        full_space = {"param": SearchSpace(values=[1, 2])}
+        run_cfg = _make_run_config(base_cfg)
+
+        sampler_arg = None
+        directions_arg = None
+
+        def capture_sampler(**kwargs):
+            nonlocal sampler_arg, directions_arg
+            sampler_arg = kwargs.get("sampler")
+            directions_arg = kwargs.get("directions", [])
+            return _FakeStudy(directions_arg)
+
+        class _DummyEvalRun:
+
+            def __init__(self, config):  # noqa: ANN001
+                self.config = config
+
+            async def run_and_evaluate(self):
+                return SimpleNamespace(evaluation_results=[
+                    ("Accuracy", SimpleNamespace(average_score=0.8)),
+                    ("Latency", SimpleNamespace(average_score=0.5)),
+                ])
+
+        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+                   side_effect=capture_sampler), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
+                   _DummyEvalRun), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+                   return_value=base_cfg), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+                   return_value=SimpleNamespace(params={})), \
+             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
+
+        # Multi-objective with "bayesian": should pass None for NSGA-II
+        assert sampler_arg is None
+        assert directions_arg == ["maximize", "minimize"]
+
+    def test_bayesian_sampler_case_insensitive(self, tmp_path: Path):
+        """Test that 'bayesian' sampler is case-insensitive."""
+        base_cfg = Config()
+        optimizer_config = _make_optimizer_config(tmp_path / "opt")
+        optimizer_config.numeric.sampler = "BAYESIAN"  # Uppercase
+        optimizer_config.numeric.n_trials = 1
+
+        full_space = {"param": SearchSpace(values=[1, 2])}
+        run_cfg = _make_run_config(base_cfg)
+
+        sampler_arg = None
+
+        def capture_sampler(**kwargs):
+            nonlocal sampler_arg
+            sampler_arg = kwargs.get("sampler")
+            return _FakeStudy(kwargs.get("directions", []))
+
+        class _DummyEvalRun:
+
+            def __init__(self, config):  # noqa: ANN001
+                self.config = config
+
+            async def run_and_evaluate(self):
+                return SimpleNamespace(evaluation_results=[
+                    ("Accuracy", SimpleNamespace(average_score=0.8)),
+                    ("Latency", SimpleNamespace(average_score=0.5)),
+                ])
+
+        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+                   side_effect=capture_sampler), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
+                   _DummyEvalRun), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+                   return_value=base_cfg), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+                   return_value=SimpleNamespace(params={})), \
+             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
+
+        # Case-insensitive "BAYESIAN" should still pass None
+        assert sampler_arg is None
 
 
 class TestGridSearchIntegration:

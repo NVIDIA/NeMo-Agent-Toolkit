@@ -113,7 +113,7 @@ This is the main configuration object for the optimizer.
 -   `eval_metrics: dict[str, OptimizerMetric] | None`: A dictionary of evaluation metrics to optimize. The keys are custom names for the metrics, and the values are `OptimizerMetric` objects.
 -   `numeric.enabled: bool`: Enable numeric optimization (Optuna). Defaults to `true`.
 -   `numeric.n_trials: int`: Number of numeric trials. Defaults to `20`.
--   `numeric.sampler: str | None`: Sampling strategy for numeric optimization. Options are `None` (Optuna default: TPE for single-objective, NSGA-II for multi-objective) or `grid` (performs exhaustive grid search over parameter combinations). For grid search, optimizable parameters must either specify explicit `values` or provide `low`, `high`, and `step` to discretize the range. Defaults to `None`.
+-   `numeric.sampler: str | None`: Sampling strategy for numeric optimization. `None` and `bayesian` use Optuna default: TPE for single-objective, NSGA-II for multi-objective. `grid` performs exhaustive grid search over parameter combinations. For grid search, optimizable parameters must either specify explicit `values` or provide `low`, `high`, and `step` to discretize the range. Defaults to `None`.
 -   `prompt.enabled: bool`: Enable GA-based prompt optimization. Defaults to `false`.
 -   `prompt.ga_population_size: int`: Population size for GA prompt optimization. Larger populations increase diversity but cost more per generation. Defaults to `10`.
 -   `prompt.ga_generations: int`: Number of generations for GA prompt optimization. Replaces `n_trials_prompt`. Defaults to `5`.

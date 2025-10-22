@@ -17,6 +17,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Field
+from typing import Literal
 
 
 class OptimizerMetric(BaseModel):
@@ -34,9 +35,11 @@ class NumericOptimizationConfig(BaseModel):
     """
     enabled: bool = Field(default=True, description="Enable numeric optimization")
     n_trials: int = Field(description="Number of trials for numeric optimization.", default=20)
-    sampler: str | None = Field(
+    sampler: Literal["grid", "bayesian"] | None = Field(
         default=None,
-        description="Sampling strategy for numeric optimization. Options: None (Optuna defaults) or 'grid'.",
+        description="Sampling strategy for numeric optimization. Options: None or 'bayesian' uses \
+            the Optuna default (TPE for single-objective, NSGA-II for multi-objective) or 'grid' performs \
+            exhaustive grid search over parameter combinations. Defaults to None.",
     )
 
 
