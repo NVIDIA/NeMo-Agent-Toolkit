@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Literal
+from enum import Enum
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -28,6 +28,9 @@ class OptimizerMetric(BaseModel):
     direction: str = Field(description="Direction of the optimization. Can be 'maximize' or 'minimize'.")
     weight: float = Field(description="Weight of the metric in the optimization process.", default=1.0)
 
+class SamplerType(str, Enum):
+    BAYESIAN = "bayesian"
+    GRID = "grid"
 
 class NumericOptimizationConfig(BaseModel):
     """
@@ -35,7 +38,7 @@ class NumericOptimizationConfig(BaseModel):
     """
     enabled: bool = Field(default=True, description="Enable numeric optimization")
     n_trials: int = Field(description="Number of trials for numeric optimization.", default=20)
-    sampler: Literal["grid", "bayesian"] | None = Field(
+    sampler: SamplerType | None = Field(
         default=None,
         description="Sampling strategy for numeric optimization. Options: None or 'bayesian' uses \
             the Optuna default (TPE for single-objective, NSGA-II for multi-objective) or 'grid' performs \

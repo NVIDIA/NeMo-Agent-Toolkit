@@ -457,11 +457,13 @@ class TestSamplerSelection:
         # Should create a GridSampler instance
         assert isinstance(sampler_instance, optuna.samplers.GridSampler)
 
-    def test_case_insensitive_sampler_type(self, tmp_path: Path):
-        """Test that sampler type is case-insensitive."""
+    def test_enum_sampler_type_with_correct_value(self, tmp_path: Path):
+        """Test that sampler enum works with correct enum value."""
         base_cfg = Config()
         optimizer_config = _make_optimizer_config(tmp_path / "opt")
-        optimizer_config.numeric.sampler = "GRID"  # Uppercase
+        # Use the actual enum value
+        from nat.data_models.optimizer import SamplerType
+        optimizer_config.numeric.sampler = SamplerType.GRID
         optimizer_config.numeric.n_trials = 1
 
         full_space = {"param": SearchSpace(values=[1, 2])}
@@ -664,11 +666,13 @@ class TestSamplerSelection:
         assert sampler_arg is None
         assert directions_arg == ["maximize", "minimize"]
 
-    def test_bayesian_sampler_case_insensitive(self, tmp_path: Path):
-        """Test that 'bayesian' sampler is case-insensitive."""
+    def test_bayesian_sampler_with_enum_value(self, tmp_path: Path):
+        """Test that 'bayesian' sampler works with enum value."""
         base_cfg = Config()
         optimizer_config = _make_optimizer_config(tmp_path / "opt")
-        optimizer_config.numeric.sampler = "BAYESIAN"  # Uppercase
+        # Use the actual enum value
+        from nat.data_models.optimizer import SamplerType
+        optimizer_config.numeric.sampler = SamplerType.BAYESIAN
         optimizer_config.numeric.n_trials = 1
 
         full_space = {"param": SearchSpace(values=[1, 2])}
@@ -707,14 +711,74 @@ class TestSamplerSelection:
                                 optimizer_config=optimizer_config,
                                 opt_run_config=run_cfg)
 
-        # Case-insensitive "BAYESIAN" should still pass None
+        # BAYESIAN enum value should pass None to Optuna
         assert sampler_arg is None
 
 
 class TestGridSearchIntegration:
     """Integration tests for grid search with various parameter configurations."""
 
-    def test_grid_search_with_multiple_categorical_params(self, tmp_path: Path):
+    def test_grid_search_with_multiple_categorical_params_static_pass(self, tmp_path: Path):
+        """Test grid search with multiple categorical parameters."""
+        base_cfg = Config()
+        optimizer_config = _make_optimizer_config(tmp_path / "opt")
+        from nat.data_models.optimizer import SamplerType
+        optimizer_config.numeric.sampler = SamplerType.GRID
+        optimizer_config.numeric.n_trials = 1
+
+        full_space = {
+            "model": SearchSpace(values=["gpt-3.5", "gpt-4"]),
+            "temperature": SearchSpace(values=[0.0, 0.5, 1.0]),
+        }
+        run_cfg = _make_run_config(base_cfg)
+
+        grid_space = None
+
+        # Save original GridSampler before patching
+        import optuna
+        original_grid_sampler = optuna.samplers.GridSampler
+
+        def capture_grid_sampler(search_space):
+            nonlocal grid_space
+            grid_space = search_space
+            return original_grid_sampler(search_space)
+
+        class _DummyEvalRun:
+
+            def __init__(self, config):  # noqa: ANN001
+                self.config = config
+
+            async def run_and_evaluate(self):
+                return SimpleNamespace(evaluation_results=[
+                    ("Accuracy", SimpleNamespace(average_score=0.8)),
+                    ("Latency", SimpleNamespace(average_score=0.5)),
+                ])
+
+        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
+                   side_effect=capture_grid_sampler), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+                   return_value=_FakeStudy(["maximize", "minimize"])), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
+                   _DummyEvalRun), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+                   return_value=base_cfg), \
+             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+                   return_value=SimpleNamespace(params={})), \
+             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
+
+        # Verify grid space was created with correct values
+        assert grid_space is not None
+        assert "model" in grid_space
+        assert "temperature" in grid_space
+        assert grid_space["model"] == ["gpt-3.5", "gpt-4"]
+        assert grid_space["temperature"] == [0.0, 0.5, 1.0]
+
+    def test_grid_search_with_multiple_categorical_params_runtime_pass(self, tmp_path: Path):
         """Test grid search with multiple categorical parameters."""
         base_cfg = Config()
         optimizer_config = _make_optimizer_config(tmp_path / "opt")
