@@ -212,39 +212,112 @@ For example, if you create a database connection in your function group, all fun
 
 If we have a collection of math functions, we can create a function group to share the configuration and context for all the functions in the group.
 
-**Python code**:
+**Python configuration code**:
+
+Without function groups, the configuration types would be:
+
+```python
+class AddConfig(FunctionGroupBaseConfig, name="add"):
+    rhs: float = Field(description="the number to use as the right-hand-side of the operation")
+
+class MultiplyConfig(FunctionGroupBaseConfig, name="multiply"):
+    rhs: float = Field(description="the number to use as the right-hand-side of the operation")
+
+class DivideConfig(FunctionGroupBaseConfig, name="divide"):
+    rhs: float = Field(description="the number to use as the right-hand-side of the operation")
+```
+
+With function groups, the configuration type is streamlined to:
 ```python
 class MathGroupConfig(FunctionGroupBaseConfig, name="math_group"):
-    pass
+    rhs: float = Field(description="the number to use as the right-hand-side of the operation")
+```
 
+**Python implementation code**
+
+Without function groups, we have a lot of duplication:
+
+```python
+@register_function_group(config_type=AddConfig)
+async def build_add(config: AddConfig, _builder: Builder):
+    async def add(a: float) -> float:
+        return a + config.rhs
+
+    yield FunctionInfo.from_fn(add, description=f"Adds a number to {config.rhs}")
+
+
+@register_function_group(config_type=MultiplyConfig)
+async def build_add(config: MultiplyConfig, _builder: Builder):
+    async def multiply(a: float) -> float:
+        return a * config.rhs
+
+    yield FunctionInfo.from_fn(multiply, description=f"Multiplies a number by {config.rhs}")
+
+
+@register_function_group(config_type=DivideConfig)
+async def build_add(config: DivideConfig, _builder: Builder):
+    async def divide(a: float) -> float:
+        return a / config.rhs
+
+    yield FunctionInfo.from_fn(divide, description=f"Divides a number by {config.rhs}")
+```
+
+With function groups, the implementation becomes:
+
+```python
 @register_function_group(config_type=MathGroupConfig)
 async def build_math_group(config: MathGroupConfig, _builder: Builder):
+    # create the function group
     group = FunctionGroup(config=config)
 
-    async def add(a: float, b: float) -> float:
-        return a + b
+    # define the following operations:
+    # - add
+    # - multiply
+    # - divide
+    async def add(a: float) -> float:
+        return a + config.rhs
     
-    async def multiply(a: float, b: float) -> float:
-        return a * b
+    async def multiply(a: float) -> float:
+        return a * config.rhs
 
-    async def divide(a: float, b: float) -> float:
-        if b == 0:
+    async def divide(a: float) -> float:
+        if config.rhs == 0:
             raise ValueError("Cannot divide by zero")
-        return a / b
+        return a / config.rhs
 
-    group.add_function(name="add", fn=add, description="Add two numbers")
-    group.add_function(name="multiply", fn=multiply, description="Multiply two numbers")
-    group.add_function(name="divide", fn=divide, description="Divide two numbers")
+    # add each function to the function group
+    group.add_function(name="add", fn=add, description=f"Adds a number to {config.rhs}")
+    group.add_function(name="multiply", fn=multiply, description=f"Multiplies a number by {config.rhs}")
+    group.add_function(name="divide", fn=divide, description=f"Divides a number by {config.rhs}")
 
+    # return the function group
+    # important: must yield rather than return
     yield group
 ```
 
 **Configuration file**:
 
+Without function groups, the YAML configuration would look like:
+```yaml
+functions:
+  add:
+    _type: add
+    rhs: 5.0
+  multiply:
+    _type: multiply
+    rhs: 5.0
+  divide:
+    _type: divide
+    rhs: 5.0
+```
+
+With function groups, the YAML configuration is simplified to:
+
 ```yaml
 function_groups:
   math:
     _type: math_group
+    rhs: 5.0
 ```
 
 ### Accessing a Function Group
@@ -483,11 +556,11 @@ from nat.builder.workflow_builder import WorkflowBuilder
 
 async with WorkflowBuilder() as builder:
     # Add the function group
-    await builder.add_function_group("math", MathGroupConfig(include=["add", "multiply"]))
+    await builder.add_function_group("math", MathGroupConfig(rhs=5.0, include=["add", "multiply"]))
     
     # Call an included function by its fully-qualified name
     add = await builder.get_function("math.add")
-    result = await add.ainvoke([1, 2, 3])  # Returns: 6
+    result = await add.ainvoke(3.0)  # Returns: 8.0
 ```
 
 #### Getting the Function Group Object
@@ -808,7 +881,7 @@ When testing workflows with function groups:
 ```python
 # Test individual functions through the group
 async with WorkflowBuilder() as builder:
-    await builder.add_function_group("math", MathGroupConfig())
+    await builder.add_function_group("math", MathGroupConfig(rhs=5.0))
     math_group = await builder.get_function_group("math")
     
     # Test each function
