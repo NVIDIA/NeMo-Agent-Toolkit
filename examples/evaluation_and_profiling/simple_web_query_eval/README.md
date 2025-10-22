@@ -185,9 +185,9 @@ Running `nat eval` generates several artifacts in the output directory:
 
 **Evaluator outputs (when configured)**
 - `trajectory_accuracy_output.json`: Trajectory evaluator scores and reasoning
-- `rag_accuracy_output.json`: RAGAS AnswerAccuracy scores
-- `rag_groundedness_output.json`: RAGAS ResponseGroundedness scores
-- `rag_relevance_output.json`: RAGAS ContextRelevance scores
+- `accuracy_output.json`: Ragas AnswerAccuracy scores
+- `groundedness_output.json`: Ragas ResponseGroundedness scores
+- `relevance_output.json`: Ragas ContextRelevance scores
 
 **Profiler outputs (when enabled)**
 - `standardized_data_all.csv`: Per-request profiler metrics
