@@ -65,6 +65,62 @@ class SearchSpace(BaseModel, Generic[T]):
             return trial.suggest_int(name, self.low, self.high, log=self.log, step=self.step)
         return trial.suggest_float(name, self.low, self.high, log=self.log, step=self.step)
 
+    def to_grid_values(self) -> list:
+        """
+        Convert SearchSpace to a list of values for GridSampler.
+        
+        Grid search requires explicit values. This can be provided in two ways:
+        1. Explicit values: SearchSpace(values=[0.1, 0.5, 0.9])
+        2. Range with step: SearchSpace(low=0.1, high=0.9, step=0.2)
+        
+        For ranges, step is required (no default will be applied) to avoid
+        unintentional combinatorial explosion.
+        """
+        import numpy as np
+        
+        if self.is_prompt:
+            raise ValueError("Prompt optimization not currently supported using Optuna. "
+                             "Use the genetic algorithm implementation instead.")
+        
+        # Option 1: Explicit values provided
+        if self.values is not None:
+            return list(self.values)
+        
+        # Option 2: Range with required step
+        if self.low is None or self.high is None:
+            raise ValueError("Grid search requires either 'values' or both 'low' and 'high' to be defined")
+        
+        if self.step is None:
+            raise ValueError(
+                f"Grid search with range (low={self.low}, high={self.high}) requires 'step' to be specified. "
+                "Please define the step size to discretize the range, for example: step=0.1"
+            )
+        
+        # Generate grid values from range with step
+        if isinstance(self.low, int) and isinstance(self.high, int):
+            step = int(self.step)
+            if self.log:
+                raise ValueError(
+                    "Log scale is not supported for integer ranges in grid search. "
+                    "Please use linear scale or provide explicit values."
+                )
+            return list(range(self.low, self.high + 1, step))
+        
+        # Float range
+        low_val = float(self.low)
+        high_val = float(self.high)
+        step_val = float(self.step)
+        
+        if self.log:
+            raise ValueError(
+                "Log scale is not yet supported for grid search with ranges. "
+                "Please provide explicit values using the 'values' field."
+            )
+        
+        # Use linspace for better numerical stability and guaranteed endpoint inclusion
+        num_points = int(round((high_val - low_val) / step_val)) + 1
+        return np.linspace(low_val, high_val, num_points).tolist()
+
 
 def OptimizableField(
     default: Any = PydanticUndefined,

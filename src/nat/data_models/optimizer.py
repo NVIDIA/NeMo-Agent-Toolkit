@@ -34,6 +34,10 @@ class NumericOptimizationConfig(BaseModel):
     """
     enabled: bool = Field(default=True, description="Enable numeric optimization")
     n_trials: int = Field(description="Number of trials for numeric optimization.", default=20)
+    sampler: str | None = Field(
+        default=None,
+        description="Sampling strategy for numeric optimization. Options: None (Optuna defaults) or 'grid'.",
+    )
 
 
 class PromptGAOptimizationConfig(BaseModel):

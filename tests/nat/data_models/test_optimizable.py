@@ -29,7 +29,7 @@ class TestSearchSpaceSuggest:
         space = SearchSpace(low=0, high=1, is_prompt=True)
         trial = mock.MagicMock()
 
-        with pytest.raises(ValueError, match="Prompt optimization not currently supported"):
+        with pytest.raises(ValueError, match="Prompt optimization not currently supported using Optuna"):
             space.suggest(trial, name="x")
 
     def test_categorical_choice(self):
@@ -177,6 +177,69 @@ class TestOptimizableField:
                         )
                 },
             )
+
+
+class TestSearchSpaceToGridValues:
+    """Test SearchSpace.to_grid_values() for grid search."""
+
+    def test_prompt_not_supported(self):
+        space = SearchSpace(low=0, high=1, is_prompt=True)
+        with pytest.raises(ValueError, match="Prompt optimization not currently supported using Optuna"):
+            space.to_grid_values()
+
+    def test_explicit_values(self):
+        space = SearchSpace(values=[0.1, 0.5, 0.9])
+        result = space.to_grid_values()
+        assert result == [0.1, 0.5, 0.9]
+
+    def test_integer_range_with_step(self):
+        space = SearchSpace(low=0, high=10, step=2)
+        result = space.to_grid_values()
+        assert result == [0, 2, 4, 6, 8, 10]
+
+    def test_float_range_with_step(self):
+        space = SearchSpace(low=0.0, high=1.0, step=0.25)
+        result = space.to_grid_values()
+        assert len(result) == 5
+        assert result[0] == pytest.approx(0.0)
+        assert result[-1] == pytest.approx(1.0)
+        # Check intermediate values
+        assert result[1] == pytest.approx(0.25)
+        assert result[2] == pytest.approx(0.5)
+        assert result[3] == pytest.approx(0.75)
+
+    def test_range_without_step_raises_error(self):
+        space = SearchSpace(low=0.1, high=0.9)
+        with pytest.raises(ValueError, match="requires 'step' to be specified"):
+            space.to_grid_values()
+
+    def test_log_scale_not_supported_for_integer_ranges(self):
+        space = SearchSpace(low=1, high=100, step=10, log=True)
+        with pytest.raises(ValueError, match="Log scale is not supported for integer ranges"):
+            space.to_grid_values()
+
+    def test_log_scale_not_supported_for_float_ranges(self):
+        space = SearchSpace(low=0.01, high=1.0, step=0.1, log=True)
+        with pytest.raises(ValueError, match="Log scale is not yet supported for grid search"):
+            space.to_grid_values()
+
+    def test_missing_low_high_raises_error(self):
+        space = SearchSpace(low=None, high=None)
+        with pytest.raises(ValueError, match="requires either 'values' or both 'low' and 'high'"):
+            space.to_grid_values()
+
+    def test_categorical_values_returned_as_list(self):
+        space = SearchSpace(values=["small", "medium", "large"])
+        result = space.to_grid_values()
+        assert result == ["small", "medium", "large"]
+
+    def test_small_float_step(self):
+        """Test with a small step size to ensure proper discretization."""
+        space = SearchSpace(low=0.0, high=0.1, step=0.02)
+        result = space.to_grid_values()
+        assert len(result) == 6  # 0.0, 0.02, 0.04, 0.06, 0.08, 0.1
+        assert result[0] == pytest.approx(0.0)
+        assert result[-1] == pytest.approx(0.1)
 
 
 class TestOptimizableMixin:
