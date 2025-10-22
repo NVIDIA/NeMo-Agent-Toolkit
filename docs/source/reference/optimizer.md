@@ -497,7 +497,7 @@ By examining these output files, you can understand the results of the optimizat
 The optimizer generates three types of visualizations to help you understand the trade-offs between different objectives:
 
 #### 1. 2D Pareto Front (`pareto_front_2d.png`)
-*Generated only when optimizing exactly 2 metrics*
+*Generated only when optimizing exactly 2 metrics, for example in ![this image](../_static/pareto_front_2d.png)*
 
 This scatter plot shows:
 - **Light blue dots**: All trials tested during optimization
@@ -513,7 +513,7 @@ This scatter plot shows:
 **Example**: If optimizing accuracy (maximize) vs latency (minimize), the ideal point would be top-left (high accuracy, low latency). The Pareto front shows the best achievable trade-offs.
 
 #### 2. Parallel Coordinates Plot (`pareto_parallel_coordinates.png`)
-*Works with any number of metrics*
+*Works with any number of metrics, for example in ![this image](../_static/pareto_parallel_coordinates.png)*
 
 This plot normalizes all metrics to a 0-1 scale where higher is always better:
 - **Blue lines**: All trials (shown with low opacity)
@@ -531,7 +531,7 @@ This plot normalizes all metrics to a 0-1 scale where higher is always better:
 **Choosing a solution**: Look for red lines that maintain good performance (stay high) across the metrics you care most about.
 
 #### 3. Pairwise Matrix Plot (`pareto_pairwise_matrix.png`)
-*Provides detailed metric relationships*
+*Provides detailed metric relationships, for example in ![this image](../_static/pareto_pairwise_matrix.png)*
 
 This matrix visualization shows:
 - **Diagonal cells (histograms)**: Distribution of values for each individual metric
