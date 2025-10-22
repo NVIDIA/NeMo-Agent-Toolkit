@@ -108,17 +108,24 @@ async def test_eval():
     eval_runner = EvaluationRun(config=config)
     output = await eval_runner.run_and_evaluate()
 
+    assert eval_runner.eval_config is not None, "The eval config is not present"
+
+    ragas_types = []
+    for name, config in eval_runner.eval_config.evaluators.items():
+        if config.type == "ragas":
+            ragas_types.append(f"{name}_output.json")
+
     # Ensure the workflow was not interrupted
     assert not output.workflow_interrupted, "The workflow was interrupted"
 
     # Look for the ragas evaluator and trajectory evaluator output files
-    rag_output_files: list[Path] = []
+    ragas_output_files: list[Path] = []
     trajectory_output_file: Path | None = None
 
     for output_file in output.evaluator_output_files:
         output_file_str = str(output_file)
-        if "rag_" in output_file_str:
-            rag_output_files.append(output_file)
+        if any(t in output_file_str for t in ragas_types):
+            ragas_output_files.append(output_file)
         if "trajectory_output.json" in output_file_str:
             trajectory_output_file = output_file
 
@@ -126,12 +133,15 @@ async def test_eval():
     assert output.workflow_output_file, "The workflow_output.json file was not created"
     validate_workflow_output(output.workflow_output_file)
 
-    # Verify that atleast one rag metric output file is present
-    assert rag_output_files, "Atleast one rag metric output whould be present"
-    for rag_output_file in rag_output_files:
+    assert len(ragas_output_files) == len(ragas_types), "Expected number of Ragas metric output files is not present"
+
+    # Verify that atleast one Ragas metric output file is present
+    assert ragas_output_files, "Atleast one Ragas metric output whould be present"
+
+    for ragas_output_file in ragas_output_files:
         # Relevance and Groundedness should evaluate better than Accuracy
-        min_score = 0.5 if "accuracy" in str(rag_output_file) else 0.75
-        validate_rag_accuracy(rag_output_file, min_score)
+        min_score = 0.5 if "accuracy" in str(ragas_output_file) else 0.75
+        validate_rag_accuracy(ragas_output_file, min_score)
 
     # Verify the trajectory_output.json file
     if trajectory_output_file:
