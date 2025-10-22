@@ -105,3 +105,12 @@ async def test_otel_full_workflow(tmp_path: Path, config_dir: Path, question: st
 
     assert len(traces) > 0
     assert called_multiply
+
+
+@pytest.mark.integration
+async def test_langfuse_full_workflow(config_dir: Path, langfuse_trace_url: str, question: str, expected_answer: str):
+    config_file = config_dir / "config-langfuse.yml"
+    config = load_config(config_file)
+    config.general.telemetry.tracing["langfuse"].endpoint = langfuse_trace_url
+
+    await run_workflow(config=config, question=question, expected_answer=expected_answer)

@@ -48,9 +48,8 @@ You can run the workflow using authenticated MCP tools. In this case, the workfl
    export CORPORATE_MCP_JIRA_URL="https://your-jira-server.com/mcp"
    ```
 
-   :::{warning}
-   **Important**: Set `CORPORATE_MCP_JIRA_URL` to your actual protected Jira MCP server URL, not the sample URL shown above. The sample URL is for demonstration purposes only and will not work with your actual Jira instance.
-   :::
+   > [!IMPORTANT]
+   > Set `CORPORATE_MCP_JIRA_URL` to your protected Jira MCP server URL, not the sample URL shown above. The sample URL is for demonstration purposes only and will not work with your actual Jira instance.
 
 2. **Start the authentication flow**: The first time you run the workflow, it will initiate an OAuth2 authentication flow:
    ```bash

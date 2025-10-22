@@ -72,6 +72,7 @@ workflow:
 
 eval:
   general:
+    max_concurrency: 1
     output_dir: .tmp/nat/examples/getting_started/simple_calculator
     dataset:
       _type: json

@@ -225,34 +225,34 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/
 
 ## NeMo Agent Toolkit Built-in Evaluators
 NeMo Agent toolkit provides the following built-in evaluator:
-- `ragas` - An evaluator to run and evaluate RAG-like workflows using the public RAGAS API.
+- `ragas` - An evaluator to run and evaluate workflows using the public Ragas API.
 - `trajectory` - An evaluator to run and evaluate the LangChain/LangGraph agent trajectory.
 - `swe_bench` - An evaluator to run and evaluate the workflow on the SWE-Bench dataset.
 
-### RAGAS Evaluator
-[RAGAS](https://docs.ragas.io/) is an OSS evaluation framework that enables end-to-end
-evaluation of RAG workflows. NeMo Agent toolkit provides an interface to RAGAS to evaluate the performance of RAG-like workflows.
+### Ragas Evaluator
+[Ragas](https://docs.ragas.io/) is an open-source evaluation framework that enables end-to-end
+evaluation of LLM workflows. NeMo Agent toolkit provides an evaluation interface to interact with Ragas.
 
-RAGAS provides a set of evaluation metrics to configure in the `config.yml` file
+Ragas provides a set of evaluation metrics to configure in the `config.yml` file
 by adding an evaluator section with type`ragas`.
 
 **Example:**
 ```yaml
 eval:
   evaluators:
-    rag_accuracy:
+    accuracy:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_rag_eval_llm
-    rag_groundedness:
+    groundedness:
       _type: ragas
       metric: ResponseGroundedness
       llm_name: nim_rag_eval_llm
-    rag_relevance:
+    relevance:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm
-    rag_factual_correctness:
+    factual_correctness:
       _type: ragas
       metric:
         FactualCorrectness:

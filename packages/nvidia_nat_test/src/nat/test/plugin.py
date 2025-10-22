@@ -220,7 +220,19 @@ def azure_openai_keys_fixture(fail_missing: bool):
     yield require_env_variables(
         varnames=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
         reason="Azure integration tests require the `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` environment "
-        "variable to be defined.",
+        "variables to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="langfuse_keys", scope='session')
+def langfuse_keys_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require Langfuse credentials.
+    """
+    yield require_env_variables(
+        varnames=["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"],
+        reason="Langfuse integration tests require the `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` environment "
+        "variables to be defined.",
         fail_missing=fail_missing)
 
 
@@ -298,8 +310,8 @@ def env_without_nat_log_level_fixture() -> dict[str, str]:
     return env
 
 
-@pytest.fixture(name="require_etcd", scope="session")
-def require_etcd_fixture(fail_missing: bool = False) -> bool:
+@pytest.fixture(name="etcd_url", scope="session")
+def etcd_url_fixture(fail_missing: bool = False) -> str:
     """
     To run these tests, an etcd server must be running
     """
@@ -307,21 +319,22 @@ def require_etcd_fixture(fail_missing: bool = False) -> bool:
 
     host = os.getenv("NAT_CI_ETCD_HOST", "localhost")
     port = os.getenv("NAT_CI_ETCD_PORT", "2379")
-    health_url = f"http://{host}:{port}/health"
+    url = f"http://{host}:{port}"
+    health_url = f"{url}/health"
 
     try:
         response = requests.get(health_url, timeout=5)
         response.raise_for_status()
-        return True
+        return url
     except:  # noqa: E722
-        failure_reason = f"Unable to connect to etcd server at {health_url}"
+        failure_reason = f"Unable to connect to etcd server at {url}"
         if fail_missing:
             raise RuntimeError(failure_reason)
         pytest.skip(reason=failure_reason)
 
 
 @pytest.fixture(name="milvus_uri", scope="session")
-def milvus_uri_fixture(require_etcd: bool, fail_missing: bool = False) -> str:
+def milvus_uri_fixture(etcd_url: str, fail_missing: bool = False) -> str:
     """
     To run these tests, a Milvus server must be running
     """
@@ -452,7 +465,7 @@ def fixture_redis_server(fail_missing: bool) -> Generator[dict[str, str | int]]:
         pytest.skip(f"Error connecting to Redis server: {e}, skipping redis tests")
 
 
-@pytest_asyncio.fixture(name="mysql_server", scope="module")
+@pytest_asyncio.fixture(name="mysql_server", scope="session")
 async def fixture_mysql_server(fail_missing: bool) -> AsyncGenerator[dict[str, str | int]]:
     """Fixture to safely skip MySQL based tests if MySQL is not running"""
     host = os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1')
@@ -475,7 +488,7 @@ async def fixture_mysql_server(fail_missing: bool) -> AsyncGenerator[dict[str, s
         pytest.skip(f"Error connecting to MySQL server: {e}, skipping MySQL tests")
 
 
-@pytest.fixture(name="minio_server", scope="module")
+@pytest.fixture(name="minio_server", scope="session")
 def minio_server_fixture(fail_missing: bool) -> Generator[dict[str, str | int]]:
     """Fixture to safely skip MinIO based tests if MinIO is not running"""
     host = os.getenv("NAT_CI_MINIO_HOST", "localhost")
@@ -502,17 +515,76 @@ def minio_server_fixture(fail_missing: bool) -> Generator[dict[str, str | int]]:
                                        aws_access_key_id=aws_access_key_id,
                                        aws_secret_access_key=aws_secret_access_key,
                                        endpoint_url=endpoint_url)
-        client.head_bucket(Bucket=bucket_name)
+        client.list_buckets()
         yield minio_info
     except ImportError:
         if fail_missing:
             raise
         pytest.skip("aioboto3 not installed, skipping MinIO tests")
     except Exception as e:
-        import botocore.exceptions
-        if isinstance(e, botocore.exceptions.ClientError) and e.response['Error']['Code'] == '404':
-            yield minio_info  # Bucket does not exist, but server is reachable
-        elif fail_missing:
+        if fail_missing:
             raise
         else:
             pytest.skip(f"Error connecting to MinIO server: {e}, skipping MinIO tests")
+
+
+@pytest.fixture(name="langfuse_bucket", scope="session")
+def langfuse_bucket_fixture(fail_missing: bool, minio_server: dict[str, str | int]) -> Generator[str]:
+
+    bucket_name = os.getenv("NAT_CI_LANGFUSE_BUCKET", "langfuse")
+    try:
+        import botocore.session
+        session = botocore.session.get_session()
+
+        client = session.create_client("s3",
+                                       aws_access_key_id=minio_server["aws_access_key_id"],
+                                       aws_secret_access_key=minio_server["aws_secret_access_key"],
+                                       endpoint_url=minio_server["endpoint_url"])
+
+        buckets = client.list_buckets()
+        bucket_names = [b['Name'] for b in buckets['Buckets']]
+        if bucket_name not in bucket_names:
+            client.create_bucket(Bucket=bucket_name)
+
+        yield bucket_name
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("aioboto3 not installed, skipping MinIO tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        else:
+            pytest.skip(f"Error connecting to MinIO server: {e}, skipping MinIO tests")
+
+
+@pytest.fixture(name="langfuse_url", scope="session")
+def langfuse_url_fixture(fail_missing: bool, langfuse_bucket: str) -> str:
+    """
+    To run these tests, a langfuse server must be running.
+    """
+    import requests
+
+    host = os.getenv("NAT_CI_LANGFUSE_HOST", "localhost")
+    port = int(os.getenv("NAT_CI_LANGFUSE_PORT", "3000"))
+    url = f"http://{host}:{port}"
+    health_endpoint = f"{url}/api/public/health"
+    try:
+        response = requests.get(health_endpoint, timeout=5)
+        response.raise_for_status()
+
+        return url
+    except Exception as e:
+        reason = f"Unable to connect to Langfuse server at {url}: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="langfuse_trace_url", scope="session")
+def langfuse_trace_url_fixture(langfuse_url: str) -> str:
+    """
+    The langfuse_url fixture provides the base url, however the general.telemetry.tracing["langfuse"].endpoint expects
+    the trace url which is what this fixture provides.
+    """
+    return f"{langfuse_url}/api/public/otel/v1/traces"
