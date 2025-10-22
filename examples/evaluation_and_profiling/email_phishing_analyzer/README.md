@@ -130,7 +130,8 @@ Workflow Result:
 
 ## Optimization
 
-This example includes an optimization configuration that uses the NeMo Agent toolkit Optimizer to tune the workflow.
+This example includes an optimization configuration that uses the NeMo Agent toolkit Optimizer to tune the workflow. For detailed information 
+about the NeMo Agent Toolkit Optimizer, refer to the [Optimizer Documentation](../../../docs/source/reference/optimizer.md).
 
 ### What Is Being Optimized
 - **Tool parameters**: The `email_phishing_analyzer` exposes two optimizable fields on its config:
@@ -262,75 +263,9 @@ Results are written to the path specified by `optimizer.output_path`. Expect art
 
 #### Understanding the Pareto Visualizations
 
-The optimizer generates three types of visualizations to help you understand the trade-offs between different objectives:
-
-##### 1. 2D Pareto Front (`pareto_front_2d.png`)
-*Generated only when optimizing exactly 2 metrics*
-
-This scatter plot shows:
-- **Light blue dots**: All trials tested during optimization
-- **Red stars**: Pareto optimal trials (solutions where improving one metric would worsen another)
-- **Red dashed line**: The Pareto front connecting optimal solutions
-
-**How to interpret**:
-- The arrows (↑ or ↓) indicate the direction of improvement for each metric
-- For "maximize" metrics, higher values are better (look up/right)
-- For "minimize" metrics, lower values are better (look down/left)
-- Points on the Pareto front represent different trade-offs - choose based on your priorities
-
-**Example**: If optimizing accuracy (maximize) vs latency (minimize), the ideal point would be top-left (high accuracy, low latency). The Pareto front shows the best achievable trade-offs.
-
-##### 2. Parallel Coordinates Plot (`pareto_parallel_coordinates.png`)
-*Works with any number of metrics*
-
-This plot normalizes all metrics to a 0-1 scale where higher is always better:
-- **Blue lines**: All trials (shown with low opacity)
-- **Red lines**: Pareto optimal trials (shown with high opacity)
-- **Y-axis**: Normalized performance (0 = worst, 1 = best)
-- **X-axis**: Different metrics with their optimization direction
-
-**How to interpret**:
-- Each line represents one complete parameter configuration
-- Follow a line across to see how it performs on each metric
-- Parallel lines indicate independent metrics
-- Crossing lines suggest trade-offs between metrics
-- The best solutions have lines staying high across all metrics
-
-**Choosing a solution**: Look for red lines that maintain good performance (stay high) across the metrics you care most about.
-
-##### 3. Pairwise Matrix Plot (`pareto_pairwise_matrix.png`)
-*Provides detailed metric relationships*
-
-This matrix visualization shows:
-- **Diagonal cells (histograms)**: Distribution of values for each individual metric
-  - Light blue bars: All trials
-  - Red bars: Pareto optimal trials
-  - Shows the range and frequency of values achieved
-- **Off-diagonal cells (scatter plots)**: Relationships between pairs of metrics
-  - Light blue dots: All trials
-  - Red stars: Pareto optimal trials
-  - Reveals correlations and trade-offs between metrics
-
-**How to interpret**:
-- **Histograms**: Check if Pareto optimal solutions (red) cluster at desirable values
-- **Scatter plots**: Look for patterns:
-  - Positive correlation: Metrics improve together (dots trend up-right)
-  - Negative correlation: Trade-off exists (dots trend down-right)
-  - No correlation: Metrics are independent (random scatter)
-
-**Example interpretation**: If the accuracy-latency scatter shows a negative correlation, it confirms that improving accuracy typically increases latency.
-
-#### Selecting the Best Configuration
-
-1. **Identify your priorities**: Decide which metrics matter most for your use case
-2. **Examine the Pareto visualizations**: Look for configurations that excel in your priority metrics
-3. **Find the trial number**: Use the `trials_dataframe_params.csv` to identify specific trial numbers
-4. **Use the configuration**: Load the corresponding `config_numeric_trial_N.yml` file
-
-**Example decision process**:
-- If latency is critical: Choose a Pareto optimal point with the lowest latency that still meets your accuracy requirements
-- If accuracy is paramount: Select the highest accuracy configuration and accept the latency trade-off
-- For balanced performance: Pick a point in the middle of the Pareto front 
+For a detailed guide on interpreting the output of the optimization process, including the 
+Pareto visualizations, refer to the [Optimizer Output Analysis](../../../docs/source/reference/optimizer.md#understanding-the-output) section in the 
+NeMo Agent toolkit documentation.
 
 ---
 

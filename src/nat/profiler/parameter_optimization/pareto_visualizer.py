@@ -102,8 +102,8 @@ class ParetoVisualizer:
         ax.grid(True, alpha=0.3)
 
         # Add direction annotations
-        x_annotation = (f"Better {self.metric_names[0]} →"
-                        if self.directions[0] == "minimize" else f"← Better {self.metric_names[0]}")
+        x_annotation = (f"Better {self.metric_names[0]} ←"
+                        if self.directions[0] == "minimize" else f"→ Better {self.metric_names[0]}")
         ax.annotate(x_annotation,
                     xy=(0.02, 0.98),
                     xycoords='axes fraction',
@@ -113,8 +113,8 @@ class ParetoVisualizer:
                     style='italic',
                     bbox=dict(boxstyle="round,pad=0.3", facecolor="wheat", alpha=0.7))
 
-        y_annotation = (f"Better {self.metric_names[1]} ↑"
-                        if self.directions[1] == "minimize" else f"Better {self.metric_names[1]} ↓")
+        y_annotation = (f"Better {self.metric_names[1]} ↓"
+                        if self.directions[1] == "minimize" else f"Better {self.metric_names[1]} ↑")
         ax.annotate(y_annotation,
                     xy=(0.02, 0.02),
                     xycoords='axes fraction',
