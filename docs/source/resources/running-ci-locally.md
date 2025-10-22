@@ -21,8 +21,9 @@ The `ci/scripts/run_ci_local.sh` attempts to mirror the behavior of the GitHub A
 
 By default the script will perform a `git clone` and checkout the latest commit. This requires the latest commit to be pushed. Alternately setting the environment variable `USE_HOST_GIT=1` the host's repo will be mounted inside the CI container, avoiding the need to commit/push changes. This option requires all Git LFS files to be checked out first.
 
-> Note: We don't set all of the same environment variables that GitHub Actions would set, just the ones needed by our own CI scripts.
-
+:::{note}
+We do not set all of the same environment variables that GitHub Actions would set, just the ones needed by our own CI scripts.
+:::
 
 ## Prerequisites
 - [Docker](https://docs.docker.com/get-docker/)
@@ -64,12 +65,16 @@ From this point you can manually copy/paste the commands which would normally be
 
 Where `<arch>` is the architecture of the host machine at time of writing this will be either `amd64` or `arm64`.
 
-> Note: In some situations it may be necessary to delete the `.tmp/local_ci_tmp` directory to clear out old artifacts and caches. This is especially true if you are switching between branches or if you are running into issues with the CI pipeline.
+:::{note}
+In some situations it may be necessary to delete the `.tmp/local_ci_tmp` directory to clear out old artifacts and caches. This is especially true if you are switching between branches or if you are running into issues with the CI pipeline.
+:::
 
 ## Multi-Architecture CI
 To run the CI pipeline on a different architecture other than your own, QEMU can be used to emulate the target architecture.
 
-> Note: This assumes you have an amd64 system and want to run the CI pipeline on arm64. If you are using an arm64 and want to emulate amd64, you will need to adjust the commands accordingly.
+:::{note}
+This assumes you have an amd64 system and want to run the CI pipeline on arm64. If you are using an arm64 and want to emulate amd64, you will need to adjust the commands accordingly.
+:::
 
 On an apt based system, this can be done with the following commands:
 <!-- path-check-skip-begin -->
