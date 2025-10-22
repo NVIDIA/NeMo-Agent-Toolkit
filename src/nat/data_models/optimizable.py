@@ -129,7 +129,10 @@ class SearchSpace(BaseModel, Generic[T]):
             if self.log:
                 raise ValueError("Log scale is not supported for integer ranges in grid search. "
                                  "Please use linear scale or provide explicit values.")
-            return list(range(self.low, self.high + 1, step))
+            values = list(range(self.low, self.high + 1, step))
+            if values[-1] != self.high:
+                values.append(self.high)
+            return values
 
         # Float range (including integer low/high with float step)
         low_val = float(self.low)
