@@ -14,10 +14,10 @@
 # limitations under the License.
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import Field
-from typing import Literal
 
 
 class OptimizerMetric(BaseModel):

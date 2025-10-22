@@ -102,8 +102,7 @@ class SearchSpace(BaseModel, Generic[T]):
 
         # Generate grid values from range with step
         # Use integer range only if low, high, and step are all integral
-        if (isinstance(self.low, int) and isinstance(self.high, int) and 
-            step_float.is_integer()):
+        if (isinstance(self.low, int) and isinstance(self.high, int) and step_float.is_integer()):
             step = int(step_float)
 
             if self.log:
