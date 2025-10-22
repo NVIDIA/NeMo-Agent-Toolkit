@@ -91,7 +91,31 @@ Running `nat eval` produces a set of artifacts in the configured output director
 - `workflow_output.json`: Per-sample execution results including question, expected `answer`, `generated_answer`, and `intermediate_steps`. Use this to inspect or debug individual runs.
 
 ### Evaluator outputs (only when configured)
-Each evaluator produces a separate output file only when that evaluator is explicitly configured in `eval.evaluators`:
+
+Each evaluator produces another unique output file (`<evaluator-name>_output.json`) only when that evaluator is explicitly configured in `eval.evaluators`
+
+For example, if the evaluators are configured as follows:
+```yaml
+eval:
+  evaluators:
+    trajectory_accuracy:
+      _type: trajectory
+      llm_name: nim_trajectory_eval_llm
+    accuracy:
+      _type: ragas
+      metric: AnswerAccuracy
+      llm_name: nim_rag_eval_llm
+    groundedness:
+      _type: ragas
+      metric: ResponseGroundedness
+      llm_name: nim_rag_eval_llm
+    relevance:
+      _type: ragas
+      metric: ContextRelevance
+      llm_name: nim_rag_eval_llm
+```
+
+Then the evaluator outputs will be:
 - `trajectory_accuracy_output.json`: Scores and reasoning from the trajectory evaluator for each dataset entry, plus an average score.
 - `accuracy_output.json`: Ragas AnswerAccuracy scores and reasoning per entry, plus an average score.
 - `groundedness_output.json`: Ragas ResponseGroundedness scores and reasoning per entry, plus an average score.
