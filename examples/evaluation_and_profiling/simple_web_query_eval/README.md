@@ -80,7 +80,7 @@ Evaluate the Simple LangSmith-Documentation agent's accuracy using different con
 
 #### Basic Evaluation
 
-The configuration files specified below contain configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
+The configuration files specified below contain configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. For detailed information about evaluation configuration and output files, refer to the [evaluation guide](../../../docs/source/workflows/evaluate.md). For profiling configuration and metrics, see the [profiling guide](../../../docs/source/workflows/profiler.md).
 
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
@@ -168,13 +168,36 @@ nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/c
 
 ### Understanding Results
 
-The evaluation generates comprehensive metrics including:
+After running evaluation, you'll find output files in `./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval/` (or your configured output directory). The evaluation generates comprehensive metrics including:
 
 - **Response Quality**: Measures how well the agent answers LangSmith-related questions
 - **Accuracy Scores**: Quantitative measures of response correctness
 - **Question-by-Question Analysis**: Detailed breakdown of individual responses
 - **Performance Metrics**: Overall quality assessments across different models
 - **Error Analysis**: Identification of common failure patterns in documentation retrieval and response generation
+
+#### Evaluation Outputs
+
+Running `nat eval` generates several artifacts in the output directory:
+
+**Workflow outputs (always available)**
+- `workflow_output.json`: Per-sample execution results including question, expected answer, generated answer, and intermediate steps
+
+**Evaluator outputs (when configured)**
+- `trajectory_accuracy_output.json`: Trajectory evaluator scores and reasoning
+- `rag_accuracy_output.json`: RAGAS AnswerAccuracy scores
+- `rag_groundedness_output.json`: RAGAS ResponseGroundedness scores
+- `rag_relevance_output.json`: RAGAS ContextRelevance scores
+
+**Profiler outputs (when enabled)**
+- `standardized_data_all.csv`: Per-request profiler metrics
+- `workflow_profiling_metrics.json`: Aggregated profiler statistics
+- `workflow_profiling_report.txt`: Human-readable profiler summary
+- `gantt_chart.png`: Timeline visualization
+- `all_requests_profiler_traces.json`: Full trace events
+- `inference_optimization.json`: Inference optimization signals (when `compute_llm_metrics` is enabled)
+
+For detailed descriptions of each output file, refer to the [Evaluation outputs section](../../../docs/source/workflows/evaluate.md#evaluation-outputs-what-you-will-get) in the evaluation guide.
 
 ### Available Configurations
 
