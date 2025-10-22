@@ -147,9 +147,11 @@ def test_optimize_parameters_happy_path(tmp_path: Path):
         # Return distinct objects to ensure the function uses the return values
         return final_cfg if suggestions == best_params else intermediate_cfg
 
-    def fake_create_study(directions: list[str]):  # noqa: ANN001
+    def fake_create_study(directions: list[str], sampler=None, **kwargs):  # noqa: ANN001
         # Validate directions are forwarded correctly from metrics
         assert directions == ["maximize", "minimize"]
+        # This test uses default sampler (None)
+        assert sampler is None
         return _FakeStudy(directions)
 
     class _DummyEvalRun:
