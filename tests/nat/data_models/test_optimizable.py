@@ -241,6 +241,30 @@ class TestSearchSpaceToGridValues:
         assert result[0] == pytest.approx(0.0)
         assert result[-1] == pytest.approx(0.1)
 
+    def test_integer_range_with_non_integral_step_raises_error(self):
+        """Test that non-integral step for integer range raises clear error."""
+        space = SearchSpace(low=0, high=10, step=1.5)
+        with pytest.raises(ValueError, match="Integer grid search requires an integral step value; got step=1.5"):
+            space.to_grid_values()
+
+    def test_integer_range_with_negative_step_raises_error(self):
+        """Test that negative step raises clear error."""
+        space = SearchSpace(low=0, high=10, step=-2)
+        with pytest.raises(ValueError, match="Grid search step must be positive; got step=-2"):
+            space.to_grid_values()
+
+    def test_integer_range_with_zero_step_raises_error(self):
+        """Test that zero step raises clear error."""
+        space = SearchSpace(low=0, high=10, step=0)
+        with pytest.raises(ValueError, match="Grid search step must be positive; got step=0"):
+            space.to_grid_values()
+
+    def test_integer_range_with_float_integral_step_works(self):
+        """Test that integral step as float (e.g., 2.0) works correctly."""
+        space = SearchSpace(low=0, high=10, step=2.0)
+        result = space.to_grid_values()
+        assert result == [0, 2, 4, 6, 8, 10]
+
 
 class TestOptimizableMixin:
 
