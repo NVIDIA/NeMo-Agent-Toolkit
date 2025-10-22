@@ -48,15 +48,15 @@ eval:
       _type: json
       file_path: examples/agents/data/wikipedia.json
   evaluators:
-    rag_accuracy:
+    accuracy:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_llm
-    rag_groundedness:
+    groundedness:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_llm
-    rag_relevance:
+    relevance:
       _type: ragas
       metric: ResponseGroundedness
       llm_name: nim_llm
