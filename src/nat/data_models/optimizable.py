@@ -25,6 +25,8 @@ from pydantic import Field
 from pydantic import model_validator
 from pydantic_core import PydanticUndefined
 
+import numpy as np
+
 T = TypeVar("T", int, float, bool, str)
 
 
@@ -101,7 +103,6 @@ class SearchSpace(BaseModel, Generic[T]):
         For ranges, step is required (no default will be applied) to avoid
         unintentional combinatorial explosion.
         """
-        import numpy as np
 
         if self.is_prompt:
             raise ValueError("Prompt optimization not currently supported using Optuna. "
