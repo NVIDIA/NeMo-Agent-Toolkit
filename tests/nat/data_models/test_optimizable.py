@@ -26,7 +26,7 @@ from nat.data_models.optimizable import SearchSpace
 class TestSearchSpaceSuggest:
 
     def test_prompt_not_supported(self):
-        space = SearchSpace(low=0, high=1, is_prompt=True)
+        space = SearchSpace(is_prompt=True, prompt="test prompt")
         trial = mock.MagicMock()
 
         with pytest.raises(ValueError, match="Prompt optimization not currently supported using Optuna"):
@@ -183,7 +183,7 @@ class TestSearchSpaceToGridValues:
     """Test SearchSpace.to_grid_values() for grid search."""
 
     def test_prompt_not_supported(self):
-        space = SearchSpace(low=0, high=1, is_prompt=True)
+        space = SearchSpace(is_prompt=True, prompt="test prompt")
         with pytest.raises(ValueError, match="Prompt optimization not currently supported using Optuna"):
             space.to_grid_values()
 
@@ -269,6 +269,69 @@ class TestSearchSpaceToGridValues:
         space = SearchSpace(low=0, high=10, step=2.0)
         result = space.to_grid_values()
         assert result == [0, 2, 4, 6, 8, 10]
+
+
+class TestSearchSpaceValidation:
+    """Test SearchSpace model validation at construction time."""
+
+    def test_prompt_with_low_high_raises_error(self):
+        """Test that is_prompt=True with low/high raises validation error."""
+        with pytest.raises(ValueError, match="'is_prompt=True' cannot have 'low' or 'high' parameters"):
+            SearchSpace(is_prompt=True, low=0, high=10)
+
+    def test_prompt_with_only_low_raises_error(self):
+        """Test that is_prompt=True with only low raises validation error."""
+        with pytest.raises(ValueError, match="'is_prompt=True' cannot have 'low' or 'high' parameters"):
+            SearchSpace(is_prompt=True, low=0)
+
+    def test_prompt_with_only_high_raises_error(self):
+        """Test that is_prompt=True with only high raises validation error."""
+        with pytest.raises(ValueError, match="'is_prompt=True' cannot have 'low' or 'high' parameters"):
+            SearchSpace(is_prompt=True, high=10)
+
+    def test_prompt_with_log_raises_error(self):
+        """Test that is_prompt=True with log=True raises validation error."""
+        with pytest.raises(ValueError, match="'is_prompt=True' cannot have 'log=True'"):
+            SearchSpace(is_prompt=True, log=True, prompt="test")
+
+    def test_prompt_with_step_raises_error(self):
+        """Test that is_prompt=True with step raises validation error."""
+        with pytest.raises(ValueError, match="'is_prompt=True' cannot have 'step' parameter"):
+            SearchSpace(is_prompt=True, step=0.1, prompt="test")
+
+    def test_empty_values_raises_error(self):
+        """Test that empty values list raises validation error."""
+        with pytest.raises(ValueError, match="'values' must not be empty"):
+            SearchSpace(values=[])
+
+    def test_low_equals_high_raises_error(self):
+        """Test that low == high raises validation error."""
+        with pytest.raises(ValueError, match="'low' must be less than 'high'"):
+            SearchSpace(low=5, high=5)
+
+    def test_low_greater_than_high_raises_error(self):
+        """Test that low > high raises validation error."""
+        with pytest.raises(ValueError, match="'low' must be less than 'high'"):
+            SearchSpace(low=10, high=5)
+
+    def test_valid_prompt_space(self):
+        """Test that valid prompt SearchSpace can be created."""
+        space = SearchSpace(is_prompt=True, prompt="test prompt", prompt_purpose="testing")
+        assert space.is_prompt is True
+        assert space.prompt == "test prompt"
+        assert space.prompt_purpose == "testing"
+
+    def test_valid_values_space(self):
+        """Test that valid values-based SearchSpace can be created."""
+        space = SearchSpace(values=[1, 2, 3])
+        assert space.values == [1, 2, 3]
+
+    def test_valid_range_space(self):
+        """Test that valid range-based SearchSpace can be created."""
+        space = SearchSpace(low=0, high=10, step=1)
+        assert space.low == 0
+        assert space.high == 10
+        assert space.step == 1
 
 
 class TestOptimizableMixin:

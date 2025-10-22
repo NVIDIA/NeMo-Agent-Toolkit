@@ -45,12 +45,33 @@ class SearchSpace(BaseModel, Generic[T]):
 
     @model_validator(mode="after")
     def validate_search_space_parameters(self):
-        """Validate that either values is provided, or both high and low."""
+        """Validate SearchSpace configuration."""
+        # 1. Prompt-specific validation
+        if self.is_prompt:
+            # When optimizing prompts, numeric parameters don't make sense
+            if self.low is not None or self.high is not None:
+                raise ValueError("SearchSpace with 'is_prompt=True' cannot have 'low' or 'high' parameters")
+            if self.log:
+                raise ValueError("SearchSpace with 'is_prompt=True' cannot have 'log=True'")
+            if self.step is not None:
+                raise ValueError("SearchSpace with 'is_prompt=True' cannot have 'step' parameter")
+            return self
+
+        # 2. Values-based validation
         if self.values is not None:
             # If values is provided, we don't need high/low
             if self.high is not None or self.low is not None:
                 raise ValueError("SearchSpace 'values' is mutually exclusive with 'high' and 'low'")
+            # Ensure values is not empty
+            if len(self.values) == 0:
+                raise ValueError("SearchSpace 'values' must not be empty")
             return self
+
+        # 3. Range-based validation
+        if self.low is not None and self.high is not None:
+            # Validate that low < high
+            if self.low >= self.high:
+                raise ValueError(f"SearchSpace 'low' must be less than 'high'; got low={self.low}, high={self.high}")
 
         return self
 
