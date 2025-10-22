@@ -152,7 +152,7 @@ For simple local development and debugging, you can export traces directly to a 
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-langsmith.yml --input "Is 100 > 50?"
     ```
 
-    This workflow is set to use the `default` LangSmith project. If you want to use a different project you can either edit the config file or by adding the following flag to the above command: `--override general.telemetry.tracing.langsmith.project <your_project_name>`
+    This workflow is set to use the `default` LangSmith project. If you want to use a different project, you can either edit the config file or add the following flag to the above command: `--override general.telemetry.tracing.langsmith.project <your_project_name>`
 
     > **Note**: This workflow happens to use LangChain, since that library has built-in support for LangSmith, if you run the above workflow with the `LANGSMITH_TRACING=true` environment variable set, will result in duplicate traces being sent to LangSmith.
 
