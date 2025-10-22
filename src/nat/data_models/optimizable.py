@@ -68,10 +68,14 @@ class SearchSpace(BaseModel, Generic[T]):
             return self
 
         # 3. Range-based validation
-        if self.low is not None and self.high is not None:
-            # Validate that low < high
-            if self.low >= self.high:
-                raise ValueError(f"SearchSpace 'low' must be less than 'high'; got low={self.low}, high={self.high}")
+        if (self.low is None) != (self.high is None):  # XOR using !=
+            raise ValueError(
+                f"SearchSpace range requires both 'low' and 'high'; got low={self.low}, high={self.high}"
+            )
+        if self.low is not None and self.high is not None and self.low >= self.high:
+            raise ValueError(
+                f"SearchSpace 'low' must be less than 'high'; got low={self.low}, high={self.high}"
+            )
 
         return self
 
