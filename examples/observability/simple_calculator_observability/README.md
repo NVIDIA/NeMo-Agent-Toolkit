@@ -140,18 +140,10 @@ For simple local development and debugging, you can export traces directly to a 
 
     Take note of the API key as you will need it to run the workflow.
 
-    **Project Name**:
-
-    Then, you can navigate to the projects page, and create a new project. Choose a name and a description. Then click on the "Create" button.
-
-    You should see a section titled "Configure Environment" which lists `LANGSMITH_PROJECT`. Take note of this project name as you will need it to run the workflow.
-
-
 1. Set your LangSmith credentials:
 
     ```bash
     export LANGSMITH_API_KEY=<your_api_key>
-    export LANGSMITH_PROJECT=<your_project>
     ```
 
 2. Run the workflow:
@@ -160,6 +152,10 @@ For simple local development and debugging, you can export traces directly to a 
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-langsmith.yml --input "Is 100 > 50?"
     ```
 
+    This workflow is set to use the `default` LangSmith project. If you want to use a different project, you can either edit the config file or add the following flag to the above command: `--override general.telemetry.tracing.langsmith.project <your_project_name>`
+
+    > **Note**: This workflow happens to use LangChain, since that library has built-in support for LangSmith, if you run the above workflow with the `LANGSMITH_TRACING=true` environment variable set, will result in duplicate traces being sent to LangSmith.
+
 ### Weave Integration
 
 [Weave](https://wandb.ai/site/weave/) provides detailed workflow tracking and visualization.
@@ -167,7 +163,7 @@ For simple local development and debugging, you can export traces directly to a 
 0. Get your Weights & Biases API key:
 
     Login to [Weights & Biases](https://wandb.ai/site/weave/) and navigate to the settings page.
-    
+
     Under the "Account" section, you can find your API key. Click on the "Show" button to reveal the API key. Take note of this API key as you will need it to run the workflow.
 
 1. Set your Weights & Biases API key:
@@ -191,7 +187,7 @@ For detailed Weave setup instructions, see the [Fine-grained Tracing with Weave]
 1. Get your Patronus API key:
 
     Login to [Patronus](https://patronus.ai/) and navigate to the settings page.
-    
+
     Click on the "API Keys" section on the left sidebar. Then click on the "Create API Key" button. Choose a name and a description. Then click on the "Create" button.
 
     Take note of the API key as you will need it to run the workflow.
@@ -215,7 +211,7 @@ Transmit traces to RagaAI Catalyst.
 1. Get your Catalyst credentials:
 
     Login to [RagaAI Catalyst](https://catalyst.raga.ai/) and navigate to the settings page.
-    
+
     Under the "Account" section, you can find your API key. Click on the "Show" button to reveal the API key. Take note of this API key as you will need it to run the workflow.
 
 2. Set your Catalyst API key:
