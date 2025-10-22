@@ -52,7 +52,7 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 
 ## Function Groups Overview
 
-This example demonstrates the new function groups feature in NeMo Agent toolkit. Function groups allow you to:
+This example demonstrates using function groups in NeMo Agent toolkit. Function groups allow you to:
 
 - **Share configurations** across multiple related functions
 - **Share resources** such as database connections or API clients
@@ -61,12 +61,14 @@ This example demonstrates the new function groups feature in NeMo Agent toolkit.
 
 ### How Function Groups Work
 
-The user report function group (`user_report`) contains four functions that all share the same configuration:
+The user report function group (`user_report`) contains four functions that all share the same configuration.
+
+It also takes advantage of:
 
 - **Shared Configuration**: All functions use the same `object_store` reference and function descriptions
 - **Shared Resources**: All functions share the same object store client connection
-- **Individual Functions**: Each function (`get`, `put`, `update`, `delete`) has its own logic and description
-- **Naming Convention**: Functions are referenced as `user_report.get`, `user_report.put`, etc.
+
+See [Function Groups](../../../docs/source/workflows/function-groups.md) for more information on the benefits of Function Groups compared to Functions, including code and configuration comparisons when using Function Groups.
 
 ### Configuration Structure
 
@@ -91,8 +93,13 @@ workflow:
   _type: react_agent
   # Reference individual functions
   tool_names: [user_report.get, user_report.put, user_report.update, user_report.delete]
-  
-  # tool_names: [user_report]
+```
+
+```yaml
+workflow:
+  _type: react_agent
+  # Reference entire group
+  tool_names: [user_report]
 ```
 
 ## Installation and Setup
