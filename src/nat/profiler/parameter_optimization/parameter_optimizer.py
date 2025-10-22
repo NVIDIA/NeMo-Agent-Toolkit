@@ -62,7 +62,7 @@ def optimize_parameters(
 
     # Create appropriate sampler based on configuration
     sampler_type = optimizer_config.numeric.sampler
-    
+
     if sampler_type == SamplerType.GRID:
         # For grid search, convert the existing space to value sequences
         grid_search_space = {param_name: search_space.to_grid_values() for param_name, search_space in space.items()}
@@ -72,8 +72,7 @@ def optimize_parameters(
         # None or BAYESIAN: let Optuna choose defaults
         sampler = None
         logger.info(
-            "Using Optuna default sampler types: TPESampler for single-objective, NSGAIISampler for multi-objective"
-        )
+            "Using Optuna default sampler types: TPESampler for single-objective, NSGAIISampler for multi-objective")
 
     study = optuna.create_study(directions=directions, sampler=sampler)
 

@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -28,9 +28,11 @@ class OptimizerMetric(BaseModel):
     direction: str = Field(description="Direction of the optimization. Can be 'maximize' or 'minimize'.")
     weight: float = Field(description="Weight of the metric in the optimization process.", default=1.0)
 
+
 class SamplerType(str, Enum):
     BAYESIAN = "bayesian"
     GRID = "grid"
+
 
 class NumericOptimizationConfig(BaseModel):
     """

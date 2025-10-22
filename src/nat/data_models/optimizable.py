@@ -121,12 +121,12 @@ class SearchSpace(BaseModel, Generic[T]):
 
         # Use arange to respect step size
         values = np.arange(low_val, high_val, step_val).tolist()
-        
+
         # Always include the high endpoint if not already present (within tolerance)
         # This ensures the full range is explored in grid search
         if not values or abs(values[-1] - high_val) > 1e-9:
             values.append(high_val)
-        
+
         return values
 
 
