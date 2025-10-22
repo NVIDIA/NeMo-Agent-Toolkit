@@ -136,7 +136,7 @@ async def test_eval():
     assert len(ragas_output_files) == len(ragas_types), "Expected number of Ragas metric output files is not present"
 
     # Verify that atleast one Ragas metric output file is present
-    assert ragas_output_files, "Atleast one Ragas metric output whould be present"
+    assert ragas_output_files, "At least one Ragas metric output whould be present"
 
     for ragas_output_file in ragas_output_files:
         # Relevance and Groundedness should evaluate better than Accuracy
