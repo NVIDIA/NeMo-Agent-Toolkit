@@ -90,11 +90,12 @@ export POSTGRES_PASSWORD="$(mk_pw)"
 docker compose -f tests/test_data/docker-compose.services.yml up -d
 ```
 
-> [!NOTE]
-> It can take some time for the services to start up. You can check the logs with:
-> ```bash
-> docker compose -f tests/test_data/docker-compose.services.yml logs --follow
-> ```
+:::{note}
+It can take some time for the services to start up. You can check the logs with:
+```bash
+docker compose -f tests/test_data/docker-compose.services.yml logs --follow
+```
+:::
 
 ### Run the Integration Tests
 ```bash
