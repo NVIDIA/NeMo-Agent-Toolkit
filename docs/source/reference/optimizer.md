@@ -340,8 +340,8 @@ This is the main configuration object for the optimizer.
 -   `prompt.ga_tournament_size: int`: Tournament size when `ga_selection_method` is `tournament`. Defaults to `3`.
 -   `prompt.ga_parallel_evaluations: int`: Maximum number of concurrent evaluations. Controls async concurrency. Defaults to `8`.
 -   `prompt.ga_diversity_lambda: float`: Diversity penalty strength to discourage duplicate prompt sets. `0.0` disables it. Defaults to `0.0`.
--   `prompt.prompt_population_init_function: str | null`: Function name used to mutate base prompts to seed the initial population and perform mutations.
--   `prompt.prompt_recombination_function: str | null`: Optional function name used to recombine two parent prompts into a child prompt.
+-   `prompt.prompt_population_init_function: str | null`: Function name used to mutate base prompts to seed the initial population and perform mutations. The NeMo Agent Toolkit includes a built-in `prompt_init` Function located in the {py:mod}`~nat.agent.prompt_optimizer.register` file you can use in your configurations. 
+-   `prompt.prompt_recombination_function: str | null`: Optional function name used to recombine two parent prompts into a child prompt. The NeMo Agent Toolkit includes a built-in `prompt_recombiner` Function located in the {py:mod}`~nat.agent.prompt_optimizer.register` file you can use in your configurations. 
 -   `reps_per_param_set: int`: The number of times to run the workflow for each set of parameters to get a more stable evaluation. This is important for noisy evaluations where the result might vary even with the same parameters. Defaults to `3`.
 -   `target: float | None`: If set, the optimization will stop when the combined score for a trial reaches this value. This is useful if you have a specific performance target and want to save time. The score is normalized between 0 and 1. Defaults to `None`.
 -   `multi_objective_combination_mode: str`: How to combine multiple objective scores into a single scalar. Supported: `harmonic`, `sum`, `chebyshev`. Defaults to `harmonic`.
