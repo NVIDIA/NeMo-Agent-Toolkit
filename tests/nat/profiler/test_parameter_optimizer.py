@@ -260,6 +260,7 @@ class TestSamplerSelection:
             return _FakeStudy(kwargs.get("directions", []))
 
         class _DummyEvalRun:
+
             def __init__(self, config):  # noqa: ANN001
                 self.config = config
 
@@ -279,8 +280,10 @@ class TestSamplerSelection:
                    return_value=SimpleNamespace(params={})), \
              patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
-            optimize_parameters(base_cfg=base_cfg, full_space=full_space,
-                              optimizer_config=optimizer_config, opt_run_config=run_cfg)
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
 
         # Should pass None to let Optuna choose
         assert sampler_arg is None
@@ -311,6 +314,7 @@ class TestSamplerSelection:
             return _FakeStudy(directions_arg)
 
         class _DummyEvalRun:
+
             def __init__(self, config):  # noqa: ANN001
                 self.config = config
 
@@ -329,8 +333,10 @@ class TestSamplerSelection:
                    return_value=SimpleNamespace(params={})), \
              patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
-            optimize_parameters(base_cfg=base_cfg, full_space=full_space,
-                              optimizer_config=optimizer_config, opt_run_config=run_cfg)
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
 
         # Single objective: Optuna will use TPE with sampler=None
         assert sampler_arg is None
@@ -365,6 +371,7 @@ class TestSamplerSelection:
             return _FakeStudy(directions_arg)
 
         class _DummyEvalRun:
+
             def __init__(self, config):  # noqa: ANN001
                 self.config = config
 
@@ -384,8 +391,10 @@ class TestSamplerSelection:
                    return_value=SimpleNamespace(params={})), \
              patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
-            optimize_parameters(base_cfg=base_cfg, full_space=full_space,
-                              optimizer_config=optimizer_config, opt_run_config=run_cfg)
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
 
         # Multi-objective: Optuna will use NSGA-II with sampler=None
         assert sampler_arg is None
@@ -414,6 +423,7 @@ class TestSamplerSelection:
             return _FakeStudy(kwargs.get("directions", []))
 
         class _DummyEvalRun:
+
             def __init__(self, config):  # noqa: ANN001
                 self.config = config
 
@@ -433,8 +443,10 @@ class TestSamplerSelection:
                    return_value=SimpleNamespace(params={})), \
              patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
-            optimize_parameters(base_cfg=base_cfg, full_space=full_space,
-                              optimizer_config=optimizer_config, opt_run_config=run_cfg)
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
 
         # Should create a GridSampler instance
         import optuna
@@ -458,6 +470,7 @@ class TestSamplerSelection:
             return _FakeStudy(kwargs.get("directions", []))
 
         class _DummyEvalRun:
+
             def __init__(self, config):  # noqa: ANN001
                 self.config = config
 
@@ -477,8 +490,10 @@ class TestSamplerSelection:
                    return_value=SimpleNamespace(params={})), \
              patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
-            optimize_parameters(base_cfg=base_cfg, full_space=full_space,
-                              optimizer_config=optimizer_config, opt_run_config=run_cfg)
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
 
         import optuna
         assert isinstance(sampler_instance, optuna.samplers.GridSampler)
@@ -501,7 +516,7 @@ class TestGridSearchIntegration:
         run_cfg = _make_run_config(base_cfg)
 
         grid_space = None
-        
+
         # Save original GridSampler before patching
         import optuna
         original_grid_sampler = optuna.samplers.GridSampler
@@ -512,6 +527,7 @@ class TestGridSearchIntegration:
             return original_grid_sampler(search_space)
 
         class _DummyEvalRun:
+
             def __init__(self, config):  # noqa: ANN001
                 self.config = config
 
@@ -533,8 +549,10 @@ class TestGridSearchIntegration:
                    return_value=SimpleNamespace(params={})), \
              patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
-            optimize_parameters(base_cfg=base_cfg, full_space=full_space,
-                              optimizer_config=optimizer_config, opt_run_config=run_cfg)
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
 
         # Verify grid space was created with correct values
         assert grid_space is not None
@@ -542,7 +560,6 @@ class TestGridSearchIntegration:
         assert "temperature" in grid_space
         assert grid_space["model"] == ["gpt-3.5", "gpt-4"]
         assert grid_space["temperature"] == [0.0, 0.5, 1.0]
-
 
     def test_grid_search_with_integer_range(self, tmp_path: Path):
         """Test grid search with integer range and step."""
@@ -557,7 +574,7 @@ class TestGridSearchIntegration:
         run_cfg = _make_run_config(base_cfg)
 
         grid_space = None
-        
+
         # Save original GridSampler before patching
         import optuna
         original_grid_sampler = optuna.samplers.GridSampler
@@ -568,6 +585,7 @@ class TestGridSearchIntegration:
             return original_grid_sampler(search_space)
 
         class _DummyEvalRun:
+
             def __init__(self, config):  # noqa: ANN001
                 self.config = config
 
@@ -589,8 +607,10 @@ class TestGridSearchIntegration:
                    return_value=SimpleNamespace(params={})), \
              patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
-            optimize_parameters(base_cfg=base_cfg, full_space=full_space,
-                              optimizer_config=optimizer_config, opt_run_config=run_cfg)
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
 
         assert grid_space is not None
         assert grid_space["batch_size"] == [8, 16, 24, 32]
@@ -608,7 +628,7 @@ class TestGridSearchIntegration:
         run_cfg = _make_run_config(base_cfg)
 
         grid_space = None
-        
+
         # Save original GridSampler before patching
         import optuna
         original_grid_sampler = optuna.samplers.GridSampler
@@ -619,6 +639,7 @@ class TestGridSearchIntegration:
             return original_grid_sampler(search_space)
 
         class _DummyEvalRun:
+
             def __init__(self, config):  # noqa: ANN001
                 self.config = config
 
@@ -640,8 +661,10 @@ class TestGridSearchIntegration:
                    return_value=SimpleNamespace(params={})), \
              patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
-            optimize_parameters(base_cfg=base_cfg, full_space=full_space,
-                              optimizer_config=optimizer_config, opt_run_config=run_cfg)
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
 
         assert grid_space is not None
         assert len(grid_space["learning_rate"]) == 4  # 0.001, 0.004, 0.007, 0.01
@@ -663,7 +686,7 @@ class TestGridSearchIntegration:
         run_cfg = _make_run_config(base_cfg)
 
         grid_space = None
-        
+
         # Save original GridSampler before patching
         import optuna
         original_grid_sampler = optuna.samplers.GridSampler
@@ -674,6 +697,7 @@ class TestGridSearchIntegration:
             return original_grid_sampler(search_space)
 
         class _DummyEvalRun:
+
             def __init__(self, config):  # noqa: ANN001
                 self.config = config
 
@@ -695,8 +719,10 @@ class TestGridSearchIntegration:
                    return_value=SimpleNamespace(params={})), \
              patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
-            optimize_parameters(base_cfg=base_cfg, full_space=full_space,
-                              optimizer_config=optimizer_config, opt_run_config=run_cfg)
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
 
         # Verify all parameter types are handled correctly
         assert grid_space is not None
@@ -719,7 +745,7 @@ class TestGridSearchIntegration:
         run_cfg = _make_run_config(base_cfg)
 
         grid_space = None
-        
+
         # Save original GridSampler before patching
         import optuna
         original_grid_sampler = optuna.samplers.GridSampler
@@ -730,6 +756,7 @@ class TestGridSearchIntegration:
             return original_grid_sampler(search_space)
 
         class _DummyEvalRun:
+
             def __init__(self, config):  # noqa: ANN001
                 self.config = config
 
@@ -751,8 +778,10 @@ class TestGridSearchIntegration:
                    return_value=SimpleNamespace(params={})), \
              patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
-            optimize_parameters(base_cfg=base_cfg, full_space=full_space,
-                              optimizer_config=optimizer_config, opt_run_config=run_cfg)
+            optimize_parameters(base_cfg=base_cfg,
+                                full_space=full_space,
+                                optimizer_config=optimizer_config,
+                                opt_run_config=run_cfg)
 
         # Prompt parameters should be filtered out
         assert grid_space is not None
@@ -779,5 +808,7 @@ class TestGridSearchIntegration:
                        return_value=base_cfg), \
                  patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
-                optimize_parameters(base_cfg=base_cfg, full_space=full_space,
-                                  optimizer_config=optimizer_config, opt_run_config=run_cfg)
+                optimize_parameters(base_cfg=base_cfg,
+                                    full_space=full_space,
+                                    optimizer_config=optimizer_config,
+                                    opt_run_config=run_cfg)

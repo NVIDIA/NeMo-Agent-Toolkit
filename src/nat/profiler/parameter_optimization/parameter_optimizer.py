@@ -63,17 +63,15 @@ def optimize_parameters(
     sampler_type = optimizer_config.numeric.sampler
     if sampler_type is not None:
         sampler_type = sampler_type.lower()
-    
+
     if sampler_type == "grid":
         # For grid search, convert the existing space to value sequences
-        grid_search_space = {
-            param_name: search_space.to_grid_values()
-            for param_name, search_space in space.items()
-        }
+        grid_search_space = {param_name: search_space.to_grid_values() for param_name, search_space in space.items()}
         sampler = optuna.samplers.GridSampler(grid_search_space)
         logger.info("Using Grid sampler for numeric optimization")
     else:
-        logger.warning("Using Optuna default sampler types: TPESampler for single-objective, NSGAIISampler for multi-objective")
+        logger.warning(
+            "Using Optuna default sampler types: TPESampler for single-objective, NSGAIISampler for multi-objective")
         sampler = None
 
     study = optuna.create_study(directions=directions, sampler=sampler)
