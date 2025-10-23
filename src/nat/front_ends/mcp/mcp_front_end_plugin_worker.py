@@ -35,7 +35,23 @@ logger = logging.getLogger(__name__)
 
 
 class MCPFrontEndPluginWorkerBase(ABC):
-    """Base class for MCP front end plugin workers."""
+    """Base class for MCP front end plugin workers.
+
+    This is the official plugin interface for custom MCP server implementations.
+    Plugins can customize server creation and route registration behavior.
+
+    Example:
+        class CustomWorker(MCPFrontEndPluginWorkerBase):
+            async def create_mcp_server(self):
+                # Return custom MCP server instance
+                return MyCustomFastMCP(...)
+
+            async def add_routes(self, mcp, builder):
+                # Reuse default route registration
+                await self._default_add_routes(mcp, builder)
+                # Add custom features
+                self._add_my_custom_features(mcp)
+    """
 
     def __init__(self, config: Config):
         """Initialize the MCP worker with configuration.
@@ -106,11 +122,74 @@ class MCPFrontEndPluginWorkerBase(ABC):
     async def add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
         """Add routes to the MCP server.
 
+        Plugins must implement this method. Most plugins can call
+        _default_add_routes() for standard behavior and then add
+        custom enhancements.
+
         Args:
             mcp: The FastMCP server instance
-            builder (WorkflowBuilder): The workflow builder instance
+            builder: The workflow builder instance
+
+        Example:
+            async def add_routes(self, mcp, builder):
+                # Use default route registration
+                await self._default_add_routes(mcp, builder)
+
+                # Add plugin-specific features
+                self._add_my_custom_features(mcp)
         """
         ...
+
+    async def _default_add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
+        """Default route registration logic - reusable by subclasses.
+
+        This is a protected helper method that plugins can call to get
+        standard route registration behavior. Plugins typically call this
+        from their add_routes() implementation and then add custom features.
+
+        This method:
+        - Sets up the health endpoint
+        - Builds the workflow and extracts all functions
+        - Filters functions based on tool_names config
+        - Registers each function as an MCP tool
+        - Sets up debug endpoints for tool introspection
+
+        Args:
+            mcp: The FastMCP server instance
+            builder: The workflow builder instance
+        """
+        from nat.front_ends.mcp.tool_converter import register_function_with_mcp
+
+        # Set up the health endpoint
+        self._setup_health_endpoint(mcp)
+
+        # Build the workflow and register all functions with MCP
+        workflow = await builder.build()
+
+        # Get all functions from the workflow
+        functions = await self._get_all_functions(workflow)
+
+        # Filter functions based on tool_names if provided
+        if self.front_end_config.tool_names:
+            logger.info("Filtering functions based on tool_names: %s", self.front_end_config.tool_names)
+            filtered_functions: dict[str, Function] = {}
+            for function_name, function in functions.items():
+                if function_name in self.front_end_config.tool_names:
+                    filtered_functions[function_name] = function
+                else:
+                    logger.debug("Skipping function %s as it's not in tool_names", function_name)
+            functions = filtered_functions
+
+        # Register each function with MCP, passing workflow context for observability
+        for function_name, function in functions.items():
+            register_function_with_mcp(mcp, function_name, function, workflow, self.memory_profiler)
+
+        # Add a simple fallback function if no functions were found
+        if not functions:
+            raise RuntimeError("No functions found in workflow. Please check your configuration.")
+
+        # After registration, expose debug endpoints for tool/schema inspection
+        self._setup_debug_endpoints(mcp, functions)
 
     async def _get_all_functions(self, workflow: Workflow) -> dict[str, Function]:
         """Get all functions from the workflow.
@@ -284,37 +363,7 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
 
         Args:
             mcp: The FastMCP server instance
-            builder (WorkflowBuilder): The workflow builder instance
+            builder: The workflow builder instance
         """
-        from nat.front_ends.mcp.tool_converter import register_function_with_mcp
-
-        # Set up the health endpoint
-        self._setup_health_endpoint(mcp)
-
-        # Build the workflow and register all functions with MCP
-        workflow = await builder.build()
-
-        # Get all functions from the workflow
-        functions = await self._get_all_functions(workflow)
-
-        # Filter functions based on tool_names if provided
-        if self.front_end_config.tool_names:
-            logger.info("Filtering functions based on tool_names: %s", self.front_end_config.tool_names)
-            filtered_functions: dict[str, Function] = {}
-            for function_name, function in functions.items():
-                if function_name in self.front_end_config.tool_names:
-                    filtered_functions[function_name] = function
-                else:
-                    logger.debug("Skipping function %s as it's not in tool_names", function_name)
-            functions = filtered_functions
-
-        # Register each function with MCP, passing workflow context for observability
-        for function_name, function in functions.items():
-            register_function_with_mcp(mcp, function_name, function, workflow, self.memory_profiler)
-
-        # Add a simple fallback function if no functions were found
-        if not functions:
-            raise RuntimeError("No functions found in workflow. Please check your configuration.")
-
-        # After registration, expose debug endpoints for tool/schema inspection
-        self._setup_debug_endpoints(mcp, functions)
+        # Use the default implementation from base class
+        await self._default_add_routes(mcp, builder)
