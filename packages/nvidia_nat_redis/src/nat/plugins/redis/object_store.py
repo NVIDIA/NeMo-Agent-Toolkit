@@ -29,6 +29,7 @@ class RedisObjectStoreClientConfig(ObjectStoreBaseConfig, name="redis"):
     db: int = Field(default=0, description="The Redis logical database number")
     port: int = Field(default=6379, description="The port of the Redis server")
     bucket_name: str = Field(description="The name of the bucket to use for the object store")
+    password: str | None = Field(default=None, description="The password for the Redis server")
 
 
 @register_object_store(config_type=RedisObjectStoreClientConfig)

@@ -492,7 +492,7 @@ def fixture_redis_server(fail_missing: bool) -> Generator[dict[str, str | int]]:
         client = redis.Redis(host=host, port=port, db=db, password=password)
         if not client.ping():
             raise RuntimeError("Failed to connect to Redis")
-        yield {"host": host, "port": port, "db": db, "bucket_name": bucket_name}
+        yield {"host": host, "port": port, "db": db, "bucket_name": bucket_name, "password": password}
     except ImportError:
         if fail_missing:
             raise
