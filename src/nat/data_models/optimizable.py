@@ -18,14 +18,13 @@ from typing import Any
 from typing import Generic
 from typing import TypeVar
 
+import numpy as np
 from optuna import Trial
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import model_validator
 from pydantic_core import PydanticUndefined
-
-import numpy as np
 
 T = TypeVar("T", int, float, bool, str)
 
@@ -71,13 +70,9 @@ class SearchSpace(BaseModel, Generic[T]):
 
         # 3. Range-based validation
         if (self.low is None) != (self.high is None):  # XOR using !=
-            raise ValueError(
-                f"SearchSpace range requires both 'low' and 'high'; got low={self.low}, high={self.high}"
-            )
+            raise ValueError(f"SearchSpace range requires both 'low' and 'high'; got low={self.low}, high={self.high}")
         if self.low is not None and self.high is not None and self.low >= self.high:
-            raise ValueError(
-                f"SearchSpace 'low' must be less than 'high'; got low={self.low}, high={self.high}"
-            )
+            raise ValueError(f"SearchSpace 'low' must be less than 'high'; got low={self.low}, high={self.high}")
 
         return self
 
