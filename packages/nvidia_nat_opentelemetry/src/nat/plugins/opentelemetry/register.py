@@ -15,6 +15,7 @@
 
 import logging
 import os
+from typing import Any
 
 from pydantic import Field
 
@@ -192,3 +193,55 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
         drop_on_overflow=config.drop_on_overflow,
         shutdown_timeout=config.shutdown_timeout,
     )
+
+
+class FutureAGITelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="futureagi"):
+    """A telemetry exporter to transmit traces to Future AGI service."""
+
+    endpoint: str = Field(description="The Future AGI endpoint to export telemetry traces",
+                          default="https://api.futureagi.com/tracer/v1/traces")
+    fi_api_key: str = Field(description="The FutureAGI API key", default="")
+    fi_secret_key: str = Field(description="The FutureAGI Secret key", default="")
+    project_type: str = Field(description="The project type for FutureAGI instrumentation", default="observe")
+    project_version_name: str = Field(description="The project version name", default="1.0.0")
+    resource_attributes: dict[str, Any] = Field(default_factory=dict,
+                                                description="The resource attributes to add to the span")
+
+
+@register_telemetry_exporter(config_type=FutureAGITelemetryExporter)
+async def futureagi_telemetry_exporter(config: FutureAGITelemetryExporter, builder: Builder):
+    """Create a FutureAGI telemetry exporter."""
+    import json
+    import uuid
+
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
+
+    api_key = config.fi_api_key or os.environ.get("FI_API_KEY")
+    secret_key = config.fi_secret_key or os.environ.get("FI_SECRET_KEY")
+
+    if not api_key or not secret_key:
+        raise ValueError("API key and Secret key are required for FutureAGI")
+
+    headers = {"x-api-key": api_key, "x-secret-key": secret_key}
+
+    project_version_id = str(uuid.uuid4())
+
+    default_resource_attributes = {
+        "project_name": config.project,
+        "project_type": config.project_type.lower(),
+        "project_version_name": config.project_version_name,
+        "project_version_id": project_version_id,
+        "eval_tags": json.dumps([]),
+        "metadata": json.dumps({})
+    }
+
+    merged_resource_attributes = {**default_resource_attributes, **config.resource_attributes}
+
+    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
+                                  headers=headers,
+                                  resource_attributes=merged_resource_attributes,
+                                  batch_size=config.batch_size,
+                                  flush_interval=config.flush_interval,
+                                  max_queue_size=config.max_queue_size,
+                                  drop_on_overflow=config.drop_on_overflow,
+                                  shutdown_timeout=config.shutdown_timeout)
