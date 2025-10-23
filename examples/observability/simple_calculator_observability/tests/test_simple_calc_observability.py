@@ -27,6 +27,8 @@ from nat.runtime.loader import load_config
 from nat.test.utils import run_workflow
 
 if typing.TYPE_CHECKING:
+    import galileo.log_streams
+    import galileo.projects
     import langsmith.client
 
 
@@ -136,26 +138,46 @@ async def test_langsmith_full_workflow(config_dir: Path,
 
     await run_workflow(config=config, question=question, expected_answer=expected_answer)
 
-    done = False
     runlist = []
     deadline = time.time() + 10
-    while not done and time.time() < deadline:
+    while len(runlist) == 0 and time.time() < deadline:
         # Wait for traces to be ingested
         await asyncio.sleep(0.5)
         runs = langsmith_client.list_runs(project_name=langsmith_project_name, is_root=True)
         runlist = [run for run in runs]
-        if len(runlist) > 0:
-            done = True
 
-    assert done, "Timed out waiting for LangSmith run to be ingested"
     # Since we have a newly created project, the above workflow should have created exactly one root run
     assert len(runlist) == 1
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("galileo_api_key")
-async def test_galileo_full_workflow(config_dir: Path, question: str, expected_answer: str):
+async def test_galileo_full_workflow(config_dir: Path,
+                                     galileo_project: "galileo.projects.Project",
+                                     galileo_log_stream: "galileo.log_streams.LogStream",
+                                     question: str,
+                                     expected_answer: str):
     config_file = config_dir / "config-galileo.yml"
     config = load_config(config_file)
+    config.general.telemetry.tracing["galileo"].project = galileo_project.name
+    config.general.telemetry.tracing["galileo"].logstream = galileo_log_stream.name
 
     await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+    import galileo.search
+
+    sessions = []
+    deadline = time.time() + 10
+    while len(sessions) == 0 and time.time() < deadline:
+        # Wait for traces to be ingested
+        await asyncio.sleep(0.5)
+        results = galileo.search.get_sessions(project_id=galileo_project.id, log_stream_id=galileo_log_stream.id)
+        sessions = results.records or []
+
+    assert len(sessions) == 1
+
+    traces = galileo.search.get_traces(project_id=galileo_project.id, log_stream_id=galileo_log_stream.id)
+    assert len(traces.records) == 1
+
+    spans = galileo.search.get_spans(project_id=galileo_project.id, log_stream_id=galileo_log_stream.id)
+    assert len(spans.records) > 1
