@@ -55,7 +55,7 @@ variables:
   NAT_CI_MYSQL_HOST: "mysql"
   NAT_CI_OPENSEARCH_URL: "http://opensearch:9200"
   NAT_CI_PHOENIX_URL: "http://phoenix:6006"
-  NAT_CI_REDIS_HOST: "redis"
+  NAT_CI_REDIS_HOST: "redis_8_0"
   UV_CACHE_DIR: .uv-cache
   WORKSPACE_TMP: "${CI_PROJECT_DIR}/.tmp"
 
@@ -117,7 +117,7 @@ test:python_tests:
         PGTZ: UTC
 
     - name: redis:8.0
-      alias: redis
+      alias: redis_8_0
       command: ["--requirepass", "${REDIS_PASSWORD}"]
       pull_policy: if-not-present
 
@@ -180,7 +180,7 @@ test:python_tests:
         NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET}
         NEXTAUTH_URL: http://langfuse:3000
         REDIS_AUTH: ${REDIS_PASSWORD}
-        REDIS_HOST: redis
+        REDIS_HOST: ${NAT_CI_REDIS_HOST}
         REDIS_PORT: 6379
         SALT: ${LANGFUSE_SALT}
 
@@ -223,7 +223,7 @@ test:python_tests:
         NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET}
         NEXTAUTH_URL: http://langfuse:3000
         REDIS_AUTH: ${REDIS_PASSWORD}
-        REDIS_HOST: redis
+        REDIS_HOST: ${NAT_CI_REDIS_HOST}
         REDIS_PORT: 6379
         SALT: ${LANGFUSE_SALT}
         LANGFUSE_INIT_ORG_ID: test-org
