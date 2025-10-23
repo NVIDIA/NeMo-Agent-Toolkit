@@ -49,7 +49,7 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json",
     ),
     (
-        r"^examples/evaluation_and_profiling/email_phishing_analyzer/configs",
+        r"^examples/evaluation_and_profiling/email_phishing_analyzer/.*/configs",
         r"^examples/evaluation_and_profiling/email_phishing_analyzer/data",
     ),
     (
@@ -96,6 +96,7 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
 }
 
 ALLOWLISTED_WORDS: set[str] = {
+    "A/B",
     "and/or",
     "application/json",
     "CI/CD",
@@ -109,6 +110,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "file/console",
     "files/functions",
     "I/O",
+    "include/exclude",
     "Input/Observation",
     "input/output",
     "inputs/outputs",
@@ -118,6 +120,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "LangChain/LangGraph.",
     "LTE/5G",
     "output/jobs/job_",
+    "POST/PUT",
     "predictions/forecasts",
     "provider/method.",
     "RagaAI/Catalyst",

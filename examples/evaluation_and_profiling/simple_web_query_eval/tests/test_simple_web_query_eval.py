@@ -19,37 +19,12 @@ from pathlib import Path
 
 import pytest
 
-import nat_simple_web_query_eval
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
 from nat.test.utils import locate_example_config
+from nat.test.utils import validate_workflow_output
 
 logger = logging.getLogger(__name__)
-
-
-def validate_workflow_output(workflow_output_file: Path):
-    """
-    Validate the contents of the workflow output file.
-    WIP: output format should be published as a schema and this validation should be done against that schema.
-    """
-    # Ensure the workflow_output.json file was created
-    assert workflow_output_file.exists(), "The workflow_output.json file was not created"
-
-    # Read and validate the workflow_output.json file
-    try:
-        with open(workflow_output_file, encoding="utf-8") as f:
-            result_json = json.load(f)
-    except json.JSONDecodeError:
-        pytest.fail("Failed to parse workflow_output.json as valid JSON")
-
-    assert isinstance(result_json, list), "The workflow_output.json file is not a list"
-    assert len(result_json) > 0, "The workflow_output.json file is empty"
-    assert isinstance(result_json[0], dict), "The workflow_output.json file is not a list of dictionaries"
-
-    # Ensure required keys exist
-    required_keys = ["id", "question", "answer", "generated_answer", "intermediate_steps"]
-    for key in required_keys:
-        assert all(item.get(key) for item in result_json), f"The '{key}' key is missing in workflow_output.json"
 
 
 def validate_rag_accuracy(rag_metric_output_file: Path, score: float):
@@ -110,6 +85,8 @@ async def test_eval():
        a. the rag accuracy metric
        b. the trajectory score (if present)
     """
+    import nat_simple_web_query_eval
+
     # Get config dynamically
     config_file: Path = locate_example_config(nat_simple_web_query_eval, "eval_config.yml")
 
@@ -131,31 +108,28 @@ async def test_eval():
     eval_runner = EvaluationRun(config=config)
     output = await eval_runner.run_and_evaluate()
 
+    assert eval_runner.eval_config is not None, "The eval config is not present"
+
+    type_name_map = {}
+    for eval_type in ["ragas", "trajectory"]:
+        expected = []
+        for name, config in eval_runner.eval_config.evaluators.items():
+            if config.type == eval_type:
+                expected.append(f"{name}_output.json")
+        type_name_map[eval_type] = expected
+
     # Ensure the workflow was not interrupted
     assert not output.workflow_interrupted, "The workflow was interrupted"
-
-    # Look for the ragas evaluator and trajectory evaluator output files
-    rag_output_files: list[Path] = []
-    trajectory_output_file: Path | None = None
-
-    for output_file in output.evaluator_output_files:
-        output_file_str = str(output_file)
-        if "rag_" in output_file_str:
-            rag_output_files.append(output_file)
-        if "trajectory_output.json" in output_file_str:
-            trajectory_output_file = output_file
 
     # Validate the workflow output
     assert output.workflow_output_file, "The workflow_output.json file was not created"
     validate_workflow_output(output.workflow_output_file)
 
-    # Verify that atleast one rag metric output file is present
-    assert rag_output_files, "Atleast one rag metric output whould be present"
-    for rag_output_file in rag_output_files:
-        # Relevance and Groundedness should evaluate better than Accuracy
-        min_score = 0.5 if "accuracy" in str(rag_output_file) else 0.75
-        validate_rag_accuracy(rag_output_file, min_score)
-
-    # Verify the trajectory_output.json file
-    if trajectory_output_file:
-        validate_trajectory_accuracy(trajectory_output_file)
+    for output_file in output.evaluator_output_files:
+        base_name = output_file.name
+        if base_name in type_name_map["ragas"]:
+            # Relevance and Groundedness should evaluate better than Accuracy
+            min_score = 0.5 if "accuracy" in str(output_file) else 0.75
+            validate_rag_accuracy(output_file, min_score)
+        elif base_name in type_name_map["trajectory"]:
+            validate_trajectory_accuracy(output_file)

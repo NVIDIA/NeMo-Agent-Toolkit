@@ -133,6 +133,33 @@ class OpenAIModelConfig(LLMBaseConfig, TopPMixin, name="openai"):
                             description="The OpenAI hosted model name.")
 ```
 
+#### ThinkingMixin
+
+The {class}`nat.data_models.thinking_mixin.ThinkingMixin` is a mixin that adds a `thinking` field to the provider config. The `thinking` field is a boolean that specifies whether to enable thinking for the model.
+
+```python
+from nat.data_models.thinking_mixin import ThinkingMixin
+
+class NIMModelConfig(LLMBaseConfig, ThinkingMixin, name="nim"):
+    """An NIM LLM provider to be used with an LLM client."""
+
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
+
+    api_key: str | None = Field(default=None, description="NIM API key to interact with hosted model.")
+    base_url: str | None = Field(default=None, description="Base url to the hosted model.")
+    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
+                            serialization_alias="model",
+                            description="The NIM hosted model name.")
+
+    # The following field is defined in the mixin:
+    thinking: bool | None = Field(default=None, description="Whether to enable thinking for the model.")
+    
+    # The following property is then defined in the mixin based on the model_name:
+    @property
+    def thinking_system_prompt(self) -> str | None:
+        ...
+```
+
 ### Registering the Provider
 An asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_provider` is used to register the provider with NeMo Agent toolkit by yielding an instance of {class}`nat.builder.llm.LLMProviderInfo`.
 
@@ -194,6 +221,7 @@ After implementing a new LLM provider, it's important to verify that it works co
 
 ```python
 @pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_nim_langchain_agent():
     """
     Test NIM LLM with LangChain/LangGraph agent. Requires NVIDIA_API_KEY to be set.
@@ -216,7 +244,7 @@ async def test_nim_langchain_agent():
         assert "3" in response.content.lower()
 ```
 
-Note: Since this test requires an API key, it's marked with `@pytest.mark.integration` to exclude it from CI runs. However, these tests are necessary for maintaining and verifying the functionality of LLM providers and their client integrations.
+Note: Since this test requires an API key, it's requesting the `nvidia_api_key` fixture, which checks for the `NVIDIA_API_KEY` environment variable. If the variable is not set, the test will be skipped. Additionally, the test is marked with `@pytest.mark.integration` this indicates that the test might take longer to run and may require external resources. Tests marked with `integration` will only run when the `--run_integration` flag is provided to `pytest`, allowing the test to be excluded from CI runs. However, these tests are necessary for maintaining and verifying the functionality of LLM providers and their client integrations.
 
 ## Packaging the Provider and Client
 

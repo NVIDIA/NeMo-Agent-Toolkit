@@ -47,6 +47,9 @@ Install this evaluation example:
 uv pip install -e examples/evaluation_and_profiling/simple_calculator_eval
 ```
 
+> [!NOTE]
+> If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, try setting the `eval.general.max_concurrency` value either in the YAML directly or via the command line with: `--override eval.general.max_concurrency 1`.
+
 ## Run the Workflow
 
 ### Running Evaluation

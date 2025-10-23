@@ -80,13 +80,14 @@ Evaluate the Simple LangSmith-Documentation agent's accuracy using different con
 
 #### Basic Evaluation
 
-The configuration files specified below contain configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
+The configuration files specified below contain configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. For detailed information about evaluation configuration and output files, refer to the [evaluation guide](../../../docs/source/workflows/evaluate.md). For profiling configuration and metrics, see the [profiling guide](../../../docs/source/workflows/profiler.md).
 
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
-> **Note**: If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, try setting the `eval.general.max_concurrency` value either in the YAML directly or via the command line with: `--override eval.general.max_concurrency 1`.
+> [!NOTE]
+> If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, try setting the `eval.general.max_concurrency` value either in the YAML directly or via the command line with: `--override eval.general.max_concurrency 1`.
 
 #### OpenAI Model Evaluation
 ```bash
@@ -111,51 +112,93 @@ nat eval --skip_workflow --config_file examples/evaluation_and_profiling/simple_
 
 #### Evaluation with Upload
 
-#### Setting up S3 Bucket for Upload
+##### Setting up S3 Bucket for Upload
 
 To enable the `eval_upload.yml` workflow, you must configure an S3-compatible bucket for both dataset input and result output. You can use AWS S3, MinIO, or another S3-compatible service.
 
+We recommend installing the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) to create and manage your S3 buckets, regardless of the S3-compatible service you use.
+
+**Set the bucket name:**
+
+```bash
+export S3_BUCKET_NAME=nat-simple-bucket
+```
+
 **Using AWS S3**
-1. Create a bucket by following instructions [here](https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html).
-2. Configure your AWS credentials:
+1. Configure your AWS credentials:
    ```bash
    export AWS_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
    export AWS_SECRET_ACCESS_KEY=<YOUR_SECRET_ACCESS_KEY>
    export AWS_DEFAULT_REGION=<your-region>
    ```
-3. In `eval_upload.yml`, update the `bucket`, `endpoint_url` (if using a custom endpoint), and credentials under both `eval.general.output.s3` and `eval.general.dataset.s3`.
 
 **Using MinIO**
 1. Start a local MinIO server or cloud instance. To start a local MinIO server, consult the [MinIO section](../../deploy/README.md#running-services) of the deployment guide.
-2. Create a bucket by visiting the MinIO console at http://localhost:9001 (or the cloud instance endpoint) and login with your credentials. Then, click the "Create Bucket" button.
-3. Set environment variables:
+2. Set environment variables:
    ```bash
-   export AWS_ACCESS_KEY_ID=<MINIO_ACCESS_KEY>
-   export AWS_SECRET_ACCESS_KEY=<MINIO_SECRET_KEY>
-   export S3_ENDPOINT=http://<minio-host>:<port>
+   export AWS_ACCESS_KEY_ID=minioadmin
+   export AWS_SECRET_ACCESS_KEY=minioadmin
+   export S3_ENDPOINT_URL=http://localhost:9000
    ```
-4. In `eval_upload.yml`, configure `endpoint_url` to point to `$S3_ENDPOINT`, and set the `bucket`, `access_key`, and `secret_key` accordingly.
+
+**Creating the S3 bucket:**
+```bash
+aws s3 mb \
+  s3://${S3_BUCKET_NAME}
+  ${S3_ENDPOINT_URL:+--endpoint-url=${S3_ENDPOINT_URL}}
+```
 
 For more information about using remote files for evaluation, refer to the [evaluation guide](../../../docs/source/reference/evaluate.md).
 
-#### Upload dataset to the S3 bucket
+##### Upload dataset to the S3 bucket
 To use the sample config file `eval_upload.yml`, you need to upload the following dataset files to the S3 bucket at path `input/`:
 - `examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json`
 
-#### Running Evaluation
+For example, if you have the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed, you can use the following command to upload the dataset files to the S3 bucket:
+```bash
+aws s3 cp \
+  examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json \
+  s3://${S3_BUCKET_NAME}/input/langsmith.json \
+  ${S3_ENDPOINT_URL:+--endpoint-url=${S3_ENDPOINT_URL}}
+```
+
+##### Running Evaluation
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_upload.yml
 ```
 
 ### Understanding Results
 
-The evaluation generates comprehensive metrics including:
+After running evaluation, you'll find output files in `./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval/` (or your configured output directory). The evaluation generates comprehensive metrics including:
 
 - **Response Quality**: Measures how well the agent answers LangSmith-related questions
 - **Accuracy Scores**: Quantitative measures of response correctness
 - **Question-by-Question Analysis**: Detailed breakdown of individual responses
 - **Performance Metrics**: Overall quality assessments across different models
 - **Error Analysis**: Identification of common failure patterns in documentation retrieval and response generation
+
+#### Evaluation Outputs
+
+Running `nat eval` generates several artifacts in the output directory:
+
+**Workflow outputs (always available)**
+- `workflow_output.json`: Per-sample execution results including question, expected answer, generated answer, and intermediate steps
+
+**Evaluator outputs (when configured)**
+- `trajectory_accuracy_output.json`: Trajectory evaluator scores and reasoning
+- `accuracy_output.json`: Ragas AnswerAccuracy scores
+- `groundedness_output.json`: Ragas ResponseGroundedness scores
+- `relevance_output.json`: Ragas ContextRelevance scores
+
+**Profiler outputs (when enabled)**
+- `standardized_data_all.csv`: Per-request profiler metrics
+- `workflow_profiling_metrics.json`: Aggregated profiler statistics
+- `workflow_profiling_report.txt`: Human-readable profiler summary
+- `gantt_chart.png`: Timeline visualization
+- `all_requests_profiler_traces.json`: Full trace events
+- `inference_optimization.json`: Inference optimization signals (when `compute_llm_metrics` is enabled)
+
+For detailed descriptions of each output file, refer to the [Evaluation outputs section](../../../docs/source/workflows/evaluate.md#evaluation-outputs-what-you-will-get) in the evaluation guide.
 
 ### Available Configurations
 

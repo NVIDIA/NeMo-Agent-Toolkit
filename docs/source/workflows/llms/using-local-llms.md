@@ -17,7 +17,7 @@ limitations under the License.
 
 # Using Local LLMs
 
-NeMo Agent toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
+NeMo Agent toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/), though any locally hosted LLM with an OpenAI-compatible API can be used.
 
 ## Using NIM
 <!-- path-check-skip-next-line -->
@@ -32,10 +32,11 @@ Regardless of the model you choose, the process is the same for downloading the 
 
 ### Install the Simple Web Query Example
 
-First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install the simple web query example so we have the `webpage_query` tool available.
+First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install NAT and the simple web query example.
 
 ```bash
-pip install -e examples/getting_started/simple_web_query
+uv pip install -e .
+uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ### Downloading the NIM Containers
@@ -112,7 +113,7 @@ llms:
   nim_llm:
     _type: nim
     base_url: "http://localhost:8000/v1"
-    model_name: nvidia/llama3.1-nemotron-nano-4b-v1.1
+    model_name: nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1
 
 embedders:
   nv-embedqa-e5-v5:
@@ -137,15 +138,21 @@ nat run --config_file examples/documentation_guides/locally_hosted_llms/nim_conf
 
 ## Using vLLM
 
+
+vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients.
+
+If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. It is recommended to use a **separate** virtual environment for vLLM due to potential conflicts with NeMo Agent toolkit dependencies.
+
 <!-- path-check-skip-next-line -->
-vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients. If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. Similar to the previous example we will be using the same [`nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1`](https://huggingface.co/nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) embedding model.
+Similar to the previous example we will be using the same [`nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1`](https://huggingface.co/nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) embedding model.
 
 ### Install the Simple Web Query Example
 
-First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install the simple web query example so we have the `webpage_query` tool available.
+First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install NAT and the simple web query example.
 
 ```bash
-pip install -e examples/getting_started/simple_web_query
+uv pip install -e .
+uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ### Serving the Models
@@ -210,4 +217,18 @@ workflow:
 To run the workflow using the locally hosted LLMs, run the following command:
 ```bash
 nat run --config_file examples/documentation_guides/locally_hosted_llms/vllm_config.yml --input "What is LangSmith?"
+```
+
+## Other Locally Hosted LLMs
+
+Any locally hosted LLM with an OpenAI-compatible API can be used with the NeMo Agent toolkit. The only changes needed are to define the `base_url` for the LLM and embedding models, along with the names of the models to use.
+
+For example, to use the `gpt-oss-20b` model, the following configuration can be used:
+```yaml
+llms:
+  gpt-oss:
+    _type: openai
+    api_key: "EMPTY"
+    base_url: "http://localhost:8000/v1"
+    model_name: gpt-oss-20b
 ```

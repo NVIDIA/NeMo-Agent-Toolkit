@@ -13,28 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-from pathlib import Path
-
 import pytest
 
-from nat.test.utils import locate_example_config
-from nat.test.utils import run_workflow
-from nat_automated_description_generation.register import AutomatedDescriptionMilvusWorkflow
 
-logger = logging.getLogger(__name__)
-
-
+@pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key", "populate_milvus")
 async def test_full_workflow(milvus_uri: str) -> None:
     from pydantic import HttpUrl
 
     from nat.runtime.loader import load_config
+    from nat.test.utils import locate_example_config
+    from nat.test.utils import run_workflow
+    from nat_automated_description_generation.register import AutomatedDescriptionMilvusWorkflow
 
-    config_file: Path = locate_example_config(AutomatedDescriptionMilvusWorkflow)
+    config_file = locate_example_config(AutomatedDescriptionMilvusWorkflow)
     config = load_config(config_file)
     config.retrievers['retriever'].uri = HttpUrl(url=milvus_uri)
 
     # Unfortunately the workflow itself returns inconsistent results
-    await run_workflow(None, "List 5 subspecies of Aardvark?", "Aardvark", config=config)
+    await run_workflow(config=config, question="List 5 subspecies of Aardvark?", expected_answer="Aardvark")

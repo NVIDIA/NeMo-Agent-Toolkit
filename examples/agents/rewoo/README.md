@@ -87,7 +87,7 @@ The ReWOO agent is configured through the `config.yml` file. The following confi
 
 ### Configurable Options
 
-* `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
+* `tool_names`: A list of tools that the agent can call. The tools must be functions or function groups configured in the YAML file
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
 
@@ -107,8 +107,6 @@ The ReWOO agent is configured through the `config.yml` file. The following confi
 
 * `log_response_max_chars`: Defaults to 1000. Maximum number of characters to display in logs when logging tool responses.
 
-* `use_openai_api`: Defaults to False. If set to True, the ReWOO agent will output in OpenAI API spec. If set to False, strings will be used.
-
 * `additional_planner_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base planner prompt.
 
 * `additional_solver_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base solver prompt.
@@ -120,7 +118,7 @@ The ReWOO agent is configured through the `config.yml` file. The following confi
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Make a joke comparing Elon and Mark Zuckerberg's birthdays?"
+nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Who would be older today, Einstein or Bohr?"
 ```
 
 **Expected Workflow Output**
@@ -130,85 +128,74 @@ nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Make a j
 - ReWOO agent output:
 ------------------------------
 [AGENT]
-Agent input: Make a joke comparing Elon and Mark Zuckerberg's birthdays?
+Agent input: Who would be older today, Einstein or Bohr?
 Agent's thoughts: 
 [
   {
-    "plan": "Find Elon Musk's birthday",
+    "plan": "Find Einstein's birthdate",
     "evidence": {
       "placeholder": "#E1",
       "tool": "internet_search",
-      "tool_input": {"question": "Elon Musk birthday"}
+      "tool_input": {"question": "Einstein birthdate"}
     }
   },
   {
-    "plan": "Find Mark Zuckerberg's birthday",
+    "plan": "Find Bohr's birthdate",
     "evidence": {
       "placeholder": "#E2",
       "tool": "internet_search",
-      "tool_input": {"question": "Mark Zuckerberg birthday"}
+      "tool_input": {"question": "Bohr birthdate"}
     }
   },
   {
-    "plan": "Compare the birthdays and create a joke",
+    "plan": "Compare Einstein's and Bohr's birthdates to determine who would be older today",
     "evidence": {
       "placeholder": "#E3",
       "tool": "haystack_chitchat_agent",
-      "tool_input": {"inputs": "Compare the birthdays of Elon Musk (#E1) and Mark Zuckerberg (#E2) and create a joke"}
+      "tool_input": {"inputs": "Who would be older today, Einstein born #E1 or Bohr born #E2?"}
     }
   }
 ]
 ------------------------------
-2025-09-27 20:12:14,522 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent execution levels: [['#E1', '#E2'], ['#E3']]
-/raid/binfeng/workspace/NeMo-Agent-Toolkit/packages/nvidia_nat_langchain/src/nat/plugins/langchain/tools/tavily_internet_search.py:45: LangChainDeprecationWarning: The class `TavilySearchResults` was deprecated in LangChain 0.3.25 and will be removed in 1.0. An updated version of the class exists in the :class:`~langchain-tavily package and should be used instead. To use it run `pip install -U :class:`~langchain-tavily` and import as `from :class:`~langchain_tavily import TavilySearch``.
-  tavily_search = TavilySearchResults(max_results=tool_config.max_results)
-2025-09-27 20:12:15,939 - nat.agent.base - INFO - 
+2025-10-14 19:14:02 - INFO     - nat.agent.rewoo_agent.agent:289 - ReWOO agent execution levels: [['#E1', '#E2'], ['#E3']]
+2025-10-14 19:14:02 - INFO     - nat.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: internet_search
-Tool's input: {'question': 'Elon Musk birthday'}
+Tool's input: {'question': 'Bohr birthdate'}
 Tool's response: 
-content='<Document href="https://www.ebsco.com/research-starters/biography/elon-musk"/>\nElon Musk was born on June 28, 1971, in Pretoria, Transvaal (now Gauteng), South Africa, one of three children born to Canadian model and dietitian Maye Musk (née Haldeman) and South African engineer Errol Musk, now divorced. He left high school and emigrated from South Africa to Canada in 1988 at the age of seventeen, primarily because he objected philosophically to mandatory conscription into the South African military, which at the time was the primary enforcement vehicle for apartheid.\n</Document>\n\n---\n\n<Document href="https://www.jagranjosh.com/general-knowledge/elon-reeve-musk-1588776062-1"/>\nElon Musk, born on June 28, 1971, in Pretoria, South Africa, is a prominent entrepreneur known for his roles in companies like Tesla, SpaceX, and Neuralink. Recently, he welcomed his 14th child, Seldon Lycurgus, with Shivon Zilis, an executive at Neuralink.\n\nThe name "Seldon" is believed to be in...(rest of response truncated)
+content='<Document href="https://www.facebook.com/TheWorldsofDavidDarling/posts/born-on-this-date-oct-7-in-1885-the-danish-physicist-niels-bohr-who-played-a-cru/1278740440721508/"/>\nNiels Bohr, in full Niels Henrik David Bohr, (born October 7, 1885, Copenhagen, Denmark—died November 18, 1962, Copenhagen), Danish\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Niels_Bohr"/>\n**Niels Henrik David Bohr** (Danish: ; 7 October 1885 – 18 November 1962) was a Danish theoretical physicist who made foundational contributions to understanding atomic structure and quantum theory, for which he received the Nobel Prize in Physics in 1922. J. Thomson (1914) * Ivan Pavlov (1915) * James Dewar (1916) * Pierre Paul Émile Roux (1917) * Hendrik Lorentz (1918) * William Bayliss (1919) * Horace Tabberer Brown (1920) * Joseph Larmor (1921) * Ernest Rutherford (1922) * Horace Lamb (1923) * Edward Albert Sharpey-Schafer (1924) * Albert Einstein (1925) * Frederick Gowland Hopkins (1926) *...(rest of response truncated)
 ------------------------------
-2025-09-27 20:12:17,757 - nat.agent.base - INFO - 
+2025-10-14 19:14:02 - INFO     - nat.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: internet_search
-Tool's input: {'question': 'Mark Zuckerberg birthday'}
+Tool's input: {'question': 'Einstein birthdate'}
 Tool's response: 
-content='<Document href="https://simple.wikipedia.org/wiki/Mark_Zuckerberg"/>\n| Mark Zuckerberg | |\n --- |\n| Zuckerberg in 2020 | |\n| Born | Mark Elliot Zuckerberg   (1984-05-14) May 14, 1984 (age 41)  White Plains, New York, USA |\n| Education | Harvard University (no degree) |\n| Occupations |  Internet entrepreneur")  philanthropist  media mogul |\n| Years active | 2004–present |\n| Known for | Co-founding and leading Meta, Inc. |\n| Height | 171 cm (5 ft 7 in) |\n| Title |  Founder and CEO of Meta, Inc.  Co-founder and co-CEO of Chan Zuckerberg Initiative | [...] Mark Elliot Zuckerberg (born White Plains, New York, 1984) is an American who created Facebook when he was still studying computer science. The founding of Facebook made Zuckerberg a billionaire, one of the youngest and richest billionaires of all time according to Forbes.\n\nBesides computer programming, Zuckerberg is also interested in foreign languages, especially Mandarin Chinese. Mark Zuckerberg was born at White ...(rest of response truncated)
+content='<Document href="https://www.facebook.com/albert.einstein.fans/posts/albert-einstein-was-born-on-march-14-1879-happy-birthday-/1204655314357103/"/>\nAlbert Einstein - Albert Einstein was born on March 14,... Albert Einstein\'s post ### **Albert Einstein** Albert Einstein was born on March 14, 1879. Happy birthday!! Image 1: 🎂Image 2: 🎉Image 3: 🎈 Image 4: No photo description available. Image 5 Image 6 67K 5.3K comments 9.1K shares A not well known fact that number Pi which is 3.14 is assigned after Einstein\'s birthday! Image 7Image 8Image 9 Happy heavenly birthday Mr. Einstein! Image 10: 🎂Image 11: 🎈 Image 12: GIFmedia1.tenor.co Image 13Image 14 happy birthday to me too! Image 15Image 16 Image 17Image 18 My birthday too though a bit later than 1879 Image 19: 😂 Image 20Image 21 Image 22 Image 23 Image 24 Image 25Image 26 Image 27\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Albert_Einstein"/>\nAlbert Einstein (14 March 1879 – 18 April 1955) was a German-...(rest of response truncated)
 ------------------------------
-2025-09-27 20:12:17,757 - nat.agent.rewoo_agent.agent - INFO - [AGENT] Completed level 0 with 2 tools
-2025-09-27 20:12:23,318 - nat_multi_frameworks.haystack_agent - INFO - output from langchain_research_tool: After comparing the birthdays of Elon Musk and Mark Zuckerberg, I found that:
-
-Elon Musk was born on June 28, 1971
-Mark Zuckerberg was born on May 14, 1984
-
-Here's a joke:
-
-Why did Elon Musk and Mark Zuckerberg go to therapy together?
-
-Because Elon was feeling a little "spacey" (get it? SpaceX?) and Mark was having a "facebook" identity crisis... but in the end, they just realized they were born to be different - 13 years and 44 days apart, to be exact!
-2025-09-27 20:12:23,318 - nat.agent.base - INFO - 
+2025-10-14 19:14:02 - INFO     - nat.agent.rewoo_agent.agent:373 - [AGENT] Completed level 0 with 2 tools
+2025-10-14 19:14:05 - INFO     - nat_multi_frameworks.haystack_agent:57 - output from langchain_research_tool: Based on the information provided, Albert Einstein was born on March 14, 1879, and Niels Bohr was born on October 7, 1885. Therefore, Einstein would be older than Bohr by approximately 6 years.
+2025-10-14 19:14:05 - INFO     - nat.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: haystack_chitchat_agent
-Tool's input: {'inputs': 'Compare the birthdays of Elon Musk (<Document href="https://www.ebsco.com/research-starters/biography/elon-musk"/>\nElon Musk was born on June 28, 1971, in Pretoria, Transvaal (now Gauteng), South Africa, one of three children born to Canadian model and dietitian Maye Musk (née Haldeman) and South African engineer Errol Musk, now divorced. He left high school and emigrated from South Africa to Canada in 1988 at the age of seventeen, primarily because he objected philosophically to mandatory conscription into the South African military, which at the time was the primary enforcement vehicle for apartheid.\n</Document>\n\n---\n\n<Document href="https://www.jagranjosh.com/general-knowledge/elon-reeve-musk-1588776062-1"/>\nElon Musk, born on June 28, 1971, in Pretoria, South Africa, is a prominent entrepreneur known for his roles in companies like Tesla, SpaceX, and Neuralink. Recently, he welcomed his 14th child, Seldon Lycurgus, with Shivon Zilis, an executive at Neuralink.\n\nThe name "Seldon" is believed to be inspired by Hari Seldon, a character from Isaac Asimov\'s "Foundation" series, while "Lycurgus" refers to the ancient Spartan lawgiver. [...] Elon Reeve Musk was born on June 28, 1971, in Pretoria, South Africa. He is the eldest of three siblings in a family with diverse talents and interests.\n\nHis early life was marked by intellectual curiosity but also challenges, including bullying at school and a difficult relationship with his father. Musk showed an early aptitude for technology and entrepreneurship, creating and selling a video game called Blastar at the age of 12.\n\n### Parents [...] +\n\n  Elon Reeve Musk was born on June 28, 1971, in Pretoria, South Africa to Maye Musk and Errol Musk.\n\nGet here current GK and GK quiz questions in English and Hindi for India, World, Sports and Competitive exam preparation. Download the Jagran Josh Current Affairs App.\n\n## Trending\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Elon_Musk"/>\nElon Reeve Musk was born on June 28, 1971, in Pretoria, South Africa\'s administrative capital.( He is of British and Pennsylvania Dutch ancestry.( His mother, Maye (néeHaldeman), is a model and dietitian born in Saskatchewan, Canada, and raised in South Africa.( Musk therefore holds both South African and Canadian citizenship from birth.( His father, Errol Musk, is a South African electromechanical engineer, pilot, sailor, consultant, emerald dealer, and property developer, who partly owned a [...] Elon Reeve Musk (/ˈ iː l ɒ n/_EE-lon_; born June 28, 1971) is an international businessman and entrepreneur known for his leadership of Tesla, SpaceX, X (formerly Twitter) "X (formerly Twitter)"), and the Department of Government Efficiency (DOGE). Musk has been the wealthiest person in the world since 2021; as of May 2025,( estimates his net worth to be US$424.7 billion. [...] | Image 5_(cropped).jpg) Musk in 2022 |\n|  |\n| Senior Advisor to the President |\n| In office January 20, 2025– May 30, 2025 Serving with Massad Boulos |\n| President | Donald Trump |\n| Preceded by | Tom Perez |\n|  |\n| Personal details |\n| Born | Elon Reeve Musk (1971-06-28) June 28, 1971 (age 54) Pretoria, South Africa |\n| Citizenship |  South Africa  Canada  United States |\n| Political party | Independent |\n</Document>) and Mark Zuckerberg (<Document href="https://simple.wikipedia.org/wiki/Mark_Zuckerberg"/>\n| Mark Zuckerberg | |\n --- |\n| Zuckerberg in 2020 | |\n| Born | Mark Elliot Zuckerberg   (1984-05-14) May 14, 1984 (age 41)  White Plains, New York, USA |\n| Education | Harvard University (no degree) |\n| Occupations |  Internet entrepreneur")  philanthropist  media mogul |\n| Years active | 2004–present |\n| Known for | Co-founding and leading Meta, Inc. |\n| Height | 171 cm (5 ft 7 in) |\n| Title |  Founder and CEO of Meta, Inc.  Co-founder and co-CEO of Chan Zuckerberg Initiative | [...] Mark Elliot Zuckerberg (born White Plains, New York, 1984) is an American who created Facebook when he was still studying computer science. The founding of Facebook made Zuckerberg a billionaire, one of the youngest and richest billionaires of all time according to Forbes.\n\nBesides computer programming, Zuckerberg is also interested in foreign languages, especially Mandarin Chinese. Mark Zuckerberg was born at White Plains Hospital in White Plains, New York but now he lives in California.\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Mark_Zuckerberg"/>\nMark Elliot Zuckerberg (/ˈzʌkərbɜːrɡ/; born May 14, 1984) is an American businessman who co-founded the social media service Facebook and its parent company Meta Platforms, of which he is the chairman, chief executive officer, and controlling shareholder. [...] ## Early life\n\nMark Elliot Zuckerberg was born on May 14, 1984, in White Plains, New York, to psychiatrist Karen (née Kempner) and dentist Edward Zuckerberg. He and his three sisters (Arielle, Randi, and Donna) were raised in a Reform Jewish household in Dobbs Ferry, New York. Their great-grandparents were emigrants from Austria, Germany, and Poland. Zuckerberg initially attended Ardsley High School before transferring to Phillips Exeter Academy. He was captain of the fencing team.\n</Document>\n\n---\n\n<Document href="https://www.biography.com/business-leaders/mark-zuckerberg"/>\nMark Elliot Zuckerberg was born on May 14, 1984, in White Plains, New York, into a comfortable, well-educated family. His father, Edward, ran a dental practice attached to the family’s home, and his mother, Karen, worked as a psychiatrist before becoming a stay-at-home mom. He was raised in the Westchester village of Dobbs Ferry with his three siblings Randi, Donna, and Arielle. [...] ## Quick Facts\n\nFULL NAME: Mark Elliot Zuckerberg BORN: May 14, 1984BIRTHPLACE: White Plains, New YorkSPOUSE: Priscilla Chan (2012-present)CHILDREN: Maxima, August, and AureliaASTROLOGICAL SIGN: Taurus\n\n## Early Life [...] In December 2015, the couple welcomed their first child, a daughter named Maxima, Max for short. Zuckerberg and Chan had two more daughters together: August (named after her birth month), born in August 2017, and Aurelia, born in March 2023.\n\n## Net Worth\n</Document>) and create a joke'}
+Tool's input: {'inputs': 'Who would be older today, Einstein born <Document href="https://www.facebook.com/albert.einstein.fans/posts/albert-einstein-was-born-on-march-14-1879-happy-birthday-/1204655314357103/"/>\nAlbert Einstein - Albert Einstein was born on March 14,... Albert Einstein\'s post ### **Albert Einstein** Albert Einstein was born on March 14, 1879. Happy birthday!! Image 1: 🎂Image 2: 🎉Image 3: 🎈 Image 4: No photo description available. Image 5 Image 6 67K 5.3K comments 9.1K shares A not well known fact that number Pi which is 3.14 is assigned after Einstein\'s birthday! Image 7Image 8Image 9 Happy heavenly birthday Mr. Einstein! Image 10: 🎂Image 11: 🎈 Image 12: GIFmedia1.tenor.co Image 13Image 14 happy birthday to me too! Image 15Image 16 Image 17Image 18 My birthday too though a bit later than 1879 Image 19: 😂 Image 20Image 21 Image 22 Image 23 Image 24 Image 25Image 26 Image 27\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Albert_Einstein"/>\nAlbert Einstein (14 March 1879 – 18 April 1955) was a German-born theoretical physicist ; Born in the German Empire ; In 1905, sometimes described as his annus\n</Document>\n\n---\n\n<Document href="https://www.facebook.com/WorldJewishCong/posts/today-is-the-birthday-of-albert-einstein-born-on-march-14-1879-one-of-the-greate/1051939843629078/"/>\nHe was born on March 14, 1879, in Ulm, in the Kingdom of Württemberg in the German Empire. Einstein is best known for his theory of relativity,\n</Document> or Bohr born <Document href="https://www.facebook.com/TheWorldsofDavidDarling/posts/born-on-this-date-oct-7-in-1885-the-danish-physicist-niels-bohr-who-played-a-cru/1278740440721508/"/>\nNiels Bohr, in full Niels Henrik David Bohr, (born October 7, 1885, Copenhagen, Denmark—died November 18, 1962, Copenhagen), Danish\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Niels_Bohr"/>\n**Niels Henrik David Bohr** (Danish: ; 7 October 1885 – 18 November 1962) was a Danish theoretical physicist who made foundational contributions to understanding atomic structure and quantum theory, for which he received the Nobel Prize in Physics in 1922. J. Thomson (1914) * Ivan Pavlov (1915) * James Dewar (1916) * Pierre Paul Émile Roux (1917) * Hendrik Lorentz (1918) * William Bayliss (1919) * Horace Tabberer Brown (1920) * Joseph Larmor (1921) * Ernest Rutherford (1922) * Horace Lamb (1923) * Edward Albert Sharpey-Schafer (1924) * Albert Einstein (1925) * Frederick Gowland Hopkins (1926) * Charles Scott Sherrington (1927) * Charles Algernon Parsons (1928) * Max Planck (1929) * William Henry Bragg (1930) * Arthur Schuster (1931) * George Ellery Hale (1932) * Theobald Smith (1933) * John Scott Haldane (1934) * Charles Thomson Rees Wilson (1935) * Arthur Evans (1936) * Henry Hallett Dale (1937) * Niels Bohr (1938) * Thomas Hunt Morgan (1939) * Paul Langevin (1940) * Thomas Lewis "Thomas Lewis (cardiologist)") (1941) * Robert Robinson "Robert Robinson (chemist)") (1942) * Joseph Barcroft (1943) * Geoffrey Ingram Taylor (1944) * Oswald Avery (1945) * Edgar Douglas Adrian (1946) * G.\n</Document>\n\n---\n\n<Document href="https://www.facebook.com/ictp.page/posts/happy-belated-birthday-to-niels-bohr-the-distinguished-danish-physicist-born-7-o/3631629133523362/"/>\n- ICTP: International Centre for Theoretical Physics | Facebook ICTP: International Centre for Theoretical Physics\'s post ### **ICTP: International Centre for Theoretical Physics** Happy (belated) Birthday to Niels Bohr! The distinguished Danish physicist, born 7 October 1885, made fundamental contributions to #atomic structure and #quantummechanics, was a #philosopher of #science, won the Physics #Nobel Prize in 1922, helped Jews escape the Nazis and helped #refugee scientists during WWII, and called for #international cooperation on #nuclearenergyImage 1: 🏆 I remember this one from university : An expert is someone who learns more and more about less and less, until eventually he knows everything about nothing. Happy Birthday. Or An expert is someone who knows more and more about less and less untill he knows every thing about nothing ! Happy Birthday!\n</Document>?'}
 Tool's response: 
-content='After comparing the birthdays of Elon Musk and Mark Zuckerberg, I found that:\n\nElon Musk was born on June 28, 1971\nMark Zuckerberg was born on May 14, 1984\n\nHere\'s a joke:\n\nWhy did Elon Musk and Mark Zuckerberg go to therapy together?\n\nBecause Elon was feeling a little "spacey" (get it? SpaceX?) and Mark was having a "facebook" identity crisis... but in the end, they just realized they were born to be different - 13 years and 44 days apart, to be exact!' name='haystack_chitchat_agent' tool_call_id='haystack_chitchat_agent'
+content='Based on the information provided, Albert Einstein was born on March 14, 1879, and Niels Bohr was born on October 7, 1885. Therefore, Einstein would be older than Bohr by approximately 6 years.' name='haystack_chitchat_agent' tool_call_id='haystack_chitchat_agent'
 ------------------------------
-2025-09-27 20:12:23,319 - nat.agent.rewoo_agent.agent - INFO - [AGENT] Completed level 1 with 1 tools
-2025-09-27 20:12:24,472 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent solver output: 
+2025-10-14 19:14:05 - INFO     - nat.agent.rewoo_agent.agent:373 - [AGENT] Completed level 1 with 1 tools
+2025-10-14 19:14:05 - INFO     - nat.agent.rewoo_agent.agent:493 - ReWOO agent solver output: 
 ------------------------------
 [AGENT]
-Agent input: Make a joke comparing Elon and Mark Zuckerberg's birthdays?
+Agent input: Who would be older today, Einstein or Bohr?
 Agent's thoughts: 
-Why did Elon Musk and Mark Zuckerberg go to therapy together? Because Elon was feeling a little "spacey" and Mark was having a "facebook" identity crisis... but in the end, they just realized they were born to be different - 13 years and 44 days apart, to be exact!
+Einstein
 ------------------------------
-2025-09-27 20:12:24,473 - nat.front_ends.console.console_front_end_plugin - INFO - 
---------------------------------------------------
+2025-10-14 19:14:05 - WARNING  - nat.builder.intermediate_step_manager:94 - Step id 8660f3ce-1732-4951-9dbc-beea6f9a43ef not found in outstanding start steps
+2025-10-14 19:14:05 - INFO     - nat.front_ends.console.console_front_end_plugin:102 - --------------------------------------------------
 Workflow Result:
-['Why did Elon Musk and Mark Zuckerberg go to therapy together? Because Elon was feeling a little "spacey" and Mark was having a "facebook" identity crisis... but in the end, they just realized they were born to be different - 13 years and 44 days apart, to be exact!']
+['Einstein']
 ```
 
 ### Starting the NeMo Agent Toolkit Server
@@ -233,7 +220,7 @@ Once the server is running, you can make HTTP requests to interact with the work
 curl --request POST \
   --url http://localhost:8000/generate \
   --header 'Content-Type: application/json' \
-  --data "{\"input_message\": \"Make a joke comparing Elon and Mark Zuckerberg's birthdays?\"}"
+  --data "{\"input_message\": \"Who would be older today, Einstein or Bohr?\"}"
 ```
 
 #### Streaming Requests
@@ -244,7 +231,7 @@ curl --request POST \
 curl --request POST \
   --url http://localhost:8000/generate/stream \
   --header 'Content-Type: application/json' \
-  --data "{\"input_message\": \"Make a joke comparing Elon and Mark Zuckerberg's birthdays?\"}"
+  --data "{\"input_message\": \"Who would be older today, Einstein or Bohr?\"}"
 ```
 ---
 

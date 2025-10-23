@@ -33,10 +33,16 @@ A tool calling agent is an AI system that directly invokes external tools based 
 ## Requirements
 The tool calling agent requires the `nvidia-nat[langchain]` plugin to be installed.
 
-After you've performed a source code checkout, install this with the following command:
+If you have performed a source code checkout, install this with the following command:
 
 ```bash
 uv pip install -e '.[langchain]'
+```
+
+If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+
+```bash
+uv pip install "nvidia-nat[langchain]"
 ```
 
 ## Configuration
@@ -78,7 +84,7 @@ functions:
 
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the Tool Calling agent is configured as a workflow and need to expose a customized name as a tool.
 
-* `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
+* `tool_names`: A list of tools that the agent can call. The tools must be functions or function groups configured in the YAML file
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
 

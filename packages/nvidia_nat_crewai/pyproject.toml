@@ -27,8 +27,7 @@ requires-python = ">=3.11,<3.14"
 readme = "src/nat/meta/pypi.md"
 description = "Subpackage for CrewAI integration in NeMo Agent toolkit"
 keywords = ["ai", "rag", "agents"]
-license = "Apache-2.0"
-license-files = ["../../LICENSE.md", "../../LICENSE-3rd-party.txt"]
+license = { text = "Apache-2.0" }
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 classifiers = [
@@ -44,6 +43,7 @@ source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
 
 [tool.uv]
+managed = true
 config-settings = { editable_mode = "compat" }
 
 

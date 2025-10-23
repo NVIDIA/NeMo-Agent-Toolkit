@@ -42,6 +42,12 @@ If you have performed a source code checkout, you can install this with the foll
 uv pip install -e '.[langchain]'
 ```
 
+If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+
+```bash
+uv pip install "nvidia-nat[langchain]"
+```
+
 ## Configuration
 
 The ReAct agent may be utilized as a workflow or a function.
@@ -78,7 +84,7 @@ functions:
 
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReAct agent is configured as a workflow and need to expose a customized name as a tool.
 
-* `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file.
+* `tool_names`: A list of tools that the agent can call. The tools must be functions or function groups configured in the YAML file.
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file.
 
@@ -102,8 +108,6 @@ functions:
 If modifying the prompt, see the limitations section below. The prompt must have variables for tools, and must instruct the LLM to output in the ReAct output format.
 
 * `max_history`:  Defaults to `15`. Maximum number of messages to keep in the conversation history.
-
-* `use_openai_api`: Defaults to `False`.  If set to `True`, the ReAct agent will output in OpenAI API spec. If set to `False`, strings will be used.
 
 * `include_tool_input_schema_in_tool_description`: Defaults to `True`.  If set to `True`, the ReAct agent will inspect its tools' input schemas, and append the following to each tool description:
   >. Arguments must be provided as a valid JSON object following this format: {tool_schema}

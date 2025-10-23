@@ -23,8 +23,10 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
+from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
@@ -81,21 +83,23 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                                                          handle_tool_errors=config.handle_tool_errors,
                                                          return_direct=return_direct_tools).build_graph()
 
-    async def _response_fn(input_message: ChatRequest) -> str:
+    async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> str:
         """
         Main workflow entry function for the Tool Calling Agent.
 
         This function invokes the Tool Calling Agent Graph and returns the response.
 
         Args:
-            input_message (ChatRequest): The input message to process
+            chat_request_or_message (ChatRequestOrMessage): The input message to process
 
         Returns:
             str: The response from the agent or error message
         """
         try:
+            message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
+
             # initialize the starting state with the user query
-            messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in input_message.messages],
+            messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in message.messages],
                                                         max_tokens=config.max_history,
                                                         strategy="last",
                                                         token_counter=len,
@@ -114,8 +118,8 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             output_message = state.messages[-1]
             return str(output_message.content)
         except Exception as ex:
-            logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
-            raise RuntimeError
+            logger.error("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
+            raise
 
     try:
         yield FunctionInfo.from_fn(_response_fn, description=config.description)

@@ -76,10 +76,12 @@ def test_function_group_add_function_validation():
         group.add_function("   ", test_fn)
 
     # Test invalid character validation
-    with pytest.raises(ValueError, match="Function name can only contain letters, numbers, underscores, and hyphens"):
+    with pytest.raises(ValueError,
+                       match="Function name can only contain letters, numbers, underscores, periods, and hyphens"):
         group.add_function("func@name", test_fn)
 
-    with pytest.raises(ValueError, match="Function name can only contain letters, numbers, underscores, and hyphens"):
+    with pytest.raises(ValueError,
+                       match="Function name can only contain letters, numbers, underscores, periods, and hyphens"):
         group.add_function("func name", test_fn)
 
     # Test duplicate function names

@@ -33,11 +33,15 @@ nat mcp serve --config_file examples/getting_started/simple_calculator/configs/c
 
 This will load the workflow configuration from the specified file, start an MCP server on the default host (localhost) and port (9901), and publish all tools from the workflow as MCP tools. The MCP server is available at `http://localhost:9901/mcp` using streamable-http transport.
 
-You can also use the `sse` (Server-Sent Events) transport for backwards compatibility via the `--transport` flag for example:
+You can also use the `sse` (Server-Sent Events) transport for backwards compatibility through the `--transport` flag, for example:
 ```bash
 nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --transport sse
 ```
 With this configuration, the MCP server is available at `http://localhost:9901/sse` using SSE transport.
+
+:::{warning}
+**SSE Transport Security Limitations**: The SSE transport does not support authentication. For production deployments, use `streamable-http` transport with authentication configured. SSE should only be used for local development on localhost or behind an authenticating reverse proxy.
+:::
 
 You can optionally specify the server settings using the following flags:
 ```bash
@@ -189,7 +193,19 @@ Server at http://localhost:9901/mcp is healthy (response time: 4.35ms)
 ```
 This is useful for health checks and monitoring.
 
-## Limitations
-- The `nat mcp serve` command currently starts an MCP server without built-in authentication. This is a temporary limitation; server-side authentication is planned for a future release.
-- NAT workflows can still connect to protected third-party MCP servers via the MCP client auth provider.
-- Recommendation: run `nat mcp serve` behind a trusted network or an authenticating reverse proxy (HTTPS with OAuth2, JWT or mTLS), and avoid exposing it directly to the public Internet.
+## Security Considerations
+
+### Authentication Limitations
+- The `nat mcp serve` command currently starts an MCP server without built-in authentication. Server-side authentication is planned for a future release.
+- NeMo Agent toolkit workflows can still connect to protected third-party MCP servers through the MCP client auth provider. See the [MCP Authentication](./mcp-auth.md) documentation for more information.
+
+### Local Development
+For local development, you can use `localhost` or `127.0.0.1` as the host (default). This limits access to your local machine only.
+
+### Production Deployment
+For production environments:
+- Run `nat mcp serve` behind a trusted network or an authenticating reverse proxy with HTTPS (OAuth2, JWT, or mTLS)
+- Do not expose the server directly to the public Internet
+- Do not bind to non-localhost addresses (such as `0.0.0.0` or public IP addresses) without authentication
+
+If you bind the MCP server to a non-localhost address without configuring authentication, the server will log a warning. This configuration exposes your server to unauthorized access.

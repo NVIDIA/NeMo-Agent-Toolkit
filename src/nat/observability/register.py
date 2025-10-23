@@ -77,6 +77,14 @@ async def console_logging_method(config: ConsoleLoggingMethodConfig, builder: Bu
     level = getattr(logging, config.level.upper(), logging.INFO)
     handler = logging.StreamHandler(stream=sys.stdout)
     handler.setLevel(level)
+
+    # Set formatter to match the default CLI format
+    formatter = logging.Formatter(
+        fmt="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    handler.setFormatter(formatter)
+
     yield handler
 
 
@@ -95,4 +103,12 @@ async def file_logging_method(config: FileLoggingMethod, builder: Builder):
     level = getattr(logging, config.level.upper(), logging.INFO)
     handler = logging.FileHandler(filename=config.path, mode="a", encoding="utf-8")
     handler.setLevel(level)
+
+    # Set formatter to match the default CLI format
+    formatter = logging.Formatter(
+        fmt="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    handler.setFormatter(formatter)
+
     yield handler

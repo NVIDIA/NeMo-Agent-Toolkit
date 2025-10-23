@@ -54,6 +54,7 @@ DB(s?)
 Dynatrace
 [Ee]mbedder(s?)
 [Ee]ngineerable
+etcd
 [Ee]val
 [Ee]xplainability
 Faiss
@@ -90,7 +91,7 @@ MLflow
 MLOps
 Morpheus
 [Mm]ultimodal
-[Nn]amespace(s?)
+[Nn]amespac(e|ed|es|ing)
 NeMo
 nginx
 NIC
@@ -133,6 +134,7 @@ pytest
 [Ss]ubpackage(s?)
 [Ss]ubword(s?)
 [Ss]uperset(s?)
+SSE
 SQLAlchemy
 Tavily
 [Tt]eardown

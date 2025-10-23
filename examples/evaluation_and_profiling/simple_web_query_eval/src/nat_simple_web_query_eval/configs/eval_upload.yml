@@ -58,6 +58,7 @@ workflow:
 
 eval:
   general:
+    max_concurrency: 1
     output:
       dir: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/upload/
       remote_dir: output
@@ -71,19 +72,19 @@ eval:
             input: workflow_output.json
             output: workflow.csv
       s3:
-        endpoint_url: http://10.185.X.X:9000
-        bucket: nat-simple-bucket
-        access_key: fake-access-key
-        secret_key: fake-secret-key
+        endpoint_url: ${S3_ENDPOINT_URL:-null}
+        bucket: ${S3_BUCKET_NAME}
+        access_key: ${AWS_ACCESS_KEY_ID}
+        secret_key: ${AWS_SECRET_ACCESS_KEY}
     dataset:
       _type: json
       remote_file_path: input/langsmith.json
       file_path: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
       s3:
-        endpoint_url: http://10.185.X.X:9000
-        bucket: nat-simple-bucket
-        access_key: fake-access-key
-        secret_key: fake-secret-key
+        endpoint_url: ${S3_ENDPOINT_URL:-null}
+        bucket: ${S3_BUCKET_NAME}
+        access_key: ${AWS_ACCESS_KEY_ID}
+        secret_key: ${AWS_SECRET_ACCESS_KEY}
     profiler:
       # Compute inter query token uniqueness
       token_uniqueness_forecast: true
@@ -105,15 +106,15 @@ eval:
         spike_threshold: 7
 
   evaluators:
-    rag_accuracy:
+    accuracy:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_rag_eval_llm
-    rag_groundedness:
+    groundedness:
       _type: ragas
       metric: ResponseGroundedness
       llm_name: nim_rag_eval_llm
-    rag_relevance:
+    relevance:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm

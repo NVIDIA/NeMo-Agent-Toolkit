@@ -21,6 +21,18 @@ This guide provides a step-by-step process to enable observability in a NeMo Age
 
 ![Weave Tracing Dashboard](../../_static/weave_tracing.png)
 
+### Prerequisites
+
+An account on [Weights & Biases](https://wandb.ai/) is required to use Weave.
+
+You can create an account on [Weights & Biases](https://wandb.ai/site/weave/) by clicking on the "Sign Up" button in the top right corner of the website.
+
+Under the "Account" section, you can find your API key. Click on the "Show" button to reveal the API key. Take note of this API key as you will need it to run the workflow.
+
+```bash
+export WANDB_API_KEY=<your_api_key>
+```
+
 ### Step 1: Install the Weave plugin
 
 To install the Weave plugin, run the following:
@@ -50,12 +62,12 @@ general:
         project: "nat-demo"
 ```
 
-This setup enables logging trace data to W&B weave. The weave integration requires one parameter and one optional parameter:
+This setup enables logging trace data to W&B weave. The weave integration only requires the `project` parameter to be set.
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
 | `project` | The name of your W&B Weave project | `"nat-demo"` |
-| `entity` (optional) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
+| `entity` (deprecated) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
 
 ### Step 4: Run Your Workflow
 Install `simple_calculator` example using the instructions in the `examples/observability/simple_calculator_observability/README.md` guide.
@@ -73,17 +85,17 @@ As the workflow runs, you will find a Weave URL (starting with a 🍩 emoji). Cl
 
 Note how the integration captures not only the `nat` intermediate steps but also the underlying framework. This is because [Weave has integrations](https://weave-docs.wandb.ai/guides/integrations/) with many of your favorite frameworks.
 
-## Redacting Sensitive Data
+### Step 6: Redacting Sensitive Data
 
 When tracing LLM workflows, you may be processing sensitive information like personal identifiers, credit card numbers, or API keys. NeMo Agent toolkit Weave integration supports automatic redaction of Personally Identifiable Information (PII) and sensitive keys from your traces.
 
-**Prerequisites**: To enable PII redaction, you need `presidio-analyzer` and `presidio-anonymizer` installed. Installing the weave plugin will install these packages for you.
+#### Prerequisites
 
-```bash
-uv pip install -e '.[weave]'
-```
+To enable PII redaction, you need `presidio-analyzer` and `presidio-anonymizer` installed. Installing the weave plugin will install these packages for you.
 
-**Enabling PII Redaction**: Update your workflow configuration to enable PII redaction:
+#### Enabling PII Redaction
+
+Update your workflow configuration to enable PII redaction:
 
 ```yaml
 general:
@@ -105,7 +117,9 @@ general:
           - auth_token
 ```
 
-**Redaction Options**: The Weave integration supports the following redaction options:
+#### Redaction Options
+
+The Weave integration supports the following redaction options:
 
 | Parameter | Description | Required |
 |-----------|-------------|----------|

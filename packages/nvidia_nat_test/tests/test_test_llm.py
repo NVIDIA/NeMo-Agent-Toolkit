@@ -15,18 +15,13 @@
 
 # pylint: disable=import-outside-toplevel,redefined-outer-name
 
-from __future__ import annotations
-
 import importlib
 
 import pytest
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.data_models.component_ref import LLMRef
-from nat.plugins.adk.agent import ADKFunctionConfig
 from nat.runtime.loader import load_workflow
-from nat.test.llm import TestLLMConfig
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -328,6 +323,7 @@ workflow:
         (LLMFrameworkEnum.CREWAI.value, ["p", "q", "r"]),
         (LLMFrameworkEnum.SEMANTIC_KERNEL.value, ["s1", "s2", "s3"]),
         (LLMFrameworkEnum.AGNO.value, ["m", "n", "o"]),
+        (LLMFrameworkEnum.ADK.value, ["u", "v", "w"]),
     ],
 )
 async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_config_cls):
@@ -337,6 +333,8 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_co
         pytest.importorskip("semantic_kernel")
     if wrapper == LLMFrameworkEnum.LLAMA_INDEX.value:
         pytest.importorskip("llama_index")
+    if wrapper == LLMFrameworkEnum.ADK.value:
+        pytest.importorskip("google.adk")
 
     async with WorkflowBuilder() as builder:
         cfg = test_llm_config_cls(response_seq=list(seq), delay_ms=0)
@@ -395,54 +393,24 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_co
                 assert isinstance(r, str)
                 outs.append(r)
 
+        elif wrapper == LLMFrameworkEnum.ADK.value:
+            from google.adk.models.llm_request import LlmRequest
+            from google.adk.models.llm_response import LlmResponse
+            for i in range(len(seq)):
+                request = LlmRequest.model_validate({"contents": [{"parts": [{"text": f"p{i}"}]}]})
+                gen = client.generate_content_async(request)
+                try:
+                    async for r in gen:
+                        assert isinstance(r, LlmResponse)
+                        assert r.content is not None
+                        assert r.content.parts is not None
+                        assert r.content.parts[0].text is not None
+                        outs.append(r.content.parts[0].text)
+                        break  # We only need the first response
+                finally:
+                    await gen.aclose()  # Ensure we properly close the generator
+
         else:
             pytest.skip(f"Unsupported wrapper: {wrapper}")
 
     assert outs == seq
-
-
-@pytest.mark.asyncio
-async def test_adk_function_integration_returns_deterministic_text():
-    pytest.importorskip("google.adk")
-    async with WorkflowBuilder() as builder:
-        await builder.add_llm("main", TestLLMConfig(response_seq=["tool-free"], delay_ms=0))
-
-        # Build a NAT function that uses the ADK integration
-        fn_cfg = ADKFunctionConfig(
-            name="nat_adk_test_agent_fn",
-            description="ADK agent function test",
-            prompt="Always reply with a short word",
-            llm=LLMRef("main"),
-            tool_names=[],
-            workflow_alias="adk_agent",
-            user_id="nat",
-        )
-
-        function = await builder.add_function("adk_agent_fn", fn_cfg)
-        result = await function.ainvoke("hello")
-        assert result == "tool-free"
-
-
-@pytest.mark.asyncio
-async def test_adk_function_integration_multiple_invokes_cycle():
-    pytest.importorskip("google.adk")
-    async with WorkflowBuilder() as builder:
-        await builder.add_llm("main", TestLLMConfig(response_seq=["A", "B"], delay_ms=0))
-
-        fn_cfg = ADKFunctionConfig(
-            name="nat_adk_test_agent_fn",
-            description="ADK agent function cycling test",
-            prompt="Respond",
-            llm=LLMRef("main"),
-            tool_names=[],
-            workflow_alias="adk_agent",
-            user_id="nat",
-        )
-
-        function = await builder.add_function("adk_agent_fn2", fn_cfg)
-        r1 = await function.ainvoke("first")
-        r2 = await function.ainvoke("second")
-        r3 = await function.ainvoke("third")
-        assert r1 == "A"
-        assert r2 == "B"
-        assert r3 == "A"
