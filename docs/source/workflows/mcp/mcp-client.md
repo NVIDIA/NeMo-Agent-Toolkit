@@ -56,7 +56,7 @@ function_groups:
         alias: "tool_a_alias"
         description: "Tool A description"
 
-workflows:
+workflow:
   _type: react_agent
   tool_names:
     - mcp_tools

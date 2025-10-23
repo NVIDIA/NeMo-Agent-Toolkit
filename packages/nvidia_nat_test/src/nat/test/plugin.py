@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import os
+import random
 import subprocess
+import time
 import types
 import typing
 from collections.abc import AsyncGenerator
@@ -25,6 +27,7 @@ import pytest
 import pytest_asyncio
 
 if typing.TYPE_CHECKING:
+    import langsmith.client
     from docker.client import DockerClient
 
 
@@ -260,6 +263,40 @@ def require_weave_fixture(fail_missing: bool) -> types.ModuleType:
         if fail_missing:
             raise RuntimeError(reason) from e
         pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="langsmith_api_key", scope='session')
+def langsmith_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a LangSmith API key.
+    """
+    yield require_env_variables(
+        varnames=["LANGSMITH_API_KEY"],
+        reason="LangSmith integration tests require the `LANGSMITH_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="langsmith_client")
+def langsmith_client_fixture(langsmith_api_key: str, fail_missing: bool) -> "langsmith.client.Client":
+    try:
+        import langsmith.client
+        client = langsmith.client.Client()
+        return client
+    except ImportError:
+        reason = "LangSmith integration tests require the `langsmith` package to be installed."
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="langsmith_project_name")
+def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client") -> Generator[str]:
+    # Createa a unique project name for each test run
+    project_name = f"nat-e2e-test-{time.time()}-{random.random()}"
+    langsmith_client.create_project(project_name)
+    yield project_name
+
+    langsmith_client.delete_project(project_name=project_name)
 
 
 @pytest.fixture(name="galileo_api_key", scope='session')

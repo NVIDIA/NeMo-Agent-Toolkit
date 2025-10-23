@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Installing NVIDIA NeMo Agent Toolkit
+# Install NVIDIA NeMo Agent Toolkit
 
 This guide will help you set up your NVIDIA NeMo Agent toolkit development environment, run existing workflows, and create your own custom workflows using the `nat` command-line interface.
 
