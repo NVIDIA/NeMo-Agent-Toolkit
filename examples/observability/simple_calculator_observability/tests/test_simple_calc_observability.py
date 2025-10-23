@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import json
 import random
 import time
@@ -27,6 +28,7 @@ from nat.runtime.loader import load_config
 from nat.test.utils import run_workflow
 
 if typing.TYPE_CHECKING:
+    import langsmith.client
     from weave.trace.weave_client import WeaveClient
 
 
@@ -153,3 +155,33 @@ async def test_langfuse_full_workflow(config_dir: Path, langfuse_trace_url: str,
     config.general.telemetry.tracing["langfuse"].endpoint = langfuse_trace_url
 
     await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.usefixtures("langsmith_api_key")
+async def test_langsmith_full_workflow(config_dir: Path,
+                                       langsmith_client: "langsmith.client.Client",
+                                       langsmith_project_name: str,
+                                       question: str,
+                                       expected_answer: str):
+    config_file = config_dir / "config-langsmith.yml"
+    config = load_config(config_file)
+    config.general.telemetry.tracing["langsmith"].project = langsmith_project_name
+
+    await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+    done = False
+    runlist = []
+    deadline = time.time() + 10
+    while not done and time.time() < deadline:
+        # Wait for traces to be ingested
+        await asyncio.sleep(0.5)
+        runs = langsmith_client.list_runs(project_name=langsmith_project_name, is_root=True)
+        runlist = [run for run in runs]
+        if len(runlist) > 0:
+            done = True
+
+    assert done, "Timed out waiting for LangSmith run to be ingested"
+    # Since we have a newly created project, the above workflow should have created exactly one root run
+    assert len(runlist) == 1
