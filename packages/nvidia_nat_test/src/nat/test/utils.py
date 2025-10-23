@@ -68,27 +68,19 @@ def locate_example_config(example_config_class: type,
     return config_path
 
 
-async def run_workflow(
-    *,
-    config: "Config | None" = None,
-    config_file: "StrPath | None" = None,
-    question: str,
-    expected_answer: str,
-    assert_expected_answer: bool = True,
-) -> str:
-    from nat.builder.workflow_builder import WorkflowBuilder
-    from nat.runtime.loader import load_config
-    from nat.runtime.session import SessionManager
+async def run_workflow(*,
+                       config: "Config | None" = None,
+                       config_file: "StrPath | None" = None,
+                       question: str,
+                       expected_answer: str,
+                       assert_expected_answer: bool = True) -> str:
+    """
+    Test specific wrapper for `nat.utils.run_workflow` to run a workflow with a question and validate the expected
+    answer. This variant always sets the result type to `str`.
+    """
+    from nat.utils import run_workflow as nat_run_workflow
 
-    if config is None:
-        assert config_file is not None, "Either config_file or config must be provided"
-        assert Path(config_file).exists(), f"Config file {config_file} does not exist"
-        config = load_config(config_file)
-
-    async with WorkflowBuilder.from_config(config=config) as workflow_builder:
-        workflow = SessionManager(await workflow_builder.build())
-        async with workflow.run(question) as runner:
-            result = await runner.result(to_type=str)
+    result = await nat_run_workflow(config=config, config_file=config_file, prompt=question, to_type=str)
 
     if assert_expected_answer:
         assert expected_answer.lower() in result.lower(), f"Expected '{expected_answer}' in '{result}'"
