@@ -223,8 +223,10 @@ exclude = ["packages/compat"]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
   "asgi-lifespan~=2.1",
+  "galileo~=1.27",
   "httpx-sse~=0.4",
   "ipython~=8.31",
+  "langsmith", # this is currently a transitive dependency of nat, not specifying a version to avoid conflicts
   "myst-parser~=4.0",
   "nbconvert", # Version determined by jupyter
   "nbsphinx~=0.9",
