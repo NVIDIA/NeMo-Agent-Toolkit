@@ -608,6 +608,8 @@ class WebSocketUserInteractionResponseMessage(BaseModel):
     type: typing.Literal[WebSocketMessageType.USER_INTERACTION_MESSAGE]
     id: str = "default"
     thread_id: str = "default"
+    parent_id: str = "default"
+    conversation_id: str | None = None
     content: UserMessageContent
     user: User = User()
     security: Security = Security()

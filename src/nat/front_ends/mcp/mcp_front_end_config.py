@@ -37,8 +37,11 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     port: int = Field(default=9901, description="Port to bind the server to (default: 9901)", ge=0, le=65535)
     debug: bool = Field(default=False, description="Enable debug mode (default: False)")
     log_level: str = Field(default="INFO", description="Log level for the MCP server (default: INFO)")
-    tool_names: list[str] = Field(default_factory=list,
-                                  description="The list of tools MCP server will expose (default: all tools)")
+    tool_names: list[str] = Field(
+        default_factory=list,
+        description="The list of tools MCP server will expose (default: all tools)."
+        "Tool names can be functions or function groups",
+    )
     transport: Literal["sse", "streamable-http"] = Field(
         default="streamable-http",
         description="Transport type for the MCP server (default: streamable-http, backwards compatible with sse)")

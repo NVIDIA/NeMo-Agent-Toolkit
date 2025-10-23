@@ -147,6 +147,8 @@ user_interaction_response_message = {
     "type": "user_interaction_message",
     "id": "string",
     "thread_id": "string",
+    "parent_id": "string",
+    "conversation_id": "string",
     "content": {
         "messages": [{
             "role": "user", "content": [{

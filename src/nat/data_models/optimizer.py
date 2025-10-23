@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -28,12 +29,23 @@ class OptimizerMetric(BaseModel):
     weight: float = Field(description="Weight of the metric in the optimization process.", default=1.0)
 
 
+class SamplerType(str, Enum):
+    BAYESIAN = "bayesian"
+    GRID = "grid"
+
+
 class NumericOptimizationConfig(BaseModel):
     """
     Configuration for numeric/enum optimization (Optuna).
     """
     enabled: bool = Field(default=True, description="Enable numeric optimization")
     n_trials: int = Field(description="Number of trials for numeric optimization.", default=20)
+    sampler: SamplerType | None = Field(
+        default=None,
+        description="Sampling strategy for numeric optimization. Options: None or 'bayesian' uses \
+            the Optuna default (TPE for single-objective, NSGA-II for multi-objective) or 'grid' performs \
+            exhaustive grid search over parameter combinations. Defaults to None.",
+    )
 
 
 class PromptGAOptimizationConfig(BaseModel):

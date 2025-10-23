@@ -16,13 +16,20 @@ limitations under the License.
 -->
 
 # NVIDIA NeMo Agent Toolkit Tutorials
+Learn how to use NeMo Agent toolkit tools by following these tutorials:
+- [Customize a Workflow](./customize-a-workflow.md)
+- [Add Tools to a Workflow](./add-tools-to-a-workflow.md)
+- [Create a New Tool and Workflow](./create-a-new-workflow.md)
+- [Build a Demo Agent Workflow Using Cursor Rules](./build-a-demo-agent-workflow-using-cursor-rules.md)
+- [Test With `nat_test_llm` ](./test-with-nat-test-llm.md)
 
 ```{toctree}
+:hidden:
 :caption: Tutorials
 
-./customize-a-workflow.md
-./add-tools-to-a-workflow.md
-./create-a-new-workflow.md
-./build-a-demo-agent-workflow-using-cursor-rules.md
-./testing-with-nat-test-llm.md
+Customize a Workflow<./customize-a-workflow.md>
+Add Tools to a Workflow<./add-tools-to-a-workflow.md>
+Create a New Tool and Workflow<./create-a-new-workflow.md>
+Build a Demo Agent Workflow Using Cursor Rules<./build-a-demo-agent-workflow-using-cursor-rules.md>
+Test With `nat_test_llm` <./test-with-nat-test-llm.md>
 ```

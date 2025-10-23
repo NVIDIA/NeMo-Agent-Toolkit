@@ -53,6 +53,7 @@ workflow:
 
 eval:
   general:
+    max_concurrency: 1
     # Example configuration demonstrating custom pre-evaluation process function
     output:
       dir: .tmp/nat/examples/simple_calculator/eval-with-post-process

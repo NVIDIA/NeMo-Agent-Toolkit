@@ -172,10 +172,11 @@ workflow:
 
 * Learn how to add your own LLM provider: [Adding an LLM Provider](../../extend/adding-an-llm-provider.md)
 <!-- vale off -->
-* See a short tutorial using YAML and `nat_test_llm`: [Testing with nat_test_llm](../../tutorials/testing-with-nat-test-llm.md)
+* See a short tutorial using YAML and `nat_test_llm`: [Test with nat_test_llm](../../tutorials/test-with-nat-test-llm.md)
 <!-- vale on -->
 
 ```{toctree}
+:hidden:
 :caption: LLMs
 
 Using Local LLMs <./using-local-llms.md>

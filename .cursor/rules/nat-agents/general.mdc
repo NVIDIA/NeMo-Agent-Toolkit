@@ -18,7 +18,7 @@ These rules standardise how the four built-in NeMo Agent Toolkit agents are conf
 
 1. **ReAct Agent**
    - Use `_type: react_agent` in either the top-level `workflow:` or inside `functions:`.
-   - Always provide `tool_names` (list of YAML-defined functions) and `llm_name`.
+   - Always provide `tool_names` (list of YAML-defined functions or function groups) and `llm_name`.
    - Optional but recommended parameters: `verbose`, `max_tool_calls`, `parse_agent_response_max_retries`, `pass_tool_call_errors_to_agent`.
    - When overriding the prompt, keep `{tools}` and `{tool_names}` placeholders and ensure the LLM outputs in ReAct format.
 

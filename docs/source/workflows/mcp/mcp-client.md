@@ -56,7 +56,7 @@ function_groups:
         alias: "tool_a_alias"
         description: "Tool A description"
 
-workflows:
+workflow:
   _type: react_agent
   tool_names:
     - mcp_tools
@@ -66,6 +66,22 @@ You can use the `mcp_client` function group to connect to an MCP server, dynamic
 The function group supports filtering using the `include` and `exclude` parameters. You can also optionally override the tool name and description defined by the MCP server using the `tool_overrides` parameter.
 
 The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers. Refer to [Function Groups](../function-groups.md) for more information about function group capabilities.
+
+A tool within a function group can also be referenced by its name using the following syntax: `<function_group_name>.<tool_name>`.
+
+:::{note}
+This requires that the tool name is explicitly listed under the optional `include` list of the function group configuration.
+
+See [function group accessibility](../function-groups.md#understanding-function-accessibility) for more details.
+:::
+Example:
+```yaml
+workflows:
+  _type: react_agent
+  tool_names:
+    - mcp_tools.tool_a
+```
+This is useful when you need to build a custom tool that uses a tool from an MCP server as a sub-tool.
 
 #### Configuration Options
 

@@ -119,6 +119,6 @@ async def test_eval():
         if "swe_bench_output.json" in output_file_str:
             swe_bench_output_file = output_file
 
-    # Verify the rag_accuracy_output.json file
-    assert swe_bench_output_file, "The rag_accuracy_output.json file was not created"
+    # Verify the swe_bench_output.json file
+    assert swe_bench_output_file, "The swe_bench_output.json file was not created"
     validate_evaluation_output(swe_bench_output_file)

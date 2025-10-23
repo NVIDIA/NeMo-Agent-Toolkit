@@ -6045,6 +6045,7 @@ requires-dist = [
 name = "nvidia-nat-langchain"
 source = { editable = "packages/nvidia_nat_langchain" }
 dependencies = [
+    { name = "langchain" },
     { name = "langchain-aws" },
     { name = "langchain-core" },
     { name = "langchain-litellm" },
@@ -6058,6 +6059,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "langchain", specifier = "~=0.3.27" },
     { name = "langchain-aws", specifier = "~=0.2.31" },
     { name = "langchain-core", specifier = "~=0.3.75" },
     { name = "langchain-litellm", specifier = "~=0.2.3" },

@@ -75,7 +75,10 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
        api_key: str
        bucket_name: str
    ```
-   > **Note**: The `name="my_custom_object_store"` ensures that NeMo Agent toolkit can recognize it when the user places `_type: my_custom_object_store` in the object store config.
+
+   :::{note}
+   The `name="my_custom_object_store"` ensures that NeMo Agent toolkit can recognize it when the user places `_type: my_custom_object_store` in the object store config.
+   :::
 
 2. **Implement an {py:class}`~nat.object_store.interfaces.ObjectStore`** that uses your backend:
 

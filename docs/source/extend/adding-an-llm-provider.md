@@ -133,6 +133,33 @@ class OpenAIModelConfig(LLMBaseConfig, TopPMixin, name="openai"):
                             description="The OpenAI hosted model name.")
 ```
 
+#### ThinkingMixin
+
+The {class}`nat.data_models.thinking_mixin.ThinkingMixin` is a mixin that adds a `thinking` field to the provider config. The `thinking` field is a boolean that specifies whether to enable thinking for the model.
+
+```python
+from nat.data_models.thinking_mixin import ThinkingMixin
+
+class NIMModelConfig(LLMBaseConfig, ThinkingMixin, name="nim"):
+    """An NIM LLM provider to be used with an LLM client."""
+
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
+
+    api_key: str | None = Field(default=None, description="NIM API key to interact with hosted model.")
+    base_url: str | None = Field(default=None, description="Base url to the hosted model.")
+    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
+                            serialization_alias="model",
+                            description="The NIM hosted model name.")
+
+    # The following field is defined in the mixin:
+    thinking: bool | None = Field(default=None, description="Whether to enable thinking for the model.")
+    
+    # The following property is then defined in the mixin based on the model_name:
+    @property
+    def thinking_system_prompt(self) -> str | None:
+        ...
+```
+
 ### Registering the Provider
 An asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_provider` is used to register the provider with NeMo Agent toolkit by yielding an instance of {class}`nat.builder.llm.LLMProviderInfo`.
 

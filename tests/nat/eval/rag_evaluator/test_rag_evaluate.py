@@ -165,19 +165,29 @@ def test_ragas_to_eval_output_unexpected_entries(rag_evaluator,
 
 def test_ragas_to_eval_output_nan_handling(rag_evaluator, rag_eval_input, metric_name):
     """
-    Ensure that NaN or None scores are coerced to 0.0 for both the
-    per‑item scores and the computed average score.
+    Ensure that NaN or None scores are preserved in individual output items,
+    but the average score is computed by treating NaN/None as 0.0.
     """
+    import math
+
+    # Helper function to compare values accounting for NaN
+    def scores_match(actual, expected):
+        if expected is None:
+            return actual is None
+        if isinstance(expected, float) and math.isnan(expected):
+            return isinstance(actual, float) and math.isnan(actual)
+        return actual == expected
+
     # fmt: off
     test_cases = [
-        # (scores list, expected per‑item scores list, expected average)
-        ([{metric_name: float("nan")}],            [0.0],           0.0),
-        ([{metric_name: None}],                   [0.0],           0.0),
+        # (scores list, expected per‑item scores list (preserving NaN/None), expected average (using 0.0 for NaN/None))
+        ([{metric_name: float("nan")}],            [float("nan")],           0.0),
+        ([{metric_name: None}],                   [None],                   0.0),
         ([{metric_name: float("nan")},
-          {metric_name: 0.9}],                    [0.0, 0.9],      0.45),
+          {metric_name: 0.9}],                    [float("nan"), 0.9],      0.45),
         ([{metric_name: None},
           {metric_name: 0.9},
-          {metric_name: float("nan")}],           [0.0, 0.9, 0.0], 0.3),
+          {metric_name: float("nan")}],           [None, 0.9, float("nan")], 0.3),
     ]
     # fmt: on
 
@@ -199,9 +209,11 @@ def test_ragas_to_eval_output_nan_handling(rag_evaluator, rag_eval_input, metric
         # Average score should match the expected value (with small tolerance for float ops)
         assert round(eval_output.average_score, 4) == round(expected_avg, 4)
 
-        # Each individual item score should match the expected coercion results
+        # Each individual item score should preserve NaN/None values
         actual_item_scores = [item.score for item in eval_output.eval_output_items]
-        assert actual_item_scores == expected_item_scores
+        assert len(actual_item_scores) == len(expected_item_scores)
+        for actual, expected in zip(actual_item_scores, expected_item_scores):
+            assert scores_match(actual, expected), f"Expected {expected}, got {actual}"
 
 
 async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_llm, ragas_metrics):

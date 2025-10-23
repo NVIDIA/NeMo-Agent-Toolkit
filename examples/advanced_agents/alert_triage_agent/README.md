@@ -221,7 +221,7 @@ workflow:
 ```
 
 * `_type`: The name of the agent (matching the agent's name in `register.py`).
-* `tool_names`: List of tools (from the `functions` section) used in the triage process.
+* `tool_names`: List of tools (from the `functions` or `function_groups` section) used in the triage process.
 * `llm_name`: Main LLM used by the agent for reasoning, tool-calling, and report generation.
 * `offline_mode`: Enables offline execution using predefined input/output instead of real systems.
 * `offline_data_path`: CSV file containing offline test alerts and their corresponding mocked tool responses.
@@ -260,15 +260,15 @@ eval:
       _type: json
       file_path: examples/advanced_agents/alert_triage_agent/data/offline_data.json
   evaluators:
-    rag_accuracy:
+    accuracy:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_rag_eval_llm
-    rag_groundedness:
+    groundedness:
       _type: ragas
       metric: ResponseGroundedness
       llm_name: nim_rag_eval_llm
-    rag_relevance:
+    relevance:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm
@@ -333,7 +333,8 @@ This will trigger a full end-to-end triage process using live data sources.
 
 #### Credentials and Access
 
-> **Note:** We recommend managing secrets (for example, API keys, SSH keys) using a secure method such as environment variables, secret management tools, or encrypted `.env` files. Never hard-code sensitive values into the source code.
+> [!NOTE]
+> We recommend managing secrets (for example, API keys, SSH keys) using a secure method such as environment variables, secret management tools, or encrypted `.env` files. Never hard-code sensitive values into the source code.
 
 ### Running live with a HTTP server listening for alerts
 The example includes a Flask-based HTTP server ([`run.py`](./src/nat_alert_triage_agent/run.py)) that can continuously listen for and process alerts. This allows integration with monitoring systems that send alerts via HTTP POST requests.
