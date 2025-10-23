@@ -319,21 +319,29 @@ def galileo_api_key_fixture(fail_missing: bool):
 @pytest.fixture(name="galileo_project")
 def galileo_project_fixture(galileo_api_key: str, fail_missing: bool,
                             project_name: str) -> Generator["galileo.projects.Project"]:
+    """
+    Creates a unique Galileo project and deletes it after the test run.
+    """
     try:
         import galileo.projects
         project = galileo.projects.create_project(name=project_name)
         yield project
 
         galileo.projects.delete_project(id=project.id)
-    except ImportError:
+    except ImportError as e:
         reason = "Galileo integration tests require the `galileo` package to be installed."
         if fail_missing:
-            raise RuntimeError(reason)
+            raise RuntimeError(reason) from e
         pytest.skip(reason=reason)
 
 
 @pytest.fixture(name="galileo_log_stream")
 def galileo_log_stream_fixture(galileo_project: "galileo.projects.Project") -> "galileo.log_streams.LogStream":
+    """
+    Creates a Galileo log stream for integration tests.
+
+    The log stream is automatically deleted when the associated project is deleted.
+    """
     import galileo.log_streams
     return galileo.log_streams.create_log_stream(project_id=galileo_project.id, name="test")
 
