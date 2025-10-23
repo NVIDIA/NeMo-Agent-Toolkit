@@ -37,7 +37,7 @@ async def test_run_workflow(echo_config_file: str, use_pathlib: bool, use_config
         config = load_config(config_file)
         config_file = None
 
-    if not to_type == str:
+    if to_type is not str:
 
         def converter(x: str) -> to_type:
             return to_type(x)
