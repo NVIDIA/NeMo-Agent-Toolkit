@@ -224,7 +224,8 @@ class TestRegisterFunctionWithMcp:
                                                     mock_function,
                                                     mock_function.input_schema,
                                                     False,
-                                                    mock_workflow)
+                                                    mock_workflow,
+                                                    None)  # memory_profiler defaults to None
         mock_mcp.tool.assert_called_once_with(name=function_name, description="Test description")
 
     @patch('nat.front_ends.mcp.tool_converter.create_function_wrapper')
@@ -251,7 +252,8 @@ class TestRegisterFunctionWithMcp:
                                                     mock_workflow,
                                                     mock_workflow.input_schema,
                                                     True,
-                                                    mock_workflow)
+                                                    mock_workflow,
+                                                    None)  # memory_profiler defaults to None
         mock_mcp.tool.assert_called_once_with(name=function_name, description="Workflow description")
 
 

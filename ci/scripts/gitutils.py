@@ -82,7 +82,7 @@ class GitWrapper:
         str
             The full version of the repo in the format 'v#.#.#{a|b|rc}'
         """
-        return _git("describe", "--tags", "--abbrev=0")
+        return _git("describe", "--first-parent", "--tags", "--abbrev=0")
 
     @functools.lru_cache
     @staticmethod

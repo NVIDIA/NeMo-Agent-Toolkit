@@ -33,6 +33,7 @@ from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import ServerToolUseSchema
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import ToolSchema
 from nat.data_models.intermediate_step import TraceMetadata
@@ -48,7 +49,14 @@ def _extract_tools_schema(invocation_params: dict) -> list:
     tools_schema = []
     if invocation_params is not None:
         for tool in invocation_params.get("tools", []):
-            tools_schema.append(ToolSchema(**tool))
+            try:
+                tools_schema.append(ToolSchema(**tool))
+            except Exception:
+                logger.debug(
+                    "Failed to parse tool schema from invocation params: %s. \n This "
+                    "can occur when the LLM server has native tools and can be ignored if "
+                    "using the responses API.",
+                    tool)
 
     return tools_schema
 
@@ -93,11 +101,15 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
             completion_tokens = usage_metadata.get("output_tokens", 0)
             total_tokens = usage_metadata.get("total_tokens", 0)
 
-            return TokenUsageBaseModel(
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                total_tokens=total_tokens,
-            )
+            cache_tokens = usage_metadata.get("input_token_details", {}).get("cache_read", 0)
+
+            reasoning_tokens = usage_metadata.get("output_token_details", {}).get("reasoning", 0)
+
+            return TokenUsageBaseModel(prompt_tokens=prompt_tokens,
+                                       completion_tokens=completion_tokens,
+                                       total_tokens=total_tokens,
+                                       cached_tokens=cache_tokens,
+                                       reasoning_tokens=reasoning_tokens)
         return TokenUsageBaseModel()
 
     async def on_llm_start(self, serialized: dict[str, Any], prompts: list[str], **kwargs: Any) -> None:
@@ -213,6 +225,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         except IndexError:
             generation = None
 
+        message = None
         if isinstance(generation, ChatGeneration):
             try:
                 message = generation.message
@@ -232,6 +245,17 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         else:
             llm_text_output = ""
 
+        tool_outputs_list = []
+        # Check if message.additional_kwargs as tool_outputs indicative of server side tool calling
+        if message and message.additional_kwargs and "tool_outputs" in message.additional_kwargs:
+            tools_outputs = message.additional_kwargs["tool_outputs"]
+            if isinstance(tools_outputs, list):
+                for tool in tools_outputs:
+                    try:
+                        tool_outputs_list.append(ServerToolUseSchema(**tool))
+                    except Exception:
+                        pass
+
         # update shared state behind lock
         with self._lock:
             usage_stat = IntermediateStepPayload(
@@ -243,7 +267,8 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                 data=StreamEventData(input=self._run_id_to_llm_input.get(str(kwargs.get("run_id", "")), ""),
                                      output=llm_text_output),
                 usage_info=UsageInfo(token_usage=self._extract_token_base_model(usage_metadata)),
-                metadata=TraceMetadata(chat_responses=[generation] if generation else []))
+                metadata=TraceMetadata(chat_responses=[generation] if generation else [],
+                                       tool_outputs=tool_outputs_list if tool_outputs_list else []))
 
             self.step_manager.push_intermediate_step(usage_stat)
 

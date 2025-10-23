@@ -24,6 +24,7 @@ from nat.data_models.config import Config
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
+from nat.data_models.optimizer import SamplerType
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
@@ -59,7 +60,21 @@ def optimize_parameters(
     eval_metrics = [v.evaluator_name for v in metric_cfg.values()]
     weights = [v.weight for v in metric_cfg.values()]
 
-    study = optuna.create_study(directions=directions)
+    # Create appropriate sampler based on configuration
+    sampler_type = optimizer_config.numeric.sampler
+
+    if sampler_type == SamplerType.GRID:
+        # For grid search, convert the existing space to value sequences
+        grid_search_space = {param_name: search_space.to_grid_values() for param_name, search_space in space.items()}
+        sampler = optuna.samplers.GridSampler(grid_search_space)
+        logger.info("Using Grid sampler for numeric optimization")
+    else:
+        # None or BAYESIAN: let Optuna choose defaults
+        sampler = None
+        logger.info(
+            "Using Optuna default sampler types: TPESampler for single-objective, NSGAIISampler for multi-objective")
+
+    study = optuna.create_study(directions=directions, sampler=sampler)
 
     # Create output directory for intermediate files
     out_dir = optimizer_config.output_path

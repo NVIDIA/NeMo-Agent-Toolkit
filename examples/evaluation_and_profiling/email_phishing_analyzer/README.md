@@ -134,11 +134,10 @@ This example includes an optimization configuration that uses the NeMo Agent too
 about the NeMo Agent Toolkit Optimizer, refer to the [Optimizer Documentation](../../../docs/source/reference/optimizer.md).
 
 ### What Is Being Optimized
-- **Tool parameters**: The `email_phishing_analyzer` exposes two optimizable fields on its config:
-  - **`llm`**: Categorical choice between `llama_3_405` and `llama_3_70`.
+- **Tool parameters**: The `email_phishing_analyzer` exposes one optimizable field in its config:
   - **`prompt`**: The prompt template used to analyze the email body (prompt optimization is disabled by default in this config; see below to enable).
 - **LLM hyperparameters**: For each LLM in `llms`, numeric hyperparameters are marked as optimizable:
-  - **`temperature`**, **`top_p`**, **`max_tokens`**.
+  - **`temperature`**, **`top_p`**, **`max_tokens`**, and **`model_name`**.
 
 Evaluation during optimization uses the dataset at `examples/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv` with `body` as the question and `label` as the ground truth.
 
@@ -152,8 +151,8 @@ Key parts of the config:
 functions:
   email_phishing_analyzer:
     _type: email_phishing_analyzer
+    llm: phishing_llm
     optimizable_params:
-      - llm
       - prompt
   
   # Prompt optimization functions are defined here
@@ -168,34 +167,42 @@ functions:
     system_objective: Agent that triages an email to see if it is a phishing attempt or not.
 
 llms:
-  llama_3_405:
+  phishing_llm:
     _type: nim
     model_name: meta/llama-3.1-405b-instruct
     temperature: 0.0
     max_tokens: 1024
-    optimizable_params: [temperature, top_p, max_tokens]
-  llama_3_70:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
-    max_tokens: 1024
-    optimizable_params: [temperature, top_p, max_tokens]
+    optimizable_params:
+      - temperature
+      - top_p
+      - max_tokens
+      - model_name
+    search_space:
+      model_name:
+        values:
+          - meta/llama-3.1-405b-instruct
+          - meta/llama-3.1-70b-instruct
     
 eval:
   general:
     output_dir: ./.tmp/eval/examples/evaluation_and_profiling/email_phishing_analyzer/original
     verbose: true
     dataset:
-        _type: csv
-        file_path: examples/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv
-        id_key: "subject"
-        structure:
-          question_key: body
-          answer_key: label
+      _type: csv
+      file_path: examples/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv
+      id_key: "subject"
+      structure:
+        question_key: body
+        answer_key: label
 
   evaluators:
     accuracy:
       _type: ragas
       metric: AnswerAccuracy
+      llm_name: prompt_optimizer
+    groundedness:
+      _type: ragas
+      metric: ResponseGroundedness
       llm_name: prompt_optimizer
     llm_latency:
       _type: avg_llm_latency
@@ -209,13 +216,15 @@ optimizer:
     accuracy:
       evaluator_name: accuracy
       direction: maximize
+    groundedness:
+      evaluator_name: groundedness
+      direction: maximize
     token_efficiency:
       evaluator_name: token_efficiency
       direction: minimize
     latency:
       evaluator_name: llm_latency
       direction: minimize
-
 
   numeric:
     enabled: true
