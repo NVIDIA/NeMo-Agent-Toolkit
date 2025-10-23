@@ -114,3 +114,12 @@ async def test_langfuse_full_workflow(config_dir: Path, langfuse_trace_url: str,
     config.general.telemetry.tracing["langfuse"].endpoint = langfuse_trace_url
 
     await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("galileo_api_key")
+async def test_galileo_full_workflow(config_dir: Path, question: str, expected_answer: str):
+    config_file = config_dir / "config-galileo.yml"
+    config = load_config(config_file)
+
+    await run_workflow(config=config, question=question, expected_answer=expected_answer)
