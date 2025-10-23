@@ -27,6 +27,8 @@ import pytest
 import pytest_asyncio
 
 if typing.TYPE_CHECKING:
+    import galileo.log_streams
+    import galileo.projects
     import langsmith.client
     from docker.client import DockerClient
 
@@ -289,10 +291,14 @@ def langsmith_client_fixture(langsmith_api_key: str, fail_missing: bool) -> "lan
         pytest.skip(reason=reason)
 
 
+@pytest.fixture(name="project_name")
+def project_name_fixture() -> str:
+    # Create a unique project name for each test run
+    return f"nat-e2e-test-{time.time()}-{random.random()}"
+
+
 @pytest.fixture(name="langsmith_project_name")
-def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client") -> Generator[str]:
-    # Createa a unique project name for each test run
-    project_name = f"nat-e2e-test-{time.time()}-{random.random()}"
+def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client", project_name: str) -> Generator[str]:
     langsmith_client.create_project(project_name)
     yield project_name
 
@@ -308,6 +314,28 @@ def galileo_api_key_fixture(fail_missing: bool):
         varnames=["GALILEO_API_KEY"],
         reason="Galileo integration tests require the `GALILEO_API_KEY` environment variable to be defined.",
         fail_missing=fail_missing)
+
+
+@pytest.fixture(name="galileo_project")
+def galileo_project_fixture(galileo_api_key: str, fail_missing: bool,
+                            project_name: str) -> Generator["galileo.projects.Project"]:
+    try:
+        import galileo.projects
+        project = galileo.projects.create_project(name=project_name)
+        yield project
+
+        galileo.projects.delete_project(id=project.id)
+    except ImportError:
+        reason = "Galileo integration tests require the `galileo` package to be installed."
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="galileo_log_stream")
+def galileo_log_stream_fixture(galileo_project: "galileo.projects.Project") -> "galileo.log_streams.LogStream":
+    import galileo.log_streams
+    return galileo.log_streams.create_log_stream(project_id=galileo_project.id, name="test")
 
 
 @pytest.fixture(name="require_docker", scope='session')
