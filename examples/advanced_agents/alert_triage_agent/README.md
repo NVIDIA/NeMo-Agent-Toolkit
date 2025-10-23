@@ -221,7 +221,7 @@ workflow:
 ```
 
 * `_type`: The name of the agent (matching the agent's name in `register.py`).
-* `tool_names`: List of tools (from the `functions` section) used in the triage process.
+* `tool_names`: List of tools (from the `functions` or `function_groups` section) used in the triage process.
 * `llm_name`: Main LLM used by the agent for reasoning, tool-calling, and report generation.
 * `offline_mode`: Enables offline execution using predefined input/output instead of real systems.
 * `offline_data_path`: CSV file containing offline test alerts and their corresponding mocked tool responses.
