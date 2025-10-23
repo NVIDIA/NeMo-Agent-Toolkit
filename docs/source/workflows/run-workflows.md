@@ -104,8 +104,4 @@ result = asyncio.run(
 print(result)
 ```
 
-In this example:
-- `config_file`: A string or {py:class}`~pathlib.Path` pointing to your workflow YAML file
-- `prompt`: A string containing the input for your workflow
-
-For detailed information about the `run_workflow` function and its capabilities, please refer to the Python API documentation for the {py:function}`~nat.utils.run_workflow` function.
+Refer to the Python API documentation for the {py:func}`~nat.utils.run_workflow` function for detailed information about its capabilities.
