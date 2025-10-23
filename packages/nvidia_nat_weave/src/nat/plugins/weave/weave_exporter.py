@@ -51,10 +51,12 @@ class WeaveExporter(SpanExporter[Span, Span]):
                  context_state=None,
                  entity: str | None = None,
                  project: str | None = None,
-                 verbose: bool = False):
+                 verbose: bool = False,
+                 attributes: dict[str, Any] | None = None):
         super().__init__(context_state=context_state)
         self._entity = entity
         self._project = project
+        self._attributes = attributes or {}
         self._gc = weave_client_context.require_weave_client()
 
         # Optionally, set log filtering for presidio-analyzer to reduce verbosity
@@ -160,11 +162,14 @@ class WeaveExporter(SpanExporter[Span, Span]):
                 inputs["input"] = str(step.payload.data.input)
 
         # Create the Weave call
+        attributes = span.attributes.copy()
+        attributes.update(self._attributes)
+
         call = self._gc.create_call(
             op_name,
             inputs=inputs,
             parent=parent_call,
-            attributes=span.attributes,
+            attributes=attributes,
             display_name=op_name,
         )
 
