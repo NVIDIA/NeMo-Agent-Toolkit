@@ -14,14 +14,20 @@
 # limitations under the License.
 
 import json
+import random
+import time
 import types
-from collections.abc import AsyncGenerator
+import typing
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 
 from nat.runtime.loader import load_config
 from nat.test.utils import run_workflow
+
+if typing.TYPE_CHECKING:
+    from weave.trace.weave_client import WeaveClient
 
 
 @pytest.fixture(name="config_dir", scope="session")
@@ -44,31 +50,64 @@ def expected_answer_fixture() -> str:
     return "8"
 
 
-@pytest.fixture(name="weave_project_name", scope="module")
-async def fixture_weave_project_name(weave: types.ModuleType, wandb_api_key) -> AsyncGenerator[str]:
-    # This currently has the following problems:
-    # 1. Ideally we would create a new project for each test run to avoid conflicts, and then delete the project.
-    #    However, W&B does not currently support deleting projects via the API.
-    # 2. We don't have a way (that I know of) to identifiy traces from this specific test run, such that we only delete
-    #    those traces.
-    project_name = "weave_test_e2e"
-    client = weave.init(project_name)
-    yield project_name
+@pytest.fixture(name="weave_attribute_key")
+def weave_attribute_key_fixture() -> str:
+    # Create a unique identifier for this test run, and use it as an attribute on all traces
+    return "test_run"
 
-    client.finish(use_progress_bar=False)
-    call_ids = [c.id for c in client.get_calls()]
+
+@pytest.fixture(name="weave_identifier")
+def weave_identifier_fixture() -> str:
+    # Create a unique identifier for this test run, and use it as an attribute on all traces
+    return f'test_run_{time.time()}_{random.random()}'
+
+
+@pytest.fixture(name="weave_project_name")
+def fixture_weave_project_name() -> str:
+    return "weave_test_e2e"
+
+
+@pytest.fixture(name="weave_query")
+def fixture_weave_query(weave_attribute_key: str, weave_identifier: str) -> dict:
+    return {"$expr": {"$eq": [{"$getField": f"attributes.{weave_attribute_key}"}, {"$literal": weave_identifier}]}}
+
+
+@pytest.fixture(name="weave_client")
+def fixture_weave_client(weave: types.ModuleType, weave_project_name: str, wandb_api_key: str,
+                         weave_query: dict) -> "Generator[WeaveClient]":
+    client = weave.init(weave_project_name)
+    yield client
+
+    client.flush()
+    calls = client.get_calls(query=weave_query)
+    call_ids = [c.id for c in calls]
     if len(call_ids) > 0:
         client.delete_calls(call_ids)
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("wandb_api_key")
-async def test_weave_full_workflow(config_dir: Path, weave_project_name: str, question: str, expected_answer: str):
+async def test_weave_full_workflow(config_dir: Path,
+                                   weave_project_name: str,
+                                   weave_attribute_key: str,
+                                   weave_identifier: str,
+                                   weave_client: "WeaveClient",
+                                   weave_query: dict,
+                                   question: str,
+                                   expected_answer: str):
     config_file = config_dir / "config-weave.yml"
     config = load_config(config_file)
     config.general.telemetry.tracing["weave"].project = weave_project_name
+    config.general.telemetry.tracing["weave"].attributes = {weave_attribute_key: weave_identifier, "other_attr": 123}
 
     await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+    weave_client.flush()
+    calls = weave_client.get_calls(query=weave_query)
+    assert len(calls) > 0
+    for call in calls:
+        assert call.attributes is not None
+        assert call.attributes.get("other_attr") == 123
 
 
 @pytest.mark.integration
@@ -105,3 +144,12 @@ async def test_otel_full_workflow(tmp_path: Path, config_dir: Path, question: st
 
     assert len(traces) > 0
     assert called_multiply
+
+
+@pytest.mark.integration
+async def test_langfuse_full_workflow(config_dir: Path, langfuse_trace_url: str, question: str, expected_answer: str):
+    config_file = config_dir / "config-langfuse.yml"
+    config = load_config(config_file)
+    config.general.telemetry.tracing["langfuse"].endpoint = langfuse_trace_url
+
+    await run_workflow(config=config, question=question, expected_answer=expected_answer)

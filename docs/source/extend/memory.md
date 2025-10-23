@@ -57,7 +57,10 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
        connection_url: str
        api_key: str
    ```
-   > **Note**: The `name="my_custom_memory"` ensures that NeMo Agent toolkit can recognize it when the user places `_type: my_custom_memory` in the memory config.
+
+   :::{note}
+   The `name="my_custom_memory"` ensures that NeMo Agent toolkit can recognize it when the user places `_type: my_custom_memory` in the memory config.
+   :::
 
 2. **Implement a {py:class}`~nat.memory.interfaces.MemoryEditor`** that uses your backend**:
    ```python

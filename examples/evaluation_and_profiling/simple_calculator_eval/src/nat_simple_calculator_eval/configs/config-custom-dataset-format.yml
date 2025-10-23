@@ -54,6 +54,7 @@ workflow:
 
 eval:
   general:
+    max_concurrency: 1
     output_dir: .tmp/nat/examples/simple_calculator/eval
     dataset:
       _type: custom

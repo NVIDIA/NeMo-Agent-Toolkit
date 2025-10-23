@@ -20,7 +20,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source ${SCRIPT_DIR}/common.sh
 
 set +e
-pre-commit run --show-diff-on-failure
+pre-commit run --all-files --show-diff-on-failure
 PRE_COMMIT_RETVAL=$?
 
 echo "Checking copyright headers"
