@@ -52,11 +52,11 @@ eval:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_llm
-    groundedness:
+    relevance:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_llm
-    relevance:
+    groundedness:
       _type: ragas
       metric: ResponseGroundedness
       llm_name: nim_llm
