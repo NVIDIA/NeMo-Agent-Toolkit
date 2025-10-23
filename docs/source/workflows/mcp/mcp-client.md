@@ -289,11 +289,12 @@ For SSE transport, ensure the MCP server starts with the `--transport sse` flag.
 
 Sample output:
 ```text
-calculator_multiply
-calculator_inequality
+calculator.add
+calculator.multiply
+calculator.subtract
+calculator.divide
+calculator.compare
 current_datetime
-calculator_divide
-calculator_subtract
 react_agent
 ```
 
@@ -302,39 +303,42 @@ react_agent
 To get detailed information about a specific tool, use the `--tool` flag:
 
 ```bash
-nat mcp client tool list --url http://localhost:9901/mcp --tool calculator_multiply
+nat mcp client tool list --url http://localhost:9901/mcp --tool calculator.multiply
 ```
 
 Sample output:
 ```text
-Tool: calculator_multiply
-Description: This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.
+Tool: calculator.multiply
+Description: Multiply two or more numbers together
 Input Schema:
 {
   "properties": {
-    "text": {
+    "numbers": {
       "description": "",
-      "title": "Text",
-      "type": "string"
+      "items": {
+        "type": "number"
+      },
+      "title": "Numbers",
+      "type": "array"
     }
   },
   "required": [
-    "text"
+    "numbers"
   ],
-  "title": "CalculatorMultiplyInputSchema",
+  "title": "Calculator.MultiplyInputSchema",
   "type": "object"
 }
-------------------------------------------------------------
 ```
 ### Call a Tool
 
 To call a tool and get its output:
 
-```bash
+```console
 # Pass arguments as JSON
-nat mcp client tool call calculator_multiply \
+$ nat mcp client tool call calculator.multiply \
   --url http://localhost:9901/mcp \
-  --json-args '{"text": "2 * 3"}'
+  --json-args '{"numbers": [1, 3, 6, 10]}'
+180.0
 ```
 
 ### Using Protected MCP Servers
@@ -383,6 +387,7 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
       "server": "stdio:python",
       "transport": "stdio",
       "session_healthy": true,
+      "protected": false,
       "tools": [
         {
           "name": "convert_time",
@@ -405,34 +410,41 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
       "server": "streamable-http:http://localhost:9901/mcp",
       "transport": "streamable-http",
       "session_healthy": true,
+      "protected": false,
       "tools": [
         {
-          "name": "calculator_divide",
-          "description": "This is a mathematical tool used to divide one number by another. It takes 2 numbers as an input and computes their numeric quotient as the output.",
+          "name": "calculator.add",
+          "description": "Add two or more numbers together",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator_inequality",
-          "description": "This is a mathematical tool used to perform an inequality comparison between two numbers. It takes two numbers as an input and determines if one is greater or are equal.",
+          "name": "calculator.compare",
+          "description": "Compare two numbers",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator_multiply",
-          "description": "This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.",
+          "name": "calculator.divide",
+          "description": "Divide one number by another",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator_subtract",
-          "description": "This is a mathematical tool used to subtract one number from another. It takes 2 numbers as an input and computes their numeric difference as the output.",
+          "name": "calculator.multiply",
+          "description": "Multiply two or more numbers together",
+          "server": "streamable-http:http://localhost:9901/mcp",
+          "available": true
+        },
+        {
+          "name": "calculator.subtract",
+          "description": "Subtract one number from another",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         }
       ],
-      "total_tools": 4,
-      "available_tools": 4
+      "total_tools": 5,
+      "available_tools": 5
     }
   ]
 }
