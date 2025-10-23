@@ -262,6 +262,17 @@ def require_weave_fixture(fail_missing: bool) -> types.ModuleType:
         pytest.skip(reason=reason)
 
 
+@pytest.fixture(name="galileo_api_key", scope='session')
+def galileo_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Galileo API key.
+    """
+    yield require_env_variables(
+        varnames=["GALILEO_API_KEY"],
+        reason="Galileo integration tests require the `GALILEO_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
 @pytest.fixture(name="require_docker", scope='session')
 def require_docker_fixture(fail_missing: bool) -> "DockerClient":
     """
