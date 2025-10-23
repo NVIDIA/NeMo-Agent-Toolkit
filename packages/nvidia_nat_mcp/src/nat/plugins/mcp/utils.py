@@ -47,7 +47,7 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
         "integer": int,
         "boolean": bool,
         "array": list,
-        "null": None,
+        "null": type(None),
         "object": dict,
     }
 
@@ -88,8 +88,22 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
         # Handle enum values
         enum_vals = schema.get("enum")
         if enum_vals:
-            enum_name = f"{name.capitalize()}Enum"
-            return Enum(enum_name, {item: item for item in enum_vals})
+            # Check if enum contains null
+            has_null = any(val is None or val == "null" for val in enum_vals)
+            # Filter out None/null values from enum
+            non_null_vals = [v for v in enum_vals if v is not None and v != "null"]
+
+            if non_null_vals:
+                enum_name = f"{name.capitalize()}Enum"
+                enum_type: Any = Enum(enum_name, {item: item for item in non_null_vals})
+                # If enum had null, make it a union with None
+                return enum_type | None if has_null else enum_type
+            elif has_null:
+                # Enum only contains null
+                return type(None)
+            else:
+                # Empty enum (shouldn't happen but handle gracefully)
+                return Any
 
         schema_type = schema.get("type")
 
@@ -97,7 +111,23 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
         if isinstance(schema_type, list):
             list_type: Any = None
             for t in schema_type:
-                mapped = _type_map.get(t, Any)
+                if t == "array":
+                    # Incorporate the mapped type of items
+                    item_schema = schema.get("items", {})
+                    if item_schema:
+                        item_type = _resolve_schema_type(item_schema, name)
+                        mapped = list[item_type]
+                    else:
+                        mapped = _type_map.get(t, Any)
+                elif t == "object":
+                    # Incorporate the mapped type from properties
+                    if "properties" in schema:
+                        mapped = model_from_mcp_schema(name=name, mcp_input_schema=schema)
+                    else:
+                        mapped = _type_map.get(t, Any)
+                else:
+                    mapped = _type_map.get(t, Any)
+
                 list_type = mapped if list_type is None else list_type | mapped
             return list_type if list_type is not None else Any
 
@@ -139,6 +169,19 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
         if isinstance(json_type, list) and "null" in json_type:
             return True
 
+        # Check enum for null (Python None or string "null")
+        enum_vals = field_properties.get("enum")
+        if enum_vals:
+            for val in enum_vals:
+                if val is None or val == "null":
+                    return True
+
+        # Check const for null (Python None or string "null")
+        if "const" in field_properties:
+            const_val = field_properties.get("const")
+            if const_val is None or const_val == "null":
+                return True
+
         return False
 
     def _generate_field(field_name: str, field_properties: dict[str, Any]) -> tuple:
@@ -156,9 +199,13 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
         default_value = field_properties.get("default")
 
         if field_name in required_fields:
-            # Field is required - use explicit default if provided, otherwise make it required
-            if default_value is None:
-                default_value = ... if not has_null else None
+            # Field is required - use explicit default if provided, otherwise use ... to enforce presence
+            if default_value is None and "default" not in field_properties:
+                # Required field without explicit default: always use ... even if nullable
+                default_value = ...
+            # Make the field type nullable if it allows null
+            if has_null:
+                field_type = field_type | None
         else:
             # Field is optional - use explicit default if provided, otherwise None
             if default_value is None:

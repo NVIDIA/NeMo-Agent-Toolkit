@@ -659,3 +659,202 @@ def test_anyof_with_array_of_objects_with_anyof():
     # Test with null
     m2 = _model.model_validate({"results": None})
     assert m2.results is None
+
+
+def test_required_nullable_field_with_anyof():
+    """Test that required nullable fields enforce presence but accept None as a value"""
+    schema = {
+        'type': 'object',
+        'properties': {
+            'nullable_field': {
+                'description': 'Required field that can be null', 'anyOf': [{
+                    'type': 'string'
+                }, {
+                    'type': 'null'
+                }]
+            }
+        },
+        'required': ['nullable_field']
+    }
+
+    _model = model_from_mcp_schema("test_required_nullable", schema)
+
+    # Verify field type is str | None
+    field_type = _model.model_fields["nullable_field"].annotation
+    args = get_args(field_type)
+    assert str in args and type(None) in args, f"Expected str | None, got {field_type}"
+
+    # Test with string value - should succeed
+    m1 = _model.model_validate({"nullable_field": "test"})
+    assert m1.nullable_field == "test"
+
+    # Test with None value - should succeed
+    m2 = _model.model_validate({"nullable_field": None})
+    assert m2.nullable_field is None
+
+    # Test with missing field - should raise ValidationError
+    with pytest.raises(ValidationError) as exc_info:
+        _model.model_validate({})
+    errors = exc_info.value.errors()
+    missing_fields = {e['loc'][0] for e in errors if e['type'] == 'missing'}
+    assert 'nullable_field' in missing_fields
+
+
+def test_required_nullable_field_with_type_list():
+    """Test required nullable field using type list notation"""
+    schema = {
+        'type': 'object',
+        'properties': {
+            'nullable_int': {
+                'description': 'Required int or null', 'type': ['integer', 'null']
+            }
+        },
+        'required': ['nullable_int']
+    }
+
+    _model = model_from_mcp_schema("test_required_nullable_list", schema)
+
+    # Verify field type is int | None
+    field_type = _model.model_fields["nullable_int"].annotation
+    args = get_args(field_type)
+    assert int in args and type(None) in args, f"Expected int | None, got {field_type}"
+
+    # Test with integer value - should succeed
+    m1 = _model.model_validate({"nullable_int": 42})
+    assert m1.nullable_int == 42
+
+    # Test with None value - should succeed
+    m2 = _model.model_validate({"nullable_int": None})
+    assert m2.nullable_int is None
+
+    # Test with missing field - should raise ValidationError
+    with pytest.raises(ValidationError) as exc_info:
+        _model.model_validate({})
+    errors = exc_info.value.errors()
+    missing_fields = {e['loc'][0] for e in errors if e['type'] == 'missing'}
+    assert 'nullable_int' in missing_fields
+
+
+def test_required_nullable_field_with_enum():
+    """Test that enum containing null is detected correctly for required fields"""
+    schema = {
+        'type': 'object',
+        'properties': {
+            'enum_field': {
+                'description': 'Required field with enum including null', 'enum': ['value1', 'value2', None]
+            }
+        },
+        'required': ['enum_field']
+    }
+
+    _model = model_from_mcp_schema("test_required_nullable_enum", schema)
+
+    # Field should be required (missing field should raise error)
+    with pytest.raises(ValidationError) as exc_info:
+        _model.model_validate({})
+    errors = exc_info.value.errors()
+    missing_fields = {e['loc'][0] for e in errors if e['type'] == 'missing'}
+    assert 'enum_field' in missing_fields
+
+    # But should accept None as a valid value
+    m1 = _model.model_validate({"enum_field": None})
+    assert m1.enum_field is None
+
+
+def test_required_nullable_field_with_const_null():
+    """Test that const: null is detected correctly for required fields"""
+    schema = {
+        'type': 'object',
+        'properties': {
+            'const_null_field': {
+                'description': 'Required field with const null', 'const': None
+            }
+        },
+        'required': ['const_null_field']
+    }
+
+    _model = model_from_mcp_schema("test_required_const_null", schema)
+
+    # Field should be required (missing field should raise error)
+    with pytest.raises(ValidationError) as exc_info:
+        _model.model_validate({})
+    errors = exc_info.value.errors()
+    missing_fields = {e['loc'][0] for e in errors if e['type'] == 'missing'}
+    assert 'const_null_field' in missing_fields
+
+    # Should accept None as value
+    m1 = _model.model_validate({"const_null_field": None})
+    assert m1.const_null_field is None
+
+
+def test_type_list_with_array_items():
+    """Test that type list containing 'array' properly resolves item types"""
+    schema = {
+        'type': 'object',
+        'properties': {
+            'mixed_field': {
+                'description': 'Field that can be array of strings or null',
+                'type': ['array', 'null'],
+                'items': {
+                    'type': 'string'
+                }
+            }
+        },
+        'required': []
+    }
+
+    _model = model_from_mcp_schema("test_type_list_array", schema)
+
+    # Verify field type includes list[str] and None
+    field_type = _model.model_fields["mixed_field"].annotation
+    args = get_args(field_type)
+    assert type(None) in args, f"Expected None in union, got {field_type}"
+
+    # Find the list type
+    list_types = [arg for arg in args if hasattr(arg, '__origin__') and arg.__origin__ is list]
+    assert len(list_types) > 0, f"Expected list type in union, got {field_type}"
+
+    # Check that list contains str
+    list_type = list_types[0]
+    list_args = get_args(list_type)
+    assert str in list_args, f"Expected list[str], got {list_type}"
+
+    # Test with array value
+    m1 = _model.model_validate({"mixed_field": ["a", "b", "c"]})
+    assert m1.mixed_field == ["a", "b", "c"]
+
+    # Test with null value
+    m2 = _model.model_validate({"mixed_field": None})
+    assert m2.mixed_field is None
+
+
+def test_type_list_with_object_properties():
+    """Test that type list containing 'object' properly resolves property types"""
+    schema = {
+        'type': 'object',
+        'properties': {
+            'config_or_null': {
+                'description': 'Config object or null',
+                'type': ['object', 'null'],
+                'properties': {
+                    'setting': {
+                        'type': 'string'
+                    }, 'value': {
+                        'type': 'integer'
+                    }
+                }
+            }
+        },
+        'required': []
+    }
+
+    _model = model_from_mcp_schema("test_type_list_object", schema)
+
+    # Test with object value
+    m1 = _model.model_validate({"config_or_null": {"setting": "test", "value": 123}})
+    assert m1.config_or_null.setting == "test"
+    assert m1.config_or_null.value == 123
+
+    # Test with null value
+    m2 = _model.model_validate({"config_or_null": None})
+    assert m2.config_or_null is None
