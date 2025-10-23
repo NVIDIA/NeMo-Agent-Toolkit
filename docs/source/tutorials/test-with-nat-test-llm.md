@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Test With `nat_test_llm` for NVIDIA NeMo Agent toolkit
+# Test With `nat_test_llm` for NVIDIA NeMo Agent Toolkit
 
 Use `nat_test_llm` to quickly validate workflows during development and CI. It yields deterministic, cycling responses and avoids real API calls. It is not intended for production use.
 

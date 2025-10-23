@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # NVIDIA NeMo Agent Toolkit Tutorials
-Learn how to use with NeMo Agent tools by following these tutorials:
+Learn how to use NeMo Agent toolkit tools by following these tutorials:
 - [Customize a Workflow](./customize-a-workflow.md)
 - [Add Tools to a Workflow](./add-tools-to-a-workflow.md)
 - [Create a New Tool and Workflow](./create-a-new-workflow.md)

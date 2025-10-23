@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 
-# Create a New Tool and Workflow with NeMo Agent toolkit
+# Create a New Tool and Workflow with NeMo Agent Toolkit
 
 In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing tools that were included with the NeMo Agent toolkit. This tutorial demonstrates how to create a new tool that can ingest data from local files stored on disk.
 
