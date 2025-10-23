@@ -1,0 +1,57 @@
+import typing
+from pathlib import Path
+
+if typing.TYPE_CHECKING:
+
+    from nat.data_models.config import Config
+
+    from .type_utils import StrPath
+
+_T = typing.TypeVar("_T")
+
+
+async def run_workflow(*,
+                       config: "Config | None" = None,
+                       config_file: "StrPath | None" = None,
+                       prompt: str,
+                       to_type: type[_T] = str) -> _T:
+    """
+    Wrapper to run a workflow given either a config or a config file path and a prompt, returning the result in the
+    type specified by the `to_type`.
+
+    Parameters
+    ----------
+    config : Config | None
+        The configuration object to use for the workflow. If None, config_file must be provided.
+    config_file : StrPath | None
+        The path to the configuration file. If None, config must be provided. Can be either a str or a Path object.
+    prompt : str
+        The prompt to run the workflow with.
+    to_type : type[_T]
+        The type to convert the result to. Default is str.
+
+    Returns
+    -------
+    _T
+        The result of the workflow converted to the specified type.
+    """
+    from nat.builder.workflow_builder import WorkflowBuilder
+    from nat.runtime.loader import load_config
+    from nat.runtime.session import SessionManager
+
+    if config is not None and config_file is not None:
+        raise ValueError("Only one of config or config_file should be provided")
+
+    if config is None:
+        if config_file is None:
+            raise ValueError("Either config_file or config must be provided")
+
+        if not Path(config_file).exists():
+            raise ValueError(f"Config file {config_file} does not exist")
+
+        config = load_config(config_file)
+
+    async with WorkflowBuilder.from_config(config=config) as workflow_builder:
+        workflow = SessionManager(await workflow_builder.build())
+        async with workflow.run(prompt) as runner:
+            return await runner.result(to_type=to_type)
