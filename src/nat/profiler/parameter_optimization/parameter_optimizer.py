@@ -111,7 +111,10 @@ def optimize_parameters(
             tasks = [_single_eval(i) for i in range(reps)]
             return await asyncio.gather(*tasks)
 
-        with (out_dir / f"config_numeric_trial_{trial._trial_id}.yml").open("w") as fh:
+        # Calculate padding width based on total number of trials
+        trial_id_width = len(str(optimizer_config.numeric.n_trials - 1))
+        trial_id_padded = f"{trial._trial_id:0{trial_id_width}d}"
+        with (out_dir / f"config_numeric_trial_{trial_id_padded}.yml").open("w") as fh:
             yaml.dump(cfg_trial.model_dump(), fh)
 
         all_scores = asyncio.run(_run_all_evals())
