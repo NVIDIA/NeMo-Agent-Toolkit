@@ -147,12 +147,12 @@ Before getting started, it's possible to run this simple workflow and many other
 
 ## 📚 Additional Resources
 
- * 📖 [Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest): Explore the full documentation for NeMo Agent Toolkit.
- * 🧭 [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with NeMo Agent Toolkit.
- * 🧪 [Examples](./examples/README.md): Explore examples of NeMo Agent Toolkit workflows located in the [`examples`](./examples) directory of the source repository.
- * 🛠️ [Create and Customize NeMo Agent Toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent Toolkit workflows.
- * 🎯 [Evaluate with NeMo Agent Toolkit](./docs/source/workflows/evaluate.md): Learn how to evaluate your NeMo Agent Toolkit workflows.
- * 🆘 [Troubleshooting](./docs/source/troubleshooting.md): Get help with common issues.
+* 📖 [Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest): Explore the full documentation for NeMo Agent Toolkit.
+* 🧭 [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with NeMo Agent Toolkit.
+* 🧪 [Examples](./examples/README.md): Explore examples of NeMo Agent Toolkit workflows located in the [`examples`](./examples) directory of the source repository.
+* 🛠️ [Create and Customize NeMo Agent Toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent Toolkit workflows.
+* 🎯 [Evaluate with NeMo Agent Toolkit](./docs/source/workflows/evaluate.md): Learn how to evaluate your NeMo Agent Toolkit workflows.
+* 🆘 [Troubleshooting](./docs/source/troubleshooting.md): Get help with common issues.
 
 
 ## 🛣️ Roadmap
