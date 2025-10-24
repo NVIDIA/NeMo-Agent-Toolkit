@@ -69,7 +69,7 @@ window.addEventListener("load", function() {
 </div>
 ```
 
-<!-- Load image-map-resizer to make regions scale correctly -->
+*JavaScript © David Bradshaw, licensed under the [MIT License](https://opensource.org/licenses/MIT).*
 <script src="_static/imageMapResizer.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
