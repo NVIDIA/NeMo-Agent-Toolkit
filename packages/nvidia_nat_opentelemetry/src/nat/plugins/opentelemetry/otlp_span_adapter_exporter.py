@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from typing import Literal
 
 from nat.builder.context import ContextState
 from nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPSpanExporterMixin
@@ -32,7 +33,7 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
     Key Features:
     - Complete span processing pipeline (IntermediateStep → Span → OtelSpan → Export)
     - Batching support for efficient transmission
-    - OTLP HTTP protocol for maximum compatibility
+    - OTLP HTTP and gRPC protocol for maximum compatibility
     - Configurable authentication via headers
     - Resource attribute management
     - Error handling and retry logic
@@ -48,6 +49,7 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
         exporter = OTLPSpanAdapterExporter(
             endpoint="https://api.service.com/v1/traces",
             headers={"Authorization": "Bearer your-token"},
+            protocol='http',
             batch_size=50,
             flush_interval=10.0
         )
@@ -67,6 +69,7 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
             # OTLPSpanExporterMixin args
             endpoint: str,
             headers: dict[str, str] | None = None,
+            protocol: Literal['http', 'grpc'] = 'http',
             **otlp_kwargs):
         """Initialize the OTLP span exporter.
 
@@ -80,6 +83,7 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
             resource_attributes: Additional resource attributes for spans.
             endpoint: The endpoint for the OTLP service.
             headers: The headers for the OTLP service.
+            protocol: The protocol to use for the OTLP service, default is 'http'.
             otlp_kwargs: Additional keyword arguments for the OTLP service.
         """
         super().__init__(context_state=context_state,
@@ -91,4 +95,5 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
                          resource_attributes=resource_attributes,
                          endpoint=endpoint,
                          headers=headers,
+                         protocol=protocol,
                          **otlp_kwargs)
