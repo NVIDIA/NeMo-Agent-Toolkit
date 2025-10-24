@@ -270,7 +270,7 @@ Transmit traces to Galileo for workflow observability.
 3. Set your DBNL credentials:
 
     ```bash
-    # DBNL_API_URL should point to your deployment API URL (e.g. http://localhost:8080/api/)
+    # DBNL_API_URL should point to your deployment API URL (e.g. http://localhost:8080/api)
     export DBNL_API_URL=<your_api_url>
     export DBNL_API_TOKEN=<your_api_token>
     export DBNL_PROJECT_ID=<your_project_id>
