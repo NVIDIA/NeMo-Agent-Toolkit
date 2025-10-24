@@ -53,7 +53,7 @@
         "pylint.importStrategy": "fromEnvironment",
         "python.analysis.inlayHints.pytestParameters": true,
         "python.analysis.typeCheckingMode": "basic",
-        "python.languageServer": "Pylance",
+        "python.languageServer": "None",
         "python.testing.pytestArgs": [
             "-s"
         ],

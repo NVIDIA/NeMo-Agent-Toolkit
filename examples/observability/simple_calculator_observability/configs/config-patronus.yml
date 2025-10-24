@@ -20,7 +20,8 @@ general:
       patronus:
         _type: patronus
         endpoint: "https://otel.patronus.ai:4317"
-        project: "nat-simple-calculator"
+        project: "simple-calculator"
+        batch_size: 1
 
 functions:
   calculator_multiply:
