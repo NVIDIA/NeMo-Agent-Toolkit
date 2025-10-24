@@ -22,6 +22,8 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 
 logger = logging.getLogger(__name__)
 
+OTLPProtocol = Literal['http', 'grpc']
+
 
 class OTLPSpanExporterMixin:
     """Mixin for OTLP span exporters.
@@ -48,7 +50,7 @@ class OTLPSpanExporterMixin:
                  *args,
                  endpoint: str,
                  headers: dict[str, str] | None = None,
-                 protocol: Literal['http', 'grpc'] = 'http',
+                 protocol: OTLPProtocol = 'http',
                  **kwargs):
         """Initialize the OTLP span exporter.
 

@@ -14,9 +14,9 @@
 # limitations under the License.
 
 import logging
-from typing import Literal
 
 from nat.builder.context import ContextState
+from nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPProtocol
 from nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPSpanExporterMixin
 from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 
@@ -69,7 +69,7 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
             # OTLPSpanExporterMixin args
             endpoint: str,
             headers: dict[str, str] | None = None,
-            protocol: Literal['http', 'grpc'] = 'http',
+            protocol: OTLPProtocol = 'http',
             **otlp_kwargs):
         """Initialize the OTLP span exporter.
 

@@ -18,11 +18,11 @@ from collections.abc import Callable
 from collections.abc import Mapping
 from enum import Enum
 from typing import Any
-from typing import Literal
 
 from nat.builder.context import ContextState
 from nat.observability.processor.redaction import SpanHeaderRedactionProcessor
 from nat.observability.processor.span_tagging_processor import SpanTaggingProcessor
+from nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPProtocol
 from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
 logger = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
             # OTLPSpanExporterMixin args
             endpoint: str,
             headers: dict[str, str] | None = None,
-            protocol: Literal['http', 'grpc'] = 'http',
+            protocol: OTLPProtocol = 'http',
             **otlp_kwargs):
         """Initialize the OTLP span exporter with redaction and tagging capabilities.
 
