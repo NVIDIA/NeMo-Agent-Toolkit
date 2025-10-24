@@ -142,6 +142,7 @@ Each exporter has its own detailed configuration guide with complete setup instr
 - **[Patronus](https://www.patronus.ai/)** - AI evaluation and monitoring platform
 - **[Phoenix](https://phoenix.arize.com/)** - See [Observing with Phoenix](./observe-workflow-with-phoenix.md)
 - **[W&B Weave](https://wandb.ai/site/weave/)** - See [Observing with W&B Weave](./observe-workflow-with-weave.md)
+- **[DBNL](https://distributional.com/)** - See [Observing with DBNL](./observe-workflow-with-dbnl.md)
 
 For complete configuration examples and setup instructions, refer to the individual guides linked above or check the `examples/observability/` directory.
 
@@ -159,6 +160,7 @@ For complete configuration examples and setup instructions, refer to the individ
 | Patronus | Logging, Tracing |
 | Phoenix | Logging, Tracing |
 | W&B Weave | Logging, Tracing, W&B Weave Redaction, Evaluation Metrics |
+| DBNL | Logging, Tracing |
 
 ### NeMo Agent Toolkit Observability Components
 
@@ -207,4 +209,5 @@ Observing with Galileo <./observe-workflow-with-galileo.md>
 Observing with OTEL Collector <./observe-workflow-with-otel-collector.md>
 Observing with Phoenix <./observe-workflow-with-phoenix.md>
 Observing with W&B Weave <./observe-workflow-with-weave.md>
+Observing with DBNL <./observe-workflow-with-dbnl.md>
 ```
