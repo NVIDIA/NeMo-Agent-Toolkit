@@ -81,7 +81,16 @@ workflows:
   tool_names:
     - mcp_tools.tool_a
 ```
-This is useful when you need to build a custom tool that uses a tool from an MCP server as a sub-tool.
+
+An additional case to note is when a function group is served by a NAT MCP server. The tools must still be accessed by their full name. This is the same as the prior case, but there is an important difference. Consider the following example:
+```yaml
+workflow:
+  _type: react_agent
+  tool_names:
+    - mcp_tools.calculator.add
+```
+
+`mcp_tools` is the name of the function group, and `calculator.add` is the name of the tool within the function group. This is because the tools are added to the function group as functions, and the function group is then added to the workflow as a tool.
 
 #### Configuration Options
 
@@ -130,6 +139,9 @@ Example with all options:
 function_groups:
   mcp_tools:
     _type: mcp_client
+    include:
+      - calculator.add
+      - calculator.multiply
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
@@ -143,10 +155,10 @@ function_groups:
     max_sessions: 50  # Maximum concurrent sessions
     session_idle_timeout: 7200  # 2 hours (in seconds)
     tool_overrides:
-      calculator_add:
+      calculator.add:
         alias: "add_numbers"
         description: "Add two numbers together"
-      calculator_multiply:
+      calculator.multiply:
         description: "Multiply two numbers"  # Keeps original name
 ```
 
