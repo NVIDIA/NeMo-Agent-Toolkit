@@ -20,32 +20,38 @@
 
 
 functions:
-  calculator_multiply:
+  calculator_add:
     _type: mcp_tool_wrapper
     url: "http://localhost:9901/mcp"
     transport: "streamable-http"
-    mcp_tool_name: calculator_multiply
-    description: "Returns the product of two numbers"
-  calculator_inequality:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    transport: "streamable-http"
-    mcp_tool_name: calculator_inequality
-    description: "Returns the inequality of two numbers"
-  calculator_divide:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    transport: "streamable-http"
-    mcp_tool_name: calculator_divide
-    description: "Returns the quotient of two numbers"
-  current_datetime:
-    _type: current_datetime
+    mcp_tool_name: calculator.add
+    description: "Returns the sum of two numbers"
   calculator_subtract:
     _type: mcp_tool_wrapper
     url: "http://localhost:9901/mcp"
     transport: "streamable-http"
-    mcp_tool_name: calculator_subtract
+    mcp_tool_name: calculator.subtract
     description: "Returns the difference of two numbers"
+  calculator_multiply:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
+    mcp_tool_name: calculator.multiply
+    description: "Returns the product of two numbers"
+  calculator_divide:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
+    mcp_tool_name: calculator.divide
+    description: "Returns the quotient of two numbers"
+  calculator_compare:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:9901/mcp"
+    transport: "streamable-http"
+    mcp_tool_name: calculator.compare
+    description: "Returns the comparison of two numbers"
+  current_datetime:
+    _type: current_datetime
 
 llms:
   nim_llm:
@@ -61,10 +67,11 @@ llms:
 workflow:
   _type: react_agent
   tool_names:
-    - calculator_multiply
-    - calculator_inequality
-    - calculator_divide
+    - calculator_add
     - calculator_subtract
+    - calculator_multiply
+    - calculator_divide
+    - calculator_compare
     - current_datetime
   llm_name: nim_llm
   verbose: true

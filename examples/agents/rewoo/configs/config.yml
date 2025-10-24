@@ -21,15 +21,11 @@ llms:
     temperature: 0.0
     max_tokens: 4096
 
+function_groups:
+  calculator:
+    _type: calculator
+
 functions:
-  calculator_multiply:
-    _type: calculator_multiply
-  calculator_inequality:
-    _type: calculator_inequality
-  calculator_divide:
-    _type: calculator_divide
-  calculator_subtract:
-    _type: calculator_subtract
   internet_search:
     _type: tavily_internet_search
   haystack_chitchat_agent:
@@ -38,7 +34,7 @@ functions:
 
 workflow:
   _type: rewoo_agent
-  tool_names: [calculator_multiply, calculator_inequality, calculator_divide, calculator_subtract, internet_search, haystack_chitchat_agent]
+  tool_names: [calculator, internet_search, haystack_chitchat_agent]
   llm_name: nim_llm
   verbose: true
   tool_call_max_retries: 3
