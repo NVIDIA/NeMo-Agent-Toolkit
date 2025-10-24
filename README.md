@@ -71,6 +71,8 @@ With NeMo Agent Toolkit, you can move quickly, experiment freely, and ensure rel
 
 ## 🚀 Installation
 
+Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11, 3.12, or 3.13 installed on your system.
+
 > [!NOTE]
 > For users who want to run the examples, it's required to clone the repository and install from source to get the necessary files required to run the examples. Please refer to the [Examples](./examples/README.md) documentation for more information.
 
