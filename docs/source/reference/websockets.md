@@ -135,6 +135,7 @@ Definition: This message contains the response content from the human in the loo
   "id": "string",
   "thread_id": "string",
   "parent_id": "string",
+  "conversation_id": "string",
   "content": {
     "messages": [
       {
@@ -143,7 +144,7 @@ Definition: This message contains the response content from the human in the loo
           {
             "type": "text",
             "text": "Yes continue processing sensitive information"
-          },
+          }
         ]
       }
     ]

@@ -21,6 +21,7 @@ import pytest
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.llm import APITypeEnum
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.plugins.agno.llm import nim_agno
@@ -40,6 +41,11 @@ class TestNimAgno:
         """Create a NIMModelConfig instance."""
         return NIMModelConfig(model_name="test-model")
 
+    @pytest.fixture
+    def nim_config_responses(self):
+        """Create a NIMModelConfig instance."""
+        return NIMModelConfig(model_name="test-model", api_type=APITypeEnum.RESPONSES)
+
     @patch("agno.models.nvidia.Nvidia")
     async def test_nim_agno_basic(self, mock_nvidia, nim_config, mock_builder):
         """Test that nim_agno creates a Nvidia instance with the correct parameters."""
@@ -52,6 +58,17 @@ class TestNimAgno:
 
             # Verify that the returned object is the mock Nvidia instance
             assert nvidia_instance == mock_nvidia.return_value
+
+    @patch("agno.models.nvidia.Nvidia")
+    async def test_nim_agno_responses(self, mock_nvidia, nim_config_responses, mock_builder):
+        """Test that nim_agno raises ValueError for NIMModelConfig with Responses API."""
+        # Use the context manager properly
+        with pytest.raises(ValueError, match="Responses API is not supported"):
+            async with nim_agno(nim_config_responses, mock_builder):
+                pass
+
+        # Verify that Nvidia was not created
+        mock_nvidia.assert_not_called()
 
     @patch("agno.models.nvidia.Nvidia")
     async def test_nim_agno_with_base_url(self, mock_nvidia, nim_config, mock_builder):
@@ -105,7 +122,7 @@ class TestNimAgno:
             mock_nvidia.assert_called_once()
 
             # Verify that the returned object is the mock Nvidia instance
-        assert nvidia_instance == mock_nvidia.return_value
+            assert nvidia_instance == mock_nvidia.return_value
 
     @patch("agno.models.nvidia.Nvidia")
     async def test_nim_agno_without_api_key(self, mock_nvidia, nim_config, mock_builder):
@@ -133,6 +150,11 @@ class TestOpenAIAgno:
         """Create an OpenAIModelConfig instance."""
         return OpenAIModelConfig(model_name="gpt-4")
 
+    @pytest.fixture
+    def openai_responses_config(self):
+        """Create an OpenAIModelConfig instance for responses."""
+        return OpenAIModelConfig(model_name="gpt-4", api_type=APITypeEnum.RESPONSES)
+
     @patch("agno.models.openai.OpenAIChat")
     async def test_openai_agno(self, mock_openai_chat, openai_config, mock_builder):
         """Test that openai_agno creates an OpenAIChat instance with the correct parameters."""
@@ -147,6 +169,21 @@ class TestOpenAIAgno:
 
             # Verify that the returned object is the mock OpenAIChat instance
             assert openai_instance == mock_openai_chat.return_value
+
+    @patch("agno.models.openai.OpenAIResponses")
+    async def test_openai_agno_responses(self, mock_openai_responses, openai_responses_config, mock_builder):
+        """Test that openai_agno creates an OpenAIResponses instance with the correct parameters."""
+        # Use the context manager properly
+        async with openai_agno(openai_responses_config, mock_builder) as openai_instance:
+            # Verify that OpenAIResponses was created with the correct parameters
+            mock_openai_responses.assert_called_once()
+            call_kwargs = mock_openai_responses.call_args[1]
+
+            # Check that model is set correctly
+            assert call_kwargs["id"] == "gpt-4"
+
+            # Verify that the returned object is the mock OpenAIResponses instance
+            assert openai_instance == mock_openai_responses.return_value
 
     @patch("agno.models.openai.OpenAIChat")
     async def test_openai_agno_with_additional_params(self, mock_openai_chat, openai_config, mock_builder):

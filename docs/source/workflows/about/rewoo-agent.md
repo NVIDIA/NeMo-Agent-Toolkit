@@ -30,6 +30,23 @@ The ReWOO agent's implementation follows the paper's methodology of decoupling r
 - **Agentic Workflows**: Fully configurable via YAML for flexibility and productivity
 - **Ease of Use**: Simplifies developer experience and deployment
 
+---
+
+## Requirements
+The ReWOO agent requires the `nvidia-nat[langchain]` plugin to be installed.
+
+If you have performed a source code checkout, you can install this with the following command:
+
+```bash
+uv pip install -e '.[langchain]'
+```
+
+If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+
+```bash
+uv pip install "nvidia-nat[langchain]"
+```
+
 ## Benefits
 
 * **Token Efficiency**: By planning all steps upfront and using placeholders (e.g., "#E1", "#E2") for intermediate results, ReWOO significantly reduces token consumption. These placeholders are replaced with actual values during execution, eliminating the need to include full tool outputs in each reasoning step.
@@ -75,7 +92,7 @@ functions:
 
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReWOO agent is configured as a workflow and need to expose a customized name as a tool.
 
-* `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
+* `tool_names`: A list of tools that the agent can call. The tools must be functions or function groups configured in the YAML file
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
 

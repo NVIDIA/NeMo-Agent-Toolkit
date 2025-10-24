@@ -16,6 +16,7 @@ limitations under the License.
 -->
 
 # Customize a Workflow
+This tutorial demonstrates how to customize a workflow with NeMo Agent toolkit.
 
 ## Prerequisites
 

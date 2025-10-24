@@ -53,162 +53,203 @@ uv pip install -e examples/observability/simple_calculator_observability
 
 ## Getting Started
 
-### Phoenix Tracing (Local Development)
+### Phoenix Tracing
 
 Phoenix provides local tracing capabilities perfect for development and testing.
 
 1. Install Phoenix:
-```bash
-uv pip install arize-phoenix
-```
+
+    ```bash
+    uv pip install arize-phoenix
+    ```
 
 2. Start Phoenix in a separate terminal:
 
-```bash
-phoenix serve
-```
+    ```bash
+    phoenix serve
+    ```
 
 3. Run the workflow with tracing enabled:
 
-```bash
-nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "What is 2 * 4?"
-```
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "What is 2 * 4?"
+    ```
 
 4. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
 
-### File-Based Tracing (Local Development)
+### File-Based Tracing
 
 For simple local development and debugging, you can export traces directly to a local file without requiring any external services.
 
 1. Run the workflow with file-based tracing:
 
-```bash
-nat run --config_file examples/observability/simple_calculator_observability/configs/config-otel-file.yml --input "What is 2 * 4?"
-```
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-otel-file.yml --input "What is 2 * 4?"
+    ```
 
 2. View the traces in the generated file:
 
-```bash
-cat nat_simple_calculator_traces.jsonl
-```
+    ```bash
+    cat nat_simple_calculator_traces.jsonl
+    ```
 
-The traces are stored in JSON Lines format, with each line representing a complete trace. This is useful for:
-- Quick debugging during development
-- Offline analysis of workflow execution
-- Integration with custom analysis tools
-- Archiving traces for later review
+    The traces are stored in JSON Lines format, with each line representing a complete trace. This is useful for:
+    - Quick debugging during development
+    - Offline analysis of workflow execution
+    - Integration with custom analysis tools
+    - Archiving traces for later review
 
-### Production Monitoring Platforms
+### Langfuse Integration
 
-For production deployments, you can integrate with these observability platforms:
+[Langfuse](https://langfuse.com/) provides production-ready monitoring and analytics.
 
-#### Langfuse Integration
+1. Get your Langfuse credentials:
 
-Langfuse provides production-ready monitoring and analytics.
+    Under your project settings, you can create your API key. Doing this will give you three credentials:
+    - Secret Key
+    - Public Key
+    - Host
 
-1. Set your Langfuse credentials:
+    Take note of these credentials as you will need them to run the workflow.
 
-```bash
-export LANGFUSE_PUBLIC_KEY=<your_key>
-export LANGFUSE_SECRET_KEY=<your_secret>
-export LANGFUSE_HOST=<your_host>
-```
+2. Set your Langfuse credentials:
 
-2. Run the workflow:
+    ```bash
+    export LANGFUSE_PUBLIC_KEY=<your_key>
+    export LANGFUSE_SECRET_KEY=<your_secret>
+    export LANGFUSE_HOST=<your_host>
+    ```
 
-```bash
-nat run --config_file examples/observability/simple_calculator_observability/configs/config-langfuse.yml --input "Calculate 15 + 23"
-```
+3. Run the workflow:
 
-#### LangSmith Integration
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-langfuse.yml --input "Calculate 15 + 23"
+    ```
 
-LangSmith offers comprehensive monitoring within the LangChain/LangGraph ecosystem.
+### LangSmith Integration
+
+[LangSmith](https://smith.langchain.com/) offers comprehensive monitoring within the LangChain/LangGraph ecosystem.
+
+0. Get your LangSmith API key and project name:
+
+    **API Key**:
+
+    Once logged in, you can navigate to the settings page, then click on "API Keys".
+
+    You can create a new API key by clicking on the "Create API Key" button. Be sure to choose the "Personal Access Token" option. Choose a workspace name and a description. Then click on the "Create" button.
+
+    Take note of the API key as you will need it to run the workflow.
 
 1. Set your LangSmith credentials:
 
-```bash
-export LANGSMITH_API_KEY=<your_api_key>
-export LANGSMITH_PROJECT=<your_project>
-```
+    ```bash
+    export LANGSMITH_API_KEY=<your_api_key>
+    ```
 
 2. Run the workflow:
 
-```bash
-nat run --config_file examples/observability/simple_calculator_observability/configs/config-langsmith.yml --input "Is 100 > 50?"
-```
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-langsmith.yml --input "Is 100 > 50?"
+    ```
 
-#### Weave Integration
+    This workflow is set to use the `default` LangSmith project. If you want to use a different project, you can either edit the config file or add the following flag to the above command: `--override general.telemetry.tracing.langsmith.project <your_project_name>`
 
-Weave provides detailed workflow tracking and visualization.
+    > [!NOTE]
+    > This workflow happens to use LangChain, since that library has built-in support for LangSmith, if you run the above workflow with the `LANGSMITH_TRACING=true` environment variable set, will result in duplicate traces being sent to LangSmith.
+
+### Weave Integration
+
+[Weave](https://wandb.ai/site/weave/) provides detailed workflow tracking and visualization.
+
+0. Get your Weights & Biases API key:
+
+    Login to [Weights & Biases](https://wandb.ai/site/weave/) and navigate to the settings page.
+
+    Under the "Account" section, you can find your API key. Click on the "Show" button to reveal the API key. Take note of this API key as you will need it to run the workflow.
 
 1. Set your Weights & Biases API key:
 
-```bash
-export WANDB_API_KEY=<your_api_key>
-```
+    ```bash
+    export WANDB_API_KEY=<your_api_key>
+    ```
 
 2. Run the workflow:
 
-```bash
-nat run --config_file examples/observability/simple_calculator_observability/configs/config-weave.yml --input "What's the sum of 7 and 8?"
-```
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-weave.yml --input "What's the sum of 7 and 8?"
+    ```
 
 For detailed Weave setup instructions, see the [Fine-grained Tracing with Weave](../../../docs/source/workflows/observe/observe-workflow-with-weave.md) guide.
 
-#### AI Safety Monitoring with Patronus
+### AI Safety Monitoring with Patronus
 
-Patronus enables AI safety monitoring and compliance tracking.
+[Patronus](https://patronus.ai/) enables AI safety monitoring and compliance tracking.
 
-1. Set your Patronus API key:
+1. Get your Patronus API key:
 
-```bash
-export PATRONUS_API_KEY=<your_api_key>
-```
+    Login to [Patronus](https://patronus.ai/) and navigate to the settings page.
 
-2. Run the workflow:
+    Click on the "API Keys" section on the left sidebar. Then click on the "Create API Key" button. Choose a name and a description. Then click on the "Create" button.
 
-```bash
-nat run --config_file examples/observability/simple_calculator_observability/configs/config-patronus.yml --input "Divide 144 by 12"
-```
+    Take note of the API key as you will need it to run the workflow.
 
-#### RagaAI Catalyst Integration
+2. Set your Patronus API key:
+
+    ```bash
+    export PATRONUS_API_KEY=<your_api_key>
+    ```
+
+3. Run the workflow:
+
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-patronus.yml --input "Divide 144 by 12"
+    ```
+
+### RagaAI Catalyst Integration
 
 Transmit traces to RagaAI Catalyst.
 
-1. Set your Catalyst API key:
+1. Get your Catalyst credentials:
 
-```bash
-export CATALYST_ACCESS_KEY=<your_access_key>
-export CATALYST_SECRET_KEY=<your_secret_key>
-export CATALYST_ENDPOINT=<your_endpoint>
-```
+    Login to [RagaAI Catalyst](https://catalyst.raga.ai/) and navigate to the settings page.
 
-2. Run the workflow:
+    Under the "Account" section, you can find your API key. Click on the "Show" button to reveal the API key. Take note of this API key as you will need it to run the workflow.
 
-```bash
-nat run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "Divide 144 by 12"
-```
+2. Set your Catalyst API key:
 
-#### Galileo Integration
+    ```bash
+    export CATALYST_ACCESS_KEY=<your_access_key>
+    export CATALYST_SECRET_KEY=<your_secret_key>
+    export CATALYST_ENDPOINT=<your_endpoint>
+    ```
+
+3. Run the workflow:
+
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "Divide 144 by 12"
+    ```
+
+### Galileo Integration
 
 Transmit traces to Galileo for workflow observability.
 
 1. Sign up for Galileo and create project
-- Visit [https://app.galileo.ai/](https://app.galileo.ai/) to create your account or sign in.
-- Create a project named `simple_calculator` and use default log stream
-- Create your API key
+
+    - Visit [https://app.galileo.ai/](https://app.galileo.ai/) to create your account or sign in.
+    - Create a project named `simple_calculator` and use default log stream
+    - Create your API key
 
 2. Set your Galileo credentials:
 
-```bash
-export GALILEO_API_KEY=<your_api_key>
-```
+    ```bash
+    export GALILEO_API_KEY=<your_api_key>
+    ```
 
 3. Run the workflow
 
-```bash
-nat run --config_file examples/observability/simple_calculator_observability/configs/config-galileo.yml --input "Is 100 > 50?"
-```
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-galileo.yml --input "Is 100 > 50?"
+    ```
 
 
 ## Configuration Files
@@ -217,9 +258,9 @@ The example includes multiple configuration files for different observability pl
 
 | Configuration File | Platform | Best For |
 |-------------------|----------|----------|
-| `config-phoenix.yml` | Phoenix | Local development and testing |
+| `config-phoenix.yml` | Phoenix | Tracing with Phoenix |
 | `config-otel-file.yml` | File Export | Local file-based tracing for development and debugging |
-| `config-langfuse.yml` | Langfuse | Production monitoring and analytics |
+| `config-langfuse.yml` | Langfuse | Langfuse monitoring and analytics |
 | `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |
 | `config-weave.yml` | Weave | Workflow-focused tracking |
 | `config-patronus.yml` | Patronus | AI safety and compliance monitoring |

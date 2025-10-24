@@ -57,7 +57,10 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
        connection_url: str
        api_key: str
    ```
-   > **Note**: The `name="my_custom_memory"` ensures that NeMo Agent toolkit can recognize it when the user places `_type: my_custom_memory` in the memory config.
+
+   :::{note}
+   The `name="my_custom_memory"` ensures that NeMo Agent toolkit can recognize it when the user places `_type: my_custom_memory` in the memory config.
+   :::
 
 2. **Implement a {py:class}`~nat.memory.interfaces.MemoryEditor`** that uses your backend**:
    ```python
@@ -147,7 +150,7 @@ Then either:
 **At runtime**, you typically see code like:
 
 ```python
-memory_client = builder.get_memory_client(<memory_config_name>)
+memory_client = await builder.get_memory_client(<memory_config_name>)
 await memory_client.add_items([MemoryItem(...), ...])
 ```
 
@@ -164,7 +167,7 @@ from nat.memory.models import MemoryItem
 from langchain_core.tools import ToolException
 
 async def add_memory_tool_action(item: MemoryItem, memory_name: str):
-    memory_client = builder.get_memory_client(memory_name)
+    memory_client = await builder.get_memory_client(memory_name)
     try:
         await memory_client.add_items([item])
         return "Memory added successfully"

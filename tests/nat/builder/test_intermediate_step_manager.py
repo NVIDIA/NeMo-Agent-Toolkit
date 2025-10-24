@@ -96,6 +96,32 @@ def _payload(step_id=None, name="step", etype: IntermediateStepType = Intermedia
 # --------------------------------------------------------------------------- #
 
 
+def test_context_returns_same_manager_instance(ctx: Context):
+    """Test that Context.intermediate_step_manager returns the same instance on multiple accesses."""
+    # Get the manager twice
+    mgr1 = ctx.intermediate_step_manager
+    mgr2 = ctx.intermediate_step_manager
+
+    # They should be the same instance
+    assert mgr1 is mgr2
+
+    # Test that START and END events work correctly when accessed through the same context
+    pay = _payload()
+    mgr1.push_intermediate_step(pay)
+
+    # step should be in the outstanding dict
+    assert pay.UUID in mgr1._outstanding_start_steps
+    # and should also be accessible through mgr2 since they're the same instance
+    assert pay.UUID in mgr2._outstanding_start_steps
+
+    # END the step through mgr2
+    mgr2.push_intermediate_step(_payload(step_id=pay.UUID, etype=IntermediateStepType.LLM_END))
+
+    # step should be removed from both (since they're the same instance)
+    assert pay.UUID not in mgr1._outstanding_start_steps
+    assert pay.UUID not in mgr2._outstanding_start_steps
+
+
 def test_start_pushes_event_and_tracks_open_step(mgr: IntermediateStepManager, output_steps: list[IntermediateStep]):
     pay = _payload()
     mgr.push_intermediate_step(pay)

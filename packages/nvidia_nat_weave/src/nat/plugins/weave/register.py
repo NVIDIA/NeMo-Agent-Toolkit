@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import typing
 
 from pydantic import Field
 
@@ -27,7 +28,11 @@ logger = logging.getLogger(__name__)
 class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
     project: str = Field(description="The W&B project name.")
-    entity: str | None = Field(default=None, description="The W&B username or team name.")
+    entity: str | None = Field(default=None,
+                               description="The W&B username or team name.",
+                               deprecated=('This field is deprecated and will be removed in future versions. '
+                                           'This value is set automatically by the weave library, and setting it will '
+                                           'have no effect.'))
     redact_pii: bool = Field(default=False, description="Whether to redact PII from the traces.")
     redact_pii_fields: list[str] | None = Field(
         default=None,
@@ -37,6 +42,8 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
         default=None,
         description="Additional keys to redact from traces beyond the default (api_key, auth_headers, authorization).")
     verbose: bool = Field(default=False, description="Whether to enable verbose logging.")
+    attributes: dict[str, typing.Any] | None = Field(default=None,
+                                                     description="Custom attributes to include in the traces.")
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
@@ -67,4 +74,7 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
         for key in config.redact_keys:
             sanitize.add_redact_key(key)
 
-    yield WeaveExporter(project=config.project, entity=config.entity, verbose=config.verbose)
+    yield WeaveExporter(project=config.project,
+                        entity=config.entity,
+                        verbose=config.verbose,
+                        attributes=config.attributes)

@@ -1,0 +1,199 @@
+---
+description: Follow these rules when the user's request involves writing, creating, or modifying integration tests for NeMo Agent Toolkit workflows
+globs:
+alwaysApply: false
+---
+
+# Integration Testing Guidelines
+
+Follow these rules when writing integration tests for NeMo Agent toolkit workflows.
+
+## Required Test Structure
+
+Every integration test MUST include the decorators:
+
+```python
+@pytest.mark.integration
+async def test_workflow():
+    from nat.test.utils import locate_example_config, run_workflow
+    from workflow_package.register import WorkflowConfig
+
+    config_file = locate_example_config(WorkflowConfig)
+    await run_workflow(config_file=config_file, question="test", expected_answer="answer")
+```
+
+### Decorator Purposes
+
+- `@pytest.mark.slow` - Tests taking longer than 30 seconds
+- `@pytest.mark.integration` - Tests requiring external services or API keys
+- `@pytest.mark.usefixtures(...)` - Ensures required fixtures are available
+
+## API Key Fixtures
+
+Available from `nvidia-nat-test` package:
+
+- `nvidia_api_key`, `openai_api_key`, `tavily_api_key`
+- `mem0_api_key`, `azure_openai_api_key`
+- `serp_api_key`, `serperdev_api_key`
+
+Multiple fixtures: `@pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")`
+
+## Test Utility Functions
+
+### locate_example_config()
+
+Locates configuration files relative to workflow configuration class:
+
+```python
+from nat.test.utils import locate_example_config
+
+config_file = locate_example_config(WorkflowConfig)  # finds config.yml
+config_file = locate_example_config(WorkflowConfig, "config-alt.yml")
+```
+
+### run_workflow()
+
+Runs workflow and validates expected answer:
+
+```python
+from nat.test.utils import run_workflow
+
+# Basic usage - case-insensitive matching
+await run_workflow(
+    config_file=config_file,
+    question="What are LLMs?",
+    expected_answer="Large Language Model"
+)
+
+# Custom validation
+result = await run_workflow(
+    config_file=config_file,
+    question="What are LLMs?",
+    expected_answer="",
+    assert_expected_answer=False
+)
+assert "large language model" in result.lower()
+
+# Using config object instead of file
+from nat.runtime.loader import load_config
+config = load_config(config_file)
+config.retrievers['retriever'].uri = HttpUrl(url=service_uri)
+await run_workflow(config=config, question="...", expected_answer="...")
+```
+
+## Workflows Without Configuration Classes
+
+For YAML-only workflows:
+
+```python
+from pathlib import Path
+
+config_file = Path(__file__).parent / "configs/config.yml"
+await run_workflow(config_file=config_file, question="...", expected_answer="...")
+```
+
+## Service Fixtures
+
+Available service fixtures that ensure services are running:
+
+- `milvus_uri`, `etcd_url`, `redis_url`
+- `mysql_connection_info`, `opensearch_url`
+- `phoenix_url`, `minio_client`
+
+Example:
+
+```python
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_workflow(milvus_uri: str):
+    from pydantic import HttpUrl
+    from nat.runtime.loader import load_config
+    from nat.test.utils import locate_example_config, run_workflow
+
+    config_file = locate_example_config(WorkflowConfig)
+    config = load_config(config_file)
+    config.retrievers['retriever'].uri = HttpUrl(url=milvus_uri)
+
+    await run_workflow(config=config, question="test", expected_answer="answer")
+```
+
+## Creating Custom Service Fixtures
+
+Pattern for new service fixtures:
+
+```python
+import os
+import pytest
+
+@pytest.fixture(name="service_uri", scope="session")
+def service_uri_fixture(fail_missing: bool = False) -> str:
+    """Ensure service is running and provide connection URI."""
+    host = os.getenv("NAT_CI_SERVICE_HOST", "localhost")
+    port = os.getenv("NAT_CI_SERVICE_PORT", "1234")
+    uri = f"http://{host}:{port}"
+
+    try:
+        # Lazy import - optional dependency
+        from service_library import ServiceClient
+        ServiceClient(uri=uri).ping()
+        return uri
+    except Exception:
+        reason = f"Unable to connect to Service at {uri}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+```
+
+Key practices:
+
+- Use `scope="session"` for service fixtures
+- Lazy import service libraries inside fixture
+- Allow configuration via environment variables, prefixed with `NAT_CI_`
+- Skip tests if service unavailable (unless `--fail_missing`)
+- Add new services to `tests/test_data/docker-compose.services.yml`
+
+## Best Practices
+
+### DO
+
+- Use `@pytest.mark.integration` decorator, and optionally the `@pytest.mark.slow` decorator for slow tests
+- Use `@pytest.mark.usefixtures()` for required API keys
+- Use `locate_example_config()` for workflows with config classes
+- Use `run_workflow()` for consistent test execution
+- Use simple, predictable questions and expected answers
+- Override config values to use test service URIs from fixtures
+- Import test utilities within test functions (not module level)
+- Make tests async with `async def`
+- Use session-scoped fixtures for services
+- Use lazy imports in fixtures for optional dependencies
+
+### DON'T
+
+- Hard-code service URLs (use fixtures instead)
+- Use complex questions with unpredictable LLM responses
+- Import third-party service libraries at module level in fixtures
+- Use function scope for service fixtures (use session scope)
+- Fail tests when services are unavailable (skip them instead)
+
+## Running Integration Tests
+
+```bash
+# Set API keys
+export NVIDIA_API_KEY=<key>
+
+# Start services
+docker compose -f tests/test_data/docker-compose.services.yml up -d
+
+# Run tests
+pytest --run_slow --run_integration
+
+# Clean up
+docker compose -f tests/test_data/docker-compose.services.yml down
+```
+
+## Reference
+
+- Test utilities and fixtures: `packages/nvidia_nat_test/src/nat/test/plugin.py`
+- Docker Compose services: `tests/test_data/docker-compose.services.yml`
+- Full documentation: [Running Tests](mdc:docs/source/resources/running-tests.md)
