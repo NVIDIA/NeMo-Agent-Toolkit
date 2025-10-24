@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import typing
 
 from pydantic import Field
 
@@ -41,6 +42,8 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
         default=None,
         description="Additional keys to redact from traces beyond the default (api_key, auth_headers, authorization).")
     verbose: bool = Field(default=False, description="Whether to enable verbose logging.")
+    attributes: dict[str, typing.Any] | None = Field(default=None,
+                                                     description="Custom attributes to include in the traces.")
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
@@ -71,4 +74,7 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
         for key in config.redact_keys:
             sanitize.add_redact_key(key)
 
-    yield WeaveExporter(project=config.project, entity=config.entity, verbose=config.verbose)
+    yield WeaveExporter(project=config.project,
+                        entity=config.entity,
+                        verbose=config.verbose,
+                        attributes=config.attributes)

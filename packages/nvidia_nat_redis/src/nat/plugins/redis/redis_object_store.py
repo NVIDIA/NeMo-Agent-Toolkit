@@ -33,7 +33,7 @@ class RedisObjectStore(ObjectStore):
     Each object is stored as a single binary value at key "nat/object_store/{bucket_name}/{object_key}".
     """
 
-    def __init__(self, *, bucket_name: str, host: str, port: int, db: int):
+    def __init__(self, *, bucket_name: str, host: str, port: int, db: int, password: str | None = None):
 
         super().__init__()
 
@@ -41,6 +41,7 @@ class RedisObjectStore(ObjectStore):
         self._host = host
         self._port = port
         self._db = db
+        self._password = password
         self._client: redis.Redis | None = None
 
     async def __aenter__(self) -> "RedisObjectStore":
@@ -52,6 +53,7 @@ class RedisObjectStore(ObjectStore):
             host=self._host,
             port=self._port,
             db=self._db,
+            password=self._password,
             socket_timeout=5.0,
             socket_connect_timeout=5.0,
         )

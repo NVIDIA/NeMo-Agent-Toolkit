@@ -175,6 +175,10 @@ class MCPFrontEndPluginWorkerBase(ABC):
             filtered_functions: dict[str, Function] = {}
             for function_name, function in functions.items():
                 if function_name in self.front_end_config.tool_names:
+                    # Treat current tool_names as function names, so check if the function name is in the list
+                    filtered_functions[function_name] = function
+                elif any(function_name.startswith(f"{group_name}.") for group_name in self.front_end_config.tool_names):
+                    # Treat tool_names as function group names, so check if the function name starts with the group name
                     filtered_functions[function_name] = function
                 else:
                     logger.debug("Skipping function %s as it's not in tool_names", function_name)

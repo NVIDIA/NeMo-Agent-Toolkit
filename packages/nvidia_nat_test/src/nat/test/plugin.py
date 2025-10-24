@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import os
+import random
 import subprocess
+import time
 import types
 import typing
 from collections.abc import AsyncGenerator
@@ -25,6 +27,8 @@ import pytest
 import pytest_asyncio
 
 if typing.TYPE_CHECKING:
+    import langsmith.client
+
     from docker.client import DockerClient
 
 
@@ -262,6 +266,40 @@ def require_weave_fixture(fail_missing: bool) -> types.ModuleType:
         pytest.skip(reason=reason)
 
 
+@pytest.fixture(name="langsmith_api_key", scope='session')
+def langsmith_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a LangSmith API key.
+    """
+    yield require_env_variables(
+        varnames=["LANGSMITH_API_KEY"],
+        reason="LangSmith integration tests require the `LANGSMITH_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="langsmith_client")
+def langsmith_client_fixture(langsmith_api_key: str, fail_missing: bool) -> "langsmith.client.Client":
+    try:
+        import langsmith.client
+        client = langsmith.client.Client()
+        return client
+    except ImportError:
+        reason = "LangSmith integration tests require the `langsmith` package to be installed."
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="langsmith_project_name")
+def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client") -> Generator[str]:
+    # Createa a unique project name for each test run
+    project_name = f"nat-e2e-test-{time.time()}-{random.random()}"
+    langsmith_client.create_project(project_name)
+    yield project_name
+
+    langsmith_client.delete_project(project_name=project_name)
+
+
 @pytest.fixture(name="require_docker", scope='session')
 def require_docker_fixture(fail_missing: bool) -> "DockerClient":
     """
@@ -447,14 +485,15 @@ def fixture_redis_server(fail_missing: bool) -> Generator[dict[str, str | int]]:
     host = os.environ.get("NAT_CI_REDIS_HOST", "localhost")
     port = int(os.environ.get("NAT_CI_REDIS_PORT", "6379"))
     db = int(os.environ.get("NAT_CI_REDIS_DB", "0"))
+    password = os.environ.get("REDIS_PASSWORD", "redis")
     bucket_name = os.environ.get("NAT_CI_REDIS_BUCKET_NAME", "test")
 
     try:
         import redis
-        client = redis.Redis(host=host, port=port, db=db)
+        client = redis.Redis(host=host, port=port, db=db, password=password)
         if not client.ping():
             raise RuntimeError("Failed to connect to Redis")
-        yield {"host": host, "port": port, "db": db, "bucket_name": bucket_name}
+        yield {"host": host, "port": port, "db": db, "bucket_name": bucket_name, "password": password}
     except ImportError:
         if fail_missing:
             raise

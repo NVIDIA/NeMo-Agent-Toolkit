@@ -24,6 +24,7 @@
 # without an express license agreement from NVIDIA CORPORATION or
 # its affiliates is strictly prohibited.
 
+import copy
 import os
 import sys
 import typing
@@ -597,3 +598,16 @@ def register_empty_function_fixture():
             return
 
         yield inner
+
+
+@pytest.fixture(name="reset_global_type_converter")
+def reset_global_type_converter_fixture():
+    """
+    Restore the GlobalTypeConverter to its previous state after a test that manipulates it in some way.
+    """
+    from nat.utils.type_converter import GlobalTypeConverter
+
+    orig_converters = copy.deepcopy(GlobalTypeConverter.get()._converters)
+
+    yield
+    GlobalTypeConverter.get()._converters = orig_converters
