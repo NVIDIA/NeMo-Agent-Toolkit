@@ -35,12 +35,15 @@ Create a new Trace Ingestion project in DBNL. To create a new project in DBNL:
 3. Add a name for your project
 4. Add a LLM connection to your project
 5. Select Trace Ingestion as the project Data Source
-6. Click on Generate API Token and copy the generated **API Token**
-7. Copy the generated **Project Id** from the code snippet
+6. Click on Generate API Token and note down the generated **API Token**
+7. Note down the **Project Id** for the project
 
 ### Step 3: Configure Your Environment
+
 Set the following environment variables in your terminal:
+
 ```bash
+# DBNL_API_URL should point to your deployment API URL (e.g. http://localhost:8080/api)
 export DBNL_API_URL=<your_api_url>
 export DBNL_API_TOKEN=<your_api_token>
 export DBNL_PROJECT_ID=<your_project_id>
