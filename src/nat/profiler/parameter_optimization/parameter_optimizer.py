@@ -136,6 +136,7 @@ def optimize_parameters(
     # Save final results (out_dir already created and defined above)
     with (out_dir / "optimized_config.yml").open("w") as fh:
         yaml.dump(tuned_cfg.model_dump(), fh)
+        # yaml.dump(tuned_cfg.model_dump(mode='json'), fh)
     with (out_dir / "trials_dataframe_params.csv").open("w") as fh:
         # Export full trials DataFrame (values, params, timings, etc.).
         df = study.trials_dataframe()
@@ -157,6 +158,14 @@ def optimize_parameters(
             # Some Optuna versions return a dict in a single user_attrs column.
             df["rep_scores"] = df["user_attrs"].apply(lambda d: d.get("rep_scores") if isinstance(d, dict) else None)
             df = df.drop(columns=["user_attrs"])
+
+        # Add Pareto optimal column
+        # Get Pareto optimal trial numbers from Optuna study
+        pareto_trials = study.best_trials
+        pareto_trial_numbers = {trial.number for trial in pareto_trials}
+        # Add boolean column indicating if trial is Pareto optimal
+        df["pareto_optimal"] = df["number"].isin(pareto_trial_numbers)
+
         df.to_csv(fh, index=False)
 
     # Generate Pareto front visualizations
