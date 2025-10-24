@@ -14,6 +14,8 @@
 # limitations under the License.
 
 from pydantic import Field
+from pydantic import SecretStr
+from pydantic import field_serializer
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_object_store
@@ -29,7 +31,13 @@ class RedisObjectStoreClientConfig(ObjectStoreBaseConfig, name="redis"):
     db: int = Field(default=0, description="The Redis logical database number")
     port: int = Field(default=6379, description="The port of the Redis server")
     bucket_name: str = Field(description="The name of the bucket to use for the object store")
-    password: str | None = Field(default=None, description="The password for the Redis server")
+    password: SecretStr | None = Field(default=None, description="The password for the Redis server")
+
+    @field_serializer('password')
+    def dump_secret(self, v: SecretStr | None) -> str | None:
+        if v is None:
+            return None
+        return v.get_secret_value()
 
 
 @register_object_store(config_type=RedisObjectStoreClientConfig)
