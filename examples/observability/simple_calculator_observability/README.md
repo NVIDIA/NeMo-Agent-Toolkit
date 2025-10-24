@@ -251,6 +251,36 @@ Transmit traces to Galileo for workflow observability.
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-galileo.yml --input "Is 100 > 50?"
     ```
 
+### Analyze Traces with DBNL
+
+[DBNL](https://www.distributional.com/) helps you undestand your agent by analyzing your traces.
+
+1. Install DBNL:
+
+    Visit [https://docs.dbnl.com/](https://docs.dbnl.com/) to install DBNL.
+
+2. Create a trace ingestion project:
+
+    Navigate to your DBNL deployment and go to Projects > + New Project
+
+    Create a trace ingestion project and generate an API token
+
+    Take note of the API token and project id
+
+3. Set your DBNL credentials:
+
+    ```bash
+    # DBNL_API_URL should point to your deployment API URL (e.g. http://localhost:8080/api/)
+    export DBNL_API_URL=<your_api_url>
+    export DBNL_API_TOKEN=<your_api_token>
+    export DBNL_PROJECT_ID=<your_project_id>
+    ```
+
+4. Run the workflow
+
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-dbnl.yml --input "Is 100 > 50?"
+    ```
 
 ## Configuration Files
 
@@ -266,6 +296,7 @@ The example includes multiple configuration files for different observability pl
 | `config-patronus.yml` | Patronus | AI safety and compliance monitoring |
 | `config-catalyst.yml` | Catalyst | RagaAI Catalyst integration |
 | `config-galileo.yml` | Galileo | Galileo integration |
+| `config-dbnl.yml` | DBNL | AI product analytics |
 
 ## What Gets Traced
 
