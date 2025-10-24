@@ -1,0 +1,132 @@
+# Example configuration for nvidia-nat-vanna package
+# This demonstrates how to use the text2sql and execute_db_query functions
+
+general:
+  use_uvloop: true
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: INFO
+
+functions:
+  # Text-to-SQL function using Vanna
+  text2sql:
+    _type: text2sql
+    llm_name: nim_llm
+    embedder_name: nim_embedder
+    milvus_retriever: milvus_retriever
+    # Database configuration
+    database_type: databricks
+    databricks_server_hostname: "${DATABRICKS_SERVER_HOSTNAME}"
+    databricks_http_path: "${DATABRICKS_HTTP_PATH}"
+    databricks_access_token: "${DATABRICKS_ACCESS_TOKEN}"
+    db_catalog: "main"
+    db_schema: "default"
+
+    # AsyncMilvus configuration
+    milvus_host: "${MILVUS_HOST:-localhost}"
+    milvus_port: 19530
+    milvus_user: "root"
+    milvus_db_name: "default"
+
+    # Vanna settings
+    allow_llm_to_see_data: false
+    execute_sql: false
+    train_on_startup: true  # Turn off after training to avoid re-training
+    n_results: 5
+    sql_collection: "vanna_sql_v0"
+    ddl_collection: "vanna_ddl_v0"
+    doc_collection: "vanna_documentation_v0"
+
+  # Database query execution function
+  execute_db_query:
+    _type: execute_db_query
+    database_type: databricks
+    databricks_server_hostname: "${DATABRICKS_SERVER_HOSTNAME}"
+    databricks_http_path: "${DATABRICKS_HTTP_PATH}"
+    databricks_access_token: "${DATABRICKS_ACCESS_TOKEN}"
+    db_catalog: "main"
+    db_schema: "default"
+    max_rows: 100
+
+# LLM configuration
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    api_key: "${NVIDIA_API_KEY}"
+    base_url: https://integrate.api.nvidia.com/v1
+    temperature: 0.0
+    max_tokens: 2000
+
+  oai_oss_120b:
+    _type: openai
+    model_name: openai/gpt-oss-120b
+    base_url: https://integrate.api.nvidia.com/v1
+    api_key: ${NVIDIA_API_KEY}
+    temperature: 1
+    top_p: 1
+    max_tokens: 4096
+
+  oai_oss_20b:
+    _type: openai
+    model_name: openai/gpt-oss-20b
+    base_url: https://integrate.api.nvidia.com/v1
+    api_key: ${NVIDIA_API_KEY}
+    temperature: 1
+    top_p: 1
+    max_tokens: 4096
+
+  nemotron_253b:
+    _type: nim
+    model_name: nvidia/llama-3.1-nemotron-ultra-253b-v1
+    base_url: https://integrate.api.nvidia.com/v1
+    api_key: ${NVIDIA_API_KEY}
+    temperature: 0.0
+    max_tokens: 4096
+
+  nemotron_49b_1_5:
+    _type: nim
+    model_name: nvidia/llama-3.3-nemotron-super-49b-v1.5
+    base_url: https://integrate.api.nvidia.com/v1
+    api_key: ${NVIDIA_API_KEY}
+    temperature: 0.0
+    max_tokens: 4096
+
+  ds_v31:
+    _type: openai
+    model_name: deepseek-ai/deepseek-v3.1
+    base_url: https://integrate.api.nvidia.com/v1
+    api_key: ${NVIDIA_API_KEY}
+    temperature: 0
+    max_tokens: 4096
+
+# Embedder configuration
+embedders:
+  nim_embedder:
+    _type: nim
+    model_name: nvidia/llama-3.2-nv-embedqa-1b-v2
+    api_key: "${NVIDIA_API_KEY}"
+    base_url: https://integrate.api.nvidia.com/v1
+
+retrievers:
+  milvus_retriever:
+    _type: milvus_retriever
+    uri: "${MILVUS_URI:-http://localhost:19530}"
+    connection_args:
+      user: "root"
+      password: "${MILVUS_PASSWORD}"
+      db_name: "default"
+    embedding_model: nim_embedder
+    content_field: text
+
+workflow:
+  _type: rewoo_agent
+  tool_names:
+    - text2sql
+    - execute_db_query
+  llm_name: nim_llm
+  verbose: true
+  max_history: 10
+  tool_call_max_retries: 3
