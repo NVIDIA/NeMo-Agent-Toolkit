@@ -20,7 +20,8 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter as OTLPSpanExporterGRPC
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter as OTLPSpanExporterHTTP
 from starlette.datastructures import Headers
 
 from nat.builder.context import ContextState
@@ -84,7 +85,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterInitialization:
 
         assert exporter is not None
         assert hasattr(exporter, '_exporter')
-        assert isinstance(exporter._exporter, OTLPSpanExporter)
+        assert isinstance(exporter._exporter, OTLPSpanExporterHTTP)
         assert isinstance(exporter, OTLPSpanAdapterExporter)
 
     def test_initialization_with_redaction_params(self, basic_exporter_config, sample_redaction_callback):
@@ -151,7 +152,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterInitialization:
 
         assert exporter is not None
         assert hasattr(exporter, '_exporter')
-        assert isinstance(exporter._exporter, OTLPSpanExporter)
+        assert isinstance(exporter._exporter, OTLPSpanExporterHTTP)
         assert exporter._resource.attributes["service.name"] == "test-service"
         assert exporter._resource.attributes["service.version"] == "1.0"
 
@@ -625,7 +626,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterIntegration:
 
         return should_redact
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     async def test_end_to_end_with_redaction_and_tagging(
         self,
         mock_otlp_exporter_class,
@@ -665,7 +666,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterIntegration:
         # Verify that export was called
         mock_otlp_exporter.export.assert_called()
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     async def test_redaction_only_configuration(
         self,
         mock_otlp_exporter_class,
@@ -702,7 +703,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterIntegration:
 
         mock_otlp_exporter.export.assert_called()
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     async def test_privacy_tagging_only_configuration(
         self,
         mock_otlp_exporter_class,
@@ -780,7 +781,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterInheritance:
         assert hasattr(exporter, 'add_processor')
         assert callable(getattr(exporter, 'add_processor'))
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     def test_otlp_exporter_initialization(self, mock_otlp_exporter_class, basic_exporter_config):
         """Test that the underlying OTLP exporter is properly initialized."""
         headers = basic_exporter_config["headers"]
@@ -912,7 +913,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterExportFunctionality:
         span.set_resource = Mock()
         return span
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     async def test_export_otel_spans_with_processing(self,
                                                      mock_otlp_exporter_class,
                                                      basic_exporter_config,
@@ -937,7 +938,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterExportFunctionality:
         # Verify the OTLP exporter was called
         mock_otlp_exporter.export.assert_called_once_with(spans)
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     async def test_export_processed_with_resource_attributes(
         self,
         mock_otlp_exporter_class,
@@ -964,7 +965,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterExportFunctionality:
         # Verify export was called
         mock_otlp_exporter.export.assert_called_once()
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.logger')
     async def test_export_with_exception_handling(
         self,
@@ -1001,7 +1002,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterBatching:
         """Basic configuration for the exporter."""
         return {"endpoint": "https://api.example.com/v1/traces", "headers": {"Authorization": "Bearer test-token"}}
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     async def test_batching_with_redaction_and_tagging(self, mock_otlp_exporter_class, basic_exporter_config):
         """Test that batching works correctly with redaction and tagging processors."""
         # Setup mock
@@ -1101,7 +1102,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterPublicInterface:
         # Should complete without errors
         exporter.on_complete()
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     async def test_export_otel_spans_error_handling(self, mock_otlp_exporter_class, basic_exporter_config):
         """Test that export_otel_spans handles exceptions gracefully."""
         # Setup mock to raise exception
@@ -1122,7 +1123,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterPublicInterface:
         # Verify the underlying exporter was called
         mock_otlp_exporter.export.assert_called_once_with(spans)
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     async def test_export_processed_with_single_span(self, mock_otlp_exporter_class, basic_exporter_config):
         """Test export_processed with a single OtelSpan."""
         mock_otlp_exporter = Mock()
@@ -1145,7 +1146,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterPublicInterface:
         # Verify export was called
         mock_otlp_exporter.export.assert_called_once()
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     async def test_export_processed_with_span_list(self, mock_otlp_exporter_class, basic_exporter_config):
         """Test export_processed with a list of OtelSpans."""
         mock_otlp_exporter = Mock()
@@ -1169,7 +1170,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterPublicInterface:
         # Verify export was called
         mock_otlp_exporter.export.assert_called_once()
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     @patch('nat.plugins.opentelemetry.otel_span_exporter.logger')
     async def test_export_processed_with_invalid_type(self,
                                                       mock_logger,
@@ -1205,7 +1206,7 @@ class TestOTLPSpanHeaderRedactionAdapterExporterPublicInterface:
         # but we can verify the method completed successfully)
         assert exporter is not None
 
-    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporter')
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterHTTP')
     async def test_context_manager_lifecycle(self, mock_otlp_exporter_class, basic_exporter_config):
         """Test the complete lifecycle using async context manager."""
         mock_otlp_exporter = Mock()
@@ -1344,3 +1345,142 @@ class TestOTLPSpanHeaderRedactionAdapterExporterRealWorldScenarios:
             })
 
         assert exporter is not None
+
+
+class TestOTLPSpanHeaderRedactionAdapterExporterGRPCProtocol:
+    """Test suite for gRPC protocol support in OTLPSpanHeaderRedactionAdapterExporter."""
+
+    @pytest.fixture
+    def basic_exporter_config(self):
+        """Basic configuration for the exporter."""
+        return {
+            "endpoint": "https://api.example.com:4317/v1/traces",
+            "headers": {
+                "Authorization": "Bearer test-token"
+            },
+            "batch_size": 50,
+            "flush_interval": 5.0
+        }
+
+    def test_initialization_with_grpc_protocol(self, basic_exporter_config):
+        """Test OTLPSpanHeaderRedactionAdapterExporter initialization with gRPC protocol."""
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
+                                                          headers=basic_exporter_config["headers"],
+                                                          protocol='grpc',
+                                                          redaction_callback=lambda x: x)
+
+        assert exporter is not None
+        assert hasattr(exporter, '_exporter')
+        assert isinstance(exporter._exporter, OTLPSpanExporterGRPC)
+
+    def test_initialization_with_http_protocol_explicit(self, basic_exporter_config):
+        """Test OTLPSpanHeaderRedactionAdapterExporter initialization with explicit HTTP protocol."""
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
+                                                          headers=basic_exporter_config["headers"],
+                                                          protocol='http',
+                                                          redaction_callback=lambda x: x)
+
+        assert exporter is not None
+        assert hasattr(exporter, '_exporter')
+        assert isinstance(exporter._exporter, OTLPSpanExporterHTTP)
+
+    def test_initialization_with_invalid_protocol(self, basic_exporter_config):
+        """Test that invalid protocol raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid protocol: ftp"):
+            OTLPSpanHeaderRedactionAdapterExporter(
+                endpoint=basic_exporter_config["endpoint"],
+                headers=basic_exporter_config["headers"],
+                protocol='ftp',  # type: ignore
+                redaction_callback=lambda x: x)
+
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterGRPC')
+    def test_grpc_exporter_initialization_with_redaction(self, mock_grpc_exporter_class, basic_exporter_config):
+        """Test that gRPC exporter is initialized correctly with redaction."""
+        headers = basic_exporter_config["headers"]
+        endpoint = basic_exporter_config["endpoint"]
+
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=endpoint,
+                                                          headers=headers,
+                                                          protocol='grpc',
+                                                          redaction_callback=lambda x: "***",
+                                                          redaction_attributes=["password", "api_key"])
+
+        # Verify OTLPSpanExporterGRPC was initialized with correct parameters
+        mock_grpc_exporter_class.assert_called_once_with(endpoint=endpoint, headers=headers)
+
+        # Verify redaction processor was added
+        assert len(exporter._processors) > 0
+
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterGRPC')
+    async def test_grpc_export_with_redaction(self, mock_grpc_exporter_class, basic_exporter_config):
+        """Test that export works correctly with gRPC and redaction."""
+        # Setup mock
+        mock_grpc_exporter = Mock()
+        mock_grpc_exporter.export = Mock()
+        mock_grpc_exporter_class.return_value = mock_grpc_exporter
+
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
+                                                          headers=basic_exporter_config["headers"],
+                                                          protocol='grpc',
+                                                          redaction_callback=lambda x: "[REDACTED]",
+                                                          redaction_attributes=["sensitive_field"])
+
+        # Create mock span
+        mock_span = Mock()
+        mock_span.set_resource = Mock()
+
+        # Test export
+        await exporter.export_otel_spans([mock_span])
+
+        # Verify the gRPC exporter was called
+        mock_grpc_exporter.export.assert_called_once()
+
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterGRPC')
+    def test_grpc_with_privacy_tagging(self, mock_grpc_exporter_class, basic_exporter_config):
+        """Test gRPC protocol with privacy tagging configuration."""
+        headers = basic_exporter_config["headers"]
+        endpoint = basic_exporter_config["endpoint"]
+
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=endpoint,
+                                                          headers=headers,
+                                                          protocol='grpc',
+                                                          redaction_callback=lambda x: x,
+                                                          tags={"privacy.level": "high"})
+
+        # Verify initialization
+        mock_grpc_exporter_class.assert_called_once_with(endpoint=endpoint, headers=headers)
+        assert exporter is not None
+
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterGRPC')
+    def test_grpc_with_redaction_and_privacy_tagging(self, mock_grpc_exporter_class, basic_exporter_config):
+        """Test gRPC protocol with both redaction and privacy tagging."""
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
+                                                          headers=basic_exporter_config["headers"],
+                                                          protocol='grpc',
+                                                          redaction_callback=lambda x: "***",
+                                                          redaction_attributes=["password"],
+                                                          tags={"data.classification": "confidential"})
+
+        assert exporter is not None
+        # Verify gRPC exporter was created
+        mock_grpc_exporter_class.assert_called_once_with(endpoint=basic_exporter_config["endpoint"],
+                                                         headers=basic_exporter_config["headers"])
+        # Verify both processors were added
+        assert len(exporter._processors) >= 2
+
+    @patch('nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin.OTLPSpanExporterGRPC')
+    async def test_grpc_resource_attributes(self, mock_grpc_exporter_class, basic_exporter_config):
+        """Test that resource attributes work with gRPC protocol."""
+        # Setup mock
+        mock_grpc_exporter = Mock()
+        mock_grpc_exporter.export = Mock()
+        mock_grpc_exporter_class.return_value = mock_grpc_exporter
+
+        resource_attributes = {"service.name": "grpc-redaction-service", "version": "2.0"}
+        exporter = OTLPSpanHeaderRedactionAdapterExporter(endpoint=basic_exporter_config["endpoint"],
+                                                          protocol='grpc',
+                                                          resource_attributes=resource_attributes,
+                                                          redaction_callback=lambda x: x)
+
+        assert exporter._resource.attributes["service.name"] == "grpc-redaction-service"
+        assert exporter._resource.attributes["version"] == "2.0"
