@@ -108,8 +108,14 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
             # Add any tools needed by the react agent
             # This ensures the temporary agent has access to all the same tools
             for tool_name in original_config.tool_names:
-                tool_config = builder.get_function_config(tool_name)
-                await temp_builder.add_function(tool_name, tool_config)
+                # Check if it's a function group first
+                try:
+                    function_group_config = builder.get_function_group_config(tool_name)
+                    await temp_builder.add_function_group(tool_name, function_group_config)
+                except Exception:
+                    # If not a function group, treat it as a regular function
+                    tool_config = builder.get_function_config(tool_name)
+                    await temp_builder.add_function(tool_name, tool_config)
 
             # Create the retry agent with the original configuration
             temp_retry_agent = await temp_builder.add_function("retry_agent", retry_config)

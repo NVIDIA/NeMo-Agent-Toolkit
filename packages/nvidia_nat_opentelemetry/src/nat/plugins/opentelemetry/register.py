@@ -159,7 +159,8 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
                                   flush_interval=config.flush_interval,
                                   max_queue_size=config.max_queue_size,
                                   drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout)
+                                  shutdown_timeout=config.shutdown_timeout,
+                                  protocol="grpc")
 
 
 class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="galileo"):
