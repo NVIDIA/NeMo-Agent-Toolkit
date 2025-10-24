@@ -17,9 +17,10 @@ from abc import ABC
 from abc import abstractmethod
 
 from nat.builder.builder import Builder
-from nat.experimental.test_time_compute.models.ttc_item import TTCItem
-from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum, PipelineTypeEnum
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
+from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.experimental.test_time_compute.models.ttc_item import TTCItem
 
 
 class StrategyBase(ABC):
@@ -45,11 +46,11 @@ class StrategyBase(ABC):
                       items: list[TTCItem],
                       original_prompt: str | None = None,
                       agent_context: str | None = None,
-                      **kwargs) -> [TTCItem]:
+                      **kwargs) -> list[TTCItem]:
         pass
 
     @abstractmethod
-    def supported_pipeline_types(self) -> [PipelineTypeEnum]:
+    def supported_pipeline_types(self) -> list[PipelineTypeEnum]:
         """Return the stage types supported by this selector."""
         pass
 

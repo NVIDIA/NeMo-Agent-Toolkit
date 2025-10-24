@@ -23,7 +23,7 @@ source ${GITLAB_SCRIPT_DIR}/common.sh
 rapids-logger "Installing non-pip deps"
 get_lfs_files
 
-create_env group:dev group:docs
+create_env group:dev
 
 rapids-logger "Building documentation"
 make -C docs html

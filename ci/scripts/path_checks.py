@@ -22,6 +22,9 @@ from dataclasses import dataclass
 
 from gitutils import all_files
 
+# Allow empty comments in this file, this allows for in-line comments to apply to a section.
+# ruff: noqa: PLR2044
+
 # File path pairs to allowlist -- first is the file path, second is the path in the file
 ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     # allow references to data from configs
@@ -46,7 +49,7 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json",
     ),
     (
-        r"^examples/evaluation_and_profiling/email_phishing_analyzer/configs",
+        r"^examples/evaluation_and_profiling/email_phishing_analyzer/.*/configs",
         r"^examples/evaluation_and_profiling/email_phishing_analyzer/data",
     ),
     (
@@ -78,12 +81,22 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
     ),
     (
+        r"^examples/notebooks/launchables/GPU_Cluster_Sizing_with_NeMo_Agent_Toolkit.ipynb",
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml",
+    ),
+    (
         r"^docs/source/",
         r"^docs/source/_static",
+    ),
+    # allow MCP server references in documentation
+    (
+        r"^docs/source/workflows/mcp/.*\.md$",
+        r"^ghcr\.io/github/github-mcp-server",
     ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
+    "A/B",
     "and/or",
     "application/json",
     "CI/CD",
@@ -92,17 +105,22 @@ ALLOWLISTED_WORDS: set[str] = {
     "conversation/chat",
     "create/reinstall/delete",
     "copy/paste",
+    "delete/recreate",
     "edit/score",
     "file/console",
     "files/functions",
     "I/O",
+    "include/exclude",
     "Input/Observation",
     "input/output",
     "inputs/outputs",
     "JavaScript/TypeScript",
     "JSON/YAML",
+    "LangChain/LangGraph",
+    "LangChain/LangGraph.",
     "LTE/5G",
     "output/jobs/job_",
+    "POST/PUT",
     "predictions/forecasts",
     "provider/method.",
     "RagaAI/Catalyst",
@@ -136,6 +154,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
     # Time zones
     "[A-Z][a-z]+(_[A-Z][a-z]+)*/[A-Z][a-z]+(_[A-Z][a-z]+)*",
+    "ghcr\\.io/.*",  # Container registry references
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
@@ -146,8 +165,12 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     ),
     # ignore notebook-relative paths
     (
-        r"^examples/notebooks/retail_sales_agent/.*configs/",
-        r"^\./retail_sales_agent/data/",
+        r"^examples/notebooks/",
+        r".*(configs|data|src).*",
+    ),
+    (
+        r"^examples/frameworks/haystack_deep_research_agent/README.md",
+        r"^examples/frameworks/haystack_deep_research_agent/data/bedrock-ug.pdf",
     ),
     # ignore generated files
     (
@@ -260,7 +283,7 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
         A list of PathInfo objects.
     """
     paths = []
-    with open(filename, "r", encoding="utf-8") as f:
+    with open(filename, encoding="utf-8") as f:
         section: list[str] = []
         in_skipped_section: bool = False
         skip_next_line: bool = False
@@ -288,10 +311,9 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                     # ensure that we don't push a single-line block
                     if "```" not in block_type:
                         section.append(block_type)
-                else:
-                    # if it's empty, then we're done with the section
-                    if section:
-                        section.pop()
+                # if it's empty, then we're done with the section
+                elif section:
+                    section.pop()
 
             if filename.endswith("yml") or filename.endswith("yaml") or (section and section[-1] in ["yml", "yaml"]):
                 if any((key in line) for key in YAML_WHITELISTED_KEYS):

@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-general:
-  use_uvloop: true
 
 functions:
   hardware_check:
@@ -116,15 +114,15 @@ eval:
       # JSON representation of the offline CSV data (including just the alerts, the expected output, and the label)
       file_path: examples/advanced_agents/alert_triage_agent/data/offline_data.json
   evaluators:
-    rag_accuracy:
+    accuracy:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_rag_eval_llm
-    rag_groundedness:
+    groundedness:
       _type: ragas
       metric: ResponseGroundedness
       llm_name: nim_rag_eval_llm
-    rag_relevance:
+    relevance:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm

@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# path-check-skip-file
+
+functions:
+  weather_update_tool:
+    _type: nat_adk_demo/weather_update
+    description: "Get the current weather for a specified city"
+  get_city_time_tool:
+    _type: nat_adk_demo/get_city_time_tool
+
+llms:
+  llm:
+    _type: openai
+    model_name: gpt-5
+
+workflow:
+  _type: adk
+  name: adk_demo
+  llm: llm
+  tool_names: [weather_update_tool, get_city_time_tool]
+  description: "To get the current weather and time in a specific city"
+  prompt: >
+    You are a helpful agent who can answer user questions about weather in a city.
+    You also have a sub-agent that can answer questions about the time in a city.
+
+eval:
+  general:
+    output:
+      dir: ./.tmp/nat/examples/frameworks/adk_demo/eval/
+      cleanup: true
+    dataset:
+      _type: json
+      file_path: examples/frameworks/adk_demo/data/eval.json
+    profiler:
+      token_uniqueness_forecast: true
+      workflow_runtime_forecast: true
+      compute_llm_metrics: true
+      csv_exclude_io_text: true
+      prompt_caching_prefixes:
+        enable: true
+        min_frequency: 0.1
+      bottleneck_analysis:
+        enable_nested_stack: true
+      concurrency_spike_analysis:
+        enable: true
+        spike_threshold: 7

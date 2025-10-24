@@ -53,7 +53,7 @@ async def _get_llm(builder, llm_name, wrapper_type):
     return _LLM_CACHE[cache_key]
 
 
-async def llm_ainvoke(config, builder, user_prompt, system_prompt=None):
+async def llm_ainvoke(config, builder, user_prompt, system_prompt=None) -> str:
     """
     A helper function to invoke an LLM with a system prompt and user prompt.
     Uses a cached LLM instance if one exists for the given name and wrapper type.
@@ -69,7 +69,7 @@ async def llm_ainvoke(config, builder, user_prompt, system_prompt=None):
         prompt = ChatPromptTemplate([MessagesPlaceholder("msgs")])
     chain = prompt | llm
     result = await chain.ainvoke({"msgs": [HumanMessage(content=user_prompt)]})
-    return result.content
+    return result.text()
 
 
 def log_header(log_str: str, dash_length: int = 100, level: int = logging.DEBUG):
@@ -103,7 +103,7 @@ def preload_offline_data(offline_data_path: str | None, benign_fallback_data_pat
     _DATA_CACHE['offline_data'] = pd.read_csv(offline_data_path)
     logger.info("Preloaded test data from: %s", offline_data_path)
 
-    with open(benign_fallback_data_path, "r", encoding="utf-8") as f:
+    with open(benign_fallback_data_path, encoding="utf-8") as f:
         _DATA_CACHE['benign_fallback_offline_data'] = json.load(f)
     logger.info("Preloaded benign fallback data from: %s", benign_fallback_data_path)
 
@@ -145,7 +145,7 @@ def load_column_or_static(df, host_id, column):
         # Column missing from DataFrame, try loading from static JSON file
         static_data = _get_static_data()
         try:
-            return static_data[column]  # pylint: disable=unsubscriptable-object
+            return static_data[column]
         except KeyError as exc:
             raise KeyError(f"Column '{column}' not found in test and benign fallback data") from exc
     # Column exists in DataFrame, get value for this host
@@ -162,7 +162,7 @@ def load_column_or_static(df, host_id, column):
         # If data is None, empty, or NaN, try loading from static JSON file
         static_data = _get_static_data()
         try:
-            return static_data[column]  # pylint: disable=unsubscriptable-object
+            return static_data[column]
         except KeyError as exc:
             raise KeyError(f"Column '{column}' not found in static data") from exc
 

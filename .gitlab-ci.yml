@@ -34,15 +34,32 @@ stages:
   - upload
 
 variables:
-  UV_CACHE_DIR: .uv-cache
-  BUILD_NAT_COMPAT: "true"
-  GIT_SUBMODULE_STRATEGY: recursive
-  GIT_SUBMODULE_FORCE_HTTPS: "true"
   BUILD_AIQ_COMPAT: "true"
+  BUILD_NAT_COMPAT: "true"
+  CLICKHOUSE_USER: clickhouse
+  CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+  GIT_SUBMODULE_FORCE_HTTPS: "true"
+  GIT_SUBMODULE_STRATEGY: recursive
+  LANGFUSE_NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET}
+  LANGFUSE_SALT: ${LANGFUSE_SALT}
+  MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_USER: postgres
+  POSTGRES_DB: postgres
+  NAT_CI_ETCD_HOST: "etcd"
+  NAT_CI_LANGFUSE_BUCKET: "langfuse"
+  NAT_CI_LANGFUSE_HOST: "langfuse"
+  NAT_CI_MILVUS_HOST: "milvus"
+  NAT_CI_MINIO_HOST: "minio"
+  NAT_CI_MYSQL_HOST: "mysql"
+  NAT_CI_OPENSEARCH_URL: "http://opensearch:9200"
+  NAT_CI_PHOENIX_URL: "http://phoenix:6006"
+  NAT_CI_REDIS_HOST: "redis"
+  UV_CACHE_DIR: .uv-cache
   WORKSPACE_TMP: "${CI_PROJECT_DIR}/.tmp"
 
 default:
-  image: ghcr.io/astral-sh/uv:python3.12-bookworm
+  image: ghcr.io/astral-sh/uv:python3.13-bookworm
   cache:
     - key: $CI_COMMIT_REF_SLUG
       paths:
@@ -71,19 +88,159 @@ check:style:
 
 test:python_tests:
   stage: test
+  services:
+    - name: clickhouse/clickhouse-server
+      alias: clickhouse
+      pull_policy: if-not-present
+      variables:
+        CLICKHOUSE_DB: default
+
+    - name: minio/minio:RELEASE.2025-07-18T21-56-31Z
+      alias: minio
+      command: ["server", "/data", "--console-address", ":9001"]
+      pull_policy: if-not-present
+
+    - name: mysql:9.3
+      alias: mysql
+      pull_policy: if-not-present
+
+    - name: arizephoenix/phoenix:latest
+      alias: phoenix
+      pull_policy: if-not-present
+
+    - name: postgres:17
+      alias: postgres
+      pull_policy: if-not-present
+      variables:
+        TZ: UTC
+        PGTZ: UTC
+
+    - name: redis:8.0
+      alias: redis
+      pull_policy: if-not-present
+
+    - name: quay.io/coreos/etcd:v3.5.5
+      alias: etcd
+      command: ["etcd", "--advertise-client-urls", "http://0.0.0.0:2379", "--listen-client-urls", "http://0.0.0.0:2379"]
+      pull_policy: if-not-present
+
+    - name: milvusdb/milvus:v2.3.1
+      alias: milvus
+      variables:
+        ETCD_ENDPOINTS: etcd:2379
+        MINIO_ADDRESS: minio:9000
+      command: ["milvus", "run", "standalone"]
+      pull_policy: if-not-present
+
+    - name: opensearchproject/opensearch:2.11.1
+      alias: opensearch
+      pull_policy: if-not-present
+      variables:
+        discovery.type: "single-node"
+        plugins.security.disabled: "true"
+
+    - name: langfuse/langfuse-worker:3
+      alias: langfuse-worker
+      pull_policy: if-not-present
+      variables:
+        CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+        CLICKHOUSE_URL: http://clickhouse:8123
+        CLICKHOUSE_CLUSTER_ENABLED: false
+        DATABASE_HOST: postgres
+        DATABASE_USERNAME: ${POSTGRES_USER}
+        DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+        DATABASE_NAME: ${POSTGRES_DB}
+        DATABASE_ARGS: ""
+        LANGFUSE_USE_AZURE_BLOB: false
+        LANGFUSE_S3_EVENT_UPLOAD_BUCKET: ${NAT_CI_LANGFUSE_BUCKET}
+        LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+        LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minioadmin
+        LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: minioadmin
+        LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+        LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: true
+        LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+        LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: ${NAT_CI_LANGFUSE_BUCKET}
+        LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+        LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minioadmin
+        LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: minioadmin
+        LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+        LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: true
+        LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+        LANGFUSE_S3_BATCH_EXPORT_ENABLED: false
+        LANGFUSE_S3_BATCH_EXPORT_BUCKET: ${NAT_CI_LANGFUSE_BUCKET}
+        LANGFUSE_S3_BATCH_EXPORT_PREFIX: exports/
+        LANGFUSE_S3_BATCH_EXPORT_REGION: auto
+        LANGFUSE_S3_BATCH_EXPORT_ENDPOINT: http://minio:9000
+        LANGFUSE_S3_BATCH_EXPORT_EXTERNAL_ENDPOINT: http://minio:9000
+        LANGFUSE_S3_BATCH_EXPORT_ACCESS_KEY_ID: minioadmin
+        LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY: minioadmin
+        LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE: true
+        NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET}
+        NEXTAUTH_URL: http://langfuse:3000
+        REDIS_HOST: redis
+        REDIS_PORT: 6379
+        SALT: ${LANGFUSE_SALT}
+
+    - name: langfuse/langfuse:3
+      alias: langfuse
+      pull_policy: if-not-present
+      variables:
+        CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+        CLICKHOUSE_URL: http://clickhouse:8123
+        CLICKHOUSE_CLUSTER_ENABLED: false
+        DATABASE_HOST: postgres
+        DATABASE_USERNAME: ${POSTGRES_USER}
+        DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+        DATABASE_NAME: ${POSTGRES_DB}
+        DATABASE_ARGS: ""
+        LANGFUSE_USE_AZURE_BLOB: false
+        LANGFUSE_S3_EVENT_UPLOAD_BUCKET: ${NAT_CI_LANGFUSE_BUCKET}
+        LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+        LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minioadmin
+        LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: minioadmin
+        LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+        LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: true
+        LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+        LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: ${NAT_CI_LANGFUSE_BUCKET}
+        LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+        LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minioadmin
+        LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: minioadmin
+        LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+        LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: true
+        LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+        LANGFUSE_S3_BATCH_EXPORT_ENABLED: false
+        LANGFUSE_S3_BATCH_EXPORT_BUCKET: ${NAT_CI_LANGFUSE_BUCKET}
+        LANGFUSE_S3_BATCH_EXPORT_PREFIX: exports/
+        LANGFUSE_S3_BATCH_EXPORT_REGION: auto
+        LANGFUSE_S3_BATCH_EXPORT_ENDPOINT: http://minio:9000
+        LANGFUSE_S3_BATCH_EXPORT_EXTERNAL_ENDPOINT: http://minio:9000
+        LANGFUSE_S3_BATCH_EXPORT_ACCESS_KEY_ID: minioadmin
+        LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY: minioadmin
+        LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE: true
+        NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET}
+        NEXTAUTH_URL: http://langfuse:3000
+        REDIS_HOST: redis
+        REDIS_PORT: 6379
+        SALT: ${LANGFUSE_SALT}
+        LANGFUSE_INIT_ORG_ID: test-org
+        LANGFUSE_INIT_PROJECT_ID: test-project
+        LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
+        LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+        LANGFUSE_INIT_USER_EMAIL: test@localhost.dev
+        LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_USER_PW}
+        HOSTNAME: 0.0.0.0
+
   script:
     - echo "Running tests"
     - ./ci/scripts/gitlab/tests.sh
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
   coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
   artifacts:
     when: always
     reports:
-      junit: report_*.xml
+      junit: pytest_junit_report*.xml
       coverage_report:
         coverage_format: cobertura  # or jacoco
-        path: report_pytest_coverage.xml
+        path: pytest_coverage_report*.xml
 
 docs:build:
   stage: docs
@@ -112,7 +269,15 @@ package:wheel:
       # Match  the transitional wheels
       - .tmp/wheels/nat/*/*/*.whl
     expire_in: 1 week
-
+  rules:
+    - if: $CI_CRON_NIGHTLY == "1"
+      when: always
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == 'develop-test'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH =~ /^release\/.*$/
 
 upload:artifactory:
   stage: upload
@@ -122,6 +287,5 @@ upload:artifactory:
   needs:
     - job: package:wheel
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_COMMIT_BRANCH == 'main'
     - if: $CI_COMMIT_TAG
+    - if: $CI_CRON_NIGHTLY == "1"

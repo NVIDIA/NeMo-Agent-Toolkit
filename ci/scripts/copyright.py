@@ -17,17 +17,12 @@
 
 import argparse
 import datetime
-import io
 import logging
 import os
 import re
 import sys
 
-# Now import gitutils. Ignore flake8 error here since there is no other way to
-# set up imports
-import gitutils  # noqa: E402
-
-# pylint: disable=global-statement
+import gitutils
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +46,7 @@ ExemptFiles: list[re.Pattern] = [
     re.compile(r"[^ \/\n]*docs/source/(_lib|_modules|_templates)/.*$"),
     re.compile(r"PULL_REQUEST_TEMPLATE.md"),  # Ignore the PR template,
     re.compile(r"[^ \/\n]*conda/environments/.*\.yaml$"),  # Ignore generated environment files
-    re.compile(r"^LICENSE\.md$"),  # Ignore the license file itself
+    re.compile(r"LICENSE\.md$"),  # Ignore the license file itself
     re.compile(r"^examples/.*/data/.*.md$"),  # Ignore data files in examples
 ]
 
@@ -94,8 +89,7 @@ def replace_current_year(line, start, end):
     # first turn a simple regex into double (if applicable). then update years
     res = CheckSimple.sub(r"Copyright (c) \1-\1, NVIDIA CORPORATION", line)
 
-    # pylint: disable=consider-using-f-string
-    res = CheckDouble.sub(r"Copyright (c) {:04d}-{:04d}, NVIDIA CORPORATION".format(start, end), res)
+    res = CheckDouble.sub(rf"Copyright (c) {start:04d}-{end:04d}, NVIDIA CORPORATION", res)
     return res
 
 
@@ -127,13 +121,12 @@ def insert_license(f, this_year, first_line):
     return [f, 1, "License inserted", replace_line]
 
 
-def check_copyright(  # pylint: disable=too-many-positional-arguments
-        f,
-        update_current_year,
-        verify_apache_v2=False,
-        update_start_year=False,
-        do_insert_license=False,
-        git_add=False):
+def check_copyright(f,
+                    update_current_year,
+                    verify_apache_v2=False,
+                    update_start_year=False,
+                    do_insert_license=False,
+                    git_add=False):
     """
     Checks for copyright headers and their years
     """
@@ -143,7 +136,7 @@ def check_copyright(  # pylint: disable=too-many-positional-arguments
     cr_found = False
     apache_lic_found = not verify_apache_v2
     year_matched = False
-    with io.open(f, "r", encoding="utf-8") as file:
+    with open(f, encoding="utf-8") as file:
         lines = file.readlines()
     for line in lines:
         line_num += 1
@@ -219,7 +212,7 @@ def check_copyright(  # pylint: disable=too-many-positional-arguments
             logger.info("File: %s. Changing line(s) %s", f, ', '.join(str(x[1]) for x in errs if x[-1] is not None))
             for _, line_num, __, replacement in errs_update:
                 lines[line_num - 1] = replacement
-            with io.open(f, "w", encoding="utf-8") as out_file:
+            with open(f, "w", encoding="utf-8") as out_file:
                 for new_line in lines:
                     out_file.write(new_line)
 
@@ -241,7 +234,6 @@ def _main():
     logging.basicConfig(format="%(levelname)s:%(message)s", level=log_level)
 
     ret_val = 0
-    global ExemptFiles
 
     argparser = argparse.ArgumentParser("Checks for a consistent copyright header in git's modified files")
     argparser.add_argument("--update-start-year",
@@ -326,7 +318,7 @@ def _main():
 
     (args, dirs) = argparser.parse_known_args()
     try:
-        ExemptFiles = ExemptFiles + [re.compile(pathName) for pathName in args.exclude]
+        ExemptFiles.extend([re.compile(pathName) for pathName in args.exclude])
     except re.error as re_exception:
         logger.exception("Regular expression error: %s", re_exception, exc_info=True)
         return 1

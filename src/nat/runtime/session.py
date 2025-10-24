@@ -16,12 +16,15 @@
 import asyncio
 import contextvars
 import typing
+import uuid
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
 
+from fastapi import WebSocket
 from starlette.requests import HTTPConnection
+from starlette.requests import Request
 
 from nat.builder.context import Context
 from nat.builder.context import ContextState
@@ -89,7 +92,8 @@ class SessionManager:
     @asynccontextmanager
     async def session(self,
                       user_manager=None,
-                      request: HTTPConnection | None = None,
+                      http_connection: HTTPConnection | None = None,
+                      user_message_id: str | None = None,
                       conversation_id: str | None = None,
                       user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None,
                       user_authentication_callback: Callable[[AuthProviderBaseConfig, AuthFlowType],
@@ -107,10 +111,11 @@ class SessionManager:
         if user_authentication_callback is not None:
             token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
 
-        if conversation_id is not None and request is None:
-            self._context_state.conversation_id.set(conversation_id)
+        if isinstance(http_connection, WebSocket):
+            self.set_metadata_from_websocket(http_connection, user_message_id, conversation_id)
 
-        self.set_metadata_from_http_request(request)
+        if isinstance(http_connection, Request):
+            self.set_metadata_from_http_request(http_connection)
 
         try:
             yield self
@@ -135,14 +140,11 @@ class SessionManager:
             async with self._workflow.run(message) as runner:
                 yield runner
 
-    def set_metadata_from_http_request(self, request: HTTPConnection | None) -> None:
+    def set_metadata_from_http_request(self, request: Request) -> None:
         """
         Extracts and sets user metadata request attributes from a HTTP request.
         If request is None, no attributes are set.
         """
-        if request is None:
-            return
-
         self._context.metadata._request.method = getattr(request, "method", None)
         self._context.metadata._request.url_path = request.url.path
         self._context.metadata._request.url_port = request.url.port
@@ -156,6 +158,65 @@ class SessionManager:
 
         if request.headers.get("conversation-id"):
             self._context_state.conversation_id.set(request.headers["conversation-id"])
+
+        if request.headers.get("user-message-id"):
+            self._context_state.user_message_id.set(request.headers["user-message-id"])
+
+        # W3C Trace Context header: traceparent: 00-<trace-id>-<span-id>-<flags>
+        traceparent = request.headers.get("traceparent")
+        if traceparent:
+            try:
+                parts = traceparent.split("-")
+                if len(parts) >= 4:
+                    trace_id_hex = parts[1]
+                    if len(trace_id_hex) == 32:
+                        trace_id_int = uuid.UUID(trace_id_hex).int
+                        self._context_state.workflow_trace_id.set(trace_id_int)
+            except Exception:
+                pass
+
+        if not self._context_state.workflow_trace_id.get():
+            workflow_trace_id = request.headers.get("workflow-trace-id")
+            if workflow_trace_id:
+                try:
+                    self._context_state.workflow_trace_id.set(uuid.UUID(workflow_trace_id).int)
+                except Exception:
+                    pass
+
+        workflow_run_id = request.headers.get("workflow-run-id")
+        if workflow_run_id:
+            self._context_state.workflow_run_id.set(workflow_run_id)
+
+    def set_metadata_from_websocket(self,
+                                    websocket: WebSocket,
+                                    user_message_id: str | None,
+                                    conversation_id: str | None) -> None:
+        """
+        Extracts and sets user metadata for WebSocket connections.
+        """
+
+        # Extract cookies from WebSocket headers (similar to HTTP request)
+        if websocket and hasattr(websocket, 'scope') and 'headers' in websocket.scope:
+            cookies = {}
+            for header_name, header_value in websocket.scope.get('headers', []):
+                if header_name == b'cookie':
+                    cookie_header = header_value.decode('utf-8')
+                    # Parse cookie header: "name1=value1; name2=value2"
+                    for cookie in cookie_header.split(';'):
+                        cookie = cookie.strip()
+                        if '=' in cookie:
+                            name, value = cookie.split('=', 1)
+                            cookies[name.strip()] = value.strip()
+
+            # Set cookies in metadata (same as HTTP request)
+            self._context.metadata._request.cookies = cookies
+            self._context_state.metadata.set(self._context.metadata)
+
+        if conversation_id is not None:
+            self._context_state.conversation_id.set(conversation_id)
+
+        if user_message_id is not None:
+            self._context_state.user_message_id.set(user_message_id)
 
 
 # Compatibility aliases with previous releases

@@ -30,6 +30,7 @@ from nat.data_models.component_ref import generate_instance_id
 from nat.data_models.config import Config
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
@@ -48,6 +49,7 @@ _component_group_order = [
     ComponentGroup.OBJECT_STORES,
     ComponentGroup.RETRIEVERS,
     ComponentGroup.TTC_STRATEGIES,
+    ComponentGroup.FUNCTION_GROUPS,
     ComponentGroup.FUNCTIONS,
 ]
 
@@ -107,6 +109,8 @@ def group_from_component(component: TypedBaseModel) -> ComponentGroup | None:
         return ComponentGroup.EMBEDDERS
     if (isinstance(component, FunctionBaseConfig)):
         return ComponentGroup.FUNCTIONS
+    if (isinstance(component, FunctionGroupBaseConfig)):
+        return ComponentGroup.FUNCTION_GROUPS
     if (isinstance(component, LLMBaseConfig)):
         return ComponentGroup.LLMS
     if (isinstance(component, MemoryBaseConfig)):
@@ -149,12 +153,12 @@ def recursive_componentref_discovery(cls: TypedBaseModel, value: typing.Any,
         for v in value.values():
             yield from recursive_componentref_discovery(cls, v, decomposed_type.args[1])
     elif (issubclass(type(value), BaseModel)):
-        for field, field_info in value.model_fields.items():
+        for field, field_info in type(value).model_fields.items():
             field_data = getattr(value, field)
             yield from recursive_componentref_discovery(cls, field_data, field_info.annotation)
     if (decomposed_type.is_union):
         for arg in decomposed_type.args:
-            if arg is typing.Any or (isinstance(value, DecomposedType(arg).root)):
+            if arg is typing.Any or DecomposedType(arg).is_instance(value):
                 yield from recursive_componentref_discovery(cls, value, arg)
     else:
         for arg in decomposed_type.args:
@@ -174,7 +178,7 @@ def update_dependency_graph(config: "Config", instance_config: TypedBaseModel,
         nx.DiGraph: An dependency graph that has been updated with the provided runtime instance.
     """
 
-    for field_name, field_info in instance_config.model_fields.items():
+    for field_name, field_info in type(instance_config).model_fields.items():
 
         for instance_id, value_node in recursive_componentref_discovery(
                 instance_config,
@@ -254,9 +258,9 @@ def build_dependency_sequence(config: "Config") -> list[ComponentInstanceData]:
             runtime instance references.
     """
 
-    total_node_count = len(config.embedders) + len(config.functions) + len(config.llms) + len(config.memory) + len(
-        config.object_stores) + len(config.retrievers) + len(config.ttc_strategies) + len(
-            config.authentication) + 1  # +1 for the workflow
+    total_node_count = (len(config.embedders) + len(config.functions) + len(config.function_groups) + len(config.llms) +
+                        len(config.memory) + len(config.object_stores) + len(config.retrievers) +
+                        len(config.ttc_strategies) + len(config.authentication) + 1)  # +1 for the workflow
 
     dependency_map: dict
     dependency_graph: nx.DiGraph

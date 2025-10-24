@@ -14,21 +14,23 @@
 # limitations under the License.
 
 import json
-# pylint: disable=R0917
 import logging
+import re
+import typing
 from json import JSONDecodeError
-from typing import TYPE_CHECKING
 
 from langchain_core.agents import AgentAction
 from langchain_core.agents import AgentFinish
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
+from langchain_core.language_models import LanguageModelInput
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import MessagesPlaceholder
+from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
@@ -46,8 +48,7 @@ from nat.agent.react_agent.output_parser import ReActOutputParserException
 from nat.agent.react_agent.prompt import SYSTEM_PROMPT
 from nat.agent.react_agent.prompt import USER_PROMPT
 
-# To avoid circular imports
-if TYPE_CHECKING:
+if typing.TYPE_CHECKING:
     from nat.agent.react_agent.register import ReActAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,7 @@ class ReActGraphState(BaseModel):
     messages: list[BaseMessage] = Field(default_factory=list)  # input and output of the ReAct Agent
     agent_scratchpad: list[AgentAction] = Field(default_factory=list)  # agent thoughts / intermediate steps
     tool_responses: list[BaseMessage] = Field(default_factory=list)  # the responses from any tool calls
+    final_answer: str | None = Field(default=None)  # the final answer from the ReAct Agent
 
 
 class ReActAgentGraph(DualNodeAgent):
@@ -72,15 +74,22 @@ class ReActAgentGraph(DualNodeAgent):
                  use_tool_schema: bool = True,
                  callbacks: list[AsyncCallbackHandler] | None = None,
                  detailed_logs: bool = False,
+                 log_response_max_chars: int = 1000,
                  retry_agent_response_parsing_errors: bool = True,
                  parse_agent_response_max_retries: int = 1,
                  tool_call_max_retries: int = 1,
-                 pass_tool_call_errors_to_agent: bool = True):
-        super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
+                 pass_tool_call_errors_to_agent: bool = True,
+                 normalize_tool_input_quotes: bool = True):
+        super().__init__(llm=llm,
+                         tools=tools,
+                         callbacks=callbacks,
+                         detailed_logs=detailed_logs,
+                         log_response_max_chars=log_response_max_chars)
         self.parse_agent_response_max_retries = (parse_agent_response_max_retries
                                                  if retry_agent_response_parsing_errors else 1)
         self.tool_call_max_retries = tool_call_max_retries
         self.pass_tool_call_errors_to_agent = pass_tool_call_errors_to_agent
+        self.normalize_tool_input_quotes = normalize_tool_input_quotes
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
@@ -98,21 +107,33 @@ class ReActAgentGraph(DualNodeAgent):
                          f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
         prompt = prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         # construct the ReAct Agent
-        bound_llm = llm.bind(stop=["Observation:"])  # type: ignore
-        self.agent = prompt | bound_llm
+        self.agent = prompt | self._maybe_bind_llm_and_yield()
         self.tools_dict = {tool.name: tool for tool in tools}
         logger.debug("%s Initialized ReAct Agent Graph", AGENT_LOG_PREFIX)
+
+    def _maybe_bind_llm_and_yield(self) -> Runnable[LanguageModelInput, BaseMessage]:
+        """
+        Bind additional parameters to the LLM if needed
+        - if the LLM is a smart model, no need to bind any additional parameters
+        - if the LLM is a non-smart model, bind a stop sequence to the LLM
+
+        Returns:
+            Runnable[LanguageModelInput, BaseMessage]: The LLM with any additional parameters bound.
+        """
+        # models that don't need (or don't support)a stop sequence
+        smart_models = re.compile(r"gpt-?5", re.IGNORECASE)
+        if any(smart_models.search(getattr(self.llm, model, "")) for model in ["model", "model_name"]):
+            # no need to bind any additional parameters to the LLM
+            return self.llm
+        # add a stop sequence to the LLM
+        return self.llm.bind(stop=["Observation:"])
 
     def _get_tool(self, tool_name: str):
         try:
             return self.tools_dict.get(tool_name)
         except Exception as ex:
-            logger.exception("%s Unable to find tool with the name %s\n%s",
-                             AGENT_LOG_PREFIX,
-                             tool_name,
-                             ex,
-                             exc_info=True)
-            raise ex
+            logger.error("%s Unable to find tool with the name %s\n%s", AGENT_LOG_PREFIX, tool_name, ex)
+            raise
 
     async def agent_node(self, state: ReActGraphState):
         try:
@@ -184,6 +205,7 @@ class ReActAgentGraph(DualNodeAgent):
                         # this is where we handle the final output of the Agent, we can clean-up/format/postprocess here
                         # the final answer goes in the "messages" state channel
                         state.messages += [AIMessage(content=final_answer)]
+                        state.final_answer = final_answer
                     else:
                         # the agent wants to call a tool, ensure the thoughts are preserved for the next agentic cycle
                         agent_output.log = output_message.content
@@ -216,16 +238,15 @@ class ReActAgentGraph(DualNodeAgent):
                     working_state.append(output_message)
                     working_state.append(HumanMessage(content=str(ex.observation)))
         except Exception as ex:
-            logger.exception("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
-            raise ex
+            logger.error("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
+            raise
 
     async def conditional_edge(self, state: ReActGraphState):
         try:
             logger.debug("%s Starting the ReAct Conditional Edge", AGENT_LOG_PREFIX)
-            if len(state.messages) > 1:
-                # the ReAct Agent has finished executing, the last agent output was AgentFinish
-                last_message_content = str(state.messages[-1].content)
-                logger.debug("%s Final answer:\n%s", AGENT_LOG_PREFIX, last_message_content)
+            if state.final_answer:
+                # the ReAct Agent has finished executing
+                logger.debug("%s Final answer:\n%s", AGENT_LOG_PREFIX, state.final_answer)
                 return AgentDecision.END
             # else the agent wants to call a tool
             agent_output = state.agent_scratchpad[-1]
@@ -235,7 +256,7 @@ class ReActAgentGraph(DualNodeAgent):
                          agent_output.tool_input)
             return AgentDecision.TOOL
         except Exception as ex:
-            logger.exception("Failed to determine whether agent is calling a tool: %s", ex, exc_info=True)
+            logger.exception("Failed to determine whether agent is calling a tool: %s", ex)
             logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
             return AgentDecision.END
 
@@ -268,35 +289,45 @@ class ReActAgentGraph(DualNodeAgent):
                      agent_thoughts.tool_input)
 
         # Run the tool. Try to use structured input, if possible.
+        tool_input_str = agent_thoughts.tool_input.strip()
+
         try:
-            tool_input_str = str(agent_thoughts.tool_input).strip().replace("'", '"')
-            tool_input_dict = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
+            tool_input = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
             logger.debug("%s Successfully parsed structured tool input from Action Input", AGENT_LOG_PREFIX)
 
-            tool_response = await self._call_tool(requested_tool,
-                                                  tool_input_dict,
-                                                  RunnableConfig(callbacks=self.callbacks),
-                                                  max_retries=self.tool_call_max_retries)
+        except JSONDecodeError as original_ex:
+            if self.normalize_tool_input_quotes:
+                # If initial JSON parsing fails, try with quote normalization as a fallback
+                normalized_str = tool_input_str.replace("'", '"')
+                try:
+                    tool_input = json.loads(normalized_str)
+                    logger.debug("%s Successfully parsed structured tool input after quote normalization",
+                                 AGENT_LOG_PREFIX)
+                except JSONDecodeError:
+                    # the quote normalization failed, use raw string input
+                    logger.debug(
+                        "%s Unable to parse structured tool input after quote normalization. Using Action Input as is."
+                        "\nParsing error: %s",
+                        AGENT_LOG_PREFIX,
+                        original_ex)
+                    tool_input = tool_input_str
+            else:
+                # use raw string input
+                logger.debug(
+                    "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
+                    "\nParsing error: %s",
+                    AGENT_LOG_PREFIX,
+                    original_ex)
+                tool_input = tool_input_str
 
-            if self.detailed_logs:
-                self._log_tool_response(requested_tool.name, tool_input_dict, str(tool_response.content))
-
-        except JSONDecodeError as ex:
-            logger.debug(
-                "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
-                "\nParsing error: %s",
-                AGENT_LOG_PREFIX,
-                ex,
-                exc_info=True)
-            tool_input_str = str(agent_thoughts.tool_input)
-
-            tool_response = await self._call_tool(requested_tool,
-                                                  tool_input_str,
-                                                  RunnableConfig(callbacks=self.callbacks),
-                                                  max_retries=self.tool_call_max_retries)
+        # Call tool once with the determined input (either parsed dict or raw string)
+        tool_response = await self._call_tool(requested_tool,
+                                              tool_input,
+                                              RunnableConfig(callbacks=self.callbacks),
+                                              max_retries=self.tool_call_max_retries)
 
         if self.detailed_logs:
-            self._log_tool_response(requested_tool.name, tool_input_str, str(tool_response.content))
+            self._log_tool_response(requested_tool.name, tool_input, str(tool_response.content))
 
         if not self.pass_tool_call_errors_to_agent:
             if tool_response.status == "error":
@@ -312,8 +343,8 @@ class ReActAgentGraph(DualNodeAgent):
             logger.debug("%s ReAct Graph built and compiled successfully", AGENT_LOG_PREFIX)
             return self.graph
         except Exception as ex:
-            logger.exception("%s Failed to build ReAct Graph: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
-            raise ex
+            logger.error("%s Failed to build ReAct Graph: %s", AGENT_LOG_PREFIX, ex)
+            raise
 
     @staticmethod
     def validate_system_prompt(system_prompt: str) -> bool:
@@ -329,8 +360,8 @@ class ReActAgentGraph(DualNodeAgent):
                 errors.append(error_message)
         if errors:
             error_text = "\n".join(errors)
-            logger.exception("%s %s", AGENT_LOG_PREFIX, error_text)
-            raise ValueError(error_text)
+            logger.error("%s %s", AGENT_LOG_PREFIX, error_text)
+            return False
         return True
 
 
@@ -356,7 +387,7 @@ def create_react_agent_prompt(config: "ReActAgentWorkflowConfig") -> ChatPromptT
 
     valid_prompt = ReActAgentGraph.validate_system_prompt(prompt_str)
     if not valid_prompt:
-        logger.exception("%s Invalid system_prompt", AGENT_LOG_PREFIX)
+        logger.error("%s Invalid system_prompt", AGENT_LOG_PREFIX)
         raise ValueError("Invalid system_prompt")
     prompt = ChatPromptTemplate([("system", prompt_str), ("user", USER_PROMPT),
                                  MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])

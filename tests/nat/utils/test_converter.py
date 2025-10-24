@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=redefined-outer-name
 from io import BytesIO
 from io import TextIOWrapper
 
@@ -55,7 +54,7 @@ def convert_str_to_int(s: str) -> int:
     try:
         return int(s)
     except ValueError:
-        raise ConvertException("String is not numeric")  # pylint: disable=raise-missing-from
+        raise ConvertException("String is not numeric")
 
 
 def convert_int_to_str(x: int) -> str:
@@ -79,7 +78,7 @@ def convert_str_to_float(s: str) -> float:
     try:
         return float(s)
     except ValueError:
-        raise ConvertException("String cannot be converted to float")  # pylint: disable=raise-missing-from
+        raise ConvertException("String cannot be converted to float")
 
 
 # ----- Converters for the inheritance tests -----

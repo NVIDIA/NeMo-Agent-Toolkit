@@ -29,10 +29,16 @@ import time
 
 import click
 import nest_asyncio
+from dotenv import load_dotenv
+
+from nat.utils.log_levels import LOG_LEVELS
 
 from .commands.configure.configure import configure_command
 from .commands.evaluate import eval_command
 from .commands.info.info import info_command
+from .commands.mcp.mcp import mcp_command
+from .commands.object_store.object_store import object_store_command
+from .commands.optimize import optimizer_command
 from .commands.registry.registry import registry_command
 from .commands.sizing.sizing import sizing
 from .commands.start import start_command
@@ -40,23 +46,21 @@ from .commands.uninstall import uninstall_command
 from .commands.validate import validate_command
 from .commands.workflow.workflow import workflow_command
 
+# Load environment variables from .env file, if it exists
+load_dotenv()
+
 # Apply at the beginning of the file to avoid issues with asyncio
 nest_asyncio.apply()
-
-# Define log level choices
-LOG_LEVELS = {
-    'DEBUG': logging.DEBUG,
-    'INFO': logging.INFO,
-    'WARNING': logging.WARNING,
-    'ERROR': logging.ERROR,
-    'CRITICAL': logging.CRITICAL
-}
 
 
 def setup_logging(log_level: str):
     """Configure logging with the specified level"""
     numeric_level = LOG_LEVELS.get(log_level.upper(), logging.INFO)
-    logging.basicConfig(level=numeric_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=numeric_level,
+        format="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
     return numeric_level
 
 
@@ -107,11 +111,13 @@ cli.add_command(uninstall_command, name="uninstall")
 cli.add_command(validate_command, name="validate")
 cli.add_command(workflow_command, name="workflow")
 cli.add_command(sizing, name="sizing")
+cli.add_command(optimizer_command, name="optimize")
+cli.add_command(object_store_command, name="object-store")
+cli.add_command(mcp_command, name="mcp")
 
 # Aliases
 cli.add_command(start_command.get_command(None, "console"), name="run")  # type: ignore
 cli.add_command(start_command.get_command(None, "fastapi"), name="serve")  # type: ignore
-cli.add_command(start_command.get_command(None, "mcp"), name="mcp")
 
 
 @cli.result_callback()

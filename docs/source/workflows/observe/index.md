@@ -35,17 +35,34 @@ export NAT_SPAN_PREFIX=aiq
 
 ## Installation
 
-The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras:
+The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras.
+
+If you have already installed the NeMo Agent toolkit from source, you can install package extras with the following commands:
 
 ```bash
 # Install all optional telemetry extras
 uv pip install -e '.[telemetry]'
 
 # Install specific telemetry extras
+uv pip install -e '.[data-flywheel]'
 uv pip install -e '.[opentelemetry]'
 uv pip install -e '.[phoenix]'
 uv pip install -e '.[weave]'
 uv pip install -e '.[ragaai]'
+```
+
+If you have not installed the NeMo Agent toolkit from source, you can install package extras with the following commands:
+
+```bash
+# Install all optional telemetry extras
+uv pip install "nvidia-nat[telemetry]"
+
+# Install specific telemetry extras
+uv pip install "nvidia-nat[data-flywheel]"
+uv pip install "nvidia-nat[opentelemetry]"
+uv pip install "nvidia-nat[phoenix]"
+uv pip install "nvidia-nat[weave]"
+uv pip install "nvidia-nat[ragaai]"
 ```
 
 ## Configurable Components
@@ -95,6 +112,16 @@ The `logging` section contains one or more logging providers. Each provider has 
 - `console`: Writes logs to the console.
 - `file`: Writes logs to a file.
 
+Available log levels:
+
+- `DEBUG`: Detailed information for debugging.
+- `INFO`: General information about the workflow.
+- `WARNING`: Potential issues that should be addressed.
+- `ERROR`: Issues that affect the workflow from running correctly.
+- `CRITICAL`: Severe issues that prevent the workflow from continuing to run.
+
+If a log level is specified, all logs at or above that level will be logged. For example, if the log level is set to `WARNING`, all logs at or above that level will be logged. If the log level is set to `ERROR`, all logs at or above that level will be logged.
+
 ### **Tracing Configuration**
 
 The `tracing` section contains one or more tracing providers. Each provider has a `_type` and optional configuration fields. The observability system supports multiple concurrent exporters.
@@ -103,18 +130,35 @@ The `tracing` section contains one or more tracing providers. Each provider has 
 
 Each exporter has its own detailed configuration guide with complete setup instructions and examples:
 
-- **[W&B Weave](https://wandb.ai/site/weave/)** - See [Observing with W&B Weave](./observe-workflow-with-weave.md)
-- **[Phoenix](https://phoenix.arize.com/)** - See [Observing with Phoenix](./observe-workflow-with-phoenix.md)
+- **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
+- **Custom Exporters** - See [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
+- **[NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel)** - See [Observing with Data Flywheel](./observe-workflow-with-data-flywheel.md)
+- **[Dynatrace](https://dynatrace.com/)** - See [Observing with Dynatrace](./observe-workflow-with-dynatrace.md)
+- **File Export** - Built-in file-based tracing for local development and debugging
 - **[Galileo](https://galileo.ai/)** - See [Observing with Galileo](./observe-workflow-with-galileo.md)
 - **[Langfuse](https://langfuse.com/)** - OTLP-compatible observability platform
 - **[LangSmith](https://www.langchain.com/langsmith)** - LangChain's observability platform
-- **[Patronus](https://patronus.ai/)** - AI evaluation and monitoring platform
-- **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
 - **[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)** - See [Observing with OTel Collector](./observe-workflow-with-otel-collector.md)
-- **File Export** - Built-in file-based tracing for local development and debugging
-- **Custom Exporters** - See [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
+- **[Patronus](https://www.patronus.ai/)** - AI evaluation and monitoring platform
+- **[Phoenix](https://phoenix.arize.com/)** - See [Observing with Phoenix](./observe-workflow-with-phoenix.md)
+- **[W&B Weave](https://wandb.ai/site/weave/)** - See [Observing with W&B Weave](./observe-workflow-with-weave.md)
 
 For complete configuration examples and setup instructions, refer to the individual guides linked above or check the `examples/observability/` directory.
+
+#### Observability Support by Providers
+
+| Provider | Supported Features|
+|----------|-----------|
+| Catalyst | Logging, Tracing |
+| Data Flywheel | Logging, Tracing |
+| Dynatrace | Logging, Tracing |
+| Galileo | Logging, Tracing |
+| Langfuse | Logging, Tracing |
+| LangSmith | Logging, Tracing |
+| OpenTelemetry Collector | Logging, Tracing |
+| Patronus | Logging, Tracing |
+| Phoenix | Logging, Tracing |
+| W&B Weave | Logging, Tracing, W&B Weave Redaction, Evaluation Metrics |
 
 ### NeMo Agent Toolkit Observability Components
 
@@ -146,7 +190,7 @@ Each exporter can optionally include a processing pipeline that transforms, filt
 #### Integration Components
 
 - **{py:class}`nat.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
-- **{py:class}`~nat.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain, LLama Index, CrewAI, and Semantic Kernel frameworks.
+- **{py:class}`~nat.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain/LangGraph, LLama Index, CrewAI, Semantic Kernel, and Google ADK frameworks.
 
 ### Registering a New Telemetry Provider as a Plugin
 
@@ -157,6 +201,8 @@ For complete information about developing and integrating custom telemetry expor
 :caption: Observe Workflows
 
 Observing with Catalyst <./observe-workflow-with-catalyst.md>
+Observing with Data Flywheel <./observe-workflow-with-data-flywheel.md>
+Observing with Dynatrace <./observe-workflow-with-dynatrace.md>
 Observing with Galileo <./observe-workflow-with-galileo.md>
 Observing with OTEL Collector <./observe-workflow-with-otel-collector.md>
 Observing with Phoenix <./observe-workflow-with-phoenix.md>

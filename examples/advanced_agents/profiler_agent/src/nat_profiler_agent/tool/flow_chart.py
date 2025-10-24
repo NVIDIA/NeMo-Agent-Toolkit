@@ -22,7 +22,6 @@ import uuid
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.patches import Patch
-from nat_profiler_agent.data_models import TraceFlowInfo
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -30,6 +29,7 @@ from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
+from nat_profiler_agent.data_models import TraceFlowInfo
 
 logger = logging.getLogger(__name__)
 
@@ -103,8 +103,8 @@ async def flow_chart(config: FlowChartConfig, builder: Builder):
             single_output_schema=FlowChartOutput,
         )
     except Exception as e:
-        logger.error("Error in flow_chart tool: %s", e, exc_info=True)
-        raise e
+        logger.error("Error in flow_chart tool: %s", e)
+        raise
     finally:
         # clean up temp directory
         import shutil

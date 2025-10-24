@@ -106,7 +106,7 @@ def correct_json_format(response):
         json_response = re.sub(r"```", "", json_content)
 
     except Exception as e:
-        logger.exception("Error: %s", e, exc_info=True)
+        logger.exception("Error: %s", e)
         json_response = response
 
     return json_response
@@ -147,7 +147,7 @@ async def extract_from_por_tool(config: ExtractPORToolConfig, builder: Builder):
         if os.path.isfile(input_file):
             logger.debug("Detected file: %s", input_file)
 
-            with open(input_file, 'r', encoding='utf-8') as file:
+            with open(input_file, encoding='utf-8') as file:
                 por_content = "\n".join(line.strip() for line in file if line.strip())
         else:
             por_content = input_text
@@ -168,7 +168,7 @@ async def extract_from_por_tool(config: ExtractPORToolConfig, builder: Builder):
             logger.debug("Data successfully saved to %s", filename)
 
         except Exception as e:
-            logger.exception("An error occurred while saving the file: %s", e, exc_info=True)
+            logger.exception("An error occurred while saving the file: %s", e)
 
         return "Extraction complete. You can now ask me to show epics or tasks."
 
@@ -193,11 +193,11 @@ async def show_tickets_tool(config: ShowTicketsToolConfig, builder: Builder):
     async def _arun(input_text: str) -> str:
         # input_text = process_input_text(input_text)
         try:
-            with open(filename, 'r', encoding='utf-8') as json_file:
+            with open(filename, encoding='utf-8') as json_file:
                 data = json.load(json_file)
                 logger.debug("Data successfully loaded from %s", filename)
         except Exception as e:
-            logger.exception("An error occurred while loading the file: %s", e, exc_info=True)
+            logger.error("An error occurred while loading the file: %s", e)
             raise
         # If we have a "raw_response", it means we couldn't parse JSON
         if "raw_response" in data:

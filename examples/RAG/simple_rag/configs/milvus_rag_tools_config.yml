@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-general:
-  use_uvloop: true
-
 retrievers:
   cuda_retriever:
     _type: milvus_retriever
@@ -40,7 +37,7 @@ functions:
     retriever: mcp_retriever
     topic: Retrieve information about Model Context Protocol (MCP)
 
-  # To use these tools you will need to install the nvidia-nat[langchain] package
+  # To use these tools you will need to install the "nvidia-nat[langchain]" package
   web_search_tool:
     _type: tavily_internet_search
     max_results: 5
@@ -69,10 +66,10 @@ embedders:
 workflow:
   _type: react_agent
   tool_names:
-   - cuda_retriever_tool
-   - mcp_retriever_tool
-   - web_search_tool
-   - code_generation_tool
+    - cuda_retriever_tool
+    - mcp_retriever_tool
+    - web_search_tool
+    - code_generation_tool
   verbose: true
   llm_name: nim_llm
   additional_instructions: "If a tool call results in code or other artifacts being returned, you MUST include that in your thoughts and response."

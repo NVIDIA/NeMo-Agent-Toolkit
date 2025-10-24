@@ -59,7 +59,7 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
     Then, set the upstream to the main repository and fetch the latest changes:
     ```bash
-    git remote add upstream git@github.com:NVIDIA/NeMo-Agent-Toolkit.git
+    git remote add upstream https://github.com/NVIDIA/NeMo-Agent-Toolkit.git
     git fetch --all
     ```
 
@@ -82,6 +82,12 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
     source .venv/bin/activate
     uv sync --all-groups --all-extras
     ```
+   :::{note}
+   You may encounter `Too many open files (os error 24)`. This error occurs when your system’s file descriptor limit is too low.
+
+   You can fix it by increasing the limit before running the build.
+   On Linux and macOS you can issue `ulimit -n 4096` in your current shell to increase your open file limit to 4096.
+   :::
 
 1. Install and configure pre-commit hooks (optional these can also be run manually).
 
@@ -124,6 +130,9 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
 Please ensure that all new contributions adhere to the latest version notes within the [Migration Guide](./migration-guide.md).
 
+### Example Workflow Contributions
+We welcome contributions of new example workflows in this repository and in the [NeMo-Agent-Toolkit-Examples](https://github.com/NVIDIA/NeMo-Agent-Toolkit-Examples) repository. The difference is that examples in this repository are maintained, tested, and updated with each release of the NeMo Agent toolkit. These examples have high quality standards and demonstrate a capability of the NeMo Agent toolkit, while examples in the NeMo-Agent-Toolkit-Examples repository are community contributed and are tied to a specific version of the NeMo Agent toolkit, and do not need to demonstrate a specific capability of the library.
+
 ### Your first issue
 
 1. Find an issue to work on. The best way is to search for issues with the [good first issue](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) label.
@@ -131,7 +140,7 @@ Please ensure that all new contributions adhere to the latest version notes with
 1. Comment on the issue stating that you are going to work on it.
 1. [Fork the NeMo Agent toolkit repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit/fork)
 1. Code!
-    - Make sure to update unit tests!
+    - Make sure to update existing unit tests!
     - Ensure the [license headers are set properly](./licensing.md).
 1. Verify your changes:
     * Run the style and lint checks, from the root of the repository run:
@@ -142,6 +151,7 @@ Please ensure that all new contributions adhere to the latest version notes with
         ```bash
         pytest
         ```
+      If you added an integration test, or changed code that is covered by an integration test, you will need to run the integration tests. Refer to the [Running Tests](./running-tests.md) guide for more information on running integration tests, along with the [Writing Integration Tests](./running-tests.md#writing-integration-tests) section.
     * Optionally [run the entire CI pipeline locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command. This is useful if CI is failing in GitHub Actions and you want to debug the issue locally.
 1. When done, [create your pull request](https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
@@ -208,7 +218,9 @@ Remember, if you are unsure about anything, don't hesitate to comment on issues 
 
 Once you have gotten your feet wet and are more comfortable with the code, you can review the prioritized issues for our next release in our [project boards](https://github.com/NVIDIA/NeMo-Agent-Toolkit/projects).
 
-> **Pro Tip:** Always review the release board with the highest number for issues to work on. This is where NeMo Agent toolkit developers also focus their efforts.
+:::{tip}
+Always review the release board with the highest number for issues to work on. This is where NeMo Agent toolkit developers also focus their efforts.
+:::
 
 Review the unassigned issues and choose an issue that you are comfortable contributing. Ensure you comment on the issue before you begin to inform others that you are working on it. If you have questions about implementing the issue, comment your questions in the issue instead of the PR.
 

@@ -252,7 +252,7 @@ class TestSpanExporterFunctionality:
             assert len(span_exporter._metadata_stack) == 0
 
             # Wait for async export to complete
-            await span_exporter._wait_for_tasks()
+            await span_exporter.wait_for_tasks()
 
             # Check that span was exported
             assert len(span_exporter.exported_spans) == 1
@@ -306,7 +306,7 @@ class TestSpanExporterFunctionality:
             span_exporter.export(end_event)
 
             # Wait for async tasks to complete
-            await span_exporter._wait_for_tasks()
+            await span_exporter.wait_for_tasks()
 
             # Check that span was processed
             assert len(span_exporter._outstanding_spans) == 0
@@ -346,7 +346,7 @@ class TestSpanExporterFunctionality:
             span_exporter.export(end_event)
 
             # Wait for async tasks to complete
-            await span_exporter._wait_for_tasks()
+            await span_exporter.wait_for_tasks()
 
             # Check that span was processed
             assert len(span_exporter._outstanding_spans) == 0
@@ -568,7 +568,7 @@ class TestSpanExporterFunctionality:
             span_exporter.export(end_event)
 
             # Wait for async tasks to complete
-            await span_exporter._wait_for_tasks()
+            await span_exporter.wait_for_tasks()
 
             # Check that span was processed and attributes set correctly
             assert len(span_exporter._outstanding_spans) == 0

@@ -35,6 +35,8 @@ class SimpleFrontEndPluginBase(FrontEndBase[FrontEndConfigT], ABC):
 
     async def run(self):
 
+        await self.pre_run()
+
         # Must yield the workflow function otherwise it cleans up
         async with WorkflowBuilder.from_config(config=self.full_config) as builder:
 
@@ -45,7 +47,7 @@ class SimpleFrontEndPluginBase(FrontEndBase[FrontEndConfigT], ABC):
 
                 click.echo(stream.getvalue())
 
-            workflow = builder.build()
+            workflow = await builder.build()
             session_manager = SessionManager(workflow)
             await self.run_workflow(session_manager)
 

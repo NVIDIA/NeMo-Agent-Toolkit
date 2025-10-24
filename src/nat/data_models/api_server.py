@@ -28,12 +28,22 @@ from pydantic import HttpUrl
 from pydantic import conlist
 from pydantic import field_serializer
 from pydantic import field_validator
+from pydantic import model_validator
 from pydantic_core.core_schema import ValidationInfo
 
 from nat.data_models.interactive import HumanPrompt
 from nat.utils.type_converter import GlobalTypeConverter
 
 FINISH_REASONS = frozenset({'stop', 'length', 'tool_calls', 'content_filter', 'function_call'})
+
+
+class UserMessageContentRoleType(str, Enum):
+    """
+    Enum representing chat message roles in API requests and responses.
+    """
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
 
 
 class Request(BaseModel):
@@ -108,7 +118,7 @@ UserContent = typing.Annotated[TextContent | ImageContent | AudioContent, Discri
 
 class Message(BaseModel):
     content: str | list[UserContent]
-    role: str
+    role: UserMessageContentRoleType
 
 
 class ChatRequest(BaseModel):
@@ -143,7 +153,6 @@ class ChatRequest(BaseModel):
     tool_choice: str | dict[str, typing.Any] | None = Field(default=None, description="Controls which tool is called")
     parallel_tool_calls: bool | None = Field(default=True, description="Whether to enable parallel function calling")
     user: str | None = Field(default=None, description="Unique identifier representing end-user")
-
     model_config = ConfigDict(extra="allow",
                               json_schema_extra={
                                   "example": {
@@ -164,7 +173,7 @@ class ChatRequest(BaseModel):
                     max_tokens: int | None = None,
                     top_p: float | None = None) -> "ChatRequest":
 
-        return ChatRequest(messages=[Message(content=data, role="user")],
+        return ChatRequest(messages=[Message(content=data, role=UserMessageContentRoleType.USER)],
                            model=model,
                            temperature=temperature,
                            max_tokens=max_tokens,
@@ -178,38 +187,128 @@ class ChatRequest(BaseModel):
                      max_tokens: int | None = None,
                      top_p: float | None = None) -> "ChatRequest":
 
-        return ChatRequest(messages=[Message(content=content, role="user")],
+        return ChatRequest(messages=[Message(content=content, role=UserMessageContentRoleType.USER)],
                            model=model,
                            temperature=temperature,
                            max_tokens=max_tokens,
                            top_p=top_p)
 
 
+class ChatRequestOrMessage(BaseModel):
+    """
+    `ChatRequestOrMessage` is a data model that represents either a conversation or a string input.
+    This is useful for functions that can handle either type of input.
+
+    - `messages` is compatible with the OpenAI Chat Completions API specification.
+    - `input_message` is a string input that can be used for functions that do not require a conversation.
+
+    Note: When `messages` is provided, extra fields are allowed to enable lossless round-trip
+    conversion with ChatRequest. When `input_message` is provided, no extra fields are permitted.
+    """
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "examples": [
+                {
+                    "input_message": "What can you do?"
+                },
+                {
+                    "messages": [{
+                        "role": "user", "content": "What can you do?"
+                    }],
+                    "model": "nvidia/nemotron",
+                    "temperature": 0.7
+                },
+            ],
+            "oneOf": [
+                {
+                    "required": ["input_message"],
+                    "properties": {
+                        "input_message": {
+                            "type": "string"
+                        },
+                    },
+                    "additionalProperties": {
+                        "not": True, "errorMessage": 'remove additional property ${0#}'
+                    },
+                },
+                {
+                    "required": ["messages"],
+                    "properties": {
+                        "messages": {
+                            "type": "array"
+                        },
+                    },
+                    "additionalProperties": True
+                },
+            ]
+        },
+    )
+
+    messages: typing.Annotated[list[Message] | None, conlist(Message, min_length=1)] = Field(
+        default=None, description="A non-empty conversation of messages to process.")
+
+    input_message: str | None = Field(
+        default=None,
+        description="A single input message to process. Useful for functions that do not require a conversation")
+
+    @property
+    def is_string(self) -> bool:
+        return self.input_message is not None
+
+    @property
+    def is_conversation(self) -> bool:
+        return self.messages is not None
+
+    @model_validator(mode="after")
+    def validate_model(self):
+        if self.messages is not None and self.input_message is not None:
+            raise ValueError("Either messages or input_message must be provided, not both")
+        if self.messages is None and self.input_message is None:
+            raise ValueError("Either messages or input_message must be provided")
+        if self.input_message is not None:
+            extra_fields = self.model_dump(exclude={"input_message"}, exclude_none=True, exclude_unset=True)
+            if len(extra_fields) > 0:
+                raise ValueError("no extra fields are permitted when input_message is provided")
+        return self
+
+
 class ChoiceMessage(BaseModel):
     content: str | None = None
-    role: str | None = None
+    role: UserMessageContentRoleType | None = None
 
 
 class ChoiceDelta(BaseModel):
     """Delta object for streaming responses (OpenAI-compatible)"""
     content: str | None = None
-    role: str | None = None
+    role: UserMessageContentRoleType | None = None
 
 
-class Choice(BaseModel):
+class ChoiceBase(BaseModel):
+    """Base choice model with common fields for both streaming and non-streaming responses"""
     model_config = ConfigDict(extra="allow")
-
-    message: ChoiceMessage | None = None
-    delta: ChoiceDelta | None = None
     finish_reason: typing.Literal['stop', 'length', 'tool_calls', 'content_filter', 'function_call'] | None = None
     index: int
-    # logprobs: ChoiceLogprobs | None = None
+
+
+class ChatResponseChoice(ChoiceBase):
+    """Choice model for non-streaming responses - contains message field"""
+    message: ChoiceMessage
+
+
+class ChatResponseChunkChoice(ChoiceBase):
+    """Choice model for streaming responses - contains delta field"""
+    delta: ChoiceDelta
+
+
+# Backward compatibility alias
+Choice = ChatResponseChoice
 
 
 class Usage(BaseModel):
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
 
 
 class ResponseSerializable(abc.ABC):
@@ -245,10 +344,10 @@ class ChatResponse(ResponseBaseModelOutput):
     model_config = ConfigDict(extra="allow")
     id: str
     object: str = "chat.completion"
-    model: str = ""
+    model: str = "unknown-model"
     created: datetime.datetime
-    choices: list[Choice]
-    usage: Usage | None = None
+    choices: list[ChatResponseChoice]
+    usage: Usage
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
 
@@ -264,22 +363,27 @@ class ChatResponse(ResponseBaseModelOutput):
                     object_: str | None = None,
                     model: str | None = None,
                     created: datetime.datetime | None = None,
-                    usage: Usage | None = None) -> "ChatResponse":
+                    usage: Usage) -> "ChatResponse":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
         if object_ is None:
             object_ = "chat.completion"
         if model is None:
-            model = ""
+            model = "unknown-model"
         if created is None:
-            created = datetime.datetime.now(datetime.timezone.utc)
+            created = datetime.datetime.now(datetime.UTC)
 
         return ChatResponse(id=id_,
                             object=object_,
                             model=model,
                             created=created,
-                            choices=[Choice(index=0, message=ChoiceMessage(content=data), finish_reason="stop")],
+                            choices=[
+                                ChatResponseChoice(index=0,
+                                                   message=ChoiceMessage(content=data,
+                                                                         role=UserMessageContentRoleType.ASSISTANT),
+                                                   finish_reason="stop")
+                            ],
                             usage=usage)
 
 
@@ -293,9 +397,9 @@ class ChatResponseChunk(ResponseBaseModelOutput):
     model_config = ConfigDict(extra="allow")
 
     id: str
-    choices: list[Choice]
+    choices: list[ChatResponseChunkChoice]
     created: datetime.datetime
-    model: str = ""
+    model: str = "unknown-model"
     object: str = "chat.completion.chunk"
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
@@ -317,14 +421,20 @@ class ChatResponseChunk(ResponseBaseModelOutput):
         if id_ is None:
             id_ = str(uuid.uuid4())
         if created is None:
-            created = datetime.datetime.now(datetime.timezone.utc)
+            created = datetime.datetime.now(datetime.UTC)
         if model is None:
-            model = ""
+            model = "unknown-model"
         if object_ is None:
             object_ = "chat.completion.chunk"
 
         return ChatResponseChunk(id=id_,
-                                 choices=[Choice(index=0, message=ChoiceMessage(content=data), finish_reason="stop")],
+                                 choices=[
+                                     ChatResponseChunkChoice(index=0,
+                                                             delta=ChoiceDelta(
+                                                                 content=data,
+                                                                 role=UserMessageContentRoleType.ASSISTANT),
+                                                             finish_reason="stop")
+                                 ],
                                  created=created,
                                  model=model,
                                  object=object_)
@@ -335,7 +445,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                                id_: str | None = None,
                                created: datetime.datetime | None = None,
                                model: str | None = None,
-                               role: str | None = None,
+                               role: UserMessageContentRoleType | None = None,
                                finish_reason: str | None = None,
                                usage: Usage | None = None,
                                system_fingerprint: str | None = None) -> "ChatResponseChunk":
@@ -343,9 +453,9 @@ class ChatResponseChunk(ResponseBaseModelOutput):
         if id_ is None:
             id_ = str(uuid.uuid4())
         if created is None:
-            created = datetime.datetime.now(datetime.timezone.utc)
+            created = datetime.datetime.now(datetime.UTC)
         if model is None:
-            model = ""
+            model = "unknown-model"
 
         delta = ChoiceDelta(content=content, role=role) if content is not None or role is not None else ChoiceDelta()
 
@@ -353,7 +463,14 @@ class ChatResponseChunk(ResponseBaseModelOutput):
 
         return ChatResponseChunk(
             id=id_,
-            choices=[Choice(index=0, message=None, delta=delta, finish_reason=final_finish_reason)],
+            choices=[
+                ChatResponseChunkChoice(
+                    index=0,
+                    delta=delta,
+                    finish_reason=typing.cast(
+                        typing.Literal['stop', 'length', 'tool_calls', 'content_filter', 'function_call'] | None,
+                        final_finish_reason))
+            ],
             created=created,
             model=model,
             object="chat.completion.chunk",
@@ -396,11 +513,6 @@ class GenerateResponse(BaseModel):
     intermediate_steps: list[tuple] | None = None
     output: str
     value: str | None = "default"
-
-
-class UserMessageContentRoleType(str, Enum):
-    USER = "user"
-    ASSISTANT = "assistant"
 
 
 class WebSocketMessageType(str, Enum):
@@ -485,7 +597,7 @@ class WebSocketUserMessage(BaseModel):
     security: Security = Security()
     error: Error = Error()
     schema_version: str = "1.0.0"
-    timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
 
 class WebSocketUserInteractionResponseMessage(BaseModel):
@@ -496,12 +608,14 @@ class WebSocketUserInteractionResponseMessage(BaseModel):
     type: typing.Literal[WebSocketMessageType.USER_INTERACTION_MESSAGE]
     id: str = "default"
     thread_id: str = "default"
+    parent_id: str = "default"
+    conversation_id: str | None = None
     content: UserMessageContent
     user: User = User()
     security: Security = Security()
     error: Error = Error()
     schema_version: str = "1.0.0"
-    timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
 
 class SystemIntermediateStepContent(BaseModel):
@@ -527,7 +641,7 @@ class WebSocketSystemIntermediateStepMessage(BaseModel):
     conversation_id: str | None = None
     content: SystemIntermediateStepContent
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
 
 class SystemResponseContent(BaseModel):
@@ -551,7 +665,7 @@ class WebSocketSystemResponseTokenMessage(BaseModel):
     conversation_id: str | None = None
     content: SystemResponseContent | Error | GenerateResponse
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
     @field_validator("content")
     @classmethod
@@ -560,7 +674,7 @@ class WebSocketSystemResponseTokenMessage(BaseModel):
             raise ValueError(f"Field: content must be 'Error' when type is {WebSocketMessageType.ERROR_MESSAGE}")
 
         if info.data.get("type") == WebSocketMessageType.RESPONSE_MESSAGE and not isinstance(
-                value, (SystemResponseContent, GenerateResponse)):
+                value, SystemResponseContent | GenerateResponse):
             raise ValueError(
                 f"Field: content must be 'SystemResponseContent' when type is {WebSocketMessageType.RESPONSE_MESSAGE}")
         return value
@@ -582,7 +696,7 @@ class WebSocketSystemInteractionMessage(BaseModel):
     conversation_id: str | None = None
     content: HumanPrompt
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
 
 # ======== GenerateResponse Converters ========
@@ -622,10 +736,50 @@ GlobalTypeConverter.register_converter(_nat_chat_request_to_string)
 
 
 def _string_to_nat_chat_request(data: str) -> ChatRequest:
-    return ChatRequest.from_string(data, model="")
+    return ChatRequest.from_string(data, model="unknown-model")
 
 
 GlobalTypeConverter.register_converter(_string_to_nat_chat_request)
+
+
+def _chat_request_or_message_to_chat_request(data: ChatRequestOrMessage) -> ChatRequest:
+    if data.input_message is not None:
+        return _string_to_nat_chat_request(data.input_message)
+    return ChatRequest(**data.model_dump(exclude={"input_message"}))
+
+
+GlobalTypeConverter.register_converter(_chat_request_or_message_to_chat_request)
+
+
+def _chat_request_to_chat_request_or_message(data: ChatRequest) -> ChatRequestOrMessage:
+    return ChatRequestOrMessage(**data.model_dump(by_alias=True))
+
+
+GlobalTypeConverter.register_converter(_chat_request_to_chat_request_or_message)
+
+
+def _chat_request_or_message_to_string(data: ChatRequestOrMessage) -> str:
+    if data.input_message is not None:
+        return data.input_message
+    # Extract content from last message in conversation
+    if data.messages is None:
+        return ""
+    content = data.messages[-1].content
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    return str(content)
+
+
+GlobalTypeConverter.register_converter(_chat_request_or_message_to_string)
+
+
+def _string_to_chat_request_or_message(data: str) -> ChatRequestOrMessage:
+    return ChatRequestOrMessage(input_message=data)
+
+
+GlobalTypeConverter.register_converter(_string_to_chat_request_or_message)
 
 
 # ======== ChatResponse Converters ========
@@ -654,22 +808,12 @@ def _string_to_nat_chat_response(data: str) -> ChatResponse:
 GlobalTypeConverter.register_converter(_string_to_nat_chat_response)
 
 
-def _chat_response_to_chat_response_chunk(data: ChatResponse) -> ChatResponseChunk:
-    # Preserve original message structure for backward compatibility
-    return ChatResponseChunk(id=data.id, choices=data.choices, created=data.created, model=data.model)
-
-
-GlobalTypeConverter.register_converter(_chat_response_to_chat_response_chunk)
-
-
 # ======== ChatResponseChunk Converters ========
 def _chat_response_chunk_to_string(data: ChatResponseChunk) -> str:
     if data.choices and len(data.choices) > 0:
         choice = data.choices[0]
         if choice.delta and choice.delta.content:
             return choice.delta.content
-        if choice.message and choice.message.content:
-            return choice.message.content
     return ""
 
 
@@ -684,21 +828,6 @@ def _string_to_nat_chat_response_chunk(data: str) -> ChatResponseChunk:
 
 
 GlobalTypeConverter.register_converter(_string_to_nat_chat_response_chunk)
-
-
-# ======== AINodeMessageChunk Converters ========
-def _ai_message_chunk_to_nat_chat_response_chunk(data) -> ChatResponseChunk:
-    '''Converts LangChain AINodeMessageChunk to ChatResponseChunk'''
-    content = ""
-    if hasattr(data, 'content') and data.content is not None:
-        content = str(data.content)
-    elif hasattr(data, 'text') and data.text is not None:
-        content = str(data.text)
-    elif hasattr(data, 'message') and data.message is not None:
-        content = str(data.message)
-
-    return ChatResponseChunk.create_streaming_chunk(content=content, role="assistant", finish_reason=None)
-
 
 # Compatibility aliases with previous releases
 AIQChatRequest = ChatRequest

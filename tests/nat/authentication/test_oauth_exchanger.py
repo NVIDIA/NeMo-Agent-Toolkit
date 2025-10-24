@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Awaitable
+from collections.abc import Callable
+from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
-from datetime import timezone
-from typing import Awaitable
-from typing import Callable
 
 import pytest
 
@@ -100,7 +100,7 @@ async def test_authenticate_success(monkeypatch, cfg):
         assert flow is AuthFlowType.OAUTH2_AUTHORIZATION_CODE
         return _bearer_ctx(
             token="tok",
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+            expires_at=datetime.now(UTC) + timedelta(minutes=10),
         )
 
     _patch_context(monkeypatch, cb)
@@ -125,7 +125,7 @@ async def test_authenticate_caches(monkeypatch, cfg):
         calls["n"] += 1
         return _bearer_ctx(
             token="tok",
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+            expires_at=datetime.now(UTC) + timedelta(minutes=10),
         )
 
     _patch_context(monkeypatch, cb)
@@ -141,7 +141,7 @@ async def test_authenticate_caches(monkeypatch, cfg):
 # 4. Token refresh succeeds
 # --------------------------------------------------------------------------- #
 async def test_refresh_expired_token(monkeypatch, cfg):
-    future_ts = int((datetime.now(timezone.utc) + timedelta(minutes=20)).timestamp())
+    future_ts = int((datetime.now(UTC) + timedelta(minutes=20)).timestamp())
 
     class _DummyAuthlibClient:
 
@@ -172,12 +172,14 @@ async def test_refresh_expired_token(monkeypatch, cfg):
     _patch_context(monkeypatch, fail_cb)
 
     client = OAuth2AuthCodeFlowProvider(cfg)
-    past = datetime.now(timezone.utc) - timedelta(seconds=1)
-    client._authenticated_tokens["bob"] = AuthResult(
-        credentials=[BearerTokenCred(token="stale")],  # type: ignore[arg-type]
-        token_expires_at=past,
-        raw={"refresh_token": "refTok"},
-    )
+    past = datetime.now(UTC) - timedelta(seconds=1)
+    await client._token_storage.store(
+        "bob",
+        AuthResult(
+            credentials=[BearerTokenCred(token="stale")],  # type: ignore[arg-type]
+            token_expires_at=past,
+            raw={"refresh_token": "refTok"},
+        ))
 
     res = await client.authenticate("bob")
     assert res.credentials[0].token.get_secret_value() == "newTok"
@@ -215,18 +217,20 @@ async def test_refresh_fallback_to_callback(monkeypatch, cfg):
         hits["n"] += 1
         return _bearer_ctx(
             token="fallbackTok",
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+            expires_at=datetime.now(UTC) + timedelta(minutes=5),
         )
 
     _patch_context(monkeypatch, cb)
 
     client = OAuth2AuthCodeFlowProvider(cfg)
-    past = datetime.now(timezone.utc) - timedelta(minutes=1)
-    client._authenticated_tokens["eve"] = AuthResult(
-        credentials=[BearerTokenCred(token="old")],  # type: ignore[arg-type]
-        token_expires_at=past,
-        raw={"refresh_token": "badTok"},
-    )
+    past = datetime.now(UTC) - timedelta(minutes=1)
+    await client._token_storage.store(
+        "eve",
+        AuthResult(
+            credentials=[BearerTokenCred(token="old")],  # type: ignore[arg-type]
+            token_expires_at=past,
+            raw={"refresh_token": "badTok"},
+        ))
 
     res = await client.authenticate("eve")
     assert hits["n"] == 1

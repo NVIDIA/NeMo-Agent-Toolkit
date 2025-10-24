@@ -14,44 +14,61 @@
 # limitations under the License.
 
 import logging
-
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from typing import Literal
 
 from nat.plugins.opentelemetry.otel_span import OtelSpan
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter as OTLPSpanExporterGRPC
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter as OTLPSpanExporterHTTP
 
 logger = logging.getLogger(__name__)
+
+OTLPProtocol = Literal['http', 'grpc']
 
 
 class OTLPSpanExporterMixin:
     """Mixin for OTLP span exporters.
 
     This mixin provides OTLP-specific functionality for OpenTelemetry span exporters.
-    It handles OTLP protocol transmission using the standard OpenTelemetry OTLP HTTP exporter.
+    It handles OTLP protocol transmission using the standard OpenTelemetry OTLP exporters.
 
     Key Features:
-    - Standard OTLP HTTP protocol support for span export
+    - Standard OTLP HTTP and gRPC protocol support for span export
     - Configurable endpoint and headers for authentication/routing
     - Integration with OpenTelemetry's OTLPSpanExporter for reliable transmission
     - Works with any OTLP-compatible collector or service
 
     This mixin is designed to be used with OtelSpanExporter as a base class:
 
-    Example:
+    Example::
+
         class MyOTLPExporter(OtelSpanExporter, OTLPSpanExporterMixin):
             def __init__(self, endpoint, headers, **kwargs):
                 super().__init__(endpoint=endpoint, headers=headers, **kwargs)
     """
 
-    def __init__(self, *args, endpoint: str, headers: dict[str, str] | None = None, **kwargs):
+    def __init__(self,
+                 *args,
+                 endpoint: str,
+                 headers: dict[str, str] | None = None,
+                 protocol: OTLPProtocol = 'http',
+                 **kwargs):
         """Initialize the OTLP span exporter.
 
         Args:
             endpoint: OTLP service endpoint URL.
             headers: HTTP headers for authentication and metadata.
+            protocol: Transport protocol to use ('http' or 'grpc'). Defaults to 'http'.
         """
         # Initialize exporter before super().__init__() to ensure it's available
         # if parent class initialization potentially calls export_otel_spans()
-        self._exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
+
+        if protocol == 'http':
+            self._exporter = OTLPSpanExporterHTTP(endpoint=endpoint, headers=headers)
+        elif protocol == 'grpc':
+            self._exporter = OTLPSpanExporterGRPC(endpoint=endpoint, headers=headers)
+        else:
+            raise ValueError(f"Invalid protocol: {protocol}")
+
         super().__init__(*args, **kwargs)
 
     async def export_otel_spans(self, spans: list[OtelSpan]) -> None:

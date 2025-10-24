@@ -102,7 +102,7 @@ class RAGEvaluator:
         """Converts the ragas EvaluationResult to nat EvalOutput"""
 
         if not results_dataset:
-            logger.error("Ragas evaluation failed with no results")
+            logger.error("Ragas evaluation failed with no results", exc_info=True)
             return EvalOutput(average_score=0.0, eval_output_items=[])
 
         scores: list[dict[str, float]] = results_dataset.scores
@@ -116,11 +116,14 @@ class RAGEvaluator:
             """Convert NaN or None to 0.0 for safe arithmetic/serialization."""
             return 0.0 if v is None or (isinstance(v, float) and math.isnan(v)) else v
 
-        # Convert from list of dicts to dict of lists, coercing NaN/None to 0.0
+        # Keep original scores (preserving NaN/None) for output
+        original_scores_dict = {metric: [score.get(metric) for score in scores] for metric in scores[0]}
+
+        # Convert from list of dicts to dict of lists, coercing NaN/None to 0.0 for average calculation
         scores_dict = {metric: [_nan_to_zero(score.get(metric)) for score in scores] for metric in scores[0]}
         first_metric_name = list(scores_dict.keys())[0] if scores_dict else None
 
-        # Compute the average of each metric, guarding against empty lists
+        # Compute the average of each metric using cleaned scores (NaN/None -> 0.0)
         average_scores = {
             metric: (sum(values) / len(values) if values else 0.0)
             for metric, values in scores_dict.items()
@@ -137,11 +140,11 @@ class RAGEvaluator:
         else:
             ids = df["user_input"].tolist()  # Use "user_input" as ID fallback
 
-        # Construct EvalOutputItem list
+        # Construct EvalOutputItem list using original scores (preserving NaN/None)
         eval_output_items = [
             EvalOutputItem(
                 id=ids[i],
-                score=_nan_to_zero(getattr(row, first_metric_name, 0.0) if first_metric_name else 0.0),
+                score=original_scores_dict[first_metric_name][i] if first_metric_name else None,
                 reasoning={
                     key:
                         getattr(row, key, None)  # Use getattr to safely access attributes
@@ -169,7 +172,7 @@ class RAGEvaluator:
                                              _pbar=pbar)
         except Exception as e:
             # On exception we still continue with other evaluators. Log and return an avg_score of 0.0
-            logger.exception("Error evaluating ragas metric, Error: %s", e, exc_info=True)
+            logger.exception("Error evaluating ragas metric, Error: %s", e)
             results_dataset = None
         finally:
             pbar.close()

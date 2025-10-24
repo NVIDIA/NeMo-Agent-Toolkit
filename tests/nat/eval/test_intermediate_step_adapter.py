@@ -23,8 +23,6 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
 from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
 
-# pylint: disable=redefined-outer-name
-
 
 @pytest.fixture
 def llm_name():

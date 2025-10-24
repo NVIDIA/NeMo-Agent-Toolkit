@@ -16,7 +16,11 @@
 import functools
 import inspect
 import uuid
+from collections.abc import Callable
 from typing import Any
+from typing import TypeVar
+from typing import cast
+from typing import overload
 
 from pydantic import BaseModel
 
@@ -36,10 +40,10 @@ def _serialize_data(obj: Any) -> Any:
 
     if isinstance(obj, dict):
         return {str(k): _serialize_data(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple, set)):
+    if isinstance(obj, list | tuple | set):
         return [_serialize_data(item) for item in obj]
 
-    if isinstance(obj, (str, int, float, bool, type(None))):
+    if isinstance(obj, str | int | float | bool | type(None)):
         return obj
 
     # Fallback
@@ -75,7 +79,24 @@ def push_intermediate_step(step_manager: IntermediateStepManager,
     step_manager.push_intermediate_step(payload)
 
 
-def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
+# Type variable for overloads
+F = TypeVar('F', bound=Callable[..., Any])
+
+
+# Overloads for different function types
+@overload
+def track_function(func: F, *, metadata: dict[str, Any] | None = None) -> F:
+    """Overload for when a function is passed directly."""
+    ...
+
+
+@overload
+def track_function(*, metadata: dict[str, Any] | None = None) -> Callable[[F], F]:
+    """Overload for decorator factory usage (when called with parentheses)."""
+    ...
+
+
+def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None) -> Any:
     """
     Decorator that can wrap any type of function (sync, async, generator,
     async generator) and executes "tracking logic" around it.
@@ -250,5 +271,141 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
                                metadata=metadata)
 
         return result
+
+    return sync_wrapper
+
+
+# Overloads for track_unregistered_function
+@overload
+def track_unregistered_function(func: F, *, name: str | None = None, metadata: dict[str, Any] | None = None) -> F:
+    """Overload for when a function is passed directly."""
+    ...
+
+
+@overload
+def track_unregistered_function(*, name: str | None = None, metadata: dict[str, Any] | None = None) -> Callable[[F], F]:
+    """Overload for decorator factory usage (when called with parentheses)."""
+    ...
+
+
+def track_unregistered_function(func: Callable[..., Any] | None = None,
+                                *,
+                                name: str | None = None,
+                                metadata: dict[str, Any] | None = None) -> Callable[..., Any]:
+    """
+    Decorator that wraps any function with scope management and automatic tracking.
+
+    - Sets active function context using the function name
+    - Leverages Context.push_active_function for built-in tracking
+    - Avoids duplicate tracking entries by relying on the library's built-in systems
+    - Supports sync/async functions and generators
+
+    Args:
+        func: The function to wrap (auto-detected when used without parentheses)
+        name: Custom name to use for tracking instead of func.__name__
+        metadata: Additional metadata to include in tracking
+    """
+
+    # If called with parameters: @track_unregistered_function(name="...", metadata={...})
+    if func is None:
+
+        def decorator_wrapper(actual_func: Callable[..., Any]) -> Callable[..., Any]:
+            # Cast to ensure type checker understands this returns a callable
+            return cast(Callable[..., Any], track_unregistered_function(actual_func, name=name, metadata=metadata))
+
+        return decorator_wrapper
+
+    # Direct decoration: @track_unregistered_function or recursive call with actual function
+    function_name: str = name if name else func.__name__
+
+    # --- Validate metadata ---
+    if metadata is not None:
+        if not isinstance(metadata, dict):
+            raise TypeError("metadata must be a dict[str, Any].")
+        if any(not isinstance(k, str) for k in metadata.keys()):
+            raise TypeError("All metadata keys must be strings.")
+
+    trace_metadata = TraceMetadata(provided_metadata=metadata)
+
+    # --- Now detect the function type and wrap accordingly ---
+    if inspect.isasyncgenfunction(func):
+        # ---------------------
+        # ASYNC GENERATOR
+        # ---------------------
+
+        @functools.wraps(func)
+        async def async_gen_wrapper(*args, **kwargs):
+            context = Context.get()
+            input_data = (
+                *args,
+                kwargs,
+            )
+            # Only do context management - let push_active_function handle tracking
+            with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
+                final_outputs = []
+                async for item in func(*args, **kwargs):
+                    final_outputs.append(item)
+                    yield item
+
+                manager.set_output(final_outputs)
+
+        return async_gen_wrapper
+
+    if inspect.iscoroutinefunction(func):
+        # ---------------------
+        # ASYNC FUNCTION
+        # ---------------------
+        @functools.wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            context = Context.get()
+            input_data = (
+                *args,
+                kwargs,
+            )
+
+            # Only do context management - let push_active_function handle tracking
+            with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
+                result = await func(*args, **kwargs)
+                manager.set_output(result)
+                return result
+
+        return async_wrapper
+
+    if inspect.isgeneratorfunction(func):
+        # ---------------------
+        # SYNC GENERATOR
+        # ---------------------
+        @functools.wraps(func)
+        def sync_gen_wrapper(*args, **kwargs):
+            context = Context.get()
+            input_data = (
+                *args,
+                kwargs,
+            )
+
+            # Only do context management - let push_active_function handle tracking
+            with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
+                final_outputs = []
+                for item in func(*args, **kwargs):
+                    final_outputs.append(item)
+                    yield item
+
+                manager.set_output(final_outputs)
+
+        return sync_gen_wrapper
+
+    @functools.wraps(func)
+    def sync_wrapper(*args, **kwargs):
+        context = Context.get()
+        input_data = (
+            *args,
+            kwargs,
+        )
+
+        # Only do context management - let push_active_function handle tracking
+        with context.push_active_function(function_name, input_data=input_data, metadata=trace_metadata) as manager:
+            result = func(*args, **kwargs)
+            manager.set_output(result)
+            return result
 
     return sync_wrapper

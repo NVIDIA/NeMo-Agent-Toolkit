@@ -91,7 +91,10 @@ class IntermediateStepManager:
             open_step = self._outstanding_start_steps.pop(payload.UUID, None)
 
             if (open_step is None):
-                logger.warning("Step id %s not found in outstanding start steps", payload.UUID)
+                logger.warning(
+                    "Step id %s not found in outstanding start steps. "
+                    "This may occur if the step was started in a different context or already completed.",
+                    payload.UUID)
                 return
 
             parent_step_id = open_step.step_parent_id
@@ -147,7 +150,8 @@ class IntermediateStepManager:
             if (open_step is None):
                 logger.warning(
                     "Created a chunk for step %s, but no matching start step was found. "
-                    "Chunks must be created with the same ID as the start step.",
+                    "Chunks must be created with the same ID as the start step. "
+                    "This may occur if the step was started in a different context.",
                     payload.UUID)
                 return
 

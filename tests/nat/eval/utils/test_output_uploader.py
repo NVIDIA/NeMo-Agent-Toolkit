@@ -24,7 +24,6 @@ from nat.data_models.evaluate import EvalOutputConfig
 from nat.eval.utils.output_uploader import OutputUploader
 
 
-# pylint: disable=redefined-outer-name
 @pytest.fixture
 def s3_config():
     return EvalS3Config(bucket="test-bucket",

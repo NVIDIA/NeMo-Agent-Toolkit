@@ -61,14 +61,8 @@ class SweBenchPredictor(SweBenchPredictorBase):
 
     def __init__(self, config: SweBenchWorkflowConfig, builder: Builder):
         super().__init__(config, builder)
-        self.setup_predictor()
+        self.git_tool = None
         self.openai_client = OpenAI(api_key=config.predictor.openai_api_key)
-
-    def setup_predictor(self):
-        '''Setup git tools'''
-        logger.info("Setting up git tools for repository management")
-        self.tools = self.builder.get_tools(["git_repo_tool"], wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-        self.git_tool = self.tools[0]
 
     def _parse_ast(self, file_path: str):
         """Parse AST of a Python file and extract symbols and imports."""
@@ -137,7 +131,7 @@ class SweBenchPredictor(SweBenchPredictorBase):
             return symbols, imports, source_code
 
         except Exception as e:
-            logger.exception("Error parsing AST for %s: %s", file_path, e, exc_info=True)
+            logger.error("Error parsing AST for %s: %s", file_path, e)
             raise
 
     def _truncate_context(self, prompt: str, max_tokens: int = 2000) -> str:
@@ -213,7 +207,7 @@ class SweBenchPredictor(SweBenchPredictorBase):
                             _process_file(str(potential_paths[0]), depth + 1)
 
             except Exception as e:
-                logger.exception("Error processing dependency %s: %s", file_path, e, exc_info=True)
+                logger.exception("Error processing dependency %s: %s", file_path, e)
 
         _process_file(target_file, 0)
         logger.info("Found %d dependencies", len(dependencies))
@@ -293,7 +287,7 @@ Output only the complete fixed version of the code without any explanations or m
             logger.warning("Could not find file path in patch")
             return None
         except Exception as e:
-            logger.exception("Error extracting file from patch: %s", e, exc_info=True)
+            logger.exception("Error extracting file from patch: %s", e)
             return None
 
     async def _generate_fix(self, prompt: str) -> str:
@@ -327,6 +321,8 @@ Output only the complete fixed version of the code without any explanations or m
     async def predict_fn(self, swebench_input: SWEBenchInput) -> str:
         logger.info("Processing instance %s", swebench_input.instance_id)
 
+        if self.git_tool is None:
+            self.git_tool = await self.builder.get_tool("git_repo_tool", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         try:
             # 1. Setup repository
             repo_name = swebench_input.instance_id.split('-')[0]
@@ -374,5 +370,5 @@ Output only the complete fixed version of the code without any explanations or m
             return generate_patch(file_content, fixed_code, target_file)
 
         except Exception as e:
-            logger.exception("Error processing %s: %s", swebench_input.instance_id, e, exc_info=True)
+            logger.exception("Error processing %s: %s", swebench_input.instance_id, e)
             return f"Error: {str(e)}"

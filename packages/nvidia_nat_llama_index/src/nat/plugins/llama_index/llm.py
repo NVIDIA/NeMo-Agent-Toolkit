@@ -13,71 +13,116 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Sequence
+from typing import TypeVar
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
+from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.thinking import BaseThinkingInjector
+from nat.llm.utils.thinking import FunctionArgumentWrapper
+from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.type_utils import override
+
+ModelType = TypeVar("ModelType")
 
 
-@register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
-async def nim_llama_index(llm_config: NIMModelConfig, builder: Builder):
+def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
 
-    from llama_index.llms.nvidia import NVIDIA
+    from llama_index.core.base.llms.types import ChatMessage
 
-    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
+    class LlamaIndexThinkingInjector(BaseThinkingInjector):
 
-    if ("base_url" in kwargs and kwargs["base_url"] is None):
-        del kwargs["base_url"]
-
-    llm = NVIDIA(**kwargs)
-
-    if isinstance(llm_config, RetryMixin):
-        llm = patch_with_retry(llm,
-                               retries=llm_config.num_retries,
-                               retry_codes=llm_config.retry_on_status_codes,
-                               retry_on_messages=llm_config.retry_on_errors)
-
-    yield llm
-
-
-@register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
-async def openai_llama_index(llm_config: OpenAIModelConfig, builder: Builder):
-
-    from llama_index.llms.openai import OpenAI
-
-    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
-
-    if ("base_url" in kwargs and kwargs["base_url"] is None):
-        del kwargs["base_url"]
-
-    llm = OpenAI(**kwargs)
+        @override
+        def inject(self, messages: Sequence[ChatMessage], *args, **kwargs) -> FunctionArgumentWrapper:
+            for i, message in enumerate(messages):
+                if message.role == "system":
+                    if self.system_prompt not in str(message.content):
+                        messages = list(messages)
+                        messages[i] = ChatMessage(role="system", content=f"{message.content}\n{self.system_prompt}")
+                    break
+            else:
+                messages = list(messages)
+                messages.insert(0, ChatMessage(role="system", content=self.system_prompt))
+            return FunctionArgumentWrapper(messages, *args, **kwargs)
 
     if isinstance(llm_config, RetryMixin):
-        llm = patch_with_retry(llm,
-                               retries=llm_config.num_retries,
-                               retry_codes=llm_config.retry_on_status_codes,
-                               retry_on_messages=llm_config.retry_on_errors)
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
 
-    yield llm
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = patch_with_thinking(
+            client,
+            LlamaIndexThinkingInjector(
+                system_prompt=llm_config.thinking_system_prompt,
+                function_names=[
+                    "chat",
+                    "stream_chat",
+                    "achat",
+                    "astream_chat",
+                ],
+            ))
+
+    return client
 
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
-async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, builder: Builder):
+async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: Builder):
 
     from llama_index.llms.bedrock import Bedrock
 
-    kwargs = llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True)
+    # LlamaIndex uses context_size instead of max_tokens
+    llm = Bedrock(**llm_config.model_dump(exclude={"type", "top_p", "thinking"}, by_alias=True))
 
-    llm = Bedrock(**kwargs)
+    yield _patch_llm_based_on_config(llm, llm_config)
 
-    if isinstance(llm_config, RetryMixin):
-        llm = patch_with_retry(llm,
-                               retries=llm_config.num_retries,
-                               retry_codes=llm_config.retry_on_status_codes,
-                               retry_on_messages=llm_config.retry_on_errors)
 
-    yield llm
+@register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder: Builder):
+
+    from llama_index.llms.azure_openai import AzureOpenAI
+
+    llm = AzureOpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True))
+
+    yield _patch_llm_based_on_config(llm, llm_config)
+
+
+@register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
+
+    from llama_index.llms.nvidia import NVIDIA
+
+    llm = NVIDIA(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+
+    yield _patch_llm_based_on_config(llm, llm_config)
+
+
+@register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
+
+    from llama_index.llms.openai import OpenAI
+
+    llm = OpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+
+    yield _patch_llm_based_on_config(llm, llm_config)
+
+
+@register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def litellm_llama_index(llm_config: LiteLlmModelConfig, _builder: Builder):
+
+    from llama_index.llms.litellm import LiteLLM
+
+    llm = LiteLLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+
+    yield _patch_llm_based_on_config(llm, llm_config)

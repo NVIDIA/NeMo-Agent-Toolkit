@@ -13,28 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
-import importlib.resources
-import inspect
 import logging
 from pathlib import Path
 
 import pytest
+
+from nat.runtime.loader import load_workflow
+from nat.test.utils import locate_example_config
 from nat_simple_calculator.register import DivisionToolConfig
 from nat_simple_calculator.register import InequalityToolConfig
 from nat_simple_calculator.register import MultiplyToolConfig
 
-from nat.runtime.loader import load_workflow
-
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_inequality_tool_workflow():
 
-    package_name = inspect.getmodule(InequalityToolConfig).__package__
-
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "config.yml").absolute()
+    config_file: Path = locate_example_config(InequalityToolConfig)
 
     async with load_workflow(config_file) as workflow:
 
@@ -46,12 +43,11 @@ async def test_inequality_tool_workflow():
         assert "no" in result
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_multiply_tool_workflow():
 
-    package_name = inspect.getmodule(MultiplyToolConfig).__package__
-
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "config.yml").absolute()
+    config_file: Path = locate_example_config(MultiplyToolConfig)
 
     async with load_workflow(config_file) as workflow:
 
@@ -63,18 +59,17 @@ async def test_multiply_tool_workflow():
         assert "8" in result
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_division_tool_workflow():
 
-    package_name = inspect.getmodule(DivisionToolConfig).__package__
-
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "config.yml").absolute()
+    config_file: Path = locate_example_config(DivisionToolConfig)
 
     async with load_workflow(config_file) as workflow:
 
-        async with workflow.run("What is 8 divided by 2?") as runner:
+        async with workflow.run("What is 12 divided by 2?") as runner:
 
             result = await runner.result(to_type=str)
 
         result = result.lower()
-        assert "4" in result
+        assert "6" in result

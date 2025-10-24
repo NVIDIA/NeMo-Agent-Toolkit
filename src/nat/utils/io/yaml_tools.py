@@ -57,7 +57,7 @@ def yaml_load(config_path: StrPath) -> dict:
     """
 
     # Read YAML file
-    with open(config_path, "r", encoding="utf-8") as stream:
+    with open(config_path, encoding="utf-8") as stream:
         config_str = stream.read()
 
     return yaml_loads(config_str)
@@ -85,7 +85,7 @@ def yaml_loads(config: str) -> dict:
     try:
         config_data = yaml.safe_load(stream)
     except yaml.YAMLError as e:
-        logger.error("Error loading YAML: %s", interpolated_config_str, exc_info=True)
+        logger.error("Error loading YAML: %s", interpolated_config_str)
         raise ValueError(f"Error loading YAML: {e}") from e
 
     assert isinstance(config_data, dict)

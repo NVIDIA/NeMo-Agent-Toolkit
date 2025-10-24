@@ -21,6 +21,16 @@ The NVIDIA NeMo Agent toolkit provides a sizing calculator to estimate the GPU c
 
 The sizing calculator uses the [evaluation](evaluate.md) and [profiling](./profiler.md) systems in the NeMo Agent toolkit.
 
+## Prerequisites
+Sizing calculator uses the profiler subsystem. Ensure that it is installed by running the following command:
+```bash
+uv pip install -e ".[profiling]"
+```
+If you are installing from a package, you need to install the `nvidia-nat[profiling]` package by running the following command:
+```bash
+uv pip install "nvidia-nat[profiling]"
+```
+
 ## Overview
 
 This guide assumes that you have an LLM hosted by an isolated GPU cluster, for which you want to perform the sizing calculations for.
@@ -39,6 +49,10 @@ export CONFIG_FILE=${CALC_OUTPUT_DIR}config-sizing-calc.yml
 mkdir -p ${CALC_OUTPUT_DIR}
 
 cp examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml $CONFIG_FILE
+```
+Install the simple calculator example:
+```bash
+uv pip install -e examples/evaluation_and_profiling/simple_calculator_eval
 ```
 
 Edit `.tmp/sizing_calc/config-sizing-calc.yml` file by adding a `base_url` parameter for the `llms.nim_llm` section for your cluster. Then, if needed, change the `llms.nim_llm.model_name`.

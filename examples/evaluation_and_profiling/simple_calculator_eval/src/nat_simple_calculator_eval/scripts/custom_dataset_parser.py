@@ -49,7 +49,7 @@ def extract_nested_questions(file_path: Path, difficulty: str | None = None, max
     """
 
     # Load the nested JSON
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding='utf-8') as f:
         data = json.load(f)
 
     # Extract questions array from the nested structure

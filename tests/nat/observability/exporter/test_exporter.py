@@ -29,7 +29,7 @@ class TestExporter:
     def test_cannot_instantiate_abstract_class(self):
         """Test that the abstract Exporter class cannot be instantiated directly."""
         with pytest.raises(TypeError, match="Can't instantiate abstract class Exporter"):
-            Exporter()  # pylint: disable=abstract-class-instantiated
+            Exporter()
 
     def test_abstract_methods_exist(self):
         """Test that all expected abstract methods are defined."""
@@ -58,7 +58,7 @@ class TestExporter:
             # Missing on_complete
 
         with pytest.raises(TypeError, match="Can't instantiate abstract class IncompleteExporter"):
-            IncompleteExporter()  # pylint: disable=abstract-class-instantiated
+            IncompleteExporter()
 
 
 class ConcreteExporter(Exporter):

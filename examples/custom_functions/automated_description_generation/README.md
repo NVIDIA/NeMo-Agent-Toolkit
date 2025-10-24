@@ -29,8 +29,14 @@ The documentation will also cover configuration considerations and how to set up
 ## Table of Contents
 
 * [Key Features](#key-features)
-* [Installation and Usage](#installation-and-setup)
+* [Installation and Setup](#installation-and-setup)
+  * [Install this Workflow](#install-this-workflow)
+  * [Set Up API Keys](#set-up-api-keys)
+  * [Set Up Milvus](#set-up-milvus)
+  * [Bootstrap Data](#bootstrap-data)
 * [Example Usage](#example-usage)
+  * [No Automated Description Generation](#no-automated-description-generation)
+  * [Automated Description Generation](#automated-description-generation)
 
 
 ## Key Features
@@ -60,22 +66,33 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-### Setting Up Milvus
+### Set Up Milvus
 
 This example uses a Milvus vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses the built-in NeMo Agent toolkit abstractions for retrievers, this example will work for any database that implements the required methods of the NeMo Agent toolkit `retriever` interface.
 
-The rest of this example assumes you have a running instance of Milvus at `localhost:19530`. If you would like a guide on setting up the database used in this example, please follow
-the instructions in the `simple_rag` example of NeMo Agent toolkit [here](../../RAG/simple_rag/README.md#set-up-milvus).
+Start the docker compose
+```bash
+docker compose -f examples/deploy/docker-compose.milvus.yml up -d
+```
 
-If you have a different Milvus database you would like to use, please modify the `./configs/config.yml` with the appropriate URLs to your database instance.
+> [!NOTE]
+> It can take some time for Milvus to start up. You can check the logs with:
+> ```bash
+> docker compose -f examples/deploy/docker-compose.milvus.yml logs --follow
+> ```
 
-To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of NeMo Agent toolkit [here](../../RAG/simple_rag/README.md) and running the following command:
+### Bootstrap Data
+
+To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. The following script will create the collections and populate the data:
 
 ```bash
 python scripts/langchain_web_ingest.py --collection_name=cuda_docs
 python scripts/langchain_web_ingest.py --urls https://en.wikipedia.org/wiki/Aardvark --collection_name=wikipedia_docs
 ```
+
 ## Example Usage
+
+### No Automated Description Generation
 
 To demonstrate the benefit of this methodology to automatically generate collection descriptions, we will use it in a function that can automatically discover and generate descriptions for collections within a given vector database.
 It will then rename the retriever tool for that database with the generated description instead of the user-provided description. Let us explore the `config_no_auto.yml` file, that performs simple RAG.
@@ -85,7 +102,6 @@ llms:
   nim_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
-    base_url: https://integrate.api.nvidia.com/v1
     temperature: 0.0
     max_tokens: 10000
 
@@ -93,13 +109,14 @@ embedders:
   milvus_embedder:
     _type: nim
     model_name: nvidia/nv-embedqa-e5-v5
+    temperature: 0.0
     truncate: "END"
 
 retrievers:
   retriever:
     _type: milvus_retriever
     uri: http://localhost:19530
-    collection_name: "wikipedia_docs"
+    collection_name: wikipedia_docs
     embedding_model: milvus_embedder
     top_k: 10
 
@@ -109,7 +126,7 @@ functions:
     retriever: retriever
     # Intentionally mislabelled to show the effects of poor descriptions
     topic: NVIDIA CUDA
-    description: Only to search about NVIDIA CUDA
+    description: This tool can only retrieve information about NVIDIA's CUDA library.
 
 workflow:
   _type: react_agent
@@ -125,46 +142,68 @@ from Wikipedia, but the agent may not know that because the description is inacc
 Let us explore the output of running the agent without an automated description generation tool:
 
 ```bash
-nat run --config_file examples/custom_functions/automated_description_generation/configs/config_no_auto.yml --input "List 5 subspecies of Aardvark?"
+nat run --config_file examples/custom_functions/automated_description_generation/configs/config_no_auto.yml --input "List all known subspecies of Aardvark"
 ```
 
 **Expected Workflow Output**
 ```console
-2025-03-14 06:23:47,362 - nat.front_ends.console.console_front_end_plugin - INFO - Processing input: ('List 5 subspecies of Aardvark?',)
-2025-03-14 06:23:47,365 - nat.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-14 06:23:48,266 - nat.agent.react_agent.agent - INFO - The user's question was: List 5 subspecis of Aardvark?
-2025-03-14 06:23:48,267 - nat.agent.react_agent.agent - INFO - The agent's thoughts are:
-Thought: To answer this question, I need to find information about the subspecies of Aardvark. I will use my knowledge database to find the answer.
+2025-10-17 11:35:32 - INFO     - nat.cli.commands.start:192 - Starting NAT from config file: 'examples/custom_functions/automated_description_generation/configs/config_no_auto.yml'
+2025-10-17 11:35:32 - INFO     - nat.retriever.milvus.retriever:63 - Mivlus Retriever using _search for search.
+
+Configuration Summary:
+--------------------
+Workflow Type: react_agent
+Number of Functions: 1
+Number of Function Groups: 0
+Number of LLMs: 1
+Number of Embedders: 1
+Number of Memory: 0
+Number of Object Stores: 0
+Number of Retrievers: 1
+Number of TTC Strategies: 0
+Number of Authentication Providers: 0
+
+2025-10-17 11:35:33 - INFO     - nat.agent.react_agent.agent:169 - 
+------------------------------
+[AGENT]
+Agent input: List all known subspecies of Aardvark
+Agent's thoughts: 
+Thought: The previous conversation history does not provide any information about the subspecies of Aardvark. I should start from scratch to answer this question.
+
 
 Action: None
 Action Input: None
 
+------------------------------
+2025-10-17 11:35:33 - WARNING  - nat.agent.react_agent.agent:273 - [AGENT] ReAct Agent wants to call tool None. In the ReAct Agent's configuration within the config file,there is no tool with that name: ['cuda_tool']
+2025-10-17 11:35:34 - INFO     - nat.agent.react_agent.agent:193 - 
+------------------------------
+[AGENT]
+Agent input: List all known subspecies of Aardvark
+Agent's thoughts: 
+Thought: Since there is no tool available to provide information about Aardvark subspecies, I should inform the user that I'm unable to answer the question.
 
-2025-03-14 06:23:48,271 - nat.agent.react_agent.agent - WARNING - ReAct Agent wants to call tool None. In the ReAct Agent's configuration within the config file,there is no tool with that name: ['cuda_tool']
-2025-03-14 06:23:48,273 - nat.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-14 06:23:49,755 - nat.agent.react_agent.agent - INFO -
 
-The agent's thoughts are:
-You are correct, there is no tool named "None". Since the question is about Aardvark subspecies and not related to NVIDIA CUDA, I should not use the cuda_tool.
-
-Instead, I will provide a general answer based on my knowledge.
-
-Thought: I now know the final answer
-Final Answer: There is only one species of Aardvark, Orycteropus afer, and it has no recognized subspecies.
-2025-03-14 06:23:49,758 - nat.observability.async_otel_listener - INFO - Intermediate step stream completed. No more events will arrive.
-2025-03-14 06:23:49,758 - nat.front_ends.console.console_front_end_plugin - INFO - --------------------------------------------------
+Final Answer: Unfortunately, I'm unable to provide information about Aardvark subspecies as it is not within my knowledge domain or available tools.
+------------------------------
+2025-10-17 11:35:34 - WARNING  - nat.builder.intermediate_step_manager:94 - Step id 4de1cd41-bd02-4b05-9478-4388922f7d00 not found in outstanding start steps
+2025-10-17 11:35:34 - INFO     - nat.front_ends.console.console_front_end_plugin:102 - --------------------------------------------------
 Workflow Result:
-['There is only one species of Aardvark, Orycteropus afer, and it has no recognized subspecies.']
+["Unfortunately, I'm unable to provide information about Aardvark subspecies as it is not within my knowledge domain or available tools."]
+--------------------------------------------------
 ```
 
-If we look at the full output from the toolkit, we see that the agent did not call tool for retrieval as it was incorrectly described. However, let us see what happens if we use the automated description generate function to intelligently sample the documents in the retriever and create an appropriate description. We could do so with the following configuration:
+If we look at the full output from the toolkit, we see that the agent did not call the tool for retrieval as it was incorrectly described.
+
+### Automated Description Generation
+
+Let us see what happens if we use the automated description generate function to intelligently sample the documents in the retriever and create an appropriate description. We could do so with the following configuration:
 
 ```yaml
 llms:
   nim_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
-    base_url: https://integrate.api.nvidia.com/v1
     temperature: 0.0
     max_tokens: 10000
 
@@ -172,6 +211,7 @@ embedders:
   milvus_embedder:
     _type: nim
     model_name: nvidia/nv-embedqa-e5-v5
+    temperature: 0.0
     truncate: "END"
 
 retrievers:
@@ -188,7 +228,7 @@ functions:
     retriever: retriever
     # Intentionally mislabelled to show the effects of poor descriptions
     topic: NVIDIA CUDA
-    description: This tool retrieves information about NVIDIA's CUDA library
+    description: This tool can only retrieve information about NVIDIA's CUDA library.
   retrieve_tool:
     _type: automated_description_milvus
     llm_name: nim_llm
@@ -203,140 +243,79 @@ workflow:
   verbose: true
   llm_name: nim_llm
 ```
+
 Here, we're searching for information about Wikipedia in a collection using a tool incorrectly described to contain documents about NVIDIA's CUDA library. We see above that we use the automated description generation tool to generate a description for the collection `wikipedia_docs`. The tool uses the `retriever` to retrieve documents from the collection, and then uses the `nim_llm` to generate a description for the collection.
 
 If we run the updated configuration, we see the following output:
 
 ```bash
-nat run --config_file examples/custom_functions/automated_description_generation/configs/config.yml --input "List 5 subspecies of Aardvark?"
+nat run --config_file examples/custom_functions/automated_description_generation/configs/config.yml --input "List all known subspecies of Aardvark"
 ```
 
 **Expected Workflow Output**
 ```console
-2025-05-16 11:07:40,778 - nat.agent.react_agent.agent - INFO -
+2025-10-17 11:36:41 - INFO     - nat.cli.commands.start:192 - Starting NAT from config file: 'examples/custom_functions/automated_description_generation/configs/config.yml'
+2025-10-17 11:36:41 - INFO     - nat.retriever.milvus.retriever:63 - Mivlus Retriever using _search for search.
+2025-10-17 11:36:41 - INFO     - nat_automated_description_generation.register:61 - Building necessary components for the Automated Description Generation Workflow
+2025-10-17 11:36:41 - INFO     - nat_automated_description_generation.register:72 - Components built, starting the Automated Description Generation Workflow
+2025-10-17 11:36:44 - INFO     - nat_automated_description_generation.register:87 - Generated the dynamic description: Ask questions about the following collection of text: This collection appears to be a comprehensive repository of information on the aardvark, storing a wide range of data types including text, images, and taxonomic classifications, with the primary purpose of providing a detailed and authoritative reference on the biology, behavior, and conservation of the aardvark species.
+
+Configuration Summary:
+--------------------
+Workflow Type: react_agent
+Number of Functions: 2
+Number of Function Groups: 0
+Number of LLMs: 1
+Number of Embedders: 1
+Number of Memory: 0
+Number of Object Stores: 0
+Number of Retrievers: 1
+Number of TTC Strategies: 0
+Number of Authentication Providers: 0
+
+2025-10-17 11:36:45 - INFO     - nat.agent.react_agent.agent:169 - 
 ------------------------------
 [AGENT]
-Agent input: List 5 subspecies of Aardvark?
-Agent's thoughts:
-Thought: The input question is asking for subspecies of Aardvark, but the provided text is about NVIDIA's CUDA toolkit, which is unrelated to Aardvarks. I will ask the human to use a tool to find the answer.
+Agent input: List all known subspecies of Aardvark
+Agent's thoughts: 
+Thought: I need to find information about the subspecies of Aardvark.
 
 Action: retrieve_tool
-Action Input: None
+Action Input: {'query': 'What are the known subspecies of Aardvark?'}
 
 
 ------------------------------
-2025-05-16 11:07:41,012 - nat.tool.retriever - INFO - Retrieved 10 records for query None.
-2025-05-16 11:07:41,014 - nat.agent.react_agent.agent - INFO -
+2025-10-17 11:36:46 - INFO     - nat.tool.retriever:76 - Retrieved 10 records for query What are the known subspecies of Aardvark?.
+2025-10-17 11:36:46 - INFO     - nat.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: retrieve_tool
-Tool's input: None
-Tool's response:
-{"results": [{"page_content": "This means, in particular, that a host thread using the runtime API without explicitly calling cudaSetDevice() might be associated with a device other than device 0 if device 0 turns out to be in prohibited mode or in exclusive-process mode and used by another process. cudaSetValidDevices() can be used to set a device from a prioritized list of devices.\nNote also that, for devices featuring the Pascal architecture onwards (compute capability with major revision number 6 and higher), there exists support for Compute Preemption. This allows compute tasks to be preempted at instruction-level granularity, rather than thread block granularity as in prior Maxwell and Kepler GPU architecture, with the benefit that applications with long-running kernels can be prevented from either monopolizing the system or timing out. However, there will be context switch overheads associated with Compute Preemption, which is automatically enabled on those devices for which su...
+Tool's input: {'query': 'What are the known subspecies of Aardvark?'}
+Tool's response: 
+{"results": [{"page_content": "Subspecies[edit]\nThe aardvark has seventeen poorly defined subspecies listed:[4]\n\nOrycteropus afer afer (Southern aardvark)\nO. a. adametzi  Grote, 1921 (Western aardvark)\nO. a. aethiopicus  Sundevall, 1843\nO. a. angolensis  Zukowsky & Haltenorth, 1957\nO. a. erikssoni  L\u00f6nnberg, 1906\nO. a. faradjius  Hatt, 1932\nO. a. haussanus  Matschie, 1900\nO. a. kordofanicus  Rothschild, 1927\nO. a. lademanni  Grote, 1911\nO. a. leptodon  Hirst, 1906\nO. a. matschiei  Grote, 1921\nO. a. observandus Grote, 1921\nO. a. ruvanensis Grote, 1921\nO. a. senegalensis Lesson, 1840\nO. a. somalicus Lydekker, 1908\nO. a. wardi Lydekker, 1908\nO. a. wertheri  Matschie, 1898 (Eastern aardvark)\nThe 1911 Encyclop\u00e6dia Britannica also mentions O.\u00a0a. capensis or Cape ant-bear from South Africa.[21]\n\nDescription[edit]\nSouthern aardvark (O.\u00a0a. afer) front and rear foot print\nStrong forelimb of aardvark\nThe aardvark is vaguely pig-like in appearance. Its ...(rest of response truncated)
 ------------------------------
-2025-05-16 11:07:44,801 - nat.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Agent input: List 5 subspecies of Aardvark?
-Agent's thoughts:
-Thought: The provided tool output does not contain any information about Aardvark subspecies. The output appears to be related to NVIDIA's CUDA toolkit and does not mention Aardvarks at all.
-
-Action: None
-Action Input: None
-
-Thought: Since the provided tool output does not contain any relevant information, I will provide a final answer based on general knowledge.
-
-Final Answer: Unfortunately, I couldn't find any information about Aardvark subspecies in the provided text. However, according to general knowledge, there are no recognized subspecies of Aardvarks. Aardvarks are a single species (Orycteropus afer) and do not have any subspecies.
-------------------------------
-2025-05-16 11:07:44,802 - nat.agent.react_agent.agent - WARNING - [AGENT] Error parsing agent output
-Observation:Parsing LLM output produced both a final answer and a parse-able action:: Thought: The provided tool output does not contain any information about Aardvark subspecies. The output appears to be related to NVIDIA's CUDA toolkit and does not mention Aardvarks at all.
-
-Action: None
-Action Input: None
-
-Thought: Since the provided tool output does not contain any relevant information, I will provide a final answer based on general knowledge.
-
-Final Answer: Unfortunately, I couldn't find any information about Aardvark subspecies in the provided text. However, according to general knowledge, there are no recognized subspecies of Aardvarks. Aardvarks are a single species (Orycteropus afer) and do not have any subspecies.
-Agent Output:
-Thought: The provided tool output does not contain any information about Aardvark subspecies. The output appears to be related to NVIDIA's CUDA toolkit and does not mention Aardvarks at all.
-
-Action: None
-Action Input: None
-
-Thought: Since the provided tool output does not contain any relevant information, I will provide a final answer based on general knowledge.
-
-Final Answer: Unfortunately, I couldn't find any information about Aardvark subspecies in the provided text. However, according to general knowledge, there are no recognized subspecies of Aardvarks. Aardvarks are a single species (Orycteropus afer) and do not have any subspecies.
-2025-05-16 11:07:44,802 - nat.agent.react_agent.agent - INFO - [AGENT] Retrying ReAct Agent, including output parsing Observation
-2025-05-16 11:07:48,755 - nat.agent.react_agent.agent - INFO -
+2025-10-17 11:36:51 - INFO     - nat.agent.react_agent.agent:193 - 
 ------------------------------
 [AGENT]
-Agent input: List 5 subspecies of Aardvark?
-Agent's thoughts:
-Thought: The input question is asking for subspecies of Aardvark, but the provided text is about NVIDIA's CUDA toolkit, which is unrelated to Aardvarks. I will ask the human to use a tool to find the answer.
+Agent input: List all known subspecies of Aardvark
+Agent's thoughts: 
+Thought: I have found the relevant information about the subspecies of Aardvark.
 
-Action: retrieve_tool
-Action Input: {"query": "Aardvark subspecies"}
+Final Answer: The aardvark has seventeen poorly defined subspecies listed, including Orycteropus afer afer, O. a. adametzi, O. a. aethiopicus, O. a. angolensis, O. a. erikssoni, O. a. faradjius, O. a. haussanus, O. a. kordofanicus, O. a. lademanni, O. a. leptodon, O. a. matschiei, O. a. observandus, O. a. ruvanensis, O. a. senegalensis, O. a. somalicus, O. a. wardi, and O. a. wertheri.
 ------------------------------
-2025-05-16 11:07:48,993 - nat.tool.retriever - INFO - Retrieved 10 records for query Aardvark subspecies.
-2025-05-16 11:07:48,995 - nat.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Calling tools: retrieve_tool
-Tool's input: {"query": "Aardvark subspecies"}
-Tool's response:
-{"results": [{"page_content": "Subspecies\nThe aardvark has seventeen poorly defined subspecies listed:[4]\n\nOrycteropus afer afer (Southern aardvark)\nO. a. adametzi  Grote, 1921 (Western aardvark)\nO. a. aethiopicus  Sundevall, 1843\nO. a. angolensis  Zukowsky & Haltenorth, 1957\nO. a. erikssoni  L\u00f6nnberg, 1906\nO. a. faradjius  Hatt, 1932\nO. a. haussanus  Matschie, 1900\nO. a. kordofanicus  Rothschild, 1927\nO. a. lademanni  Grote, 1911\nO. a. leptodon  Hirst, 1906\nO. a. matschiei  Grote, 1921\nO. a. observandus Grote, 1921\nO. a. ruvanensis Grote, 1921\nO. a. senegalensis Lesson, 1840\nO. a. somalicus Lydekker, 1908\nO. a. wardi Lydekker, 1908\nO. a. wertheri  Matschie, 1898 (Eastern aardvark)\nThe 1911 Encyclop\u00e6dia Britannica also mentions O.\u00a0a. capensis or Cape ant-bear from South Africa.[21]\n\nDescription\nSouthern aardvark (O.\u00a0a. afer) front and rear foot print\nStrong forelimb of aardvark\nThe aardvark is vaguely pig-like in appearance. Its body is stou...
-------------------------------
-2025-05-16 11:07:51,650 - nat.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Agent input: List 5 subspecies of Aardvark?
-Agent's thoughts:
-Thought: The human has provided the results of the tool, which includes information about the aardvark's subspecies.
-
-Action: None
-Action Input: None
-
-
-------------------------------
-2025-05-16 11:07:51,651 - nat.agent.react_agent.agent - WARNING - [AGENT] ReAct Agent wants to call tool None. In the ReAct Agent's configuration within the config file,there is no tool with that name: ['retrieve_tool']
-2025-05-16 11:07:54,720 - nat.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Agent input: List 5 subspecies of Aardvark?
-Agent's thoughts:
-Thought: The human has provided the results of the tool, which includes information about the aardvark's subspecies.
-
-Action: retrieve_tool
-Action Input: {"query": "List 5 subspecies of Aardvark"}
-------------------------------
-2025-05-16 11:07:54,954 - nat.tool.retriever - INFO - Retrieved 10 records for query List 5 subspecies of Aardvark.
-2025-05-16 11:07:54,956 - nat.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Calling tools: retrieve_tool
-Tool's input: {"query": "List 5 subspecies of Aardvark"}
-Tool's response:
-{"results": [{"page_content": "Subspecies\nThe aardvark has seventeen poorly defined subspecies listed:[4]\n\nOrycteropus afer afer (Southern aardvark)\nO. a. adametzi  Grote, 1921 (Western aardvark)\nO. a. aethiopicus  Sundevall, 1843\nO. a. angolensis  Zukowsky & Haltenorth, 1957\nO. a. erikssoni  L\u00f6nnberg, 1906\nO. a. faradjius  Hatt, 1932\nO. a. haussanus  Matschie, 1900\nO. a. kordofanicus  Rothschild, 1927\nO. a. lademanni  Grote, 1911\nO. a. leptodon  Hirst, 1906\nO. a. matschiei  Grote, 1921\nO. a. observandus Grote, 1921\nO. a. ruvanensis Grote, 1921\nO. a. senegalensis Lesson, 1840\nO. a. somalicus Lydekker, 1908\nO. a. wardi Lydekker, 1908\nO. a. wertheri  Matschie, 1898 (Eastern aardvark)\nThe 1911 Encyclop\u00e6dia Britannica also mentions O.\u00a0a. capensis or Cape ant-bear from South Africa.[21]\n\nDescription\nSouthern aardvark (O.\u00a0a. afer) front and rear foot print\nStrong forelimb of aardvark\nThe aardvark is vaguely pig-like in appearance. Its body is stou...
-------------------------------
-2025-05-16 11:08:02,632 - nat.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Agent input: List 5 subspecies of Aardvark?
-Agent's thoughts:
-Thought: I now know the final answer
-
-Final Answer: The 5 subspecies of Aardvark are:
-
-1. Orycteropus afer afer (Southern aardvark)
-2. O. a. adametzi  Grote, 1921 (Western aardvark)
-3. O. a. aethiopicus  Sundevall, 1843
-4. O. a. angolensis  Zukowsky & Haltenorth, 1957
-5. O. a. erikssoni  Lönnberg, 1906
-------------------------------
-2025-05-16 11:08:02,634 - nat.front_ends.console.console_front_end_plugin - INFO -
---------------------------------------------------
+2025-10-17 11:36:51 - WARNING  - nat.builder.intermediate_step_manager:94 - Step id 327b094d-f883-47ab-837e-eca0a91ca557 not found in outstanding start steps
+2025-10-17 11:36:51 - INFO     - nat.front_ends.console.console_front_end_plugin:102 - --------------------------------------------------
 Workflow Result:
-['The 5 subspecies of Aardvark are:\n\n1. Orycteropus afer afer (Southern aardvark)\n2. O. a. adametzi  Grote, 1921 (Western aardvark)\n3. O. a. aethiopicus  Sundevall, 1843\n4. O. a. angolensis  Zukowsky & Haltenorth, 1957\n5. O. a. erikssoni  Lönnberg, 1906']
+['The aardvark has seventeen poorly defined subspecies listed, including Orycteropus afer afer, O. a. adametzi, O. a. aethiopicus, O. a. angolensis, O. a. erikssoni, O. a. faradjius, O. a. haussanus, O. a. kordofanicus, O. a. lademanni, O. a. leptodon, O. a. matschiei, O. a. observandus, O. a. ruvanensis, O. a. senegalensis, O. a. somalicus, O. a. wardi, and O. a. wertheri.']
+--------------------------------------------------
 ```
 
-We see that the agent called the `retrieve_tool`. This demonstrates how the automated description generation tool can be used to automatically generate descriptions for collections within a vector database. While this is a toy example, this can be quite helpful when descriptions are vague, or you have too many collections to describe!
+There are two key differences in the workflow execution:
+
+1. The generated description correctly reflected the contents of the collection.
+
+    > Generated the dynamic description: Ask questions about the following collection of text: This collection appears to be a comprehensive repository of information on the aardvark, storing a wide range of data types including text, images, and taxonomic classifications, with the primary purpose of providing a detailed and authoritative reference on the biology, behavior, and conservation of the aardvark species.
+
+2. We see that the agent called the `retrieve_tool`.
+
+This example demonstrates how the automated description generation tool can be used to automatically generate descriptions for collections within a vector database. While this is a toy example, this can be quite helpful when descriptions are vague, or you have too many collections to describe!

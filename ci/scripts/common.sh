@@ -23,7 +23,7 @@ export PROJ_TOML="${PROJECT_ROOT}/pyproject.toml"
 export PY_DIRS="${PY_ROOT} ${PROJECT_ROOT}/packages ${PROJECT_ROOT}/tests ${PROJECT_ROOT}/ci/scripts "
 
 # Determine the commits to compare against. If running in CI, these will be set. Otherwise, diff with main
-export NAT_LOG_LEVEL=WARN
+export NAT_LOG_LEVEL=WARNING
 export CI_MERGE_REQUEST_TARGET_BRANCH_NAME=${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-"develop"}
 
 if [[ "${GITLAB_CI}" == "true" ]]; then
@@ -178,9 +178,9 @@ function get_lfs_files() {
     if [[ "${USE_HOST_GIT}" == "1" ]]; then
         rapids-logger "Using host git, skipping git-lfs install"
     else
-        rapids-logger "Fetching LFS files"
-        git lfs install
+        rapids-logger "Calling git lfs fetch"
         git lfs fetch
+        rapids-logger "Calling git lfs pull"
         git lfs pull
     fi
 

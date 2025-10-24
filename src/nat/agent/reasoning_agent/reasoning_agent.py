@@ -23,25 +23,22 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.component_ref import FunctionRef
-from nat.data_models.component_ref import LLMRef
-from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
 
-class ReasoningFunctionConfig(FunctionBaseConfig, name="reasoning_agent"):
+class ReasoningFunctionConfig(AgentBaseConfig, name="reasoning_agent"):
     """
     Defines a NAT function that performs reasoning on the input data.
     Output is passed to the next function in the workflow.
 
     Designed to be used with an InterceptingFunction.
     """
-
-    llm_name: LLMRef = Field(description="The name of the LLM to use for reasoning.")
+    description: str = Field(default="Reasoning Agent", description="The description of this function's use.")
     augmented_fn: FunctionRef = Field(description="The name of the function to reason on.")
-    verbose: bool = Field(default=False, description="Whether to log detailed information.")
     reasoning_prompt_template: str = Field(
         default=("You are an expert reasoning model task with creating a detailed execution plan"
                  " for a system that has the following description:\n\n"
@@ -102,7 +99,7 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
     llm: BaseChatModel = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     # Get the augmented function's description
-    augmented_function = builder.get_function(config.augmented_fn)
+    augmented_function = await builder.get_function(config.augmented_fn)
 
     # For now, we rely on runtime checking for type conversion
 
@@ -113,11 +110,16 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
                          f"function without a description.")
 
     # Get the function dependencies of the augmented function
-    function_used_tools = builder.get_function_dependencies(config.augmented_fn).functions
+    function_dependencies = builder.get_function_dependencies(config.augmented_fn)
+    function_used_tools = set()
+    function_used_tools.update(function_dependencies.functions)
+    for function_group in function_dependencies.function_groups:
+        function_used_tools.update(builder.get_function_group_dependencies(function_group).functions)
+
     tool_names_with_desc: list[tuple[str, str]] = []
 
     for tool in function_used_tools:
-        tool_impl = builder.get_function(tool)
+        tool_impl = await builder.get_function(tool)
         tool_names_with_desc.append((tool, tool_impl.description if hasattr(tool_impl, "description") else ""))
 
     # Draft the reasoning prompt for the augmented function
@@ -155,12 +157,12 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
             prompt = prompt.to_string()
 
             # Get the reasoning output from the LLM
-            reasoning_output = ""
+            reasoning_output = []
 
             async for chunk in llm.astream(prompt):
-                reasoning_output += chunk.content
+                reasoning_output.append(chunk.content)
 
-            reasoning_output = remove_r1_think_tags(reasoning_output)
+            reasoning_output = remove_r1_think_tags("".join(reasoning_output))
 
             output = await downstream_template.ainvoke(input={
                 "input_text": input_text, "reasoning_output": reasoning_output
@@ -198,12 +200,12 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
             prompt = prompt.to_string()
 
             # Get the reasoning output from the LLM
-            reasoning_output = ""
+            reasoning_output = []
 
             async for chunk in llm.astream(prompt):
-                reasoning_output += chunk.content
+                reasoning_output.append(chunk.content)
 
-            reasoning_output = remove_r1_think_tags(reasoning_output)
+            reasoning_output = remove_r1_think_tags("".join(reasoning_output))
 
             output = await downstream_template.ainvoke(input={
                 "input_text": input_text, "reasoning_output": reasoning_output

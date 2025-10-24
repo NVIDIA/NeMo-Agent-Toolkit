@@ -13,20 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import random
+import subprocess
+import time
+import types
+import typing
+from collections.abc import AsyncGenerator
+from collections.abc import Generator
+from pathlib import Path
+
 import pytest
+import pytest_asyncio
+
+if typing.TYPE_CHECKING:
+    import langsmith.client
+
+    from docker.client import DockerClient
 
 
 def pytest_addoption(parser: pytest.Parser):
     """
     Adds command line options for running specfic tests that are disabled by default
     """
-    parser.addoption(
-        "--run_e2e",
-        action="store_true",
-        dest="run_e2e",
-        help="Run end to end tests that would otherwise be skipped",
-    )
-
     parser.addoption(
         "--run_integration",
         action="store_true",
@@ -42,12 +51,16 @@ def pytest_addoption(parser: pytest.Parser):
         help="Run end to end tests that would otherwise be skipped",
     )
 
+    parser.addoption(
+        "--fail_missing",
+        action="store_true",
+        dest="fail_missing",
+        help=("Tests requiring unmet dependencies are normally skipped. "
+              "Setting this flag will instead cause them to be reported as a failure"),
+    )
+
 
 def pytest_runtest_setup(item):
-    if (not item.config.getoption("--run_e2e")):
-        if (item.get_closest_marker("e2e") is not None):
-            pytest.skip("Skipping end to end tests by default. Use --run_e2e to enable")
-
     if (not item.config.getoption("--run_integration")):
         if (item.get_closest_marker("integration") is not None):
             pytest.skip("Skipping integration tests by default. Use --run_integration to enable")
@@ -68,7 +81,6 @@ def register_components_fixture():
     discover_and_register_plugins(PluginTypes.ALL)
 
     # Also import the nat.test.register module to register test-only components
-    import nat.test.register  # pylint: disable=unused-import # noqa: F401
 
 
 @pytest.fixture(name="module_registry", scope="module", autouse=True)
@@ -95,3 +107,522 @@ def function_registry_fixture():
 
     with GlobalTypeRegistry.push() as registry:
         yield registry
+
+
+@pytest.fixture(scope="session", name="fail_missing")
+def fail_missing_fixture(pytestconfig: pytest.Config) -> bool:
+    """
+    Returns the value of the `fail_missing` flag, when false tests requiring unmet dependencies will be skipped, when
+    True they will fail.
+    """
+    yield pytestconfig.getoption("fail_missing")
+
+
+def require_env_variables(varnames: list[str], reason: str, fail_missing: bool = False) -> dict[str, str]:
+    """
+    Checks if the given environment variable is set, and returns its value if it is. If the variable is not set, and
+    `fail_missing` is False the test will ve skipped, otherwise a `RuntimeError` will be raised.
+    """
+    env_variables = {}
+    try:
+        for varname in varnames:
+            env_variables[varname] = os.environ[varname]
+    except KeyError as e:
+        if fail_missing:
+            raise RuntimeError(reason) from e
+
+        pytest.skip(reason=reason)
+
+    return env_variables
+
+
+@pytest.fixture(name="openai_api_key", scope='session')
+def openai_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require an Openai API key.
+    """
+    yield require_env_variables(
+        varnames=["OPENAI_API_KEY"],
+        reason="openai integration tests require the `OPENAI_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="nvidia_api_key", scope='session')
+def nvidia_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require an Nvidia API key.
+    """
+    yield require_env_variables(
+        varnames=["NVIDIA_API_KEY"],
+        reason="Nvidia integration tests require the `NVIDIA_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="serp_api_key", scope='session')
+def serp_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a SERP API (serpapi.com) key.
+    """
+    yield require_env_variables(
+        varnames=["SERP_API_KEY"],
+        reason="SERP integration tests require the `SERP_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="serperdev", scope='session')
+def serperdev_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Serper Dev API (https://serper.dev) key.
+    """
+    yield require_env_variables(
+        varnames=["SERPERDEV_API_KEY"],
+        reason="SERPERDEV integration tests require the `SERPERDEV_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="tavily_api_key", scope='session')
+def tavily_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Tavily API key.
+    """
+    yield require_env_variables(
+        varnames=["TAVILY_API_KEY"],
+        reason="Tavily integration tests require the `TAVILY_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="mem0_api_key", scope='session')
+def mem0_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Mem0 API key.
+    """
+    yield require_env_variables(
+        varnames=["MEM0_API_KEY"],
+        reason="Mem0 integration tests require the `MEM0_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="aws_keys", scope='session')
+def aws_keys_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require AWS credentials.
+    """
+
+    yield require_env_variables(
+        varnames=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+        reason=
+        "AWS integration tests require the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables to be "
+        "defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="azure_openai_keys", scope='session')
+def azure_openai_keys_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require Azure OpenAI credentials.
+    """
+    yield require_env_variables(
+        varnames=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
+        reason="Azure integration tests require the `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` environment "
+        "variables to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="langfuse_keys", scope='session')
+def langfuse_keys_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require Langfuse credentials.
+    """
+    yield require_env_variables(
+        varnames=["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"],
+        reason="Langfuse integration tests require the `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` environment "
+        "variables to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="wandb_api_key", scope='session')
+def wandb_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Weights & Biases API key.
+    """
+    yield require_env_variables(
+        varnames=["WANDB_API_KEY"],
+        reason="Weights & Biases integration tests require the `WANDB_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="weave", scope='session')
+def require_weave_fixture(fail_missing: bool) -> types.ModuleType:
+    """
+    Use for integration tests that require Weave to be running.
+    """
+    try:
+        import weave
+        return weave
+    except Exception as e:
+        reason = "Weave must be installed to run weave based tests"
+        if fail_missing:
+            raise RuntimeError(reason) from e
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="langsmith_api_key", scope='session')
+def langsmith_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a LangSmith API key.
+    """
+    yield require_env_variables(
+        varnames=["LANGSMITH_API_KEY"],
+        reason="LangSmith integration tests require the `LANGSMITH_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="langsmith_client")
+def langsmith_client_fixture(langsmith_api_key: str, fail_missing: bool) -> "langsmith.client.Client":
+    try:
+        import langsmith.client
+        client = langsmith.client.Client()
+        return client
+    except ImportError:
+        reason = "LangSmith integration tests require the `langsmith` package to be installed."
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="langsmith_project_name")
+def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client") -> Generator[str]:
+    # Createa a unique project name for each test run
+    project_name = f"nat-e2e-test-{time.time()}-{random.random()}"
+    langsmith_client.create_project(project_name)
+    yield project_name
+
+    langsmith_client.delete_project(project_name=project_name)
+
+
+@pytest.fixture(name="require_docker", scope='session')
+def require_docker_fixture(fail_missing: bool) -> "DockerClient":
+    """
+    Use for integration tests that require Docker to be running.
+    """
+    try:
+        from docker.client import DockerClient
+        yield DockerClient()
+    except Exception as e:
+        reason = f"Unable to connect to Docker daemon: {e}"
+        if fail_missing:
+            raise RuntimeError(reason) from e
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="restore_environ")
+def restore_environ_fixture():
+    orig_vars = os.environ.copy()
+    yield os.environ
+
+    for key, value in orig_vars.items():
+        os.environ[key] = value
+
+    # Delete any new environment variables
+    # Iterating over a copy of the keys as we will potentially be deleting keys in the loop
+    for key in list(os.environ.keys()):
+        if key not in orig_vars:
+            del (os.environ[key])
+
+
+@pytest.fixture(name="root_repo_dir", scope='session')
+def root_repo_dir_fixture() -> Path:
+    from nat.test.utils import locate_repo_root
+    return locate_repo_root()
+
+
+@pytest.fixture(name="examples_dir", scope='session')
+def examples_dir_fixture(root_repo_dir: Path) -> Path:
+    return root_repo_dir / "examples"
+
+
+@pytest.fixture(name="env_without_nat_log_level", scope='function')
+def env_without_nat_log_level_fixture() -> dict[str, str]:
+    env = os.environ.copy()
+    env.pop("NAT_LOG_LEVEL", None)
+    return env
+
+
+@pytest.fixture(name="etcd_url", scope="session")
+def etcd_url_fixture(fail_missing: bool = False) -> str:
+    """
+    To run these tests, an etcd server must be running
+    """
+    import requests
+
+    host = os.getenv("NAT_CI_ETCD_HOST", "localhost")
+    port = os.getenv("NAT_CI_ETCD_PORT", "2379")
+    url = f"http://{host}:{port}"
+    health_url = f"{url}/health"
+
+    try:
+        response = requests.get(health_url, timeout=5)
+        response.raise_for_status()
+        return url
+    except:  # noqa: E722
+        failure_reason = f"Unable to connect to etcd server at {url}"
+        if fail_missing:
+            raise RuntimeError(failure_reason)
+        pytest.skip(reason=failure_reason)
+
+
+@pytest.fixture(name="milvus_uri", scope="session")
+def milvus_uri_fixture(etcd_url: str, fail_missing: bool = False) -> str:
+    """
+    To run these tests, a Milvus server must be running
+    """
+    host = os.getenv("NAT_CI_MILVUS_HOST", "localhost")
+    port = os.getenv("NAT_CI_MILVUS_PORT", "19530")
+    uri = f"http://{host}:{port}"
+    try:
+        from pymilvus import MilvusClient
+        MilvusClient(uri=uri)
+
+        return uri
+    except:  # noqa: E722
+        reason = f"Unable to connect to Milvus server at {uri}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="populate_milvus", scope="session")
+def populate_milvus_fixture(milvus_uri: str, root_repo_dir: Path):
+    """
+    Populate Milvus with some test data.
+    """
+    populate_script = root_repo_dir / "scripts/langchain_web_ingest.py"
+
+    # Ingest default cuda docs
+    subprocess.run(["python", str(populate_script), "--milvus_uri", milvus_uri], check=True)
+
+    # Ingest MCP docs
+    subprocess.run([
+        "python",
+        str(populate_script),
+        "--milvus_uri",
+        milvus_uri,
+        "--urls",
+        "https://github.com/modelcontextprotocol/python-sdk",
+        "--urls",
+        "https://modelcontextprotocol.io/introduction",
+        "--urls",
+        "https://modelcontextprotocol.io/quickstart/server",
+        "--urls",
+        "https://modelcontextprotocol.io/quickstart/client",
+        "--urls",
+        "https://modelcontextprotocol.io/examples",
+        "--urls",
+        "https://modelcontextprotocol.io/docs/concepts/architecture",
+        "--collection_name",
+        "mcp_docs"
+    ],
+                   check=True)
+
+    # Ingest some wikipedia docs
+    subprocess.run([
+        "python",
+        str(populate_script),
+        "--milvus_uri",
+        milvus_uri,
+        "--urls",
+        "https://en.wikipedia.org/wiki/Aardvark",
+        "--collection_name",
+        "wikipedia_docs"
+    ],
+                   check=True)
+
+
+@pytest.fixture(name="require_nest_asyncio", scope="session")
+def require_nest_asyncio_fixture():
+    """
+    Some tests require nest_asyncio to be installed to allow nested event loops, calling nest_asyncio.apply() more than
+    once is a no-op so it's safe to call this fixture even if one of our dependencies already called it.
+    """
+    import nest_asyncio
+    nest_asyncio.apply()
+
+
+@pytest.fixture(name="phoenix_url", scope="session")
+def phoenix_url_fixture(fail_missing: bool) -> str:
+    """
+    To run these tests, a phoenix server must be running.
+    The phoenix server can be started by running the following command:
+    docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:latest
+    """
+    import requests
+
+    url = os.getenv("NAT_CI_PHOENIX_URL", "http://localhost:6006")
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+
+        return url
+    except Exception as e:
+        reason = f"Unable to connect to Phoenix server at {url}: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="phoenix_trace_url", scope="session")
+def phoenix_trace_url_fixture(phoenix_url: str) -> str:
+    """
+    Some of our tools expect the base url provided by the phoenix_url fixture, however the
+    general.telemetry.tracing["phoenix"].endpoint expects the trace url which is what this fixture provides.
+    """
+    return f"{phoenix_url}/v1/traces"
+
+
+@pytest.fixture(name="redis_server", scope="session")
+def fixture_redis_server(fail_missing: bool) -> Generator[dict[str, str | int]]:
+    """Fixture to safely skip redis based tests if redis is not running"""
+    host = os.environ.get("NAT_CI_REDIS_HOST", "localhost")
+    port = int(os.environ.get("NAT_CI_REDIS_PORT", "6379"))
+    db = int(os.environ.get("NAT_CI_REDIS_DB", "0"))
+    bucket_name = os.environ.get("NAT_CI_REDIS_BUCKET_NAME", "test")
+
+    try:
+        import redis
+        client = redis.Redis(host=host, port=port, db=db)
+        if not client.ping():
+            raise RuntimeError("Failed to connect to Redis")
+        yield {"host": host, "port": port, "db": db, "bucket_name": bucket_name}
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("redis not installed, skipping redis tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        pytest.skip(f"Error connecting to Redis server: {e}, skipping redis tests")
+
+
+@pytest_asyncio.fixture(name="mysql_server", scope="session")
+async def fixture_mysql_server(fail_missing: bool) -> AsyncGenerator[dict[str, str | int]]:
+    """Fixture to safely skip MySQL based tests if MySQL is not running"""
+    host = os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1')
+    port = int(os.environ.get('NAT_CI_MYSQL_PORT', '3306'))
+    user = os.environ.get('NAT_CI_MYSQL_USER', 'root')
+    password = os.environ.get('MYSQL_ROOT_PASSWORD', 'my_password')
+    bucket_name = os.environ.get('NAT_CI_MYSQL_BUCKET_NAME', 'test')
+    try:
+        import aiomysql
+        conn = await aiomysql.connect(host=host, port=port, user=user, password=password)
+        yield {"host": host, "port": port, "username": user, "password": password, "bucket_name": bucket_name}
+        conn.close()
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("aiomysql not installed, skipping MySQL tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        pytest.skip(f"Error connecting to MySQL server: {e}, skipping MySQL tests")
+
+
+@pytest.fixture(name="minio_server", scope="session")
+def minio_server_fixture(fail_missing: bool) -> Generator[dict[str, str | int]]:
+    """Fixture to safely skip MinIO based tests if MinIO is not running"""
+    host = os.getenv("NAT_CI_MINIO_HOST", "localhost")
+    port = int(os.getenv("NAT_CI_MINIO_PORT", "9000"))
+    bucket_name = os.getenv("NAT_CI_MINIO_BUCKET_NAME", "test")
+    aws_access_key_id = os.getenv("NAT_CI_MINIO_ACCESS_KEY_ID", "minioadmin")
+    aws_secret_access_key = os.getenv("NAT_CI_MINIO_SECRET_ACCESS_KEY", "minioadmin")
+    endpoint_url = f"http://{host}:{port}"
+
+    minio_info = {
+        "host": host,
+        "port": port,
+        "bucket_name": bucket_name,
+        "endpoint_url": endpoint_url,
+        "aws_access_key_id": aws_access_key_id,
+        "aws_secret_access_key": aws_secret_access_key,
+    }
+
+    try:
+        import botocore.session
+        session = botocore.session.get_session()
+
+        client = session.create_client("s3",
+                                       aws_access_key_id=aws_access_key_id,
+                                       aws_secret_access_key=aws_secret_access_key,
+                                       endpoint_url=endpoint_url)
+        client.list_buckets()
+        yield minio_info
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("aioboto3 not installed, skipping MinIO tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        else:
+            pytest.skip(f"Error connecting to MinIO server: {e}, skipping MinIO tests")
+
+
+@pytest.fixture(name="langfuse_bucket", scope="session")
+def langfuse_bucket_fixture(fail_missing: bool, minio_server: dict[str, str | int]) -> Generator[str]:
+
+    bucket_name = os.getenv("NAT_CI_LANGFUSE_BUCKET", "langfuse")
+    try:
+        import botocore.session
+        session = botocore.session.get_session()
+
+        client = session.create_client("s3",
+                                       aws_access_key_id=minio_server["aws_access_key_id"],
+                                       aws_secret_access_key=minio_server["aws_secret_access_key"],
+                                       endpoint_url=minio_server["endpoint_url"])
+
+        buckets = client.list_buckets()
+        bucket_names = [b['Name'] for b in buckets['Buckets']]
+        if bucket_name not in bucket_names:
+            client.create_bucket(Bucket=bucket_name)
+
+        yield bucket_name
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("aioboto3 not installed, skipping MinIO tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        else:
+            pytest.skip(f"Error connecting to MinIO server: {e}, skipping MinIO tests")
+
+
+@pytest.fixture(name="langfuse_url", scope="session")
+def langfuse_url_fixture(fail_missing: bool, langfuse_bucket: str) -> str:
+    """
+    To run these tests, a langfuse server must be running.
+    """
+    import requests
+
+    host = os.getenv("NAT_CI_LANGFUSE_HOST", "localhost")
+    port = int(os.getenv("NAT_CI_LANGFUSE_PORT", "3000"))
+    url = f"http://{host}:{port}"
+    health_endpoint = f"{url}/api/public/health"
+    try:
+        response = requests.get(health_endpoint, timeout=5)
+        response.raise_for_status()
+
+        return url
+    except Exception as e:
+        reason = f"Unable to connect to Langfuse server at {url}: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="langfuse_trace_url", scope="session")
+def langfuse_trace_url_fixture(langfuse_url: str) -> str:
+    """
+    The langfuse_url fixture provides the base url, however the general.telemetry.tracing["langfuse"].endpoint expects
+    the trace url which is what this fixture provides.
+    """
+    return f"{langfuse_url}/api/public/otel/v1/traces"

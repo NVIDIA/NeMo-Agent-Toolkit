@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import dataclasses
 import logging
 from contextlib import asynccontextmanager
@@ -61,7 +62,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
             # Store the evaluator
             self._evaluators[name] = ConfiguredEvaluator(config=config, instance=info_obj)
         except Exception as e:
-            logger.error("Error %s adding evaluator `%s` with config `%s`", e, name, config, exc_info=True)
+            logger.error("Error %s adding evaluator `%s` with config `%s`", e, name, config)
             raise
 
     @override
@@ -90,17 +91,20 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         return self.eval_general_config.output_dir
 
     @override
-    def get_all_tools(self, wrapper_type: LLMFrameworkEnum | str):
-        tools = []
+    async def get_all_tools(self, wrapper_type: LLMFrameworkEnum | str):
         tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
-        for fn_name in self._functions:
-            fn = self.get_function(fn_name)
-            try:
-                tools.append(tool_wrapper_reg.build_fn(fn_name, fn, self))
-            except Exception:
-                logger.exception("Error fetching tool `%s`", fn_name, exc_info=True)
 
-        return tools
+        async def get_tool(fn_name: str):
+            fn = await self.get_function(fn_name)
+            try:
+                return tool_wrapper_reg.build_fn(fn_name, fn, self)
+            except Exception:
+                logger.exception("Error fetching tool `%s`", fn_name)
+                return None
+
+        tasks = [get_tool(fn_name) for fn_name in self._functions]
+        tools = await asyncio.gather(*tasks, return_exceptions=False)
+        return [tool for tool in tools if tool is not None]
 
     def _log_build_failure_evaluator(self,
                                      failing_evaluator_name: str,
@@ -127,11 +131,12 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
                                 remaining_components,
                                 original_error)
 
-    async def populate_builder(self, config: Config):
+    @override
+    async def populate_builder(self, config: Config, skip_workflow: bool = False):
         # Skip setting workflow if workflow config is EmptyFunctionConfig
-        skip_workflow = isinstance(config.workflow, EmptyFunctionConfig)
+        skip_workflow = skip_workflow or isinstance(config.workflow, EmptyFunctionConfig)
 
-        await super().populate_builder(config, skip_workflow)
+        await super().populate_builder(config, skip_workflow=skip_workflow)
 
         # Initialize progress tracking for evaluators
         completed_evaluators = []

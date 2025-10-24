@@ -34,25 +34,33 @@ function get_git_tag() {
             exit 1;
         fi
 
-        # If the branch is a nightly build create a version which will be accepted by pypi
-        # Note: We are intentionally creating an actual tag, just setting the variable
-        GIT_TAG=$(echo $GIT_TAG | sed -e "s|-.*|a$(date +"%Y%m%d")|")
+        # If the branch is a nightly build create a version which will be accepted by pypi,
+        # The sed script here is splitting on either the first dash or 'a',
+        # transforming a tag like `v1.3.0-dev-17-g7681cf9f` into `v1.3.0a20250821`
+        # and a tag like `v1.3.0a5` into `v1.3.0a20250821`
+        # Note: We are intentionally not ceating an actual tag, just setting the variable
+        GIT_TAG=$(echo $GIT_TAG | sed -E -e "s/(-|a).*/a$(date +"%Y%m%d")/")
     fi
 
     echo ${GIT_TAG}
 }
 
-function is_current_commit_tagged() {
-    # Check if the current commit is tagged
+function is_current_commit_release_tagged() {
+    # Check if the current commit is tagged for release, either an RC tag or the release tag
     set +e
-    git describe --tags --exact-match HEAD >/dev/null 2>&1
+    GIT_TAG=$(git describe --tags --exact-match HEAD 2>/dev/null)
     local status_code=$?
     set -e
 
     # Convert the unix status code to a boolean value
     local is_tagged=0
     if [[ ${status_code} -eq 0 ]]; then
-        is_tagged=1
+        local is_pre_release=0
+
+        # Ensure we don't have a dev or alpha tag
+        if [[ ! (${GIT_TAG} =~ "-dev" || ${GIT_TAG} =~ "a") ]]; then
+            is_tagged=1
+        fi
     fi
     echo ${is_tagged}
 }

@@ -16,51 +16,31 @@ limitations under the License.
 -->
 
 # NVIDIA NeMo Agent Toolkit Release Notes
+This section contains the release notes for [NeMo Agent toolkit](./index.md).
 
-## Release 1.2.1
+## Release 1.3.0
 ### Summary
-This is a documentation only release, there are no code changes in this release.
+This release introduces support for Google Agent Development Kit (ADK), adds control-flow agents, function groups, hyperparameter agent optimizer, LLM provider improvements, MCP server improvements, and Python 3.13 support. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
 
-## Release 1.2.0
-### Summary
-The NeMo Agent toolkit, formerly known as Agent Intelligence (AIQ) toolkit, has been renamed in this release to align with the NVIDIA NeMo family of products. This release also brings significant new capabilities and improvements across authentication, resource management, observability, and developer experience. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
-
+### New Features
 The following are the key features and improvements in this release:
-* [Authentication for Tool Calling](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/reference/api-authentication.md): Implement robust authentication mechanisms that enable secure and configurable access management for tool invocation within agent workflows.
-* [Test Time Compute](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/reference/test-time-compute.md): Dynamically reallocate compute resources after model training, allowing agents to optimize reasoning, factual accuracy, and system robustness without retraining the base model.
-* [Sizing Calculator](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/workflows/sizing-calc.md): Estimate GPU cluster requirements to support your target number of users and desired response times, simplifying deployment planning and scaling.
-* [Object Store Integration](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/extend/object-store.md): Connect and manage data through supported object stores, improving agent extensibility and enabling advanced data workflows.
-* [Enhanced Cursor Rules](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md): Build new workflows or extend existing ones by leveraging cursor rules, making agent development faster and more flexible.
-* [Interactive Notebooks](https://github.com/NVIDIA/NeMo-Agent-Toolkit/tree/release/1.2/examples/notebooks): Access a suite of onboarding and example notebooks to accelerate agent workflow development, testing, and experimentation.
-* [Observability Refactor](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/workflows/observe/index.md): Onboard new observability and monitoring platforms more easily, and take advantage of improved plug-in architecture for workflow inspection and analysis.
-* [Examples Reorganization](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/examples/README.md): Organize examples by functionality, making it easier to find and use the examples.
+* [ADK Support](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/reference/frameworks-overview.md): Supports Google Agent Development Kit (ADK). Adds tool calling, core observability, and LLM integration in this release.
+* [Control-Flow Agents](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/about/index.md): [Sequential Executor](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/about/sequential-executor.md) (Linear Agent) and [Router Agent](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/about/router-agent.md) now control flow patterns of tool calls and sub-agents.
+* [Function Groups](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/function-groups.md): Packages multiple related functions together so they share configuration, context, and resources.
+* [Hyperparameter Agent Optimizer](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/reference/optimizer.md): Automates hyperparameter tuning and prompt engineering for workflows.
+* [Introductory Notebook Improvements](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/examples/notebooks/README.md): Reorganizes getting started notebooks and adds Open in Colab links.
+* [LLM Improvements](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/llms/index.md)
+  - Adds LiteLLM Provider
+  - Supports GPT-5 (`/chat/completions` endpoint only)
+  - Adds Nemotron thinking configuration
+* [MCP Improvements](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/mcp/index.md)
+  - Supports `streamable-http` - `sse` is no longer the default transport type.
+  - Supports initial authorization - Enables connecting to MCP servers that require authentication.
+  - Supports multiple MCP tools from a single configuration - Pulls in entire tool sets published by MCP servers or filters them based on user configuration.
+  - Enhances CLI utilities for MCP servers and clients - Improves the `nat mcp` sub-command for querying, calling, and listing tools.
+* Python 3.13 support
 
-Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/CHANGELOG.md) for a complete list of changes.
-
-## Release 1.1.0
-### Summary
-* [Full Model Context Protocol (MCP) support](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/v1.1.0/docs/source/workflows/mcp/index.md). Workflows/tools can now be exposed as MCP servers.
-* Deep integration with [Weights and Biases’ Weave](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/v1.1.0/docs/source/workflows/observe/observe-workflow-with-weave.md) for logging and tracing support.
-* Addition of the [Agno](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/v1.1.0/examples/agno_personal_finance/README.md) LLM framework.
-* A new [ReWOO agent](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/v1.1.0/examples/agents/rewoo/README.md) that improves on ReAct by removing the tool output from the LLM context, reducing token counts.
-* A new [Alert Triage Agent example](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/v1.1.0/examples/alert_triage_agent/README.md) that demonstrates how to build a full application with NeMo Agent toolkit to automatically analyze system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization.
-* Support for Python 3.11.
-* Various other improvements.
-
-Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/v1.1.0/CHANGELOG.md) for a complete list of changes.
-
-## Release 1.0.0
-### Summary
-This is the first general release of NeMo Agent toolkit.
-
-## LLM APIs
-- NIM
-- OpenAI
-
-## Supported LLM Frameworks
-- LangChain
-- LlamaIndex
+Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/CHANGELOG.md) for a complete list of changes.
 
 ## Known Issues
-- Faiss is currently broken on Arm64. This is a known issue [#72](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/72) caused by an upstream bug in the Faiss library [https://github.com/facebookresearch/faiss/issues/3936](https://github.com/facebookresearch/faiss/issues/3936).
 - Refer to [https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) for an up to date list of current issues.

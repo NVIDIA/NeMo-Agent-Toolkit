@@ -27,7 +27,7 @@ class EvaluationRunConfig(BaseModel):
     """
     Parameters used for a single evaluation run.
     """
-    config_file: Path
+    config_file: Path | BaseModel
     dataset: str | None = None  # dataset file path can be specified in the config file
     result_json_path: str = "$"
     skip_workflow: bool = False
@@ -44,6 +44,8 @@ class EvaluationRunConfig(BaseModel):
     # number of passes at each concurrency, if 0 the dataset is adjusted to a multiple of the
     # concurrency. The is only used if adjust_dataset_size is true
     num_passes: int = 0
+    # timeout for waiting for trace export tasks to complete
+    export_timeout: float = 60.0
 
 
 class EvaluationRunOutput(BaseModel):

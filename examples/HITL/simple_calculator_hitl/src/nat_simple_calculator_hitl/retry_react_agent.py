@@ -24,6 +24,7 @@ from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.interactive import HumanPromptText
@@ -60,10 +61,10 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
     from nat.builder.function import Function
 
     # Get references to the underlying React agent and approval function
-    react_agent: Function = builder.get_function(config.react_agent_fn)
+    react_agent: Function = await builder.get_function(config.react_agent_fn)
     react_agent_config: FunctionBaseConfig = builder.get_function_config(
         config.react_agent_fn)  # ReActAgentWorkflowConfig
-    hitl_approval_fn: Function = builder.get_function(config.hitl_approval_fn)
+    hitl_approval_fn: Function = await builder.get_function(config.hitl_approval_fn)
 
     # Regex pattern to detect GraphRecursionError message
     # This pattern matches the specific error message format from LangGraph
@@ -107,8 +108,14 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
             # Add any tools needed by the react agent
             # This ensures the temporary agent has access to all the same tools
             for tool_name in original_config.tool_names:
-                tool_config = builder.get_function_config(tool_name)
-                await temp_builder.add_function(tool_name, tool_config)
+                # Check if it's a function group first
+                try:
+                    function_group_config = builder.get_function_group_config(tool_name)
+                    await temp_builder.add_function_group(tool_name, function_group_config)
+                except Exception:
+                    # If not a function group, treat it as a regular function
+                    tool_config = builder.get_function_config(tool_name)
+                    await temp_builder.add_function(tool_name, tool_config)
 
             # Create the retry agent with the original configuration
             temp_retry_agent = await temp_builder.add_function("retry_agent", retry_config)
@@ -161,7 +168,10 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
 
                 # If user doesn't approve, return error message
                 if not selected_option:
-                    return ChatResponse.from_string("I seem to be having a problem.")
+                    error_msg = "I seem to be having a problem."
+
+                    # Create usage statistics for error response
+                    return ChatResponse.from_string(error_msg, usage=Usage())
 
         # If we exhausted all retries, return the last response
         return response
@@ -202,11 +212,17 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
                 return await handle_recursion_error(input_message)
 
             # User declined - return error message
-            return ChatResponse.from_string("I seem to be having a problem.")
+            error_msg = "I seem to be having a problem."
+
+            # Create usage statistics for error response
+            return ChatResponse.from_string(error_msg, usage=Usage())
 
         except Exception:
             # Handle any other unexpected exceptions
-            return ChatResponse.from_string("I seem to be having a problem.")
+            error_msg = "I seem to be having a problem."
+
+            # Create usage statistics for error response
+            return ChatResponse.from_string(error_msg, usage=Usage())
 
     yield FunctionInfo.from_fn(_response_fn, description=config.description)
 

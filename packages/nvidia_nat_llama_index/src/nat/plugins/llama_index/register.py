@@ -13,12 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-import
 # flake8: noqa
 # isort:skip_file
 
 # Import any providers which need to be automatically registered here
 
+from . import embedder
 from . import llm
 from . import tool_wrapper
-from . import embedder

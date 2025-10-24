@@ -37,6 +37,7 @@ from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.front_end import FrontEndBase
 from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.builder.function_base import FunctionBase
 from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
@@ -55,6 +56,8 @@ from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.front_end import FrontEndConfigT
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionConfigT
+from nat.data_models.function import FunctionGroupBaseConfig
+from nat.data_models.function import FunctionGroupConfigT
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.llm import LLMBaseConfigT
 from nat.data_models.logging import LoggingBaseConfig
@@ -85,6 +88,7 @@ EmbedderProviderBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncI
 EvaluatorBuildCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AsyncIterator[EvaluatorInfo]]
 FrontEndBuildCallableT = Callable[[FrontEndConfigT, Config], AsyncIterator[FrontEndBase]]
 FunctionBuildCallableT = Callable[[FunctionConfigT, Builder], AsyncIterator[FunctionInfo | Callable | FunctionBase]]
+FunctionGroupBuildCallableT = Callable[[FunctionGroupConfigT, Builder], AsyncIterator[FunctionGroup]]
 TTCStrategyBuildCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AsyncIterator[StrategyBase]]
 LLMClientBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[typing.Any]]
 LLMProviderBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[LLMProviderInfo]]
@@ -106,6 +110,7 @@ EvaluatorRegisteredCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], Abs
 FrontEndRegisteredCallableT = Callable[[FrontEndConfigT, Config], AbstractAsyncContextManager[FrontEndBase]]
 FunctionRegisteredCallableT = Callable[[FunctionConfigT, Builder],
                                        AbstractAsyncContextManager[FunctionInfo | Callable | FunctionBase]]
+FunctionGroupRegisteredCallableT = Callable[[FunctionGroupConfigT, Builder], AbstractAsyncContextManager[FunctionGroup]]
 TTCStrategyRegisterCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
 LLMClientRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[LLMProviderInfo]]
@@ -175,6 +180,16 @@ class RegisteredFunctionInfo(RegisteredInfo[FunctionBaseConfig]):
     """
 
     build_fn: FunctionRegisteredCallableT = Field(repr=False)
+    framework_wrappers: list[str] = Field(default_factory=list)
+
+
+class RegisteredFunctionGroupInfo(RegisteredInfo[FunctionGroupBaseConfig]):
+    """
+    Represents a registered function group. Function groups are collections of functions that share configuration
+    and resources.
+    """
+
+    build_fn: FunctionGroupRegisteredCallableT = Field(repr=False)
     framework_wrappers: list[str] = Field(default_factory=list)
 
 
@@ -298,7 +313,7 @@ class RegisteredPackage(BaseModel):
     discovery_metadata: DiscoveryMetadata
 
 
-class TypeRegistry:  # pylint: disable=too-many-public-methods
+class TypeRegistry:
 
     def __init__(self) -> None:
         # Telemetry Exporters
@@ -312,6 +327,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         # Functions
         self._registered_functions: dict[type[FunctionBaseConfig], RegisteredFunctionInfo] = {}
+
+        # Function Groups
+        self._registered_function_groups: dict[type[FunctionGroupBaseConfig], RegisteredFunctionGroupInfo] = {}
 
         # LLMs
         self._registered_llm_provider_infos: dict[type[LLMBaseConfig], RegisteredLLMProviderInfo] = {}
@@ -478,6 +496,50 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         return list(self._registered_functions.values())
 
+    def register_function_group(self, registration: RegisteredFunctionGroupInfo):
+        """Register a function group with the type registry.
+
+        Args:
+            registration: The function group registration information
+
+        Raises:
+            ValueError: If a function group with the same config type is already registered
+        """
+        if (registration.config_type in self._registered_function_groups):
+            raise ValueError(
+                f"A function group with the same config type `{registration.config_type}` has already been "
+                "registered.")
+
+        self._registered_function_groups[registration.config_type] = registration
+
+        self._registration_changed()
+
+    def get_function_group(self, config_type: type[FunctionGroupBaseConfig]) -> RegisteredFunctionGroupInfo:
+        """Get a registered function group by its config type.
+
+        Args:
+            config_type: The function group configuration type
+
+        Returns:
+            RegisteredFunctionGroupInfo: The registered function group information
+
+        Raises:
+            KeyError: If no function group is registered for the given config type
+        """
+        try:
+            return self._registered_function_groups[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered function group for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_function_groups.keys())}") from err
+
+    def get_registered_function_groups(self) -> list[RegisteredInfo[FunctionGroupBaseConfig]]:
+        """Get all registered function groups.
+
+        Returns:
+            list[RegisteredInfo[FunctionGroupBaseConfig]]: List of all registered function groups
+        """
+        return list(self._registered_function_groups.values())
+
     def register_llm_provider(self, info: RegisteredLLMProviderInfo):
 
         if (info.config_type in self._registered_llm_provider_infos):
@@ -588,8 +650,8 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         except KeyError as err:
             raise KeyError(
                 f"An invalid Embedder config and wrapper combination was supplied. Config: `{config_type}`, "
-                "Wrapper: `{wrapper_type}`. The workflow is requesting a {wrapper_type} Embedder client but "
-                "there is no registered conversion from that Embedder provider to LLM framework: {wrapper_type}. "
+                f"Wrapper: `{wrapper_type}`. The workflow is requesting a {wrapper_type} Embedder client but "
+                f"there is no registered conversion from that Embedder provider to LLM framework: {wrapper_type}. "
                 "Please provide an Embedder configuration from one of the following providers: "
                 f"{set(self._embedder_client_provider_to_framework.keys())}") from err
 
@@ -703,8 +765,8 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         except KeyError as err:
             raise KeyError(
                 f"An invalid Retriever config and wrapper combination was supplied. Config: `{config_type}`, "
-                "Wrapper: `{wrapper_type}`. The workflow is requesting a {wrapper_type} Retriever client but "
-                "there is no registered conversion from that Retriever provider to LLM framework: {wrapper_type}. "
+                f"Wrapper: `{wrapper_type}`. The workflow is requesting a {wrapper_type} Retriever client but "
+                f"there is no registered conversion from that Retriever provider to LLM framework: {wrapper_type}. "
                 "Please provide a Retriever configuration from one of the following providers: "
                 f"{set(self._retriever_client_provider_to_framework.keys())}") from err
 
@@ -779,7 +841,7 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         self._registration_changed()
 
-    def get_infos_by_type(self, component_type: ComponentEnum) -> dict:  # pylint: disable=R0911
+    def get_infos_by_type(self, component_type: ComponentEnum) -> dict:
 
         if component_type == ComponentEnum.FRONT_END:
             return self._registered_front_end_infos
@@ -789,6 +851,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if component_type == ComponentEnum.FUNCTION:
             return self._registered_functions
+
+        if component_type == ComponentEnum.FUNCTION_GROUP:
+            return self._registered_function_groups
 
         if component_type == ComponentEnum.TOOL_WRAPPER:
             return self._registered_tool_wrappers
@@ -849,11 +914,13 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
-    def get_registered_types_by_component_type(  # pylint: disable=R0911
-            self, component_type: ComponentEnum) -> list[str]:
+    def get_registered_types_by_component_type(self, component_type: ComponentEnum) -> list[str]:
 
         if component_type == ComponentEnum.FUNCTION:
             return [i.static_type() for i in self._registered_functions]
+
+        if component_type == ComponentEnum.FUNCTION_GROUP:
+            return [i.static_type() for i in self._registered_function_groups]
 
         if component_type == ComponentEnum.TOOL_WRAPPER:
             return list(self._registered_tool_wrappers)
@@ -925,8 +992,7 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
             if (short_names[key.local_name] == 1):
                 type_list.append((key.local_name, key.config_type))
 
-        # pylint: disable=consider-alternative-union-syntax
-        return typing.Union[tuple(typing.Annotated[x_type, Tag(x_id)] for x_id, x_type in type_list)]
+        return typing.Union[*tuple(typing.Annotated[x_type, Tag(x_id)] for x_id, x_type in type_list)]
 
     def compute_annotation(self, cls: type[TypedBaseModelT]):
 
@@ -944,6 +1010,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if issubclass(cls, FunctionBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_functions())
+
+        if issubclass(cls, FunctionGroupBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_function_groups())
 
         if issubclass(cls, LLMBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_llm_providers())

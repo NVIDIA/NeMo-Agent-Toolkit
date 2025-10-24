@@ -78,7 +78,7 @@ async def telemetry_metrics_host_heartbeat_check_tool(config: TelemetryMetricsHo
 
         except Exception as e:
             utils.logger.error("Error during telemetry metrics host heartbeat check: %s", str(e))
-            raise e
+            raise
 
     yield FunctionInfo.from_fn(
         _arun,

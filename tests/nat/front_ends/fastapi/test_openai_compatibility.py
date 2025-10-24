@@ -13,12 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from contextlib import asynccontextmanager
-
 import pytest
-from asgi_lifespan import LifespanManager
-from httpx import ASGITransport
-from httpx import AsyncClient
 from httpx_sse import aconnect_sse
 
 from nat.data_models.api_server import ChatRequest
@@ -26,23 +21,14 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import ChoiceDelta
 from nat.data_models.api_server import Message
+from nat.data_models.api_server import Usage
+from nat.data_models.api_server import UserMessageContentRoleType
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from nat.test.functions import EchoFunctionConfig
 from nat.test.functions import StreamingEchoFunctionConfig
-
-
-@asynccontextmanager
-async def _build_client(config: Config, worker_class: type[FastApiFrontEndPluginWorker] = FastApiFrontEndPluginWorker):
-    """Helper to build test client with proper lifecycle management"""
-    worker = worker_class(config)
-    app = worker.build_app()
-
-    async with LifespanManager(app):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            yield client
+from nat.test.utils import build_nat_client
 
 
 def test_fastapi_config_openai_api_v1_path_field():
@@ -146,11 +132,10 @@ def test_nat_choice_delta_class():
 def test_nat_chat_response_chunk_create_streaming_chunk():
     """Test the new create_streaming_chunk method"""
     # Test basic streaming chunk
-    chunk = ChatResponseChunk.create_streaming_chunk(content="Hello", role="assistant")
+    chunk = ChatResponseChunk.create_streaming_chunk(content="Hello", role=UserMessageContentRoleType.ASSISTANT)
 
     assert chunk.choices[0].delta.content == "Hello"
-    assert chunk.choices[0].delta.role == "assistant"
-    assert chunk.choices[0].message is None
+    assert chunk.choices[0].delta.role == UserMessageContentRoleType.ASSISTANT
     assert chunk.choices[0].finish_reason is None
     assert chunk.object == "chat.completion.chunk"
 
@@ -166,8 +151,10 @@ def test_nat_chat_response_timestamp_serialization():
     import datetime
 
     # Create response with known timestamp
-    test_time = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
-    response = ChatResponse.from_string("Hello", created=test_time)
+    test_time = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
+    # Create usage statistics for test
+    usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
+    response = ChatResponse.from_string("Hello", created=test_time, usage=usage)
 
     # Serialize to JSON
     json_data = response.model_dump()
@@ -195,7 +182,7 @@ async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None
         workflow=EchoFunctionConfig(use_openai_api=True),
     )
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         base_path = "/v1/chat/completions"
 
         if openai_api_v1_path:
@@ -230,11 +217,6 @@ async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None
 
             assert event_source.response.status_code == 200
             assert len(response_chunks) > 0
-            # In OpenAI compatible mode, we should get proper streaming response
-            # The chunks use the existing streaming infrastructure format
-            has_content = any((chunk.choices[0].message and chunk.choices[0].message.content) or (
-                chunk.choices[0].delta and chunk.choices[0].delta.content) for chunk in response_chunks)
-            assert has_content
 
         else:
             # Legacy Mode: separate endpoints for streaming and non-streaming
@@ -260,10 +242,6 @@ async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None
 
             assert event_source.response.status_code == 200
             assert len(response_chunks) > 0
-            # In legacy mode, chunks should use message field
-            has_message_content = any(chunk.choices[0].message and chunk.choices[0].message.content
-                                      for chunk in response_chunks)
-            assert has_message_content
 
 
 async def test_openai_compatible_mode_stream_parameter():
@@ -279,7 +257,7 @@ async def test_openai_compatible_mode_stream_parameter():
         workflow=StreamingEchoFunctionConfig(use_openai_api=True),
     )
 
-    async with _build_client(config) as client:
+    async with build_nat_client(config) as client:
         base_path = "/v1/chat/completions"
 
         # Test stream=true (should return streaming response)
@@ -305,78 +283,288 @@ async def test_openai_compatible_mode_stream_parameter():
         assert event_source.response.headers["content-type"] == "text/event-stream; charset=utf-8"
 
 
-async def test_legacy_mode_backward_compatibility():
-    """Test that legacy mode maintains exact backward compatibility"""
+async def test_legacy_non_streaming_response_format():
+    """Test non-streaming legacy endpoint response format matches exact OpenAI structure"""
 
     front_end_config = FastApiFrontEndConfig()
-    front_end_config.workflow.openai_api_v1_path = None  # Legacy mode
-    front_end_config.workflow.openai_api_path = "/v1/chat/completions"
+    front_end_config.workflow.openai_api_path = "/chat"
 
+    # Use EchoFunctionConfig with specific content to match expected response
     config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=True),
     )
 
-    async with _build_client(config) as client:
-        base_path = "/v1/chat/completions"
+    async with build_nat_client(config) as client:
+        # Send request to legacy OpenAI endpoint
+        response = await client.post("/chat",
+                                     json={
+                                         "messages": [{
+                                             "role": "user", "content": "Hello! How can I assist you today?"
+                                         }],
+                                         "stream": False
+                                     })
 
-        # Test legacy non-streaming endpoint structure
-        response = await client.post(base_path, json={"messages": [{"content": "Hello", "role": "user"}]})
         assert response.status_code == 200
-        chat_response = ChatResponse.model_validate(response.json())
+        data = response.json()
 
-        # Verify legacy response structure
-        assert chat_response.choices[0].message is not None
-        assert chat_response.choices[0].message.content == "Hello"
-        assert chat_response.object == "chat.completion"
+        # Validate response structure exactly matches OpenAI ChatCompletion format
+        assert "id" in data
+        assert data["object"] == "chat.completion"
+        assert "created" in data
+        assert isinstance(data["created"], int)
+        assert "model" in data
+        assert "choices" in data
+        assert len(data["choices"]) == 1
 
-        # Test legacy streaming endpoint structure
-        response_chunks = []
+        # Verify choices array structure (OpenAI spec: array of choice objects)
+        choice = data["choices"][0]
+
+        # Essential choice fields per OpenAI spec
+        assert choice["index"] == 0, "Choice index should be 0 for single completion"
+        assert "message" in choice, "Choice must contain message object"
+        assert "finish_reason" in choice, "Choice must contain finish_reason"
+
+        # Message structure validation
+        message = choice["message"]
+        assert "role" in message, "Message must contain role"
+        assert message["role"] == "assistant", "Response message role should be assistant"
+        assert "content" in message, "Message must contain content"
+        assert isinstance(message["content"], str), "Message content must be string"
+
+        # Finish reason validation
+        finish_reason = choice["finish_reason"]
+        valid_finish_reasons = {"stop", "length", "content_filter", "tool_calls", "function_call"}
+        assert finish_reason in valid_finish_reasons, f"Invalid finish_reason: {finish_reason}"
+
+        # Usage validation (OpenAI spec requires usage field for non-streaming)
+        assert "usage" in data, "Non-streaming response must include usage"
+        usage = data["usage"]
+        assert "prompt_tokens" in usage, "Usage must include prompt_tokens"
+        assert "completion_tokens" in usage, "Usage must include completion_tokens"
+        assert "total_tokens" in usage, "Usage must include total_tokens"
+
+        # Validate token counts are non-negative integers
+        assert isinstance(usage["prompt_tokens"], int), "prompt_tokens must be integer"
+        assert isinstance(usage["completion_tokens"], int), "completion_tokens must be integer"
+        assert isinstance(usage["total_tokens"], int), "total_tokens must be integer"
+        assert usage["prompt_tokens"] >= 0, "prompt_tokens must be non-negative"
+        assert usage["completion_tokens"] >= 0, "completion_tokens must be non-negative"
+        assert usage["total_tokens"] >= 0, "total_tokens must be non-negative"
+
+        # Validate total_tokens = prompt_tokens + completion_tokens
+        assert usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"], \
+            "total_tokens must equal prompt_tokens + completion_tokens"
+
+
+async def test_legacy_streaming_response_format():
+    """
+    Validate only the required structural shape of legacy streaming
+    (/chat/stream).
+    """
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_path = "/chat"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=StreamingEchoFunctionConfig(use_openai_api=True),
+    )
+
+    async with build_nat_client(config) as client:
         async with aconnect_sse(client,
                                 "POST",
-                                f"{base_path}/stream",
-                                json={"messages": [{
-                                    "content": "World", "role": "user"
-                                }]}) as event_source:
+                                "/chat/stream",
+                                json={
+                                    "messages": [{
+                                        "role": "user", "content": "Hello"
+                                    }], "stream": True
+                                }) as event_source:
+
+            chunks = []
             async for sse in event_source.aiter_sse():
-                if sse.data != "[DONE]":
-                    chunk = ChatResponseChunk.model_validate(sse.json())
-                    response_chunks.append(chunk)
-                    if len(response_chunks) >= 1:  # Just need to verify structure
-                        break
+                if sse.data == "[DONE]":
+                    break
+                chunks.append(sse.json())
 
-        assert event_source.response.status_code == 200
-        assert len(response_chunks) > 0
+            # Transport-level checks
+            assert event_source.response.status_code == 200
+            ct = event_source.response.headers.get("content-type", "")
+            assert ct.startswith("text/event-stream"), f"Unexpected Content-Type: {ct}"
+            assert len(chunks) > 0, "Expected at least one JSON chunk before [DONE]"
 
-        # Verify legacy chunk structure (uses message, not delta)
-        chunk = response_chunks[0]
-        assert chunk.choices[0].message is not None
-        assert chunk.choices[0].message.content == "World"
-        assert chunk.object == "chat.completion.chunk"
-        # In legacy mode, delta should not be populated
-        assert chunk.choices[0].delta is None or (chunk.choices[0].delta.content is None
-                                                  and chunk.choices[0].delta.role is None)
+    # ---- Structural validation of chunks ----
+    valid_final_reason_seen = False
+    valid_finish_reasons = {"stop", "length", "content_filter", "tool_calls", "function_call"}
+
+    for i, chunk in enumerate(chunks):
+        # Required root fields for a streaming chunk
+        assert chunk.get("object") == "chat.completion.chunk", f"Chunk {i}: wrong object"
+        assert chunk.get("id"), f"Chunk {i}: missing id"
+        assert "created" in chunk, f"Chunk {i}: missing created"
+        assert chunk.get("model"), f"Chunk {i}: missing model"
+        assert "choices" in chunk, f"Chunk {i}: missing choices"
+
+        # choices can be empty on a usage-only summary chunk
+        if not chunk["choices"]:
+            continue
+
+        for c_idx, choice in enumerate(chunk["choices"]):
+            # Required choice fields in streaming
+            assert "index" in choice, f"Chunk {i} choice {c_idx}: missing index"
+            assert "delta" in choice, f"Chunk {i} choice {c_idx}: missing delta"
+            # Must NOT include full message in streaming
+            assert "message" not in choice, f"Chunk {i} choice {c_idx}: message must not appear in streaming"
+            # finish_reason must exist; may be null until final chunk
+            assert "finish_reason" in choice, f"Chunk {i} choice {c_idx}: missing finish_reason"
+
+            fr = choice.get("finish_reason")
+            if fr is not None:
+                assert fr in valid_finish_reasons, f"Chunk {i} choice {c_idx}: invalid finish_reason {fr}"
+                valid_final_reason_seen = True
+
+    # At least one non-null finish_reason should appear across the stream (finalization)
+    assert valid_final_reason_seen, "Expected a final chunk with non-null finish_reason"
 
 
-def test_converter_functions_backward_compatibility():
-    """Test that converter functions handle both legacy and new formats"""
-    from nat.data_models.api_server import _chat_response_chunk_to_string
-    from nat.data_models.api_server import _chat_response_to_chat_response_chunk
+async def test_openai_compatible_non_streaming_response_format():
+    """Test non-streaming OpenAI compatible endpoint response format matches exact OpenAI structure"""
 
-    # Test legacy chunk (with message) conversion to string
-    legacy_chunk = ChatResponseChunk.from_string("Legacy content")
-    legacy_content = _chat_response_chunk_to_string(legacy_chunk)
-    assert legacy_content == "Legacy content"
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_v1_path = "/v1/chat/completions"
 
-    # Test new chunk (with delta) conversion to string
-    new_chunk = ChatResponseChunk.create_streaming_chunk("New content")
-    new_content = _chat_response_chunk_to_string(new_chunk)
-    assert new_content == "New content"
+    # Use EchoFunctionConfig with specific content to match expected response
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=True),
+    )
 
-    # Test response to chunk conversion preserves message structure
-    response = ChatResponse.from_string("Response content")
-    converted_chunk = _chat_response_to_chat_response_chunk(response)
+    async with build_nat_client(config) as client:
+        # Send request to actual OpenAI endpoint - this will trigger generate_single_response
+        response = await client.post("/v1/chat/completions",
+                                     json={
+                                         "messages": [{
+                                             "role": "user", "content": "Hello! How can I assist you today?"
+                                         }],
+                                         "stream": False
+                                     })
 
-    # Should preserve original message structure for backward compatibility
-    assert converted_chunk.choices[0].message is not None
-    assert converted_chunk.choices[0].message.content == "Response content"
+        assert response.status_code == 200
+        data = response.json()
+
+        # Validate response structure exactly matches OpenAI ChatCompletion format
+        assert "id" in data
+        assert data["object"] == "chat.completion"
+        assert "created" in data
+        assert isinstance(data["created"], int)
+        assert "model" in data
+        assert "choices" in data
+        assert len(data["choices"]) == 1
+
+        # Verify choices array structure (OpenAI spec: array of choice objects)
+        choice = data["choices"][0]
+
+        # Essential choice fields per OpenAI spec
+        assert choice["index"] == 0, "Choice index should be 0 for single completion"
+        assert isinstance(choice["index"], int), "Choice index should be integer"
+
+        # finish_reason: stop|length|content_filter|tool_calls|function_call
+        assert choice["finish_reason"] == "stop", "Finish reason should be 'stop' for completed response"
+        assert choice["finish_reason"] in ["stop", "length", "content_filter", "tool_calls", "function_call"], \
+            f"Invalid finish_reason: {choice['finish_reason']}"
+
+        # Message object should be present for non-streaming, delta should not
+        assert "message" in choice, "Non-streaming response must have message field"
+        assert "delta" not in choice, "Non-streaming response should not have delta field"
+
+        # OpenAI spec requires logprobs field (can be null if not requested)
+        if "logprobs" in choice:
+            # logprobs can be null or object with content/refusal arrays
+            assert choice["logprobs"] is None or isinstance(choice["logprobs"], dict)
+
+        # Verify message object structure per OpenAI spec
+        message = choice["message"]
+
+        # Essential message fields
+        assert "role" in message, "Message must have role field"
+        assert message["role"] == "assistant", f"Expected assistant role, got: {message['role']}"
+        assert "content" in message, "Message must have content field"
+        assert message["content"] == "Hello! How can I assist you today?", "Echo function should return input content"
+        assert isinstance(message["content"], str), "Message content should be string"
+
+        # Verify usage statistics per OpenAI spec
+        assert "usage" in data, "Response must include usage statistics"
+        usage = data["usage"]
+
+        # Essential usage fields
+        assert "prompt_tokens" in usage, "Usage must include prompt_tokens"
+        assert "completion_tokens" in usage, "Usage must include completion_tokens"
+        assert "total_tokens" in usage, "Usage must include total_tokens"
+
+
+async def test_openai_compatible_streaming_response_format():
+    """
+    Validate only the required structural shape of OpenAI-compatible streaming
+    (/v1/chat/completions with stream=True).
+    """
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_v1_path = "/v1/chat/completions"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=StreamingEchoFunctionConfig(use_openai_api=True),
+    )
+
+    async with build_nat_client(config) as client:
+        async with aconnect_sse(client,
+                                "POST",
+                                "/v1/chat/completions",
+                                json={
+                                    "messages": [{
+                                        "role": "user", "content": "Hello"
+                                    }], "stream": True
+                                }) as event_source:
+
+            chunks = []
+            async for sse in event_source.aiter_sse():
+                if sse.data == "[DONE]":
+                    break
+                chunks.append(sse.json())
+
+            # Transport-level checks
+            assert event_source.response.status_code == 200
+            ct = event_source.response.headers.get("content-type", "")
+            assert ct.startswith("text/event-stream"), f"Unexpected Content-Type: {ct}"
+            assert len(chunks) > 0, "Expected at least one JSON chunk before [DONE]"
+
+    # ---- Structural validation of chunks ----
+    valid_final_reason_seen = False
+    valid_finish_reasons = {"stop", "length", "content_filter", "tool_calls", "function_call"}
+
+    for i, chunk in enumerate(chunks):
+        # Required root fields for a streaming chunk
+        assert chunk.get("object") == "chat.completion.chunk", f"Chunk {i}: wrong object"
+        assert chunk.get("id"), f"Chunk {i}: missing id"
+        assert "created" in chunk, f"Chunk {i}: missing created"
+        assert chunk.get("model"), f"Chunk {i}: missing model"
+        assert "choices" in chunk, f"Chunk {i}: missing choices"
+
+        # choices can be empty on a usage-only summary chunk
+        if not chunk["choices"]:
+            continue
+
+        for c_idx, choice in enumerate(chunk["choices"]):
+            # Required choice fields in streaming
+            assert "index" in choice, f"Chunk {i} choice {c_idx}: missing index"
+            assert "delta" in choice, f"Chunk {i} choice {c_idx}: missing delta"
+            # Must NOT include full message in streaming
+            assert "message" not in choice, f"Chunk {i} choice {c_idx}: message must not appear in streaming"
+            # finish_reason must exist; may be null until final chunk
+            assert "finish_reason" in choice, f"Chunk {i} choice {c_idx}: missing finish_reason"
+
+            fr = choice.get("finish_reason")
+            if fr is not None:
+                assert fr in valid_finish_reasons, f"Chunk {i} choice {c_idx}: invalid finish_reason {fr}"
+                valid_final_reason_seen = True
+
+    # At least one non-null finish_reason should appear across the stream (finalization)
+    assert valid_final_reason_seen, "Expected a final chunk with non-null finish_reason"

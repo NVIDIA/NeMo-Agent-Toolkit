@@ -59,7 +59,7 @@ def process_dataset(split_name, file_path, output_file, columns):
                      output_file,
                      SUBSET_SIZE)
     except Exception as e:
-        logger.exception("Error processing %s dataset: %s", split_name, e, exc_info=True)
+        logger.exception("Error processing %s dataset: %s", split_name, e)
 
 
 # Columns to extract

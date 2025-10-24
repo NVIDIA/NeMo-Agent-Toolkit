@@ -13,32 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
-import importlib.resources
-import inspect
-import logging
-from pathlib import Path
-
 import pytest
-from nat_multi_frameworks.register import MultiFrameworksWorkflowConfig
-
-from nat.runtime.loader import load_workflow
-
-logger = logging.getLogger(__name__)
 
 
-@pytest.mark.e2e
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_full_workflow():
+    from nat.test.utils import locate_example_config
+    from nat.test.utils import run_workflow
+    from nat_multi_frameworks.register import MultiFrameworksWorkflowConfig
 
-    package_name = inspect.getmodule(MultiFrameworksWorkflowConfig).__package__
+    config_file = locate_example_config(MultiFrameworksWorkflowConfig)
 
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "config.yml").absolute()
-
-    async with load_workflow(config_file) as workflow:
-
-        async with workflow.run("tell me about this workflow") as runner:
-
-            result = await runner.result(to_type=str)
-
-        result = result.lower()
-        assert "workflow" in result
+    await run_workflow(config_file=config_file, question="tell me about this workflow", expected_answer="workflow")

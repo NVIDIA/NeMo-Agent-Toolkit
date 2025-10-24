@@ -21,7 +21,7 @@ from pydantic import ValidationError
 logger = logging.getLogger(__name__)
 
 
-def schema_exception_handler(func, **kwargs):  # pylint: disable=unused-argument
+def schema_exception_handler(func, **kwargs):
     """
     A decorator that handles `ValidationError` exceptions for schema validation functions.
 

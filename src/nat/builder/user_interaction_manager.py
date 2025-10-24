@@ -61,13 +61,13 @@ class UserInteractionManager:
 
         uuid_req = str(uuid.uuid4())
         status = InteractionStatus.IN_PROGRESS
-        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         sys_human_interaction = InteractionPrompt(id=uuid_req, status=status, timestamp=timestamp, content=content)
 
         resp = await self._context_state.user_input_callback.get()(sys_human_interaction)
 
         # Rebuild a InteractionResponse object with the response
-        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         status = InteractionStatus.COMPLETED
         sys_human_interaction = InteractionResponse(id=uuid_req, status=status, timestamp=timestamp, content=resp)
 

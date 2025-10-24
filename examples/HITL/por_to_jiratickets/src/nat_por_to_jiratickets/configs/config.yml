@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 general:
-  use_uvloop: true
   front_end:
     _type: fastapi
     cors:
@@ -51,14 +51,11 @@ llms:
   extract_llm:
     _type: nim
     model_name: meta/llama-3.3-70b-instruct
-    # model_name: "deepseek-ai/deepseek-r1"
     temperature: 0.0
     seed: 33
     max_tokens: 2000
   agent_llm:
     _type: nim
-    # model_name: "deepseek-ai/deepseek-r1"
-    # model_name: mistralai/mixtral-8x22b-instruct-v0.1
     model_name: meta/llama-3.3-70b-instruct
     temperature: 0.0
     seed: 33

@@ -15,18 +15,16 @@
 
 ARG BASE_IMAGE_URL=nvcr.io/nvidia/base/ubuntu
 ARG BASE_IMAGE_TAG=22.04_20240212
-ARG NAT_VERSION=1.0.0
-ARG PYTHON_VERSION=3.12
-ARG UV_VERSION=0.8.3
-
-FROM --platform=$TARGETPLATFORM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv_base
-
-FROM --platform=$TARGETPLATFORM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG} AS base
+ARG PYTHON_VERSION=3.13
+# Specified on the command line with --build-arg NAT_VERSION=$(python -m setuptools_scm)
 ARG NAT_VERSION
-ARG PYTHON_VERSION
-ARG UV_VERSION
 
-COPY --from=uv_base /uv /uvx /bin/
+FROM --platform=$TARGETPLATFORM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
+
+ARG PYTHON_VERSION
+ARG NAT_VERSION
+
+COPY --from=ghcr.io/astral-sh/uv:0.8.15 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -50,9 +48,10 @@ WORKDIR /workspace
 RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     . /workspace/.venv/bin/activate && \
-    uv pip install --prerelease=allow "nvidia-nat[crewai, langchain, llama-index, mem0ai, semantic-kernel, zep-cloud] == ${NAT_VERSION}"
+    test -n "${NAT_VERSION}" || { echo "NAT_VERSION build-arg is required" >&2; exit 1; } && \
+    uv pip install --prerelease=allow "nvidia-nat[all]==${NAT_VERSION}"
 
-# Enivronment variables for the venv
+# Environment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Define the entry point to start the nat CLI tool

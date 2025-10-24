@@ -27,17 +27,16 @@ from nat.data_models.retry_mixin import RetryMixin
 class OpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
 
-    model_config = ConfigDict(protected_namespaces=())
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
     api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
     base_url: str | None = Field(default=None, description="Base url to the hosted model.")
     model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
                             serialization_alias="model",
                             description="The OpenAI hosted model name.")
-    max_retries: int = Field(default=2, description="The max number of retries for the request.")
 
 
 @register_embedder_provider(config_type=OpenAIEmbedderModelConfig)
-async def openai_llm(config: OpenAIEmbedderModelConfig, builder: Builder):
+async def openai_embedder_model(config: OpenAIEmbedderModelConfig, _builder: Builder):
 
     yield EmbedderProviderInfo(config=config, description="An OpenAI model for use with an Embedder client.")

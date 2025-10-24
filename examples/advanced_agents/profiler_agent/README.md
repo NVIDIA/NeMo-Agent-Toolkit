@@ -21,12 +21,14 @@ The profiler agent is a tool that allows you to analyze the performance of NeMo 
 
 ## Table of Contents
 
-- [Key Features](#key-features)
-- [Installation and Setup](#installation-and-setup)
-  - [Install this Workflow](#install-this-workflow)
-  - [Set Up API Keys](#set-up-api-keys)
-- [Run the Workflow](#run-the-workflow)
-- [Features](#features)
+- [NeMo Agent Toolkit Profiler Agent](#nemo-agent-toolkit-profiler-agent)
+  - [Table of Contents](#table-of-contents)
+  - [Key Features](#key-features)
+  - [Installation and Setup](#installation-and-setup)
+    - [Install this Workflow:](#install-this-workflow)
+    - [Set Up API Keys](#set-up-api-keys)
+  - [Run the Workflow](#run-the-workflow)
+  - [Features](#features)
 
 ## Key Features
 
@@ -63,7 +65,8 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
    ```
 
 2. Ensure that there are traces in the Phoenix server. You can use the simple calculator example to generate traces.
-   > Note: This requires installing both the optional `telemetry` dependencies along with the simple calculator. You can do this by running the following commands:
+   > [!NOTE]
+   > This requires installing both the optional `telemetry` dependencies along with the simple calculator. You can do this by running the following commands:
    > ```bash
    > uv pip install -e examples/observability/simple_calculator_observability
    > ```
@@ -81,7 +84,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
    nat serve --config_file=examples/advanced_agents/profiler_agent/configs/config.yml
    ```
 
-4. Launch the NeMo Agent Toolkit User Interface by using the instructions in the [Launching the User Interface](../../../docs/source/quick-start/launching-ui.md#launch-the-nemo-agent-toolkit-user-interface) guide.
+4. Launch the NeMo Agent Toolkit User Interface by using the instructions in the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide.
 
 5. Query the agent with natural language via the UI:
    ```

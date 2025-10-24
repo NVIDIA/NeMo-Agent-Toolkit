@@ -27,32 +27,60 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
+import glob
 import os
 import shutil
 import subprocess
 import typing
+from pathlib import Path
 
 if typing.TYPE_CHECKING:
     from autoapi._objects import PythonObject
 
-CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-DOC_DIR = os.path.dirname(CUR_DIR)
-ROOT_DIR = os.path.dirname(os.path.dirname(CUR_DIR))
-NAT_DIR = os.path.join(ROOT_DIR, "src", "nat")
 
-# Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
-# AutoAPI support for implicit namespaces is broken, so we need to manually
-# construct an nat package with an __init__.py file
-BUILD_DIR = os.path.join(DOC_DIR, "build")
-API_TREE = os.path.join(BUILD_DIR, "_api_tree")
+def _build_api_tree() -> Path:
+    # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
+    # AutoAPI support for implicit namespaces is broken, so we need to manually
 
-if os.path.exists(API_TREE):
-    shutil.rmtree(API_TREE)
+    cur_dir = Path(os.path.abspath(__file__)).parent
+    docs_dir = cur_dir.parent
+    root_dir = docs_dir.parent
+    nat_dir = root_dir / "src" / "nat"
+    plugins_dir = root_dir / "packages"
 
-os.makedirs(API_TREE)
-shutil.copytree(NAT_DIR, os.path.join(API_TREE, "nat"))
-with open(os.path.join(API_TREE, "nat", "__init__.py"), "w") as f:
-    f.write("")
+    build_dir = docs_dir / "build"
+    api_tree = build_dir / "_api_tree"
+    dest_dir = api_tree / "nat"
+
+    if api_tree.exists():
+        shutil.rmtree(api_tree.absolute())
+
+    os.makedirs(api_tree.absolute())
+    shutil.copytree(nat_dir, dest_dir)
+    dest_plugins_dir = dest_dir / "plugins"
+
+    for sub_dir in (dest_dir, dest_plugins_dir):
+        with open(sub_dir / "__init__.py", "w", encoding="utf-8") as f:
+            f.write("")
+
+    plugin_dirs = [Path(p) for p in glob.glob(f'{plugins_dir}/nvidia_nat_*')]
+    for plugin_dir in plugin_dirs:
+        src_dir = plugin_dir / 'src/nat/plugins'
+        if src_dir.exists():
+            for plugin_subdir in src_dir.iterdir():
+                if plugin_subdir.is_dir():
+                    dest_subdir = dest_plugins_dir / plugin_subdir.name
+                    shutil.copytree(plugin_subdir, dest_subdir)
+                    package_file = dest_subdir / "__init__.py"
+                    if not package_file.exists():
+                        with open(package_file, "w", encoding="utf-8") as f:
+                            f.write("")
+
+    return api_tree
+
+
+API_TREE = _build_api_tree()
+print(f"API tree built at {API_TREE}")
 
 # -- Project information -----------------------------------------------------
 
@@ -87,7 +115,7 @@ extensions = [
     "sphinxmermaid"
 ]
 
-autoapi_dirs = [API_TREE]
+autoapi_dirs = [str(API_TREE.absolute())]
 
 autoapi_root = "api"
 autoapi_python_class_content = "both"
@@ -113,7 +141,11 @@ set_type_checking_flag = True  # Enable 'expensive' imports for sphinx_autodoc_t
 nbsphinx_allow_errors = True  # Continue through Jupyter errors
 add_module_names = False  # Remove namespaces from class/method signatures
 myst_heading_anchors = 4  # Generate links for markdown headers
-copybutton_prompt_text = ">>> |$ |# "  # characters to be stripped from the copied text
+copybutton_prompt_text = ">>> |$ "  # characters to be stripped from the copied text
+
+# Allow GitHub-style mermaid fence code blocks to be used in markdown files
+# see https://myst-parser.readthedocs.io/en/latest/configuration.html
+myst_fence_as_directive = ["mermaid"]
 
 suppress_warnings = [
     "myst.header"  # Allow header increases from h2 to h4 (skipping h3)
@@ -128,6 +160,7 @@ numpydoc_class_members_toctree = False
 # Ignore openai.com links, as these always report a 403 when requested by the linkcheck agent
 # mysql.com  reports a 403 when requested by linkcheck
 # api.service.com is a placeholder for a service example
+# Ignore example.com/mcp as it is inaccessible when building the docs
 # Once v1.2 is merged into main, remove the ignore for the banner.png
 linkcheck_ignore = [
     r'http://localhost:\d+/',
@@ -138,7 +171,7 @@ linkcheck_ignore = [
     r'https://code.visualstudio.com',
     r'https://www.mysql.com',
     r'https://api.service.com',
-    r'https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png',  # noqa: E501
+    r'https?://example\.com/mcp/?',
     r'http://custom-server'
 ]
 
@@ -285,9 +318,7 @@ texinfo_documents = [
 # -- Extension configuration -------------------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {
-    "python": ('https://docs.python.org/', None), "scipy": ('https://docs.scipy.org/doc/scipy/reference', None)
-}
+intersphinx_mapping = {"python": ('https://docs.python.org/', None)}
 
 # Set the default role for interpreted code (anything surrounded in `single
 # backticks`) to be a python object. See
@@ -297,7 +328,7 @@ default_role = "py:obj"
 # The defauylt docstring for Pydantic models contains some docstrings that cause parsing warnings for docutils.
 # While this string is tightly tied to a specific version of Pydantic, it is hoped that this will be resolved in future
 # versions of Pydantic.
-PYDANTIC_DEFAULT_DOCSTRING = 'Usage docs: https://docs.pydantic.dev/2.10/concepts/models/\n'
+PYDANTIC_DEFAULT_DOCSTRING = "A base class for creating Pydantic models."
 
 
 def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonObject", skip: bool,
@@ -306,7 +337,7 @@ def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonO
     if not skip:
         bases = getattr(obj, 'bases', [])
         if (not skip and ('pydantic.BaseModel' in bases or 'EndpointBase' in bases)
-                and obj.docstring.startswith(PYDANTIC_DEFAULT_DOCSTRING)):
+                and PYDANTIC_DEFAULT_DOCSTRING in obj.docstring):
             obj.docstring = ""
 
     return skip

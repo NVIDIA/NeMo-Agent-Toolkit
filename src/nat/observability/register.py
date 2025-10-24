@@ -45,7 +45,7 @@ class FileTelemetryExporterConfig(TelemetryExporterBaseConfig, name="file"):
 
 
 @register_telemetry_exporter(config_type=FileTelemetryExporterConfig)
-async def file_telemetry_exporter(config: FileTelemetryExporterConfig, builder: Builder):  # pylint: disable=W0613
+async def file_telemetry_exporter(config: FileTelemetryExporterConfig, builder: Builder):
     """
     Build and return a FileExporter for file-based telemetry export with optional rolling.
     """
@@ -68,13 +68,23 @@ class ConsoleLoggingMethodConfig(LoggingBaseConfig, name="console"):
 
 
 @register_logging_method(config_type=ConsoleLoggingMethodConfig)
-async def console_logging_method(config: ConsoleLoggingMethodConfig, builder: Builder):  # pylint: disable=W0613
+async def console_logging_method(config: ConsoleLoggingMethodConfig, builder: Builder):
     """
     Build and return a StreamHandler for console-based logging.
     """
+    import sys
+
     level = getattr(logging, config.level.upper(), logging.INFO)
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(stream=sys.stdout)
     handler.setLevel(level)
+
+    # Set formatter to match the default CLI format
+    formatter = logging.Formatter(
+        fmt="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    handler.setFormatter(formatter)
+
     yield handler
 
 
@@ -86,11 +96,19 @@ class FileLoggingMethod(LoggingBaseConfig, name="file"):
 
 
 @register_logging_method(config_type=FileLoggingMethod)
-async def file_logging_method(config: FileLoggingMethod, builder: Builder):  # pylint: disable=W0613
+async def file_logging_method(config: FileLoggingMethod, builder: Builder):
     """
     Build and return a FileHandler for file-based logging.
     """
     level = getattr(logging, config.level.upper(), logging.INFO)
     handler = logging.FileHandler(filename=config.path, mode="a", encoding="utf-8")
     handler.setLevel(level)
+
+    # Set formatter to match the default CLI format
+    formatter = logging.Formatter(
+        fmt="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    handler.setFormatter(formatter)
+
     yield handler

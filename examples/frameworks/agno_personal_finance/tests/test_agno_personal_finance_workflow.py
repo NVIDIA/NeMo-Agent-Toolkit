@@ -13,26 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
-import importlib.resources
-import inspect
 import logging
 from pathlib import Path
 
 import pytest
-from nat_agno_personal_finance.agno_personal_finance_function import AgnoPersonalFinanceFunctionConfig
 
 from nat.runtime.loader import load_workflow
+from nat.test.utils import locate_example_config
+from nat_agno_personal_finance.agno_personal_finance_function import AgnoPersonalFinanceFunctionConfig
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
+@pytest.mark.usefixtures("serp_api_key", "openai_api_key")
 async def test_full_workflow():
 
-    package_name = inspect.getmodule(AgnoPersonalFinanceFunctionConfig).__package__
-
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "config.yml").absolute()
+    config_file: Path = locate_example_config(AgnoPersonalFinanceFunctionConfig)
 
     async with load_workflow(config_file) as workflow:
 

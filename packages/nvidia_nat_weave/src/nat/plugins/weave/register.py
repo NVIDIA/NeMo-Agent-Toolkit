@@ -27,7 +27,11 @@ logger = logging.getLogger(__name__)
 class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
     project: str = Field(description="The W&B project name.")
-    entity: str | None = Field(default=None, description="The W&B username or team name.")
+    entity: str | None = Field(default=None,
+                               description="The W&B username or team name.",
+                               deprecated=('This field is deprecated and will be removed in future versions. '
+                                           'This value is set automatically by the weave library, and setting it will '
+                                           'have no effect.'))
     redact_pii: bool = Field(default=False, description="Whether to redact PII from the traces.")
     redact_pii_fields: list[str] | None = Field(
         default=None,
@@ -40,9 +44,8 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
-async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):  # pylint: disable=unused-argument
+async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):
     import weave
-
     from nat.plugins.weave.weave_exporter import WeaveExporter
 
     weave_settings = {}
@@ -63,14 +66,9 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
 
     # Handle custom redact keys if specified
     if config.redact_keys and config.redact_pii:
-        # Need to create a new list combining default keys and custom ones
-        from weave.trace import sanitize
-        default_keys = sanitize.REDACT_KEYS
+        from weave.utils import sanitize
 
-        # Create a new list with all keys
-        all_keys = list(default_keys) + config.redact_keys
-
-        # Replace the default REDACT_KEYS with our extended list
-        sanitize.REDACT_KEYS = tuple(all_keys)
+        for key in config.redact_keys:
+            sanitize.add_redact_key(key)
 
     yield WeaveExporter(project=config.project, entity=config.entity, verbose=config.verbose)

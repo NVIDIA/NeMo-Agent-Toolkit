@@ -54,7 +54,7 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
         return self._config
 
     @abstractmethod
-    async def authenticate(self, user_id: str | None = None) -> AuthResult:
+    async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
         """
         Perform the authentication process for the client.
 
@@ -62,6 +62,9 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
         target API service, which may include obtaining tokens, refreshing credentials,
         or completing multi-step authentication flows.
 
+        Args:
+            user_id: Optional user identifier for authentication
+            kwargs: Additional authentication parameters for example: http response (typically from a 401)
         Raises:
             NotImplementedError: Must be implemented by subclasses.
         """
@@ -71,7 +74,7 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
 
 class FlowHandlerBase(ABC):
     """
-    Handles front-end specifc flows for authentication clients.
+    Handles front-end specific flows for authentication clients.
 
     Each front end will define a FlowHandler that will implement the authenticate method.
 

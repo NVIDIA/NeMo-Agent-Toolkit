@@ -17,17 +17,16 @@ import logging
 from collections.abc import Generator
 from contextlib import contextmanager
 
-from weave.trace.context import weave_client_context
-from weave.trace.context.call_context import get_current_call
-from weave.trace.context.call_context import set_call_stack
-from weave.trace.weave_client import Call
-
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.span import Span
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.utils.log_utils import LogFilter
 from nat.utils.type_utils import override
+from weave.trace.context import weave_client_context
+from weave.trace.context.call_context import get_current_call
+from weave.trace.context.call_context import set_call_stack
+from weave.trace.weave_client import Call
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +124,7 @@ class WeaveExporter(SpanExporter[Span, Span]):
         # Extract parent call if applicable
         parent_call = None
 
-        # If we have an existing Weave call from another framework (e.g., LangChain),
+        # If we have an existing Weave call from another framework (e.g., LangChain/LangGraph),
         # use it as the parent
         if existing_call is not None:
             parent_call = existing_call

@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 
-# Create a New Tool and Workflow
+# Create a New Tool and Workflow with NeMo Agent Toolkit
 
 In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing tools that were included with the NeMo Agent toolkit. This tutorial demonstrates how to create a new tool that can ingest data from local files stored on disk.
 
@@ -38,23 +38,25 @@ nat workflow delete text_file_ingest
 ```
 :::
 
-<!-- This section needs to be updated once #559 is completed -->
 Each workflow created in this way also creates a Python project, and by default, this will also install the project into the environment. If you want to avoid installing it into the environment you can use the `--no-install` flag.
 
-<!-- path-check-skip-next-line -->
+<!-- path-check-skip-begin -->
 This creates a new directory `examples/text_file_ingest` with the following layout:
 ```
-examples/
-└── text_file_ingest/
-    ├── pyproject.toml
-    └── src/
-        └── text_file_ingest/
-            ├── configs
-            │   └── config.yml
-            ├── __init__.py
-            ├── register.py
-            └── text_file_ingest_function.py
+examples/text_file_ingest
+├── configs -> src/text_file_ingest/configs
+├── data -> src/text_file_ingest/data
+├── pyproject.toml
+└── src
+    └── text_file_ingest
+        ├── __init__.py
+        ├── configs
+        │   └── config.yml
+        ├── data
+        ├── register.py
+        └── text_file_ingest.py
 ```
+<!-- path-check-skip-end -->
 
 :::{note}
 The completed code for this example can be found in the `examples/documentation_guides/workflows/text_file_ingest` directory of the NeMo Agent toolkit repository.
@@ -64,33 +66,7 @@ The completed code for this example can be found in the `examples/documentation_
 By convention, tool implementations are defined within or imported into the `register.py` file. In this example, the tool implementation exists within the `text_file_ingest_function.py` file and is imported into the `register.py` file. The `pyproject.toml` file contains the package metadata and dependencies for the tool. The `text_file_ingest_function.py` that was created for us will contain a configuration object (`TextFileIngestFunctionConfig`) along with the tool function (`text_file_ingest_function`). The next two sections will walk through customizing these.
 
 <!-- path-check-skip-begin -->
-Many of these tools contain an associated workflow configuration file stored in a `config` directory, along with example data stored in a `data` directory. Since these tools are installable Python packages and the workflow configuration file and data must be included in the package, they need to be located under the `examples/text_file_ingest/src/text_file_ingest` directory. For convenience, symlinks can be created at the root of the project directory pointing to the actual directories. Lastly, a `README.md` file is often included in the root of the project. Resulting in a directory structure similar to the following:
-```
-examples/
-└── text_file_ingest/
-    ├── README.md
-    ├── config -> src/text_file_ingest/configs
-    |── data   -> src/text_file_ingest/data
-    ├── pyproject.toml
-    └── src/
-        └── text_file_ingest/
-            ├── __init__.py
-            ├── configs/
-            |   └── config.yml
-            ├── data/
-            ├── register.py
-            └── text_file_ingest_function.py
-```
-
-<!-- Remove this once #559 is completed -->
-For our purposes we will need a `data` directory, along with the above mentioned symlinks which can be created with the following commands:
-```bash
-mkdir examples/text_file_ingest/src/text_file_ingest/data
-pushd examples/text_file_ingest
-ln -s src/text_file_ingest/data
-ln -s src/text_file_ingest/configs
-popd
-```
+Many of these tools contain an associated workflow configuration file stored in a `config` directory, along with example data stored in a `data` directory. Since these tools are installable Python packages and the workflow configuration file and data must be included in the package, they need to be located under the `examples/text_file_ingest/src/text_file_ingest` directory. For convenience, symlinks are created at the root of the project directory pointing to the actual directories. Lastly, a `README.md` file is often included in the root of the project.
 <!-- path-check-skip-end -->
 
 ## Customizing the Configuration Object
@@ -125,7 +101,7 @@ The `text_file_ingest_tool` function created is already correctly associated wit
 async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builder: Builder):
 ```
 
-However since we are going to make use of LangChain, we need to add the `framework_wrappers` parameter to the `register_function` decorator:
+However since we are going to make use of LangChain/LangGraph, we need to add the `framework_wrappers` parameter to the `register_function` decorator:
 ```python
 @register_function(config_type=TextFileIngestFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builder: Builder):
@@ -157,7 +133,7 @@ Next, update the retrieval tool definition changing the `name` parameter to `tex
     )
 ```
 
-The rest of the code largely remains the same resulting in the following code, the full code of this example is located at `examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/register.py` in the NeMo Agent toolkit repository:
+The rest of the code largely remains the same resulting in the following code, the full code of this example is located at `examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/text_file_ingest_function.py` in the NeMo Agent toolkit repository:
 ```python
 @register_function(config_type=TextFileIngestFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builder: Builder):
@@ -165,7 +141,7 @@ async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builde
     from langchain.tools.retriever import create_retriever_tool
     from langchain_community.document_loaders import DirectoryLoader
     from langchain_community.document_loaders import TextLoader
-    from langchain_community.vectorstores import FAISS
+    from langchain_community.vectorstores import USearch
     from langchain_core.embeddings import Embeddings
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -179,7 +155,7 @@ async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builde
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=config.chunk_size)
     documents = text_splitter.split_documents(docs)
-    vector = await FAISS.afrom_documents(documents, embeddings)
+    vector = await USearch.afrom_documents(documents, embeddings)
 
     retriever = vector.as_retriever()
 
@@ -241,12 +217,12 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
 
   ```toml
   dependencies = [
-    "nvidia-nat[langchain]~=1.1",
+    "nvidia-nat[langchain]~=1.3",
     # Add any additional dependencies your workflow needs
   ]
   ```
 
-  In this example, you have been using NeMo Agent toolkit with LangChain. This is why the dependency is declared on `nvidia-nat[langchain]`, that is to say NeMo Agent toolkit with the LangChain integration plugin. If you want to use LlamaIndex, declare the dependency on `nvidia-nat[llama-index]`. This is described in more detail in [Framework Integrations](../quick-start/installing.md#framework-integrations).
+  In this example, you have been using NeMo Agent toolkit with LangChain/LangGraph. This is why the dependency is declared on `nvidia-nat[langchain]`, that is to say NeMo Agent toolkit with the LangChain/LangGraph integration plugin. If you want to use LlamaIndex, declare the dependency on `nvidia-nat[llama-index]`. This is described in more detail in [Framework Integrations](../quick-start/installing.md#framework-integrations).
 
 - **Version**: In this example, and in NeMo Agent toolkit in general, we use [setuptools-scm](https://setuptools-scm.readthedocs.io/en/latest/) to automatically determine the version of the package based on the Git tags. We did this by setting `dynamic = ["version"]` and declaring a build dependency on both `setuptools` and `setuptools_scm` in the `build-system` section of `pyproject.toml`:
   ```toml
@@ -288,7 +264,7 @@ nat workflow reinstall text_file_ingest
 ```
 
 :::{note}
-Alternatively, the workflow can be uninstalled with the following command:
+Alternatively, the workflow can be uninstalled and deleted with the following command:
 ```bash
 nat workflow delete text_file_ingest
 ```
@@ -309,7 +285,7 @@ uv pip install -e examples/documentation_guides/workflows/text_file_ingest
 Run the workflow with the following command:
 ```bash
 nat run --config_file examples/documentation_guides/workflows/text_file_ingest/configs/config.yml \
-   --input "What does DOCA GPUNetIO to remove the CPU from the critical path?"
+   --input "What does DOCA GPUNetIO do to remove the CPU from the critical path?"
 ```
 
 If successful, you should receive output similar to the following:

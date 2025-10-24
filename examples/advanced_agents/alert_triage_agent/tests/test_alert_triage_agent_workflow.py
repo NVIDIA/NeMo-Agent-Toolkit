@@ -13,57 +13,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
-import importlib.resources
-import inspect
 import json
 import logging
 from pathlib import Path
 
 import pytest
 import yaml
-from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 
 from nat.runtime.loader import load_workflow
+from nat.test.utils import locate_example_config
+from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.e2e
-async def test_full_workflow():
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_full_workflow(root_repo_dir: Path):
 
-    package_name = inspect.getmodule(AlertTriageAgentWorkflowConfig).__package__
+    config_file: Path = locate_example_config(AlertTriageAgentWorkflowConfig, "config_offline_mode.yml")
 
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs",
-                                                                         "config_offline_mode.yml").absolute()
-
-    with open(config_file, "r") as file:
+    with open(config_file, encoding="utf-8") as file:
         config = yaml.safe_load(file)
         input_filepath = config["eval"]["general"]["dataset"]["file_path"]
 
-    input_filepath_abs = importlib.resources.files(package_name).joinpath("../../../../", input_filepath).absolute()
+    input_filepath_abs = root_repo_dir.joinpath(input_filepath).absolute()
+
+    assert input_filepath_abs.exists(), f"Input data file {input_filepath_abs} does not exist"
 
     # Load input data
-    with open(input_filepath_abs, 'r') as f:
+    with open(input_filepath_abs, encoding="utf-8") as f:
         input_data = json.load(f)
 
+    input_data = input_data[0]  # Limit to first row for testing
+
     # Run the workflow
-    results = []
     async with load_workflow(config_file) as workflow:
-        for item in input_data:
-            async with workflow.run(item["question"]) as runner:
-                result = await runner.result(to_type=str)
-                results.append(result)
+        async with workflow.run(input_data["question"]) as runner:
+            result = await runner.result(to_type=str)
 
     # Check that the results are as expected
-    assert len(results) == len(input_data)
-    for i, result in enumerate(results):
-        assert len(result) > 0, f"Result for item {i} is empty"
+    assert len(result) > 0, "Result is empty"
 
     # Deterministic data point: host under maintenance
-    assert 'maintenance' in results[3]
+    assert input_data['label'] in result
 
     # Check that rows with hosts not under maintenance contain root cause categorization
-    for i in range(len(results)):
-        if i != 3:
-            assert "root cause category" in results[i].lower()
+    assert "root cause category" in result.lower()

@@ -15,15 +15,16 @@
 
 ARG BASE_IMAGE_URL=nvcr.io/nvidia/base/ubuntu
 ARG BASE_IMAGE_TAG=22.04_20240212
-ARG PYTHON_VERSION=3.12
-
+ARG PYTHON_VERSION=3.13
 # Specified on the command line with --build-arg NAT_VERSION=$(python -m setuptools_scm)
-ARG NAT_VERSION=0.0.1
+ARG NAT_VERSION
 
 FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
-COPY --from=ghcr.io/astral-sh/uv:0.6.17 /uv /uvx /bin/
-ARG NAT_VERSION
+
 ARG PYTHON_VERSION
+ARG NAT_VERSION
+
+COPY --from=ghcr.io/astral-sh/uv:0.8.15 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -35,6 +36,7 @@ COPY ./ /workspace
 
 # Install the nvidia-nat package and the example package
 RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
+    test -n "${NAT_VERSION}" || { echo "NAT_VERSION build-arg is required" >&2; exit 1; } && \
     export SETUPTOOLS_SCM_PRETEND_VERSION=${NAT_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_NVIDIA_NAT=${NAT_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_NVIDIA_NAT_TEST=${NAT_VERSION} && \
@@ -47,7 +49,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
 # Set the config file environment variable
 ENV NAT_CONFIG_FILE=/workspace/examples/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml
 
-# Enivronment variables for the venv
+# Environment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Define the entry point to start the server

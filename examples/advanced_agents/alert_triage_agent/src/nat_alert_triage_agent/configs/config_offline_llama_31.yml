@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 general:
-  use_uvloop: true
   telemetry:
     tracing:
       weave:
@@ -130,7 +130,7 @@ eval:
       base_metrics: true
 
   evaluators:
-    rag_accuracy:
+    accuracy:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_rag_eval_llm

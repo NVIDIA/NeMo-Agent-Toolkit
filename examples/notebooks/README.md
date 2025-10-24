@@ -17,9 +17,35 @@ limitations under the License.
 
 # Building an Agentic System using NeMo Agent Toolkit
 
-Through these series of notebooks, we demonstrate how you can use the NeMo Agent Toolkit to build, connect, evaluate, profile and deploy an agentic system. We showcase the  building blocks that make up the agentic system and how easy it is to configure using this toolkit.
+Through this series of notebooks, we demonstrate how you can use the NVIDIA NeMo Agent toolkit to build, connect, evaluate, profile, and deploy an agentic system.
 
-- [1_getting_started.ipynb](1_getting_started.ipynb)
-- [2_add_tools_and_agents.ipynb](2_add_tools_and_agents.ipynb)
-- [3_observability_evalauation_and_profiling.ipynb](3_observability_evaluation_and_profiling.ipynb)
+We showcase the building blocks that make up the agentic system, including tools, agents, workflows, and observability.
 
+1. [Getting Started](1_getting_started_with_nat.ipynb) - Getting started with the NeMo Agent toolkit
+2. [Bringing Your Own Agent](2_bringing_your_own_agent.ipynb) - Bringing your own agent to the NeMo Agent toolkit
+3. [Adding Tools and Agents](3_adding_tools_to_agents.ipynb) - Adding tools to your agentic workflow
+4. [Multi-Agent Orchestration](4_multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
+5. [Observability, Evaluation, and Profiling](5_observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
+   
+We recommend opening these notebooks in a Jupyter Lab environment or Google Colab environment.
+
+We also have a set of notebooks that are designed to be run in a Brev environment. See the [Brev Launchables](./launchables/README.md) for more details.
+
+## Google Colab
+
+To open these notebooks in a Google Colab environment, you can click the following link: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NVIDIA/NeMo-Agent-Toolkit/)
+
+## Jupyter Lab
+If you want to run these notebooks locally, you can clone the repository and open the notebooks in a Jupyter Lab environment. To install the necessary dependencies, you can run the following command:
+
+```bash
+uv venv --seed .venv
+source .venv/bin/activate
+uv pip install jupyterlab
+```
+
+Assuming you have cloned the repository and are in the root directory, you can open the notebooks in a Jupyter Lab environment by running the following command:
+
+```bash
+jupyter lab examples/notebooks
+```

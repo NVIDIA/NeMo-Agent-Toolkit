@@ -14,15 +14,15 @@
 # limitations under the License.
 
 
-general:
-  use_uvloop: true
-# Uncomment the following to enable tracing. Run `phoenix serve` before launching
-#  telemetry:
-#    tracing:
-#      phoenix:
-#        _type: phoenix
-#        endpoint: http://localhost:6006/v1/traces
-#        project: simple_calculator
+# Uncomment the following to enable tracing.
+# Install `arize-phoenix` and run `phoenix serve` before launching
+# general:
+#   telemetry:
+#     tracing:
+#       phoenix:
+#         _type: phoenix
+#         endpoint: http://localhost:6006/v1/traces
+#         project: simple_calculator
 
 functions:
   calculator_multiply:
@@ -62,14 +62,15 @@ llms:
     _type: openai
     model_name: gpt-3.5-turbo
     max_tokens: 2000
-  r1_model:
+  nemotron_model:
     _type: nim
-    model_name: deepseek-ai/deepseek-r1
+    model_name: nvidia/llama-3.3-nemotron-super-49b-v1
+    thinking: true
     temperature: 0.0
     max_tokens: 2000
 
 workflow:
   _type: reasoning_agent
-  llm_name: r1_model
+  llm_name: nemotron_model
   augmented_fn: react_agent
   verbose: true

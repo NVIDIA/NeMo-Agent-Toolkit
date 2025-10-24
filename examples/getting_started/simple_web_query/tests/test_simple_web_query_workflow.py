@@ -13,26 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
-import importlib.resources
-import inspect
 import logging
 from pathlib import Path
 
 import pytest
-from nat_simple_web_query.register import WebQueryToolConfig
 
 from nat.runtime.loader import load_workflow
+from nat.test.utils import locate_example_config
+from nat_simple_web_query.register import WebQueryToolConfig
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.e2e
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_full_workflow():
 
-    package_name = inspect.getmodule(WebQueryToolConfig).__package__
-
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "config.yml").absolute()
+    config_file: Path = locate_example_config(WebQueryToolConfig)
 
     async with load_workflow(config_file) as workflow:
 

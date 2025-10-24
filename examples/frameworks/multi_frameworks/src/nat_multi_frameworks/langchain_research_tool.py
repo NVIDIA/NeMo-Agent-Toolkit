@@ -50,7 +50,7 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
             "API token must be provided in the configuration or in the environment variable `NVIDIA_API_KEY`")
 
     llm = await builder.get_llm(llm_name=tool_config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    tavily_tool = builder.get_tool(fn_name=tool_config.web_tool, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tavily_tool = await builder.get_tool(fn_name=tool_config.web_tool, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     async def web_search(topic: str) -> list[dict]:
         output = (await tavily_tool.ainvoke(topic))
@@ -98,7 +98,7 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
 
         except Exception as e:
             output_summary = f"this search on web search with topic:{topic} yield not results with an error:{e}"
-            logger.exception("error in executing tool: %s", e, exc_info=True)
+            logger.exception("error in executing tool: %s", e)
             pass
 
         return output_summary

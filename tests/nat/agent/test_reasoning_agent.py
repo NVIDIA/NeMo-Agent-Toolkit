@@ -126,21 +126,23 @@ async def fake_builder_fixture() -> Builder:
         mock_llm.ainvoke = AsyncMock()
         return mock_llm
 
-    builder.get_llm.side_effect = _get_llm
+    builder.get_llm = AsyncMock(side_effect=_get_llm)
 
-    def _get_function(name: str):
+    async def _get_function(name: str):
         # Return a mock augmented function
         # We can configure it to be streaming or not in each test
         # For now, default to a non-streaming MockAugmentedFunction
         return MockAugmentedFunction(DummyConfig())
 
-    builder.get_function.side_effect = _get_function
+    builder.get_function = AsyncMock(side_effect=_get_function)
 
     # get_function_dependencies is used just for referencing tool names, etc
     class FakeDeps:
-        functions = ["SomeTool"]
+        functions = {"SomeTool"}
+        function_groups = set()
 
     builder.get_function_dependencies.return_value = FakeDeps()
+    builder.get_function_group_dependencies.return_value = FakeDeps()
 
     return builder
 
@@ -158,7 +160,7 @@ async def test_build_reasoning_function_happy_path(fake_builder):
     """
 
     # Mock the augmented function to have a description
-    def mock_get_function(name: str):
+    async def mock_get_function(name: str):
         # Return a non-streaming function with a description
         return MockAugmentedFunction(config=DummyConfig(), description="I am described!")
 
@@ -168,7 +170,11 @@ async def test_build_reasoning_function_happy_path(fake_builder):
     # We patch the place where the code calls llm.ainvoke_stream(...) inside build_reasoning_function
     mock_llm = MagicMock()
     mock_llm.ainvoke_stream = MagicMock(side_effect=_fake_llm_stream)
-    fake_builder.get_llm.return_value = mock_llm
+
+    async def mock_get_llm(name, wrapper_type):
+        return mock_llm
+
+    fake_builder.get_llm.side_effect = mock_get_llm
 
     # Setup config
     config = ReasoningFunctionConfig(
@@ -202,7 +208,7 @@ async def test_build_reasoning_function_streaming_with_chat_request(fake_builder
     """
 
     # Return a streaming augmented function
-    def mock_get_function(name: str):
+    async def mock_get_function(name: str):
         return MockStreamingAugmentedFunction(config=DummyConfig(), description="I am streaming described!")
 
     fake_builder.get_function.side_effect = mock_get_function
@@ -210,7 +216,11 @@ async def test_build_reasoning_function_streaming_with_chat_request(fake_builder
     # Patch the LLM
     mock_llm = MagicMock()
     mock_llm.ainvoke_stream = MagicMock(side_effect=_fake_llm_stream)
-    fake_builder.get_llm.return_value = mock_llm
+
+    async def mock_get_llm(name, wrapper_type):
+        return mock_llm
+
+    fake_builder.get_llm.side_effect = mock_get_llm
 
     # Setup config
     config = ReasoningFunctionConfig(llm_name="fake_streaming_llm",
@@ -239,7 +249,7 @@ async def test_build_reasoning_function_no_augmented_function_description(fake_b
     If the augmented function is missing a description, build_reasoning_function should raise ValueError.
     """
 
-    def mock_get_function(name: str):
+    async def mock_get_function(name: str):
         # Return a function with an empty description
         return MockAugmentedFunction(config=DummyConfig(), description="")
 
@@ -257,7 +267,7 @@ async def test_build_reasoning_function_augmented_fn_not_found(fake_builder):
     we should see a KeyError or similar. We'll mock get_function to raise.
     """
 
-    def mock_get_function(name: str):
+    async def mock_get_function(name: str):
         raise ValueError("No function with that name")
 
     fake_builder.get_function.side_effect = mock_get_function
@@ -274,7 +284,7 @@ async def test_build_reasoning_function_no_llm_found(fake_builder):
     final build fails with that error.
     """
 
-    def mock_get_llm(name, wrapper_type):
+    async def mock_get_llm(name, wrapper_type):
         raise RuntimeError("No LLM with that name found")
 
     fake_builder.get_llm.side_effect = mock_get_llm
@@ -293,16 +303,18 @@ async def test_build_reasoning_function_prompt_contains_tools(fake_builder):
     """
 
     # We'll mock an augmented function with a valid description
-    def mock_get_function(name: str):
+    async def mock_get_function(name: str):
         return MockAugmentedFunction(config=DummyConfig(), description="I am described!")
 
     fake_builder.get_function.side_effect = mock_get_function
 
     # The builder says we have 2 tools
     class FakeDeps:
-        functions = ["ToolA", "ToolB"]
+        functions = {"ToolA", "ToolB"}
+        function_groups = set()
 
     fake_builder.get_function_dependencies.return_value = FakeDeps()
+    fake_builder.get_function_group_dependencies.return_value = FakeDeps()
 
     mock_llm = MagicMock()
 
@@ -314,7 +326,11 @@ async def test_build_reasoning_function_prompt_contains_tools(fake_builder):
         return _fake_llm_stream(prompt, *args, **kwargs)
 
     mock_llm.ainvoke_stream.side_effect = side_effect_for_llm_stream
-    fake_builder.get_llm.return_value = mock_llm
+
+    async def mock_get_llm(name, wrapper_type):
+        return mock_llm
+
+    fake_builder.get_llm.side_effect = mock_get_llm
 
     config = ReasoningFunctionConfig(llm_name="test_llm", augmented_fn="my_augmented_fn", verbose=True)
     reasoning_info = await AsyncExitStack().enter_async_context(build_reasoning_function(config, fake_builder))
@@ -334,7 +350,7 @@ async def test_build_reasoning_function_prompt_includes_input(fake_builder):
     check the call argument to `ainvoke_stream`.
     """
 
-    def mock_get_function(name: str):
+    async def mock_get_function(name: str):
         return MockAugmentedFunction(config=DummyConfig(), description="some tool desc")
 
     fake_builder.get_function.side_effect = mock_get_function
@@ -347,7 +363,11 @@ async def test_build_reasoning_function_prompt_includes_input(fake_builder):
 
     mock_llm = MagicMock()
     mock_llm.ainvoke_stream.side_effect = side_effect_llm_stream
-    fake_builder.get_llm.return_value = mock_llm
+
+    async def mock_get_llm(name, wrapper_type):
+        return mock_llm
+
+    fake_builder.get_llm.side_effect = mock_get_llm
 
     config = ReasoningFunctionConfig(llm_name="test_llm_2", augmented_fn="augfn_check_prompt", verbose=True)
     reasoning_info = await AsyncExitStack().enter_async_context(build_reasoning_function(config, fake_builder))
@@ -366,20 +386,26 @@ async def test_build_reasoning_function_handles_empty_tool_list(fake_builder):
     """
 
     # We'll mock an augmented function with a valid description
-    def mock_get_function(name: str):
+    async def mock_get_function(name: str):
         return MockAugmentedFunction(config=DummyConfig(), description="Description present")
 
     fake_builder.get_function.side_effect = mock_get_function
 
     # The builder says we have no tools
     class FakeDeps:
-        functions = []
+        functions = set()
+        function_groups = set()
 
     fake_builder.get_function_dependencies.return_value = FakeDeps()
+    fake_builder.get_function_group_dependencies.return_value = FakeDeps()
 
     mock_llm = MagicMock()
     mock_llm.ainvoke_stream.side_effect = _fake_llm_stream
-    fake_builder.get_llm.return_value = mock_llm
+
+    async def mock_get_llm(name, wrapper_type):
+        return mock_llm
+
+    fake_builder.get_llm.side_effect = mock_get_llm
 
     config = ReasoningFunctionConfig(llm_name="test_llm_empty_tools", augmented_fn="my_augmented_fn", verbose=True)
     # Just ensure no error is thrown

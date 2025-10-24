@@ -49,8 +49,8 @@ The ReWOO agent uses a unique three-node graph architecture that separates plann
 
 **Workflow Overview:**
 - **Start**: The agent begins processing with user input
-- **Planner Node**: Creates a complete execution plan with all necessary steps upfront
-- **Executor Node**: Executes tools according to the plan, looping until all steps are completed
+- **Planner Node**: Creates a complete execution plan with all necessary steps upfront. Plans are parsed into a Dependency Graph for parallel execution. 
+- **Executor Node**: Executes tools according to the plan. Non-dependent tool calls are executed in parallel at each level.
 - **Solver Node**: Takes all execution results and generates the final answer
 - **End**: Process completes with the final response
 
@@ -81,90 +81,121 @@ Prior to using the `tavily_internet_search` tool, create an account at [`tavily.
 export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 ```
 
+## Configuration
+
+The ReWOO agent is configured through the `config.yml` file. The following configuration options are available:
+
+### Configurable Options
+
+* `tool_names`: A list of tools that the agent can call. The tools must be functions or function groups configured in the YAML file
+
+* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
+
+* `verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the agent will log input, output, and intermediate steps.
+
+* `include_tool_input_schema_in_tool_description`: Defaults to True. If set to True, the agent will include tool input schemas in tool descriptions.
+
+* `description`: Defaults to "ReWOO Agent Workflow". When the ReWOO agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
+
+* `planner_prompt`: Optional. Allows us to override the planner prompt for the ReWOO agent. The prompt must have variables for tools and must instruct the LLM to output in the ReWOO planner format.
+
+* `solver_prompt`: Optional. Allows us to override the solver prompt for the ReWOO agent. The prompt must have variables for plan and task.
+
+* `tool_call_max_retries`: Defaults to 3. The number of retries before raising a tool call error.
+
+* `max_history`:  Defaults to 15. Maximum number of messages to keep in the conversation history.
+
+* `log_response_max_chars`: Defaults to 1000. Maximum number of characters to display in logs when logging tool responses.
+
+* `additional_planner_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base planner prompt.
+
+* `additional_solver_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base solver prompt.
+
+* `raise_tool_call_error`: Defaults to True. Whether to raise a exception immediately if a tool call fails. If set to False, the tool call error message will be included in the tool response and passed to the next tool.
+
 ## Run the Workflow
 
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
+nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Who would be older today, Einstein or Bohr?"
 ```
 
 **Expected Workflow Output**
 ```console
 <snipped for brevity>
 
-- ReWOO agent planner output:
+- ReWOO agent output:
 ------------------------------
 [AGENT]
-Agent input: Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?
-Agent's thoughts:
+Agent input: Who would be older today, Einstein or Bohr?
+Agent's thoughts: 
 [
   {
-    "plan": "Compare the numbers 1996 and 2004 to determine the bigger number.",
+    "plan": "Find Einstein's birthdate",
     "evidence": {
       "placeholder": "#E1",
-      "tool": "calculator_inequality",
-      "tool_input": {"text": "2004 > 1996"}
+      "tool": "internet_search",
+      "tool_input": {"question": "Einstein birthdate"}
     }
   },
   {
-    "plan": "Since 2004 is indeed bigger, search for the city that held the Olympic Games in 2004.",
+    "plan": "Find Bohr's birthdate",
     "evidence": {
       "placeholder": "#E2",
       "tool": "internet_search",
-      "tool_input": {"question": "Which city held the Olympic Games in 2004?"}
+      "tool_input": {"question": "Bohr birthdate"}
+    }
+  },
+  {
+    "plan": "Compare Einstein's and Bohr's birthdates to determine who would be older today",
+    "evidence": {
+      "placeholder": "#E3",
+      "tool": "haystack_chitchat_agent",
+      "tool_input": {"inputs": "Who would be older today, Einstein born #E1 or Bohr born #E2?"}
     }
   }
 ]
 ------------------------------
-2025-04-23 15:02:11,047 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
-------------------------------
-[AGENT]
-Calling tools: calculator_inequality
-Tool's input: {'text': '2004 > 1996'}
-Tool's response:
-First number 2004 is greater than the second number 1996
-------------------------------
-2025-04-23 15:02:13,096 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
+2025-10-14 19:14:02 - INFO     - nat.agent.rewoo_agent.agent:289 - ReWOO agent execution levels: [['#E1', '#E2'], ['#E3']]
+2025-10-14 19:14:02 - INFO     - nat.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: internet_search
-Tool's input: {'question': 'Which city held the Olympic Games in 2004?'}
-Tool's response:
-<Document href="https://en.wikipedia.org/wiki/2004_Summer_Olympics"/>
-The 2004 Summer Olympics (Greek: Θερινοί Ολυμπιακοί Αγώνες 2004, romanized: Theriní Olympiakí Agónes 2004),[b] officially the Games of the XXVIII Olympiad (Αγώνες της 28ης Ολυμπιάδας, Agónes tis 28is Olympiádas), and officially branded as Athens 2004 (Αθήνα 2004), were an international multi-sport event held from 13 to 29 August 2004 in Athens, Greece. [...] Emblem of the 2004 Summer Olympics[a]
-Location    Athens, Greece
-Motto   Welcome Home
-(Greek: Καλώς ήρθατε σπίτι, romanized: Kalós írthate spíti)
-Nations 201
-Athletes    10,557 (6,257 men, 4,300 women)
-Events  301 in 28 sports (40 disciplines)
-Opening 13 August 2004
-Closing 29 August 2004
-Opened by   President Konstantinos Stephanopoulos[1]
-Closed by   IOC President Jacques Rogge
-Cauldron    Nikolaos Kaklamanakis[1]
-Stadium Olympic Stadium
-Summer
-← Sydney 2000
-Beijing 2008 →
-Winter [...] See also[edit]
-    Olympic Games portal
-2004 Summer Paralympics
-Olympic Game...
+Tool's input: {'question': 'Bohr birthdate'}
+Tool's response: 
+content='<Document href="https://www.facebook.com/TheWorldsofDavidDarling/posts/born-on-this-date-oct-7-in-1885-the-danish-physicist-niels-bohr-who-played-a-cru/1278740440721508/"/>\nNiels Bohr, in full Niels Henrik David Bohr, (born October 7, 1885, Copenhagen, Denmark—died November 18, 1962, Copenhagen), Danish\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Niels_Bohr"/>\n**Niels Henrik David Bohr** (Danish: ; 7 October 1885 – 18 November 1962) was a Danish theoretical physicist who made foundational contributions to understanding atomic structure and quantum theory, for which he received the Nobel Prize in Physics in 1922. J. Thomson (1914) * Ivan Pavlov (1915) * James Dewar (1916) * Pierre Paul Émile Roux (1917) * Hendrik Lorentz (1918) * William Bayliss (1919) * Horace Tabberer Brown (1920) * Joseph Larmor (1921) * Ernest Rutherford (1922) * Horace Lamb (1923) * Edward Albert Sharpey-Schafer (1924) * Albert Einstein (1925) * Frederick Gowland Hopkins (1926) *...(rest of response truncated)
 ------------------------------
-2025-04-23 15:02:13,382 - nat.agent.rewoo_agent.agent - INFO - ReWOO agent solver output:
+2025-10-14 19:14:02 - INFO     - nat.agent.base:221 - 
 ------------------------------
 [AGENT]
-Agent input: Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?
-Agent's thoughts:
-Athens
+Calling tools: internet_search
+Tool's input: {'question': 'Einstein birthdate'}
+Tool's response: 
+content='<Document href="https://www.facebook.com/albert.einstein.fans/posts/albert-einstein-was-born-on-march-14-1879-happy-birthday-/1204655314357103/"/>\nAlbert Einstein - Albert Einstein was born on March 14,... Albert Einstein\'s post ### **Albert Einstein** Albert Einstein was born on March 14, 1879. Happy birthday!! Image 1: 🎂Image 2: 🎉Image 3: 🎈 Image 4: No photo description available. Image 5 Image 6 67K 5.3K comments 9.1K shares A not well known fact that number Pi which is 3.14 is assigned after Einstein\'s birthday! Image 7Image 8Image 9 Happy heavenly birthday Mr. Einstein! Image 10: 🎂Image 11: 🎈 Image 12: GIFmedia1.tenor.co Image 13Image 14 happy birthday to me too! Image 15Image 16 Image 17Image 18 My birthday too though a bit later than 1879 Image 19: 😂 Image 20Image 21 Image 22 Image 23 Image 24 Image 25Image 26 Image 27\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Albert_Einstein"/>\nAlbert Einstein (14 March 1879 – 18 April 1955) was a German-...(rest of response truncated)
 ------------------------------
-2025-04-23 15:02:13,385 - nat.front_ends.console.console_front_end_plugin - INFO -
---------------------------------------------------
+2025-10-14 19:14:02 - INFO     - nat.agent.rewoo_agent.agent:373 - [AGENT] Completed level 0 with 2 tools
+2025-10-14 19:14:05 - INFO     - nat_multi_frameworks.haystack_agent:57 - output from langchain_research_tool: Based on the information provided, Albert Einstein was born on March 14, 1879, and Niels Bohr was born on October 7, 1885. Therefore, Einstein would be older than Bohr by approximately 6 years.
+2025-10-14 19:14:05 - INFO     - nat.agent.base:221 - 
+------------------------------
+[AGENT]
+Calling tools: haystack_chitchat_agent
+Tool's input: {'inputs': 'Who would be older today, Einstein born <Document href="https://www.facebook.com/albert.einstein.fans/posts/albert-einstein-was-born-on-march-14-1879-happy-birthday-/1204655314357103/"/>\nAlbert Einstein - Albert Einstein was born on March 14,... Albert Einstein\'s post ### **Albert Einstein** Albert Einstein was born on March 14, 1879. Happy birthday!! Image 1: 🎂Image 2: 🎉Image 3: 🎈 Image 4: No photo description available. Image 5 Image 6 67K 5.3K comments 9.1K shares A not well known fact that number Pi which is 3.14 is assigned after Einstein\'s birthday! Image 7Image 8Image 9 Happy heavenly birthday Mr. Einstein! Image 10: 🎂Image 11: 🎈 Image 12: GIFmedia1.tenor.co Image 13Image 14 happy birthday to me too! Image 15Image 16 Image 17Image 18 My birthday too though a bit later than 1879 Image 19: 😂 Image 20Image 21 Image 22 Image 23 Image 24 Image 25Image 26 Image 27\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Albert_Einstein"/>\nAlbert Einstein (14 March 1879 – 18 April 1955) was a German-born theoretical physicist ; Born in the German Empire ; In 1905, sometimes described as his annus\n</Document>\n\n---\n\n<Document href="https://www.facebook.com/WorldJewishCong/posts/today-is-the-birthday-of-albert-einstein-born-on-march-14-1879-one-of-the-greate/1051939843629078/"/>\nHe was born on March 14, 1879, in Ulm, in the Kingdom of Württemberg in the German Empire. Einstein is best known for his theory of relativity,\n</Document> or Bohr born <Document href="https://www.facebook.com/TheWorldsofDavidDarling/posts/born-on-this-date-oct-7-in-1885-the-danish-physicist-niels-bohr-who-played-a-cru/1278740440721508/"/>\nNiels Bohr, in full Niels Henrik David Bohr, (born October 7, 1885, Copenhagen, Denmark—died November 18, 1962, Copenhagen), Danish\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Niels_Bohr"/>\n**Niels Henrik David Bohr** (Danish: ; 7 October 1885 – 18 November 1962) was a Danish theoretical physicist who made foundational contributions to understanding atomic structure and quantum theory, for which he received the Nobel Prize in Physics in 1922. J. Thomson (1914) * Ivan Pavlov (1915) * James Dewar (1916) * Pierre Paul Émile Roux (1917) * Hendrik Lorentz (1918) * William Bayliss (1919) * Horace Tabberer Brown (1920) * Joseph Larmor (1921) * Ernest Rutherford (1922) * Horace Lamb (1923) * Edward Albert Sharpey-Schafer (1924) * Albert Einstein (1925) * Frederick Gowland Hopkins (1926) * Charles Scott Sherrington (1927) * Charles Algernon Parsons (1928) * Max Planck (1929) * William Henry Bragg (1930) * Arthur Schuster (1931) * George Ellery Hale (1932) * Theobald Smith (1933) * John Scott Haldane (1934) * Charles Thomson Rees Wilson (1935) * Arthur Evans (1936) * Henry Hallett Dale (1937) * Niels Bohr (1938) * Thomas Hunt Morgan (1939) * Paul Langevin (1940) * Thomas Lewis "Thomas Lewis (cardiologist)") (1941) * Robert Robinson "Robert Robinson (chemist)") (1942) * Joseph Barcroft (1943) * Geoffrey Ingram Taylor (1944) * Oswald Avery (1945) * Edgar Douglas Adrian (1946) * G.\n</Document>\n\n---\n\n<Document href="https://www.facebook.com/ictp.page/posts/happy-belated-birthday-to-niels-bohr-the-distinguished-danish-physicist-born-7-o/3631629133523362/"/>\n- ICTP: International Centre for Theoretical Physics | Facebook ICTP: International Centre for Theoretical Physics\'s post ### **ICTP: International Centre for Theoretical Physics** Happy (belated) Birthday to Niels Bohr! The distinguished Danish physicist, born 7 October 1885, made fundamental contributions to #atomic structure and #quantummechanics, was a #philosopher of #science, won the Physics #Nobel Prize in 1922, helped Jews escape the Nazis and helped #refugee scientists during WWII, and called for #international cooperation on #nuclearenergyImage 1: 🏆 I remember this one from university : An expert is someone who learns more and more about less and less, until eventually he knows everything about nothing. Happy Birthday. Or An expert is someone who knows more and more about less and less untill he knows every thing about nothing ! Happy Birthday!\n</Document>?'}
+Tool's response: 
+content='Based on the information provided, Albert Einstein was born on March 14, 1879, and Niels Bohr was born on October 7, 1885. Therefore, Einstein would be older than Bohr by approximately 6 years.' name='haystack_chitchat_agent' tool_call_id='haystack_chitchat_agent'
+------------------------------
+2025-10-14 19:14:05 - INFO     - nat.agent.rewoo_agent.agent:373 - [AGENT] Completed level 1 with 1 tools
+2025-10-14 19:14:05 - INFO     - nat.agent.rewoo_agent.agent:493 - ReWOO agent solver output: 
+------------------------------
+[AGENT]
+Agent input: Who would be older today, Einstein or Bohr?
+Agent's thoughts: 
+Einstein
+------------------------------
+2025-10-14 19:14:05 - WARNING  - nat.builder.intermediate_step_manager:94 - Step id 8660f3ce-1732-4951-9dbc-beea6f9a43ef not found in outstanding start steps
+2025-10-14 19:14:05 - INFO     - nat.front_ends.console.console_front_end_plugin:102 - --------------------------------------------------
 Workflow Result:
-['Athens']
---------------------------------------------------
+['Einstein']
 ```
 
 ### Starting the NeMo Agent Toolkit Server
@@ -189,7 +220,7 @@ Once the server is running, you can make HTTP requests to interact with the work
 curl --request POST \
   --url http://localhost:8000/generate \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"}'
+  --data "{\"input_message\": \"Who would be older today, Einstein or Bohr?\"}"
 ```
 
 #### Streaming Requests
@@ -200,7 +231,7 @@ curl --request POST \
 curl --request POST \
   --url http://localhost:8000/generate/stream \
   --header 'Content-Type: application/json' \
-  --data '{"input_message": "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"}'
+  --data "{\"input_message\": \"Who would be older today, Einstein or Bohr?\"}"
 ```
 ---
 

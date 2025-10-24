@@ -177,14 +177,14 @@ class ExporterManager:
                 else:
                     logger.debug("Skipping cleanup for non-isolated exporter '%s'", name)
             except Exception as e:
-                logger.error("Error preparing cleanup for isolated exporter '%s': %s", name, e)
+                logger.exception("Error preparing cleanup for isolated exporter '%s': %s", name, e)
 
         if cleanup_tasks:
             # Run cleanup tasks concurrently with timeout
             try:
                 await asyncio.wait_for(asyncio.gather(*cleanup_tasks, return_exceptions=True),
                                        timeout=self._shutdown_timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("Some isolated exporters did not clean up within timeout")
 
         self._active_isolated_exporters.clear()
@@ -195,7 +195,7 @@ class ExporterManager:
             logger.debug("Stopping isolated exporter '%s'", name)
             await exporter.stop()
         except Exception as e:
-            logger.error("Error stopping isolated exporter '%s': %s", name, e)
+            logger.exception("Error stopping isolated exporter '%s': %s", name, e)
 
     @asynccontextmanager
     async def start(self, context_state: ContextState | None = None):
@@ -251,7 +251,7 @@ class ExporterManager:
             try:
                 await self._cleanup_isolated_exporters()
             except Exception as e:
-                logger.error("Error during isolated exporter cleanup: %s", e)
+                logger.exception("Error during isolated exporter cleanup: %s", e)
 
             # Then stop the manager tasks
             await self.stop()
@@ -275,7 +275,7 @@ class ExporterManager:
             logger.info("Stopped exporter '%s'", name)
             raise
         except Exception as e:
-            logger.error("Failed to run exporter '%s': %s", name, str(e), exc_info=True)
+            logger.error("Failed to run exporter '%s': %s", name, str(e))
             # Re-raise the exception to ensure it's properly handled
             raise
 
@@ -301,13 +301,13 @@ class ExporterManager:
             try:
                 task.cancel()
                 await asyncio.wait_for(task, timeout=self._shutdown_timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("Exporter '%s' task did not shut down in time and may be stuck.", name)
                 stuck_tasks.append(name)
             except asyncio.CancelledError:
                 logger.debug("Exporter '%s' task cancelled", name)
             except Exception as e:
-                logger.error("Failed to stop exporter '%s': %s", name, str(e))
+                logger.exception("Failed to stop exporter '%s': %s", name, str(e))
 
         if stuck_tasks:
             logger.warning("Exporters did not shut down in time: %s", ", ".join(stuck_tasks))

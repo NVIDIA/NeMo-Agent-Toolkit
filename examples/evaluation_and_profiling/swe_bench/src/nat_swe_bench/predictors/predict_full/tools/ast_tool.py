@@ -44,7 +44,7 @@ def extract_file_from_patch(patch_content: str) -> str | None:
                     return parts[2][2:]  # Remove 'b/' prefix
         return None
     except Exception as e:
-        logger.exception("Error extracting file from patch: %s", e, exc_info=True)
+        logger.exception("Error extracting file from patch: %s", e)
         return None
 
 
@@ -57,7 +57,7 @@ async def ast_tool(tool_config: AstToolConfig, builder: Builder):
         logger.info("Analyzing file: %s", file_path)
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 source_code = f.read()
 
             tree = ast.parse(source_code)
@@ -89,7 +89,7 @@ async def ast_tool(tool_config: AstToolConfig, builder: Builder):
                     })
                     logger.info("Found class: %s with methods: %s", node.name, methods)
 
-                elif isinstance(node, (ast.Import, ast.ImportFrom)):
+                elif isinstance(node, ast.Import | ast.ImportFrom):
                     for alias in node.names:
                         import_info = {
                             'name': alias.name,
@@ -102,7 +102,7 @@ async def ast_tool(tool_config: AstToolConfig, builder: Builder):
             return {'file_path': file_path, 'symbols': symbols, 'imports': imports, 'source': source_code}
 
         except Exception as e:
-            logger.exception("Error analyzing file %s %s", file_path, e, exc_info=True)
+            logger.exception("Error analyzing file %s %s", file_path, e)
             return {'file_path': file_path, 'error': str(e)}
 
     async def ast_operations(args_str: str) -> str:

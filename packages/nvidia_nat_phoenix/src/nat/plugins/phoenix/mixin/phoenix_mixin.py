@@ -15,10 +15,10 @@
 
 import logging
 
-from phoenix.otel import HTTPSpanExporter
-from phoenix.trace.projects import using_project
+from openinference.instrumentation import dangerously_using_project
 
 from nat.plugins.opentelemetry.otel_span import OtelSpan
+from phoenix.otel import HTTPSpanExporter
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,8 @@ class PhoenixMixin:
 
     This mixin is designed to be used with OtelSpanExporter as a base class:
 
-    Example:
+    Example::
+
         class MyPhoenixExporter(OtelSpanExporter, PhoenixMixin):
             def __init__(self, endpoint, project, **kwargs):
                 super().__init__(endpoint=endpoint, project=project, **kwargs)
@@ -68,7 +69,7 @@ class PhoenixMixin:
             Exception: If there's an error during span export (logged but not re-raised).
         """
         try:
-            with using_project(self._project):
+            with dangerously_using_project(self._project):
                 self._exporter.export(spans)  # type: ignore
         except Exception as e:
             logger.error("Error exporting spans: %s", e, exc_info=True)

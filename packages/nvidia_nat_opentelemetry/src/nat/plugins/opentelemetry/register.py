@@ -38,18 +38,18 @@ class LangfuseTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, n
 
 
 @register_telemetry_exporter(config_type=LangfuseTelemetryExporter)
-async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder: Builder):
 
     import base64
 
-    from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
     secret_key = config.secret_key or os.environ.get("LANGFUSE_SECRET_KEY")
     public_key = config.public_key or os.environ.get("LANGFUSE_PUBLIC_KEY")
     if not secret_key or not public_key:
         raise ValueError("secret and public keys are required for langfuse")
 
-    credentials = f"{public_key}:{secret_key}".encode("utf-8")
+    credentials = f"{public_key}:{secret_key}".encode()
     auth_header = base64.b64encode(credentials).decode("utf-8")
     headers = {"Authorization": f"Basic {auth_header}"}
 
@@ -75,10 +75,10 @@ class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemet
 
 
 @register_telemetry_exporter(config_type=LangsmithTelemetryExporter)
-async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, builder: Builder):
     """Create a Langsmith telemetry exporter."""
 
-    from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
     api_key = config.api_key or os.environ.get("LANGSMITH_API_KEY")
     if not api_key:
@@ -105,11 +105,11 @@ class OtelCollectorTelemetryExporter(BatchConfigMixin,
 
 
 @register_telemetry_exporter(config_type=OtelCollectorTelemetryExporter)
-async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):
     """Create an OpenTelemetry telemetry exporter."""
 
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
     from nat.plugins.opentelemetry.otel_span_exporter import get_opentelemetry_sdk_version
-    from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
     # Default resource attributes
     default_resource_attributes = {
@@ -140,10 +140,10 @@ class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetr
 
 
 @register_telemetry_exporter(config_type=PatronusTelemetryExporter)
-async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder: Builder):
     """Create a Patronus telemetry exporter."""
 
-    from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
     api_key = config.api_key or os.environ.get("PATRONUS_API_KEY")
     if not api_key:
@@ -159,10 +159,10 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
                                   flush_interval=config.flush_interval,
                                   max_queue_size=config.max_queue_size,
                                   drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout)
+                                  shutdown_timeout=config.shutdown_timeout,
+                                  protocol="grpc")
 
 
-# pylint: disable=W0613
 class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="galileo"):
     """A telemetry exporter to transmit traces to externally hosted galileo service."""
 
@@ -173,10 +173,10 @@ class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetry
 
 
 @register_telemetry_exporter(config_type=GalileoTelemetryExporter)
-async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: Builder):
     """Create a Galileo telemetry exporter."""
 
-    from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
     headers = {
         "Galileo-API-Key": config.api_key,

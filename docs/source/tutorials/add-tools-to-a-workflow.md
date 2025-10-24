@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Add Tools to a Workflow
+# Add Tools to a Workflow with NeMo Agent Toolkit
 
-The [Customizing a Workflow](./customize-a-workflow.md) tutorial demonstrates how to customize a workflow by overriding parameters. This tutorial will demonstrate how to add new tools to a workflow. Adding a new tool to a workflow requires copying and modifying the workflow configuration file, which, in effect, creates a new customized workflow.
+The [Customizing a Workflow](./customize-a-workflow.md) tutorial demonstrates how to customize a workflow by overriding parameters. This tutorial will show how to add new tools to a workflow. Adding a new tool to a workflow requires copying and modifying the workflow configuration file, which, in effect, creates a new customized workflow.
 
 NeMo Agent toolkit includes several built-in tools (functions) that can be used in any workflow. To query for a list of installed tools, run the following command:
 ```bash
@@ -35,7 +35,7 @@ functions:
     chunk_size: 512
 ```
 
-However, the workflow is unaware of some related technologies, such as LangChain, if you run:
+However, the workflow is unaware of some related technologies, such as LangChain/LangGraph, if you run:
 ```bash
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "How do I trace only specific parts of my LangChain application?"
 ```

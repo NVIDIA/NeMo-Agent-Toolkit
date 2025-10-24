@@ -53,7 +53,7 @@ def _extract_tools_schema(invocation_params: dict) -> list:
     return tools_schema
 
 
-class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # pylint: disable=R0901
+class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
     """Callback Handler that tracks NIM info."""
 
     total_tokens: int = 0
@@ -106,7 +106,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
         try:
             model_name = kwargs.get("metadata")["ls_model_name"]
         except Exception as e:
-            logger.exception("Error getting model name: %s", e, exc_info=True)
+            logger.exception("Error getting model name: %s", e)
 
         run_id = str(kwargs.get("run_id", str(uuid4())))
         self._run_id_to_model_name[run_id] = model_name
@@ -144,7 +144,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
         try:
             model_name = metadata["ls_model_name"] if metadata else kwargs.get("metadata")["ls_model_name"]
         except Exception as e:
-            logger.exception("Error getting model name: %s", e, exc_info=True)
+            logger.exception("Error getting model name: %s", e)
 
         run_id = str(run_id)
         self._run_id_to_model_name[run_id] = model_name
@@ -173,13 +173,13 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
         try:
             model_name = self._run_id_to_model_name.get(str(kwargs.get("run_id", "")), "")
         except Exception as e:
-            logger.exception("Error getting model name: %s", e, exc_info=True)
+            logger.exception("Error getting model name: %s", e)
 
         usage_metadata = {}
         try:
             usage_metadata = kwargs.get("chunk").message.usage_metadata if kwargs.get("chunk") else {}
         except Exception as e:
-            logger.exception("Error getting usage metadata: %s", e, exc_info=True)
+            logger.exception("Error getting usage metadata: %s", e)
 
         stats = IntermediateStepPayload(
             event_type=IntermediateStepType.LLM_NEW_TOKEN,
@@ -206,7 +206,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
             try:
                 model_name = self._run_id_to_model_name.get(str(kwargs.get("run_id", "")), "")
             except Exception as e_inner:
-                logger.exception("Error getting model name: %s from outer error %s", e_inner, e, exc_info=True)
+                logger.exception("Error getting model name: %s from outer error %s", e_inner, e)
 
         try:
             generation = response.generations[0][0]
@@ -223,7 +223,14 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
             except AttributeError:
                 usage_metadata = {}
 
-        llm_text_output = generation.message.content if generation else ""
+        if generation:
+            llm_text_output = generation.message.content
+            if "tool_calls" in generation.message.additional_kwargs:
+                # add tool calls if included in the output
+                tool_calls = generation.message.additional_kwargs['tool_calls']
+                llm_text_output = f"{llm_text_output}\n\nTool calls: {tool_calls}"
+        else:
+            llm_text_output = ""
 
         # update shared state behind lock
         with self._lock:

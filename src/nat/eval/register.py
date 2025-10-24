@@ -14,10 +14,13 @@
 # limitations under the License.
 
 # flake8: noqa
-# pylint: disable=unused-import
 
 # Import evaluators which need to be automatically registered here
 from .rag_evaluator.register import register_ragas_evaluator
+from .runtime_evaluator.register import register_avg_llm_latency_evaluator
+from .runtime_evaluator.register import register_avg_num_llm_calls_evaluator
+from .runtime_evaluator.register import register_avg_tokens_per_llm_end_evaluator
+from .runtime_evaluator.register import register_avg_workflow_runtime_evaluator
 from .swe_bench_evaluator.register import register_swe_bench_evaluator
 from .trajectory_evaluator.register import register_trajectory_evaluator
 from .tunable_rag_evaluator.register import register_tunable_rag_evaluator

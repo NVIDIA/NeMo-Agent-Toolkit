@@ -80,7 +80,7 @@ async def register_ttc_tool_wrapper_function(
         raise ImportError("langchain-core is not installed. Please install it to use SingleShotMultiPlanPlanner.\n"
                           "This error can be resolved by installing nvidia-nat-langchain.")
 
-    augmented_function: Function = builder.get_function(config.augmented_fn)
+    augmented_function: Function = await builder.get_function(config.augmented_fn)
     input_llm: BaseChatModel = await builder.get_llm(config.input_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     if not augmented_function.has_single_output:
@@ -98,8 +98,8 @@ async def register_ttc_tool_wrapper_function(
 
         augmented_function_desc = config.tool_description
 
-    fn_input_schema: BaseModel = augmented_function.input_schema
-    fn_output_schema: BaseModel = augmented_function.single_output_schema
+    fn_input_schema: type[BaseModel] = augmented_function.input_schema
+    fn_output_schema: type[BaseModel] | type[None] = augmented_function.single_output_schema
 
     runnable_llm = input_llm.with_structured_output(schema=fn_input_schema)
 

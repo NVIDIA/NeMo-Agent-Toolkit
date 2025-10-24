@@ -55,9 +55,10 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         self.auth_flow_handler = ConsoleAuthenticationFlowHandler()
 
     async def pre_run(self):
-
-        if (not self.front_end_config.input_query and not self.front_end_config.input_file):
-            raise click.UsageError("Must specify either --input_query or --input_file")
+        if (self.front_end_config.input_query is not None and self.front_end_config.input_file is not None):
+            raise click.UsageError("Must specify either --input or --input_file, not both")
+        if (self.front_end_config.input_query is None and self.front_end_config.input_file is None):
+            raise click.UsageError("Must specify either --input or --input_file")
 
     async def run_workflow(self, session_manager: SessionManager):
 
@@ -80,17 +81,28 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
             input_list = list(self.front_end_config.input_query)
             logger.debug("Processing input: %s", self.front_end_config.input_query)
 
-            runner_outputs = await asyncio.gather(*[run_single_query(query) for query in input_list])
+            # Make `return_exceptions=False` explicit; all exceptions are raised instead of being silenced
+            runner_outputs = await asyncio.gather(*[run_single_query(query) for query in input_list],
+                                                  return_exceptions=False)
 
         elif (self.front_end_config.input_file):
 
             # Run the workflow
-            with open(self.front_end_config.input_file, "r", encoding="utf-8") as f:
+            with open(self.front_end_config.input_file, encoding="utf-8") as f:
 
                 async with session_manager.workflow.run(f) as runner:
                     runner_outputs = await runner.result(to_type=str)
         else:
             assert False, "Should not reach here. Should have been caught by pre_run"
 
-        # Print result
-        logger.info(f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n%s{Fore.RESET}\n{'-' * 50}", runner_outputs)
+        line = f"{'-' * 50}"
+        prefix = f"{line}\n{Fore.GREEN}Workflow Result:\n"
+        suffix = f"{Fore.RESET}\n{line}"
+
+        logger.info(f"{prefix}%s{suffix}", runner_outputs)
+
+        # (handler is a stream handler) => (level > INFO)
+        effective_level_too_high = all(
+            type(h) is not logging.StreamHandler or h.level > logging.INFO for h in logging.getLogger().handlers)
+        if effective_level_too_high:
+            print(f"{prefix}{runner_outputs}{suffix}")

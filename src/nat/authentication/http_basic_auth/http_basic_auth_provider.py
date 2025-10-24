@@ -38,7 +38,7 @@ class HTTPBasicAuthProvider(AuthProviderBase):
 
         self._authenticated_tokens: dict[str, AuthResult] = {}
 
-    async def authenticate(self, user_id: str | None = None) -> AuthResult:
+    async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
         """
         Performs simple HTTP Authentication using the provided user ID.
         """

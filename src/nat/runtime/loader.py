@@ -114,7 +114,7 @@ async def load_workflow(config_file: StrPath, max_concurrency: int = -1):
     # Must yield the workflow function otherwise it cleans up
     async with WorkflowBuilder.from_config(config=config) as workflow:
 
-        yield SessionManager(workflow.build(), max_concurrency=max_concurrency)
+        yield SessionManager(await workflow.build(), max_concurrency=max_concurrency)
 
 
 @lru_cache
@@ -210,7 +210,7 @@ def discover_and_register_plugins(plugin_type: PluginTypes):
                 # Optionally, you can mark the plugin as unavailable or take other actions
 
             except Exception:
-                logger.exception("An error occurred while loading plugin '%s': {e}", entry_point.name, exc_info=True)
+                logger.exception("An error occurred while loading plugin '%s'", entry_point.name)
 
             finally:
                 count += 1
