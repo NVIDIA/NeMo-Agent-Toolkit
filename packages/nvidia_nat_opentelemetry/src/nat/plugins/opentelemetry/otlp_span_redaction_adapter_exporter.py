@@ -22,6 +22,7 @@ from typing import Any
 from nat.builder.context import ContextState
 from nat.observability.processor.redaction import SpanHeaderRedactionProcessor
 from nat.observability.processor.span_tagging_processor import SpanTaggingProcessor
+from nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPProtocol
 from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
     - Privacy level tagging for compliance and governance
     - Complete span processing pipeline (IntermediateStep → Span → Redaction → Tagging → OtelSpan → Batching → Export)
     - Batching support for efficient transmission
-    - OTLP HTTP protocol for maximum compatibility
+    - OTLP HTTP and gRPC protocol for maximum compatibility
     - Configurable authentication via headers
     - Resource attribute management
     - Error handling and retry logic
@@ -63,6 +64,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
         exporter = OTLPSpanRedactionAdapterExporter(
             endpoint="https://api.service.com/v1/traces",
             headers={"Authorization": "Bearer your-token"},
+            protocol='http',
             redaction_attributes=["user.email", "request.body"],
             redaction_headers=["x-user-id"],
             redaction_callback=should_redact,
@@ -96,6 +98,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
             # OTLPSpanExporterMixin args
             endpoint: str,
             headers: dict[str, str] | None = None,
+            protocol: OTLPProtocol = 'http',
             **otlp_kwargs):
         """Initialize the OTLP span exporter with redaction and tagging capabilities.
 
@@ -117,6 +120,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
             redaction_tag: Tag to add to spans when redaction occurs.
             endpoint: The endpoint for the OTLP service.
             headers: The headers for the OTLP service.
+            protocol: The protocol to use for the OTLP service, default is 'http'.
             otlp_kwargs: Additional keyword arguments for the OTLP service.
         """
         super().__init__(context_state=context_state,
@@ -128,6 +132,7 @@ class OTLPSpanHeaderRedactionAdapterExporter(OTLPSpanAdapterExporter):
                          resource_attributes=resource_attributes,
                          endpoint=endpoint,
                          headers=headers,
+                         protocol=protocol,
                          **otlp_kwargs)
 
         # Insert redaction and tagging processors to the front of the processing pipeline
