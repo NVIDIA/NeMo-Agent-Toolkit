@@ -193,3 +193,41 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
         drop_on_overflow=config.drop_on_overflow,
         shutdown_timeout=config.shutdown_timeout,
     )
+
+
+class DBNLTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="dbnl"):
+    """A telemetry exporter to transmit traces to DBNL."""
+
+    endpoint: str = Field(description="The DBNL OTEL traces endpoint.", default="")
+    api_token: str = Field(description="The DBNL API token.", default="")
+    project_id: str = Field(description="The DBNL project id.", default="")
+
+
+@register_telemetry_exporter(config_type=DBNLTelemetryExporter)
+async def dbnl_telemetry_exporter(config: DBNLTelemetryExporter, builder: Builder):
+    """Create a DBNL telemetry exporter."""
+
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
+
+    api_token = config.api_token or os.environ.get("DBNL_API_TOKEN")
+    project_id = config.project_id or os.environ.get("DBNL_PROJECT_ID")
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "x-dbnl-project-id": project_id,
+    }
+
+    endpoint = config.endpoint
+    if not endpoint:
+        api_url = os.environ.get("DBNL_API_URL") or "http://localhost:8080/api"
+        endpoint = api_url.rstrip("/") + "/otel/v1/traces"
+    print(endpoint)
+
+    yield OTLPSpanAdapterExporter(
+        endpoint=endpoint,
+        headers=headers,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
