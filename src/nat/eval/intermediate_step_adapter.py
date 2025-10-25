@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class IntermediateStepAdapter:
-    DEFAULT_EVENT_FILTER = [IntermediateStepType.LLM_END, IntermediateStepType.TOOL_END]
+    DEFAULT_EVENT_FILTER = [IntermediateStepType.LLM_END, IntermediateStepType.TOOL_END, IntermediateStepType.NODE_END]
 
     def filter_intermediate_steps(self,
                                   intermediate_steps: list[IntermediateStep],

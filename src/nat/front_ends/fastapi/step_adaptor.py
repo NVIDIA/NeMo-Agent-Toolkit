@@ -55,6 +55,8 @@ class StepAdaptor:
                 return True
             if step.event_category == IntermediateStepCategory.FUNCTION:
                 return True
+            if step.event_category == IntermediateStepCategory.NODE:
+                return True
             return False
 
         if config.mode == StepAdaptorMode.CUSTOM:
@@ -62,6 +64,67 @@ class StepAdaptor:
             return step.event_type in config.custom_event_types
 
         return False
+
+    def _handle_node(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
+        """
+        Handles the NODE_START and NODE_END events
+        """
+        input_str: str | None = None
+        output_str: str | None = None
+
+        # Find the start in the history with matching run_id
+        start_step = next(
+            (x for x in self._history if x.event_type == IntermediateStepType.NODE_START and x.UUID == step.UUID), None)
+
+        if not start_step:
+            # If we don't have a start step, we can't do anything
+            return None
+
+        if start_step.data and hasattr(start_step.data, 'input'):
+            input_str = str(start_step.data.input)
+
+        if step.event_type == IntermediateStepType.NODE_END:
+            if step.data and hasattr(step.data, 'output'):
+                output_str = str(step.data.output)
+
+        if not input_str and not output_str:
+            return None
+
+        payload = ""
+        if input_str:
+            escaped_input = html.escape(input_str, quote=False)
+            format_input_type = "json" if is_valid_json(escaped_input) else "python"
+
+            # Dont use f-strings here because the payload is markdown and screws up the dedent
+            payload = dedent("""
+            **Input:**
+            ```{format_input_type}
+            {input_value}
+            ```
+            """).strip("\n").format(input_value=escaped_input, format_input_type=format_input_type)
+
+        if output_str:
+            escaped_output = html.escape(output_str, quote=False)
+            format_output_type = "json" if is_valid_json(escaped_output) else "python"
+
+            output_section = dedent("""
+            **Output:**
+            ```{format_output_type}
+            {output_value}
+            ```
+            """).strip("\n").format(output_value=escaped_output, format_output_type=format_output_type)
+
+            if payload:
+                payload = f"{payload}\n\n{output_section}"
+            else:
+                payload = output_section
+
+        event = ResponseIntermediateStep(id=step.UUID,
+                                         name=f"Node: {step.name}",
+                                         payload=payload,
+                                         parent_id=ancestry.function_id)
+
+        return event
 
     def _handle_llm(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         input_str: str | None = None
@@ -309,6 +372,9 @@ class StepAdaptor:
 
             if step.event_category == IntermediateStepCategory.FUNCTION:
                 return self._handle_function(payload, ancestry)
+
+            if step.event_category == IntermediateStepCategory.NODE:
+                return self._handle_node(payload, ancestry)
 
             if step.event_category == IntermediateStepCategory.CUSTOM:
                 return self._handle_custom(payload, ancestry)

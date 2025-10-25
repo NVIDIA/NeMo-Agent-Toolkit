@@ -80,6 +80,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
     from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
     from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.profiler.decorators.framework_wrapper import callback_handler_var
 
     from .agent import ReWOOAgentGraph
     from .agent import ReWOOGraphState
@@ -150,7 +151,12 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
             state = ReWOOGraphState(messages=messages, task=task)
 
             # run the ReWOO Agent Graph
-            state = await graph.ainvoke(state)
+            invoke_config = {}
+            # Add callbacks to enable node-level tracking (on_chain_start/on_chain_end)
+            callback_handler = callback_handler_var.get()
+            if callback_handler:
+                invoke_config['callbacks'] = [callback_handler]
+            state = await graph.ainvoke(state, config=invoke_config if invoke_config else None)
 
             # get and return the output from the state
             state = ReWOOGraphState(**state)
