@@ -142,7 +142,7 @@ async def test_otel_full_workflow(tmp_path: Path, config_dir: Path, question: st
 
             if not called_multiply:
                 function_name = trace.get('function_ancestry', {}).get('function_name')
-                called_multiply = function_name == "calculator_multiply"
+                called_multiply = function_name == "calculator.multiply"
 
     assert len(traces) > 0
     assert called_multiply

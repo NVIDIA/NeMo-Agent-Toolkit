@@ -34,6 +34,7 @@ async def test_full_workflow(redis_server: dict[str, str | int], phoenix_trace_u
     redis_config = RedisMemoryClientConfig(host=redis_server["host"],
                                            port=redis_server["port"],
                                            db=redis_server["db"],
+                                           password=redis_server["password"],
                                            key_prefix=existing_redis_config.key_prefix,
                                            embedder=existing_redis_config.embedder)
 

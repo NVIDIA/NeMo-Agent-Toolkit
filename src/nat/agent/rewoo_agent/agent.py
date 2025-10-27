@@ -217,7 +217,7 @@ class ReWOOAgentGraph(BaseAgent):
                 if value is not None:
                     if value == placeholder:
                         tool_input[key] = tool_output
-                    elif placeholder in value:
+                    elif isinstance(value, str) and placeholder in value:
                         # If the placeholder is part of the value, replace it with the stringified output
                         tool_input[key] = value.replace(placeholder, str(tool_output))
 

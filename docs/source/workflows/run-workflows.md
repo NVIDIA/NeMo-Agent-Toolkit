@@ -95,26 +95,13 @@ The toolkit offers a programmatic way to execute workflows through its Python AP
 ```python
 import asyncio
 
-from nat.runtime.loader import load_workflow
-from nat.utils.type_utils import StrPath
-
-
-async def run_workflow(config_file: StrPath, input_str: str) -> str:
-    async with load_workflow(config_file) as workflow:
-        async with workflow.run(input_str) as runner:
-            return await runner.result(to_type=str)
-
+from nat.utils import run_workflow
 
 result = asyncio.run(
     run_workflow(config_file='examples/getting_started/simple_web_query/configs/config.yml',
-                 input_str='What is LangSmith?'))
+                 prompt='What is LangSmith?'))
 
 print(result)
 ```
 
-In this example:
-- `config_file`: A string or {py:class}`~pathlib.Path` pointing to your workflow YAML file
-- `input_str`: A string containing the input for your workflow
-- The `workflow.run(input_str)` method returns an instance of {py:class}`~nat.runtime.runner.Runner`
-
-For detailed information about the `Runner` class and its capabilities, please refer to the Python API documentation for the {py:class}`~nat.runtime.runner.Runner` class.
+Refer to the Python API documentation for the {py:func}`~nat.utils.run_workflow` function for detailed information about its capabilities.

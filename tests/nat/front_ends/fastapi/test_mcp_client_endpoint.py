@@ -143,8 +143,8 @@ async def test_mcp_client_tool_list_unhealthy_marks_unavailable(app_worker):
     group_name = "mcp_math"
     group_instance = _GroupInstanceStub(client,
                                         {
-                                            f"{group_name}.calculator_add": _FnStub("Add"),
-                                            f"{group_name}.calculator_subtract": _FnStub("Subtract"),
+                                            f"{group_name}.calculator.add": _FnStub("Add"),
+                                            f"{group_name}.calculator.subtract": _FnStub("Subtract"),
                                         })
     configured_group = _ConfiguredGroupStub(cfg, group_instance)
     builder = _BuilderStub({group_name: configured_group})

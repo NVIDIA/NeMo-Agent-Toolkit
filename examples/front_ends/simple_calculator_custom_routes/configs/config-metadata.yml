@@ -23,17 +23,12 @@ general:
         description: Gets the request attributes from the request.
         function_name: current_request_attributes
 
+function_groups:
+  calculator:
+    _type: calculator
 functions:
-  calculator_multiply:
-    _type: calculator_multiply
-  calculator_inequality:
-    _type: calculator_inequality
-  calculator_divide:
-    _type: nat_simple_calculator/calculator_divide
   current_datetime:
     _type: current_datetime
-  calculator_subtract:
-    _type: calculator_subtract
   current_request_attributes:
     _type: current_request_attributes
 
@@ -47,11 +42,8 @@ llms:
 workflow:
   _type: react_agent
   tool_names:
-    - calculator_multiply
-    - calculator_inequality
+    - calculator
     - current_datetime
-    - calculator_divide
-    - calculator_subtract
     - current_request_attributes
   llm_name: nim_llm
   verbose: true

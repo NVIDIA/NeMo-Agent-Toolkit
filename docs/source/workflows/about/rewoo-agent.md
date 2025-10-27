@@ -72,19 +72,13 @@ workflow:
 
 In your YAML file, to use the ReWOO agent as a function:
 ```yaml
+function_groups:
+  calculator:
+    _type: calculator
 functions:
-  calculator_multiply:
-    _type: calculator_multiply
-  calculator_inequality:
-    _type: calculator_inequality
-  calculator_divide:
-    _type: nat_simple_calculator/calculator_divide
   math_agent:
     _type: rewoo_agent
-    tool_names:
-      - calculator_multiply
-      - calculator_inequality
-      - calculator_divide
+    tool_names: [calculator]
     description: 'Useful for performing simple mathematical calculations.'
 ```
 

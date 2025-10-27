@@ -485,14 +485,15 @@ def fixture_redis_server(fail_missing: bool) -> Generator[dict[str, str | int]]:
     host = os.environ.get("NAT_CI_REDIS_HOST", "localhost")
     port = int(os.environ.get("NAT_CI_REDIS_PORT", "6379"))
     db = int(os.environ.get("NAT_CI_REDIS_DB", "0"))
+    password = os.environ.get("REDIS_PASSWORD", "redis")
     bucket_name = os.environ.get("NAT_CI_REDIS_BUCKET_NAME", "test")
 
     try:
         import redis
-        client = redis.Redis(host=host, port=port, db=db)
+        client = redis.Redis(host=host, port=port, db=db, password=password)
         if not client.ping():
             raise RuntimeError("Failed to connect to Redis")
-        yield {"host": host, "port": port, "db": db, "bucket_name": bucket_name}
+        yield {"host": host, "port": port, "db": db, "bucket_name": bucket_name, "password": password}
     except ImportError:
         if fail_missing:
             raise

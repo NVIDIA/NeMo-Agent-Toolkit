@@ -26,19 +26,14 @@ llms:
     temperature: 0.0
     max_tokens: 250
 
+function_groups:
+  calculator:
+    _type: calculator
+
 functions:
-  calculator_multiply:
-    _type: calculator_multiply
-  calculator_inequality:
-    _type: calculator_inequality
-  calculator_divide:
-    _type: nat_simple_calculator/calculator_divide
   math_agent:
     _type: tool_calling_agent
-    tool_names:
-      - calculator_multiply
-      - calculator_inequality
-      - calculator_divide
+    tool_names: [calculator]
     llm_name: agent_executor
     verbose: true
     handle_tool_errors: true
