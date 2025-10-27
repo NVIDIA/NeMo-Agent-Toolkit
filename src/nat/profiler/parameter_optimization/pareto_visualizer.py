@@ -81,15 +81,16 @@ class ParetoVisualizer:
 
             # Add trial number labels to Pareto optimal points
             for idx in range(len(pareto_trials_df)):
-                trial_number = pareto_trials_df.iloc[idx]['number'] if 'number' in pareto_trials_df.columns else pareto_trials_df.index[idx]
+                trial_number = pareto_trials_df.iloc[idx][
+                    'number'] if 'number' in pareto_trials_df.columns else pareto_trials_df.index[idx]
                 ax.annotate(f'{int(trial_number)}',
-                           xy=(pareto_x[idx], pareto_y[idx]),
-                           xytext=(8, 8),
-                           textcoords='offset points',
-                           fontsize=9,
-                           fontweight='bold',
-                           color='darkred',
-                           bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='red', alpha=0.9))
+                            xy=(pareto_x[idx], pareto_y[idx]),
+                            xytext=(8, 8),
+                            textcoords='offset points',
+                            fontsize=9,
+                            fontweight='bold',
+                            color='darkred',
+                            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='red', alpha=0.9))
 
             # Draw Pareto front line (only for 2D)
             if len(pareto_x) > 1:
@@ -193,18 +194,18 @@ class ParetoVisualizer:
                 if idx < len(trials_df):
                     trial_values = [normalized_values[j][idx] for j in range(n_metrics)]
                     ax.plot(x_positions, trial_values, 'r-', alpha=0.8, linewidth=3)
-                    
+
                     # Add trial number label at the rightmost point
                     trial_number = trials_df.iloc[idx]['number'] if 'number' in trials_df.columns else idx
                     # Position label slightly to the right and above the last point
                     ax.annotate(f'{int(trial_number)}',
-                               xy=(x_positions[-1], trial_values[-1]),
-                               xytext=(5, 5),
-                               textcoords='offset points',
-                               fontsize=9,
-                               fontweight='bold',
-                               color='darkred',
-                               bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='red', alpha=0.8))
+                                xy=(x_positions[-1], trial_values[-1]),
+                                xytext=(5, 5),
+                                textcoords='offset points',
+                                fontsize=9,
+                                fontweight='bold',
+                                color='darkred',
+                                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='red', alpha=0.8))
 
         # Customize plot
         ax.set_xticks(x_positions)
@@ -287,18 +288,22 @@ class ParetoVisualizer:
                                    edgecolors='darkred',
                                    linewidths=1,
                                    marker='*')
-                        
+
                         # Add trial number labels to Pareto optimal points
                         for idx in range(len(pareto_trials_df)):
-                            trial_number = pareto_trials_df.iloc[idx]['number'] if 'number' in pareto_trials_df.columns else pareto_trials_df.index[idx]
+                            trial_number = pareto_trials_df.iloc[idx][
+                                'number'] if 'number' in pareto_trials_df.columns else pareto_trials_df.index[idx]
                             ax.annotate(f'{int(trial_number)}',
-                                       xy=(pareto_x[idx], pareto_y[idx]),
-                                       xytext=(6, 6),
-                                       textcoords='offset points',
-                                       fontsize=8,
-                                       fontweight='bold',
-                                       color='darkred',
-                                       bbox=dict(boxstyle='round,pad=0.2', facecolor='white', edgecolor='red', alpha=0.8))
+                                        xy=(pareto_x[idx], pareto_y[idx]),
+                                        xytext=(6, 6),
+                                        textcoords='offset points',
+                                        fontsize=8,
+                                        fontweight='bold',
+                                        color='darkred',
+                                        bbox=dict(boxstyle='round,pad=0.2',
+                                                  facecolor='white',
+                                                  edgecolor='red',
+                                                  alpha=0.8))
 
                     ax.set_xlabel(f"{self.metric_names[j]} ({self.directions[j]})")
                     ax.set_ylabel(f"{self.metric_names[i]} ({self.directions[i]})")
@@ -309,14 +314,25 @@ class ParetoVisualizer:
         from matplotlib.lines import Line2D
         from matplotlib.patches import Patch
         legend_elements = [
-            Line2D([0], [0], marker='o', color='w', markerfacecolor='lightblue', 
-                   markeredgecolor='navy', markersize=8, alpha=0.6, label='All Trials'),
-            Line2D([0], [0], marker='*', color='w', markerfacecolor='red',
-                   markeredgecolor='darkred', markersize=10, alpha=0.9, label='Pareto Optimal'),
+            Line2D([0], [0],
+                   marker='o',
+                   color='w',
+                   markerfacecolor='lightblue',
+                   markeredgecolor='navy',
+                   markersize=8,
+                   alpha=0.6,
+                   label='All Trials'),
+            Line2D([0], [0],
+                   marker='*',
+                   color='w',
+                   markerfacecolor='red',
+                   markeredgecolor='darkred',
+                   markersize=10,
+                   alpha=0.9,
+                   label='Pareto Optimal'),
             Patch(facecolor='white', edgecolor='red', label='[n]: trial number')
         ]
-        fig.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(0.98, 0.98), 
-                   framealpha=0.9, fontsize=10)
+        fig.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(0.98, 0.98), framealpha=0.9, fontsize=10)
 
         plt.tight_layout()
 
