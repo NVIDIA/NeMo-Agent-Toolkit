@@ -22,6 +22,10 @@ async def _run_simple_rag_workflow(milvus_uri: str,
                                    config_file: Path,
                                    question="How do I install CUDA?",
                                    expected_answer="CUDA") -> str:
+    """
+    The tests/running of the workflow is the same for all the different configurations.
+    However the API keys required are different.
+    """
     from pydantic import HttpUrl
 
     from nat.runtime.loader import load_config
@@ -44,7 +48,31 @@ async def test_full_workflow(milvus_uri: str, examples_dir: Path):
 
 @pytest.mark.slow
 @pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key", "populate_milvus")
+async def test_full_workflow_ttc(milvus_uri: str, examples_dir: Path):
+    config_file = examples_dir / "RAG" / "simple_rag" / "configs" / "milvus_rag_config_ttc.yml"
+    await _run_simple_rag_workflow(milvus_uri=milvus_uri, config_file=config_file)
+
+
+@pytest.mark.slow
+@pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key", "mem0_api_key", "populate_milvus")
 async def test_full_workflow_memory(milvus_uri: str, examples_dir: Path):
     config_file = examples_dir / "RAG" / "simple_rag" / "configs" / "milvus_memory_rag_config.yml"
+    await _run_simple_rag_workflow(milvus_uri=milvus_uri, config_file=config_file)
+
+
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key", "populate_milvus")
+async def test_full_workflow_tools(milvus_uri: str, examples_dir: Path):
+    config_file = examples_dir / "RAG" / "simple_rag" / "configs" / "milvus_rag_tools_config.yml"
+    await _run_simple_rag_workflow(milvus_uri=milvus_uri, config_file=config_file)
+
+
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key", "mem0_api_key", "tavily_api_key", "populate_milvus")
+async def test_full_workflow_memory_tools(milvus_uri: str, examples_dir: Path):
+    config_file = examples_dir / "RAG" / "simple_rag" / "configs" / "milvus_memory_rag_tools_config.yml"
     await _run_simple_rag_workflow(milvus_uri=milvus_uri, config_file=config_file)
