@@ -18,20 +18,33 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.slow
-@pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key", "populate_milvus")
-async def test_full_workflow(milvus_uri: str, examples_dir: Path) -> None:
+async def _run_simple_rag_workflow(milvus_uri: str,
+                                   config_file: Path,
+                                   question="How do I install CUDA?",
+                                   expected_answer="CUDA") -> str:
     from pydantic import HttpUrl
 
     from nat.runtime.loader import load_config
-    from nat.test.utils import locate_example_config
     from nat.test.utils import run_workflow
 
-    config_file = examples_dir / "RAG" / "simple_rag" / "configs" / "milvus_rag_config.yml"
     config = load_config(config_file)
     config.retrievers['cuda_retriever'].uri = HttpUrl(url=milvus_uri)
     config.retrievers['mcp_retriever'].uri = HttpUrl(url=milvus_uri)
 
-    # Unfortunately the workflow itself returns inconsistent results
-    await run_workflow(config=config, question="How do I install CUDA?", expected_answer="CUDA")
+    return await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key", "populate_milvus")
+async def test_full_workflow(milvus_uri: str, examples_dir: Path):
+    config_file = examples_dir / "RAG" / "simple_rag" / "configs" / "milvus_rag_config.yml"
+    await _run_simple_rag_workflow(milvus_uri=milvus_uri, config_file=config_file)
+
+
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key", "mem0_api_key", "populate_milvus")
+async def test_full_workflow_memory(milvus_uri: str, examples_dir: Path):
+    config_file = examples_dir / "RAG" / "simple_rag" / "configs" / "milvus_memory_rag_config.yml"
+    await _run_simple_rag_workflow(milvus_uri=milvus_uri, config_file=config_file)
