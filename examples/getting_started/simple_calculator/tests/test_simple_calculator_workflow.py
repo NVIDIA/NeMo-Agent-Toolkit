@@ -17,59 +17,82 @@ import logging
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
 
+from nat.builder.workflow import Workflow
 from nat.runtime.loader import load_workflow
 from nat.test.utils import locate_example_config
-from nat_simple_calculator.register import DivisionToolConfig
-from nat_simple_calculator.register import InequalityToolConfig
-from nat_simple_calculator.register import MultiplyToolConfig
+from nat_simple_calculator.register import CalculatorToolConfig
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key")
-async def test_inequality_tool_workflow():
-
-    config_file: Path = locate_example_config(InequalityToolConfig)
-
+@pytest_asyncio.fixture(scope="module")
+async def workflow():
+    config_file: Path = locate_example_config(CalculatorToolConfig)
     async with load_workflow(config_file) as workflow:
-
-        async with workflow.run("Is 8 greater than 15?") as runner:
-
-            result = await runner.result(to_type=str)
-
-        result = result.lower()
-        assert "no" in result
+        yield workflow
 
 
-@pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key")
-async def test_multiply_tool_workflow():
-
-    config_file: Path = locate_example_config(MultiplyToolConfig)
-
-    async with load_workflow(config_file) as workflow:
-
-        async with workflow.run("What is the product of 2 * 4?") as runner:
-
-            result = await runner.result(to_type=str)
-
-        result = result.lower()
-        assert "8" in result
+async def run_calculator_tool(workflow: Workflow, workflow_input: str, expected_result: str):
+    async with workflow.run(workflow_input) as runner:
+        result = await runner.result(to_type=str)
+    result = result.lower()
+    assert expected_result in result
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_division_tool_workflow():
+async def test_inequality_less_than_tool_workflow(workflow):
+    await run_calculator_tool(workflow, "Is 8 less than 15?", "yes")
+    await run_calculator_tool(workflow, "Is 15 less than 7?", "no")
 
-    config_file: Path = locate_example_config(DivisionToolConfig)
 
-    async with load_workflow(config_file) as workflow:
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_inequality_greater_than_tool_workflow(workflow):
+    await run_calculator_tool(workflow, "Is 15 greater than 8?", "yes")
+    await run_calculator_tool(workflow, "Is 7 greater than 8?", "no")
 
-        async with workflow.run("What is 12 divided by 2?") as runner:
 
-            result = await runner.result(to_type=str)
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_inequality_equal_to_tool_workflow(workflow):
+    await run_calculator_tool(workflow, "Is 8 plus 8 equal to 16?", "yes")
+    await run_calculator_tool(workflow, "Is 8 plus 8 equal to 15?", "no")
 
-        result = result.lower()
-        assert "6" in result
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_add_tool_workflow(workflow):
+    await run_calculator_tool(workflow, "What is 1+2?", "3")
+    await run_calculator_tool(workflow, "What is 1+2+3?", "6")
+    await run_calculator_tool(workflow, "What is 1+2+3+4+5?", "15")
+    await run_calculator_tool(workflow, "What is 1+2+3+4+5+6+7+8+9+10?", "55")
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_subtract_tool_workflow(workflow):
+    await run_calculator_tool(workflow, "What is 10-3?", "7")
+    await run_calculator_tool(workflow, "What is 1-2?", "-1")
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_multiply_tool_workflow(workflow):
+    await run_calculator_tool(workflow, "What is 2*3?", "6")
+    await run_calculator_tool(workflow, "What is 2*3*4?", "24")
+    await run_calculator_tool(workflow, "What is 2*3*4*5?", "120")
+    await run_calculator_tool(workflow, "What is 2*3*4*5*6*7*8*9*10?", "3628800")
+    await run_calculator_tool(workflow, "What is the product of -2 and 4?", "-8")
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_division_tool_workflow(workflow):
+    await run_calculator_tool(workflow, "What is 12 divided by 2?", "6")
+    await run_calculator_tool(workflow, "What is 12 divided by 3?", "4")
+    await run_calculator_tool(workflow, "What is -12 divided by 2?", "-6")
+    await run_calculator_tool(workflow, "What is 12 divided by -3?", "-4")
+    await run_calculator_tool(workflow, "What is -12 divided by -3?", "4")
