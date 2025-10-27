@@ -582,20 +582,20 @@ class TestStrandsProfilerHandlerAgentInstrumentation:
         def import_side_effect(module_name):
             if "agent.agent" in module_name:
                 return mock_agent_mod
-            elif "experimental.hooks" in module_name:
+            elif "hooks" in module_name and "strands" in module_name:
                 # Import the actual hook classes for testing
                 try:
-                    from strands.experimental.hooks import AfterToolInvocationEvent
-                    from strands.experimental.hooks import BeforeToolInvocationEvent
+                    from strands.hooks import AfterToolCallEvent
+                    from strands.hooks import BeforeToolCallEvent
                     hook_mod = MagicMock()
-                    hook_mod.BeforeToolInvocationEvent = BeforeToolInvocationEvent
-                    hook_mod.AfterToolInvocationEvent = AfterToolInvocationEvent
+                    hook_mod.BeforeToolCallEvent = BeforeToolCallEvent
+                    hook_mod.AfterToolCallEvent = AfterToolCallEvent
                     return hook_mod
                 except ImportError:
                     # Fallback to mocks if strands not available
                     hook_mod = MagicMock()
-                    hook_mod.BeforeToolInvocationEvent = MagicMock()
-                    hook_mod.AfterToolInvocationEvent = MagicMock()
+                    hook_mod.BeforeToolCallEvent = MagicMock()
+                    hook_mod.AfterToolCallEvent = MagicMock()
                     return hook_mod
             raise ImportError(f"No module named {module_name}")
 
@@ -663,10 +663,10 @@ class TestStrandsProfilerHandlerAgentInstrumentation:
         def import_side_effect(module_name):
             if "agent.agent" in module_name:
                 return mock_agent_mod
-            elif "experimental.hooks" in module_name:
+            elif "hooks" in module_name and "strands" in module_name:
                 hook_mod = MagicMock()
-                hook_mod.BeforeToolInvocationEvent = MagicMock()
-                hook_mod.AfterToolInvocationEvent = MagicMock()
+                hook_mod.BeforeToolCallEvent = MagicMock()
+                hook_mod.AfterToolCallEvent = MagicMock()
                 return hook_mod
             raise ImportError(f"No module named {module_name}")
 

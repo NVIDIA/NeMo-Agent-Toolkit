@@ -19,6 +19,7 @@ from unittest.mock import patch
 import pytest
 
 from nat.builder.builder import Builder
+from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
@@ -40,6 +41,11 @@ class TestOpenAIStrands:
     def openai_config(self):
         """Create an OpenAIModelConfig instance."""
         return OpenAIModelConfig(model_name="gpt-4")
+
+    @pytest.fixture
+    def openai_config_wrong_api(self):
+        """Create an OpenAIModelConfig with wrong API type."""
+        return OpenAIModelConfig(model_name="gpt-4", api_type=APITypeEnum.RESPONSES)
 
     @patch("strands.models.openai.OpenAIModel")
     async def test_openai_strands_basic(self, mock_model, openai_config, mock_builder):
@@ -64,6 +70,14 @@ class TestOpenAIStrands:
         async with openai_strands(openai_config, mock_builder):
             mock_model.assert_called_once()
 
+    @patch("strands.models.openai.OpenAIModel")
+    async def test_api_type_validation(self, mock_model, openai_config_wrong_api, mock_builder):
+        """Non-chat-completion API types must raise a ValueError."""
+        with pytest.raises(ValueError):
+            async with openai_strands(openai_config_wrong_api, mock_builder):
+                pass
+        mock_model.assert_not_called()
+
 
 class TestBedrockStrands:
     """Tests for the bedrock_strands function."""
@@ -81,6 +95,15 @@ class TestBedrockStrands:
             region_name="us-east-1",
         )
 
+    @pytest.fixture
+    def bedrock_config_wrong_api(self):
+        """Create an AWSBedrockModelConfig with wrong API type."""
+        return AWSBedrockModelConfig(
+            model_name="anthropic.claude-3-sonnet-20240229-v1:0",
+            region_name="us-east-1",
+            api_type=APITypeEnum.RESPONSES,
+        )
+
     @patch("strands.models.bedrock.BedrockModel")
     async def test_bedrock_strands_basic(self, mock_model, bedrock_config, mock_builder):
         """Test that bedrock_strands creates a BedrockModel."""
@@ -90,6 +113,14 @@ class TestBedrockStrands:
         # pylint: disable=not-async-context-manager
         async with bedrock_strands(bedrock_config, mock_builder):
             mock_model.assert_called_once()
+
+    @patch("strands.models.bedrock.BedrockModel")
+    async def test_api_type_validation(self, mock_model, bedrock_config_wrong_api, mock_builder):
+        """Non-chat-completion API types must raise a ValueError."""
+        with pytest.raises(ValueError):
+            async with bedrock_strands(bedrock_config_wrong_api, mock_builder):
+                pass
+        mock_model.assert_not_called()
 
 
 class TestNIMStrands:
@@ -107,6 +138,16 @@ class TestNIMStrands:
             model_name="meta/llama-3.1-8b-instruct",
             api_key="test-api-key",
             base_url="https://integrate.api.nvidia.com/v1",
+        )
+
+    @pytest.fixture
+    def nim_config_wrong_api(self):
+        """Create a NIMModelConfig with wrong API type."""
+        return NIMModelConfig(
+            model_name="meta/llama-3.1-8b-instruct",
+            api_key="test-api-key",
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_type=APITypeEnum.RESPONSES,
         )
 
     async def test_nim_strands_basic(self, nim_config, mock_builder):
@@ -219,6 +260,14 @@ class TestNIMStrands:
                 assert "num_retries" not in params
                 assert "thinking" not in params
                 assert "retry_on_status_codes" not in params
+
+    async def test_api_type_validation(self, nim_config_wrong_api, mock_builder):
+        """Non-chat-completion API types must raise a ValueError."""
+        with patch("strands.models.openai.OpenAIModel.__init__", return_value=None) as mock_init:
+            with pytest.raises(ValueError):
+                async with nim_strands(nim_config_wrong_api, mock_builder):
+                    pass
+            mock_init.assert_not_called()
 
 
 class TestPatchLLMBasedOnConfig:
