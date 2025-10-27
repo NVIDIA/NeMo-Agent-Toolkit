@@ -18,6 +18,7 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_memory
 from nat.data_models.common import OptionalSecretStr
+from nat.data_models.common import get_secret_value
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.memory import MemoryBaseConfig
 
@@ -42,14 +43,10 @@ async def redis_memory_client(config: RedisMemoryClientConfig, builder: Builder)
 
     from .schema import ensure_index_exists
 
-    redis_password = None
-    if config.password is not None:
-        redis_password = config.password.get_secret_value()
-
     redis_client = redis.Redis(host=config.host,
                                port=config.port,
                                db=config.db,
-                               password=redis_password,
+                               password=get_secret_value(config.password),
                                decode_responses=True,
                                socket_timeout=5.0,
                                socket_connect_timeout=5.0)

@@ -173,11 +173,11 @@ class TypedBaseModel(BaseModel):
 TypedBaseModelT = typing.TypeVar("TypedBaseModelT", bound=TypedBaseModel)
 
 
-def _dump_secret(v: SecretStr | None) -> str | None:
+def get_secret_value(v: SecretStr | None) -> str | None:
     if v is None:
         return None
     return v.get_secret_value()
 
 
 # A SecretStr or None that serializes to plain string
-OptionalSecretStr = typing.Annotated[SecretStr | None, PlainSerializer(_dump_secret)]
+OptionalSecretStr = typing.Annotated[SecretStr | None, PlainSerializer(get_secret_value)]
