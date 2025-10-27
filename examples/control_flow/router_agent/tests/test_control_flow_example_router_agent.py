@@ -13,33 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import os
-
 import pytest
-
-from nat.runtime.loader import load_workflow
-
-logger = logging.getLogger(__name__)
-
-
-async def _test_workflow(config_file: str, question: str, answer: str):
-    async with load_workflow(config_file) as workflow:
-
-        async with workflow.run(question) as runner:
-            result = await runner.result(to_type=str)
-
-        result = result.lower()
-        assert answer in result
 
 
 @pytest.mark.usefixtures("nvidia_api_key")
 @pytest.mark.integration
 async def test_full_workflow():
 
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+    from nat.test.utils import locate_example_config
+    from nat.test.utils import run_workflow
+    from nat_router_agent.register import MockFruitAdvisorFunctionConfig
 
-    config_file = os.path.join(current_dir, "../configs", "config.yml")
+    config_file = locate_example_config(MockFruitAdvisorFunctionConfig)
 
     test_cases = [{
         "question": "What yellow fruit would you recommend?", "answer": "banana"
@@ -66,4 +51,4 @@ async def test_full_workflow():
     }]
 
     for test_case in test_cases:
-        await _test_workflow(config_file, test_case["question"], test_case["answer"])
+        await run_workflow(config_file=config_file, question=test_case["question"], expected_answer=test_case["answer"])
