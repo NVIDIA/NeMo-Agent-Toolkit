@@ -60,7 +60,8 @@ DATABRICKS_HTTP_PATH=/sql/1.0/warehouses/abc123
 DATABRICKS_ACCESS_TOKEN=dapi-xxx
 
 # Milvus
-MILVUS_HOST=localhost
+MILVUS_URI=http://localhost:19530
+MILVUS_PASSWORD=your-password
 ```
 
 ### 3. Create Workflow Configuration
@@ -86,10 +87,6 @@ functions:
     databricks_server_hostname: "${DATABRICKS_SERVER_HOSTNAME}"
     databricks_http_path: "${DATABRICKS_HTTP_PATH}"
     databricks_access_token: "${DATABRICKS_ACCESS_TOKEN}"
-
-    # Milvus config
-    milvus_host: "${MILVUS_HOST:-localhost}"
-    milvus_port: 19530
 
     # Settings
     execute_sql: false
@@ -142,7 +139,7 @@ workflow:
 
 ```bash
 # Using NAT CLI
-nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "Retrieve the total number of customers."
+uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "Retrieve the total number of customers."
 
 # Or programmatically
 ```
@@ -197,6 +194,9 @@ Results: 42 customers found
 | `training_documentation` | list[str] | Contextual information | null |
 | `initial_prompt` | str | Custom system prompt | null |
 | `n_results` | int | Number of similar examples | 5 |
+| `sql_collection` | str | Milvus collection name for SQL examples | "vanna_sql" |
+| `ddl_collection` | str | Milvus collection name for DDL | "vanna_ddl" |
+| `doc_collection` | str | Milvus collection name for documentation | "vanna_documentation" |
 | `milvus_search_limit` | int | Maximum limit for vector search operations | 1000 |
 | `reasoning_models` | set[str] | Models requiring think tag removal | See below |
 | `chat_models` | set[str] | Models using standard response handling | See below |
@@ -204,6 +204,14 @@ Results: 42 customers found
 **Default reasoning models**: `nvidia/llama-3.1-nemotron-ultra-253b-v1`, `nvidia/llama-3.3-nemotron-super-49b-v1.5`, `deepseek-ai/deepseek-v3.1`, `deepseek-ai/deepseek-r1`
 
 **Default chat models**: `meta/llama-3.1-70b-instruct`
+
+#### Understanding `train_on_startup`
+
+The `train_on_startup` parameter controls whether Vanna initializes and loads training data when the workflow starts:
+
+- **`true`**: Automatically creates Milvus collections with names specified by `sql_collection`, `ddl_collection`, and `doc_collection` parameters (defaults: "vanna_sql", "vanna_ddl", "vanna_documentation") and ingests all training data (`training_ddl`, `training_examples`, `training_documentation`) during workflow initialization. This ensures the vector store is populated and ready for similarity search before the first query is processed. Use this setting when you want to ensure fresh training data is loaded each time the workflow starts.
+
+- **`false`** (default): Skips automatic collection creation and training data ingestion. The workflow assumes Milvus collections already exist and contain previously trained data. Use this setting in production environments where training data is already loaded.
 
 ### Database Configuration
 
@@ -246,6 +254,24 @@ db_password: "${DB_PASSWORD}"
 | `max_rows` | int | Maximum rows to return | 100 |
 | `db_catalog` | str | Database catalog | null |
 | `db_schema` | str | Database schema | null |
+
+### Milvus Configuration
+
+The text2sql function connects to Milvus using environment variables and manages collections internally. For advanced use cases, you can configure Milvus connection settings:
+
+```yaml
+# Optional: Custom retriever for additional collections
+retrievers:
+  milvus_retriever:
+    _type: milvus_retriever
+    uri: "${MILVUS_URI}"  # Supports both http://localhost:19530 or https://host:443
+    connection_args:
+      user: "developer"
+      password: "${MILVUS_PASSWORD}"
+      db_name: "default"
+    embedding_model: my_embedder
+    use_async_client: true
+```
 
 ## Training Data
 

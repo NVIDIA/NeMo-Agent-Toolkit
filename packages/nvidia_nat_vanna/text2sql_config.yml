@@ -15,7 +15,8 @@ functions:
     _type: text2sql
     llm_name: nim_llm
     embedder_name: nim_embedder
-    milvus_retriever: milvus_retriever
+    milvus_retriever: milvus_retriever  # Uses connection info from retriever config
+    
     # Database configuration
     database_type: databricks
     databricks_server_hostname: "${DATABRICKS_SERVER_HOSTNAME}"
@@ -24,20 +25,14 @@ functions:
     db_catalog: "main"
     db_schema: "default"
 
-    # AsyncMilvus configuration
-    milvus_host: "${MILVUS_HOST:-localhost}"
-    milvus_port: 19530
-    milvus_user: "root"
-    milvus_db_name: "default"
-
     # Vanna settings
     allow_llm_to_see_data: false
     execute_sql: false
-    train_on_startup: true  # Turn off after training to avoid re-training
+    train_on_startup: false  # Turn off after training to avoid re-training
     n_results: 5
-    sql_collection: "vanna_sql_v0"
-    ddl_collection: "vanna_ddl_v0"
-    doc_collection: "vanna_documentation_v0"
+    sql_collection: "vannasql_vtest_10"
+    ddl_collection: "vannaddl_vtest_10"
+    doc_collection: "vannadoc_vtest_10"
 
   # Database query execution function
   execute_db_query:
@@ -113,16 +108,17 @@ embedders:
 retrievers:
   milvus_retriever:
     _type: milvus_retriever
-    uri: "${MILVUS_URI:-http://localhost:19530}"
+    uri: "${MILVUS_URI}"
     connection_args:
-      user: "root"
+      user: "developer"
       password: "${MILVUS_PASSWORD}"
       db_name: "default"
     embedding_model: nim_embedder
     content_field: text
+    use_async_client: true
 
 workflow:
-  _type: rewoo_agent
+  _type: nat.agent.rewoo_agent/rewoo_agent
   tool_names:
     - text2sql
     - execute_db_query
