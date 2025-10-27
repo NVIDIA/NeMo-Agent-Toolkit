@@ -67,6 +67,7 @@ general:
     tracing:
       dbnl:
         _type: dbnl
+```
 
 ## Step 6: Run the workflow
 
