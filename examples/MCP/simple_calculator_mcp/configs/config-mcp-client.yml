@@ -45,10 +45,11 @@ function_groups:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
     include:
-      - calculator_multiply
-      - calculator_inequality
-      - calculator_divide
-      - calculator_subtract
+      - calculator.add
+      - calculator.subtract
+      - calculator.multiply
+      - calculator.divide
+      - calculator.compare
 
 llms:
   nim_llm:
