@@ -198,7 +198,7 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
 class DBNLTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="dbnl"):
     """A telemetry exporter to transmit traces to DBNL."""
 
-    api_url: str | None = Field(description="The DBNL API url.", default=None)
+    api_url: str | None = Field(description="The DBNL API URL.", default=None)
     api_token: str | None = Field(description="The DBNL API token.", default=None)
     project_id: str | None = Field(description="The DBNL project id.", default=None)
 
