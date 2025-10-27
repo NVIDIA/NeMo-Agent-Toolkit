@@ -65,9 +65,8 @@ Example configuration:
 general:
   telemetry:
     tracing:
-      otelcollector:
+      dbnl:
         _type: dbnl
-```
 
 ## Step 6: Run the workflow
 
