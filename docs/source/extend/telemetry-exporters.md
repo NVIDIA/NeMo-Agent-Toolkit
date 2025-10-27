@@ -78,7 +78,7 @@ Examples of existing telemetry exporters include:
 - **Patronus**: Exports traces to Patronus via OTLP
 - **Galileo**: Exports traces to Galileo via OTLP
 - **RagaAI Catalyst**: Exports traces to RagaAI Catalyst
-- **DBNL**: Exports traces to DBNL via OLTP
+- **DBNL**: Exports traces to DBNL via OTLP
 
 ## Quick Start: Your First Telemetry Exporter
 
@@ -270,6 +270,7 @@ Before creating a custom exporter, check if your observability service is alread
 
 | Service | Type | Installation | Configuration |
 |---------|------|-------------|---------------|
+| **DBNL** | `dbnl` | `pip install "nvidia-nat[opentelemetry]"` | API url + API token + project id |
 | **File** | `file` | `pip install nvidia-nat` | local file or directory |
 | **Langfuse** | `langfuse` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API keys |
 | **LangSmith** | `langsmith` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
@@ -279,7 +280,6 @@ Before creating a custom exporter, check if your observability service is alread
 | **Phoenix** | `phoenix` | `pip install "nvidia-nat[phoenix]"` | endpoint |
 | **RagaAI/Catalyst** | `catalyst` | `pip install "nvidia-nat[ragaai]"` | API key + project |
 | **Weave** | `weave` | `pip install "nvidia-nat[weave]"` | project name |
-| **DBNL** | `dbnl` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key + project id |
 
 ### Simple Configuration Example
 

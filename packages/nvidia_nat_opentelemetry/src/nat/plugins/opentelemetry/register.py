@@ -198,9 +198,9 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
 class DBNLTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="dbnl"):
     """A telemetry exporter to transmit traces to DBNL."""
 
-    endpoint: str = Field(description="The DBNL OTEL traces endpoint.", default="")
-    api_token: str = Field(description="The DBNL API token.", default="")
-    project_id: str = Field(description="The DBNL project id.", default="")
+    api_url: str = Field(description="The DBNL API url.", default="http://localhost:8080/api")
+    api_token: str = Field(description="The DBNL API token.")
+    project_id: str = Field(description="The DBNL project id.")
 
 
 @register_telemetry_exporter(config_type=DBNLTelemetryExporter)
@@ -209,18 +209,14 @@ async def dbnl_telemetry_exporter(config: DBNLTelemetryExporter, builder: Builde
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
-    api_token = config.api_token or os.environ.get("DBNL_API_TOKEN")
-    project_id = config.project_id or os.environ.get("DBNL_PROJECT_ID")
+    api_token = config.api_token
+    project_id = config.project_id
     headers = {
         "Authorization": f"Bearer {api_token}",
         "x-dbnl-project-id": project_id,
     }
 
-    endpoint = config.endpoint
-    if not endpoint:
-        api_url = os.environ.get("DBNL_API_URL") or "http://localhost:8080/api"
-        endpoint = api_url.rstrip("/") + "/otel/v1/traces"
-    print(endpoint)
+    endpoint = config.api_url.rstrip("/") + "/otel/v1/traces"
 
     yield OTLPSpanAdapterExporter(
         endpoint=endpoint,

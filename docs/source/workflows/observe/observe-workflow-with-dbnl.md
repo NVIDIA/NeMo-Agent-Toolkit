@@ -24,15 +24,15 @@ This guide provides a step-by-step process to enable observability in a NeMo Age
 
 ## Step 1: Install DBNL
 
-Visit [https://docs.dbnl.com/](https://docs.dbnl.com/) to install DBNL.
+Visit [https://docs.dbnl.com/get-started/quickstart](https://docs.dbnl.com/get-started/quickstart) to install DBNL.
 
 ## Step 2: Create a Project
 
 Create a new Trace Ingestion project in DBNL. To create a new project in DBNL:
 
-1. Navigate to your DBNL deployment (e.g. http://localhost:8080/)
+1. Navigate to your DBNL deployment (e.g. <http://localhost:8080/>)
 2. Go to Projects > + New Project
-3. Add a name for your project
+3. Name your project `nat-calculator`
 4. Add a LLM connection to your project
 5. Select Trace Ingestion as the project Data Source
 6. Click on Generate API Token and note down the generated **API Token**
@@ -67,8 +67,7 @@ general:
     tracing:
       otelcollector:
         _type: dbnl
-        # The endpoint where you have deployed DBNL
-        endpoint: ${DBNL_API_URL}/otel/v1/traces
+        api_url: ${DBNL_API_URL}
         api_token: ${DBNL_API_TOKEN}
         project_id: ${DBNL_PROJECT_ID}
 ```
@@ -95,6 +94,6 @@ As the workflow runs, telemetry data will start showing up in DBNL.
 Analyze the traces in DBNL. To analyze traces in DBNL:
 
 1. Navigate to your DBNL deployment (e.g. http://localhost:8080/)
-2. Go to Projects > <your_project_name>
+2. Go to Projects > nat-calculator
 
 For additional help, see the [DBNL docs](https://docs.dbnl.com/).

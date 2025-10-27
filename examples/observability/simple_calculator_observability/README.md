@@ -253,11 +253,11 @@ Transmit traces to Galileo for workflow observability.
 
 ### Analyze Traces with DBNL
 
-[DBNL](https://www.distributional.com/) helps you undestand your agent by analyzing your traces.
+[DBNL](https://www.distributional.com/) helps you understand your agent by analyzing your traces.
 
 1. Install DBNL:
 
-    Visit [https://docs.dbnl.com/](https://docs.dbnl.com/) to install DBNL.
+    Visit [https://docs.dbnl.com/get-started/quickstart](https://docs.dbnl.com/get-started/quickstart) to install DBNL.
 
 2. Create a trace ingestion project:
 

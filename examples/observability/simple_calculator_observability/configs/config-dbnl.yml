@@ -27,9 +27,9 @@ general:
     tracing:
       dbnl:
         _type: dbnl
-        # endpoint: ${DBNL_API_URL}/otel/v1/traces
-        # api_token: ${DBNL_API_TOKEN}
-        # project_id: ${DBNL_PROJECT_ID}
+        api_url: ${DBNL_API_URL}
+        api_token: ${DBNL_API_TOKEN}
+        project_id: ${DBNL_PROJECT_ID}
 
 functions:
   calculator_multiply:
