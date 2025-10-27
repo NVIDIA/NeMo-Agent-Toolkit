@@ -328,6 +328,15 @@ wheels = [
 ]
 
 [[package]]
+name = "annotated-doc"
+version = "0.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/a6/dc46877b911e40c00d395771ea710d5e77b6de7bacd5fdcd78d70cc5a48f/annotated_doc-0.0.3.tar.gz", hash = "sha256:e18370014c70187422c33e945053ff4c286f453a984eba84d0dbfa0c935adeda", size = 5535, upload-time = "2025-10-24T14:57:10.718Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/02/b7/cf592cb5de5cb3bade3357f8d2cf42bf103bbe39f459824b4939fd212911/annotated_doc-0.0.3-py3-none-any.whl", hash = "sha256:348ec6664a76f1fd3be81f43dffbee4c7e8ce931ba71ec67cc7f4ade7fbbb580", size = 5488, upload-time = "2025-10-24T14:57:09.462Z" },
+]
+
+[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1788,16 +1797,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/30/17/43350d1b147510b3e
 
 [[package]]
 name = "fastapi"
-version = "0.115.14"
+version = "0.120.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "annotated-doc" },
     { name = "pydantic" },
     { name = "starlette" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/53/8c38a874844a8b0fa10dd8adf3836ac154082cf88d3f22b544e9ceea0a15/fastapi-0.115.14.tar.gz", hash = "sha256:b1de15cdc1c499a4da47914db35d0e4ef8f1ce62b624e94e0e5824421df99739", size = 296263, upload-time = "2025-06-26T15:29:08.21Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/0e/7f29e8f7219e4526747db182e1afb5a4b6abc3201768fb38d81fa2536241/fastapi-0.120.0.tar.gz", hash = "sha256:6ce2c1cfb7000ac14ffd8ddb2bc12e62d023a36c20ec3710d09d8e36fab177a0", size = 337603, upload-time = "2025-10-23T20:56:34.743Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/53/50/b1222562c6d270fea83e9c9075b8e8600b8479150a18e4516a6138b980d1/fastapi-0.115.14-py3-none-any.whl", hash = "sha256:6c0c8bf9420bd58f565e585036d971872472b4f7d3f6c73b698e10cffdefb3ca", size = 95514, upload-time = "2025-06-26T15:29:06.49Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/60/7a639ceaba54aec4e1d5676498c568abc654b95762d456095b6cb529b1ca/fastapi-0.120.0-py3-none-any.whl", hash = "sha256:84009182e530c47648da2f07eb380b44b69889a4acfd9e9035ee4605c5cfc469", size = 108243, upload-time = "2025-10-23T20:56:33.281Z" },
 ]
 
 [[package]]
@@ -5807,7 +5817,7 @@ requires-dist = [
     { name = "datasets", specifier = "~=4.0" },
     { name = "distributed", marker = "extra == 'async-endpoints'", specifier = "==2023.6" },
     { name = "expandvars", specifier = "~=1.0" },
-    { name = "fastapi", specifier = "~=0.115.5" },
+    { name = "fastapi", specifier = "~=0.120" },
     { name = "gunicorn", marker = "extra == 'gunicorn'", specifier = "~=23.0" },
     { name = "httpx", specifier = "~=0.27" },
     { name = "jinja2", specifier = "~=3.1" },
