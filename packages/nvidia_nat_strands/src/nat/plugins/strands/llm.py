@@ -29,6 +29,7 @@ from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
 ModelType = TypeVar("ModelType")
@@ -95,9 +96,11 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
 async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder):
 
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
+
     from strands.models.openai import OpenAIModel
 
-    params = llm_config.model_dump(exclude={"type", "api_key", "base_url", "model_name"},
+    params = llm_config.model_dump(exclude={"type", "api_type", "api_key", "base_url", "model_name"},
                                    by_alias=True,
                                    exclude_none=True)
     # Remove NAT-specific and retry-specific keys not accepted by OpenAI chat.create
@@ -118,6 +121,8 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder):
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
 async def nim_strands(llm_config: NIMModelConfig, _builder: Builder):
+
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
 
     # NIM is OpenAI compatible; use OpenAI model with NIM base_url and api_key
     from strands.models.openai import OpenAIModel
@@ -151,7 +156,7 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder):
 
             return formatted_messages
 
-    params = llm_config.model_dump(exclude={"type", "api_key", "base_url", "model_name"},
+    params = llm_config.model_dump(exclude={"type", "api_type", "api_key", "base_url", "model_name"},
                                    by_alias=True,
                                    exclude_none=True)
     # Remove NAT-specific and retry-specific keys not accepted by OpenAI
@@ -173,15 +178,26 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder):
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
 async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder):
 
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
+
     from strands.models.bedrock import BedrockModel
 
-    client = BedrockModel(
-        model_id=llm_config.model_name,
-        max_tokens=llm_config.max_tokens,
-        temperature=llm_config.temperature,
-        top_p=llm_config.top_p,
-        region_name=llm_config.region_name,
-        endpoint_url=llm_config.base_url,
-    )
+    params = llm_config.model_dump(exclude={"type", "api_type", "model_name", "region_name", "base_url"},
+                                   by_alias=True,
+                                   exclude_none=True)
+
+    for k in ("max_retries",
+              "num_retries",
+              "retry_on_status_codes",
+              "retry_on_errors",
+              "thinking",
+              "context_size",
+              "credentials_profile_name"):
+        params.pop(k, None)
+
+    client = BedrockModel(model_id=llm_config.model_name,
+                          region_name=llm_config.region_name,
+                          endpoint_url=llm_config.base_url,
+                          **params)
 
     yield _patch_llm_based_on_config(client, llm_config)

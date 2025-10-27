@@ -276,13 +276,12 @@ class StrandsProfilerHandler(BaseProfilerCallback):
                 try:
                     # Import hook event types
                     # pylint: disable=import-outside-toplevel
-                    from strands.experimental.hooks import AfterToolInvocationEvent
-                    from strands.experimental.hooks import BeforeToolInvocationEvent
+                    from strands.hooks import AfterToolCallEvent
+                    from strands.hooks import BeforeToolCallEvent
 
                     # Register tool hooks on this agent instance
-                    agent_self.hooks.add_callback(BeforeToolInvocationEvent,
-                                                  handler.tool_hook.on_before_tool_invocation)
-                    agent_self.hooks.add_callback(AfterToolInvocationEvent, handler.tool_hook.on_after_tool_invocation)
+                    agent_self.hooks.add_callback(BeforeToolCallEvent, handler.tool_hook.on_before_tool_invocation)
+                    agent_self.hooks.add_callback(AfterToolCallEvent, handler.tool_hook.on_after_tool_invocation)
 
                     logger.debug("Strands tool hooks registered on Agent instance")
 
