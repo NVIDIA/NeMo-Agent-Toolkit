@@ -34,23 +34,12 @@ from nat.front_ends.mcp.memory_profiler import MemoryProfiler
 logger = logging.getLogger(__name__)
 
 
-class McpServerWorker(ABC):
-    """Base class for MCP server workers.
+class MCPFrontEndPluginWorkerBase(ABC):
+    """Base class for MCP front end plugin workers.
 
-    This is the official plugin interface for custom MCP server implementations.
-    Workers can customize server creation and route registration behavior.
-
-    Example:
-        class CustomWorker(McpServerWorker):
-            async def create_mcp_server(self):
-                # Return custom MCP server instance
-                return MyCustomFastMCP(...)
-
-            async def add_routes(self, mcp, builder):
-                # Reuse default route registration
-                await self._default_add_routes(mcp, builder)
-                # Add custom features
-                self._add_my_custom_features(mcp)
+    This abstract base class provides shared utilities and defines the contract
+    for MCP worker implementations. Most users should inherit from
+    MCPFrontEndPluginWorker instead of this class directly.
     """
 
     def __init__(self, config: Config):
@@ -326,8 +315,25 @@ class McpServerWorker(ABC):
             return JSONResponse(stats)
 
 
-class MCPFrontEndPluginWorker(McpServerWorker):
-    """Default MCP server worker implementation."""
+class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
+    """Default MCP server worker implementation.
+
+    Inherit from this class to create custom MCP workers that extend or modify
+    server behavior. Override create_mcp_server() to use a different server type,
+    and override add_routes() to add custom functionality.
+
+    Example:
+        class CustomWorker(MCPFrontEndPluginWorker):
+            async def create_mcp_server(self):
+                # Return custom MCP server instance
+                return MyCustomFastMCP(...)
+
+            async def add_routes(self, mcp, builder):
+                # Get default routes
+                await super().add_routes(mcp, builder)
+                # Add custom features
+                self._add_my_custom_features(mcp)
+    """
 
     async def create_mcp_server(self) -> FastMCP:
         """Create default MCP server with optional authentication.
@@ -371,7 +377,3 @@ class MCPFrontEndPluginWorker(McpServerWorker):
         """
         # Use the default implementation from base class
         await self._default_add_routes(mcp, builder)
-
-
-# Backwards compatibility alias
-MCPFrontEndPluginWorkerBase = McpServerWorker
