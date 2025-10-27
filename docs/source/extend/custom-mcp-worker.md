@@ -18,10 +18,10 @@ limitations under the License.
 # Adding a Custom MCP Server Worker
 
 :::{note}
-We recommend reading the [MCP Server Guide](../workflows/mcp/mcp-server.md) before proceeding with this documentation, to understand how MCP servers work in NAT.
+We recommend reading the [MCP Server Guide](../workflows/mcp/mcp-server.md) before proceeding with this documentation, to understand how MCP servers work in NVIDIA NeMo Agent toolkit.
 :::
 
-NAT's MCP frontend supports custom server implementations through a plugin system. This guide shows you how to create custom MCP server workers that extend the default server behavior.
+The NeMo Agent toolkit's MCP frontend supports custom server implementations through a plugin system. This guide shows you how to create custom MCP server workers that extend the default server behavior.
 
 ## When to Create a Custom Worker
 
@@ -34,9 +34,9 @@ Create a custom MCP worker when you need to:
 
 ## Creating and Registering a Custom MCP Worker
 
-To extend NAT with custom MCP workers, you need to create a worker class that inherits from {py:class}`~nat.front_ends.mcp.mcp_front_end_plugin_worker.McpServerWorker` and implement two required methods.
+To extend the NeMo Agent toolkit with custom MCP workers, you need to create a worker class that inherits from {py:class}`~nat.front_ends.mcp.mcp_front_end_plugin_worker.McpServerWorker` and implement two required methods.
 
-This section provides a step-by-step guide to create and register a custom MCP worker with NAT. A request logging worker is used as an example to demonstrate the process.
+This section provides a step-by-step guide to create and register a custom MCP worker with the NeMo Agent toolkit. A request logging worker is used as an example to demonstrate the process.
 
 ## Step 1: Implement the Worker Class
 
@@ -90,7 +90,7 @@ class LoggingMCPWorker(McpServerWorker):
             mcp: The FastMCP server instance
             builder: The workflow builder containing functions to expose
         """
-        # Register NAT functions as MCP tools (standard behavior)
+        # Register NeMo Agent toolkit functions as MCP tools (standard behavior)
         await self._default_add_routes(mcp, builder)
 
         # Add custom middleware for request/response logging
@@ -147,7 +147,7 @@ workflow:
 
 ## Step 3: Run and Test Your Server
 
-Start your server using the NAT CLI:
+Start your server using the NeMo Agent toolkit CLI:
 
 ```bash
 nat mcp serve --config_file configs/my_workflow.yml
@@ -187,10 +187,10 @@ The {py:meth}`~nat.front_ends.mcp.mcp_front_end_plugin_worker.McpServerWorker._d
 
 - **Health endpoint**: `/health` for server status checks
 - **Workflow building**: Processes your workflow configuration
-- **Function-to-tool conversion**: Registers NAT functions as MCP tools
+- **Function-to-tool conversion**: Registers NeMo Agent toolkit functions as MCP tools
 - **Debug endpoints**: Additional routes for development
 
-Most workers call `_default_add_routes()` first to ensure all standard NAT tools are registered, then extend or modify the behavior as needed. You can skip this call if you intend to handle all route registration manually.
+Most workers call `_default_add_routes()` first to ensure all standard NeMo Agent toolkit tools are registered, then extend or modify the behavior as needed. You can skip this call if you intend to handle all route registration manually.
 
 ```python
 async def add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
@@ -212,7 +212,7 @@ Your worker has access to configuration through instance variables:
   - `port`: Server port number
   - `debug`: Debug mode flag
 
-- **`self.full_config`**: Complete NAT configuration
+- **`self.full_config`**: Complete NeMo Agent toolkit configuration
   - `general`: General settings including front end config
   - `llms`: LLM configurations
   - `functions`: Function configurations
@@ -239,7 +239,7 @@ async def create_mcp_server(self) -> FastMCP:
 
 ## Summary
 
-This guide provides a step-by-step process to create custom MCP server workers in NAT. The request logging worker demonstrates how to:
+This guide provides a step-by-step process to create custom MCP server workers in the NeMo Agent toolkit. The request logging worker demonstrates how to:
 
 1. Extend {py:class}`~nat.front_ends.mcp.mcp_front_end_plugin_worker.McpServerWorker`
 2. Implement `create_mcp_server()` and `add_routes()` methods
@@ -247,4 +247,4 @@ This guide provides a step-by-step process to create custom MCP server workers i
 4. Add custom middleware for logging, monitoring, or other features
 5. Configure and test the custom worker in your workflows
 
-Custom workers enable enterprise features like authentication, telemetry, and integration with existing infrastructure without modifying NAT core code.
+Custom workers enable enterprise features like authentication, telemetry, and integration with existing infrastructure without modifying NeMo Agent toolkit core code.
