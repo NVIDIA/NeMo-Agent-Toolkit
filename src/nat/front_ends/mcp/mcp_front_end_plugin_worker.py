@@ -34,14 +34,14 @@ from nat.front_ends.mcp.memory_profiler import MemoryProfiler
 logger = logging.getLogger(__name__)
 
 
-class MCPFrontEndPluginWorkerBase(ABC):
-    """Base class for MCP front end plugin workers.
+class McpServerWorker(ABC):
+    """Base class for MCP server workers.
 
     This is the official plugin interface for custom MCP server implementations.
-    Plugins can customize server creation and route registration behavior.
+    Workers can customize server creation and route registration behavior.
 
     Example:
-        class CustomWorker(MCPFrontEndPluginWorkerBase):
+        class CustomWorker(McpServerWorker):
             async def create_mcp_server(self):
                 # Return custom MCP server instance
                 return MyCustomFastMCP(...)
@@ -326,8 +326,8 @@ class MCPFrontEndPluginWorkerBase(ABC):
             return JSONResponse(stats)
 
 
-class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
-    """Default MCP front end plugin worker implementation."""
+class MCPFrontEndPluginWorker(McpServerWorker):
+    """Default MCP server worker implementation."""
 
     async def create_mcp_server(self) -> FastMCP:
         """Create default MCP server with optional authentication.
@@ -371,3 +371,7 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
         """
         # Use the default implementation from base class
         await self._default_add_routes(mcp, builder)
+
+
+# Backwards compatibility alias
+MCPFrontEndPluginWorkerBase = McpServerWorker

@@ -26,7 +26,7 @@ from nat.data_models.config import GeneralConfig
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from nat.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
 from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
-from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorkerBase
+from nat.front_ends.mcp.mcp_front_end_plugin_worker import McpServerWorker
 from nat.test.functions import EchoFunctionConfig
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 
-class DummyMCPWorker(MCPFrontEndPluginWorkerBase):
+class DummyMCPWorker(McpServerWorker):
     """Minimal test plugin that creates a server with a custom name prefix."""
 
     async def create_mcp_server(self) -> FastMCP:
@@ -55,7 +55,7 @@ class DummyMCPWorker(MCPFrontEndPluginWorkerBase):
         await default_worker.add_routes(mcp, builder)
 
 
-class CustomMCPWorker(MCPFrontEndPluginWorkerBase):
+class CustomMCPWorker(McpServerWorker):
     """Test plugin that uses environment variables for configuration."""
 
     async def create_mcp_server(self) -> FastMCP:
@@ -80,6 +80,56 @@ class CustomMCPWorker(MCPFrontEndPluginWorkerBase):
         await default_worker.add_routes(mcp, builder)
 
         logger.info("CustomMCPWorker: Routes added successfully to %s", mcp.name)
+
+
+class LoggingMCPWorker(McpServerWorker):
+    """MCP worker that implements the logging example from custom-mcp-worker.md documentation."""
+
+    async def create_mcp_server(self) -> FastMCP:
+        """Create and configure the MCP server.
+
+        This method is called once during server initialization.
+        Return a FastMCP instance or any subclass with custom behavior.
+
+        Returns:
+            FastMCP: The configured server instance
+        """
+        return FastMCP(
+            name=self.front_end_config.name,
+            host=self.front_end_config.host,
+            port=self.front_end_config.port,
+            debug=self.front_end_config.debug,
+        )
+
+    async def add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
+        """Register tools and add custom server behavior.
+
+        This method is called after the server is created.
+        Use _default_add_routes() to get standard tool registration,
+        then add your custom features.
+
+        Args:
+            mcp: The FastMCP server instance
+            builder: The workflow builder containing functions to expose
+        """
+        # Register NAT functions as MCP tools (standard behavior)
+        await self._default_add_routes(mcp, builder)
+
+        # Add custom middleware for request/response logging
+        @mcp.app.middleware("http")
+        async def log_requests(request, call_next):
+            import logging
+            import time
+
+            logger = logging.getLogger(__name__)
+            start_time = time.time()
+
+            logger.info(f"Request: {request.method} {request.url.path}")
+            response = await call_next(request)
+
+            duration = time.time() - start_time
+            logger.info(f"Response: {response.status_code} ({duration:.2f}s)")
+            return response
 
 
 # ============================================================================
@@ -216,3 +266,75 @@ async def test_custom_worker_fallback_to_config(base_config):
 
     assert mcp is not None
     assert mcp.name == "Test Server"
+
+
+async def test_logging_worker_creates_server(base_config):
+    """Test that the logging worker can create a server."""
+    worker = LoggingMCPWorker(base_config)
+    mcp = await worker.create_mcp_server()
+
+    assert mcp is not None
+    assert mcp.name == "Test Server"
+    assert mcp.host == "localhost"
+    assert mcp.port == 9999
+
+
+async def test_logging_worker_adds_routes(base_config):
+    """Test that the logging worker can add routes with middleware."""
+    worker = LoggingMCPWorker(base_config)
+    mcp = await worker.create_mcp_server()
+    builder = WorkflowBuilder(general_config=base_config.general)
+
+    # Add routes (including middleware)
+    await worker.add_routes(mcp, builder)
+
+    # Verify middleware was registered (middleware is stored in app.user_middleware)
+    assert len(mcp.app.user_middleware) > 0, "Middleware should be registered"
+
+    # Verify that tools were registered via default route registration
+    # This is indirect - we check that the workflow was configured
+    assert builder._workflow is not None, "Workflow should be configured after add_routes"
+
+
+async def test_logging_worker_middleware_logs_requests(base_config, caplog):
+    """Test that the logging worker middleware logs requests."""
+    import logging
+    from unittest.mock import MagicMock
+
+    caplog.set_level(logging.INFO)
+
+    worker = LoggingMCPWorker(base_config)
+    mcp = await worker.create_mcp_server()
+    builder = WorkflowBuilder(general_config=base_config.general)
+
+    # Add routes (including middleware)
+    await worker.add_routes(mcp, builder)
+
+    # Simulate a request through the middleware
+    # Get the middleware function
+    middleware = mcp.app.user_middleware[0]
+    middleware_func = middleware.cls
+
+    # Create mock request and response
+    mock_request = MagicMock()
+    mock_request.method = "GET"
+    mock_request.url.path = "/test"
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+
+    # Create a mock call_next that returns the response
+    async def mock_call_next(request):
+        return mock_response
+
+    # Call the middleware
+    response = await middleware_func(mock_request, mock_call_next)
+
+    # Verify the middleware returned the response
+    assert response == mock_response
+
+    # Verify logging occurred
+    assert any("Request: GET /test" in record.message for record in caplog.records), \
+        "Request should be logged"
+    assert any("Response: 200" in record.message for record in caplog.records), \
+        "Response should be logged"

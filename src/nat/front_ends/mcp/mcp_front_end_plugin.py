@@ -19,7 +19,7 @@ import typing
 from nat.builder.front_end import FrontEndBase
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
-from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorkerBase
+from nat.front_ends.mcp.mcp_front_end_plugin_worker import McpServerWorker
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
     """MCP front end plugin implementation."""
 
-    def get_worker_class(self) -> type[MCPFrontEndPluginWorkerBase]:
+    def get_worker_class(self) -> type[McpServerWorker]:
         """Get the worker class for handling MCP routes."""
         from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
 
@@ -42,7 +42,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
         worker_class = self.get_worker_class()
         return f"{worker_class.__module__}.{worker_class.__qualname__}"
 
-    def _get_worker_instance(self) -> MCPFrontEndPluginWorkerBase:
+    def _get_worker_instance(self) -> McpServerWorker:
         """Get an instance of the worker class."""
         # Import the worker class dynamically if specified in config
         if self.front_end_config.runner_class:
