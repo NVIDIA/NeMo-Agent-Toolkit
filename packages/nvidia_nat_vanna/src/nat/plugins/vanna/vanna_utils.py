@@ -239,9 +239,10 @@ class MilvusVectorStore(Milvus_VectorStore):
         try:
             VannaBase.__init__(self, config=config)
 
-            self.milvus_client = config["milvus_client"]
+            # Only use async client
             self.async_milvus_client = config["async_milvus_client"]
             self.n_results = config.get("n_results", 5)
+            self.milvus_search_limit = config.get("milvus_search_limit", 1000)
 
             # Use configured embedder
             if config.get("embedder_client") is not None:
@@ -263,23 +264,29 @@ class MilvusVectorStore(Milvus_VectorStore):
             self.ddl_collection = config.get("ddl_collection", "vanna_ddl")
             self.doc_collection = config.get("doc_collection", "vanna_documentation")
 
-            self._create_collections()
+            # Collection creation tracking
+            self._collections_created = False
         except Exception as e:
             logger.error(f"Error initializing MilvusVectorStore: {e}")
             raise
 
-    def _create_collections(self):
-        """Create all necessary Milvus collections."""
-        self._create_sql_collection(self.sql_collection)
-        self._create_ddl_collection(self.ddl_collection)
-        self._create_doc_collection(self.doc_collection)
+    async def _ensure_collections_created(self):
+        """Ensure all necessary Milvus collections are created (async)."""
+        if self._collections_created:
+            return
+        
+        logger.info("Creating Milvus collections if they don't exist...")
+        await self._create_sql_collection(self.sql_collection)
+        await self._create_ddl_collection(self.ddl_collection)
+        await self._create_doc_collection(self.doc_collection)
+        self._collections_created = True
 
-    def _create_sql_collection(self, name: str):
-        """Create SQL collection."""
+    async def _create_sql_collection(self, name: str):
+        """Create SQL collection using async client."""
         from pymilvus import DataType
         from pymilvus import MilvusClient
 
-        if not self.milvus_client.has_collection(collection_name=name):
+        if not await self.async_milvus_client.has_collection(collection_name=name):
             schema = MilvusClient.create_schema(
                 auto_id=False,
                 enable_dynamic_field=False,
@@ -300,19 +307,19 @@ class MilvusVectorStore(Milvus_VectorStore):
 
             index_params = MilvusClient.prepare_index_params()
             index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
-            self.milvus_client.create_collection(
+            await self.async_milvus_client.create_collection(
                 collection_name=name,
                 schema=schema,
                 index_params=index_params,
                 consistency_level="Strong",
             )
 
-    def _create_ddl_collection(self, name: str):
-        """Create DDL collection."""
+    async def _create_ddl_collection(self, name: str):
+        """Create DDL collection using async client."""
         from pymilvus import DataType
         from pymilvus import MilvusClient
 
-        if not self.milvus_client.has_collection(collection_name=name):
+        if not await self.async_milvus_client.has_collection(collection_name=name):
             schema = MilvusClient.create_schema(
                 auto_id=False,
                 enable_dynamic_field=False,
@@ -332,19 +339,19 @@ class MilvusVectorStore(Milvus_VectorStore):
 
             index_params = MilvusClient.prepare_index_params()
             index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
-            self.milvus_client.create_collection(
+            await self.async_milvus_client.create_collection(
                 collection_name=name,
                 schema=schema,
                 index_params=index_params,
                 consistency_level="Strong",
             )
 
-    def _create_doc_collection(self, name: str):
-        """Create documentation collection."""
+    async def _create_doc_collection(self, name: str):
+        """Create documentation collection using async client."""
         from pymilvus import DataType
         from pymilvus import MilvusClient
 
-        if not self.milvus_client.has_collection(collection_name=name):
+        if not await self.async_milvus_client.has_collection(collection_name=name):
             schema = MilvusClient.create_schema(
                 auto_id=False,
                 enable_dynamic_field=False,
@@ -364,32 +371,32 @@ class MilvusVectorStore(Milvus_VectorStore):
 
             index_params = MilvusClient.prepare_index_params()
             index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
-            self.milvus_client.create_collection(
+            await self.async_milvus_client.create_collection(
                 collection_name=name,
                 schema=schema,
                 index_params=index_params,
                 consistency_level="Strong",
             )
 
-    def add_question_sql(self, question: str, sql: str, **kwargs) -> str:
-        """Add question-SQL pair to collection."""
+    async def add_question_sql(self, question: str, sql: str, **kwargs) -> str:
+        """Add question-SQL pair to collection using async client."""
         if len(question) == 0 or len(sql) == 0:
             msg = "Question and SQL cannot be empty"
             raise ValueError(msg)
         _id = str(uuid.uuid4()) + "-sql"
         embedding = self.embedder.embed_documents([question])[0]
         data = {"id": _id, "text": question, "sql": sql, "vector": embedding}
-        self.milvus_client.insert(collection_name=self.sql_collection, data=data)
+        await self.async_milvus_client.insert(collection_name=self.sql_collection, data=data)
         return _id
 
-    def add_ddl(self, ddl: str, **kwargs) -> str:
-        """Add DDL to collection."""
+    async def add_ddl(self, ddl: str, **kwargs) -> str:
+        """Add DDL to collection using async client."""
         if len(ddl) == 0:
             msg = "DDL cannot be empty"
             raise ValueError(msg)
         _id = str(uuid.uuid4()) + "-ddl"
         embedding = self.embedder.embed_documents([ddl])[0]
-        self.milvus_client.insert(
+        await self.async_milvus_client.insert(
             collection_name=self.ddl_collection,
             data={
                 "id": _id, "ddl": ddl, "vector": embedding
@@ -397,14 +404,14 @@ class MilvusVectorStore(Milvus_VectorStore):
         )
         return _id
 
-    def add_documentation(self, documentation: str, **kwargs) -> str:
-        """Add documentation to collection."""
+    async def add_documentation(self, documentation: str, **kwargs) -> str:
+        """Add documentation to collection using async client."""
         if len(documentation) == 0:
             msg = "Documentation cannot be empty"
             raise ValueError(msg)
         _id = str(uuid.uuid4()) + "-doc"
         embedding = self.embedder.embed_documents([documentation])[0]
-        self.milvus_client.insert(
+        await self.async_milvus_client.insert(
             collection_name=self.doc_collection,
             data={
                 "id": _id, "doc": documentation, "vector": embedding
@@ -413,7 +420,7 @@ class MilvusVectorStore(Milvus_VectorStore):
         return _id
 
     async def get_related_record(self, collection_name: str) -> list:
-        """Retrieve all related records."""
+        """Retrieve all related records using async client."""
 
         if 'ddl' in collection_name:
             output_field = "ddl"
@@ -436,12 +443,12 @@ class MilvusVectorStore(Milvus_VectorStore):
         return record_list
 
     async def get_similar_question_sql(self, question: str, **kwargs) -> list:
-        """Get similar question-SQL pairs."""
+        """Get similar question-SQL pairs using async client."""
         search_params = {"metric_type": "L2", "params": {"nprobe": 128}}
         list_sql = []
         try:
+            # Use async embedder and async Milvus client
             embeddings = [await self.embedder.aembed_query(question)]
-
             res = await self.async_milvus_client.search(
                 collection_name=self.sql_collection,
                 anns_field="vector",
@@ -464,14 +471,14 @@ class MilvusVectorStore(Milvus_VectorStore):
             logger.error(f"Error retrieving similar questions: {e}")
         return list_sql
 
-    def get_training_data(self, **kwargs):
-        """Get all training data."""
+    async def get_training_data(self, **kwargs):
+        """Get all training data using async client."""
         import pandas as pd
 
         df = pd.DataFrame()
 
         # Get SQL data
-        sql_data = self.milvus_client.query(collection_name=self.sql_collection, output_fields=["*"], limit=1000)
+        sql_data = await self.async_milvus_client.query(collection_name=self.sql_collection, output_fields=["*"], limit=1000)
         if sql_data:
             df_sql = pd.DataFrame({
                 "id": [doc["id"] for doc in sql_data],
@@ -482,7 +489,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             df = pd.concat([df, df_sql])
 
         # Get DDL data
-        ddl_data = self.milvus_client.query(collection_name=self.ddl_collection, output_fields=["*"], limit=1000)
+        ddl_data = await self.async_milvus_client.query(collection_name=self.ddl_collection, output_fields=["*"], limit=1000)
         if ddl_data:
             df_ddl = pd.DataFrame({
                 "id": [doc["id"] for doc in ddl_data],
@@ -493,7 +500,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             df = pd.concat([df, df_ddl])
 
         # Get documentation data
-        doc_data = self.milvus_client.query(collection_name=self.doc_collection, output_fields=["*"], limit=1000)
+        doc_data = await self.async_milvus_client.query(collection_name=self.doc_collection, output_fields=["*"], limit=1000)
         if doc_data:
             df_doc = pd.DataFrame({
                 "id": [doc["id"] for doc in doc_data],
@@ -506,20 +513,13 @@ class MilvusVectorStore(Milvus_VectorStore):
         return df
 
     async def close(self):
-        """Close Milvus client connections."""
-        try:
-            if hasattr(self, 'async_milvus_client') and self.async_milvus_client is not None:
+        """Close async Milvus client connection."""
+        if hasattr(self, 'async_milvus_client') and self.async_milvus_client is not None:
+            try:
                 await self.async_milvus_client.close()
                 logger.info("Closed async Milvus client")
-        except Exception as e:
-            logger.warning(f"Error closing async Milvus client: {e}")
-
-        try:
-            if hasattr(self, 'milvus_client') and self.milvus_client is not None:
-                self.milvus_client.close()
-                logger.info("Closed sync Milvus client")
-        except Exception as e:
-            logger.warning(f"Error closing sync Milvus client: {e}")
+            except Exception as e:
+                logger.warning(f"Error closing async Milvus client: {e}")
 
 
 class VannaLangChain(MilvusVectorStore, VannaLangChainLLM):
@@ -531,7 +531,6 @@ class VannaLangChain(MilvusVectorStore, VannaLangChainLLM):
         Args:
             client: LangChain LLM client
             config: Configuration dict containing:
-                - milvus_client: Sync Milvus client
                 - async_milvus_client: Async Milvus client
                 - embedder_client: LangChain embedder
                 - initial_prompt: Optional custom prompt
@@ -622,7 +621,6 @@ class VannaSingleton:
         cls,
         llm_client,
         embedder_client,
-        milvus_client,
         async_milvus_client,
         dialect: str = "SQLite",
         initial_prompt: str | None = None,
@@ -633,13 +631,13 @@ class VannaSingleton:
         milvus_search_limit: int = 1000,
         reasoning_models: set[str] | None = None,
         chat_models: set[str] | None = None,
+        create_collections: bool = True,
     ) -> VannaLangChain:
         """Get or create a singleton Vanna instance.
 
         Args:
             llm_client: LangChain LLM client for SQL generation
             embedder_client: LangChain embedder for vector operations
-            milvus_client: Sync Milvus client
             async_milvus_client: Async Milvus client
             dialect: SQL dialect (e.g., 'databricks', 'postgres', 'mysql')
             initial_prompt: Optional custom system prompt
@@ -650,6 +648,7 @@ class VannaSingleton:
             milvus_search_limit: Maximum limit size for vector search operations
             reasoning_models: Models requiring special handling for think tags (defaults handled by VannaLangChainLLM)
             chat_models: Models using standard response handling (defaults handled by VannaLangChainLLM)
+            create_collections: Whether to create Milvus collections if they don't exist (default True for backward compatibility)
 
         Returns:
             Initialized Vanna instance
@@ -669,7 +668,6 @@ class VannaSingleton:
                 return cls._instance
 
             config = {
-                "milvus_client": milvus_client,
                 "async_milvus_client": async_milvus_client,
                 "embedder_client": embedder_client,
                 "dialect": dialect,
@@ -681,10 +679,16 @@ class VannaSingleton:
                 "milvus_search_limit": milvus_search_limit,
                 "reasoning_models": reasoning_models,
                 "chat_models": chat_models,
+                "create_collections": create_collections,
             }
 
             logger.info(f"Creating new Vanna instance with LangChain (dialect: {dialect})")
             cls._instance = VannaLangChain(client=llm_client, config=config)
+            
+            # Create collections if requested
+            if create_collections:
+                await cls._instance._ensure_collections_created()  # type: ignore[attr-defined]
+            
             return cls._instance
 
     @classmethod
@@ -748,11 +752,11 @@ async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
         ddls = VANNA_TRAINING_DDL
 
     for ddl in ddls:
-        vn.train(ddl=ddl)
+        await vn.add_ddl(ddl=ddl)
 
     # Train with documentation
     for doc in VANNA_TRAINING_DOCUMENTATION:
-        vn.train(documentation=doc)
+        await vn.add_documentation(documentation=doc)
 
     # Retrieve relevant context in parallel
     retrieval_tasks = [vn.get_related_record(vn.ddl_collection), vn.get_related_record(vn.doc_collection)]
@@ -791,7 +795,7 @@ async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
     # Train with validated examples
     logger.info(f"Training Vanna with {len(examples)} validated examples")
     for example in examples:
-        vn.train(question=example["question"], sql=example["sql"])
-    df = vn.get_training_data()
+        await vn.add_question_sql(question=example["question"], sql=example["sql"])
+    df = await vn.get_training_data()
     df.to_csv("vanna_training_data.csv", index=False)
     logger.info("Vanna training complete")

@@ -53,12 +53,10 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     llm_name: LLMRef = Field(description="LLM for SQL generation")
     embedder_name: EmbedderRef = Field(description="Embedder for vector operations")
 
-    # Milvus retriever (backward compatibility)
-    milvus_retriever: RetrieverRef | None = Field(
-        default=None,
-        description=("Optional milvus_retriever reference for backward compatibility. "
-                     "If provided, uses the retriever's client for sync operations. "
-                     "Milvus connection details are still needed for async operations."))
+    # Milvus retriever (required, must use async client)
+    milvus_retriever: RetrieverRef = Field(
+        description="Milvus retriever reference for vector operations. "
+                    "MUST be configured with use_async_client=true for text2sql function.")
 
     # Database configuration
     database_type: str = Field(default="databricks", description="Database type")
@@ -75,12 +73,7 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     databricks_http_path: str | None = Field(default=None, description="Databricks HTTP path")
     databricks_access_token: str | None = Field(default=None, description="Databricks access token")
 
-    # Milvus configuration
-    milvus_host: str | None = Field(default=None, description="Milvus host")
-    milvus_port: int | None = Field(default=None, description="Milvus port")
-    milvus_user: str | None = Field(default=None, description="Milvus username")
-    milvus_password: str | None = Field(default=None, description="Milvus password")
-    milvus_db_name: str | None = Field(default=None, description="Milvus database")
+    # Vanna Milvus configuration
     milvus_search_limit: int = Field(default=1000,
                                      description="Maximum limit size for vector search operations in Milvus")
 
@@ -113,7 +106,6 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
 async def text2sql(config: Text2SQLConfig, builder: Builder):
     """Register the Text2SQL function with Vanna integration."""
     from nat.plugins.vanna.db_utils import setup_vanna_db_connection
-    from nat.plugins.vanna.milvus_utils import create_milvus_client
     from nat.plugins.vanna.vanna_utils import VannaSingleton
     from nat.plugins.vanna.vanna_utils import train_vanna
 
@@ -135,37 +127,23 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         llm_client = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         embedder_client = await builder.get_embedder(config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-        # Create Milvus clients
-        if config.milvus_retriever:
-            logger.info("Using milvus_retriever for Milvus connection")
-            retriever = await builder.get_retriever(config.milvus_retriever)
-            milvus_client = retriever._client  # type: ignore[attr-defined]
-        else:
-            milvus_client = create_milvus_client(
-                host=config.milvus_host,
-                port=config.milvus_port,
-                user=config.milvus_user,
-                password=config.milvus_password,
-                db_name=config.milvus_db_name,
-                is_async=False,
-            )
+        # Get Milvus clients from retriever (expects async client)
+        logger.info("Getting async Milvus client from milvus_retriever")
+        retriever = await builder.get_retriever(config.milvus_retriever)
+        
+        # Vanna expects async client from retriever
+        if not retriever._is_async:  # type: ignore[attr-defined]
+            msg = (f"Milvus retriever '{config.milvus_retriever}' must be configured with "
+                   "use_async_client=true for Vanna text2sql function")
+            raise ValueError(msg)
+        
+        # Get async client from retriever
+        async_milvus_client = retriever._client  # type: ignore[attr-defined]
 
-        # Create async client with same config
-        # TODO: Replace with async NAT milvus_retriever
-        async_milvus_client = create_milvus_client(
-            host=config.milvus_host,
-            port=config.milvus_port,
-            user=config.milvus_user,
-            password=config.milvus_password,
-            db_name=config.milvus_db_name,
-            is_async=True,
-        )
-
-        # Initialize Vanna instance (singleton pattern)
+        # Initialize Vanna instance (singleton pattern) with async client only
         vanna_instance = await VannaSingleton.get_instance(
             llm_client=llm_client,
             embedder_client=embedder_client,
-            milvus_client=milvus_client,
             async_milvus_client=async_milvus_client,
             dialect=config.database_type,
             initial_prompt=config.initial_prompt,
@@ -176,6 +154,7 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
             milvus_search_limit=config.milvus_search_limit,
             reasoning_models=config.reasoning_models,
             chat_models=config.chat_models,
+            create_collections=config.train_on_startup,
         )
 
     # Setup database connection
