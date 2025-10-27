@@ -38,7 +38,7 @@ Create a new Trace Ingestion project in DBNL. To create a new project in DBNL:
 6. Click on Generate API Token and note down the generated **API Token**
 7. Note down the **Project Id** for the project
 
-### Step 3: Configure Your Environment
+## Step 3: Configure Your Environment
 
 Set the following environment variables in your terminal:
 
@@ -67,9 +67,6 @@ general:
     tracing:
       otelcollector:
         _type: dbnl
-        api_url: ${DBNL_API_URL}
-        api_token: ${DBNL_API_TOKEN}
-        project_id: ${DBNL_PROJECT_ID}
 ```
 
 ## Step 6: Run the workflow
