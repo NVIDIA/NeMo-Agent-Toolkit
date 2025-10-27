@@ -13,30 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from pathlib import Path
 
 import pytest
 
-from nat.runtime.loader import load_workflow
-from nat.test.utils import locate_example_config
-from nat_semantic_kernel_demo.register import SKTravelPlanningWorkflowConfig
 
-logger = logging.getLogger(__name__)
-
-
-@pytest.mark.usefixtures("mem0_api_key")
+@pytest.mark.usefixtures("mem0_api_key", "openai_api_key")
 @pytest.mark.integration
 async def test_full_workflow():
+    from nat.test.utils import locate_example_config
+    from nat.test.utils import run_workflow
+    from nat_semantic_kernel_demo.register import SKTravelPlanningWorkflowConfig
 
     config_file: Path = locate_example_config(SKTravelPlanningWorkflowConfig)
 
-    async with load_workflow(config_file) as workflow:
-
-        async with workflow.run("Create a 3-day travel itinerary for Tokyo in April, \
-                covering hotels and activities within a USD 2000 budget.") as runner:
-
-            result = await runner.result(to_type=str)
-
-        result = result.lower()
-        assert "budget" in result
+    await run_workflow(
+        config_file=config_file,
+        question=("Create a 3-day travel itinerary for Tokyo in April, covering hotels and activities within a USD "
+                  "2000 budget."),
+        expected_answer="budget")
