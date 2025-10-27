@@ -209,11 +209,9 @@ async def dbnl_telemetry_exporter(config: DBNLTelemetryExporter, builder: Builde
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
-    api_token = config.api_token
-    project_id = config.project_id
     headers = {
-        "Authorization": f"Bearer {api_token}",
-        "x-dbnl-project-id": project_id,
+        "Authorization": f"Bearer {config.api_token}",
+        "x-dbnl-project-id": config.project_id,
     }
 
     endpoint = config.api_url.rstrip("/") + "/otel/v1/traces"
