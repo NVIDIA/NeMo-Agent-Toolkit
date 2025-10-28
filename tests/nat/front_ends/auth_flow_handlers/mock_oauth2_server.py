@@ -36,10 +36,6 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from pydantic import Field
 
-from nat.data_models.common import OptionalSecretStr
-from nat.data_models.common import SerializableSecretStr
-from nat.data_models.common import get_secret_value
-
 
 # =============================================================================
 # Models
@@ -47,7 +43,7 @@ from nat.data_models.common import get_secret_value
 @dataclass
 class _Client:
     client_id: str
-    client_secret: OptionalSecretStr
+    client_secret: str | None
     redirect_uri: str  # e.g. http://localhost:9000/auth/redirect
 
 
@@ -77,7 +73,7 @@ class _DeviceCodeEntry:
 
 
 class _Token(BaseModel):
-    access_token: SerializableSecretStr = Field(..., alias="access_token")
+    access_token: str = Field(..., alias="access_token")
     token_type: str = "Bearer"
     expires_in: int = 3600
     refresh_token: str | None = None
@@ -310,7 +306,7 @@ class MockOAuth2Server:
         client = self._clients.get(client_id or "")
         if not client:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "invalid_client")
-        if client.client_secret and get_secret_value(client.client_secret) != client_secret:
+        if client.client_secret and client.client_secret != client_secret:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "invalid_client")
 
         # 3) mark code as used and issue token
@@ -338,6 +334,4 @@ class MockOAuth2Server:
             scope=scope,
         )
         self.tokens[at] = token
-        # Ensure we didn't accidentally create a redacted token
-        assert "*" not in at
         return token
