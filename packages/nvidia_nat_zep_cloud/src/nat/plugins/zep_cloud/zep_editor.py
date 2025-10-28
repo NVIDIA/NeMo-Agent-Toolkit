@@ -75,13 +75,13 @@ class ZepEditor(MemoryEditor):
                 logger.info("Created Zep user")
             except ApiError as e:
                 # Check if user was created by another request (409 Conflict)
-                if hasattr(e, 'status_code') and e.status_code == 409:
+                if e.response_data and e.response_data.get("status_code") == 409:
                     logger.info("Zep user already exists (409), continuing")
                 else:
-                    logger.error("Failed creating Zep user: %s", str(e))
+                    logger.error("Failed creating Zep user: %s", str(e))  # noqa: TRY400
                     raise
         except ApiError as e:
-            logger.error("Failed fetching Zep user: %s", str(e))
+            logger.error("Failed fetching Zep user: %s", str(e))  # noqa: TRY400
             raise
 
     async def add_items(self, items: list[MemoryItem], **kwargs) -> None:
@@ -94,7 +94,7 @@ class ZepEditor(MemoryEditor):
             items (list[MemoryItem]): The items to be added.
             kwargs (dict): Provider-specific keyword arguments.
                 - ignore_roles (list[str], optional): List of role types to ignore when adding
-                  messages to graph memory. Available roles: norole, system, assistant, user,
+                  messages to graph memory. Available roles: system, assistant, user,
                   function, tool.
         """
         # Extract Zep-specific parameters
@@ -141,11 +141,11 @@ class ZepEditor(MemoryEditor):
                     logger.info("Created Zep thread (thread_id=%s)", thread_id)
                     created_threads.add(thread_id)
                 except ApiError as create_error:
-                    if hasattr(create_error, 'status_code') and create_error.status_code == 409:
+                    if create_error.response_data and create_error.response_data.get("status_code") == 409:
                         logger.info("Zep thread already exists (thread_id=%s)", thread_id)
                         created_threads.add(thread_id)
                     else:
-                        logger.error("Thread create failed (thread_id=%s): %s", thread_id, str(create_error))
+                        logger.exception("Thread create failed (thread_id=%s)", thread_id)
                         thread_ready = False
 
             # Skip this item if thread creation failed unexpectedly
@@ -218,7 +218,7 @@ class ZepEditor(MemoryEditor):
             # Thread doesn't exist or no context available
             return []
         except ApiError as e:
-            logger.error("get_user_context failed (thread_id=%s): %s", thread_id, str(e))
+            logger.error("get_user_context failed (thread_id=%s): %s", thread_id, str(e))  # noqa: TRY400
             raise
 
     async def remove_items(self, **kwargs) -> None:
@@ -242,11 +242,11 @@ class ZepEditor(MemoryEditor):
         elif "user_id" in kwargs:
             # Delete all threads for a user
             user_id = kwargs.pop("user_id")
-            logger.info("Deleting all threads for user (user_id=%s)", user_id)
+            logger.debug("Deleting all threads for user (user_id=%s)", user_id)
 
             # Get all threads for this user
             threads = await self._client.user.get_threads(user_id=user_id)
-            logger.info("Found %d threads for user (user_id=%s)", len(threads), user_id)
+            logger.debug("Found %d threads for user (user_id=%s)", len(threads), user_id)
 
             # Delete each thread
             delete_coroutines = []
@@ -257,6 +257,6 @@ class ZepEditor(MemoryEditor):
 
             if delete_coroutines:
                 await asyncio.gather(*delete_coroutines)
-                logger.info("Deleted %d threads for user (user_id=%s)", len(delete_coroutines), user_id)
+                logger.info("Deleted %d threads for user", len(delete_coroutines))
         else:
             raise ValueError("Either thread_id or user_id is required.")
