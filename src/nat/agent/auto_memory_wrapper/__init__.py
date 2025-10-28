@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
+"""
+Auto memory wrapper for NAT agents.
 
-# Import any workflows which need to be automatically registered here
-from .auto_memory_wrapper import register as auto_memory_wrapper
-from .prompt_optimizer import register as prompt_optimizer
-from .react_agent import register as react_agent
-from .reasoning_agent import reasoning_agent
-from .responses_api_agent import register as responses_api_agent
-from .rewoo_agent import register as rewoo_agent
-from .tool_calling_agent import register as tool_calling_agent
+This module provides automatic memory capture and retrieval for any NAT agent.
+"""
+
+from . import register
+
+__all__ = ["register"]
