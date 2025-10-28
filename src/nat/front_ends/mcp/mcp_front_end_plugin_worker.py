@@ -341,8 +341,6 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
         Returns:
             FastMCP instance configured with settings from NAT config
         """
-        from mcp.server.fastmcp import FastMCP
-
         # Handle auth if configured
         auth_settings = None
         token_verifier = None
@@ -375,5 +373,5 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
             mcp: The FastMCP server instance
             builder: The workflow builder instance
         """
-        # Use the default implementation from base class
+        # Use the default implementation from base class to add the tools to the MCP server
         await self._default_add_routes(mcp, builder)
