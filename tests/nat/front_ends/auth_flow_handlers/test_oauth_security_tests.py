@@ -48,10 +48,8 @@ def mock_server(oauth_config) -> MockOAuth2Server:
     srv = MockOAuth2Server(host="testserver", port=0)
     # Register client using config values
     srv.register_client(client_id=oauth_config.client_id,
-                        client_secret=oauth_config.client_secret,
+                        client_secret=oauth_config.client_secret.get_secret_value(),
                         redirect_base="https://app.example.com")
-    # Ensure we're not accidentally using a redacted client secret
-    assert "*" not in str(oauth_config.client_secret)
     return srv
 
 
