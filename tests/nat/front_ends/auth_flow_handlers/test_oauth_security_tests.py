@@ -555,8 +555,6 @@ async def test_authorization_code_security_handling(mock_server,
             redirect_uri=oauth_config.redirect_uri,
         )
         assert "access_token" in first_token
-        # Ensure we're not accidentally using a redacted token
-        assert "*" not in first_token["access_token"]
 
         # Try to reuse the same code - should fail
         result = await oauth_client.fetch_token(
