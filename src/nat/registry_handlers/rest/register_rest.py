@@ -18,6 +18,7 @@ import os
 from pydantic import Field
 
 from nat.cli.register_workflow import register_registry_handler
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.registry_handler import RegistryHandlerBaseConfig
 
 
@@ -25,8 +26,8 @@ class RestRegistryHandlerConfig(RegistryHandlerBaseConfig, name="rest"):
     """Registry handler for interacting with a remote REST registry."""
 
     endpoint: str = Field(description="A string representing the remote endpoint.")
-    token: str | None = Field(default=None,
-                              description="The authentication token to use when interacting with the registry.")
+    token: OptionalSecretStr = Field(default=None,
+                                     description="The authentication token to use when interacting with the registry.")
     publish_route: str = Field(default="", description="The route to the NAT publish service.")
     pull_route: str = Field(default="", description="The route to the NAT pull service.")
     search_route: str = Field(default="", description="The route to the NAT search service")

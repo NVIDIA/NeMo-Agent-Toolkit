@@ -25,6 +25,7 @@ from nat.authentication.exceptions.api_key_exceptions import HeaderNameFieldErro
 from nat.authentication.exceptions.api_key_exceptions import HeaderPrefixFieldError
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.authentication import HeaderAuthScheme
+from nat.data_models.common import SerializableSecretStr
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +38,9 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
     API Key authentication configuration model.
     """
 
-    raw_key: str = Field(description=("Raw API token or credential to be injected into the request parameter. "
-                                      "Used for 'bearer','x-api-key','custom', and other schemes. "))
+    raw_key: SerializableSecretStr = Field(
+        description=("Raw API token or credential to be injected into the request parameter. "
+                     "Used for 'bearer','x-api-key','custom', and other schemes. "))
 
     auth_scheme: HeaderAuthScheme = Field(default=HeaderAuthScheme.BEARER,
                                           description=("The HTTP authentication scheme to use. "
