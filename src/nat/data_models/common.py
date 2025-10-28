@@ -174,6 +174,19 @@ TypedBaseModelT = typing.TypeVar("TypedBaseModelT", bound=TypedBaseModel)
 
 
 def get_secret_value(v: SecretStr | None) -> str | None:
+    """
+    Extract the secret value from a SecretStr or return None.
+
+    Parameters
+    ----------
+    v: SecretStr or None.
+        A field defined as OptionalSecretStr, which is either a SecretStr or None.
+
+    Returns
+    -------
+    str | None
+        The secret value as a plain string, or None if v is None.
+    """
     if v is None:
         return None
     return v.get_secret_value()
