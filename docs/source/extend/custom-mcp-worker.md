@@ -21,7 +21,7 @@ limitations under the License.
 We recommend reading the [MCP Server Guide](../workflows/mcp/mcp-server.md) before proceeding with this documentation, to understand how MCP servers work in NVIDIA NeMo Agent toolkit.
 :::
 
-The NeMo Agent toolkit MCP frontend supports custom server implementations through a plugin system. This guide shows you how to create custom MCP server workers that extend the default server behavior.
+The NVIDIA NeMo Agent toolkit provides a default MCP server worker that publishes your workflow functions as MCP tools. However, you may need to customize the server behavior for enterprise requirements such as authentication, custom endpoints, or telemetry. This guide shows you how to create custom MCP server workers that extend the default implementation.
 
 ## When to Create a Custom Worker
 
