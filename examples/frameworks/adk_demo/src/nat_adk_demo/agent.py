@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
+
 import logging
 
 from pydantic import Field
@@ -49,6 +52,7 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
     """
     import logging
 
+    from cachetools import TTLCache
     from google.adk import Runner
     from google.adk.agents import Agent
     from google.adk.artifacts import InMemoryArtifactService
@@ -76,8 +80,8 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
                     artifact_service=artifact_service,
                     session_service=session_service)
 
-    # Cache of sessions per conversation
-    sessions_cache = {}
+    # Bounded cache of sessions per conversation with TTL
+    sessions_cache = TTLCache(maxsize=1000, ttl=3600)  # 1000 sessions, 1-hour TTL
 
     async def _response_fn(input_message: str) -> str:
         """Wrapper for response fn
@@ -91,12 +95,12 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
         nat_context = Context.get()
         user_id = nat_context.conversation_id or config.user_id
 
+        # Get or create session for this conversation
         if user_id not in sessions_cache:
             sessions_cache[user_id] = await session_service.create_session(
                 app_name=config.name,
                 user_id=user_id
             )
-
         session = sessions_cache[user_id]
 
         async def run_prompt(new_message: str) -> str:
