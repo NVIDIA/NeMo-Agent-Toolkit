@@ -18,6 +18,7 @@ import os
 import sys
 import typing
 from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -216,6 +217,23 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         description="Logging level for Dask.",
     )
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
+
+    max_concurrent_users: int = Field(default=100,
+                                      description="Maximum number of concurrent users allowed to use the API.",
+                                      ge=1)
+
+    user_idle_timeout: timedelta = Field(
+        default=timedelta(minutes=30),
+        description="Time after which a user is considered idle and their session is terminated.")
+
+    cleanup_check_interval: timedelta = Field(
+        default=timedelta(minutes=10),
+        description="Interval at which the cleanup task is run to check for idle users and terminate their sessions.")
+
+    require_user_id: bool = Field(
+        default=False,
+        description="Whether to require a user ID to use the API. If True, all requests must include a user ID in the\
+            request body.")
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
         method="POST",

@@ -21,10 +21,19 @@ from pydantic import model_validator
 
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
+from .component import ComponentScope
 
 
 class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
-    pass
+    """Base configuration for functions.
+
+    Functions are the core building blocks for defining workflow logic.
+    """
+    scope: ComponentScope = Field(
+        default=ComponentScope.PER_USER,
+        description="The scope of the function. Default to per-user. If set to shared, the function instance will be \
+        shared across all users once it is built. If set to per-user, each user will have their own separate instance \
+        of the function.")
 
 
 class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
@@ -40,6 +49,11 @@ class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
         default_factory=list,
         description="The list of function names which should be excluded from default access to the group",
     )
+    scope: ComponentScope = Field(
+        default=ComponentScope.PER_USER,
+        description="The scope of the function group. Default to per-user. If set to shared, the function group \
+        instance will be shared across all users once it is built. If set to per-user, each user will have their own \
+        separate instance of the function group.")
 
     @field_validator("include", "exclude")
     @classmethod
