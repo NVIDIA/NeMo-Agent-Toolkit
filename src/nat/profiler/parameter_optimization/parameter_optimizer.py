@@ -112,8 +112,8 @@ def optimize_parameters(
             return await asyncio.gather(*tasks)
 
         # Calculate padding width based on total number of trials
-        trial_id_width = len(str(optimizer_config.numeric.n_trials - 1))
-        trial_id_padded = f"{trial._trial_id:0{trial_id_width}d}"
+        trial_id_width = len(str(max(0, optimizer_config.numeric.n_trials - 1)))
+        trial_id_padded = f"{trial.number:0{trial_id_width}d}"
         with (out_dir / f"config_numeric_trial_{trial_id_padded}.yml").open("w") as fh:
             yaml.dump(cfg_trial.model_dump(), fh)
 
