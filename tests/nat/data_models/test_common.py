@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import os
 import typing
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -474,3 +475,26 @@ def test_optional_secret_str_none():
     # we do serialize this value in model_dump
     assert None in model.model_dump().values()
     assert "null" in model.model_dump_json()
+
+
+@pytest.mark.parametrize("initial_value", ["secret_1", None])
+@pytest.mark.usefixtures("restore_environ")
+def test_set_secret_from_env(initial_value: str | None):
+    os.environ["TEST_API_KEY"] = "secret_from_env"
+    model = ModelWithSecret(name="test", secret=initial_value)
+    common.set_secret_from_env(model, 'secret', 'TEST_API_KEY')
+    assert isinstance(model.secret, pydantic.SecretStr)
+    assert model.secret.get_secret_value() == "secret_from_env"
+
+
+@pytest.mark.parametrize("initial_value", ["secret_1", None])
+@pytest.mark.usefixtures("restore_environ")
+def test_set_secret_from_env_unset(initial_value: str | None):
+    assert "TEST_API_KEY" not in os.environ
+    model = ModelWithSecret(name="test", secret=initial_value)
+    common.set_secret_from_env(model, 'secret', 'TEST_API_KEY')
+    if initial_value is None:
+        assert model.secret is None
+    else:
+        assert isinstance(model.secret, pydantic.SecretStr)
+        assert model.secret.get_secret_value() == initial_value

@@ -195,7 +195,7 @@ def get_secret_value(v: SecretStr | None) -> str | None:
 
 def set_secret_from_env(model: BaseModel, field_name: str, env_var: str):
     """
-    Set a SecretStr field in a Pydantic model from an environment variable.
+    Set a SecretStr field in a Pydantic model from an environment variable, but only if the environment variable is set.
 
     Parameters
     ----------
