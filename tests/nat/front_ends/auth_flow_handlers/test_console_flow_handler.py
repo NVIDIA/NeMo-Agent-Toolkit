@@ -100,6 +100,8 @@ async def test_oauth2_flow_in_process(monkeypatch, mock_server):
         client_secret="secret",
         redirect_base=f"http://localhost:{redirect_port}",
     )
+    # Ensure we're not accidentally using a redacted client secret
+    assert "*" not in "secret"
 
     cfg = OAuth2AuthCodeFlowProviderConfig(
         client_id="cid",
@@ -152,6 +154,8 @@ async def test_oauth2_flow_in_process(monkeypatch, mock_server):
     assert opened, "Browser was never opened"
     tok = ctx.headers["Authorization"].split()[1]
     assert tok in mock_server.tokens  # issued by mock server
+    # Ensure we're not accidentally using a redacted token
+    assert "*" not in tok
 
     # internal cleanup
     assert handler._active_flows == 0

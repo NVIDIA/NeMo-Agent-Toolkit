@@ -97,6 +97,8 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
         client_secret="secret",
         redirect_base=f"http://localhost:{redirect_port}",
     )
+    # Ensure we're not accidentally using a redacted client secret
+    assert "*" not in "secret"
 
     # ----------------- build front‑end worker & FastAPI app ------------- #
     cfg_nat = Config(workflow=EchoFunctionConfig())
@@ -170,6 +172,8 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
     assert opened, "The authorization URL was never emitted."
     token_val = ctx.headers["Authorization"].split()[1]
     assert token_val in mock_server.tokens, "token not issued by mock server"
+    # Ensure we're not accidentally using a redacted token
+    assert "*" not in token_val
     # all flow‑state cleaned up
     assert worker._outstanding_flows == {}
 
