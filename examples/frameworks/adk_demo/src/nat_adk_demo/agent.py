@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
-
-
 import logging
 
 from pydantic import Field
@@ -51,8 +48,8 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
         builder (Builder): The NAT builder instance.
     """
     import logging
+    import time
 
-    from cachetools import TTLCache
     from google.adk import Runner
     from google.adk.agents import Agent
     from google.adk.artifacts import InMemoryArtifactService
@@ -60,6 +57,7 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
     from google.genai import types
 
     logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+    MAX_SESSIONS = 1000
 
     model = await builder.get_llm(config.llm, wrapper_type=LLMFrameworkEnum.ADK)
     tools = await builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.ADK)
@@ -79,9 +77,8 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
                     agent=agent,
                     artifact_service=artifact_service,
                     session_service=session_service)
-
-    # Bounded cache of sessions per conversation with TTL
-    sessions_cache = TTLCache(maxsize=1000, ttl=3600)  # 1000 sessions, 1-hour TTL
+    
+    sessions_cache: dict[str, tuple] = {}
 
     async def _response_fn(input_message: str) -> str:
         """Wrapper for response fn
@@ -96,12 +93,26 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
         user_id = nat_context.conversation_id or config.user_id
 
         # Get or create session for this conversation
+        current_time = time.time()
+        if user_id in sessions_cache:
+            session, timestamp = sessions_cache[user_id]
+            if current_time - timestamp > 3600:
+                del sessions_cache[user_id]
+            else:
+                sessions_cache[user_id] = (session, current_time)
+        
         if user_id not in sessions_cache:
-            sessions_cache[user_id] = await session_service.create_session(
+            if len(sessions_cache) >= MAX_SESSIONS:
+                oldest_user = min(sessions_cache.keys(), key=lambda k: sessions_cache[k][1])
+                del sessions_cache[oldest_user]
+            
+            session = await session_service.create_session(
                 app_name=config.name,
                 user_id=user_id
             )
-        session = sessions_cache[user_id]
+            sessions_cache[user_id] = (session, current_time)
+        else:
+            session, _ = sessions_cache[user_id]
 
         async def run_prompt(new_message: str) -> str:
             """Run prompt through the agent.
