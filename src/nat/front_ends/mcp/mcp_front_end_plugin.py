@@ -93,15 +93,14 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
                         )
                         logger.info("MCP server URL: %s", full_url)
                         await self._run_with_mount(mcp)
-                else:
-                    # Standard behavior - run at root path
-                    if self.front_end_config.transport == "sse":
-                        logger.info("Starting MCP server with SSE endpoint at /sse")
-                        await mcp.run_sse_async()
-                    else:  # streamable-http
-                        full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}/mcp"
-                        logger.info("MCP server URL: %s", full_url)
-                        await mcp.run_streamable_http_async()
+                # Standard behavior - run at root path
+                elif self.front_end_config.transport == "sse":
+                    logger.info("Starting MCP server with SSE endpoint at /sse")
+                    await mcp.run_sse_async()
+                else:  # streamable-http
+                    full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}/mcp"
+                    logger.info("MCP server URL: %s", full_url)
+                    await mcp.run_streamable_http_async()
             except KeyboardInterrupt:
                 logger.info("MCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
 
