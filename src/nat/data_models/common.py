@@ -21,6 +21,8 @@ from hashlib import sha512
 from pydantic import AliasChoices
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import PlainSerializer
+from pydantic import SecretStr
 from pydantic.json_schema import GenerateJsonSchema
 from pydantic.json_schema import JsonSchemaMode
 
@@ -169,3 +171,26 @@ class TypedBaseModel(BaseModel):
 
 
 TypedBaseModelT = typing.TypeVar("TypedBaseModelT", bound=TypedBaseModel)
+
+
+def get_secret_value(v: SecretStr | None) -> str | None:
+    """
+    Extract the secret value from a SecretStr or return None.
+
+    Parameters
+    ----------
+    v: SecretStr or None.
+        A field defined as OptionalSecretStr, which is either a SecretStr or None.
+
+    Returns
+    -------
+    str | None
+        The secret value as a plain string, or None if v is None.
+    """
+    if v is None:
+        return None
+    return v.get_secret_value()
+
+
+# A SecretStr or None that serializes to plain string
+OptionalSecretStr = typing.Annotated[SecretStr | None, PlainSerializer(get_secret_value)]
