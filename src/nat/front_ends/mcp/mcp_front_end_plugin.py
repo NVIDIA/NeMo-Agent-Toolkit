@@ -21,6 +21,9 @@ from nat.builder.workflow_builder import WorkflowBuilder
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorkerBase
 
+if typing.TYPE_CHECKING:
+    from mcp.server.fastmcp import FastMCP
+
 logger = logging.getLogger(__name__)
 
 
@@ -102,7 +105,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
             except KeyboardInterrupt:
                 logger.info("MCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
 
-    async def _run_with_mount(self, mcp) -> None:
+    async def _run_with_mount(self, mcp: "FastMCP") -> None:
         """Run MCP server mounted at configured base_path using FastAPI wrapper.
 
         Args:
