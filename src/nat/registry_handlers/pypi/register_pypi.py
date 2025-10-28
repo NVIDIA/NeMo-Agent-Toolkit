@@ -37,7 +37,6 @@ async def pypi_publish_registry_handler(config: PypiRegistryHandlerConfig):
 
     from nat.registry_handlers.pypi.pypi_handler import PypiRegistryHandler
 
-    registry_handler = PypiRegistryHandler(endpoint=config.endpoint,
-                                           token=get_secret_value(config.token) if config.token else None)
+    registry_handler = PypiRegistryHandler(endpoint=config.endpoint, token=get_secret_value(config.token))
 
     yield registry_handler
