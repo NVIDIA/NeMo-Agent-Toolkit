@@ -1,3 +1,14 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:7bdc639461909b2c298528db842d8bf148f1fdd60dab55785e2ca009df6f6c77
-size 280
+[
+    {
+        "name": "Budget Inn", "price_per_night": 75
+    },
+    {
+        "name": "Midrange Suites", "price_per_night": 120
+    },
+    {
+        "name": "Luxury Penthouse", "price_per_night": 250
+    },
+    {
+        "name": "Boutique Hotel", "price_per_night": 180
+    }
+]

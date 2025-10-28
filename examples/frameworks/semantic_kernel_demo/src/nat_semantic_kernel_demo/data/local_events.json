@@ -1,3 +1,17 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:e9fe6cd6942cfb26412ca3e176e85cd9760a0339763f0480f69597cb0bcbc44d
-size 422
+[
+    {
+        "name": "Cherry Blossom Tour", "cost": 40, "city": "Tokyo"
+    },
+    {
+        "name": "Modern Art Expo", "cost": 30, "city": "New York"
+    },
+    {
+        "name": "Sushi Making Workshop", "cost": 50, "city": "Tokyo"
+    },
+    {
+        "name": "Vegan Food Festival", "cost": 20, "city": "New York"
+    },
+    {
+        "name": "Vegan Michelin Star Restaurant", "cost": 100, "city": "New York"
+    }
+]

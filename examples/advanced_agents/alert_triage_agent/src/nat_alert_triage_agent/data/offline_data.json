@@ -1,3 +1,44 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:4c6fe991cadb94ccb50aa506e788dfdc89990b1a15bd88f7e5b9bbb0a3688feb
-size 4356
+[
+  {
+    "id": "0",
+    "question": "{ \"alert_id\": 0, \"alert_name\": \"InstanceDown\", \"host_id\": \"test-instance-0.example.com\", \"severity\": \"critical\", \"description\": \"Instance test-instance-0.example.com is not available for scrapping for the last 5m. Please check: - instance is up and running; - monitoring service is in place and running; - network connectivity is ok\", \"summary\": \"Instance test-instance-0.example.com is down\", \"timestamp\": \"2025-04-28T05:00:00.000000\" }",
+    "answer": "This alert is a false positive.",
+    "label": "false_positive"
+  },
+  {
+    "id": "1",
+    "question": "{ \"alert_id\": 1, \"alert_name\": \"InstanceDown\", \"host_id\": \"test-instance-1.example.com\", \"severity\": \"critical\", \"description\": \"Instance test-instance-1.example.com is not available for scrapping for the last 5m. Please check: - instance is up and running; - monitoring service is in place and running; - network connectivity is ok\", \"summary\": \"Instance test-instance-1.example.com is down\", \"timestamp\": \"2025-04-28T05:00:00.000000\" }",
+    "answer": "The root cause of this alert is a hardware issue.",
+    "label": "hardware"
+  },
+  {
+    "id": "2",
+    "question": "{ \"alert_id\": 2, \"alert_name\": \"InstanceDown\", \"host_id\": \"test-instance-2.example.com\", \"severity\": \"critical\", \"description\": \"Instance test-instance-2.example.com is not available for scrapping for the last 5m. Please check: - instance is up and running; - monitoring service is in place and running; - network connectivity is ok\", \"summary\": \"Instance test-instance-2.example.com is down\", \"timestamp\": \"2025-04-28T05:00:00.000000\" }",
+    "answer": "The root cause of this alert is a software issue.",
+    "label": "software"
+  },
+  {
+    "id": "3",
+    "question": "{ \"alert_id\": 3, \"alert_name\": \"InstanceDown\", \"host_id\": \"test-instance-3.example.com\", \"severity\": \"critical\", \"description\": \"Instance test-instance-3.example.com is not available for scrapping for the last 5m. Please check: - instance is up and running; - monitoring service is in place and running; - network connectivity is ok\", \"summary\": \"Instance test-instance-3.example.com is down\", \"timestamp\": \"2025-04-30T05:00:00.000000\" }",
+    "answer": "The host alerted is under maintenance. Investigation can be deprioritized.",
+    "label": "maintenance"
+  },
+  {
+    "id": "4",
+    "question": "{\"alert_id\":4,\"alert_name\":\"CPUUsageHighError\",\"host_id\":\"test-instance-4.example.com\",\"severity\":\"error\",\"description\":\"CPU usage on test-instance-4.example.com is critically high (current value: 100%). Please check the following: - CPU usage trends across all cores; - running processes that may be causing high load; - potential hardware issues (e.g., I/O bottlenecks).\",\"summary\":\"High CPU usage detected on test-instance-4.example.com\",\"timestamp\":\"2025-05-01T02:00:00.000000\"}",
+    "answer": "The root cause of this alert is a software issue.",
+    "label": "software"
+  },
+  {
+    "id": "5",
+    "question": "{\"alert_id\":5,\"alert_name\":\"CPUUsageHighError\",\"host_id\":\"test-instance-5.example.com\",\"severity\":\"error\",\"description\":\"CPU usage on test-instance-5.example.com is critically high (current value: 100%). Please check the following: - CPU usage trends across all cores; - running processes that may be causing high load; - potential hardware issues (e.g., I/O bottlenecks).\",\"summary\":\"High CPU usage detected on test-instance-5.example.com\",\"timestamp\":\"2025-05-02T02:00:00.000000\"}",
+    "answer": "This alert is a false positive.",
+    "label": "false_positive"
+  },
+  {
+    "id": "6",
+    "question": "{\"alert_id\":6,\"alert_name\":\"CPUUsageHighError\",\"host_id\":\"test-instance-6.example.com\",\"severity\":\"error\",\"description\":\"CPU usage on test-instance-6.example.com is critically high (current value: 100%). Please check the following: - CPU usage trends across all cores; - running processes that may be causing high load; - potential hardware issues (e.g., I/O bottlenecks).\",\"summary\":\"High CPU usage detected on test-instance-6.example.com\",\"timestamp\":\"2025-05-03T02:00:00.000000\"}",
+    "answer": "The alert is on a periodic behavior that is likely a benign signal.",
+    "label": "repetitive_behavior"
+  }
+]

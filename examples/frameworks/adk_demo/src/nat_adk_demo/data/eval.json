@@ -1,3 +1,28 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:e7e0a3ad0f16adbcf51b068d95b3e9c3a3d420da7d4b44724cd3d68e74380139
-size 762
+[
+    {
+        "id": "1",
+        "question": "What is the current weather in New York?",
+        "answer": "The current weather in New York is sunny with a temperature of 75°F (24°C)."
+    },
+    {
+        "id": "2",
+        "question": "What is the current time in New York?",
+        "answer": "The current time in New York is 12:00 PM (EDT)."
+    },
+    {
+        "id": "3",
+        "question": "What is the current weather and time in New York?"
+    },
+    {
+        "id": "4",
+        "question": "What is the current weather in Los Angeles?"
+    },
+    {
+        "id": "5",
+        "question": "What is the current time in Los Angeles?"
+    },
+    {
+        "id": "6",
+        "question": "What is the current weather and time in Los Angeles?"
+    }
+]
