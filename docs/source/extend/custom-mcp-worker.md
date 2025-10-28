@@ -205,6 +205,8 @@ async def create_mcp_server(self) -> FastMCP:
     )
 ```
 
+**Authentication ownership**: When you override `create_mcp_server()`, your worker controls authentication. If you need custom auth (JWT, OAuth2, API keys), configure it inside `create_mcp_server()`. Any front-end config auth settings are optional hints and may be ignored by your worker.
+
 ### Accessing Configuration
 
 Your worker has access to configuration through instance variables:
