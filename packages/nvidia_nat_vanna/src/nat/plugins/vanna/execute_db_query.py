@@ -69,22 +69,17 @@ class ExecuteDBQueryOutput(BaseModel):
 class ExecuteDBQueryConfig(FunctionBaseConfig, name="execute_db_query"):
     """
     Database query execution configuration.
+    
+    Currently only Databricks is supported.
     """
 
     # Database configuration
-    database_type: str = Field(default="databricks", description="Database type")
-    db_host: str | None = Field(default=None, description="Database host")
-    db_port: int | None = Field(default=None, description="Database port")
-    db_name: str | None = Field(default=None, description="Database name")
-    db_username: str | None = Field(default=None, description="Database username")
-    db_password: str | None = Field(default=None, description="Database password")
+    database_type: str = Field(default="databricks", description="Database type (currently only 'databricks' is supported)")
+    db_host: str | None = Field(default=None, description="Database host (Databricks server hostname)")
+    db_password: str | None = Field(default=None, description="Database password (Databricks access token)")
     db_catalog: str | None = Field(default=None, description="Database catalog")
     db_schema: str | None = Field(default=None, description="Database schema")
-
-    # Databricks-specific
-    databricks_server_hostname: str | None = Field(default=None, description="Databricks server hostname")
-    databricks_http_path: str | None = Field(default=None, description="Databricks HTTP path")
-    databricks_access_token: str | None = Field(default=None, description="Databricks access token")
+    http_path: str | None = Field(default=None, description="HTTP path for database connection (Databricks)")
 
     # Query configuration
     max_rows: int = Field(default=100, description="Maximum rows to return")
@@ -132,46 +127,35 @@ async def execute_db_query(
                 payload=StatusPayload(message="Connecting to database and executing query...").model_dump_json(),
             )
 
-            # Connect to database
-            if config.database_type == "databricks":
-                if not all([
-                        config.databricks_server_hostname,
-                        config.databricks_http_path,
-                        config.databricks_access_token,
-                ]):
-                    yield ExecuteDBQueryOutput(
-                        success=False,
-                        failure_reason="Missing Databricks connection parameters",
-                        sql_query=sql_query,
-                        dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
-                    )
-                    return
-
-                connection = connect_to_database(
-                    database_type=config.database_type,
-                    host=config.databricks_server_hostname,
-                    server_hostname=config.databricks_server_hostname,
-                    http_path=config.databricks_http_path,
-                    access_token=config.databricks_access_token,
+            # Validate database type
+            if config.database_type.lower() != "databricks":
+                yield ExecuteDBQueryOutput(
+                    success=False,
+                    failure_reason=f"Only Databricks is currently supported. Got database_type: {config.database_type}",
+                    sql_query=sql_query,
+                    dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
                 )
-            else:
-                if not all([config.db_host, config.db_name]):
-                    yield ExecuteDBQueryOutput(
-                        success=False,
-                        failure_reason="Missing database connection parameters",
-                        sql_query=sql_query,
-                        dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
-                    )
-                    return
+                return
 
-                connection = connect_to_database(
-                    database_type=config.database_type,
-                    host=config.db_host,
-                    port=config.db_port,
-                    database=config.db_name,
-                    username=config.db_username,
-                    password=config.db_password,
+            if not all([
+                    config.db_host,
+                    config.http_path,
+                    config.db_password,
+            ]):
+                yield ExecuteDBQueryOutput(
+                    success=False,
+                    failure_reason="Missing required connection parameters (db_host, http_path, db_password)",
+                    sql_query=sql_query,
+                    dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
                 )
+                return
+
+            connection = connect_to_database(
+                database_type=config.database_type,
+                host=config.db_host,
+                password=config.db_password,
+                http_path=config.http_path,
+            )
 
             if connection is None:
                 yield ExecuteDBQueryOutput(

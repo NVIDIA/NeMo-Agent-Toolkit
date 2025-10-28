@@ -285,98 +285,134 @@ class MilvusVectorStore(Milvus_VectorStore):
         """Create SQL collection using async client."""
         from pymilvus import DataType
         from pymilvus import MilvusClient
+        from pymilvus import MilvusException
 
-        if not await self.async_milvus_client.has_collection(collection_name=name):
-            schema = MilvusClient.create_schema(
-                auto_id=False,
-                enable_dynamic_field=False,
-            )
-            schema.add_field(
-                field_name="id",
-                datatype=DataType.VARCHAR,
-                is_primary=True,
-                max_length=65535,
-            )
-            schema.add_field(field_name="text", datatype=DataType.VARCHAR, max_length=65535)
-            schema.add_field(field_name="sql", datatype=DataType.VARCHAR, max_length=65535)
-            schema.add_field(
-                field_name="vector",
-                datatype=DataType.FLOAT_VECTOR,
-                dim=self._embedding_dim,
-            )
+        # Check if collection already exists by attempting to load it
+        try:
+            await self.async_milvus_client.load_collection(collection_name=name)
+            logger.debug(f"Collection {name} already exists, skipping creation")
+            return
+        except MilvusException as e:
+            if "collection not found" not in str(e).lower():
+                raise  # Unexpected error, re-raise
+            # Collection doesn't exist, proceed to create it
+        
+        # Create the collection
+        schema = MilvusClient.create_schema(
+            auto_id=False,
+            enable_dynamic_field=False,
+        )
+        schema.add_field(
+            field_name="id",
+            datatype=DataType.VARCHAR,
+            is_primary=True,
+            max_length=65535,
+        )
+        schema.add_field(field_name="text", datatype=DataType.VARCHAR, max_length=65535)
+        schema.add_field(field_name="sql", datatype=DataType.VARCHAR, max_length=65535)
+        schema.add_field(
+            field_name="vector",
+            datatype=DataType.FLOAT_VECTOR,
+            dim=self._embedding_dim,
+        )
 
-            index_params = MilvusClient.prepare_index_params()
-            index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
-            await self.async_milvus_client.create_collection(
-                collection_name=name,
-                schema=schema,
-                index_params=index_params,
-                consistency_level="Strong",
-            )
+        index_params = MilvusClient.prepare_index_params()
+        index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
+        await self.async_milvus_client.create_collection(
+            collection_name=name,
+            schema=schema,
+            index_params=index_params,
+            consistency_level="Strong",
+        )
+        logger.info(f"Created collection: {name}")
 
     async def _create_ddl_collection(self, name: str):
         """Create DDL collection using async client."""
         from pymilvus import DataType
         from pymilvus import MilvusClient
+        from pymilvus import MilvusException
 
-        if not await self.async_milvus_client.has_collection(collection_name=name):
-            schema = MilvusClient.create_schema(
-                auto_id=False,
-                enable_dynamic_field=False,
-            )
-            schema.add_field(
-                field_name="id",
-                datatype=DataType.VARCHAR,
-                is_primary=True,
-                max_length=65535,
-            )
-            schema.add_field(field_name="ddl", datatype=DataType.VARCHAR, max_length=65535)
-            schema.add_field(
-                field_name="vector",
-                datatype=DataType.FLOAT_VECTOR,
-                dim=self._embedding_dim,
-            )
+        # Check if collection already exists by attempting to load it
+        try:
+            await self.async_milvus_client.load_collection(collection_name=name)
+            logger.debug(f"Collection {name} already exists, skipping creation")
+            return
+        except MilvusException as e:
+            if "collection not found" not in str(e).lower():
+                raise  # Unexpected error, re-raise
+            # Collection doesn't exist, proceed to create it
+        
+        # Create the collection
+        schema = MilvusClient.create_schema(
+            auto_id=False,
+            enable_dynamic_field=False,
+        )
+        schema.add_field(
+            field_name="id",
+            datatype=DataType.VARCHAR,
+            is_primary=True,
+            max_length=65535,
+        )
+        schema.add_field(field_name="ddl", datatype=DataType.VARCHAR, max_length=65535)
+        schema.add_field(
+            field_name="vector",
+            datatype=DataType.FLOAT_VECTOR,
+            dim=self._embedding_dim,
+        )
 
-            index_params = MilvusClient.prepare_index_params()
-            index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
-            await self.async_milvus_client.create_collection(
-                collection_name=name,
-                schema=schema,
-                index_params=index_params,
-                consistency_level="Strong",
-            )
+        index_params = MilvusClient.prepare_index_params()
+        index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
+        await self.async_milvus_client.create_collection(
+            collection_name=name,
+            schema=schema,
+            index_params=index_params,
+            consistency_level="Strong",
+        )
+        logger.info(f"Created collection: {name}")
 
     async def _create_doc_collection(self, name: str):
         """Create documentation collection using async client."""
         from pymilvus import DataType
         from pymilvus import MilvusClient
+        from pymilvus import MilvusException
 
-        if not await self.async_milvus_client.has_collection(collection_name=name):
-            schema = MilvusClient.create_schema(
-                auto_id=False,
-                enable_dynamic_field=False,
-            )
-            schema.add_field(
-                field_name="id",
-                datatype=DataType.VARCHAR,
-                is_primary=True,
-                max_length=65535,
-            )
-            schema.add_field(field_name="doc", datatype=DataType.VARCHAR, max_length=65535)
-            schema.add_field(
-                field_name="vector",
-                datatype=DataType.FLOAT_VECTOR,
-                dim=self._embedding_dim,
-            )
+        # Check if collection already exists by attempting to load it
+        try:
+            await self.async_milvus_client.load_collection(collection_name=name)
+            logger.debug(f"Collection {name} already exists, skipping creation")
+            return
+        except MilvusException as e:
+            if "collection not found" not in str(e).lower():
+                raise  # Unexpected error, re-raise
+            # Collection doesn't exist, proceed to create it
+        
+        # Create the collection
+        schema = MilvusClient.create_schema(
+            auto_id=False,
+            enable_dynamic_field=False,
+        )
+        schema.add_field(
+            field_name="id",
+            datatype=DataType.VARCHAR,
+            is_primary=True,
+            max_length=65535,
+        )
+        schema.add_field(field_name="doc", datatype=DataType.VARCHAR, max_length=65535)
+        schema.add_field(
+            field_name="vector",
+            datatype=DataType.FLOAT_VECTOR,
+            dim=self._embedding_dim,
+        )
 
-            index_params = MilvusClient.prepare_index_params()
-            index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
-            await self.async_milvus_client.create_collection(
-                collection_name=name,
-                schema=schema,
-                index_params=index_params,
-                consistency_level="Strong",
-            )
+        index_params = MilvusClient.prepare_index_params()
+        index_params.add_index(field_name="vector", index_type="AUTOINDEX", metric_type="L2")
+        await self.async_milvus_client.create_collection(
+            collection_name=name,
+            schema=schema,
+            index_params=index_params,
+            consistency_level="Strong",
+        )
+        logger.info(f"Created collection: {name}")
 
     async def add_question_sql(self, question: str, sql: str, **kwargs) -> str:
         """Add question-SQL pair to collection using async client."""
@@ -727,25 +763,10 @@ async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
                 ddl = await vn.run_sql(ddl_sql)
                 ddl = ddl.to_string()  # Convert DataFrame to string
                 ddls.append(ddl)
-
-        elif dialect == 'mysql':
-            for table in VANNA_ACTIVE_TABLES:
-                ddl_sql = f"SHOW CREATE TABLE {table};"
-                ddl = await vn.run_sql(ddl_sql)
-                ddl = ddl.to_string()  # Convert DataFrame to string
-                ddls.append(ddl)
-
-        elif dialect == 'sqlite':
-            for table in VANNA_ACTIVE_TABLES:
-                ddl_sql = f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table}';"
-                ddl = await vn.run_sql(ddl_sql)
-                ddl = ddl.to_string()  # Convert DataFrame to string
-                ddls.append(ddl)
-
         else:
-            error_msg = (f"Auto-extraction of DDL is not implemented for dialect: {vn.dialect}. "
-                         "Supported dialects: 'databricks', 'mysql', 'sqlite'. "
-                         "Please either set auto_extract_ddl=False or use a supported dialect.")
+            error_msg = (f"Auto-extraction of DDL is currently only supported for Databricks. "
+                         f"Current dialect: {vn.dialect}. "
+                         "Please either set auto_extract_ddl=False or use 'databricks' as the dialect.")
             logger.error(error_msg)
             raise NotImplementedError(error_msg)
     else:

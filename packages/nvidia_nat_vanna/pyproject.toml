@@ -30,7 +30,7 @@ dependencies = [
   "langchain-core~=0.3.0",
 ]
 requires-python = ">=3.11,<3.14"
-description = "Vanna-based Text-to-SQL integration for NeMo Agent Toolkit"
+description = "Vanna-based Text-to-SQL integration for NeMo Agent Toolkit with Databricks support"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "agents", "text2sql", "vanna", "sql", "database"]
 classifiers = [

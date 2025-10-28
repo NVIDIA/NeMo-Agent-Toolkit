@@ -161,8 +161,10 @@ def connect_to_database(
 ) -> Any:
     """Connect to a database based on type.
 
+    Currently only Databricks is supported.
+
     Args:
-        database_type: Type of database ('databricks', 'postgres', 'mysql', etc.)
+        database_type: Type of database (currently only 'databricks' is supported)
         host: Database host
         port: Database port
         database: Database name
@@ -172,6 +174,9 @@ def connect_to_database(
 
     Returns:
         Database connection object
+
+    Raises:
+        ValueError: If database_type is not 'databricks'
     """
     database_type = database_type.lower()
 
@@ -181,54 +186,8 @@ def connect_to_database(
             http_path=kwargs.get("http_path", ""),
             access_token=kwargs.get("access_token", password),
         )
-
-    elif database_type in {"postgres", "postgresql"}:
-        try:
-            import psycopg2
-
-            connection = psycopg2.connect(
-                host=host,
-                port=port or 5432,
-                database=database,
-                user=username,
-                password=password,
-            )
-            logger.info("Connected to PostgreSQL")
-            return connection
-        except ImportError:
-            logger.error("psycopg2 not installed")
-            raise
-
-    elif database_type == "mysql":
-        try:
-            import mysql.connector
-
-            connection = mysql.connector.connect(
-                host=host,
-                port=port or 3306,
-                database=database,
-                user=username,
-                password=password,
-            )
-            logger.info("Connected to MySQL")
-            return connection
-        except ImportError:
-            logger.error("mysql-connector-python not installed")
-            raise
-
-    elif database_type == "sqlite":
-        try:
-            import sqlite3
-
-            connection = sqlite3.connect(database or ":memory:")
-            logger.info("Connected to SQLite")
-            return connection
-        except Exception as e:
-            logger.error(f"Failed to connect to SQLite: {e}")
-            raise
-
     else:
-        msg = f"Unsupported database type: {database_type}"
+        msg = f"Only Databricks is currently supported. Got database_type: {database_type}"
         raise ValueError(msg)
 
 
@@ -253,30 +212,12 @@ def execute_query(
     """
     try:
         with connection.cursor() as cursor:
-            # Database-specific catalog and schema handling
-            if database_type:
-                db_type = database_type.lower()
-
-                if db_type == "databricks":
-                    if catalog:
-                        cursor.execute(f"USE CATALOG {catalog}")
-                    if schema:
-                        cursor.execute(f"USE SCHEMA {schema}")
-
-                elif db_type in ("postgres", "postgresql"):
-                    if schema:
-                        cursor.execute(f"SET search_path TO {schema}")
-                    # PostgreSQL doesn't have catalog concept
-
-                elif db_type == "mysql":
-                    if schema:
-                        cursor.execute(f"USE {schema}")
-                    # MySQL uses database, not catalog
-
-                elif db_type in ("mssql", "sqlserver"):
-                    # SQL Server uses database.schema notation
-                    # Schema is typically set in the query itself or connection string
-                    pass
+            # Set catalog and schema for Databricks
+            if database_type and database_type.lower() == "databricks":
+                if catalog:
+                    cursor.execute(f"USE CATALOG {catalog}")
+                if schema:
+                    cursor.execute(f"USE SCHEMA {schema}")
 
             logger.info(f"Executing query: {query}")
             cursor.execute(query)
@@ -304,7 +245,7 @@ async def async_execute_query(
     Args:
         connection: Database connection object
         query: SQL query to execute
-        catalog: Optional catalog to use
+        catalog: Optional catalog to use (Databricks)
         schema: Optional schema to use
         database_type: Type of database for proper catalog/schema handling
 
@@ -334,9 +275,11 @@ def setup_vanna_db_connection(
 ) -> Any:
     """Set up database connection for Vanna instance.
 
+    Currently only Databricks is supported.
+
     Args:
         vn: Vanna instance
-        database_type: Type of database
+        database_type: Type of database (currently only 'databricks' is supported)
         host: Database host
         port: Database port
         database: Database name
@@ -348,26 +291,23 @@ def setup_vanna_db_connection(
 
     Returns:
         Database connection object (must be closed by caller)
+
+    Raises:
+        ValueError: If database_type is not 'databricks'
     """
     import pandas as pd
 
+    # Validate database type
+    if database_type.lower() != "databricks":
+        msg = f"Only Databricks is currently supported. Got database_type: {database_type}"
+        raise ValueError(msg)
+
     # Connect to database
-    if database_type == "databricks":
-        connection = connect_to_databricks(
-            server_hostname=kwargs.get("server_hostname", host),
-            http_path=kwargs.get("http_path", ""),
-            access_token=kwargs.get("access_token", password),
-        )
-    else:
-        connection = connect_to_database(
-            database_type=database_type,
-            host=host,
-            port=port,
-            database=database,
-            username=username,
-            password=password,
-            **kwargs,
-        )
+    connection = connect_to_databricks(
+        server_hostname=kwargs.get("server_hostname", host),
+        http_path=kwargs.get("http_path", ""),
+        access_token=kwargs.get("access_token", password),
+    )
 
     # Define async run_sql function for Vanna
     async def run_sql(sql_query: str) -> pd.DataFrame:

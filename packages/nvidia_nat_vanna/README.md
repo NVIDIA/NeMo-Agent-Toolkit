@@ -1,11 +1,11 @@
 # nvidia-nat-vanna
 
-Production-ready text-to-SQL integration for NeMo Agent Toolkit (NAT) using the Vanna framework with support for multiple databases and vector-based few-shot learning.
+Production-ready text-to-SQL integration for NeMo Agent Toolkit (NAT) using the Vanna framework with Databricks support and vector-based few-shot learning.
 
 ## Features
 
 - **Text-to-SQL Generation**: Convert natural language questions to SQL queries using AI
-- **Multiple Database Support**: Databricks, PostgreSQL, MySQL, SQLite
+- **Databricks Support**: Optimized for Databricks SQL warehouses and compute clusters
 - **Vector Store Integration**: Milvus-based similarity search for few-shot learning
 - **Streaming Support**: Real-time progress updates during SQL generation
 - **Database Execution**: Optional query execution with result formatting
@@ -18,19 +18,13 @@ uv venv --python 3.12
 uv pip install -e packages/nvidia_nat_vanna
 ```
 
-### Optional Dependencies
+### Required Dependencies
 
-Install database-specific drivers as needed:
+The Databricks SQL connector is automatically installed with the package:
 
 ```bash
-# Databricks
-uv pip install databricks-sql-connector
-
-# PostgreSQL
-uv pip install psycopg2-binary
-
-# MySQL
-uv pip install mysql-connector-python
+# Already included in nvidia-nat-vanna dependencies
+# databricks-sql-connector~=4.0.5
 ```
 
 ## Quick Start
@@ -40,7 +34,7 @@ uv pip install mysql-connector-python
 - Python 3.11+
 - NVIDIA API Key from [NVIDIA API Catalog](https://build.nvidia.com)
 - Milvus vector database (local or cloud)
-- Database access credentials
+- Databricks workspace with SQL warehouse or compute cluster access
 
 ### 1. Start Milvus
 
@@ -54,10 +48,10 @@ Create a `.env` file:
 # NVIDIA API
 NVIDIA_API_KEY=nvapi-xxx
 
-# Databricks
-DATABRICKS_SERVER_HOSTNAME=your-workspace.cloud.databricks.com
-DATABRICKS_HTTP_PATH=/sql/1.0/warehouses/abc123
-DATABRICKS_ACCESS_TOKEN=dapi-xxx
+# Database (Databricks)
+DB_HOST=your-workspace.cloud.databricks.com
+DB_PASSWORD=dapi-xxx
+HTTP_PATH=/sql/1.0/warehouses/abc123
 
 # Milvus
 MILVUS_URI=http://localhost:19530
@@ -84,13 +78,17 @@ functions:
 
     # Database config
     database_type: databricks
-    databricks_server_hostname: "${DATABRICKS_SERVER_HOSTNAME}"
-    databricks_http_path: "${DATABRICKS_HTTP_PATH}"
-    databricks_access_token: "${DATABRICKS_ACCESS_TOKEN}"
+    db_host: "${DB_HOST}"
+    db_password: "${DB_PASSWORD}"
+    http_path: "${HTTP_PATH}"
+    db_catalog: main
+    db_schema: default
 
     # Settings
     execute_sql: false
     train_on_startup: true
+    n_results: 5
+    milvus_search_limit: 1000
 
     # Training data
     training_ddl:
@@ -106,9 +104,9 @@ functions:
   execute_db_query:
     _type: execute_db_query
     database_type: databricks
-    databricks_server_hostname: "${DATABRICKS_SERVER_HOSTNAME}"
-    databricks_http_path: "${DATABRICKS_HTTP_PATH}"
-    databricks_access_token: "${DATABRICKS_ACCESS_TOKEN}"
+    db_host: "${DB_HOST}"
+    db_password: "${DB_PASSWORD}"
+    http_path: "${HTTP_PATH}"
     db_catalog: main
     db_schema: default
     max_rows: 100
@@ -185,7 +183,12 @@ Results: 42 customers found
 |-----------|------|-------------|---------|
 | `llm_name` | str | LLM reference for SQL generation | Required |
 | `embedder_name` | str | Embedder reference for vector ops | Required |
-| `database_type` | str | Database type (databricks, postgres, mysql, sqlite) | "databricks" |
+| `database_type` | str | Database type (must be 'databricks') | "databricks" |
+| `db_host` | str | Database host (Databricks server hostname) | null |
+| `db_password` | str | Database password (Databricks access token) | null |
+| `http_path` | str | HTTP path for database connection | null |
+| `db_catalog` | str | Database catalog | null |
+| `db_schema` | str | Database schema | null |
 | `execute_sql` | bool | Execute SQL or just return query | false |
 | `allow_llm_to_see_data` | bool | Allow intermediate queries | false |
 | `train_on_startup` | bool | Train Vanna on startup | false |
@@ -218,39 +221,28 @@ The `train_on_startup` parameter controls whether Vanna initializes and loads tr
 **Databricks:**
 ```yaml
 database_type: databricks
-databricks_server_hostname: "your-workspace.cloud.databricks.com"
-databricks_http_path: "/sql/1.0/warehouses/abc123"
-databricks_access_token: "${DATABRICKS_TOKEN}"
+db_host: "your-workspace.cloud.databricks.com"
+db_password: "${DB_PASSWORD}"  # Databricks access token
+http_path: "/sql/1.0/warehouses/abc123"
 db_catalog: "main"
 db_schema: "default"
 ```
 
-**PostgreSQL:**
-```yaml
-database_type: postgres
-db_host: "localhost"
-db_port: 5432
-db_name: "mydb"
-db_username: "user"
-db_password: "${DB_PASSWORD}"
-db_schema: "public"
-```
-
-**MySQL:**
-```yaml
-database_type: mysql
-db_host: "localhost"
-db_port: 3306
-db_name: "mydb"
-db_username: "user"
-db_password: "${DB_PASSWORD}"
-```
+**Note**: Only Databricks is supported. The configuration requires:
+- `db_host`: Your Databricks workspace URL (server hostname)
+- `db_password`: Databricks personal access token or service principal token
+- `http_path`: Path to your SQL warehouse or compute cluster
+- `db_catalog`: Optional catalog name (defaults to "main")
+- `db_schema`: Optional schema name (defaults to "default")
 
 ### Execute DB Query Function
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
-| `database_type` | str | Database type | "databricks" |
+| `database_type` | str | Database type (must be 'databricks') | "databricks" |
+| `db_host` | str | Database host (Databricks server hostname) | Required |
+| `db_password` | str | Database password (Databricks access token) | Required |
+| `http_path` | str | HTTP path for connection (Databricks) | Required |
 | `max_rows` | int | Maximum rows to return | 100 |
 | `db_catalog` | str | Database catalog | null |
 | `db_schema` | str | Database schema | null |
