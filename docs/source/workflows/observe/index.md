@@ -133,6 +133,7 @@ Each exporter has its own detailed configuration guide with complete setup instr
 - **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
 - **Custom Exporters** - See [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
 - **[NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel)** - See [Observing with Data Flywheel](./observe-workflow-with-data-flywheel.md)
+- **[DBNL](https://distributional.com/)** - See [Observing with DBNL](./observe-workflow-with-dbnl.md)
 - **[Dynatrace](https://dynatrace.com/)** - See [Observing with Dynatrace](./observe-workflow-with-dynatrace.md)
 - **File Export** - Built-in file-based tracing for local development and debugging
 - **[Galileo](https://galileo.ai/)** - See [Observing with Galileo](./observe-workflow-with-galileo.md)
@@ -151,6 +152,7 @@ For complete configuration examples and setup instructions, refer to the individ
 |----------|-----------|
 | Catalyst | Logging, Tracing |
 | Data Flywheel | Logging, Tracing |
+| DBNL | Logging, Tracing |
 | Dynatrace | Logging, Tracing |
 | Galileo | Logging, Tracing |
 | Langfuse | Logging, Tracing |
@@ -202,6 +204,7 @@ For complete information about developing and integrating custom telemetry expor
 
 Observing with Catalyst <./observe-workflow-with-catalyst.md>
 Observing with Data Flywheel <./observe-workflow-with-data-flywheel.md>
+Observing with DBNL <./observe-workflow-with-dbnl.md>
 Observing with Dynatrace <./observe-workflow-with-dynatrace.md>
 Observing with Galileo <./observe-workflow-with-galileo.md>
 Observing with OTEL Collector <./observe-workflow-with-otel-collector.md>
