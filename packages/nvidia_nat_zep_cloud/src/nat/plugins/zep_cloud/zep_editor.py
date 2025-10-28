@@ -18,6 +18,8 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from zep_cloud import ApiError
+from zep_cloud import NotFoundError
 from zep_cloud.client import AsyncZep
 from zep_cloud.types import Message
 
@@ -34,7 +36,7 @@ class ZepEditor(MemoryEditor):
     Uses thread-based memory management with automatic user creation.
     """
 
-    def __init__(self, zep_client: AsyncZep):
+    def __init__(self, zep_client: AsyncZep) -> None:
         """
         Initialize class with Zep v3 AsyncZep Client.
 
@@ -50,30 +52,37 @@ class ZepEditor(MemoryEditor):
         Args:
             user_id (str): The user ID to check/create.
         """
-        logger.info("Checking if Zep user exists")
+        logger.debug("Checking if Zep user exists")
         try:
-            # Try to get the user
             await self._client.user.get(user_id=user_id)
-            logger.info("Zep user already exists")
-        except Exception:
+            logger.debug("Zep user already exists")
+        except NotFoundError:
             # User doesn't exist, create with basic info
             logger.info("Zep user not found, creating...")
             try:
-                # Set realistic defaults for default_user
+                # Set defaults only for default_user, otherwise use just user_id
                 if user_id == "default_user":
                     email = "jane.doe@example.com"
                     first_name = "Jane"
                     last_name = "Doe"
+                    await self._client.user.add(
+                        user_id=user_id, email=email, first_name=first_name, last_name=last_name
+                    )
                 else:
-                    email = f"{user_id}@example.com"
-                    first_name = "User"
-                    last_name = user_id
+                    # For non-default users, just use user_id (email/names not required)
+                    await self._client.user.add(user_id=user_id)
 
-                await self._client.user.add(user_id=user_id, email=email, first_name=first_name, last_name=last_name)
-                logger.info("Successfully created Zep user")
-            except Exception:
-                # User might have been created by another request, ignore
-                logger.warning("Error creating Zep user, assuming it exists")
+                logger.info("Created Zep user")
+            except ApiError as e:
+                # Check if user was created by another request (409 Conflict)
+                if hasattr(e, 'status_code') and e.status_code == 409:
+                    logger.info("Zep user already exists (409), continuing")
+                else:
+                    logger.error("Failed creating Zep user: %s", str(e))
+                    raise
+        except ApiError as e:
+            logger.error("Failed fetching Zep user: %s", str(e))
+            raise
 
     async def add_items(self, items: list[MemoryItem], **kwargs) -> None:
         """
@@ -92,11 +101,13 @@ class ZepEditor(MemoryEditor):
         ignore_roles = kwargs.get("ignore_roles", None)
 
         coroutines = []
+        created_threads: set[str] = set()
+        ensured_users: set[str] = set()
 
         # Iteratively insert memories into Zep using threads
         for memory_item in items:
             conversation = memory_item.conversation
-            user_id = memory_item.user_id
+            user_id = memory_item.user_id or "default_user"  # Validate user_id
 
             # Get thread_id from NAT context (unique per UI conversation)
             thread_id = Context.get().conversation_id
@@ -107,8 +118,10 @@ class ZepEditor(MemoryEditor):
 
             messages = []
 
-            # Ensure user exists before creating thread
-            await self._ensure_user_exists(user_id)
+            # Ensure user exists before creating thread (only once per user)
+            if user_id not in ensured_users:
+                await self._ensure_user_exists(user_id)
+                ensured_users.add(user_id)
 
             # Skip if no conversation data
             if not conversation:
@@ -119,24 +132,28 @@ class ZepEditor(MemoryEditor):
                 message = Message(content=msg["content"], role=msg["role"])
                 messages.append(message)
 
-            # Ensure thread exists - try to create it (more reliable than checking first)
-            logger.info("Ensuring Zep thread exists")
-            try:
-                # Always try to create the thread
-                await self._client.thread.create(thread_id=thread_id, user_id=user_id)
-                logger.info("Successfully created new Zep thread")
-            except Exception as create_error:
-                # Thread likely already exists, which is fine
-                error_msg = str(create_error).lower()
-                if "already exists" in error_msg or "409" in error_msg or "conflict" in error_msg:
-                    logger.info("Zep thread already exists (expected), continuing")
-                else:
-                    # Unexpected error, log it but continue anyway
-                    logger.warning(
-                        f"Unexpected error creating thread: {type(create_error).__name__}, attempting to continue")
+            # Ensure thread exists once per thread_id
+            thread_ready = True
+            if thread_id not in created_threads:
+                logger.info("Ensuring Zep thread exists (thread_id=%s)", thread_id)
+                try:
+                    await self._client.thread.create(thread_id=thread_id, user_id=user_id)
+                    logger.info("Created Zep thread (thread_id=%s)", thread_id)
+                    created_threads.add(thread_id)
+                except ApiError as create_error:
+                    if hasattr(create_error, 'status_code') and create_error.status_code == 409:
+                        logger.info("Zep thread already exists (thread_id=%s)", thread_id)
+                        created_threads.add(thread_id)
+                    else:
+                        logger.error("Thread create failed (thread_id=%s): %s", thread_id, str(create_error))
+                        thread_ready = False
+
+            # Skip this item if thread creation failed unexpectedly
+            if not thread_ready:
+                continue
 
             # Add messages to thread using Zep v3 API
-            logger.info(f"Queueing add_messages for thread with {len(messages)} messages")
+            logger.info("Queueing add_messages (thread_id=%s, count=%d)", thread_id, len(messages))
 
             # Build add_messages parameters
             add_messages_params = {"thread_id": thread_id, "messages": messages}
@@ -147,7 +164,7 @@ class ZepEditor(MemoryEditor):
 
         await asyncio.gather(*coroutines)
 
-    async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:
+    async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:  # noqa: ARG002
         """
         Retrieve memory from Zep v3 using the high-level get_user_context API.
         Uses conversation_id from NAT context as thread_id for multi-thread support.
@@ -166,7 +183,10 @@ class ZepEditor(MemoryEditor):
         Returns:
             list[MemoryItem]: A single MemoryItem containing the formatted context from Zep.
         """
-        user_id = kwargs.pop("user_id")  # Ensure user ID is in keyword arguments
+        # Validate required kwargs
+        if "user_id" not in kwargs or not kwargs["user_id"]:
+            raise ValueError("user_id is required.")
+        user_id = kwargs.pop("user_id")
         mode = kwargs.pop("mode", "basic")  # Get mode, default to "basic" for fast retrieval
 
         # Get thread_id from NAT context
@@ -194,22 +214,49 @@ class ZepEditor(MemoryEditor):
             else:
                 return []
 
-        except Exception as e:
-            # If thread doesn't exist or no context available, return empty list
-            if "404" in str(e) or "not found" in str(e).lower():
-                return []
+        except NotFoundError:
+            # Thread doesn't exist or no context available
+            return []
+        except ApiError as e:
+            logger.error("get_user_context failed (thread_id=%s): %s", thread_id, str(e))
             raise
 
-    async def remove_items(self, **kwargs):
+    async def remove_items(self, **kwargs) -> None:
         """
-        Remove items for a specific thread.
+        Remove memory items based on provided criteria.
+
+        Supports two deletion modes:
+        1. Delete a specific thread by thread_id
+        2. Delete all threads for a user by user_id
 
         Args:
             kwargs: Additional parameters.
-                - thread_id (str): Thread ID to delete specific thread.
+                - thread_id (str, optional): Thread ID to delete a specific thread.
+                - user_id (str, optional): User ID to delete all threads for that user.
         """
         if "thread_id" in kwargs:
+            # Delete specific thread
             thread_id = kwargs.pop("thread_id")
+            logger.info("Deleting thread (thread_id=%s)", thread_id)
             await self._client.thread.delete(thread_id=thread_id)
+        elif "user_id" in kwargs:
+            # Delete all threads for a user
+            user_id = kwargs.pop("user_id")
+            logger.info("Deleting all threads for user (user_id=%s)", user_id)
+
+            # Get all threads for this user
+            threads = await self._client.user.get_threads(user_id=user_id)
+            logger.info("Found %d threads for user (user_id=%s)", len(threads), user_id)
+
+            # Delete each thread
+            delete_coroutines = []
+            for thread in threads:
+                if thread.thread_id:
+                    logger.debug("Queueing deletion of thread (thread_id=%s)", thread.thread_id)
+                    delete_coroutines.append(self._client.thread.delete(thread_id=thread.thread_id))
+
+            if delete_coroutines:
+                await asyncio.gather(*delete_coroutines)
+                logger.info("Deleted %d threads for user (user_id=%s)", len(delete_coroutines), user_id)
         else:
-            raise ValueError("thread_id not provided as part of the tool call.")
+            raise ValueError("Either thread_id or user_id is required.")
