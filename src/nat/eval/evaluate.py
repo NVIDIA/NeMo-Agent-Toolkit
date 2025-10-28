@@ -73,6 +73,18 @@ class EvaluationRun:
             self.eval_trace_context = EvalTraceContext()
 
         self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration(self.eval_trace_context)
+
+        try:
+            from nat.eval.utils.eval_trace_ctx import EvalTraceContext
+            from nat.eval.utils.phoenix_eval import PhoenixEvaluationIntegration
+            # Phoenix doesn't need its specific trace context because phoenix annotates spans; no context API is used
+            self.phoenix_eval = PhoenixEvaluationIntegration(EvalTraceContext())
+        except Exception:
+            self.phoenix_eval = None
+
+        self._use_weave_eval: bool = False
+        self._use_phoenix_eval: bool = False
+
         # Metadata
         self.eval_input: EvalInput | None = None
         self.workflow_interrupted: bool = False
@@ -215,8 +227,12 @@ class EvaluationRun:
                 item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
                 usage_stats_item = self._compute_usage_stats(item)
 
-                self.weave_eval.log_prediction(item, output)
-                await self.weave_eval.log_usage_stats(item, usage_stats_item)
+                if self._use_weave_eval:
+                    self.weave_eval.log_prediction(item, output)
+                    await self.weave_eval.log_usage_stats(item, usage_stats_item)
+                if self._use_phoenix_eval and self.phoenix_eval:
+                    self.phoenix_eval.log_prediction(item, output)
+                    await self.phoenix_eval.log_usage_stats(item, usage_stats_item)
 
         async def wrapped_run(item: EvalInputItem) -> None:
             await run_one(item)
@@ -240,8 +256,12 @@ class EvaluationRun:
         await handler.run_workflow_remote(self.eval_input)
         for item in self.eval_input.eval_input_items:
             usage_stats_item = self._compute_usage_stats(item)
-            self.weave_eval.log_prediction(item, item.output_obj)
-            await self.weave_eval.log_usage_stats(item, usage_stats_item)
+            if self._use_weave_eval:
+                self.weave_eval.log_prediction(item, item.output_obj)
+                await self.weave_eval.log_usage_stats(item, usage_stats_item)
+            if self._use_phoenix_eval and self.phoenix_eval:
+                self.phoenix_eval.log_prediction(item, item.output_obj)
+                await self.phoenix_eval.log_usage_stats(item, usage_stats_item)
 
     async def profile_workflow(self) -> ProfilerResults:
         """
@@ -359,7 +379,11 @@ class EvaluationRun:
                    "`eval` with the --skip_completed_entries flag.")
             logger.warning(msg)
 
-        self.weave_eval.log_summary(self.usage_stats, self.evaluation_results, profiler_results)
+        if self._use_weave_eval:
+            self.weave_eval.log_summary(self.usage_stats, self.evaluation_results, profiler_results)
+        # Export to Phoenix if selected
+        if self._use_phoenix_eval and self.phoenix_eval:
+            self.phoenix_eval.log_summary(self.usage_stats, self.evaluation_results, profiler_results)
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
@@ -367,7 +391,10 @@ class EvaluationRun:
             eval_output = await evaluator.evaluate_fn(self.eval_input)
             self.evaluation_results.append((evaluator_name, eval_output))
 
-            await self.weave_eval.alog_score(eval_output, evaluator_name)
+            if self._use_weave_eval:
+                await self.weave_eval.alog_score(eval_output, evaluator_name)
+            if self._use_phoenix_eval and self.phoenix_eval:
+                await self.phoenix_eval.alog_score(eval_output, evaluator_name)
         except Exception as e:
             logger.exception("An error occurred while running evaluator %s: %s", evaluator_name, e)
 
@@ -385,8 +412,11 @@ class EvaluationRun:
             logger.error("An error occurred while running evaluators: %s", e)
             raise
         finally:
-            # Finish prediction loggers in Weave
-            await self.weave_eval.afinish_loggers()
+            # Finish prediction loggers where enabled
+            if self._use_weave_eval:
+                await self.weave_eval.afinish_loggers()
+            if self._use_phoenix_eval and self.phoenix_eval:
+                await self.phoenix_eval.afinish_loggers()
 
     def apply_overrides(self):
         from nat.cli.cli_utils.config_override import load_and_override_config
@@ -513,8 +543,16 @@ class EvaluationRun:
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
-            # Initialize Weave integration
-            self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config)
+            # Decide which evaluation integrations to use based on tracing config
+            tracing_cfg = getattr(getattr(config.general, 'telemetry', None), 'tracing', None)
+            self._use_weave_eval = isinstance(tracing_cfg, dict) and ('weave' in tracing_cfg)
+            self._use_phoenix_eval = isinstance(tracing_cfg, dict) and ('phoenix' in tracing_cfg)
+
+            # Initialize selected integrations
+            if self._use_weave_eval:
+                self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config)
+            if self._use_phoenix_eval and self.phoenix_eval:
+                self.phoenix_eval.initialize_logger(workflow_alias, self.eval_input, config)
 
             with self.eval_trace_context.evaluation_context():
                 # Run workflow
