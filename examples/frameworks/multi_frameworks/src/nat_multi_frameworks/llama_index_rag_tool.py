@@ -22,6 +22,7 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
@@ -36,7 +37,7 @@ class LlamaIndexRAGConfig(FunctionBaseConfig, name="llama_index_rag"):
     llm_name: LLMRef
     embedding_name: EmbedderRef
     data_dir: str
-    api_key: str | None = None
+    api_key: OptionalSecretStr = None
     model_name: str
 
 

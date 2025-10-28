@@ -16,12 +16,13 @@
 from pydantic import Field
 
 from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.common import SerializableSecretStr
 
 
 class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth_code_flow"):
 
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
-    client_secret: str = Field(description="The secret associated with the client_id.")
+    client_secret: SerializableSecretStr = Field(description="The secret associated with the client_id.")
     authorization_url: str = Field(description="The authorization URL for OAuth 2.0 authentication.")
     token_url: str = Field(description="The token URL for OAuth 2.0 authentication.")
     token_endpoint_auth_method: str | None = Field(

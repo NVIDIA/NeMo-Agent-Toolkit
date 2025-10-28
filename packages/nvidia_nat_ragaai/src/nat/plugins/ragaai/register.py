@@ -19,6 +19,7 @@ from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.common import SerializableSecretStr
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
 from nat.observability.mixin.collector_config_mixin import CollectorConfigMixin
@@ -29,8 +30,8 @@ logger = logging.getLogger(__name__)
 class CatalystTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="catalyst"):
     """A telemetry exporter to transmit traces to RagaAI catalyst."""
     endpoint: str = Field(description="The RagaAI Catalyst endpoint", default="https://catalyst.raga.ai/api")
-    access_key: str = Field(description="The RagaAI Catalyst API access key", default="")
-    secret_key: str = Field(description="The RagaAI Catalyst API secret key", default="")
+    access_key: SerializableSecretStr = Field(description="The RagaAI Catalyst API access key", default="")
+    secret_key: SerializableSecretStr = Field(description="The RagaAI Catalyst API secret key", default="")
     dataset: str | None = Field(description="The RagaAI Catalyst dataset name", default=None)
     tracer_type: str = Field(description="The RagaAI Catalyst tracer type", default="agentic/nemo-framework")
 
