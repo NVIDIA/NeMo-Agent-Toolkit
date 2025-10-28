@@ -137,6 +137,7 @@ workflow:
 
 ```bash
 # Using NAT CLI
+# If train_on_startup is set to true, training takes approximately 7 minutes depending on endpoints and network conditions.
 uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "Retrieve the total number of customers."
 
 # Or programmatically
@@ -435,6 +436,12 @@ Error: Failed to connect to database
 **No training data found:**
 - Vanna needs examples to work. Add at least 3-5 training examples in your config
 
+### Known Limitations
+
+**LLM Limitations:**
+- The `llama-3.1-70b-instruct` model does not always strictly follow instructions to output in the expected JSON format, which can cause parsing issues. A parsing fallback mechanism has been implemented to handle these cases.
+- To ensure optimal performance and consistent JSON output formatting, we recommend using reasoning models in the configuration. These models demonstrate better instruction-following capabilities and reliably produce output in the expected format.
+
 ## Package Structure
 
 ```
@@ -465,5 +472,5 @@ This package is part of the NVIDIA NeMo Agent Toolkit and follows the same licen
 
 For questions and support:
 - GitHub Issues: https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues
-- Documentation: https://nvidia.github.io/NeMo-Agent-Toolkit/
+- Documentation: https://docs.nvidia.com/nemo/agent-toolkit/latest/
 - Discord: Join the NAT community Discord
