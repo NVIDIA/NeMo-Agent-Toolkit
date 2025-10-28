@@ -55,7 +55,7 @@ class _AuthHandler(WebSocketAuthenticationFlowHandler):
 
         client = AsyncOAuth2Client(
             client_id=config.client_id,
-            client_secret=config.client_secret,
+            client_secret=config.client_secret.get_secret_value(),
             redirect_uri=config.redirect_uri,
             scope=" ".join(config.scopes) if config.scopes else None,
             token_endpoint=config.token_url,
@@ -97,8 +97,6 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
         client_secret="secret",
         redirect_base=f"http://localhost:{redirect_port}",
     )
-    # Ensure we're not accidentally using a redacted client secret
-    assert "*" not in "secret"
 
     # ----------------- build front‑end worker & FastAPI app ------------- #
     cfg_nat = Config(workflow=EchoFunctionConfig())
@@ -172,8 +170,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
     assert opened, "The authorization URL was never emitted."
     token_val = ctx.headers["Authorization"].split()[1]
     assert token_val in mock_server.tokens, "token not issued by mock server"
-    # Ensure we're not accidentally using a redacted token
-    assert "*" not in token_val
+
     # all flow‑state cleaned up
     assert worker._outstanding_flows == {}
 

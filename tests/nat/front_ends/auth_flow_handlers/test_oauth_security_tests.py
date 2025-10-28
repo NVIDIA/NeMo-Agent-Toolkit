@@ -521,7 +521,7 @@ async def test_authorization_code_security_handling(mock_server,
         # Test code reuse - use a code twice
         oauth_client = AsyncOAuth2Client(
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.client_secret,
+            client_secret=oauth_config.client_secret.get_secret_value(),
             redirect_uri=oauth_config.redirect_uri,
             scope=" ".join(oauth_config.scopes),
             token_endpoint=oauth_config.token_url,
