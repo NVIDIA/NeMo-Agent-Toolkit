@@ -72,11 +72,77 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
             # Start the MCP server with configurable transport
             # streamable-http is the default, but users can choose sse if preferred
             try:
-                if self.front_end_config.transport == "sse":
-                    logger.info("Starting MCP server with SSE endpoint at /sse")
-                    await mcp.run_sse_async()
-                else:  # streamable-http
-                    logger.info("Starting MCP server with streamable-http endpoint at /mcp/")
-                    await mcp.run_streamable_http_async()
+                # If base_path is configured, mount server at sub-path using FastAPI wrapper
+                if self.front_end_config.base_path:
+                    if self.front_end_config.transport == "sse":
+                        logger.warning(
+                            "base_path is configured but SSE transport does not support mounting at sub-paths. "
+                            "Use streamable-http transport for base_path support.")
+                        logger.info("Starting MCP server with SSE endpoint at /sse")
+                        await mcp.run_sse_async()
+                    else:
+                        full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}{self.front_end_config.base_path}/mcp"
+                        logger.info(
+                            "Mounting MCP server at %s/mcp on %s:%s",
+                            self.front_end_config.base_path,
+                            self.front_end_config.host,
+                            self.front_end_config.port,
+                        )
+                        logger.info("MCP server URL: %s", full_url)
+                        await self._run_with_mount(mcp)
+                else:
+                    # Standard behavior - run at root path
+                    if self.front_end_config.transport == "sse":
+                        logger.info("Starting MCP server with SSE endpoint at /sse")
+                        await mcp.run_sse_async()
+                    else:  # streamable-http
+                        logger.info("Starting MCP server with streamable-http endpoint at /mcp/")
+                        await mcp.run_streamable_http_async()
             except KeyboardInterrupt:
                 logger.info("MCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
+
+    async def _run_with_mount(self, mcp) -> None:
+        """Run MCP server mounted at configured base_path using FastAPI wrapper.
+
+        Args:
+            mcp: The FastMCP server instance to mount
+        """
+        import contextlib
+
+        import uvicorn
+        from fastapi import FastAPI
+
+        @contextlib.asynccontextmanager
+        async def lifespan(_app: FastAPI):
+            """Manage MCP server session lifecycle."""
+            logger.info("Starting MCP server session manager...")
+            async with contextlib.AsyncExitStack() as stack:
+                try:
+                    # Initialize the MCP server's session manager
+                    await stack.enter_async_context(mcp.session_manager.run())
+                    logger.info("MCP server session manager started successfully")
+                    yield
+                except Exception as e:
+                    logger.error("Failed to start MCP server session manager: %s", e)
+                    raise
+            logger.info("MCP server session manager stopped")
+
+        # Create a FastAPI wrapper app with lifespan management
+        app = FastAPI(
+            title=self.front_end_config.name,
+            description="MCP server mounted at custom base path",
+            lifespan=lifespan,
+        )
+
+        # Mount the MCP server's ASGI app at the configured base_path
+        app.mount(self.front_end_config.base_path, mcp.streamable_http_app())
+
+        # Configure and start uvicorn server
+        config = uvicorn.Config(
+            app,
+            host=self.front_end_config.host,
+            port=self.front_end_config.port,
+            log_level=self.front_end_config.log_level.lower(),
+        )
+        server = uvicorn.Server(config)
+        await server.serve()

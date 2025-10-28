@@ -47,6 +47,10 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
         description="Transport type for the MCP server (default: streamable-http, backwards compatible with sse)")
     runner_class: str | None = Field(
         default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")
+    base_path: str | None = Field(default=None,
+                                  description="Base path to mount the MCP server at (e.g., '/api/v1'). "
+                                  "If specified, the server will be accessible at http://host:port{base_path}/mcp. "
+                                  "If None, server runs at root path /mcp.")
 
     server_auth: OAuth2ResourceServerConfig | None = Field(
         default=None, description=("OAuth 2.0 Resource Server configuration for token verification."))
