@@ -29,7 +29,6 @@ class WeatherToolConfig(FunctionBaseConfig, name="weather_update"):
 
 @register_function(config_type=WeatherToolConfig, framework_wrappers=[LLMFrameworkEnum.ADK])
 async def weather_update(_config: WeatherToolConfig, _builder: Builder) -> AsyncIterator[FunctionInfo]:
-
     async def _weather_update(city: str) -> str:
         """
         Get the current weather for a specified city.

@@ -74,10 +74,9 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
     # Initialize the Runner with the agent and services
     session_service = InMemorySessionService()
     artifact_service = InMemoryArtifactService()
-    runner = Runner(app_name=config.name,
-                    agent=agent,
-                    artifact_service=artifact_service,
-                    session_service=session_service)
+    runner = Runner(
+        app_name=config.name, agent=agent, artifact_service=artifact_service, session_service=session_service
+    )
 
     sessions_cache: dict[str, tuple] = {}
 
