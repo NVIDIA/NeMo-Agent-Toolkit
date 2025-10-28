@@ -59,6 +59,23 @@ nat mcp serve --config_file examples/getting_started/simple_calculator/configs/c
   --tool_names calculator
 ```
 
+### Mounting at Custom Paths
+By default, the MCP server is available at the root path (such as `http://localhost:9901/mcp`). You can mount the server at a custom base path by setting `base_path` in your configuration file:
+
+```yaml
+general:
+  front_end:
+    _type: mcp
+    name: "my_server"
+    base_path: "/api/v1"
+```
+
+With this configuration, the MCP server will be accessible at `http://localhost:9901/api/v1/mcp`. This is useful when deploying MCP servers that need to be mounted at specific paths for reverse proxy configurations or service mesh architectures.
+
+:::{note}
+The `base_path` feature requires the `streamable-http` transport. SSE transport does not support custom base paths.
+:::
+
 ## Displaying MCP Tools published by an MCP server
 
 To list the tools published by the MCP server you can use the `nat mcp client tool list` command. This command acts as an MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
