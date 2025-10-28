@@ -17,6 +17,7 @@ import logging
 from typing import Literal
 
 from pydantic import Field
+from pydantic import field_validator
 from pydantic import model_validator
 
 from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
@@ -54,6 +55,17 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
 
     server_auth: OAuth2ResourceServerConfig | None = Field(
         default=None, description=("OAuth 2.0 Resource Server configuration for token verification."))
+
+    @field_validator('base_path')
+    @classmethod
+    def validate_base_path(cls, v: str | None) -> str | None:
+        """Validate that base_path starts with '/' and doesn't end with '/'."""
+        if v is not None:
+            if not v.startswith('/'):
+                raise ValueError("base_path must start with '/'")
+            if v.endswith('/'):
+                raise ValueError("base_path must not end with '/'")
+        return v
 
     # Memory profiling configuration
     enable_memory_profiling: bool = Field(default=False,
