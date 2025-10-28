@@ -193,7 +193,7 @@ def get_secret_value(v: SecretStr | None) -> str | None:
 
 
 # A SecretStr that serializes to plain string
-APIKey = typing.Annotated[SecretStr, PlainSerializer(get_secret_value)]
+SerializableSecretStr = typing.Annotated[SecretStr, PlainSerializer(get_secret_value)]
 
 # A SecretStr or None that serializes to plain string
 OptionalSecretStr = typing.Annotated[SecretStr | None, PlainSerializer(get_secret_value)]
