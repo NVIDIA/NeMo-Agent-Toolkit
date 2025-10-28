@@ -16,38 +16,36 @@
 
 general:
   telemetry:
+    logging:
+      console:
+        _type: console
+        level: WARN
+      file:
+        _type: file
+        path: ./.tmp/nat_simple_calculator.log
+        level: DEBUG
     tracing:
-      weave:
-        _type: weave
-        project: "nat-pii"
-        redact_pii: true
-        redact_pii_fields:
-          - EMAIL_ADDRESS
-          # Uncomment other entity types as needed
-          # - PHONE_NUMBER
-          # - CREDIT_CARD
-          # - US_SSN
-          # - PERSON
-          # Note: Enabling additional entity types may impact tracing latency performance
-        redact_keys:
-          - custom_secret
-          - api_key
-          - auth_token
+      dbnl:
+        _type: dbnl
+
+function_groups:
+  calculator:
+    _type: calculator
 
 functions:
-  pii_redaction_test:
-    _type: pii_redaction_test
+  current_datetime:
+    _type: current_datetime
 
 llms:
   nim_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
+    max_tokens: 1024
 
 workflow:
   _type: react_agent
-  tool_names: [pii_redaction_test]
+  tool_names: [calculator, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_agent_response_parsing_errors: true
   parse_agent_response_max_retries: 3

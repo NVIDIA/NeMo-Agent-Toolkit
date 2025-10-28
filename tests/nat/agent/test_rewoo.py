@@ -489,7 +489,7 @@ def test_json_output_parsing_valid_format():
     valid_json_output = json.dumps([{
         "plan": "Calculate the result of 2023 minus 25.",
         "evidence": {
-            "placeholder": "#E1", "tool": "calculator_subtract", "tool_input": [2023, 25]
+            "placeholder": "#E1", "tool": "calculator.subtract", "tool_input": [2023, 25]
         }
     },
                                     {
@@ -511,7 +511,7 @@ def test_json_output_parsing_valid_format():
     assert isinstance(first_step, ReWOOPlanStep)
     assert first_step.plan == "Calculate the result of 2023 minus 25."
     assert first_step.evidence.placeholder == "#E1"
-    assert first_step.evidence.tool == "calculator_subtract"
+    assert first_step.evidence.tool == "calculator.subtract"
     assert first_step.evidence.tool_input == [2023, 25]
 
 

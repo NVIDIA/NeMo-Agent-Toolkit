@@ -130,7 +130,7 @@ eval:
       base_metrics: true
 
   evaluators:
-    rag_accuracy:
+    accuracy:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_rag_eval_llm

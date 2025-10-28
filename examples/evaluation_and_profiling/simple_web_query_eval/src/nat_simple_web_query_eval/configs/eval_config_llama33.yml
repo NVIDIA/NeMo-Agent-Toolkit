@@ -59,6 +59,7 @@ workflow:
 
 eval:
   general:
+    max_concurrency: 1
     workflow_alias: nat-simple-llama-33-70b
     output:
       dir: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/llama-33-70b
@@ -70,15 +71,15 @@ eval:
       base_metrics: true
 
   evaluators:
-    rag_accuracy:
+    accuracy:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_rag_eval_llm
-    rag_groundedness:
+    groundedness:
       _type: ragas
       metric: ResponseGroundedness
       llm_name: nim_rag_eval_llm
-    rag_relevance:
+    relevance:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm

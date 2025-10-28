@@ -54,6 +54,9 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
         self._redirect_app: FastAPI | None = None
         self._server_lock = asyncio.Lock()
         self._oauth_client: AsyncOAuth2Client | None = None
+        self._redirect_host: str = "localhost"  # Default host, will be overridden from config
+        self._redirect_port: int = 8000  # Default port, will be overridden from config
+        self._server_task: asyncio.Task | None = None
 
     async def authenticate(self, config: AuthProviderBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
         """
@@ -87,6 +90,34 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
 
     async def _handle_oauth2_auth_code_flow(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
         logger.info("Starting MCP OAuth2 authorization code flow")
+
+        # Extract and validate host and port from redirect_uri for callback server
+        from urllib.parse import urlparse
+        parsed_uri = urlparse(str(cfg.redirect_uri))
+
+        # Validate scheme/host and choose a safe non-privileged bind port
+        scheme = (parsed_uri.scheme or "http").lower()
+        if scheme not in ("http", "https"):
+            raise ValueError(f"redirect_uri must use http or https scheme, got '{scheme}'")
+
+        host = parsed_uri.hostname
+        if not host:
+            raise ValueError("redirect_uri must include a hostname, for example http://localhost:8000/auth/redirect")
+
+        # Never auto-bind to 80/443; default to 8000 when port is not specified
+        port = parsed_uri.port or 8000
+        if not (1 <= port <= 65535):
+            raise ValueError(f"Invalid redirect port: {port}. Expected 1-65535.")
+
+        if scheme == "https" and parsed_uri.port is None:
+            logger.warning(
+                "redirect_uri uses https without an explicit port; binding to %d (plain HTTP). "
+                "Terminate TLS at a reverse proxy and forward to this port.",
+                port)
+
+        self._redirect_host = host
+        self._redirect_port = port
+        logger.info("MCP redirect server will use %s:%d", self._redirect_host, self._redirect_port)
 
         state = secrets.token_urlsafe(16)
         flow_state = _FlowState()
@@ -142,3 +173,36 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
                 "raw_token": token,
             },
         )
+
+    async def _start_redirect_server(self) -> None:
+        """
+        Override to use the host and port from redirect_uri config instead of hardcoded localhost:8000.
+
+        This allows MCP authentication to work with custom redirect hosts and ports
+        specified in the configuration.
+        """
+        # If the server is already running, do nothing
+        if self._server_controller:
+            return
+        try:
+            if not self._redirect_app:
+                raise RuntimeError("Redirect app not built.")
+
+            self._server_controller = _FastApiFrontEndController(self._redirect_app)
+
+            self._server_task = asyncio.create_task(
+                self._server_controller.start_server(host=self._redirect_host, port=self._redirect_port))
+            logger.debug("MCP redirect server starting on %s:%d", self._redirect_host, self._redirect_port)
+
+            # Wait for the server to bind (max ~10s)
+            start = asyncio.get_running_loop().time()
+            while True:
+                server = getattr(self._server_controller, "_server", None)
+                if server and getattr(server, "started", False):
+                    break
+                if asyncio.get_running_loop().time() - start > 10:
+                    raise RuntimeError("Redirect server did not report ready within 10s")
+                await asyncio.sleep(0.1)
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to start MCP redirect server on {self._redirect_host}:{self._redirect_port}: {exc}") from exc

@@ -21,17 +21,13 @@ general:
         _type: langfuse
         endpoint: http://localhost:3000/api/public/otel/v1/traces
 
+function_groups:
+  calculator:
+    _type: calculator
+
 functions:
-  calculator_multiply:
-    _type: calculator_multiply
-  calculator_inequality:
-    _type: calculator_inequality
-  calculator_divide:
-    _type: nat_simple_calculator/calculator_divide
   current_datetime:
     _type: current_datetime
-  calculator_subtract:
-    _type: calculator_subtract
 
 llms:
   nim_llm:
@@ -39,19 +35,10 @@ llms:
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
     max_tokens: 1024
-  openai_llm:
-    _type: openai
-    model_name: gpt-3.5-turbo
-    max_tokens: 2000
 
 workflow:
   _type: react_agent
-  tool_names:
-    - calculator_multiply
-    - calculator_inequality
-    - current_datetime
-    - calculator_divide
-    - calculator_subtract
+  tool_names: [calculator, current_datetime]
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3

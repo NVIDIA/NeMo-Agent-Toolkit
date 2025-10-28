@@ -40,9 +40,12 @@ def nat_mcp_url_fixture(nat_mcp_host: str, nat_mcp_port: str) -> str:
 @pytest.fixture(name="simple_calc_mcp_process", scope="module")
 async def simple_calc_mcp_process_fixture(nat_mcp_host: str, nat_mcp_port: str) -> subprocess.Popen:
     from nat.test.utils import locate_example_config
-    from nat_simple_calculator.register import DivisionToolConfig
+    from nat_simple_calculator.register import CalculatorToolConfig
 
-    config_file: Path = locate_example_config(DivisionToolConfig)
+    config_file: Path = locate_example_config(CalculatorToolConfig)
+
+    env = os.environ.copy()
+    env.pop("NAT_LOG_LEVEL", None)
     cmd = [
         "nat",
         "mcp",
@@ -54,7 +57,7 @@ async def simple_calc_mcp_process_fixture(nat_mcp_host: str, nat_mcp_port: str) 
         "--port",
         nat_mcp_port
     ]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
     assert proc.poll() is None, f"MCP server process failed to start: {proc.stdout.read()}"
 
     yield proc
@@ -75,7 +78,7 @@ async def simple_calc_mcp_process_fixture(nat_mcp_host: str, nat_mcp_port: str) 
 @pytest.fixture(name="simple_calc_mcp_avail", scope="module")
 async def simple_calc_mcp_avail_fixture(simple_calc_mcp_process: subprocess.Popen, nat_mcp_url: str):
     """
-    Wait for the MCP server to become available, then verify that the calculator_subtract tool is registered."""
+    Wait for the MCP server to become available, then verify that the calculator.subtract tool is registered."""
     from mcp import ClientSession
     from mcp.client.streamable_http import streamablehttp_client
 
@@ -92,7 +95,7 @@ async def simple_calc_mcp_avail_fixture(simple_calc_mcp_process: subprocess.Pope
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tools = await session.list_tools()
-                    assert 'calculator_subtract' in (t.name for t in tools.tools)
+                    assert 'calculator.subtract' in (t.name for t in tools.tools)
                     return
         except Exception:
             pass

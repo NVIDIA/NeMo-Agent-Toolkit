@@ -159,7 +159,8 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
                                   flush_interval=config.flush_interval,
                                   max_queue_size=config.max_queue_size,
                                   drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout)
+                                  shutdown_timeout=config.shutdown_timeout,
+                                  protocol="grpc")
 
 
 class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="galileo"):
@@ -185,6 +186,48 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
 
     yield OTLPSpanAdapterExporter(
         endpoint=config.endpoint,
+        headers=headers,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
+
+
+class DBNLTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="dbnl"):
+    """A telemetry exporter to transmit traces to DBNL."""
+
+    api_url: str | None = Field(description="The DBNL API URL.", default=None)
+    api_token: str | None = Field(description="The DBNL API token.", default=None)
+    project_id: str | None = Field(description="The DBNL project id.", default=None)
+
+
+@register_telemetry_exporter(config_type=DBNLTelemetryExporter)
+async def dbnl_telemetry_exporter(config: DBNLTelemetryExporter, builder: Builder):
+    """Create a DBNL telemetry exporter."""
+
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
+
+    api_token = config.api_token or os.environ.get("DBNL_API_TOKEN")
+    if not api_token:
+        raise ValueError("API token is required for DBNL")
+    project_id = config.project_id or os.environ.get("DBNL_PROJECT_ID")
+    if not project_id:
+        raise ValueError("Project id is required for DBNL")
+
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "x-dbnl-project-id": project_id,
+    }
+
+    api_url = config.api_url or os.environ.get("DBNL_API_URL")
+    if not api_url:
+        raise ValueError("API url is required for DBNL")
+    endpoint = api_url.rstrip("/") + "/otel/v1/traces"
+
+    yield OTLPSpanAdapterExporter(
+        endpoint=endpoint,
         headers=headers,
         batch_size=config.batch_size,
         flush_interval=config.flush_interval,
