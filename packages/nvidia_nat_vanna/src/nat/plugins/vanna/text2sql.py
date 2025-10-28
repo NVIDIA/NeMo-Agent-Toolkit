@@ -47,6 +47,8 @@ class Text2SQLOutput(BaseModel):
 class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     """
     Text2SQL configuration with Vanna integration.
+    
+    Currently only Databricks is supported.
     """
 
     # LLM and Embedder
@@ -59,19 +61,12 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
                     "MUST be configured with use_async_client=true for text2sql function.")
 
     # Database configuration
-    database_type: str = Field(default="databricks", description="Database type")
-    db_host: str | None = Field(default=None, description="Database host")
-    db_port: int | None = Field(default=None, description="Database port")
-    db_name: str | None = Field(default=None, description="Database name")
-    db_username: str | None = Field(default=None, description="Database username")
-    db_password: str | None = Field(default=None, description="Database password")
+    database_type: str = Field(default="databricks", description="Database type (currently only 'databricks' is supported)")
+    db_host: str | None = Field(default=None, description="Database host (Databricks server hostname)")
+    db_password: str | None = Field(default=None, description="Database password (Databricks access token)")
     db_catalog: str | None = Field(default=None, description="Database catalog")
     db_schema: str | None = Field(default=None, description="Database schema")
-
-    # Databricks-specific
-    databricks_server_hostname: str | None = Field(default=None, description="Databricks server hostname")
-    databricks_http_path: str | None = Field(default=None, description="Databricks HTTP path")
-    databricks_access_token: str | None = Field(default=None, description="Databricks access token")
+    http_path: str | None = Field(default=None, description="HTTP path for database connection (Databricks)")
 
     # Vanna Milvus configuration
     milvus_search_limit: int = Field(default=1000,
@@ -157,20 +152,20 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
             create_collections=config.train_on_startup,
         )
 
+    # Validate database type
+    if config.database_type.lower() != "databricks":
+        msg = f"Only Databricks is currently supported. Got database_type: {config.database_type}"
+        raise ValueError(msg)
+
     # Setup database connection
     db_connection = setup_vanna_db_connection(
         vn=vanna_instance,
         database_type=config.database_type,
-        host=config.db_host or config.databricks_server_hostname,
-        port=config.db_port,
-        database=config.db_name,
-        username=config.db_username,
-        password=config.db_password or config.databricks_access_token,
+        host=config.db_host,
+        password=config.db_password,
         catalog=config.db_catalog,
         schema=config.db_schema,
-        server_hostname=config.databricks_server_hostname,
-        http_path=config.databricks_http_path,
-        access_token=config.databricks_access_token,
+        http_path=config.http_path,
     )
 
     # Train on startup if configured
@@ -248,7 +243,8 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
 
     description = ("Generate SQL queries from natural language questions using AI. "
                    "Leverages similar question-SQL pairs, DDL information, and "
-                   "documentation to generate accurate SQL queries.")
+                   "documentation to generate accurate SQL queries. "
+                   "Currently supports Databricks only.")
 
     if config.execute_sql:
         description += " Also executes queries and returns results."

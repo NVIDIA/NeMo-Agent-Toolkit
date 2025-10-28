@@ -19,9 +19,9 @@ functions:
     
     # Database configuration
     database_type: databricks
-    databricks_server_hostname: "${DATABRICKS_SERVER_HOSTNAME}"
-    databricks_http_path: "${DATABRICKS_HTTP_PATH}"
-    databricks_access_token: "${DATABRICKS_ACCESS_TOKEN}"
+    db_host: "${DB_HOST}"  # Databricks server hostname
+    db_password: "${DB_PASSWORD}"  # Databricks access token
+    http_path: "${HTTP_PATH}"  # Databricks HTTP path
     db_catalog: "main"
     db_schema: "default"
 
@@ -29,18 +29,19 @@ functions:
     allow_llm_to_see_data: false
     execute_sql: false
     train_on_startup: false  # Turn off after training to avoid re-training
-    n_results: 5
+    n_results: 5 # number of similar SQL examples to retrieve
     sql_collection: "vannasql_vtest_10"
     ddl_collection: "vannaddl_vtest_10"
     doc_collection: "vannadoc_vtest_10"
+    milvus_search_limit: 1000  # Maximum records to retrieve from Milvus
 
   # Database query execution function
   execute_db_query:
     _type: execute_db_query
     database_type: databricks
-    databricks_server_hostname: "${DATABRICKS_SERVER_HOSTNAME}"
-    databricks_http_path: "${DATABRICKS_HTTP_PATH}"
-    databricks_access_token: "${DATABRICKS_ACCESS_TOKEN}"
+    db_host: "${DB_HOST}"  # Databricks server hostname
+    db_password: "${DB_PASSWORD}"  # Databricks access token
+    http_path: "${HTTP_PATH}"  # Databricks HTTP path
     db_catalog: "main"
     db_schema: "default"
     max_rows: 100
