@@ -96,8 +96,8 @@ class OutputUploader:
             ) as s3_client:
                 with tqdm(total=len(file_entries), desc="Uploading files to S3") as pbar:
                     upload_tasks = [
-                        self._upload_file(s3_client, bucket, s3_key, local_path, pbar) for local_path,
-                        s3_key in file_entries
+                        self._upload_file(s3_client, bucket, s3_key, local_path, pbar)
+                        for local_path, s3_key in file_entries
                     ]
                     await asyncio.gather(*upload_tasks)
 

@@ -100,8 +100,6 @@ async def test_oauth2_flow_in_process(monkeypatch, mock_server):
         client_secret="secret",
         redirect_base=f"http://localhost:{redirect_port}",
     )
-    # Ensure we're not accidentally using a redacted client secret
-    assert "*" not in "secret"
 
     cfg = OAuth2AuthCodeFlowProviderConfig(
         client_id="cid",
