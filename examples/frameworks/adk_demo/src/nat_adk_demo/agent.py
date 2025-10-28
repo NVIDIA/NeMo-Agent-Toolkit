@@ -18,12 +18,12 @@ import logging
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from nat.builder.context import Context
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +74,10 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
     # Initialize the Runner with the agent and services
     session_service = InMemorySessionService()
     artifact_service = InMemoryArtifactService()
-    runner = Runner(
-        app_name=config.name, agent=agent, artifact_service=artifact_service, session_service=session_service
-    )
+    runner = Runner(app_name=config.name,
+                    agent=agent,
+                    artifact_service=artifact_service,
+                    session_service=session_service)
 
     sessions_cache: dict[str, tuple] = {}
 
