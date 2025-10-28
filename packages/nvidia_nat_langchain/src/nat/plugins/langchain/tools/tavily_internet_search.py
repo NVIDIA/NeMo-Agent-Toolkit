@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pydantic import Field
+
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.common import SerializableSecretStr
 from nat.data_models.function import FunctionBaseConfig
 
 
@@ -26,7 +29,7 @@ class TavilyInternetSearchToolConfig(FunctionBaseConfig, name="tavily_internet_s
     Requires a TAVILY_API_KEY.
     """
     max_results: int = 3
-    api_key: str = ""
+    api_key: SerializableSecretStr = Field(default="", description="The API key for the Tavily service.")
 
 
 @register_function(config_type=TavilyInternetSearchToolConfig)

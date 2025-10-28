@@ -22,6 +22,7 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ class SerpApiToolConfig(FunctionBaseConfig, name="serp_api_tool"):
     Tool that retrieves search results from the web using SerpAPI.
     Requires a SERP_API_KEY.
     """
-    api_key: str | None = Field(default=None, description="The API key for the SerpAPI service.")
+    api_key: OptionalSecretStr = Field(default=None, description="The API key for the SerpAPI service.")
     max_results: int = Field(default=5, description="The maximum number of results to return.")
 
 

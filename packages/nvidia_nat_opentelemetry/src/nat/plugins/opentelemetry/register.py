@@ -20,6 +20,8 @@ from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.common import OptionalSecretStr
+from nat.data_models.common import SerializableSecretStr
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
 from nat.observability.mixin.collector_config_mixin import CollectorConfigMixin
@@ -31,8 +33,8 @@ class LangfuseTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, n
     """A telemetry exporter to transmit traces to externally hosted langfuse service."""
 
     endpoint: str = Field(description="The langfuse OTEL endpoint (/api/public/otel/v1/traces)")
-    public_key: str = Field(description="The Langfuse public key", default="")
-    secret_key: str = Field(description="The Langfuse secret key", default="")
+    public_key: SerializableSecretStr = Field(description="The Langfuse public key", default="")
+    secret_key: SerializableSecretStr = Field(description="The Langfuse secret key", default="")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -69,7 +71,7 @@ class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemet
         description="The langsmith OTEL endpoint",
         default="https://api.smith.langchain.com/otel/v1/traces",
     )
-    api_key: str = Field(description="The Langsmith API key", default="")
+    api_key: SerializableSecretStr = Field(description="The Langsmith API key", default="")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -134,7 +136,7 @@ async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builde
 class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="patronus"):
     """A telemetry exporter to transmit traces to Patronus service."""
 
-    api_key: str = Field(description="The Patronus API key", default="")
+    api_key: SerializableSecretStr = Field(description="The Patronus API key", default="")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -169,7 +171,7 @@ class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetry
     endpoint: str = Field(description="The galileo endpoint to export telemetry traces.",
                           default="https://app.galileo.ai/api/galileo/otel/traces")
     logstream: str = Field(description="The logstream name to group the telemetry traces.")
-    api_key: str = Field(description="The api key to authenticate with the galileo service.")
+    api_key: SerializableSecretStr = Field(description="The api key to authenticate with the galileo service.")
 
 
 @register_telemetry_exporter(config_type=GalileoTelemetryExporter)
@@ -199,7 +201,7 @@ class DBNLTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name=
     """A telemetry exporter to transmit traces to DBNL."""
 
     api_url: str | None = Field(description="The DBNL API URL.", default=None)
-    api_token: str | None = Field(description="The DBNL API token.", default=None)
+    api_token: OptionalSecretStr = Field(description="The DBNL API token.", default=None)
     project_id: str | None = Field(description="The DBNL project id.", default=None)
 
 
