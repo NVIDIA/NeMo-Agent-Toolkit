@@ -28,7 +28,7 @@ The NVIDIA NeMo Agent toolkit provides a default MCP server worker that publishe
 Create a custom MCP worker when you need to:
 - **Add authentication/authorization**: OAuth, API keys, JWT tokens, or custom auth flows
 - **Integrate custom transport protocols**: WebSocket, gRPC, or other communication methods
-- **Add logging and telemetry**: Response logging, metrics collection, or distributed tracing
+- **Add logging and telemetry**: Custom logging, metrics collection, or distributed tracing
 - **Modify server behavior**: Custom middleware, error handling, or protocol extensions
 - **Integrate with enterprise systems**: SSO, audit logging, or compliance requirements
 
@@ -248,6 +248,6 @@ This guide provides a step-by-step process to create custom MCP server workers i
 
 1. Extend {py:class}`~nat.front_ends.mcp.mcp_front_end_plugin_worker.MCPFrontEndPluginWorker`
 2. Override `add_routes()` and use `super()` to get default behavior
-3. Override `create_mcp_server()` to use a different server implementation — when doing so, implement your own authentication and authorization logic within that server.
+3. Override `create_mcp_server()` to use a different server implementation. When doing so, implement your own authentication and authorization logic within that server.
 
 Custom workers enable enterprise features like authentication, telemetry, and integration with existing infrastructure without modifying NeMo Agent toolkit core code.
