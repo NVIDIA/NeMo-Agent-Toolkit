@@ -72,6 +72,8 @@ general:
 
 With this configuration, the MCP server will be accessible at `http://localhost:9901/api/v1/mcp`. This is useful when deploying MCP servers that need to be mounted at specific paths for reverse proxy configurations or service mesh architectures.
 
+The `base_path` must start with a forward slash (`/`) and must not end with a forward slash (`/`).
+
 :::{note}
 The `base_path` feature requires the `streamable-http` transport. SSE transport does not support custom base paths.
 :::
