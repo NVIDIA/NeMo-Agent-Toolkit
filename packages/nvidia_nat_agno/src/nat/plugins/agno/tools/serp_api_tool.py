@@ -17,6 +17,7 @@ import logging
 import os
 
 from pydantic import Field
+from pydantic import SecretStr
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -56,7 +57,9 @@ async def serp_api_tool(tool_config: SerpApiToolConfig, builder: Builder):
     from agno.tools.serpapi import SerpApiTools
 
     if (not tool_config.api_key):
-        tool_config.api_key = os.getenv("SERP_API_KEY")
+        env_api_key = os.getenv("SERP_API_KEY")
+        if env_api_key is not None:
+            tool_config.api_key = SecretStr(env_api_key)
 
     if not tool_config.api_key:
         raise ValueError(

@@ -19,6 +19,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from pydantic import SecretStr
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -111,7 +112,7 @@ class TestOpenAICrewAI:
     async def test_param_passthrough(self, mock_llm, openai_cfg, mock_builder):
         """Arbitrary config kwargs must reach crewai.LLM unchanged."""
         openai_cfg.temperature = 0.3
-        openai_cfg.api_key = "sk-abc123"
+        openai_cfg.api_key = SecretStr("sk-abc123")
         async with openai_crewai(openai_cfg, mock_builder):
             pass
         kwargs = mock_llm.call_args.kwargs
