@@ -78,6 +78,7 @@ Examples of existing telemetry exporters include:
 - **Patronus**: Exports traces to Patronus via OTLP
 - **Galileo**: Exports traces to Galileo via OTLP
 - **RagaAI Catalyst**: Exports traces to RagaAI Catalyst
+- **DBNL**: Exports traces to DBNL via OTLP
 
 ## Quick Start: Your First Telemetry Exporter
 
@@ -244,7 +245,7 @@ Specialized for OpenTelemetry-compatible services with many pre-built options:
 - **Use case**: OTLP-compatible backends, standard observability tools
 - **Base class**: `OtelSpanExporter`
 - **Data flow**: `IntermediateStep` → `Span` → [Processing Pipeline] → `OtelSpan` → Export
-- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Phoenix, RagaAI, Weave
+- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Phoenix, RagaAI, Weave, DBNL
 
 #### Advanced Custom Exporters
 
@@ -269,6 +270,7 @@ Before creating a custom exporter, check if your observability service is alread
 
 | Service | Type | Installation | Configuration |
 |---------|------|-------------|---------------|
+| **DBNL** | `dbnl` | `pip install "nvidia-nat[opentelemetry]"` | API URL + API token + project id |
 | **File** | `file` | `pip install nvidia-nat` | local file or directory |
 | **Langfuse** | `langfuse` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API keys |
 | **LangSmith** | `langsmith` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |

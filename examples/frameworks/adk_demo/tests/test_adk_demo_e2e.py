@@ -19,11 +19,14 @@ import pytest
 
 
 @pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key")
+@pytest.mark.usefixtures("openai_api_key")
 async def test_full_workflow():
     from nat.test.utils import locate_example_config
     from nat.test.utils import run_workflow
-    from nat_simple_web_query.register import WebQueryToolConfig
+    from nat_adk_demo.agent import ADKFunctionConfig
 
-    config_file: Path = locate_example_config(WebQueryToolConfig)
-    await run_workflow(config_file=config_file, question="What is LangSmith?", expected_answer="langsmith")
+    config_file: Path = locate_example_config(ADKFunctionConfig)
+
+    await run_workflow(config_file=config_file,
+                       question="What is the weather and time in New York today?",
+                       expected_answer="weather")

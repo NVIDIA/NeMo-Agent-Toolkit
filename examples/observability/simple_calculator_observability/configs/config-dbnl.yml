@@ -14,6 +14,20 @@
 # limitations under the License.
 
 
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: WARN
+      file:
+        _type: file
+        path: ./.tmp/nat_simple_calculator.log
+        level: DEBUG
+    tracing:
+      dbnl:
+        _type: dbnl
+
 function_groups:
   calculator:
     _type: calculator
