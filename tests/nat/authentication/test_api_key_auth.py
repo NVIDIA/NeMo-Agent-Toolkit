@@ -56,8 +56,10 @@ def make_config(
 # APIKeyAuthProviderConfig – validation tests
 # --------------------------------------------------------------------------- #
 def test_config_valid_bearer():
-    cfg = make_config()
-    assert cfg.raw_key == "superSecretAPIKey"
+    expected_key = "superSecretAPIKey"
+    cfg = make_config(raw_key=expected_key)
+    assert str(cfg.raw_key) != expected_key
+    assert cfg.raw_key.get_secret_value() == expected_key
     assert cfg.auth_scheme is HeaderAuthScheme.BEARER
 
 
