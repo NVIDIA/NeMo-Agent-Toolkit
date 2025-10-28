@@ -19,6 +19,7 @@ from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.common import SerializableSecretStr
+from nat.data_models.common import get_secret_value
 from nat.data_models.function import FunctionBaseConfig
 
 
@@ -39,7 +40,8 @@ async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, bu
     from langchain_tavily import TavilySearch
 
     if not os.environ.get("TAVILY_API_KEY"):
-        os.environ["TAVILY_API_KEY"] = tool_config.api_key
+        if tool_config.api_key:
+            os.environ["TAVILY_API_KEY"] = get_secret_value(tool_config.api_key)
     # This tavily tool requires an API Key and it must be set as an environment variable (TAVILY_API_KEY)
     # Refer to create_customize_workflow.md for instructions of getting the API key
 

@@ -29,11 +29,10 @@ logger = logging.getLogger(__name__)
 class APIKeyAuthProvider(AuthProviderBase[APIKeyAuthProviderConfig]):
 
     # fmt: off
-    def __init__(self,
-                 config: APIKeyAuthProviderConfig,
-                 config_name: str | None = None) -> None:
+    def __init__(self, config: APIKeyAuthProviderConfig, config_name: str | None = None) -> None:
         assert isinstance(config, APIKeyAuthProviderConfig), ("Config is not APIKeyAuthProviderConfig")
         super().__init__(config)
+
     # fmt: on
 
     async def _construct_authentication_header(self) -> BearerTokenCred:
@@ -58,12 +57,12 @@ class APIKeyAuthProvider(AuthProviderBase[APIKeyAuthProviderConfig]):
         header_auth_scheme = config.auth_scheme
 
         if header_auth_scheme == HeaderAuthScheme.BEARER:
-            return BearerTokenCred(token=SecretStr(f"{config.raw_key}"),
+            return BearerTokenCred(token=SecretStr(config.raw_key),
                                    scheme=HeaderAuthScheme.BEARER.value,
                                    header_name=AUTHORIZATION_HEADER)
 
         if header_auth_scheme == HeaderAuthScheme.X_API_KEY:
-            return BearerTokenCred(token=SecretStr(f"{config.raw_key}"),
+            return BearerTokenCred(token=SecretStr(config.raw_key),
                                    scheme=HeaderAuthScheme.X_API_KEY.value,
                                    header_name='')
 
@@ -74,7 +73,7 @@ class APIKeyAuthProvider(AuthProviderBase[APIKeyAuthProviderConfig]):
             if not config.custom_header_prefix:
                 raise ValueError('custom_header_prefix required when using header_auth_scheme=CUSTOM')
 
-            return BearerTokenCred(token=SecretStr(f"{config.raw_key}"),
+            return BearerTokenCred(token=SecretStr(config.raw_key),
                                    scheme=config.custom_header_prefix,
                                    header_name=config.custom_header_name)
 

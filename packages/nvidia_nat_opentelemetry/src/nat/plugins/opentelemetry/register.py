@@ -22,6 +22,7 @@ from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
 from nat.data_models.common import OptionalSecretStr
 from nat.data_models.common import SerializableSecretStr
+from nat.data_models.common import get_secret_value
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
 from nat.observability.mixin.collector_config_mixin import CollectorConfigMixin
@@ -46,8 +47,8 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
-    secret_key = config.secret_key or os.environ.get("LANGFUSE_SECRET_KEY")
-    public_key = config.public_key or os.environ.get("LANGFUSE_PUBLIC_KEY")
+    secret_key = get_secret_value(config.secret_key) if config.secret_key else os.environ.get("LANGFUSE_SECRET_KEY")
+    public_key = get_secret_value(config.public_key) if config.public_key else os.environ.get("LANGFUSE_PUBLIC_KEY")
     if not secret_key or not public_key:
         raise ValueError("secret and public keys are required for langfuse")
 
@@ -82,7 +83,7 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
-    api_key = config.api_key or os.environ.get("LANGSMITH_API_KEY")
+    api_key = get_secret_value(config.api_key) if config.api_key else os.environ.get("LANGSMITH_API_KEY")
     if not api_key:
         raise ValueError("API key is required for langsmith")
 
@@ -147,7 +148,7 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
-    api_key = config.api_key or os.environ.get("PATRONUS_API_KEY")
+    api_key = get_secret_value(config.api_key) if config.api_key else os.environ.get("PATRONUS_API_KEY")
     if not api_key:
         raise ValueError("API key is required for Patronus")
 
@@ -181,7 +182,7 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
     headers = {
-        "Galileo-API-Key": config.api_key,
+        "Galileo-API-Key": get_secret_value(config.api_key),
         "logstream": config.logstream,
         "project": config.project,
     }
@@ -211,7 +212,7 @@ async def dbnl_telemetry_exporter(config: DBNLTelemetryExporter, builder: Builde
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
-    api_token = config.api_token or os.environ.get("DBNL_API_TOKEN")
+    api_token = get_secret_value(config.api_token) if config.api_token else os.environ.get("DBNL_API_TOKEN")
     if not api_token:
         raise ValueError("API token is required for DBNL")
     project_id = config.project_id or os.environ.get("DBNL_PROJECT_ID")

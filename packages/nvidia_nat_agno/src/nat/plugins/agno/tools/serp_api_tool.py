@@ -23,6 +23,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.common import OptionalSecretStr
+from nat.data_models.common import get_secret_value
 from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ async def serp_api_tool(tool_config: SerpApiToolConfig, builder: Builder):
             "API token must be provided in the configuration or in the environment variable `SERP_API_KEY`")
 
     # Create the SerpAPI tools instance
-    search_tool = SerpApiTools(api_key=tool_config.api_key)
+    search_tool = SerpApiTools(api_key=get_secret_value(tool_config.api_key))
 
     # Simple search function with a single string parameter
     async def _serp_api_search(query: str) -> str:
