@@ -21,14 +21,14 @@ limitations under the License.
 We recommend reading the [MCP Server Guide](../workflows/mcp/mcp-server.md) before proceeding with this documentation, to understand how MCP servers work in NVIDIA NeMo Agent toolkit.
 :::
 
-The NeMo Agent toolkit's MCP frontend supports custom server implementations through a plugin system. This guide shows you how to create custom MCP server workers that extend the default server behavior.
+The NeMo Agent toolkit MCP frontend supports custom server implementations through a plugin system. This guide shows you how to create custom MCP server workers that extend the default server behavior.
 
 ## When to Create a Custom Worker
 
 Create a custom MCP worker when you need to:
 - **Add authentication/authorization**: OAuth, API keys, JWT tokens, or custom auth flows
 - **Integrate custom transport protocols**: WebSocket, gRPC, or other communication methods
-- **Add logging and telemetry**: Request/response logging, metrics collection, or distributed tracing
+- **Add logging and telemetry**: Response logging, metrics collection, or distributed tracing
 - **Modify server behavior**: Custom middleware, error handling, or protocol extensions
 - **Integrate with enterprise systems**: SSO, audit logging, or compliance requirements
 
@@ -98,7 +98,7 @@ class CustomStatusWorker(MCPFrontEndPluginWorker):
 Configure your workflow to use the custom worker by specifying the fully qualified class name in the `runner_class` field.
 
 <!-- path-check-skip-next-line -->
-`configs/my_workflow.yml`:
+`custom_mcp_server_workflow.yml`:
 ```yaml
 general:
   front_end:
@@ -129,7 +129,7 @@ workflow:
 Start your server using the NeMo Agent toolkit CLI:
 
 ```bash
-nat mcp serve --config_file configs/my_workflow.yml
+nat mcp serve --config_file custom_mcp_server_workflow.yml
 ```
 
 **Expected output**:
@@ -248,8 +248,6 @@ This guide provides a step-by-step process to create custom MCP server workers i
 
 1. Extend {py:class}`~nat.front_ends.mcp.mcp_front_end_plugin_worker.MCPFrontEndPluginWorker`
 2. Override `add_routes()` and use `super()` to get default behavior
-3. Add custom routes with `@mcp.custom_route()`
-4. Optionally override `create_mcp_server()` to use a different server implementation
-5. Configure and test the custom worker in your workflows
+3. Override `create_mcp_server()` to use a different server implementation — when doing so, implement your own authentication and authorization logic within that server.
 
 Custom workers enable enterprise features like authentication, telemetry, and integration with existing infrastructure without modifying NeMo Agent toolkit core code.
