@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 class ADKFunctionConfig(FunctionBaseConfig, name="adk"):
     """Configuration for ADK demo function."""
+
     name: str = Field(default="nat-adk-agent")
     description: str
     prompt: str
@@ -77,7 +78,7 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
                     agent=agent,
                     artifact_service=artifact_service,
                     session_service=session_service)
-    
+
     sessions_cache: dict[str, tuple] = {}
 
     async def _response_fn(input_message: str) -> str:
@@ -100,16 +101,13 @@ async def adk_agent(config: ADKFunctionConfig, builder: Builder):
                 del sessions_cache[user_id]
             else:
                 sessions_cache[user_id] = (session, current_time)
-        
+
         if user_id not in sessions_cache:
             if len(sessions_cache) >= MAX_SESSIONS:
                 oldest_user = min(sessions_cache.keys(), key=lambda k: sessions_cache[k][1])
                 del sessions_cache[oldest_user]
-            
-            session = await session_service.create_session(
-                app_name=config.name,
-                user_id=user_id
-            )
+
+            session = await session_service.create_session(app_name=config.name, user_id=user_id)
             sessions_cache[user_id] = (session, current_time)
         else:
             session, _ = sessions_cache[user_id]
