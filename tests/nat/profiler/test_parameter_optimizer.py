@@ -30,7 +30,7 @@ class _FakeTrial:
 
     def __init__(self, trial_id: int):
         self._trial_id = trial_id
-        self.number = trial_id # Add number attribute for Pareto optimal tracking
+        self.number = trial_id  # Add number attribute for Pareto optimal tracking
         self.user_attrs: dict[str, object] = {}
 
     # Optuna Trial API subset used by SearchSpace.suggest()
@@ -86,6 +86,7 @@ class _FakeDF:
 
     def to_csv(self, fh, index: bool = False):  # noqa: ANN001, FBT001
         fh.write("trial_id,params\n0,{}\n")
+
 
 class _FakeSeries:
 
