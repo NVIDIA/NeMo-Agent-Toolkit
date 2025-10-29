@@ -49,7 +49,6 @@ VANNA_TRAINING_EXAMPLES: list[dict[str, str]] = [
     },
 ]
 
-# Remove from PR
 VANNA_ACTIVE_TABLES = ['catalog.schema.table_a', 'catalog.schema.table_b']
 
 # Default prompts

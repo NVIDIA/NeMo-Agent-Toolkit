@@ -136,7 +136,7 @@ workflow:
 ### 4. Run the Workflow
 
 ```bash
-# Using NAT CLI
+# Using NeMo Agent Toolkit CLI
 # If train_on_startup is set to true, training takes approximately 7 minutes depending on endpoints and network conditions.
 uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "Retrieve the total number of customers."
 
@@ -397,7 +397,7 @@ general:
 ```
 
 Other features include:
-- Full integration with NAT's intermediate step tracking system
+- Full integration with NeMo Agent Toolkit's intermediate step tracking system
 - Better UI Display - Front-ends can now properly render intermediate steps
 - Parent Tracking - Each function call has a parent_id to group related steps
 
@@ -441,6 +441,8 @@ Error: Failed to connect to database
 **LLM Limitations:**
 - The `llama-3.1-70b-instruct` model does not always strictly follow instructions to output in the expected JSON format, which can cause parsing issues. A parsing fallback mechanism has been implemented to handle these cases.
 - To ensure optimal performance and consistent JSON output formatting, we recommend using reasoning models in the configuration. These models demonstrate better instruction-following capabilities and reliably produce output in the expected format.
+**Database Privileges:**
+- This package provides text-to-SQL functionality without built-in guardrails. To prevent destructive operations, always configure the database connection with read-only privileges.
 
 ## Package Structure
 
@@ -452,7 +454,7 @@ nvidia_nat_vanna/
 │   └── nat/
 │       └── plugins/
 │           └── vanna/
-│               ├── register.py         # NAT component registration
+│               ├── register.py         # NeMo Agent Toolkit component registration
 │               ├── text2sql.py         # Text-to-SQL function
 │               ├── execute_db_query.py # Query execution function
 │               ├── vanna_utils.py      # Vanna framework integration
@@ -462,7 +464,7 @@ nvidia_nat_vanna/
 
 ## Contributing
 
-Contributions are welcome! Please see the main NAT repository for contribution guidelines.
+Contributions are welcome! Please see the main NeMo Agent Toolkit repository for contribution guidelines.
 
 ## License
 
@@ -473,4 +475,4 @@ This package is part of the NVIDIA NeMo Agent Toolkit and follows the same licen
 For questions and support:
 - GitHub Issues: https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues
 - Documentation: https://docs.nvidia.com/nemo/agent-toolkit/latest/
-- Discord: Join the NAT community Discord
+- Discord: Join the NeMo Agent Toolkit community Discord
