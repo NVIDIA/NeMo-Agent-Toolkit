@@ -65,9 +65,10 @@ class ZepEditor(MemoryEditor):
                     email = "jane.doe@example.com"
                     first_name = "Jane"
                     last_name = "Doe"
-                    await self._client.user.add(
-                        user_id=user_id, email=email, first_name=first_name, last_name=last_name
-                    )
+                    await self._client.user.add(user_id=user_id,
+                                                email=email,
+                                                first_name=first_name,
+                                                last_name=last_name)
                 else:
                     # For non-default users, just use user_id (email/names not required)
                     await self._client.user.add(user_id=user_id)
@@ -176,9 +177,12 @@ class ZepEditor(MemoryEditor):
             query (str): The query string (not used by Zep's high-level API, included for interface compatibility).
             top_k (int): Maximum number of items to return (not used by Zep's context API).
             kwargs: Zep-specific keyword arguments.
-                - user_id (str, required): The user ID for which to retrieve memory.
+                - user_id (str, required): The user ID to include in the returned MemoryItem.
+                  Note: Zep's API does not require user_id (only thread_id), but we require it
+                  for constructing the MemoryItem response.
                 - mode (str, optional): Retrieval mode. "basic" for fast retrieval (P95 < 200ms) or
-                  "summary" for more comprehensive memory. Defaults to "basic".
+                  "summary" for more comprehensive memory. Defaults to "basic" for performance.
+                  Note: Zep's server-side default is "summary" if mode is not specified.
 
         Returns:
             list[MemoryItem]: A single MemoryItem containing the formatted context from Zep.
