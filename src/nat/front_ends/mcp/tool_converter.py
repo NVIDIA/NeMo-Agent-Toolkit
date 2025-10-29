@@ -18,9 +18,12 @@ import logging
 from inspect import Parameter
 from inspect import Signature
 from typing import TYPE_CHECKING
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
+from pydantic.fields import FieldInfo
+from pydantic_core import PydanticUndefined
 
 from nat.builder.context import ContextState
 from nat.builder.function import Function
@@ -31,6 +34,33 @@ if TYPE_CHECKING:
     from nat.front_ends.mcp.memory_profiler import MemoryProfiler
 
 logger = logging.getLogger(__name__)
+
+
+def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
+    """Determine if a Pydantic field is optional and extract its default value.
+
+    A field is considered optional if:
+    1. is_required() returns False, OR
+    2. It has a default value (not PydanticUndefined), OR
+    3. It has a default_factory
+
+    Args:
+        field: The Pydantic FieldInfo to check
+
+    Returns:
+        A tuple of (is_optional, default_value):
+        - is_optional: True if the field is optional, False if required
+        - default_value: The default value to use (actual value, None, or Parameter.empty)
+    """
+    has_default = (not field.is_required() or (field.default is not PydanticUndefined)
+                   or (field.default_factory is not None))
+
+    if has_default:
+        if field.default is not PydanticUndefined:
+            return True, field.default
+        return True, None
+
+    return False, Parameter.empty
 
 
 def create_function_wrapper(
@@ -79,12 +109,15 @@ def create_function_wrapper(
             # Get the field type and convert to appropriate Python type
             field_type = field.annotation
 
+            # Check if field is optional and get its default value
+            _is_optional, param_default = is_field_optional(field)
+
             # Add the parameter to our list
             parameters.append(
                 Parameter(
                     name=name,
                     kind=Parameter.KEYWORD_ONLY,
-                    default=Parameter.empty if field.is_required else None,
+                    default=param_default,
                     annotation=field_type,
                 ))
 
