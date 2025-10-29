@@ -28,6 +28,11 @@ llms:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
+  sagemaker_llm:
+    _type: aws_sagemaker
+    endpoint_name: jumpstart-dft-hf-llm-mistral-small-20251028-215914
+    max_tokens: 1024
+    temperature: 0.0
 
 embedders:
   nv-embedqa-e5-v5:
@@ -37,6 +42,25 @@ embedders:
 workflow:
   _type: react_agent
   tool_names: [webpage_query, current_datetime]
-  llm_name: nim_llm
+  llm_name: sagemaker_llm
   verbose: true
-  parse_agent_response_max_retries: 3
+  parse_agent_response_max_retries: 5
+  system_prompt: |
+    Answer the following questions as best you can. You may communicate and collaborate with various experts to answer the questions:
+
+    {tools}
+
+    You may respond in one of two formats.
+    Use the following format exactly to communicate with an expert:
+
+    Question: the input question you must answer
+    Thought: you should always think about what to do
+    Action: the action to take, should be one of [{tool_names}]
+    Action Input: the input to the action (if there is no required input, include "Action Input: None")
+    Observation: wait for the expert to respond, do not assume the expert's response
+
+    ... (this Thought/Action/Action Input/Observation can repeat N times.)
+    Use the following format once you have the final answer:
+
+    Thought: I now know the final answer
+    Final Answer: the final answer to the original input question

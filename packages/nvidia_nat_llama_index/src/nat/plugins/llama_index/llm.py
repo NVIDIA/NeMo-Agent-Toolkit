@@ -24,6 +24,7 @@ from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.aws_sagemaker_llm import AWSSageMakerModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
@@ -88,6 +89,19 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
 
     # LlamaIndex uses context_size instead of max_tokens
     llm = Bedrock(**llm_config.model_dump(exclude={"type", "top_p", "thinking", "api_type"}, by_alias=True))
+
+    yield _patch_llm_based_on_config(llm, llm_config)
+
+
+@register_llm_client(config_type=AWSSageMakerModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def aws_sagemaker_llama_index(llm_config: AWSSageMakerModelConfig, _builder: Builder):
+
+    from llama_index.llms.sagemaker import SageMaker
+
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
+
+    # LlamaIndex SageMaker LLM uses context_size
+    llm = SageMaker(**llm_config.model_dump(exclude={"type", "thinking", "api_type"}, by_alias=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
