@@ -15,8 +15,6 @@
 
 import logging
 
-from pydantic import SecretStr
-
 from nat.authentication.api_key.api_key_auth_provider_config import APIKeyAuthProviderConfig
 from nat.authentication.interfaces import AuthProviderBase
 from nat.data_models.authentication import AuthResult
