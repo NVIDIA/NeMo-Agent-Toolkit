@@ -116,7 +116,7 @@ async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):
 
         assert cred.header_name == "Authorization"
         assert cred.scheme == "Bearer"
-        assert cred.token.get_secret_value() == cfg.raw_key
+        assert cred.token.get_secret_value() == cfg.raw_key.get_secret_value()
 
 
 async def test_construct_header_x_api_key():
@@ -138,7 +138,7 @@ async def test_construct_header_x_api_key():
 
         assert cred.scheme == "X-API-Key"
         assert cred.header_name == ""  # per implementation
-        assert cred.token.get_secret_value() == cfg.raw_key
+        assert cred.token.get_secret_value() == cfg.raw_key.get_secret_value()
 
 
 async def test_construct_header_custom():
@@ -160,4 +160,4 @@ async def test_construct_header_custom():
 
         assert cred.header_name == "X-Custom"
         assert cred.scheme == "Token"
-        assert cred.token.get_secret_value() == cfg.raw_key
+        assert cred.token.get_secret_value() == cfg.raw_key.get_secret_value()
