@@ -85,6 +85,7 @@ LLM(s?)
 # https://github.com/logpai/loghub/
 Loghub
 Mem0
+[Mm]iddleware
 Milvus
 [Mm]ixin(s?)
 MLflow
