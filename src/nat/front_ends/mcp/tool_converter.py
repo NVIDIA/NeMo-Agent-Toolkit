@@ -35,32 +35,40 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Sentinel: marks "optional; let Pydantic supply default/factory"
+_USE_PYDANTIC_DEFAULT = object()
+
 
 def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
-    """Determine if a Pydantic field is optional and extract its default value.
+    """Determine if a Pydantic field is optional and extract its default value for MCP signatures.
 
-    A field is considered optional if:
-    1. is_required() returns False, OR
-    2. It has a default value (not PydanticUndefined), OR
-    3. It has a default_factory
+    For MCP tool signatures, we need to distinguish:
+    - Required fields: marked with Parameter.empty
+    - Optional with concrete default: use that default
+    - Optional with factory: use sentinel so Pydantic can apply the factory later
 
     Args:
         field: The Pydantic FieldInfo to check
 
     Returns:
         A tuple of (is_optional, default_value):
-        - is_optional: True if the field is optional, False if required
-        - default_value: The default value to use (actual value, None, or Parameter.empty)
+        - (False, Parameter.empty) for required fields
+        - (True, actual_default) for optional fields with explicit defaults
+        - (True, _USE_PYDANTIC_DEFAULT) for optional fields with default_factory
     """
-    has_default = (not field.is_required() or (field.default is not PydanticUndefined)
-                   or (field.default_factory is not None))
+    if field.is_required():
+        return False, Parameter.empty
 
-    if has_default:
-        if field.default is not PydanticUndefined:
-            return True, field.default
-        return True, None
+    # Field is optional - has either default or factory
+    if field.default is not PydanticUndefined:
+        return True, field.default
 
-    return False, Parameter.empty
+    # Factory case: mark optional in signature but don't fabricate a value
+    if field.default_factory is not None:
+        return True, _USE_PYDANTIC_DEFAULT
+
+    # Rare corner case: non-required yet no default surfaced
+    return True, _USE_PYDANTIC_DEFAULT
 
 
 def create_function_wrapper(
@@ -176,33 +184,23 @@ def create_function_wrapper(
                         result = await call_with_observability(lambda: function.ainvoke(chat_request, to_type=str))
                 else:
                     # Regular handling
-                    # Handle complex input schema - if we extracted fields from a nested schema,
-                    # we need to reconstruct the input
-                    if len(schema.model_fields) == 1 and len(parameters) > 1:
-                        # Get the field name from the original schema
-                        field_name = next(iter(schema.model_fields.keys()))
-                        field_type = schema.model_fields[field_name].annotation
+                    # Strip sentinel values so Pydantic can apply defaults/factories
+                    cleaned_kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
 
-                        # If it's a pydantic model, we need to create an instance
-                        if field_type and hasattr(field_type, "model_validate"):
-                            # Create the nested object
-                            nested_obj = field_type.model_validate(kwargs)
-                            # Call with the nested object
-                            kwargs = {field_name: nested_obj}
+                    # Always validate with the declared schema
+                    # This handles defaults, factories, nested models, validators, etc.
+                    model_input = schema.model_validate(cleaned_kwargs)
 
                     # Call the NAT function with the parameters - special handling for Workflow
                     if is_workflow:
-                        # For workflow with regular input, we'll assume the first parameter is the input
-                        input_value = list(kwargs.values())[0] if kwargs else ""
-
-                        # Workflows have a run method that is an async context manager
-                        # that returns a Runner
-                        async with function.run(input_value) as runner:
+                        # Workflows expect the model instance directly
+                        async with function.run(model_input) as runner:
                             # Get the result from the runner
                             result = await runner.result(to_type=str)
                     else:
-                        # Regular function call
-                        result = await call_with_observability(lambda: function.acall_invoke(**kwargs))
+                        # Regular function call - unpack the validated model
+                        result = await call_with_observability(lambda: function.acall_invoke(**model_input.model_dump())
+                                                               )
 
                 # Report completion
                 if ctx:

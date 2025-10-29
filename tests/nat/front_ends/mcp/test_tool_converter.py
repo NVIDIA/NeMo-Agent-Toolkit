@@ -24,6 +24,7 @@ from pydantic import Field
 
 from nat.builder.function import Function
 from nat.builder.workflow import Workflow
+from nat.front_ends.mcp.tool_converter import _USE_PYDANTIC_DEFAULT
 from nat.front_ends.mcp.tool_converter import create_function_wrapper
 from nat.front_ends.mcp.tool_converter import get_function_description
 from nat.front_ends.mcp.tool_converter import is_field_optional
@@ -138,8 +139,9 @@ class TestIsFieldOptional:
 
         # Assert
         assert is_optional is True
-        # When default_factory is used, we return None as the default
-        assert default_value is None
+        # When default_factory is used, we return the sentinel
+        # This allows Pydantic to apply the factory at validation time
+        assert default_value is _USE_PYDANTIC_DEFAULT
 
     def test_optional_field_with_none_default(self):
         """Test optional field with None as default (Union types)."""
@@ -455,6 +457,7 @@ class TestParameterSchemaValidation:
         assert sig.parameters["optional_str"].default == "default"
         assert sig.parameters["optional_int"].default == 0
         assert sig.parameters["optional_bool"].default is False
+        # optional_list has None as explicit default (not a factory), so it should be None
         assert sig.parameters["optional_list"].default is None
 
     def test_mixed_required_and_optional_parameters(self):
@@ -482,9 +485,9 @@ class TestParameterSchemaValidation:
         assert "optional_list" in sig.parameters
         assert sig.parameters["optional_str"].default == "default_value"
         assert sig.parameters["optional_int"].default == 42
-        # Fields with default_factory get None as the signature default
-        # The actual factory will be called by Pydantic at instantiation time
-        assert sig.parameters["optional_list"].default is None
+        # Fields with default_factory get the sentinel as the signature default
+        # The actual factory will be called by Pydantic at validation time
+        assert sig.parameters["optional_list"].default is _USE_PYDANTIC_DEFAULT
 
     def test_optional_with_none_type(self):
         """Test optional parameters with None type (Union types)."""
