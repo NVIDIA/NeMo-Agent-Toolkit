@@ -292,8 +292,8 @@ class ParetoVisualizer:
 
                         # Add trial number labels to Pareto optimal points
                         for idx in range(len(pareto_trials_df)):
-                            trial_number = pareto_trials_df.iloc[idx][
-                                'number'] if 'number' in pareto_trials_df.columns else pareto_trials_df.index[idx]
+                            trial_number = pareto_trials_df.iloc[idx]['number'] if 'number' in pareto_trials_df.columns \
+                                else pareto_trials_df.index[idx]
                             ax.annotate(f'{int(trial_number)}',
                                         xy=(pareto_x[idx], pareto_y[idx]),
                                         xytext=(6, 6),
