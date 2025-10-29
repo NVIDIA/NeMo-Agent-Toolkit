@@ -197,17 +197,17 @@ class ParetoVisualizer:
                     trial_values = [normalized_values[j][idx] for j in range(n_metrics)]
                     ax.plot(x_positions, trial_values, 'r-', alpha=0.8, linewidth=3)
 
-        # Add trial number label at the rightmost point
-        trial_number = trials_df.iloc[idx]['number'] if 'number' in trials_df.columns else idx
-        # Position label slightly to the right and above the last point
-        ax.annotate(f'{int(trial_number)}',
-                    xy=(x_positions[-1], trial_values[-1]),
-                    xytext=(5, 5),
-                    textcoords='offset points',
-                    fontsize=9,
-                    fontweight='bold',
-                    color='darkred',
-                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='red', alpha=0.8))
+                    # Add trial number label at the rightmost point
+                    trial_number = trials_df.iloc[idx]['number'] if 'number' in trials_df.columns else idx
+                    # Position label slightly to the right and above the last point
+                    ax.annotate(f'{int(trial_number)}',
+                                xy=(x_positions[-1], trial_values[-1]),
+                                xytext=(5, 5),
+                                textcoords='offset points',
+                                fontsize=9,
+                                fontweight='bold',
+                                color='darkred',
+                                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='red', alpha=0.8))
 
         # Customize plot
         ax.set_xticks(x_positions)
