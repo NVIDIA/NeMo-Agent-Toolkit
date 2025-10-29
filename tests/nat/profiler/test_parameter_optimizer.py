@@ -30,6 +30,7 @@ class _FakeTrial:
 
     def __init__(self, trial_id: int):
         self._trial_id = trial_id
+        self.number = trial_id # Add number attribute for Pareto optimal tracking
         self.user_attrs: dict[str, object] = {}
 
     # Optuna Trial API subset used by SearchSpace.suggest()
@@ -64,20 +65,36 @@ class _FakeDF:
 
     def __init__(self):
         # include rep_scores so the optimizer's flattening branch is skipped
-        self.columns = ["rep_scores"]
+        self.columns = ["rep_scores", "number"]
+        self._data = {}
 
     def __getitem__(self, key):  # noqa: ANN001
+        if key == "number":
+            # Return a fake series-like object that supports .isin()
+            return _FakeSeries([0, 1])
+        if key in self._data:
+            return self._data[key]
         raise KeyError(key)
 
     def __setitem__(self, key, value):  # noqa: ANN001
         # no-op for tests
-        return None
+        # Store values so they can be used later
+        self._data[key] = value
 
     def drop(self, columns=None):  # noqa: ANN001, D401
         return self
 
     def to_csv(self, fh, index: bool = False):  # noqa: ANN001, FBT001
         fh.write("trial_id,params\n0,{}\n")
+
+class _FakeSeries:
+
+    def __init__(self, values):  # noqa: ANN001
+        self.values = values
+
+    def isin(self, other):  # noqa: ANN001
+        # Return a fake boolean array
+        return [v in other for v in self.values]
 
 
 class _FakeStudy:
@@ -96,6 +113,12 @@ class _FakeStudy:
 
     def trials_dataframe(self, *args, **kwargs):  # noqa: ANN001, D401
         return _FakeDF()
+
+    @property
+    def best_trials(self):  # noqa: D401
+        """Return Pareto optimal trials (for multi-objective optimization)."""
+        # For testing purposes, consider all trials as Pareto optimal
+        return self.trials
 
 
 def _make_optimizer_config(tmp_path: Path) -> OptimizerConfig:
