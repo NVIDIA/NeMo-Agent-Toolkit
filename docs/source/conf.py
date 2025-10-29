@@ -250,6 +250,8 @@ html_extra_path = ["versions1.json"]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
+
+
 html_static_path = ['_static']
 html_js_files = ['imageMapResizer.min.js']
 
@@ -347,3 +349,4 @@ def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonO
 def setup(sphinx):
     # Work-around for for Pydantic docstrings that trigger parsing warnings
     sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+    sphinx.add_js_file('imageMapResizer.min.js')
