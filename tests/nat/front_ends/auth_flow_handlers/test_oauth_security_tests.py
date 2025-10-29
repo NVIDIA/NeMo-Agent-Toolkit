@@ -65,7 +65,7 @@ class TestOAuth2RedirectURIValidation:
         transport = ASGITransport(app=mock_server._app)
         oauth_client = AsyncOAuth2Client(
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.client_secret,
+            client_secret=oauth_config.client_secret.get_secret_value(),
             redirect_uri=oauth_config.redirect_uri,
             scope=" ".join(oauth_config.scopes) if oauth_config.scopes else None,
             token_endpoint=oauth_config.token_url,
@@ -104,7 +104,7 @@ class TestOAuth2RedirectURIValidation:
         transport = ASGITransport(app=mock_server._app)
         malicious_client = AsyncOAuth2Client(
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.client_secret,
+            client_secret=oauth_config.client_secret.get_secret_value(),
             redirect_uri=malicious_redirect_uri,  # Use malicious URI
             scope=" ".join(oauth_config.scopes) if oauth_config.scopes else None,
             token_endpoint=oauth_config.token_url,
@@ -198,7 +198,7 @@ class TestOAuth2RedirectURIValidation:
         transport = ASGITransport(app=mock_server._app)
         attack_client = AsyncOAuth2Client(
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.client_secret,
+            client_secret=oauth_config.client_secret.get_secret_value(),
             redirect_uri=attack_uri,
             scope=" ".join(oauth_config.scopes) if oauth_config.scopes else None,
             token_endpoint=oauth_config.token_url,
@@ -244,7 +244,7 @@ class TestOAuth2AuthorizationRequest:
         transport = ASGITransport(app=mock_server._app)
         oauth_client = AsyncOAuth2Client(
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.client_secret,
+            client_secret=oauth_config.client_secret.get_secret_value(),
             redirect_uri=oauth_config.redirect_uri,
             scope=" ".join(oauth_config.scopes) if oauth_config.scopes else None,
             token_endpoint=oauth_config.token_url,
@@ -273,7 +273,7 @@ class TestOAuth2AuthorizationRequest:
         transport = ASGITransport(app=mock_server._app)
         oauth_client = AsyncOAuth2Client(
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.client_secret,
+            client_secret=oauth_config.client_secret.get_secret_value(),
             redirect_uri=oauth_config.redirect_uri,
             scope=" ".join(oauth_config.scopes) if oauth_config.scopes else None,
             token_endpoint=oauth_config.token_url,
@@ -306,7 +306,7 @@ class TestOAuth2AuthorizationRequest:
         transport = ASGITransport(app=mock_server._app)
         oauth_client = AsyncOAuth2Client(
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.client_secret,
+            client_secret=oauth_config.client_secret.get_secret_value(),
             redirect_uri=oauth_config.redirect_uri,
             scope=" ".join(oauth_config.scopes) if oauth_config.scopes else None,
             token_endpoint=oauth_config.token_url,
@@ -360,7 +360,7 @@ class TestOAuth2AuthorizationRequest:
         transport = ASGITransport(app=mock_server._app)
         oauth_client = AsyncOAuth2Client(
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.client_secret,
+            client_secret=oauth_config.client_secret.get_secret_value(),
             redirect_uri=oauth_config.redirect_uri,
             scope=" ".join(oauth_config.scopes) if oauth_config.scopes else None,
             token_endpoint=oauth_config.token_url,
@@ -429,7 +429,7 @@ class TestOAuth2ErrorHandlingAndRecovery:
         with pytest.raises(Exception) as exc_info:
             oauth_client = AsyncOAuth2Client(
                 client_id=fake_client_id or oauth_config.client_id,
-                client_secret=oauth_config.client_secret,
+                client_secret=oauth_config.client_secret.get_secret_value(),
                 redirect_uri=oauth_config.redirect_uri,
                 scope=fake_scope,
                 base_url="http://testserver",
@@ -497,7 +497,7 @@ async def test_authorization_code_security_handling(mock_server,
         # Test with invalid authorization code
         oauth_client = AsyncOAuth2Client(
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.client_secret,
+            client_secret=oauth_config.client_secret.get_secret_value(),
             redirect_uri=oauth_config.redirect_uri,
             scope=" ".join(oauth_config.scopes),
             token_endpoint=oauth_config.token_url,
@@ -595,7 +595,7 @@ async def test_authorization_code_security_handling(mock_server,
         # Test with expired code
         oauth_client = AsyncOAuth2Client(
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.client_secret,
+            client_secret=oauth_config.client_secret.get_secret_value(),
             redirect_uri=oauth_config.redirect_uri,
             scope=" ".join(oauth_config.scopes),
             token_endpoint=oauth_config.token_url,
