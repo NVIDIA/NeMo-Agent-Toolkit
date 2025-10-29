@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import os
+from collections.abc import AsyncGenerator
+from typing import Any
 from typing import TypeVar
 
 from nat.builder.builder import Builder
@@ -36,6 +38,15 @@ ModelType = TypeVar("ModelType")
 
 
 def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
+    """Patch a Strands client per NAT config (retries/thinking) and return it.
+
+    Args:
+        client: Concrete Strands model client instance.
+        llm_config: NAT LLM config with Retry/Thinking mixins.
+
+    Returns:
+        The patched client instance.
+    """
 
     class StrandsThinkingInjector(BaseThinkingInjector):
 
@@ -94,7 +105,8 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
-async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder):
+async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> AsyncGenerator[Any, None]:
+    """Build a Strands OpenAIModel from NAT OpenAIModelConfig and yield it."""
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
 
@@ -120,7 +132,8 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder):
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
-async def nim_strands(llm_config: NIMModelConfig, _builder: Builder):
+async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGenerator[Any, None]:
+    """Build a Strands OpenAI-compatible client for NIM and yield it."""
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
 
@@ -131,22 +144,46 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder):
     class NIMCompatibleOpenAIModel(OpenAIModel):
 
         @classmethod
+        def format_request_message_content(cls, content):
+            """Format OpenAI compatible content block with reasoning support.
+
+            Args:
+                content: Message content.
+
+            Returns:
+                OpenAI compatible content block.
+
+            Raises:
+                TypeError: If the content block type cannot be converted to
+                    an OpenAI-compatible format.
+            """
+            # Handle reasoning content by extracting the text
+            if "reasoningContent" in content:
+                reasoning_text = content["reasoningContent"].get("reasoningText", {}).get("text", "")
+                return {"text": reasoning_text, "type": "text"}
+
+            # Fall back to parent implementation for other content types
+            return super().format_request_message_content(content)
+
+        @classmethod
         def format_request_messages(cls, messages, system_prompt=None):
             # Get the formatted messages from the parent
             formatted_messages = super().format_request_messages(messages, system_prompt)
 
-            # Convert content arrays with only text to strings for NIM compatibility
+            # Convert content arrays with only text to strings for NIM
+            # compatibility
             for msg in formatted_messages:
                 content = msg.get("content")
-                if isinstance(content, list) and len(content) == 1 and isinstance(content[0], str):
+                if (isinstance(content, list) and len(content) == 1 and isinstance(content[0], str)):
                     # If content is a single-item list with a string, flatten it
                     msg["content"] = content[0]
-                elif isinstance(content, list) and all(
-                        isinstance(item, dict) and item.get("type") == "text" for item in content):
-                    # If all items are text blocks, join them into a single string
+                elif (isinstance(content, list)
+                      and all(isinstance(item, dict) and item.get("type") == "text" for item in content)):
+                    # If all items are text blocks, join them into a single
+                    # string
                     text_content = "".join(item["text"] for item in content)
                     # Ensure we don't send empty strings (NIM rejects them)
-                    msg["content"] = text_content if text_content.strip() else " "
+                    msg["content"] = (text_content if text_content.strip() else " ")
                 elif isinstance(content, list) and len(content) == 0:
                     # Handle empty content arrays
                     msg["content"] = " "
@@ -176,7 +213,8 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder):
 
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
-async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder):
+async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder) -> AsyncGenerator[Any, None]:
+    """Build a Strands BedrockModel from NAT AWSBedrockModelConfig and yield it."""
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
 
@@ -195,8 +233,9 @@ async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder):
               "credentials_profile_name"):
         params.pop(k, None)
 
+    region = None if llm_config.region_name in (None, "None") else llm_config.region_name
     client = BedrockModel(model_id=llm_config.model_name,
-                          region_name=llm_config.region_name,
+                          region_name=region,
                           endpoint_url=llm_config.base_url,
                           **params)
 

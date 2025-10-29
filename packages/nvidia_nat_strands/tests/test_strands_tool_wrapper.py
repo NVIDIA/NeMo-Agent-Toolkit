@@ -146,6 +146,7 @@ class TestNATFunctionAgentTool:
         assert tool.tool_name == "test_tool"
         assert tool._fn == mock_function
 
+    @pytest.mark.asyncio
     async def test_nat_function_agent_tool_stream_success(self, mock_function, tool_spec):
         """Test successful tool execution."""
         from nat.plugins.strands.tool_wrapper import NATFunctionAgentTool
@@ -174,6 +175,7 @@ class TestNATFunctionAgentTool:
         assert tool_result["status"] == "success"
         assert "content" in tool_result
 
+    @pytest.mark.asyncio
     async def test_nat_function_agent_tool_stream_error(self, mock_function, tool_spec):
         """Test tool execution with error."""
         from nat.plugins.strands.tool_wrapper import NATFunctionAgentTool
@@ -200,6 +202,7 @@ class TestNATFunctionAgentTool:
         assert tool_result["status"] == "error"
         assert "ValueError" in tool_result["content"][0]["text"]
 
+    @pytest.mark.asyncio
     async def test_nat_function_agent_tool_streaming_function(self, tool_spec):
         """Test tool with streaming function."""
         from nat.plugins.strands.tool_wrapper import NATFunctionAgentTool
@@ -238,6 +241,7 @@ class TestNATFunctionAgentTool:
         # toolUseId comes from tool_use.get("toolUseId", "unknown")
         assert "toolUseId" in tool_result
 
+    @pytest.mark.asyncio
     async def test_nat_function_agent_tool_streaming_with_error(self, tool_spec):
         """Test streaming tool with error."""
         from nat.plugins.strands.tool_wrapper import NATFunctionAgentTool
@@ -286,6 +290,7 @@ class TestNATFunctionAgentTool:
         assert "inputSchema" in tool.tool_spec
         assert tool.tool_type == "function"
 
+    @pytest.mark.asyncio
     async def test_nat_function_agent_tool_empty_input(self, mock_function, tool_spec):
         """Test tool execution with empty input."""
         from nat.plugins.strands.tool_wrapper import NATFunctionAgentTool

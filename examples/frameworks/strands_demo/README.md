@@ -33,14 +33,14 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 ## Key Features
 
-- **Strands framework integration**: Demonstrates support for Strands Agents in the NeMo Agent toolkit.
+- **Strands framework integration**: Demonstrates support for Strands Agents in the NeMo Agent Toolkit.
 - **AgentCore Integration**: Demonstrates an agent that can be run on Amazon Bedrock AgentCore runtime.
 - **Evaluation and Performance Metrics**: Runs dataset-driven evaluation and performance analysis via `nat eval`.
 - **Support for Model Providers**: Configuration includes NIM, OpenAI, and AWS Bedrock options.
 
 ## Prerequisites
 
-- NeMo Agent toolkit installed. See the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source).
+- NeMo Agent Toolkit installed. See the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source).
 - API keys as required by your chosen models.
 
 ## Installation and Setup

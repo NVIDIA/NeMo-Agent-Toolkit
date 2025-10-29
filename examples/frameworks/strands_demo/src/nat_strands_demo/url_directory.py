@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from collections.abc import AsyncGenerator
 from urllib.parse import urlparse
 
 from pydantic import Field
@@ -42,17 +43,19 @@ class URLDirectoryConfig(FunctionBaseConfig, name="url_directory"):
 
     @field_validator("urls")
     @classmethod
-    def validate_urls(cls, v):
+    def validate_urls(cls, v: dict[str, str]) -> dict[str, str]:
         """Validate that all URLs are properly formatted."""
         for name, url in v.items():
             parsed = urlparse(url)
             if not all([parsed.scheme, parsed.netloc]):
                 raise ValueError(f"Invalid URL for '{name}': {url}")
+            if parsed.scheme not in ("http", "https"):
+                raise ValueError(f"Unsupported scheme for '{name}': {parsed.scheme} (only http/https allowed)")
         return v
 
 
 @register_function(config_type=URLDirectoryConfig)
-async def url_directory(config: URLDirectoryConfig, _: Builder):
+async def url_directory(config: URLDirectoryConfig, _: Builder) -> AsyncGenerator[FunctionInfo, None]:
     """
     Create a URL directory tool that provides vetted URLs for specific topics.
 
@@ -100,8 +103,8 @@ async def url_directory(config: URLDirectoryConfig, _: Builder):
 
             return "\n".join(directory_lines)
 
-        except Exception as e:
-            logger.exception("Error generating URL directory: %s", e)
-            return f"Error accessing URL directory: {str(e)}"
+        except Exception as e:  # noqa: BLE001
+            logger.exception("Error generating URL directory")
+            return f"Error accessing URL directory: {e}"
 
     yield FunctionInfo.from_fn(_get_url_directory, description=config.description)

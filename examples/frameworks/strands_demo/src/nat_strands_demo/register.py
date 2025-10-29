@@ -74,7 +74,7 @@ async def strands_demo(config: StrandsDemoConfig, builder: Builder):
     )
 
     # Combine NAT tools with Strands http_request tool
-    all_tools = nat_tools + [http_request]
+    all_tools = [*nat_tools, http_request]
 
     # Create Agent
     agent = Agent(model=llm, tools=all_tools, system_prompt=config.system_prompt)
@@ -87,7 +87,7 @@ async def strands_demo(config: StrandsDemoConfig, builder: Builder):
                     text += ev["data"]
             return text or ""
         except Exception as exc:
-            logger.exception("Strands demo failed: %s", exc)
+            logger.exception("Strands demo failed")
             return f"Error: {exc}"
 
     yield FunctionInfo.from_fn(

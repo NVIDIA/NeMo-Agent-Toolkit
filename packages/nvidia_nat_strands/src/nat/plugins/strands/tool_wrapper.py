@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +15,7 @@
 # limitations under the License.
 
 import logging
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from pydantic import BaseModel
@@ -36,13 +38,13 @@ def _json_schema_from_pydantic(model: type[BaseModel]) -> dict[str, Any]:
             if k in schema:
                 del schema[k]
         return {"json": schema}
-    except Exception as exc:
-        logger.exception("Failed to generate JSON schema: %s", exc)
+    except Exception:
+        logger.exception("Failed to generate JSON schema")
         return {"json": {}}
 
 
 def _to_tool_result(tool_use_id: str, value: Any) -> dict[str, Any]:
-    if isinstance(value, dict | list | tuple):
+    if isinstance(value, (dict, list, tuple)):  # noqa: UP038
         content_item = {"json": value}
     else:
         content_item = {"text": str(value)}
@@ -58,7 +60,7 @@ def _to_error_result(tool_use_id: str, err: Exception) -> dict[str, Any]:
         "toolUseId": tool_use_id,
         "status": "error",
         "content": [{
-            "text": f"{type(err).__name__}: {str(err)}"
+            "text": f"{type(err).__name__}: {err!s}"
         }],
     }
 
@@ -89,7 +91,8 @@ class NATFunctionAgentTool(AgentTool):
     def tool_type(self) -> str:
         return "function"
 
-    async def stream(self, tool_use: ToolUse, invocation_state: dict[str, Any], **kwargs: Any):
+    async def stream(self, tool_use: ToolUse, _invocation_state: dict[str, Any],
+                     **_kwargs: Any) -> AsyncGenerator[Any, None]:
         from strands.types._events import ToolResultEvent  # type: ignore
         from strands.types._events import ToolStreamEvent
 
@@ -97,7 +100,7 @@ class NATFunctionAgentTool(AgentTool):
         tool_input = tool_use.get("input", {}) or {}
 
         try:
-            if self._fn.has_streaming_output and not self._fn.has_single_output:
+            if (self._fn.has_streaming_output and not self._fn.has_single_output):
                 last_chunk: Any | None = None
                 async for chunk in self._fn.acall_stream(**tool_input):
                     last_chunk = chunk
@@ -109,12 +112,13 @@ class NATFunctionAgentTool(AgentTool):
             result = await self._fn.acall_invoke(**tool_input)
             yield ToolResultEvent(_to_tool_result(tool_use_id, result))
         except Exception as exc:  # noqa: BLE001
-            logger.exception("Strands tool '%s' failed: %s", self.tool_name, exc)
+            logger.exception("Strands tool '%s' failed", self.tool_name)
             yield ToolResultEvent(_to_error_result(tool_use_id, exc))
 
 
 @register_tool_wrapper(wrapper_type=LLMFrameworkEnum.STRANDS)
-def strands_tool_wrapper(name: str, fn: Function, builder: Builder):
+def strands_tool_wrapper(name: str, fn: Function, _builder: Builder) -> NATFunctionAgentTool:
+    """Create a Strands `AgentTool` wrapper for a NAT `Function`."""
     if fn.input_schema is None:
         raise ValueError(f"Tool '{name}' must define an input schema")
 
