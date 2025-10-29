@@ -39,16 +39,19 @@ def _run_notebook(notebook_path: Path, timeout_seconds: int = 120):
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-@pytest.mark.parametrize("notebook_file_name",
-                         [
-                             pytest.param("1_getting_started_with_nat.ipynb",
-                                          marks=pytest.mark.xfail(reason='failing in the nat_embedded.py cell')),
-                             "3_adding_tools_to_agents.ipynb",
-                             "4_multi_agent_orchestration.ipynb",
-                             "5_observability_evaluation_and_profiling.ipynb",
-                             pytest.param("6_optimize_model_selection.ipynb",
-                                          marks=pytest.mark.skip(reason='failing after about 15 minutes')),
-                         ])
+@pytest.mark.parametrize(
+    "notebook_file_name",
+    [
+        pytest.param("1_getting_started_with_nat.ipynb",
+                     marks=pytest.mark.xfail(reason='failing in the nat_embedded.py cell')),
+        "3_adding_tools_to_agents.ipynb",
+        "4_multi_agent_orchestration.ipynb",
+        "5_observability_evaluation_and_profiling.ipynb",
+        pytest.param(
+            "6_optimize_model_selection.ipynb",
+            marks=pytest.mark.skip(reason="failing after about 13 minutes with a key-error in cell 1.2 on line:\n"
+                                   "\tbest_trial = trials_df.loc[trials_df['values_0'].idxmax()]")),
+    ])
 def test_notebooks(notebooks_dir: Path, notebook_file_name: str):
     _run_notebook(notebooks_dir / notebook_file_name)
 
