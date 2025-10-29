@@ -97,13 +97,6 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
         Returns:
             FastMCP instance or a subclass with custom behavior
-
-        Example:
-            return FastMCP(
-                name=self.front_end_config.name,
-                host=self.front_end_config.host,
-                port=self.front_end_config.port,
-            )
         """
         ...
 
@@ -118,14 +111,6 @@ class MCPFrontEndPluginWorkerBase(ABC):
         Args:
             mcp: The FastMCP server instance
             builder: The workflow builder instance
-
-        Example:
-            async def add_routes(self, mcp, builder):
-                # Use default route registration
-                await self._default_add_routes(mcp, builder)
-
-                # Add plugin-specific features
-                self._add_my_custom_features(mcp)
         """
         ...
 
