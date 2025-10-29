@@ -177,12 +177,11 @@ class ZepEditor(MemoryEditor):
             query (str): The query string (not used by Zep's high-level API, included for interface compatibility).
             top_k (int): Maximum number of items to return (not used by Zep's context API).
             kwargs: Zep-specific keyword arguments.
-                - user_id (str, required): The user ID to include in the returned MemoryItem.
-                  Note: Zep's API does not require user_id (only thread_id), but we require it
-                  for constructing the MemoryItem response.
-                - mode (str, optional): Retrieval mode. "basic" for fast retrieval (P95 < 200ms) or
-                  "summary" for more comprehensive memory. Defaults to "basic" for performance.
-                  Note: Zep's server-side default is "summary" if mode is not specified.
+                - user_id (str, required for response construction): Used only to construct the
+                  returned MemoryItem. Zep v3's thread.get_user_context() only requires thread_id.
+                - mode (str, optional): Retrieval mode. Zep server default is "summary". This
+                  implementation uses mode="basic" (NAT's default) for performance (P95 < 200ms).
+                  "summary" provides more comprehensive memory at the cost of latency.
 
         Returns:
             list[MemoryItem]: A single MemoryItem containing the formatted context from Zep.
