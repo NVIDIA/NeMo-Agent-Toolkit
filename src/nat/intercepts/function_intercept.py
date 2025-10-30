@@ -49,9 +49,6 @@ CallNext = Callable[[Any], Awaitable[Any]]
 CallNextStream = Callable[[Any], AsyncIterator[Any]]
 """Callable signature for calling the next middleware in the chain (streaming)."""
 
-SingleInvokeCallable = CallNext
-StreamInvokeCallable = CallNextStream
-
 
 @dataclasses.dataclass(frozen=True)
 class FunctionInterceptContext:
@@ -271,7 +268,5 @@ __all__ = [
     "FunctionIntercept",
     "FunctionInterceptChain",
     "FunctionInterceptContext",
-    "SingleInvokeCallable",
-    "StreamInvokeCallable",
     "validate_intercepts",
 ]
