@@ -87,7 +87,7 @@ The ReWOO agent is configured through the `config.yml` file. The following confi
 
 ### Configurable Options
 
-* `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
+* `tool_names`: A list of tools that the agent can call. The tools must be functions or function groups configured in the YAML file
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
 
