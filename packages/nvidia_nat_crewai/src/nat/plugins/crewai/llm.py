@@ -19,6 +19,7 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
@@ -79,7 +80,8 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
 
     # https://docs.crewai.com/en/concepts/llms#azure
 
-    api_key = llm_config.api_key or os.environ.get("AZURE_OPENAI_API_KEY") or os.environ.get("AZURE_API_KEY")
+    api_key = get_secret_value(llm_config.api_key) if llm_config.api_key else os.environ.get(
+        "AZURE_OPENAI_API_KEY") or os.environ.get("AZURE_API_KEY")
     if api_key is None:
         raise ValueError("Azure API key is not set")
     os.environ["AZURE_API_KEY"] = api_key

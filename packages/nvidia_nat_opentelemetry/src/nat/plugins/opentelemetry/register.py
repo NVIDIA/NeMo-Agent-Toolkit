@@ -20,6 +20,9 @@ from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.common import OptionalSecretStr
+from nat.data_models.common import SerializableSecretStr
+from nat.data_models.common import get_secret_value
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
 from nat.observability.mixin.collector_config_mixin import CollectorConfigMixin
@@ -31,8 +34,8 @@ class LangfuseTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, n
     """A telemetry exporter to transmit traces to externally hosted langfuse service."""
 
     endpoint: str = Field(description="The langfuse OTEL endpoint (/api/public/otel/v1/traces)")
-    public_key: str = Field(description="The Langfuse public key", default="")
-    secret_key: str = Field(description="The Langfuse secret key", default="")
+    public_key: SerializableSecretStr = Field(description="The Langfuse public key", default="")
+    secret_key: SerializableSecretStr = Field(description="The Langfuse secret key", default="")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -44,8 +47,8 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
-    secret_key = config.secret_key or os.environ.get("LANGFUSE_SECRET_KEY")
-    public_key = config.public_key or os.environ.get("LANGFUSE_PUBLIC_KEY")
+    secret_key = get_secret_value(config.secret_key) if config.secret_key else os.environ.get("LANGFUSE_SECRET_KEY")
+    public_key = get_secret_value(config.public_key) if config.public_key else os.environ.get("LANGFUSE_PUBLIC_KEY")
     if not secret_key or not public_key:
         raise ValueError("secret and public keys are required for langfuse")
 
@@ -69,7 +72,7 @@ class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemet
         description="The langsmith OTEL endpoint",
         default="https://api.smith.langchain.com/otel/v1/traces",
     )
-    api_key: str = Field(description="The Langsmith API key", default="")
+    api_key: SerializableSecretStr = Field(description="The Langsmith API key", default="")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -80,7 +83,7 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
-    api_key = config.api_key or os.environ.get("LANGSMITH_API_KEY")
+    api_key = get_secret_value(config.api_key) if config.api_key else os.environ.get("LANGSMITH_API_KEY")
     if not api_key:
         raise ValueError("API key is required for langsmith")
 
@@ -134,7 +137,7 @@ async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builde
 class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="patronus"):
     """A telemetry exporter to transmit traces to Patronus service."""
 
-    api_key: str = Field(description="The Patronus API key", default="")
+    api_key: SerializableSecretStr = Field(description="The Patronus API key", default="")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -145,7 +148,7 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
-    api_key = config.api_key or os.environ.get("PATRONUS_API_KEY")
+    api_key = get_secret_value(config.api_key) if config.api_key else os.environ.get("PATRONUS_API_KEY")
     if not api_key:
         raise ValueError("API key is required for Patronus")
 
@@ -169,7 +172,7 @@ class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetry
     endpoint: str = Field(description="The galileo endpoint to export telemetry traces.",
                           default="https://app.galileo.ai/api/galileo/otel/traces")
     logstream: str = Field(description="The logstream name to group the telemetry traces.")
-    api_key: str = Field(description="The api key to authenticate with the galileo service.")
+    api_key: SerializableSecretStr = Field(description="The api key to authenticate with the galileo service.")
 
 
 @register_telemetry_exporter(config_type=GalileoTelemetryExporter)
@@ -179,7 +182,7 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
     headers = {
-        "Galileo-API-Key": config.api_key,
+        "Galileo-API-Key": get_secret_value(config.api_key),
         "logstream": config.logstream,
         "project": config.project,
     }
@@ -199,7 +202,7 @@ class DBNLTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name=
     """A telemetry exporter to transmit traces to DBNL."""
 
     api_url: str | None = Field(description="The DBNL API URL.", default=None)
-    api_token: str | None = Field(description="The DBNL API token.", default=None)
+    api_token: OptionalSecretStr = Field(description="The DBNL API token.", default=None)
     project_id: str | None = Field(description="The DBNL project id.", default=None)
 
 
@@ -209,7 +212,7 @@ async def dbnl_telemetry_exporter(config: DBNLTelemetryExporter, builder: Builde
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
-    api_token = config.api_token or os.environ.get("DBNL_API_TOKEN")
+    api_token = get_secret_value(config.api_token) if config.api_token else os.environ.get("DBNL_API_TOKEN")
     if not api_token:
         raise ValueError("API token is required for DBNL")
     project_id = config.project_id or os.environ.get("DBNL_PROJECT_ID")
