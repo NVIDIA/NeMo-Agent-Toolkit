@@ -1,5 +1,17 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Middleware-style function intercepts for the NeMo Agent toolkit.
 
 This module provides a middleware pattern for function intercepts, allowing you to
@@ -37,12 +49,8 @@ CallNext = Callable[[Any], Awaitable[Any]]
 CallNextStream = Callable[[Any], AsyncIterator[Any]]
 """Callable signature for calling the next middleware in the chain (streaming)."""
 
-# Legacy aliases for backward compatibility
 SingleInvokeCallable = CallNext
-"""Deprecated: Use CallNext instead."""
-
 StreamInvokeCallable = CallNextStream
-"""Deprecated: Use CallNextStream instead."""
 
 
 @dataclasses.dataclass(frozen=True)
@@ -107,8 +115,7 @@ class FunctionIntercept(ABC):
 
         return self._is_final
 
-    async def intercept_invoke(self, value: Any, call_next: CallNext,
-                               context: FunctionInterceptContext) -> Any:
+    async def intercept_invoke(self, value: Any, call_next: CallNext, context: FunctionInterceptContext) -> Any:
         """Middleware for single-output invocations.
 
         Args:
@@ -264,7 +271,7 @@ __all__ = [
     "FunctionIntercept",
     "FunctionInterceptChain",
     "FunctionInterceptContext",
-    "SingleInvokeCallable",  # Deprecated, use CallNext
-    "StreamInvokeCallable",  # Deprecated, use CallNextStream
+    "SingleInvokeCallable",
+    "StreamInvokeCallable",
     "validate_intercepts",
 ]
