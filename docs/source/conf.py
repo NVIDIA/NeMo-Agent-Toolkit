@@ -349,4 +349,5 @@ def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonO
 def setup(sphinx):
     # Work-around for for Pydantic docstrings that trigger parsing warnings
     sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+    # this javascript handles resizing the impage map at the top
     sphinx.add_js_file('imageMapResizer.min.js')

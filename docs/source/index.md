@@ -43,8 +43,6 @@ limitations under the License.
    
       <area shape="rect" coords="725,1,850,50" href="store-and-retrieve/memory.html" alt="Tool creator allows creationg customization and integration of tools." title="Memory modules enable multi-turn or context-aware interactions. Advanced configurations can include tool prioritization, callbacks for logging or monitoring, and multi-agent orchestration">
 
-      
-
       <area shape="rect" coords="100,320,225,373" href="workflows/about/reasoning-agent.html" alt="Agent Types" title="The reasoning agent is an AI system that directly invokes an underlying function while performing reasoning on top, &#10;&#10; ReAct (Reasoning and Acting) agent, Reasoning Agent which directly invokes an underlying function while performing reasoning on top. &#10; &#10; ReWOO (Reasoning WithOut Observation) are among the supported types. ">
       
       <area shape="rect" coords="650,320,775,373" href="extend/memory.html" alt="Memory subsystem" title="The NeMo Agent toolkit Memory subsystem allows storage and retrieve a user’s data in long-term memory. mem0, redis or zep memory is integrated in the code." >
@@ -55,7 +53,7 @@ limitations under the License.
       
       <area shape="rect" coords="320,385,440,440" href="workflows/retrievers.html" alt="Retrievers" title="Retrievers are used to retrieve relevant documents from a vector database. NVIDIA NIM and Milvus are supported.">
       
-      <area shape="rect" coords="470,385,575,440" href="workflows/mcp/index.html" alt="Model Control Protocol" title="NeMo Agent toolkit Model Context Protocol (MCP) integration includes client, server and transport configuration support">
+      <area shape="rect" coords="470,385,575,440" href="workflows/mcp/index.html" alt="Model Control Protocol" title="NeMo Agent toolkit integrates with Model Context Protocol (MCP) including client, server and transport configuration support">
       
       <area shape="rect" coords="600,385,710,440" href="workflows/observe/index.html" alt="Observation" title="The NeMo Agent toolkit uses a flexible, plugin-based observability system that provides comprehensive support for configuring logging, tracing, and metrics for workflows. Catalyst, Dynatrace, Galileo, Langfuse, OpenTelemetry Collector, Patronus, Phoenix, and W&B Weave are all supported with examples.">
       
