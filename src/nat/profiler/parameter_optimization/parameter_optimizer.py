@@ -111,7 +111,10 @@ def optimize_parameters(
             tasks = [_single_eval(i) for i in range(reps)]
             return await asyncio.gather(*tasks)
 
-        with (out_dir / f"config_numeric_trial_{trial._trial_id}.yml").open("w") as fh:
+        # Calculate padding width based on total number of trials
+        trial_id_width = len(str(max(0, optimizer_config.numeric.n_trials - 1)))
+        trial_id_padded = f"{trial.number:0{trial_id_width}d}"
+        with (out_dir / f"config_numeric_trial_{trial_id_padded}.yml").open("w") as fh:
             yaml.dump(cfg_trial.model_dump(), fh)
 
         all_scores = asyncio.run(_run_all_evals())
@@ -132,7 +135,7 @@ def optimize_parameters(
 
     # Save final results (out_dir already created and defined above)
     with (out_dir / "optimized_config.yml").open("w") as fh:
-        yaml.dump(tuned_cfg.model_dump(), fh)
+        yaml.dump(tuned_cfg.model_dump(mode='json'), fh)
     with (out_dir / "trials_dataframe_params.csv").open("w") as fh:
         # Export full trials DataFrame (values, params, timings, etc.).
         df = study.trials_dataframe()
@@ -154,6 +157,13 @@ def optimize_parameters(
             # Some Optuna versions return a dict in a single user_attrs column.
             df["rep_scores"] = df["user_attrs"].apply(lambda d: d.get("rep_scores") if isinstance(d, dict) else None)
             df = df.drop(columns=["user_attrs"])
+
+        # Get Pareto optimal trial numbers from Optuna study
+        pareto_trials = study.best_trials
+        pareto_trial_numbers = {trial.number for trial in pareto_trials}
+        # Add boolean column indicating if trial is Pareto optimal
+        df["pareto_optimal"] = df["number"].isin(pareto_trial_numbers)
+
         df.to_csv(fh, index=False)
 
     # Generate Pareto front visualizations
