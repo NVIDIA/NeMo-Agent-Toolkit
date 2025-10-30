@@ -1,11 +1,18 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Cache intercept for function memoization with similarity matching.
+"""Cache middleware for function memoization with similarity matching.
 
-This module provides a cache intercept that can memoize function calls based on
-input similarity. It supports exact matching for maximum performance and fuzzy
-matching using Python's built-in difflib for similarity computation.
+This module provides a cache middleware that memoizes function calls based on
+input similarity. It demonstrates the middleware pattern by:
+
+1. Preprocessing: Serializing and checking the cache for similar inputs
+2. Calling next: Delegating to the next middleware/function if no cache hit
+3. Postprocessing: Caching the result for future use
+4. Continuing: Returning the result (cached or fresh)
+
+The cache supports exact matching for maximum performance and fuzzy matching
+using Python's built-in difflib for similarity computation.
 """
 
 from __future__ import annotations
@@ -17,21 +24,28 @@ from typing import Any
 
 from nat.builder.context import Context
 from nat.builder.context import ContextState
+from nat.intercepts.function_intercept import CallNext
+from nat.intercepts.function_intercept import CallNextStream
 from nat.intercepts.function_intercept import FunctionIntercept
 from nat.intercepts.function_intercept import FunctionInterceptContext
-from nat.intercepts.function_intercept import SingleInvokeCallable
-from nat.intercepts.function_intercept import StreamInvokeCallable
 
 logger = logging.getLogger(__name__)
 
 
 class CacheIntercept(FunctionIntercept):
-    """Cache function outputs based on input similarity.
+    """Cache middleware that memoizes function outputs based on input similarity.
 
-    This intercept serializes function inputs to strings and performs
-    similarity matching against previously seen inputs. If a similar input
-    is found above the configured threshold, it returns the cached output
-    instead of calling the function.
+    This middleware demonstrates the four-phase middleware pattern:
+
+    1. **Preprocess**: Serialize input and check cache for similar entries
+    2. **Call Next**: Delegate to next middleware/function if cache miss
+    3. **Postprocess**: Store the result in cache for future use
+    4. **Continue**: Return the result (from cache or fresh)
+
+    The cache serializes function inputs to strings and performs similarity
+    matching against previously seen inputs. If a similar input is found above
+    the configured threshold, it returns the cached output without calling the
+    next middleware or function.
 
     Args:
         enabled_mode: Either "always" to always cache, or "eval" to only
@@ -129,57 +143,87 @@ class CacheIntercept(FunctionIntercept):
 
         return best_match
 
-    async def intercept_invoke(self, value: Any, next_call: SingleInvokeCallable,
+    async def intercept_invoke(self, value: Any, call_next: CallNext,
                                context: FunctionInterceptContext) -> Any:
-        """Intercept single-output invocations with caching logic.
+        """Cache middleware for single-output invocations.
 
-        This method:
-        1. Checks if caching should be enabled
-        2. Serializes the input
-        3. Looks for similar cached inputs
-        4. Returns cached output if found, otherwise delegates to function
-        5. Caches the output for future use
+        Implements the four-phase middleware pattern:
+
+        1. **Preprocess**: Check if caching is enabled and serialize input
+        2. **Call Next**: Delegate to next middleware/function if cache miss
+        3. **Postprocess**: Store the result in cache
+        4. **Continue**: Return the result (cached or fresh)
+
+        Args:
+            value: The input value to process
+            call_next: Callable to invoke the next middleware or function
+            context: Metadata about the function being intercepted
+
+        Returns:
+            The cached output if found, otherwise the fresh output
         """
-        # Check if we should cache
+        # Phase 1: Preprocess - check if caching should be enabled
         if not self._should_cache():
-            return await next_call(value)
+            return await call_next(value)
 
-        # Try to serialize the input
+        # Phase 1: Preprocess - serialize the input
         input_str = self._serialize_input(value)
         if input_str is None:
-            # Can't serialize, pass through to function
+            # Can't serialize, pass through to next middleware/function
             logger.debug("Could not serialize input for function %s, bypassing cache", context.name)
-            return await next_call(value)
+            return await call_next(value)
 
-        # Look for a similar cached input
+        # Phase 1: Preprocess - look for a similar cached input
         similar_key = self._find_similar_key(input_str)
         if similar_key is not None:
-            # Found a match, return the cached output
+            # Cache hit - short-circuit and return cached output
             logger.debug("Cache hit for function %s with similarity %.2f",
                          context.name,
                          1.0 if similar_key == input_str else self._similarity_threshold)
+            # Phase 4: Continue - return cached result
             return self._cache[similar_key]
 
-        # No match found, call the function
+        # Phase 2: Call next - no cache hit, call next middleware/function
         logger.debug("Cache miss for function %s", context.name)
-        result = await next_call(value)
+        result = await call_next(value)
 
-        # Cache the result
+        # Phase 3: Postprocess - cache the result for future use
         self._cache[input_str] = result
         logger.debug("Cached result for function %s", context.name)
 
+        # Phase 4: Continue - return the fresh result
         return result
 
-    async def intercept_stream(self, value: Any, next_call: StreamInvokeCallable,
+    async def intercept_stream(self, value: Any, call_next: CallNextStream,
                                context: FunctionInterceptContext) -> AsyncIterator[Any]:
-        """Intercept streaming invocations - always delegates to function.
+        """Cache middleware for streaming invocations - bypasses caching.
 
         Streaming results are not cached as they would need to be buffered
-        entirely in memory, defeating the purpose of streaming.
+        entirely in memory, which would defeat the purpose of streaming.
+
+        This method demonstrates the middleware pattern for streams:
+
+        1. **Preprocess**: Log that we're bypassing cache
+        2. **Call Next**: Get stream from next middleware/function
+        3. **Process Chunks**: Yield each chunk as it arrives
+        4. **Continue**: Complete the stream
+
+        Args:
+            value: The input value to process
+            call_next: Callable to invoke the next middleware or function stream
+            context: Metadata about the function being intercepted
+
+        Yields:
+            Chunks from the stream (unmodified)
         """
+        # Phase 1: Preprocess - log that we're bypassing cache for streams
         logger.debug("Streaming call for function %s, bypassing cache", context.name)
-        async for chunk in next_call(value):
+
+        # Phase 2-3: Call next and process chunks - yield chunks as they arrive
+        async for chunk in call_next(value):
             yield chunk
+
+        # Phase 4: Continue - stream is complete (implicit)
 
 
 __all__ = ["CacheIntercept"]

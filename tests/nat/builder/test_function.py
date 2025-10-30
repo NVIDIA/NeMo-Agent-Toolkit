@@ -216,17 +216,24 @@ async def test_function_intercepts_are_invoked_in_order():
             super().__init__()
             self._label = label
 
-        async def intercept_invoke(self, value, next_call, context):  # noqa: D401 - inherit docs
+        async def intercept_invoke(self, value, call_next, context):  # noqa: D401 - inherit docs
+            # Phase 1: Preprocess
             call_log.append((self._label, "before_single", value))
-            result = await next_call(value)
+            # Phase 2: Call next
+            result = await call_next(value)
+            # Phase 3: Postprocess
             call_log.append((self._label, "after_single", result))
+            # Phase 4: Continue
             return result
 
-        async def intercept_stream(self, value, next_call, context):  # noqa: D401 - inherit docs
+        async def intercept_stream(self, value, call_next, context):  # noqa: D401 - inherit docs
+            # Phase 1: Preprocess
             call_log.append((self._label, "before_stream", value))
-            async for chunk in next_call(value):
+            # Phase 2-3: Call next and process chunks
+            async for chunk in call_next(value):
                 call_log.append((self._label, "chunk", chunk))
                 yield chunk
+            # Phase 4: Postprocess after stream ends
             call_log.append((self._label, "after_stream", value))
 
     class InterceptTestFunction(Function[str, str, str]):
@@ -289,10 +296,12 @@ async def test_function_final_intercept_short_circuits():
         def __init__(self):
             super().__init__(is_final=True)
 
-        async def intercept_invoke(self, value, next_call, context):  # noqa: D401 - inherit docs
+        async def intercept_invoke(self, value, call_next, context):  # noqa: D401 - inherit docs
+            # Demonstrate middleware short-circuiting: skip call_next entirely
             return "intercepted"
 
-        async def intercept_stream(self, value, next_call, context):  # noqa: D401 - inherit docs
+        async def intercept_stream(self, value, call_next, context):  # noqa: D401 - inherit docs
+            # Demonstrate middleware short-circuiting: skip call_next entirely
             yield "streamed"
 
     class CountingFunction(Function[str, str, str]):
