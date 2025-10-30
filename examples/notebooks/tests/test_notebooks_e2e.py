@@ -27,6 +27,10 @@ _ALL_WORKFLOWS = [
     "tmp_workflow"
 ]
 
+_OTHER_FILES = [
+    "nat_embedded.py",
+]
+
 
 @pytest.fixture(name="notebooks_dir", scope='session')
 def notebooks_dir_fixture(examples_dir: Path) -> Path:
@@ -54,11 +58,23 @@ def _delete_all_workflows():
             subprocess.run(cmd, check=False)
 
 
+def _delete_other_files(notebooks_dir: Path):
+    for file in _OTHER_FILES:
+        file_path = notebooks_dir / file
+        if file_path.exists():
+            file_path.unlink()
+
+
+def _cleanup_all(notebooks_dir: Path):
+    _delete_all_workflows()
+    _delete_other_files(notebooks_dir)
+
+
 @pytest.fixture(name="workflow_cleanups", scope='function', autouse=True)
 def workflow_cleanups_fixture(notebooks_dir: Path):
-    _delete_all_workflows()
+    _cleanup_all(notebooks_dir)
     yield
-    _delete_all_workflows()
+    _cleanup_all(notebooks_dir)
 
 
 def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_seconds: int = 120):
