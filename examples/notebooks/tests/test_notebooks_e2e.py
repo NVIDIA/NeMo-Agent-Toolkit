@@ -63,5 +63,5 @@ def test_notebooks(notebooks_dir: Path, notebook_file_name: str):
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")
 def test_2_bringing_your_own_agent(notebooks_dir: Path):
-    # This notebook is the same as the others but requires a Tavily API key to run
+    # This test is the same as the others but requires a Tavily API key to run
     _run_notebook(notebooks_dir / "2_bringing_your_own_agent.ipynb")
