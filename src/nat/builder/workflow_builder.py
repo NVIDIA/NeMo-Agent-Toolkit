@@ -1384,17 +1384,8 @@ class SharedWorkflowBuilder(WorkflowBuilder):
     All dependencies of the components must also have server lifecycle.
     """
 
-    def __init__(self,
-                 *,
-                 general_config: GeneralConfig | None = None,
-                 registry: TypeRegistry | None = None,
-                 user_id: str | None = None):
+    def __init__(self, *, general_config: GeneralConfig | None = None, registry: TypeRegistry | None = None):
         super().__init__(general_config=general_config, registry=registry)
-        self._user_id = user_id
-
-    @property
-    def user_id(self) -> str | None:
-        return self._user_id
 
     @override
     def _should_build_component(self, config: TypedBaseModel) -> bool:
@@ -1492,3 +1483,70 @@ class SharedWorkflowBuilder(WorkflowBuilder):
         await super().populate_builder(config, skip_workflow=skip_workflow)
 
         self._validate_shared_dependencies(config)
+
+
+class UserWorkflowBuilder(WorkflowBuilder):
+
+    def __init__(self,
+                 *,
+                 general_config: GeneralConfig | None = None,
+                 registry: TypeRegistry | None = None,
+                 shared_builder: SharedWorkflowBuilder,
+                 user_id: str):
+        if not user_id:
+            raise ValueError("UserWorkflowBuilder requires a non-empty user ID to initialize.")
+
+        super().__init__(general_config=general_config, registry=registry)
+        self.shared_builder = shared_builder
+        self._user_id = user_id
+
+        # Always shared components
+        self._llms = shared_builder._llms
+        self._embedders = shared_builder._embedders
+        self._memory_clients = shared_builder._memory_clients
+        self._object_stores = shared_builder._object_stores
+        self._retrievers = shared_builder._retrievers
+        self._ttc_strategies = shared_builder._ttc_strategies
+
+        # Reference shared functions/function groups
+        self._function_groups.update(shared_builder._function_groups)
+        self._functions.update(shared_builder._functions)
+
+        # Track existing dependencies
+        self.function_group_dependencies.update(shared_builder.function_group_dependencies)
+        self.function_dependencies.update(shared_builder.function_dependencies)
+
+    @property
+    def user_id(self) -> str:
+        return self._user_id
+
+    @override
+    def _should_build_component(self, config: TypedBaseModel) -> bool:
+        """Determine if a component should be built based on the configuration.
+
+        UserWorkflowBuilder should build the following components:
+            - Functions/groups with scope: per-user
+            - Auth providers (must be per-user)
+        """
+        from nat.data_models.authentication import AuthProviderBaseConfig
+        from nat.data_models.component import ComponentScope
+
+        # Auth providers MUST be per-user
+        if isinstance(config, AuthProviderBaseConfig):
+            return True
+
+        # Components without scope are shared
+        if not hasattr(config, "scope"):
+            return False
+
+        return config.scope == ComponentScope.PER_USER  # type: ignore
+
+    @override
+    async def populate_builder(self, config: Config, skip_workflow: bool = False):
+        """Populate the builder with components and optionally set up the workflow.
+
+        Args:
+            config (Config): The configuration object containing component definitions.
+            skip_workflow (bool): If True, skips the workflow instantiation step. Defaults to False.
+        """
+        await super().populate_builder(config, skip_workflow=skip_workflow)
