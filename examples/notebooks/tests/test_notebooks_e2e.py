@@ -25,14 +25,17 @@ def notebooks_dir_fixture(examples_dir: Path) -> Path:
 
 
 def _run_notebook(notebook_path: Path, timeout_seconds: int = 120):
-    """Run a Jupyter notebook using nbconvert and check for errors."""
+    """Run a Jupyter notebook and check for errors."""
     cmd = [
         "jupyter",
         "execute",
         f"--timeout={timeout_seconds}",
         str(notebook_path.absolute()),
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    # Ideally if the notebook times out we want jupyter to catch it and exit gracefully with the most informative error
+    # possible. However in the potential situation where jupyter itself hangs, we add a 30s buffer to the timeout here.
+    result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout_seconds + 30)
     assert result.returncode == 0, f"Notebook execution failed:\n{result.stderr}"
 
 
