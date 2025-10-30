@@ -354,7 +354,8 @@ def reinstall_command(workflow_name):
 
 @click.command()
 @click.argument('workflow_name')
-def delete_command(workflow_name: str):
+@click.option('-y,--yes', is_flag=True, help='Do not prompt for confirmation.')
+def delete_command(workflow_name: str, yes: bool):
     """
     Delete a NAT workflow and uninstall its package.
 
@@ -362,7 +363,7 @@ def delete_command(workflow_name: str):
         workflow_name (str): The name of the workflow to delete.
     """
     try:
-        if not click.confirm(f"Are you sure you want to delete the workflow '{workflow_name}'?"):
+        if not yes and not click.confirm(f"Are you sure you want to delete the workflow '{workflow_name}'?"):
             click.echo("Workflow deletion cancelled.")
             return
         editable = get_repo_root() is not None
