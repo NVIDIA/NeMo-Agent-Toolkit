@@ -19,20 +19,27 @@ limitations under the License.
 
 ## Overview
 
-Function intercepts provide a powerful mechanism to add cross-cutting concerns and preprocessing logic to functions in the NeMo Agent toolkit without modifying the function implementation itself. Intercepts execute before a function's core logic, enabling capabilities such as caching, logging, authentication, rate limiting, and other middleware-like behaviors.
+Function intercepts provide a powerful middleware mechanism for adding cross-cutting concerns to functions in the NeMo Agent toolkit without modifying the function implementation itself. Like middleware in web frameworks (Express.js, FastAPI, etc.), intercepts wrap function calls with a four-phase pattern:
+
+1. **Preprocess** - Inspect and modify inputs before calling next
+2. **Call Next** - Delegate to the next middleware or function
+3. **Postprocess** - Process, transform, or augment outputs
+4. **Continue** - Return or yield the final result
+
+This middleware pattern enables capabilities such as caching, logging, authentication, rate limiting, input validation, and more.
 
 ### Key Concepts
 
-**Function Intercept**: A callable that runs before a function's `ainvoke` or `astream` methods, with the ability to:
-- Inspect and modify function inputs
-- Execute preprocessing logic
-- Short-circuit execution by returning cached or computed results
-- Delegate to the next intercept or the function itself
-- Transform or augment function outputs
+**Function Intercept (Middleware)**: A middleware component that wraps a function's `ainvoke` or `astream` methods, with the ability to:
+- **Preprocess**: Inspect and modify function inputs
+- **Call Next**: Delegate to the next middleware or the function itself
+- **Postprocess**: Transform or augment function outputs
+- **Continue**: Return or yield the final result
+- **Short-circuit**: Skip calling next entirely (e.g., return cached results)
 
-**Intercept Chain**: A sequence of intercepts that execute in order before reaching the function. Each intercept can delegate to the next one in the chain.
+**Middleware Chain**: A sequence of middleware intercepts that execute in order, with each intercept wrapping the next. The chain forms an "onion" structure where control flows in through preprocessing, down to the function, and back out through postprocessing.
 
-**Final Intercept**: A special intercept that terminates the chain. Only one final intercept is allowed per function, and it must be the last intercept in the chain.
+**Final Intercept**: A special middleware that terminates the chain. Only one final intercept is allowed per function, and it must be the last intercept in the chain.
 
 ### When to Use Function Intercepts
 
@@ -49,50 +56,66 @@ Function intercepts are ideal for implementing:
 
 ## How Function Intercepts Work
 
-### Intercept Chain Architecture
+### Middleware Architecture
 
-Function intercepts form a chain of responsibility pattern where each intercept can:
+Function intercepts use a middleware pattern similar to web frameworks. Each middleware wraps the next one in the chain, creating an "onion" structure. The four phases of middleware execution are:
 
-1. **Inspect** the input before passing it forward
-2. **Modify** the input before delegation
-3. **Execute** custom logic (logging, validation, and so on)
-4. **Short-circuit** by returning a value without calling the next intercept
-5. **Delegate** to the next intercept in the chain
-6. **Transform** the result from downstream intercepts
+1. **Preprocess** - Inspect and optionally modify the input
+2. **Call Next** - Delegate to the next middleware or function
+3. **Postprocess** - Process and optionally modify the output
+4. **Continue** - Return or yield the final result
+
+Middleware can also **short-circuit** the chain by skipping the call to next and returning a result directly (e.g., cached values).
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ Function Call                                           │
 └────────────┬────────────────────────────────────────────┘
              │
+             │ ┌──────────────────────────────────┐
+             │ │ Middleware 1 (Logging)           │
+             ├─┤ ┌ Preprocess: Log input          │
+             │ │ ├ Call Next ──────────────┐      │
+             │ │ │                          │      │
+             │ │ │ ┌─────────────────────────────────┐
+             │ │ │ │ Middleware 2 (Validation)       │
+             │ │ │ │ ┌ Preprocess: Validate input    │
+             │ │ │ ├─┤ ├ Call Next ───────────┐      │
+             │ │ │ │ │ │                       │      │
+             │ │ │ │ │ │ ┌──────────────────────────────┐
+             │ │ │ │ │ │ │ Middleware 3 (Cache-Final)   │
+             │ │ │ │ │ │ │ ┌ Check cache               │
+             │ │ │ │ │ │ ├─┤ ├ Call Next (if miss) ───┐ │
+             │ │ │ │ │ │ │ │ │                         │ │
+             │ │ │ │ │ │ │ │ │ ┌────────────────┐      │ │
+             │ │ │ │ │ │ │ │ └→│ Actual Function│      │ │
+             │ │ │ │ │ │ │ │   └────────┬───────┘      │ │
+             │ │ │ │ │ │ │ │            │ Return       │ │
+             │ │ │ │ │ │ │ └────────────┤              │ │
+             │ │ │ │ │ │ │ └ Store in cache            │ │
+             │ │ │ │ │ └─┤ ← Return result              │ │
+             │ │ │ │ │   └───────────────────────────────┘
+             │ │ │ └─┤ ← Return result
+             │ │ │   └ Postprocess: Validate output
+             │ │ │   └──────────────────────────────────┘
+             │ └─┤ ← Return result
+             │   └ Postprocess: Log output
+             │   └──────────────────────────────────┘
              ▼
-      ┌─────────────┐
-      │ Intercept 1 │  (such as, logging)
-      └──────┬──────┘
-             │
-             ▼
-      ┌─────────────┐
-      │ Intercept 2 │  (such as, validation)
-      └──────┬──────┘
-             │
-             ▼
-      ┌─────────────┐
-      │ Intercept 3 │  (such as, caching - final)
-      └──────┬──────┘
-             │
-             ▼
-    ┌────────────────┐
-    │ Actual Function│
-    └────────────────┘
+    Final Result
 ```
 
 ### Execution Flow
 
-1. **Registration**: Intercepts are registered with a function at build time
-2. **Chain Construction**: The builder creates an intercept chain when building the workflow
-3. **Invocation**: When the function is called, the chain executes from first to last
-4. **Delegation**: Each intercept can delegate to the next using the `next_call` parameter
-5. **Return**: Results flow back through the chain to the caller
+1. **Registration**: Middleware intercepts are registered with a function at build time
+2. **Chain Construction**: The builder creates a middleware chain when building the workflow
+3. **Invocation**: When the function is called, the chain executes with the middleware pattern:
+   - **Phase 1 (Preprocess)**: Each middleware preprocesses in order (1 → 2 → 3)
+   - **Phase 2 (Call Next)**: Control flows to the actual function
+   - **Phase 3 (Postprocess)**: Each middleware postprocesses in reverse order (3 → 2 → 1)
+   - **Phase 4 (Continue)**: Final result returns to the caller
+4. **Delegation**: Each middleware delegates using the `call_next` parameter
+5. **Return**: Results flow back through the middleware chain to the caller
 
 ### Final Intercepts
 
@@ -106,53 +129,60 @@ Final intercepts are useful for behaviors like caching where you want to potenti
 
 ## Creating Custom Function Intercepts
 
-### Basic Intercept Implementation
+### Basic Middleware Implementation
 
-All intercepts must inherit from the `FunctionIntercept` base class:
+All middleware intercepts must inherit from the `FunctionIntercept` base class:
 
 ```python
 from nat.intercepts import FunctionIntercept, FunctionInterceptContext
-from nat.intercepts import SingleInvokeCallable, StreamInvokeCallable
+from nat.intercepts import CallNext, CallNextStream
 from typing import Any
 from collections.abc import AsyncIterator
 
 
 class MyCustomIntercept(FunctionIntercept):
-    """A custom intercept that logs function calls."""
-    
+    """A custom middleware that logs function calls."""
+
     def __init__(self, *, log_level: str = "INFO"):
         super().__init__(is_final=False)
         self.log_level = log_level
-    
+
     async def intercept_invoke(
         self,
         value: Any,
-        next_call: SingleInvokeCallable,
+        call_next: CallNext,
         context: FunctionInterceptContext
     ) -> Any:
-        """Intercept single-output invocations."""
+        """Middleware for single-output invocations."""
+        # Phase 1: Preprocess
         print(f"[{self.log_level}] Calling function: {context.name}")
         print(f"[{self.log_level}] Input: {value}")
-        
-        # Delegate to the next intercept or function
-        result = await next_call(value)
-        
+
+        # Phase 2: Call next middleware or function
+        result = await call_next(value)
+
+        # Phase 3: Postprocess
         print(f"[{self.log_level}] Result: {result}")
+
+        # Phase 4: Continue
         return result
-    
+
     async def intercept_stream(
         self,
         value: Any,
-        next_call: StreamInvokeCallable,
+        call_next: CallNextStream,
         context: FunctionInterceptContext
     ) -> AsyncIterator[Any]:
-        """Intercept streaming invocations."""
+        """Middleware for streaming invocations."""
+        # Phase 1: Preprocess
         print(f"[{self.log_level}] Streaming call to: {context.name}")
-        
-        # Delegate to the next intercept or function
-        async for chunk in next_call(value):
+
+        # Phase 2-3: Call next and process chunks
+        async for chunk in call_next(value):
             print(f"[{self.log_level}] Chunk: {chunk}")
             yield chunk
+
+        # Phase 4: Cleanup after stream (implicit)
 ```
 
 ### Intercept Context
@@ -172,40 +202,45 @@ class FunctionInterceptContext:
     stream_output_schema: type[BaseModel] | type[None]  # Stream output schema
 ```
 
-### Implementing a Final Intercept
+### Implementing a Final Middleware
 
-Here's an example of a validation intercept that short-circuits on invalid input:
+Here's an example of a validation middleware that short-circuits on invalid input:
 
 ```python
 from pydantic import ValidationError
 
 
 class ValidationIntercept(FunctionIntercept):
-    """A final intercept that validates inputs."""
-    
+    """A final middleware that validates inputs."""
+
     def __init__(self, *, strict: bool = True):
         super().__init__(is_final=True)
         self.strict = strict
-    
+
     async def intercept_invoke(
         self,
         value: Any,
-        next_call: SingleInvokeCallable,
+        call_next: CallNext,
         context: FunctionInterceptContext
     ) -> Any:
-        """Validate input before delegating."""
+        """Validate input before calling next."""
+        # Phase 1: Preprocess - validate input
         try:
             # Validate against the input schema
             validated = context.input_schema.model_validate(value)
         except ValidationError as e:
             if self.strict:
+                # Short-circuit: skip call_next and raise error
                 raise ValueError(f"Invalid input for {context.name}: {e}")
             else:
                 # In non-strict mode, try to proceed anyway
-                return await next_call(value)
-        
-        # Delegate to the function with validated input
-        return await next_call(validated)
+                validated = value
+
+        # Phase 2: Call next - delegate to function with validated input
+        result = await call_next(validated)
+
+        # Phase 3-4: Postprocess and continue - return result as-is
+        return result
 ```
 
 ## Using Function Intercepts
@@ -249,31 +284,38 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
     )
 ```
 
-### Chaining Multiple Intercepts
+### Chaining Multiple Middleware
 
-You can chain multiple intercepts together. They execute in the order provided:
+You can chain multiple middleware together. They execute in the order provided, forming an "onion" structure:
 
 ```python
 from nat.intercepts import CacheIntercept
 
 
 class LoggingIntercept(FunctionIntercept):
-    """Log function calls."""
-    
-    async def intercept_invoke(self, value, next_call, context):
+    """Logging middleware."""
+
+    async def intercept_invoke(self, value, call_next, context):
+        # Phase 1: Preprocess
         logger.info(f"Calling {context.name} with {value}")
-        result = await next_call(value)
+
+        # Phase 2: Call next
+        result = await call_next(value)
+
+        # Phase 3: Postprocess
         logger.info(f"Function {context.name} returned {result}")
+
+        # Phase 4: Continue
         return result
 
 
 @register_function(
     config_type=MyFunctionConfig,
     intercepts=[
-        LoggingIntercept(),              # Executes first
-        ValidationIntercept(strict=True),  # Executes second
+        LoggingIntercept(),              # Outer layer - first to preprocess, last to postprocess
+        ValidationIntercept(strict=True),  # Middle layer
         CacheIntercept(
-            enabled_mode="eval",          # Executes last (final)
+            enabled_mode="eval",          # Inner layer (final) - last to preprocess, first to postprocess
             similarity_threshold=0.95
         )
     ]
@@ -628,52 +670,65 @@ async def test_cache_intercept():
 
 ```python
 class ConditionalIntercept(FunctionIntercept):
-    """Execute logic only when condition is met."""
-    
+    """Middleware that executes logic only when condition is met."""
+
     def __init__(self, *, condition: Callable[[], bool]):
         super().__init__()
         self.condition = condition
-    
-    async def intercept_invoke(self, value, next_call, context):
+
+    async def intercept_invoke(self, value, call_next, context):
+        # Phase 1: Preprocess with conditional logic
         if self.condition():
             # Execute conditional logic
             pass
-        return await next_call(value)
+
+        # Phase 2: Call next
+        result = await call_next(value)
+
+        # Phase 3-4: Postprocess and continue
+        return result
 ```
 
-### Input Transformation
+### Input and Output Transformation
 
 ```python
 class TransformIntercept(FunctionIntercept):
-    """Transform inputs before function execution."""
-    
-    async def intercept_invoke(self, value, next_call, context):
-        # Transform input
-        transformed = self.transform(value)
-        
-        # Call with transformed input
-        result = await next_call(transformed)
-        
-        # Optionally transform output
-        return self.transform_output(result)
+    """Middleware that transforms inputs and outputs."""
+
+    async def intercept_invoke(self, value, call_next, context):
+        # Phase 1: Preprocess - transform input
+        transformed_input = self.transform_input(value)
+
+        # Phase 2: Call next with transformed input
+        result = await call_next(transformed_input)
+
+        # Phase 3: Postprocess - transform output
+        transformed_output = self.transform_output(result)
+
+        # Phase 4: Continue with transformed output
+        return transformed_output
 ```
 
 ### Error Handling and Retry
 
 ```python
 class RetryIntercept(FunctionIntercept):
-    """Retry failed function calls."""
-    
+    """Middleware that retries failed function calls."""
+
     def __init__(self, *, max_retries: int = 3, backoff: float = 1.0):
         super().__init__()
         self.max_retries = max_retries
         self.backoff = backoff
-    
-    async def intercept_invoke(self, value, next_call, context):
+
+    async def intercept_invoke(self, value, call_next, context):
+        # Phase 2: Call next with retry logic (no preprocessing needed)
         for attempt in range(self.max_retries):
             try:
-                return await next_call(value)
+                result = await call_next(value)
+                # Phase 3-4: Success - return result
+                return result
             except Exception as e:
+                # Phase 3: Handle error
                 if attempt == self.max_retries - 1:
                     raise
                 await asyncio.sleep(self.backoff * (2 ** attempt))
