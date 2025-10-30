@@ -41,7 +41,7 @@ class ZepEditor(MemoryEditor):
         Initialize class with Zep v3 AsyncZep Client.
 
         Args:
-        zep_client (AsyncZep): Async client instance.
+            zep_client (AsyncZep): Async client instance.
         """
         self._client = zep_client
 
@@ -94,6 +94,7 @@ class ZepEditor(MemoryEditor):
         Args:
             items (list[MemoryItem]): The items to be added.
             kwargs (dict): Provider-specific keyword arguments.
+
                 - ignore_roles (list[str], optional): List of role types to ignore when adding
                   messages to graph memory. Available roles: system, assistant, user,
                   function, tool.
@@ -177,6 +178,7 @@ class ZepEditor(MemoryEditor):
             query (str): The query string (not used by Zep's high-level API, included for interface compatibility).
             top_k (int): Maximum number of items to return (not used by Zep's context API).
             kwargs: Zep-specific keyword arguments.
+
                 - user_id (str, required for response construction): Used only to construct the
                   returned MemoryItem. Zep v3's thread.get_user_context() only requires thread_id.
                 - mode (str, optional): Retrieval mode. Zep server default is "summary". This
@@ -229,11 +231,13 @@ class ZepEditor(MemoryEditor):
         Remove memory items based on provided criteria.
 
         Supports two deletion modes:
+
         1. Delete a specific thread by thread_id
         2. Delete all threads for a user by user_id
 
         Args:
             kwargs: Additional parameters.
+
                 - thread_id (str, optional): Thread ID to delete a specific thread.
                 - user_id (str, optional): User ID to delete all threads for that user.
         """
