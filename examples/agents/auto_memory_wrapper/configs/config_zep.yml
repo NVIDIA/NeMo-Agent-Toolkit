@@ -40,17 +40,19 @@ llms:
 memory:
   zep_memory:
     _type: nat.plugins.zep_cloud/zep_memory
-    # API credentials are loaded from environment variables:
-    # ZEP_API_KEY and ZEP_PROJECT_ID
+    # API credentials are loaded from environment variables: ZEP_API_KEY
 
 # Tools for the inner agent (no memory tools needed!)
 functions:
+  # Simple calculator tool for testing
+  calculator:
+    _type: calculator_multiply
+
   # Define the ReAct agent that will be wrapped
   my_react_agent:
     _type: react_agent
     llm_name: nim_llm
-    tool_names: []  # No tools needed for memory test
-    system_prompt: "You are a helpful assistant."
+    tool_names: [calculator]  # At least one tool required for ReAct agent
     verbose: true
     use_openai_api: true
     parse_agent_response_max_retries: 3
@@ -62,12 +64,4 @@ workflow:
   memory_name: zep_memory           # Reference to the memory backend
   llm_name: nim_llm                 # Required by AgentBaseConfig
   verbose: true
-
-  # All feature flags default to true - memory save and retrieval are automatic!
-  # Optionally configure:
-  # save_user_messages_to_memory: true
-  # retrieve_memory_for_every_response: true
-  # save_ai_messages_to_memory: true
-  # search_params:
-  #   mode: "basic"  # or "summary" for Zep
-  #   top_k: 5
+  description: "A ReAct agent with automatic Zep memory"
