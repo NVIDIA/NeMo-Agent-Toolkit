@@ -19,6 +19,7 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
@@ -30,6 +31,7 @@ from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
 ModelType = TypeVar("ModelType")
@@ -74,9 +76,12 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
 
     from crewai import LLM
 
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
+
     # https://docs.crewai.com/en/concepts/llms#azure
 
-    api_key = llm_config.api_key or os.environ.get("AZURE_OPENAI_API_KEY") or os.environ.get("AZURE_API_KEY")
+    api_key = get_secret_value(llm_config.api_key) if llm_config.api_key else os.environ.get(
+        "AZURE_OPENAI_API_KEY") or os.environ.get("AZURE_API_KEY")
     if api_key is None:
         raise ValueError("Azure API key is not set")
     os.environ["AZURE_API_KEY"] = api_key
@@ -93,13 +98,7 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
 
     client = LLM(
         **llm_config.model_dump(
-            exclude={
-                "type",
-                "api_key",
-                "azure_endpoint",
-                "azure_deployment",
-                "thinking",
-            },
+            exclude={"type", "api_key", "azure_endpoint", "azure_deployment", "thinking", "api_type"},
             by_alias=True,
             exclude_none=True,
         ),
@@ -114,6 +113,8 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
 
     from crewai import LLM
 
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
+
     # Because CrewAI uses a different environment variable for the API key, we need to set it here manually
     if llm_config.api_key is None and "NVIDIA_NIM_API_KEY" not in os.environ:
         nvidia_api_key = os.getenv("NVIDIA_API_KEY")
@@ -121,7 +122,9 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
             os.environ["NVIDIA_NIM_API_KEY"] = nvidia_api_key
 
     client = LLM(
-        **llm_config.model_dump(exclude={"type", "model_name", "thinking"}, by_alias=True, exclude_none=True),
+        **llm_config.model_dump(exclude={"type", "model_name", "thinking", "api_type"},
+                                by_alias=True,
+                                exclude_none=True),
         model=f"nvidia_nim/{llm_config.model_name}",
     )
 
@@ -133,7 +136,9 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from crewai import LLM
 
-    client = LLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
+
+    client = LLM(**llm_config.model_dump(exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -143,6 +148,8 @@ async def litellm_crewai(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     from crewai import LLM
 
-    client = LLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
+
+    client = LLM(**llm_config.model_dump(exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True))
 
     yield _patch_llm_based_on_config(client, llm_config)

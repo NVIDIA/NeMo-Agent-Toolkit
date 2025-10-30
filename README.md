@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA NeMo Agent Toolkit](./docs/source/_static/banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](./docs/source/_static/banner.png "NeMo Agent Toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit
 
@@ -23,21 +23,35 @@ limitations under the License.
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 [![GitHub Release](https://img.shields.io/github/v/release/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit/releases)
 [![PyPI version](https://img.shields.io/pypi/v/nvidia-nat)](https://pypi.org/project/nvidia-nat/)
-[![PyPI Downloads](https://static.pepy.tech/badge/nvidia-nat)](https://pepy.tech/projects/nvidia-nat)
 [![GitHub issues](https://img.shields.io/github/issues/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit/pulls)
 [![GitHub Repo stars](https://img.shields.io/github/stars/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit)
 [![GitHub forks](https://img.shields.io/github/forks/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit/network/members)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NVIDIA/NeMo-Agent-Toolkit/)
 <!-- vale on -->
 
-NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
+<div align="center">
+
+*NVIDIA NeMo Agent Toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.*
+
+</div>
 
 > [!NOTE]
-> NeMo Agent toolkit was previously known as the Agent Intelligence (AIQ) toolkit, and <!-- vale off -->AgentIQ<!-- vale on -->. The library was renamed to better reflect the purpose of the toolkit and to align with the NVIDIA NeMo family of products. The core technologies, performance and roadmap remain unchanged and the API is fully compatible with previous release. Please refer to the [Migration Guide](./docs/source/resources/migration-guide.md) for more information.
+> NeMo Agent Toolkit was previously known as the Agent Intelligence (AIQ) toolkit, and <!-- vale off -->AgentIQ<!-- vale on -->. The library was renamed to better reflect the purpose of the toolkit and to align with the NVIDIA NeMo family of products. The core technologies, performance, and roadmap remain unchanged and the API is fully compatible with previous releases. Please refer to the [Migration Guide](./docs/source/resources/migration-guide.md) for more information.
+
+## 🔥 New Features
+
+- [**Automatic Hyperparameter Tuning:**](docs/source/reference/optimizer.md) Automatically tune the hyperparameters of your agents, tools, and workflows to maximize performance, minimize cost, and increase accuracy.
+
+- [**Google ADK Support:**](./docs/source/reference/frameworks-overview.md#adk-google-agent-development-kit) Users of Google's Agent Development Kit (ADK) framework are now supported in NeMo Agent Toolkit.
+
+- [**MCP Authorization:**](./docs/source/workflows/mcp/mcp-auth.md) NeMo Agent Toolkit now supports MCP authorization. This allows you to use NeMo Agent Toolkit with MCP authorization when using the streamable HTTP protocol.
+
+- [**Function Groups:**](./docs/source/workflows/function-groups.md) NeMo Agent Toolkit now supports Function Groups, allowing you to package multiple related functions together to share configuration, context, and resources.
 
 ## ✨ Key Features
 
-- 🧩 [**Framework Agnostic:**](./docs/source/quick-start/installing.md#framework-integrations) NeMo Agent toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
+- 🧩 [**Framework Agnostic:**](./docs/source/reference/frameworks-overview.md) NeMo Agent Toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent Toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, LLM provider, or data source.
 
 - 🔁 [**Reusability:**](./docs/source/extend/sharing-components.md) Every agent, tool, and agentic workflow in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
 
@@ -49,37 +63,20 @@ NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that 
 
 - 🧪 [**Evaluation System:**](./docs/source/workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
-- 💬 [**User Interface:**](./docs/source/quick-start/launching-ui.md) Use the NeMo Agent toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- 💬 [**User Interface:**](./docs/source/quick-start/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 
-- 🔗 [**Full MCP Support:**](./docs/source/workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent toolkit as an [MCP client](./docs/source/workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent toolkit as an [MCP server](./docs/source/workflows/mcp/mcp-server.md) to publish tools via MCP.
+- 🔗 [**Full MCP Support:**](./docs/source/workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent Toolkit as an [MCP client](./docs/source/workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent Toolkit as an [MCP server](./docs/source/workflows/mcp/mcp-server.md) to publish tools via MCP.
 
-With NeMo Agent toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
+With NeMo Agent Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
 ## 🚀 Installation
 
 Before you begin using NeMo Agent Toolkit, ensure that you have Python 3.11, 3.12, or 3.13 installed on your system.
 
-### Supported Platforms
+> [!NOTE]
+> For users who want to run the examples, it's required to clone the repository and install from source to get the necessary files required to run the examples. Please refer to the [Examples](./examples/README.md) documentation for more information.
 
-| Operating System | Architecture | Python Version | Supported |
-|------------------|--------------|---------------|-----------|
-| Linux | x86_64 | 3.11, 3.12, 3.13 | ✅ Tested, Validated in CI |
-| Linux | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested, Validated in CI |
-| macOS | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
-| macOS | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested |
-| Windows | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
-| Windows | aarch64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
-
-### Stable Version
-
-Based on your system settings, you may need to configure and activate a Python virtual environment. On macOS or Linux, you can run the following commands:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-To install the latest stable version of NeMo Agent Toolkit, run the following command:
+To install the latest stable version of NeMo Agent Toolkit from PyPI, run the following command:
 
 ```bash
 pip install nvidia-nat
@@ -97,17 +94,11 @@ Or for all optional dependencies:
 pip install "nvidia-nat[all]"
 ```
 
-The full list of optional dependencies can be found [here](./docs/source/quick-start/installing.md#framework-integrations).
-
-### From Source (For Running Examples)
-
-To run the examples, it's recommended to clone the repository and install from source. For instructions on how to do this, see the [Installation from Source](./docs/source/quick-start/installing.md#installation-from-source) guide.
-
-### Development Version
-
-More information on how to install the latest development version and contribute to the project can be found in the [Contributing](./docs/source/resources/contributing.md) guide.
+Detailed installation instructions, including the full list of optional dependencies, can be found in the [Installation Guide](./docs/source/quick-start/installing.md).
 
 ## 🌟 Hello World Example
+
+Before getting started, it's possible to run this simple workflow and many other examples in Google Colab with no setup. Click here to open the introduction notebook in a new tab: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NVIDIA/NeMo-Agent-Toolkit/).
 
 1. Ensure you have set the `NVIDIA_API_KEY` environment variable to allow the example to use NVIDIA NIMs. An API key can be obtained by visiting [`build.nvidia.com`](https://build.nvidia.com/) and creating an account.
 
@@ -115,7 +106,7 @@ More information on how to install the latest development version and contribute
    export NVIDIA_API_KEY=<your_api_key>
    ```
 
-2. Create the NeMo Agent toolkit workflow configuration file. This file will define the agents, tools, and workflows that will be used in the example. Save the following as `workflow.yml`:
+2. Create the NeMo Agent Toolkit workflow configuration file. This file will define the agents, tools, and workflows that will be used in the example. Save the following as `workflow.yml`:
 
    ```yaml
    functions:
@@ -125,7 +116,7 @@ More information on how to install the latest development version and contribute
          max_results: 2
 
    llms:
-      # Tell NeMo Agent toolkit which LLM to use for the agent
+      # Tell NeMo Agent Toolkit which LLM to use for the agent
       nim_llm:
          _type: nim
          model_name: meta/llama-3.1-70b-instruct
@@ -159,25 +150,19 @@ More information on how to install the latest development version and contribute
 
 ## 📚 Additional Resources
 
- * 📖 [Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest): Explore the full documentation for NeMo Agent toolkit.
- * 🧭 [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with NeMo Agent toolkit.
- * 🧪 [Examples](./examples/README.md): Explore examples of NeMo Agent toolkit workflows located in the [`examples`](./examples) directory of the source repository.
- * 🛠️ [Create and Customize NeMo Agent toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent toolkit workflows.
- * 🎯 [Evaluate with NeMo Agent toolkit](./docs/source/workflows/evaluate.md): Learn how to evaluate your NeMo Agent toolkit workflows.
- * 🆘 [Troubleshooting](./docs/source/troubleshooting.md): Get help with common issues.
+* 📖 [Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest): Explore the full documentation for NeMo Agent Toolkit.
+* 🧭 [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with NeMo Agent Toolkit.
+* 🤝 [Contributing](./docs/source/resources/contributing.md): Learn how to contribute to NeMo Agent Toolkit and set up your development environment.
+* 🧪 [Examples](./examples/README.md): Explore examples of NeMo Agent Toolkit workflows located in the [`examples`](./examples) directory of the source repository.
+* 🛠️ [Create and Customize NeMo Agent Toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent Toolkit workflows.
+* 🎯 [Evaluate with NeMo Agent Toolkit](./docs/source/workflows/evaluate.md): Learn how to evaluate your NeMo Agent Toolkit workflows.
+* 🆘 [Troubleshooting](./docs/source/troubleshooting.md): Get help with common issues.
 
-## 📊 Component Overview
-
-The following diagram illustrates the key components of NeMo Agent toolkit and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend NeMo Agent toolkit in your projects.
-
-![NeMo Agent toolkit Components Diagram](docs/source/_static/gitdiagram.png)
 
 ## 🛣️ Roadmap
 
-- [x] Integrate with [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel) for continuous model improvement from production data.
-- [x] Add support for [Google ADK](https://google.github.io/adk-docs/) framework.
-- [x] Add an agent optimizer to auto-tune hyperparameters and prompts to maximize performance.
-- [x] MCP authorization and streamable HTTP support.
+- [ ] Add support for the [AWS Strands](https://github.com/strands-agents/sdk-python) framework.
+- [ ] Automatic Reinforcement Learning (RL) to fine-tune LLMs for a specific agent.
 - [ ] Integration with [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) to secure any function in an agent workflow.
 - [ ] End-to-end acceleration using intelligent integrations with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo).
 
@@ -187,7 +172,14 @@ We would love to hear from you! Please file an issue on [GitHub](https://github.
 
 ## 🤝 Acknowledgements
 
-We would like to thank the following open source projects that made NeMo Agent toolkit possible:
+We would like to thank the following groups for their contribution to the toolkit:
+
+- [Synopsys](https://www.synopsys.com/)
+  - Google ADK framework support.
+- [W&B Weave Team](https://wandb.ai/site/weave/)
+  - Contributions to the evaluation and telemetry system.
+
+In addition, we would like to thank the following open source projects that made NeMo Agent Toolkit possible:
 
 - [CrewAI](https://github.com/crewAIInc/crewAI)
 - [FastAPI](https://github.com/tiangolo/fastapi)
@@ -195,12 +187,12 @@ We would like to thank the following open source projects that made NeMo Agent t
 - [LangChain](https://github.com/langchain-ai/langchain)
 - [Llama-Index](https://github.com/run-llama/llama_index)
 - [Mem0ai](https://github.com/mem0ai/mem0)
-- [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/modelcontextprotocol)
 - [MinIO](https://github.com/minio/minio)
+- [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/modelcontextprotocol)
 - [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-python)
 - [Phoenix](https://github.com/arize-ai/phoenix)
 - [Ragas](https://github.com/explodinggradients/ragas)
 - [Redis](https://github.com/redis/redis-py)
 - [Semantic Kernel](https://github.com/microsoft/semantic-kernel)
-- [Weave](https://github.com/wandb/weave)
 - [uv](https://github.com/astral-sh/uv)
+- [Weave](https://github.com/wandb/weave)

@@ -29,16 +29,16 @@ NeMo Agent toolkit MCP authentication provides the capabilities required to acce
 Sample configuration:
 ```yaml
 authentication:
-  auth_provider_mcp:
+  mcp_oauth2_jira:
     _type: mcp_oauth2
-    server_url: "http://localhost:9901/mcp"
-    redirect_uri: http://localhost:8000/auth/redirect
+    server_url: ${CORPORATE_MCP_JIRA_URL}
+    redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
     default_user_id: ${NAT_USER_ID}
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 Configuration options:
 - `server_url`: The URL of the MCP server that requires authentication.
-- `redirect_uri`: The redirect URI for the OAuth2 flow.
+- `redirect_uri`: The redirect URI for the OAuth2 flow. This must match the address where your NAT server is accessible from your browser.
 - `default_user_id`: The user ID for discovering and adding tools to the workflow at startup. The `default_user_id` can be any string and is used as the key to cache the user's information. It defaults to the `server_url` if not provided.
 - `allow_default_user_id_for_tool_calls`: Whether to allow the default user ID for tool calls. This is typically enabled for single-user workflows, for example, a workflow that is launched using the `nat run` CLI command. For multi-user workflows, this should be disabled to avoid accidental tool calls by unauthorized users.
 
@@ -51,11 +51,13 @@ To view all configuration options for the `mcp_oauth2` authentication provider, 
 Some configuration values are commonly provided through environment variables:
 - `NAT_USER_ID`: Used as `default_user_id` to cache the authenticating user during setup and optionally for tool calls. Defaults to the `server_url` if not provided.
 - `ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS`: Controls whether the default user can invoke tools. Defaults to `true` if not provided.
+- `NAT_REDIRECT_URI`: The full redirect URI for OAuth2 callbacks. Defaults to `http://localhost:8000/auth/redirect` if not provided. For remote servers or production deployments, set this to match the address where your NAT server is accessible from your browser. **Note**: If no port is specified in the URI, the server will bind to port 8000 by default.
 
 Set them for your current shell:
 ```bash
 export NAT_USER_ID="dev-user"
 export ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS=true
+export NAT_REDIRECT_URI="http://localhost:8000/auth/redirect"
 ```
 ## Referencing Auth Providers in Clients
 The authentication provider is referenced by name through the `auth_provider` parameter in the MCP client configuration.
@@ -94,13 +96,13 @@ function_groups:
     server:
       transport: streamable-http
       url: ${CORPORATE_MCP_JIRA_URL}
-    auth_provider: mcp_oauth2_jira
+      auth_provider: mcp_oauth2_jira
 
 authentication:
   mcp_oauth2_jira:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
-    redirect_uri: http://localhost:8000/auth/redirect
+    redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
     default_user_id: ${NAT_USER_ID}
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
@@ -176,6 +178,57 @@ Ensure that `WebSocket` mode is enabled by navigating to the top-right corner an
 What is ticket AIQ-1935 about
 ```
 At this point, a consent window is displayed again. The `UI` user must authorize the workflow to access the MCP server and call the tool. This user's information is cached separately using the `WebSocket` session cookie as the user ID.
+
+### Running the Workflow on a Remote Server
+
+When running the NeMo Agent toolkit on a remote server accessible from your local browser, you must configure the `redirect_uri` to use the remote server's network address instead of `localhost`.
+
+#### Why This Is Required
+
+OAuth2 authentication redirects your browser to the `redirect_uri` after you approve access. If the `redirect_uri` uses `localhost`, your browser will try to connect to your local machine instead of the remote server, causing the authentication to fail.
+
+#### Configuration
+
+Set the `NAT_REDIRECT_URI` environment variable to match your remote server's address:
+```bash
+export NAT_REDIRECT_URI="http://192.168.1.100:8080/auth/redirect"
+```
+This is an example value for a remote server at `192.168.1.100` running on port `8080`. Replace this with the actual network address where your NAT server is accessible from your browser.
+
+For production environments using a reverse proxy, specify the public HTTPS URL:
+```bash
+export NAT_REDIRECT_URI="https://myapp.example.com/auth/redirect"
+```
+
+:::{important}
+When `redirect_uri` does not include an explicit port, the NAT server will bind to port **8000** by default (not port 80 or 443). For HTTPS redirect URIs, you must use a reverse proxy to handle TLS termination on port 443 and forward requests to the NAT server on port 8000.
+:::
+
+Configure the authentication provider in the workflow configuration:
+```yaml
+authentication:
+  mcp_oauth2_jira:
+    _type: mcp_oauth2
+    server_url: ${CORPORATE_MCP_JIRA_URL}
+    redirect_uri: ${NAT_REDIRECT_URI}
+    default_user_id: ${NAT_USER_ID}
+    allow_default_user_id_for_tool_calls: false
+```
+
+The `redirect_uri` must match the address where your NAT server is accessible from your browser. The `/auth/redirect` endpoint is automatically registered on the main NAT server for handling OAuth callbacks.
+
+Start the server using the `--host` and `--port` flags that match your `redirect_uri`:
+```bash
+# For the remote server example above
+nat serve --host 192.168.1.100 --port 8080
+
+# Or for production with a reverse proxy
+nat serve --host 0.0.0.0 --port 8000
+```
+
+:::{note}
+For production deployments with HTTPS, you typically run NAT behind a reverse proxy (such as nginx) that handles TLS termination. In this case, set `NAT_REDIRECT_URI` to your public HTTPS address, and configure the reverse proxy to forward requests to your NAT server's internal address and port.
+:::
 
 ## Displaying Protected MCP Tools through the CLI
 MCP client CLI can be used to display and call MCP tools on a remote MCP server. To use a protected MCP server, you need to provide the `--auth` flag:

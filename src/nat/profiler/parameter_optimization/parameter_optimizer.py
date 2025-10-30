@@ -24,6 +24,7 @@ from nat.data_models.config import Config
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
+from nat.data_models.optimizer import SamplerType
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
@@ -59,7 +60,21 @@ def optimize_parameters(
     eval_metrics = [v.evaluator_name for v in metric_cfg.values()]
     weights = [v.weight for v in metric_cfg.values()]
 
-    study = optuna.create_study(directions=directions)
+    # Create appropriate sampler based on configuration
+    sampler_type = optimizer_config.numeric.sampler
+
+    if sampler_type == SamplerType.GRID:
+        # For grid search, convert the existing space to value sequences
+        grid_search_space = {param_name: search_space.to_grid_values() for param_name, search_space in space.items()}
+        sampler = optuna.samplers.GridSampler(grid_search_space)
+        logger.info("Using Grid sampler for numeric optimization")
+    else:
+        # None or BAYESIAN: let Optuna choose defaults
+        sampler = None
+        logger.info(
+            "Using Optuna default sampler types: TPESampler for single-objective, NSGAIISampler for multi-objective")
+
+    study = optuna.create_study(directions=directions, sampler=sampler)
 
     # Create output directory for intermediate files
     out_dir = optimizer_config.output_path
@@ -96,7 +111,10 @@ def optimize_parameters(
             tasks = [_single_eval(i) for i in range(reps)]
             return await asyncio.gather(*tasks)
 
-        with (out_dir / f"config_numeric_trial_{trial._trial_id}.yml").open("w") as fh:
+        # Calculate padding width based on total number of trials
+        trial_id_width = len(str(max(0, optimizer_config.numeric.n_trials - 1)))
+        trial_id_padded = f"{trial.number:0{trial_id_width}d}"
+        with (out_dir / f"config_numeric_trial_{trial_id_padded}.yml").open("w") as fh:
             yaml.dump(cfg_trial.model_dump(), fh)
 
         all_scores = asyncio.run(_run_all_evals())
@@ -117,10 +135,21 @@ def optimize_parameters(
 
     # Save final results (out_dir already created and defined above)
     with (out_dir / "optimized_config.yml").open("w") as fh:
-        yaml.dump(tuned_cfg.model_dump(), fh)
+        yaml.dump(tuned_cfg.model_dump(mode='json'), fh)
     with (out_dir / "trials_dataframe_params.csv").open("w") as fh:
         # Export full trials DataFrame (values, params, timings, etc.).
         df = study.trials_dataframe()
+
+        # Rename values_X columns to actual metric names
+        metric_names = list(metric_cfg.keys())
+        rename_mapping = {}
+        for i, metric_name in enumerate(metric_names):
+            old_col = f"values_{i}"
+            if old_col in df.columns:
+                rename_mapping[old_col] = f"values_{metric_name}"
+        if rename_mapping:
+            df = df.rename(columns=rename_mapping)
+
         # Normalise rep_scores column naming for convenience.
         if "user_attrs_rep_scores" in df.columns and "rep_scores" not in df.columns:
             df = df.rename(columns={"user_attrs_rep_scores": "rep_scores"})
@@ -128,6 +157,13 @@ def optimize_parameters(
             # Some Optuna versions return a dict in a single user_attrs column.
             df["rep_scores"] = df["user_attrs"].apply(lambda d: d.get("rep_scores") if isinstance(d, dict) else None)
             df = df.drop(columns=["user_attrs"])
+
+        # Get Pareto optimal trial numbers from Optuna study
+        pareto_trials = study.best_trials
+        pareto_trial_numbers = {trial.number for trial in pareto_trials}
+        # Add boolean column indicating if trial is Pareto optimal
+        df["pareto_optimal"] = df["number"].isin(pareto_trial_numbers)
+
         df.to_csv(fh, index=False)
 
     # Generate Pareto front visualizations

@@ -18,6 +18,7 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
@@ -27,6 +28,7 @@ from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
 ModelType = TypeVar("ModelType")
@@ -89,8 +91,10 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
 
     from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
+
     llm = AzureChatCompletion(
-        api_key=llm_config.api_key,
+        api_key=get_secret_value(llm_config.api_key),
         api_version=llm_config.api_version,
         endpoint=llm_config.azure_endpoint,
         deployment_name=llm_config.azure_deployment,
@@ -103,6 +107,8 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
 async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
 
     llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name)
 

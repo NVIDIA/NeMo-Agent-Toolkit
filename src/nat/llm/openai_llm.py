@@ -20,7 +20,9 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.temperature_mixin import TemperatureMixin
@@ -39,11 +41,11 @@ class OpenAIModelConfig(LLMBaseConfig,
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
-    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
+    api_key: OptionalSecretStr = Field(default=None, description="OpenAI API key to interact with hosted model.")
     base_url: str | None = Field(default=None, description="Base url to the hosted model.")
-    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
-                            serialization_alias="model",
-                            description="The OpenAI hosted model name.")
+    model_name: str = OptimizableField(validation_alias=AliasChoices("model_name", "model"),
+                                       serialization_alias="model",
+                                       description="The OpenAI hosted model name.")
     seed: int | None = Field(default=None, description="Random seed to set for generation.")
     max_retries: int = Field(default=10, description="The max number of retries for the request.")
 

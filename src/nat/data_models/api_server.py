@@ -31,6 +31,7 @@ from pydantic import field_validator
 from pydantic import model_validator
 from pydantic_core.core_schema import ValidationInfo
 
+from nat.data_models.common import SerializableSecretStr
 from nat.data_models.interactive import HumanPrompt
 from nat.utils.type_converter import GlobalTypeConverter
 
@@ -109,8 +110,8 @@ class TextContent(BaseModel):
 class Security(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    api_key: str = "default"
-    token: str = "default"
+    api_key: SerializableSecretStr = Field(default="default")
+    token: SerializableSecretStr = Field(default="default")
 
 
 UserContent = typing.Annotated[TextContent | ImageContent | AudioContent, Discriminator("type")]
@@ -608,6 +609,8 @@ class WebSocketUserInteractionResponseMessage(BaseModel):
     type: typing.Literal[WebSocketMessageType.USER_INTERACTION_MESSAGE]
     id: str = "default"
     thread_id: str = "default"
+    parent_id: str = "default"
+    conversation_id: str | None = None
     content: UserMessageContent
     user: User = User()
     security: Security = Security()

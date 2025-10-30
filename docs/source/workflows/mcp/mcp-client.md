@@ -56,7 +56,7 @@ function_groups:
         alias: "tool_a_alias"
         description: "Tool A description"
 
-workflows:
+workflow:
   _type: react_agent
   tool_names:
     - mcp_tools
@@ -66,6 +66,31 @@ You can use the `mcp_client` function group to connect to an MCP server, dynamic
 The function group supports filtering using the `include` and `exclude` parameters. You can also optionally override the tool name and description defined by the MCP server using the `tool_overrides` parameter.
 
 The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers. Refer to [Function Groups](../function-groups.md) for more information about function group capabilities.
+
+A tool within a function group can also be referenced by its name using the following syntax: `<function_group_name>.<tool_name>`.
+
+:::{note}
+This requires that the tool name is explicitly listed under the optional `include` list of the function group configuration.
+
+See [function group accessibility](../function-groups.md#understanding-function-accessibility) for more details.
+:::
+Example:
+```yaml
+workflows:
+  _type: react_agent
+  tool_names:
+    - mcp_tools.tool_a
+```
+
+An additional case to note is when a function group is served by a NAT MCP server. The tools must still be accessed by their full name. This is the same as the prior case, but there is an important difference. Consider the following example:
+```yaml
+workflow:
+  _type: react_agent
+  tool_names:
+    - mcp_tools.calculator.add
+```
+
+`mcp_tools` is the name of the function group, and `calculator.add` is the name of the tool within the function group. This is because the tools are added to the function group as functions, and the function group is then added to the workflow as a tool.
 
 #### Configuration Options
 
@@ -114,6 +139,9 @@ Example with all options:
 function_groups:
   mcp_tools:
     _type: mcp_client
+    include:
+      - calculator.add
+      - calculator.multiply
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
@@ -127,10 +155,10 @@ function_groups:
     max_sessions: 50  # Maximum concurrent sessions
     session_idle_timeout: 7200  # 2 hours (in seconds)
     tool_overrides:
-      calculator_add:
+      calculator.add:
         alias: "add_numbers"
         description: "Add two numbers together"
-      calculator_multiply:
+      calculator.multiply:
         description: "Multiply two numbers"  # Keeps original name
 ```
 
@@ -273,11 +301,12 @@ For SSE transport, ensure the MCP server starts with the `--transport sse` flag.
 
 Sample output:
 ```text
-calculator_multiply
-calculator_inequality
+calculator.add
+calculator.multiply
+calculator.subtract
+calculator.divide
+calculator.compare
 current_datetime
-calculator_divide
-calculator_subtract
 react_agent
 ```
 
@@ -286,18 +315,42 @@ react_agent
 To get detailed information about a specific tool, use the `--tool` flag:
 
 ```bash
-nat mcp client tool list --url http://localhost:9901/mcp --tool calculator_multiply
+nat mcp client tool list --url http://localhost:9901/mcp --tool calculator.multiply
 ```
 
+Sample output:
+```text
+Tool: calculator.multiply
+Description: Multiply two or more numbers together
+Input Schema:
+{
+  "properties": {
+    "numbers": {
+      "description": "",
+      "items": {
+        "type": "number"
+      },
+      "title": "Numbers",
+      "type": "array"
+    }
+  },
+  "required": [
+    "numbers"
+  ],
+  "title": "Calculator.MultiplyInputSchema",
+  "type": "object"
+}
+```
 ### Call a Tool
 
 To call a tool and get its output:
 
-```bash
+```console
 # Pass arguments as JSON
-nat mcp client tool call calculator_multiply \
+$ nat mcp client tool call calculator.multiply \
   --url http://localhost:9901/mcp \
-  --json-args '{"text": "2 * 3"}'
+  --json-args '{"numbers": [1, 3, 6, 10]}'
+180.0
 ```
 
 ### Using Protected MCP Servers
@@ -307,28 +360,6 @@ To use a protected MCP server, you need to provide the `--auth` flag:
 nat mcp client tool list --url http://example.com/mcp --auth
 ```
 This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Authentication](./mcp-auth.md).
-
-Sample output:
-```text
-Tool: calculator_multiply
-Description: This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.
-Input Schema:
-{
-  "properties": {
-    "text": {
-      "description": "",
-      "title": "Text",
-      "type": "string"
-    }
-  },
-  "required": [
-    "text"
-  ],
-  "title": "CalculatorMultiplyInputSchema",
-  "type": "object"
-}
-------------------------------------------------------------
-```
 
 ## List MCP Client Tools using the HTTP endpoint
 This is useful when you want to inspect the tools configured on the client side and whether each tool is available on the connected server.
@@ -342,14 +373,14 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
    nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
    ```
 
-2. Start the workflow (MCP client) with FastAPI on port 8080:
+2. Start the workflow (MCP client) with FastAPI:
    ```bash
-   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --port 8080
+   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml
    ```
 
 3. Call the endpoint and pretty-print the response:
    ```bash
-   curl -s http://localhost:8080/mcp/client/tool/list | jq
+   curl -s http://localhost:8000/mcp/client/tool/list | jq
    ```
 
 ### Endpoint
@@ -368,6 +399,7 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
       "server": "stdio:python",
       "transport": "stdio",
       "session_healthy": true,
+      "protected": false,
       "tools": [
         {
           "name": "convert_time",
@@ -390,38 +422,70 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
       "server": "streamable-http:http://localhost:9901/mcp",
       "transport": "streamable-http",
       "session_healthy": true,
+      "protected": false,
       "tools": [
         {
-          "name": "calculator_divide",
-          "description": "This is a mathematical tool used to divide one number by another. It takes 2 numbers as an input and computes their numeric quotient as the output.",
+          "name": "calculator.add",
+          "description": "Add two or more numbers together",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator_inequality",
-          "description": "This is a mathematical tool used to perform an inequality comparison between two numbers. It takes two numbers as an input and determines if one is greater or are equal.",
+          "name": "calculator.compare",
+          "description": "Compare two numbers",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator_multiply",
-          "description": "This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.",
+          "name": "calculator.divide",
+          "description": "Divide one number by another",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator_subtract",
-          "description": "This is a mathematical tool used to subtract one number from another. It takes 2 numbers as an input and computes their numeric difference as the output.",
+          "name": "calculator.multiply",
+          "description": "Multiply two or more numbers together",
+          "server": "streamable-http:http://localhost:9901/mcp",
+          "available": true
+        },
+        {
+          "name": "calculator.subtract",
+          "description": "Subtract one number from another",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         }
       ],
-      "total_tools": 4,
-      "available_tools": 4
+      "total_tools": 5,
+      "available_tools": 5
     }
   ]
 }
 ```
+
+## MCP Inspection via UI
+You can inspect the MCP tools available on the client side using the UI.
+
+### Steps
+
+1. Start the MCP server:
+   ```bash
+   nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
+   ```
+
+2. Start the workflow (MCP client) with FastAPI:
+   ```bash
+   nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml
+   ```
+
+3. Launch the UI by following the instructions in the [Launching the UI](../../quick-start/launching-ui.md) documentation.
+
+4. Click on the MCP tab in the side panel to inspect the MCP tools available on the client side.
+
+### Sample Output
+![MCP Side Panel](../../_static/mcp_side_panel.png)
+
+![MCP Tools](../../_static/mcp_tools.png)
+
 
 ### Troubleshooting
 

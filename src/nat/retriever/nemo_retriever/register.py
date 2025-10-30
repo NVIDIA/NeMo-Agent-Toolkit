@@ -20,6 +20,7 @@ from nat.builder.builder import Builder
 from nat.builder.retriever import RetrieverProviderInfo
 from nat.cli.register_workflow import register_retriever_client
 from nat.cli.register_workflow import register_retriever_provider
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.retriever import RetrieverBaseConfig
 
 
@@ -34,7 +35,7 @@ class NemoRetrieverConfig(RetrieverBaseConfig, name="nemo_retriever"):
         default=None,
         description="A list of fields to return from the datastore. If 'None', all fields but the vector are returned.")
     timeout: int = Field(default=60, description="Maximum time to wait for results to be returned from the service.")
-    nvidia_api_key: str | None = Field(
+    nvidia_api_key: OptionalSecretStr = Field(
         description="API key used to authenticate with the service. If 'None', will use ENV Variable 'NVIDIA_API_KEY'",
         default=None,
     )

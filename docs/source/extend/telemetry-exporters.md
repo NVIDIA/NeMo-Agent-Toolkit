@@ -17,7 +17,9 @@ limitations under the License.
 
 # Adding Telemetry Exporters to NVIDIA NeMo Agent Toolkit
 
-> **Note**: The code examples in this guide are pseudo code designed to illustrate the programming interface and key concepts. They focus on demonstrating the structure and flow rather than providing complete, runnable implementations. Use these examples to understand the interface patterns and adapt them to your specific use case.
+:::{note}
+The code examples in this guide are pseudo code designed to illustrate the programming interface and key concepts. They focus on demonstrating the structure and flow rather than providing complete, runnable implementations. Use these examples to understand the interface patterns and adapt them to your specific use case.
+:::
 
 Telemetry exporters are plugins that send telemetry data (e.g., traces, spans, and intermediate steps, etc.) from NeMo Agent toolkit workflows to external observability services. The NeMo Agent toolkit uses a flexible, plugin-based observability system that allows you to configure multiple exporters simultaneously and create custom integrations for any observability platform. This guide provides a comprehensive overview of how to create and register custom telemetry exporters.
 
@@ -76,6 +78,7 @@ Examples of existing telemetry exporters include:
 - **Patronus**: Exports traces to Patronus via OTLP
 - **Galileo**: Exports traces to Galileo via OTLP
 - **RagaAI Catalyst**: Exports traces to RagaAI Catalyst
+- **DBNL**: Exports traces to DBNL via OTLP
 
 ## Quick Start: Your First Telemetry Exporter
 
@@ -242,7 +245,7 @@ Specialized for OpenTelemetry-compatible services with many pre-built options:
 - **Use case**: OTLP-compatible backends, standard observability tools
 - **Base class**: `OtelSpanExporter`
 - **Data flow**: `IntermediateStep` → `Span` → [Processing Pipeline] → `OtelSpan` → Export
-- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Phoenix, RagaAI, Weave
+- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Phoenix, RagaAI, Weave, DBNL
 
 #### Advanced Custom Exporters
 
@@ -253,9 +256,11 @@ Advanced exporters for complex analytics pipelines with state management:
 - **Data flow**: `IntermediateStep` → `InputT` → [Enrichment Pipeline] → `OutputT` → Export
 - **Key features**: Circuit breakers, dead letter queues, state tracking, custom transformations, performance monitoring
 
-> **Note**: This is a high-complexity pattern. See the [Advanced Custom Exporters](#advanced-custom-exporters) section in Advanced Features for detailed implementation examples.
+This is a high-complexity pattern. See the [Advanced Custom Exporters](#advanced-custom-exporters) section in Advanced Features for detailed implementation examples.
 
-**Note**: All exporters support optional processing pipelines that can transform, filter, batch, or aggregate data before export. Common processors include batching for efficient transmission, filtering for selective export, and format conversion for compatibility with different backends.
+:::{note}
+All exporters support optional processing pipelines that can transform, filter, batch, or aggregate data before export. Common processors include batching for efficient transmission, filtering for selective export, and format conversion for compatibility with different backends.
+:::
 
 ## Pre-Built Telemetry Exporters
 
@@ -265,6 +270,7 @@ Before creating a custom exporter, check if your observability service is alread
 
 | Service | Type | Installation | Configuration |
 |---------|------|-------------|---------------|
+| **DBNL** | `dbnl` | `pip install "nvidia-nat[opentelemetry]"` | API URL + API token + project id |
 | **File** | `file` | `pip install nvidia-nat` | local file or directory |
 | **Langfuse** | `langfuse` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API keys |
 | **LangSmith** | `langsmith` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
@@ -289,7 +295,9 @@ general:
         secret_key: ${LANGFUSE_SECRET_KEY}
 ```
 
-> **Most services use OTLP**: If your service supports OpenTelemetry Protocol (OTLP), you can often subclass `OtelSpanExporter` or use the generic `otelcollector` type with appropriate headers.
+:::{tip}
+**Most services use OTLP**. If your service supports OpenTelemetry Protocol (OTLP), you can often subclass `OtelSpanExporter` or use the generic `otelcollector` type with appropriate headers.
+:::
 
 ## Creating a Custom Telemetry Exporter
 
@@ -312,7 +320,9 @@ class CustomTelemetryExporter(TelemetryExporterBaseConfig, name="custom"):
     api_key: str = Field(description="API key for authentication")
 ```
 
-> **Tip**: Start with the fields you need and add more as your integration becomes more sophisticated. See the [Common Integration Patterns](#common-integration-patterns) section for practical examples.
+:::{tip}
+Start with the fields you need and add more as your integration becomes more sophisticated. See the [Common Integration Patterns](#common-integration-patterns) section for practical examples.
+:::
 
 ### Step 2: Implement the Exporter Class
 
@@ -409,11 +419,13 @@ class CustomSpanExporter(SpanExporter[Span, dict]):
 
 #### OpenTelemetry Exporter (for OTLP compatibility)
 
-> **Note**: OpenTelemetry exporters require the `nvidia-nat-opentelemetry` subpackage. Install it with:
+:::{note}
+OpenTelemetry exporters require the `nvidia-nat-opentelemetry` subpackage. Install it with:
 
-> ```bash
-> pip install "nvidia-nat[opentelemetry]"
-> ```
+```bash
+pip install "nvidia-nat[opentelemetry]"
+```
+:::
 
 For most OTLP-compatible services, use the pre-built `OTLPSpanAdapterExporter`:
 
@@ -423,8 +435,13 @@ from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapter
 # See Pattern 3 in Common Integration Patterns for full example
 ```
 
-> **Tip**: For complete implementation examples with HTTP sessions, error handling, and cleanup, see the [Common Integration Patterns](#common-integration-patterns) section.
-> **Warning**: Always implement `_cleanup()` and call `await super()._cleanup()` to prevent resource leaks. Failure to properly clean up HTTP sessions, file handles, or database connections can cause memory leaks and connection pool exhaustion in production environments.
+:::{tip}
+For complete implementation examples with HTTP sessions, error handling, and cleanup, see the [Common Integration Patterns](#common-integration-patterns) section.
+:::
+
+:::{warning}
+Always implement `_cleanup()` and call `await super()._cleanup()` to prevent resource leaks. Failure to properly clean up HTTP sessions, file handles, or database connections can cause memory leaks and connection pool exhaustion in production environments.
+:::
 
 ### Step 3: Register the Exporter
 
@@ -461,7 +478,9 @@ async def custom_telemetry_exporter(config: CustomTelemetryExporter, builder: Bu
         raise
 ```
 
-> **Important**: For plugin-specific imports (like `aiohttp`, OpenTelemetry modules, or other external dependencies), always import them inside the registration function to enable lazy loading. This prevents long startup times when these plugins aren't needed.
+:::{important}
+For plugin-specific imports (like `aiohttp`, OpenTelemetry modules, or other external dependencies), always import them inside the registration function to enable lazy loading. This prevents long startup times when these plugins aren't needed.
+:::
 
 ### Best Practices for Code Organization
 
@@ -526,9 +545,11 @@ async def my_telemetry_exporter(config: MyTelemetryExporter, builder: Builder):
 - **Maintainability**: Classes are easier to test and modify when properly organized
 - **Performance**: Avoids importing heavy dependencies during application startup
 
-**Note**: Configuration classes are lightweight and can be defined in the same file as registration functions. The separation is primarily for exporter implementation classes that have heavy dependencies.
+Configuration classes are lightweight and can be defined in the same file as registration functions. The separation is primarily for exporter implementation classes that have heavy dependencies.
 
-> **Note**: For OpenTelemetry exporters with custom protocols, see the [Advanced Features](#advanced-features) section for mixin patterns and complex integrations.
+:::{note}
+For OpenTelemetry exporters with custom protocols, see the [Advanced Features](#advanced-features) section for mixin patterns and complex integrations.
+:::
 
 ### Step 4: Add Processing Pipeline (Optional)
 
@@ -713,7 +734,7 @@ async def my_telemetry_exporter(config: MyTelemetryExporter, builder: Builder):
 ```
 
 > **Summary**: You now have three proven patterns for telemetry integration:
-
+>
 > - **Pattern 1 (HTTP API)**: Most common for cloud services and APIs
 > - **Pattern 2 (File Export)**: Perfect for development and debugging
 > - **Pattern 3 (OTLP)**: Use when your service supports OpenTelemetry standards
@@ -734,7 +755,9 @@ This section covers advanced topics for production-ready telemetry exporters. Ch
 
 #### Isolated Attributes for Concurrent Execution
 
-> **Note**: If you're only running one workflow at a time, you can skip this section. However, if your application runs multiple concurrent workflows or serves multiple users simultaneously, proper isolation is critical to prevent data corruption and race conditions.
+:::{note}
+If you're only running one workflow at a time, you can skip this section. However, if your application runs multiple concurrent workflows or serves multiple users simultaneously, proper isolation is critical to prevent data corruption and race conditions.
+:::
 
 When multiple workflows run simultaneously, each needs its own isolated exporter state. NeMo Agent toolkit provides `IsolatedAttribute` to handle this automatically.
 
@@ -1290,7 +1313,9 @@ def test_isolated_attributes():
 
 ### Security
 
-> **Warning**: Telemetry data may contain sensitive information from workflow executions. Never log API keys, credentials, or PII in trace data. Always use environment variables for secrets and validate/sanitize data before transmission.
+:::{warning}
+Telemetry data may contain sensitive information from workflow executions. Never log API keys, credentials, or PII in trace data. Always use environment variables for secrets and validate/sanitize data before transmission.
+:::
 
 - Never log sensitive data like API keys
 - Use environment variables for credentials

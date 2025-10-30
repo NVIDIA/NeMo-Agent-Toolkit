@@ -14,22 +14,18 @@
 # limitations under the License.
 
 import json
-import logging
 from pathlib import Path
 
 import pytest
 import yaml
 
-from nat.runtime.loader import load_workflow
-from nat.test.utils import locate_example_config
-from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
-
-logger = logging.getLogger(__name__)
-
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_full_workflow(root_repo_dir: Path):
+    from nat.test.utils import locate_example_config
+    from nat.test.utils import run_workflow
+    from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
 
     config_file: Path = locate_example_config(AlertTriageAgentWorkflowConfig, "config_offline_mode.yml")
 
@@ -48,15 +44,9 @@ async def test_full_workflow(root_repo_dir: Path):
     input_data = input_data[0]  # Limit to first row for testing
 
     # Run the workflow
-    async with load_workflow(config_file) as workflow:
-        async with workflow.run(input_data["question"]) as runner:
-            result = await runner.result(to_type=str)
-
-    # Check that the results are as expected
-    assert len(result) > 0, "Result is empty"
-
-    # Deterministic data point: host under maintenance
-    assert input_data['label'] in result
+    result = await run_workflow(config_file=config_file,
+                                question=input_data["question"],
+                                expected_answer=input_data["label"])
 
     # Check that rows with hosts not under maintenance contain root cause categorization
     assert "root cause category" in result.lower()

@@ -27,6 +27,110 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ## Version Specific Changes
 
+### v1.3.0
+
+#### CLI Changes
+
+The MCP server CLI commands have been restructured.
+
+* `nat mcp` is now a command group and can no longer be used to start the MCP server.
+* `nat mcp serve` is now the main command to start the MCP server.
+* `nat info mcp` has been removed. Use the new `nat mcp client` command instead.
+
+**Listing MCP Tools:**
+```bash
+# Old (v1.2)
+nat info mcp
+nat info mcp --tool tool_name
+
+# New (v1.3)
+nat mcp client tool list
+nat mcp client tool list --tool tool_name
+```
+
+**Pinging MCP Server:**
+```bash
+# Old (v1.2)
+nat info mcp ping --url http://localhost:9901/sse
+
+# New (v1.3)
+nat mcp client ping --url http://localhost:9901/mcp
+```
+
+#### API Changes
+
+##### API Server Data Models
+
+The {py:mod}`nat.data_models.api_server` module has been updated to improve type safety and OpenAI API compatibility.
+
+* {py:class}`nat.data_models.api_server.Choice` has been split into two specialized models:
+  * {py:class}`nat.data_models.api_server.ChatResponseChoice` - for non-streaming responses (contains `message` field)
+  * {py:class}`nat.data_models.api_server.ChatResponseChunkChoice` - for streaming responses (contains `delta` field)
+  * {py:class}`nat.data_models.api_server.Choice` remains as a backward compatibility alias for `ChatResponseChoice`
+
+* {py:class}`nat.data_models.api_server.ChatResponse` now requires `usage` field (no longer optional).
+
+##### Builder `get_*` methods switched to asynchronous
+
+The following builder methods have been switched to asynchronous to be aligned with other builder methods.
+
+* {py:meth}`nat.builder.Builder.get_function` is now marked as async
+* {py:meth}`nat.builder.Builder.get_functions` is now marked as async
+* {py:meth}`nat.builder.Builder.get_memory_client` is now marked as async
+* {py:meth}`nat.builder.Builder.get_memory_clients` is now marked as async
+* {py:meth}`nat.builder.Builder.get_tool` is now marked as async
+* {py:meth}`nat.builder.Builder.get_tools` is now marked as async
+
+**Migration example:**
+
+```python
+# Old (v1.2)
+function = builder.get_function("my_function")
+
+# New (v1.3)
+function = await builder.get_function("my_function")
+```
+
+##### MCP Default Transport Changed
+
+- v1.2: Used SSE transport at `http://localhost:9901/sse`
+- v1.3: Uses streamable-http transport at `http://localhost:9901/mcp`
+
+To use SSE transport for backward compatibility:
+```bash
+nat mcp serve --config_file config.yml --transport sse
+```
+
+:::{warning}
+SSE transport does not support authentication. For production deployments, use `streamable-http` transport with authentication configured.
+:::
+
+#### Package Changes
+
+Core MCP functionality has been moved to the `nvidia-nat-mcp` package.
+
+If you are using MCP functionality, you will need to install the `nvidia-nat[mcp]` extra.
+
+#### Package Dependency Updates
+
+The following dependency updates may affect your workflows:
+
+* `mcp` updated from `~1.10` to `~1.13` - Update your MCP server configurations if needed
+* `uvicorn` limited to `<0.36` for `nest_asyncio` compatibility
+* `langchain-core` updated to `~0.3.75` - Review any custom LangChain workflows for compatibility
+* `langgraph` updated to `~0.6.7` - Review any custom LangGraph workflows for compatibility
+* `crewai` updated to `~0.193.2` - Review any custom CrewAI workflows for compatibility
+* `semantic-kernel` updated to `~1.35` - Review any custom Semantic Kernel workflows for compatibility
+
+#### Deprecations
+
+:::{warning}
+The following features are deprecated and will be removed in a future release.
+:::
+
+* {py:attr}`nat.telemetry_exporters.weave.WeaveTelemetryExporter.entity` - The `entity` field is deprecated. Remove this field from your Weave exporter configuration.
+* `use_uvloop` configuration option - This setting in the general section of the config is deprecated. Remove this option from your workflow configurations.
+
 ### v1.2.0
 
 #### Package Changes

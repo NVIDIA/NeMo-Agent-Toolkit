@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import inspect
+import os
 import sys
 import typing
 from hashlib import sha512
@@ -21,6 +22,8 @@ from hashlib import sha512
 from pydantic import AliasChoices
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import PlainSerializer
+from pydantic import SecretStr
 from pydantic.json_schema import GenerateJsonSchema
 from pydantic.json_schema import JsonSchemaMode
 
@@ -169,3 +172,47 @@ class TypedBaseModel(BaseModel):
 
 
 TypedBaseModelT = typing.TypeVar("TypedBaseModelT", bound=TypedBaseModel)
+
+
+def get_secret_value(v: SecretStr | None) -> str | None:
+    """
+    Extract the secret value from a SecretStr or return None.
+
+    Parameters
+    ----------
+    v: SecretStr or None.
+        A field defined as OptionalSecretStr, which is either a SecretStr or None.
+
+    Returns
+    -------
+    str | None
+        The secret value as a plain string, or None if v is None.
+    """
+    if v is None:
+        return None
+    return v.get_secret_value()
+
+
+def set_secret_from_env(model: BaseModel, field_name: str, env_var: str):
+    """
+    Set a SecretStr field in a Pydantic model from an environment variable, but only if the environment variable is set.
+
+    Parameters
+    ----------
+    model: BaseModel
+        The Pydantic model instance containing the field to set.
+    field_name: str
+        The name of the field in the model to set.
+    env_var: str
+        The name of the environment variable to read the secret value from.
+    """
+    env_value = os.getenv(env_var)
+    if env_value is not None:
+        setattr(model, field_name, SecretStr(env_value))
+
+
+# A SecretStr that serializes to plain string
+SerializableSecretStr = typing.Annotated[SecretStr, PlainSerializer(get_secret_value)]
+
+# A SecretStr or None that serializes to plain string
+OptionalSecretStr = typing.Annotated[SecretStr | None, PlainSerializer(get_secret_value)]

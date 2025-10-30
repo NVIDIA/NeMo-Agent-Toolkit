@@ -21,6 +21,7 @@ from pydantic import PositiveInt
 from nat.builder.builder import Builder
 from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
@@ -42,11 +43,11 @@ class NIMModelConfig(LLMBaseConfig,
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
-    api_key: str | None = Field(default=None, description="NVIDIA API key to interact with hosted NIM.")
+    api_key: OptionalSecretStr = Field(default=None, description="NVIDIA API key to interact with hosted NIM.")
     base_url: str | None = Field(default=None, description="Base url to the hosted NIM.")
-    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
-                            serialization_alias="model",
-                            description="The model name for the hosted NIM.")
+    model_name: str = OptimizableField(validation_alias=AliasChoices("model_name", "model"),
+                                       serialization_alias="model",
+                                       description="The model name for the hosted NIM.")
     max_tokens: PositiveInt = OptimizableField(default=300,
                                                description="Maximum number of tokens to generate.",
                                                space=SearchSpace(high=2176, low=128, step=512))

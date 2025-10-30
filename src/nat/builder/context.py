@@ -19,6 +19,7 @@ from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import contextmanager
 from contextvars import ContextVar
+from functools import cached_property
 
 from nat.builder.intermediate_step_manager import IntermediateStepManager
 from nat.builder.user_interaction_manager import UserInteractionManager
@@ -168,7 +169,7 @@ class Context:
         """
         return UserInteractionManager(self._context_state)
 
-    @property
+    @cached_property
     def intermediate_step_manager(self) -> IntermediateStepManager:
         """
         Retrieves the intermediate step manager instance from the current context state.

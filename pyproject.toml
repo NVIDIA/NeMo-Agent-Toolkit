@@ -19,12 +19,12 @@ dependencies = [
   # `~=0.1.3.5`.
   # Keep sorted!!!
   "aioboto3>=11.0.0",
-  "authlib~=1.5",
+  "authlib>=1.6.5,<2.0.0",
   "click~=8.1",
   "colorama~=0.4.6",
   "datasets~=4.0", # workaround for uv's solver choosing different versions of datasets based on sys_platform
   "expandvars~=1.0",
-  "fastapi~=0.115.5",
+  "fastapi~=0.120.1",
   "httpx~=0.27",
   "jinja2~=3.1",
   "jsonpath-ng~=1.7",
@@ -91,10 +91,11 @@ redis = ["nvidia-nat-redis"]
 s3 = ["nvidia-nat-s3"]
 semantic-kernel = ["nvidia-nat-semantic-kernel"]
 telemetry = [
+  "nvidia-nat-data-flywheel",
   "nvidia-nat-opentelemetry",
   "nvidia-nat-phoenix",
-  "nvidia-nat-weave",
   "nvidia-nat-ragaai",
+  "nvidia-nat-weave",
 ]
 weave = ["nvidia-nat-weave"]
 zep-cloud = ["nvidia-nat-zep-cloud"]
@@ -110,7 +111,6 @@ examples = [
   "nat_plot_charts",
   "nat_por_to_jiratickets",
   "nat_profiler_agent",
-  "nat_redact_pii",
   "nat_router_agent",
   "nat_semantic_kernel_demo",
   "nat_sequential_executor",
@@ -197,7 +197,6 @@ nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable
 nat_plot_charts = { path = "examples/custom_functions/plot_charts", editable = true }
 nat_por_to_jiratickets = { path = "examples/HITL/por_to_jiratickets", editable = true }
 nat_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editable = true }
-nat_redact_pii = { path = "examples/observability/redact_pii", editable = true }
 nat_router_agent = { path = "examples/control_flow/router_agent", editable = true }
 nat_semantic_kernel_demo = { path = "examples/frameworks/semantic_kernel_demo", editable = true }
 nat_sequential_executor = { path = "examples/control_flow/sequential_executor", editable = true }

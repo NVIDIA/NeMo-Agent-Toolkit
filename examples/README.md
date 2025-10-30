@@ -114,10 +114,14 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 
 **[Building an Agentic System](notebooks/README.md)**: Series of notebooks demonstrating how to build, connect, evaluate, profile and deploy an agentic system using the NeMo Agent toolkit
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NVIDIA/NeMo-Agent-Toolkit/)
+
 1. [Getting Started](notebooks/1_getting_started_with_nat.ipynb) - Getting started with the NeMo Agent toolkit
 2. [Bringing Your Own Agent](notebooks/2_bringing_your_own_agent.ipynb) - Bringing your own agent to the NeMo Agent toolkit
-3. [Adding Tools and Agents](notebooks/3_adding_tools_and_agents.ipynb) - Adding tools and agents to your workflow
-4. [Observability, Evaluation, and Profiling](notebooks/4_observability_evaluation_and_profiling.ipynb) - Observability, evaluation and profiling
+3. [Adding Tools and Agents](notebooks/3_adding_tools_to_agents.ipynb) - Adding tools to your agentic workflow
+4. [Multi-Agent Orchestration](notebooks/4_multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
+5. [Observability, Evaluation, and Profiling](notebooks/5_observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
+6. [Optimizing Model Selection, Parameters, and Prompts](notebooks/6_optimize_model_selection.ipynb) - Use NAT Optimize to compare models, parameters, and prompt variations
 
 #### Brev Launchables
 
@@ -127,7 +131,6 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`user_report`](object_store/user_report/README.md)**: User report generation and storage system using object store (S3, MySQL, and/or memory)
 
 ### Observability
-- **[`redact_pii`](observability/redact_pii/README.md)**: Demonstrates how to use Weights & Biases (W&B) Weave with PII redaction
 - **[`simple_calculator_observability`](observability/simple_calculator_observability/README.md)**: Basic simple calculator with integrated monitoring, telemetry, and observability features
 
 ### Retrieval Augmented Generation (RAG)

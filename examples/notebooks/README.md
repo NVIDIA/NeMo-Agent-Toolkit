@@ -21,11 +21,13 @@ Through this series of notebooks, we demonstrate how you can use the NVIDIA NeMo
 
 We showcase the building blocks that make up the agentic system, including tools, agents, workflows, and observability.
 
-1. [Getting Started](1_getting_started_with_nat.ipynb)
-2. [Bringing Your Own Agent](2_bringing_your_own_agent.ipynb)
-3. [Adding Tools and Agents](3_adding_tools_and_agents.ipynb)
-4. [Observability, Evaluation, and Profiling](4_observability_evaluation_and_profiling.ipynb)
-
+1. [Getting Started](1_getting_started_with_nat.ipynb) - Getting started with the NeMo Agent toolkit
+2. [Bringing Your Own Agent](2_bringing_your_own_agent.ipynb) - Bringing your own agent to the NeMo Agent toolkit
+3. [Adding Tools and Agents](3_adding_tools_to_agents.ipynb) - Adding tools to your agentic workflow
+4. [Multi-Agent Orchestration](4_multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
+5. [Observability, Evaluation, and Profiling](5_observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
+6. [Optimizing Model Selection, Parameters, and Prompts](6_optimize_model_selection.ipynb) - Use NAT Optimize to compare models, parameters, and prompt variations
+   
 We recommend opening these notebooks in a Jupyter Lab environment or Google Colab environment.
 
 We also have a set of notebooks that are designed to be run in a Brev environment. See the [Brev Launchables](./launchables/README.md) for more details.
