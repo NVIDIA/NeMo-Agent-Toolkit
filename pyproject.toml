@@ -98,6 +98,7 @@ telemetry = [
   "nvidia-nat-weave",
 ]
 test = ["nvidia-nat-test"]
+vanna = ["nvidia-nat-vanna"]
 weave = ["nvidia-nat-weave"]
 zep-cloud = ["nvidia-nat-zep-cloud"]
 
@@ -185,6 +186,7 @@ nvidia-nat-redis = { workspace = true }
 nvidia-nat-s3 = { workspace = true }
 nvidia-nat-semantic-kernel = { workspace = true }
 nvidia-nat-test = { workspace = true }
+nvidia-nat-vanna = { workspace = true }
 nvidia-nat-weave = { workspace = true }
 nvidia-nat-zep-cloud = { workspace = true }
 
