@@ -26,7 +26,7 @@ We showcase the building blocks that make up the agentic system, including tools
 3. [Adding Tools and Agents](3_adding_tools_to_agents.ipynb) - Adding tools to your agentic workflow
 4. [Multi-Agent Orchestration](4_multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
 5. [Observability, Evaluation, and Profiling](5_observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
-6. [Optimizing Model Selection, Parameters, and Promps](6_optimize_model_selection.ipynb) - Use NAT Optimize to compare models, parameters, and prompt variations
+6. [Optimizing Model Selection, Parameters, and Prompts](6_optimize_model_selection.ipynb) - Use NAT Optimize to compare models, parameters, and prompt variations
    
 We recommend opening these notebooks in a Jupyter Lab environment or Google Colab environment.
 
