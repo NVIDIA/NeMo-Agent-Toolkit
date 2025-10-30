@@ -27,8 +27,13 @@ _ALL_WORKFLOWS = [
     "tmp_workflow"
 ]
 
+# Other files produced by notebooks, relative to the notebooks directory
 _OTHER_FILES = [
+    "data/rag/product_catalog.md",
+    "data/retail_sales_data.csv",
+    "langchain_agent.py",
     "nat_embedded.py",
+    "search_agent.yml",
 ]
 
 
@@ -87,8 +92,8 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
     ]
 
     # Ideally if the notebook times out we want jupyter to catch it and exit gracefully with the most informative error
-    # possible. However in the potential situation where jupyter itself hangs, we add a 30s buffer to the timeout here.
-    result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout_seconds + 30)
+    # possible. However in the potential situation where jupyter itself hangs, we add a 10s buffer to the timeout.
+    result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout_seconds + 10)
     assert result.returncode == 0, f"Notebook execution failed:\n{result.stderr}"
 
     for package in expected_packages:
@@ -99,18 +104,24 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 @pytest.mark.parametrize(
-    "notebook_file_name, expected_packages",
+    "notebook_file_name, expected_packages, timeout_seconds",
     [
-        ("1_getting_started_with_nat.ipynb", ["getting_started"]),
-        ("3_adding_tools_to_agents.ipynb", ["retail_sales_agent"]),
-        ("4_multi_agent_orchestration.ipynb", ["retail_sales_agent"]),
-        ("5_observability_evaluation_and_profiling.ipynb", ["retail_sales_agent"]),
+        pytest.param("1_getting_started_with_nat.ipynb", ["getting_started"], 120, id="1_getting_started_with_nat"),
+        pytest.param("3_adding_tools_to_agents.ipynb", ["retail_sales_agent"], 300, id="3_adding_tools_to_agents"),
+        pytest.param("4_multi_agent_orchestration.ipynb", ["retail_sales_agent"], 120,
+                     id="4_multi_agent_orchestration"),
+        pytest.param("5_observability_evaluation_and_profiling.ipynb", ["retail_sales_agent"],
+                     120,
+                     id="5_observability_evaluation_and_profiling"),
         pytest.param("6_optimize_model_selection.ipynb", ["tmp_workflow"],
+                     120,
+                     id="6_optimize_model_selection",
                      marks=pytest.mark.skip(reason="Notebook takes over an hour to run completely.")),
-    ],
-    ids=[f"notebook_{i}" for i in (1, 3, 4, 5, 6)])
-def test_notebooks(notebooks_dir: Path, notebook_file_name: str, expected_packages: list[str]):
-    _run_notebook(notebooks_dir / notebook_file_name, expected_packages=expected_packages)
+    ])
+def test_notebooks(notebooks_dir: Path, notebook_file_name: str, expected_packages: list[str], timeout_seconds: int):
+    _run_notebook(notebooks_dir / notebook_file_name,
+                  expected_packages=expected_packages,
+                  timeout_seconds=timeout_seconds)
 
 
 @pytest.mark.slow
@@ -119,5 +130,4 @@ def test_notebooks(notebooks_dir: Path, notebook_file_name: str, expected_packag
 def test_2_bringing_your_own_agent(notebooks_dir: Path):
     # This test is the same as the others but requires a Tavily API key to run
     _run_notebook(notebooks_dir / "2_bringing_your_own_agent.ipynb",
-                  expected_packages=["first_agent_attempt", "second_agent_attempt", "third_agent_attempt"],
-                  timeout_seconds=180)
+                  expected_packages=["first_agent_attempt", "second_agent_attempt", "third_agent_attempt"])
