@@ -1,6 +1,23 @@
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # nvidia-nat-vanna
 
-Production-ready text-to-SQL integration for NeMo Agent Toolkit (NAT) using the Vanna framework with Databricks support and vector-based few-shot learning.
+Production-ready text-to-SQL integration for NeMo Agent Toolkit using the Vanna framework with Databricks support and vector-based few-shot learning.
 
 ## Features
 
@@ -60,7 +77,7 @@ MILVUS_PASSWORD=your-password
 
 ### 3. Create Workflow Configuration
 
-Create `text2sql_config.yml`:
+#### 3.1 Create training config `text2sql_training_config.yml`
 
 ```yaml
 general:
@@ -84,22 +101,12 @@ functions:
     db_catalog: main
     db_schema: default
 
-    # Settings
+    # Vanna settings
     execute_sql: false
     train_on_startup: true
+    auto_training: true # Auto-train Vanna (auto-extract DDL and generate training data from database) or manually train Vanna (uses training data from db_schema.py
     n_results: 5
     milvus_search_limit: 1000
-
-    # Training data
-    training_ddl:
-      - "CREATE TABLE customers (id INT, name VARCHAR(100), email VARCHAR(100))"
-      - "CREATE TABLE orders (id INT, customer_id INT, amount DECIMAL(10,2))"
-
-    training_examples:
-      - question: "How many customers do we have?"
-        sql: "SELECT COUNT(*) FROM customers"
-      - question: "What is the total revenue?"
-        sql: "SELECT SUM(amount) FROM orders"
 
   execute_db_query:
     _type: execute_db_query
@@ -133,12 +140,29 @@ workflow:
   tool_call_max_retries: 3
 ```
 
+Update training materials:
+- `VANNA_TRAINING_DOCUMENTATION`
+- `VANNA_TRAINING_DDL`
+   - If auto_training is set to true, make sure `VANNA_ACTIVE_TABLES` is updated with the tables in your database. This ensures that automatic DDL extraction works properly.
+- `VANNA_TRAINING_EXAMPLES`
+
+#### 3.2 Create inference config `text2sql_config.yml`
+Set `train_on_startup` and `auto_training` to false.
+```
+    train_on_startup: false
+    auto_training: false
+```
+See `text2sql_training_config.yml` and `text2sql_config.yml` for reference.
+
 ### 4. Run the Workflow
 
 ```bash
 # Using NeMo Agent Toolkit CLI
-# If train_on_startup is set to true, training takes approximately 7 minutes depending on endpoints and network conditions.
-uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "Retrieve the total number of customers."
+# If auto_training is set to true, training takes approximately 7 minutes depending on endpoints and network conditions.
+uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_training_config.yml --input "Retrieve the total number of customers."
+
+# OOnce training is complete, use the inference configuration for faster generation.
+uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "What is the total profit?"
 
 # Or programmatically
 ```

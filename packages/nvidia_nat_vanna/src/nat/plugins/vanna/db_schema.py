@@ -12,6 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Manual training data and configuration for Vanna text-to-SQL.
+
+This module provides default DDL statements, documentation examples,
+question-SQL pairs, and prompt templates used to train and configure
+the Vanna text-to-SQL model with database schema context.
+"""
 
 # yapf: disable
 # ruff: noqa: E501
