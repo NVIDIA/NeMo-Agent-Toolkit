@@ -13,135 +13,80 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+from collections.abc import AsyncGenerator
+
+from pydantic import Field
 
 from nat.builder.builder import Builder
-from nat.builder.function_info import FunctionInfo
-from nat.cli.register_workflow import register_function
-from nat.data_models.function import FunctionBaseConfig
-
-logger = logging.getLogger(__name__)
-
-# pylint: disable=unused-argument
+from nat.builder.function import FunctionGroup
+from nat.cli.register_workflow import register_function_group
+from nat.data_models.function import FunctionGroupBaseConfig
 
 
-def extract_numbers(text: str) -> list[str]:
-    """
-    Extract numerical values (including floats) from text.
+class CalculatorToolConfig(FunctionGroupBaseConfig, name="calculator"):
+    include: list[str] = Field(default_factory=lambda: ["add", "subtract", "multiply", "divide", "compare"],
+                               description="The list of functions to include in the calculator function group.")
+
+
+@register_function_group(config_type=CalculatorToolConfig)
+async def calculator(_config: CalculatorToolConfig, _builder: Builder) -> AsyncGenerator[FunctionGroup, None]:
+    """Create and register the calculator function group.
 
     Args:
-        text: Input text containing numbers
+        _config: Calculator function group configuration (unused).
+        _builder: Workflow builder (unused).
 
-    Returns:
-        List of number strings found in the text
+    Yields:
+        FunctionGroup: The configured calculator function group with add, subtract,
+            multiply, divide, and compare operations.
     """
-    import re
-    return re.findall(r"\d+(?:\.\d+)?", text)
+    import math
 
+    group = FunctionGroup(config=_config)
 
-def validate_number_count(numbers: list[str], expected_count: int, action: str) -> str | None:
-    if len(numbers) < expected_count:
-        return f"Provide at least {expected_count} numbers to {action}."
-    if len(numbers) > expected_count:
-        return f"This tool only supports {action} between {expected_count} numbers."
-    return None
+    async def _add(numbers: list[float]) -> float:
+        """Add two or more numbers together."""
+        if len(numbers) < 2:
+            raise ValueError("This tool only supports addition between two or more numbers.")
+        return sum(numbers)
 
+    async def _subtract(numbers: list[float]) -> float:
+        """Subtract one number from another."""
+        if len(numbers) != 2:
+            raise ValueError("This tool only supports subtraction between two numbers.")
+        a, b = numbers
+        return a - b
 
-class InequalityToolConfig(FunctionBaseConfig, name="calculator_inequality"):
-    pass
+    async def _multiply(numbers: list[float]) -> float:
+        """Multiply two or more numbers together."""
+        if len(numbers) < 2:
+            raise ValueError("This tool only supports multiplication between two or more numbers.")
+        return math.prod(numbers)
 
+    async def _divide(numbers: list[float]) -> float:
+        """Divide one number by another."""
+        if len(numbers) != 2:
+            raise ValueError("This tool only supports division between two numbers.")
+        a, b = numbers
+        if b == 0:
+            raise ValueError("Cannot divide by zero.")
+        return a / b
 
-@register_function(config_type=InequalityToolConfig)
-async def calculator_inequality(tool_config: InequalityToolConfig, builder: Builder):
-
-    async def _calculator_inequality(text: str) -> str:
-        numbers = extract_numbers(text)
-        validation_error = validate_number_count(numbers, expected_count=2, action="compare")
-        if validation_error:
-            return validation_error
-        a = float(numbers[0])
-        b = float(numbers[1])
+    async def _compare(numbers: list[float]) -> str:
+        """Compare two numbers."""
+        if len(numbers) != 2:
+            raise ValueError("This tool only supports comparison between two numbers.")
+        a, b = numbers
         if a > b:
-            return f"First number {a} is greater than the second number {b}"
+            return f"{a} is greater than {b}"
         if a < b:
-            return f"First number {a} is less than the second number {b}"
+            return f"{a} is less than {b}"
+        return f"{a} is equal to {b}"
 
-        return f"First number {a} is equal to the second number {b}"
+    group.add_function(name="add", fn=_add, description=_add.__doc__)
+    group.add_function(name="subtract", fn=_subtract, description=_subtract.__doc__)
+    group.add_function(name="multiply", fn=_multiply, description=_multiply.__doc__)
+    group.add_function(name="divide", fn=_divide, description=_divide.__doc__)
+    group.add_function(name="compare", fn=_compare, description=_compare.__doc__)
 
-    # Create a Generic NAT tool that can be used with any supported LLM framework
-    yield FunctionInfo.from_fn(
-        _calculator_inequality,
-        description=("This is a mathematical tool used to perform an inequality comparison between two numbers. "
-                     "It takes two numbers as an input and determines if one is greater or are equal."))
-
-
-class MultiplyToolConfig(FunctionBaseConfig, name="calculator_multiply"):
-    pass
-
-
-@register_function(config_type=MultiplyToolConfig)
-async def calculator_multiply(config: MultiplyToolConfig, builder: Builder):
-
-    async def _calculator_multiply(text: str) -> str:
-        numbers = extract_numbers(text)
-        validation_error = validate_number_count(numbers, expected_count=2, action="multiply")
-        if validation_error:
-            return validation_error
-        a = int(numbers[0])
-        b = int(numbers[1])
-
-        return f"The product of {a} * {b} is {a * b}"
-
-    # Create a Generic NAT tool that can be used with any supported LLM framework
-    yield FunctionInfo.from_fn(
-        _calculator_multiply,
-        description=("This is a mathematical tool used to multiply two numbers together. "
-                     "It takes 2 numbers as an input and computes their numeric product as the output."))
-
-
-class DivisionToolConfig(FunctionBaseConfig, name="calculator_divide"):
-    pass
-
-
-@register_function(config_type=DivisionToolConfig)
-async def calculator_divide(config: DivisionToolConfig, builder: Builder):
-
-    async def _calculator_divide(text: str) -> str:
-        numbers = extract_numbers(text)
-        validation_error = validate_number_count(numbers, expected_count=2, action="divide")
-        if validation_error:
-            return validation_error
-        a = float(numbers[0])
-        b = float(numbers[1])
-
-        return f"The result of {a} / {b} is {a / b}"
-
-    # Create a Generic NAT tool that can be used with any supported LLM framework
-    yield FunctionInfo.from_fn(
-        _calculator_divide,
-        description=("This is a mathematical tool used to divide one number by another. "
-                     "It takes 2 numbers as an input and computes their numeric quotient as the output."))
-
-
-class SubtractToolConfig(FunctionBaseConfig, name="calculator_subtract"):
-    pass
-
-
-@register_function(config_type=SubtractToolConfig)
-async def calculator_subtract(config: SubtractToolConfig, builder: Builder):
-
-    async def _calculator_subtract(text: str) -> str:
-        numbers = extract_numbers(text)
-        validation_error = validate_number_count(numbers, expected_count=2, action="subtract")
-        if validation_error:
-            return validation_error
-        a = int(numbers[0])
-        b = int(numbers[1])
-
-        return f"The result of {a} - {b} is {a - b}"
-
-    # Create a Generic NAT tool that can be used with any supported LLM framework
-    yield FunctionInfo.from_fn(
-        _calculator_subtract,
-        description=("This is a mathematical tool used to subtract one number from another. "
-                     "It takes 2 numbers as an input and computes their numeric difference as the output."))
+    yield group

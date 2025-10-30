@@ -18,6 +18,7 @@ from pydantic import HttpUrl
 from pydantic import model_validator
 
 from nat.authentication.interfaces import AuthProviderBaseConfig
+from nat.data_models.common import OptionalSecretStr
 
 
 class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
@@ -36,7 +37,8 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
 
     # Client registration (manual registration vs DCR)
     client_id: str | None = Field(default=None, description="OAuth2 client ID for pre-registered clients")
-    client_secret: str | None = Field(default=None, description="OAuth2 client secret for pre-registered clients")
+    client_secret: OptionalSecretStr = Field(default=None,
+                                             description="OAuth2 client secret for pre-registered clients")
     enable_dynamic_registration: bool = Field(default=True,
                                               description="Enable OAuth2 Dynamic Client Registration (RFC 7591)")
     client_name: str = Field(default="NAT MCP Client", description="OAuth2 client name for dynamic registration")

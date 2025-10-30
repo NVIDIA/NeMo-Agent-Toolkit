@@ -20,6 +20,7 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.temperature_mixin import TemperatureMixin
@@ -39,7 +40,7 @@ class AzureOpenAIModelConfig(
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
-    api_key: str | None = Field(default=None, description="Azure OpenAI API key to interact with hosted model.")
+    api_key: OptionalSecretStr = Field(default=None, description="Azure OpenAI API key to interact with hosted model.")
     api_version: str = Field(default="2025-04-01-preview", description="Azure OpenAI API version.")
     azure_endpoint: str | None = Field(validation_alias=AliasChoices("azure_endpoint", "base_url"),
                                        serialization_alias="azure_endpoint",

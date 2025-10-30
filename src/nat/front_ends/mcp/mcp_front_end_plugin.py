@@ -16,11 +16,13 @@
 import logging
 import typing
 
-from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 from nat.builder.front_end import FrontEndBase
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorkerBase
+
+if typing.TYPE_CHECKING:
+    from mcp.server.fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +45,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
         worker_class = self.get_worker_class()
         return f"{worker_class.__module__}.{worker_class.__qualname__}"
 
-    def _get_worker_instance(self) -> MCPFrontEndPluginWorkerBase:
+    def _get_worker_instance(self):
         """Get an instance of the worker class."""
         # Import the worker class dynamically if specified in config
         if self.front_end_config.runner_class:
@@ -56,49 +58,16 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
 
         return worker_class(self.full_config)
 
-    async def _create_token_verifier(self, token_verifier_config: OAuth2ResourceServerConfig):
-        """Create a token verifier based on configuration."""
-        from nat.front_ends.mcp.introspection_token_verifier import IntrospectionTokenVerifier
-
-        if not self.front_end_config.server_auth:
-            return None
-
-        return IntrospectionTokenVerifier(token_verifier_config)
-
     async def run(self) -> None:
         """Run the MCP server."""
-        # Import FastMCP
-        from mcp.server.fastmcp import FastMCP
-
-        # Create auth settings and token verifier if auth is required
-        auth_settings = None
-        token_verifier = None
-
         # Build the workflow and add routes using the worker
         async with WorkflowBuilder.from_config(config=self.full_config) as builder:
 
-            if self.front_end_config.server_auth:
-                from mcp.server.auth.settings import AuthSettings
-                from pydantic import AnyHttpUrl
-
-                server_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}"
-
-                auth_settings = AuthSettings(issuer_url=AnyHttpUrl(self.front_end_config.server_auth.issuer_url),
-                                             required_scopes=self.front_end_config.server_auth.scopes,
-                                             resource_server_url=AnyHttpUrl(server_url))
-
-                token_verifier = await self._create_token_verifier(self.front_end_config.server_auth)
-
-            # Create an MCP server with the configured parameters
-            mcp = FastMCP(name=self.front_end_config.name,
-                          host=self.front_end_config.host,
-                          port=self.front_end_config.port,
-                          debug=self.front_end_config.debug,
-                          auth=auth_settings,
-                          token_verifier=token_verifier)
-
-            # Get the worker instance and set up routes
+            # Get the worker instance
             worker = self._get_worker_instance()
+
+            # Let the worker create the MCP server (allows plugins to customize)
+            mcp = await worker.create_mcp_server()
 
             # Add routes through the worker (includes health endpoint and function registration)
             await worker.add_routes(mcp, builder)
@@ -106,11 +75,77 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
             # Start the MCP server with configurable transport
             # streamable-http is the default, but users can choose sse if preferred
             try:
-                if self.front_end_config.transport == "sse":
+                # If base_path is configured, mount server at sub-path using FastAPI wrapper
+                if self.front_end_config.base_path:
+                    if self.front_end_config.transport == "sse":
+                        logger.warning(
+                            "base_path is configured but SSE transport does not support mounting at sub-paths. "
+                            "Use streamable-http transport for base_path support.")
+                        logger.info("Starting MCP server with SSE endpoint at /sse")
+                        await mcp.run_sse_async()
+                    else:
+                        full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}{self.front_end_config.base_path}/mcp"
+                        logger.info(
+                            "Mounting MCP server at %s/mcp on %s:%s",
+                            self.front_end_config.base_path,
+                            self.front_end_config.host,
+                            self.front_end_config.port,
+                        )
+                        logger.info("MCP server URL: %s", full_url)
+                        await self._run_with_mount(mcp)
+                # Standard behavior - run at root path
+                elif self.front_end_config.transport == "sse":
                     logger.info("Starting MCP server with SSE endpoint at /sse")
                     await mcp.run_sse_async()
                 else:  # streamable-http
-                    logger.info("Starting MCP server with streamable-http endpoint at /mcp/")
+                    full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}/mcp"
+                    logger.info("MCP server URL: %s", full_url)
                     await mcp.run_streamable_http_async()
             except KeyboardInterrupt:
                 logger.info("MCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
+
+    async def _run_with_mount(self, mcp: "FastMCP") -> None:
+        """Run MCP server mounted at configured base_path using FastAPI wrapper.
+
+        Args:
+            mcp: The FastMCP server instance to mount
+        """
+        import contextlib
+
+        import uvicorn
+        from fastapi import FastAPI
+
+        @contextlib.asynccontextmanager
+        async def lifespan(_app: FastAPI):
+            """Manage MCP server session lifecycle."""
+            logger.info("Starting MCP server session manager...")
+            async with contextlib.AsyncExitStack() as stack:
+                try:
+                    # Initialize the MCP server's session manager
+                    await stack.enter_async_context(mcp.session_manager.run())
+                    logger.info("MCP server session manager started successfully")
+                    yield
+                except Exception as e:
+                    logger.error("Failed to start MCP server session manager: %s", e)
+                    raise
+            logger.info("MCP server session manager stopped")
+
+        # Create a FastAPI wrapper app with lifespan management
+        app = FastAPI(
+            title=self.front_end_config.name,
+            description="MCP server mounted at custom base path",
+            lifespan=lifespan,
+        )
+
+        # Mount the MCP server's ASGI app at the configured base_path
+        app.mount(self.front_end_config.base_path, mcp.streamable_http_app())
+
+        # Configure and start uvicorn server
+        config = uvicorn.Config(
+            app,
+            host=self.front_end_config.host,
+            port=self.front_end_config.port,
+            log_level=self.front_end_config.log_level.lower(),
+        )
+        server = uvicorn.Server(config)
+        await server.serve()

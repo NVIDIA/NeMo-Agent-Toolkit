@@ -13,121 +13,65 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
 from nat.test.tool_test_runner import ToolTestRunner
-from nat_simple_calculator.register import DivisionToolConfig
-from nat_simple_calculator.register import InequalityToolConfig
-from nat_simple_calculator.register import MultiplyToolConfig
-from nat_simple_calculator.register import SubtractToolConfig
+
+
+class SimpleCalculatorToolConfig(FunctionBaseConfig, name="test_simple_calculator"):
+    pass
+
+
+@register_function(config_type=SimpleCalculatorToolConfig)
+async def simple_calculator_tool(_config: SimpleCalculatorToolConfig, _builder: Builder):
+    import re
+
+    async def _calc_fn(input_data: str) -> str:
+        """Simple calculator tool that adds two numbers."""
+        match = re.findall(r"\d+", input_data)
+        if match:
+            nums = [int(num) for num in match]
+            if len(nums) == 2:
+                return f"The result of {nums[0]}+{nums[1]} is {nums[0]+nums[1]}"
+        return "Invalid input"
+
+    yield FunctionInfo.from_fn(_calc_fn, description=_calc_fn.__doc__)
 
 
 # This test is to ensure ToolTestRunner is working correctly, and also a demonstration of how to test tools
 # in complete isolation without requiring spinning up entire workflows, agents, and external services.
-async def test_inequality_tool():
-    """Test inequality tool logic directly."""
+async def test_simple_calculator_tool():
+    """Test simple calculator tool logic directly."""
 
     runner = ToolTestRunner()
-    await runner.test_tool(config_type=InequalityToolConfig,
-                           input_data="Is 8 greater than 15?",
-                           expected_output="First number 8.0 is less than the second number 15.0")
+    await runner.test_tool(config_type=SimpleCalculatorToolConfig,
+                           input_data="2 + 3",
+                           expected_output="The result of 2+3 is 5")
 
 
-async def test_inequality_tool_equal_case():
-    """Test inequality tool with equal numbers."""
-
-    runner = ToolTestRunner()
-    await runner.test_tool(config_type=InequalityToolConfig,
-                           input_data="Compare 5 and 5",
-                           expected_output="First number 5.0 is equal to the second number 5.0")
-
-
-async def test_inequality_tool_greater_case():
-    """Test inequality tool with first number greater."""
+async def test_simple_calculator_tool_one_number():
+    """Test with one number."""
 
     runner = ToolTestRunner()
-    await runner.test_tool(config_type=InequalityToolConfig,
-                           input_data="Is 15 greater than 8?",
-                           expected_output="First number 15.0 is greater than the second number 8.0")
+    await runner.test_tool(config_type=SimpleCalculatorToolConfig, input_data="2", expected_output="Invalid input")
 
 
-async def test_multiply_tool():
-    """Test multiply tool logic directly."""
+async def test_simple_calculator_tool_too_many_numbers():
+    """Test too many numbers."""
 
     runner = ToolTestRunner()
-    await runner.test_tool(config_type=MultiplyToolConfig,
-                           input_data="What is 2 times 4?",
-                           expected_output="The product of 2 * 4 is 8")
+    await runner.test_tool(config_type=SimpleCalculatorToolConfig,
+                           input_data="2+2+2+2",
+                           expected_output="Invalid input")
 
 
-async def test_multiply_tool_edge_cases():
-    """Test multiply tool with various inputs."""
-
-    runner = ToolTestRunner()
-
-    # Test with zero
-    await runner.test_tool(config_type=MultiplyToolConfig,
-                           input_data="Multiply 0 and 5",
-                           expected_output="The product of 0 * 5 is 0")
-
-    # Test with larger numbers
-    await runner.test_tool(config_type=MultiplyToolConfig,
-                           input_data="Calculate 12 times 13",
-                           expected_output="The product of 12 * 13 is 156")
-
-
-async def test_division_tool():
-    """Test division tool logic directly."""
+async def test_simple_calculator_tool_no_numbers():
+    """Test with no numbers."""
 
     runner = ToolTestRunner()
-    await runner.test_tool(config_type=DivisionToolConfig,
-                           input_data="What is 8 divided by 2?",
-                           expected_output="The result of 8.0 / 2.0 is 4.0")
-
-
-async def test_division_tool_with_remainder():
-    """Test division with decimal result."""
-
-    runner = ToolTestRunner()
-    await runner.test_tool(config_type=DivisionToolConfig,
-                           input_data="Divide 7 by 2",
-                           expected_output="The result of 7.0 / 2.0 is 3.5")
-
-
-async def test_subtract_tool():
-    """Test subtract tool logic directly."""
-
-    runner = ToolTestRunner()
-    await runner.test_tool(config_type=SubtractToolConfig,
-                           input_data="What is 10 minus 3?",
-                           expected_output="The result of 10 - 3 is 7")
-
-
-async def test_subtract_tool_negative_result():
-    """Test subtract tool with negative result."""
-
-    runner = ToolTestRunner()
-    await runner.test_tool(config_type=SubtractToolConfig,
-                           input_data="Subtract 15 from 10",
-                           expected_output="The result of 15 - 10 is 5")
-
-
-async def test_tool_error_handling():
-    """Test error handling for insufficient numbers."""
-
-    runner = ToolTestRunner()
-    result = await runner.test_tool(config_type=MultiplyToolConfig, input_data="Multiply just one number: 5")
-
-    # Should return an error message
-    assert "Provide at least 2 numbers" in result
-
-
-async def test_tool_validation_too_many_numbers():
-    """Test validation for too many numbers."""
-
-    runner = ToolTestRunner()
-    result = await runner.test_tool(config_type=MultiplyToolConfig, input_data="Multiply 2, 3, and 4 together")
-
-    # Should return an error message about only supporting 2 numbers
-    assert "only supports" in result and "2 numbers" in result
+    await runner.test_tool(config_type=SimpleCalculatorToolConfig, input_data="hello", expected_output="Invalid input")
 
 
 async def test_tool_with_mocked_dependencies():
@@ -147,8 +91,8 @@ async def test_tool_with_mocked_dependencies():
 
         # Test the tool with mocked dependencies
         result = await runner.test_tool_with_builder(
-            config_type=MultiplyToolConfig,  # Using simple tool for demo
+            config_type=SimpleCalculatorToolConfig,  # Using simple tool for demo
             builder=mock_builder,
-            input_data="2 times 3")
+            input_data="2 + 3")
 
-        assert "6" in result
+        assert "5" in result

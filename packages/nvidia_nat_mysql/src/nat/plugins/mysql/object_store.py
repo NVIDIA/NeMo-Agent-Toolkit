@@ -20,6 +20,7 @@ from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_object_store
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.object_store import ObjectStoreBaseConfig
 
 
@@ -51,7 +52,7 @@ class MySQLObjectStoreClientConfig(ObjectStoreBaseConfig, name="mysql"):
         default=os.environ.get(USERNAME_ENV),
         description=f"The username used to connect to the MySQL server (uses {USERNAME_ENV} if unspecifed)",
     )
-    password: str | None = Field(
+    password: OptionalSecretStr = Field(
         default=os.environ.get(PASSWORD_ENV),
         description="The password used to connect to the MySQL server (uses {PASSWORD_ENV} if unspecifed)",
     )

@@ -13,28 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from pathlib import Path
 
 import pytest
-
-from nat.runtime.loader import load_workflow
-from nat.test.utils import locate_example_config
-from nat_simple_web_query.register import WebQueryToolConfig
-
-logger = logging.getLogger(__name__)
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_full_workflow():
+    from nat.test.utils import locate_example_config
+    from nat.test.utils import run_workflow
+    from nat_simple_web_query.register import WebQueryToolConfig
 
     config_file: Path = locate_example_config(WebQueryToolConfig)
-
-    async with load_workflow(config_file) as workflow:
-
-        async with workflow.run("What is LangSmith?") as runner:
-
-            result = await runner.result(to_type=str)
-
-        assert "langsmith" in result.lower()
+    await run_workflow(config_file=config_file, question="What is LangSmith?", expected_answer="langsmith")
