@@ -47,7 +47,7 @@ class Text2SQLOutput(BaseModel):
 class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     """
     Text2SQL configuration with Vanna integration.
-    
+
     Currently only Databricks is supported.
     """
 
@@ -56,12 +56,12 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     embedder_name: EmbedderRef = Field(description="Embedder for vector operations")
 
     # Milvus retriever (required, must use async client)
-    milvus_retriever: RetrieverRef = Field(
-        description="Milvus retriever reference for vector operations. "
-                    "MUST be configured with use_async_client=true for text2sql function.")
+    milvus_retriever: RetrieverRef = Field(description="Milvus retriever reference for vector operations. "
+                                           "MUST be configured with use_async_client=true for text2sql function.")
 
     # Database configuration
-    database_type: str = Field(default="databricks", description="Database type (currently only 'databricks' is supported)")
+    database_type: str = Field(default="databricks",
+                               description="Database type (currently only 'databricks' is supported)")
     db_host: str | None = Field(default=None, description="Database host (Databricks server hostname)")
     db_password: str | None = Field(default=None, description="Database password (Databricks access token)")
     db_catalog: str | None = Field(default=None, description="Database catalog")
@@ -75,8 +75,11 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     # Vanna configuration
     allow_llm_to_see_data: bool = Field(default=False, description="Allow LLM to see data for intermediate queries")
     execute_sql: bool = Field(default=False, description="Execute SQL or just return query string")
-    train_on_startup: bool = Field(default=False,
-                                   description="Train Vanna on startup (uses training data from db_schema.py)")
+    train_on_startup: bool = Field(default=False, description="Train Vanna on startup")
+    auto_training: bool = Field(default=False,
+                                description=("Auto-train Vanna (auto-extract DDL and generate training data "
+                                             "from database) or manually train Vanna (uses training data from "
+                                             "db_schema.py)"))
     initial_prompt: str | None = Field(default=None, description="Custom system prompt")
     n_results: int = Field(default=5, description="Number of similar examples")
     sql_collection: str = Field(default="vanna_sql", description="Milvus collection for SQL examples")
@@ -125,13 +128,13 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         # Get Milvus clients from retriever (expects async client)
         logger.info("Getting async Milvus client from milvus_retriever")
         retriever = await builder.get_retriever(config.milvus_retriever)
-        
+
         # Vanna expects async client from retriever
         if not retriever._is_async:  # type: ignore[attr-defined]
             msg = (f"Milvus retriever '{config.milvus_retriever}' must be configured with "
                    "use_async_client=true for Vanna text2sql function")
             raise ValueError(msg)
-        
+
         # Get async client from retriever
         async_milvus_client = retriever._client  # type: ignore[attr-defined]
 
@@ -170,7 +173,7 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
 
     # Train on startup if configured
     if config.train_on_startup:
-        await train_vanna(vanna_instance, auto_extract_ddl=True)
+        await train_vanna(vanna_instance, auto_train=config.auto_training)
 
     # Streaming version
     async def _generate_sql_stream(question: str, ) -> AsyncGenerator[ResponseIntermediateStep | Text2SQLOutput, None]:

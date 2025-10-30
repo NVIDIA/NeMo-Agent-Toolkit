@@ -274,7 +274,7 @@ class MilvusVectorStore(Milvus_VectorStore):
         """Ensure all necessary Milvus collections are created (async)."""
         if self._collections_created:
             return
-        
+
         logger.info("Creating Milvus collections if they don't exist...")
         await self._create_sql_collection(self.sql_collection)
         await self._create_ddl_collection(self.ddl_collection)
@@ -296,7 +296,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             if "collection not found" not in str(e).lower():
                 raise  # Unexpected error, re-raise
             # Collection doesn't exist, proceed to create it
-        
+
         # Create the collection
         schema = MilvusClient.create_schema(
             auto_id=False,
@@ -341,7 +341,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             if "collection not found" not in str(e).lower():
                 raise  # Unexpected error, re-raise
             # Collection doesn't exist, proceed to create it
-        
+
         # Create the collection
         schema = MilvusClient.create_schema(
             auto_id=False,
@@ -385,7 +385,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             if "collection not found" not in str(e).lower():
                 raise  # Unexpected error, re-raise
             # Collection doesn't exist, proceed to create it
-        
+
         # Create the collection
         schema = MilvusClient.create_schema(
             auto_id=False,
@@ -514,7 +514,9 @@ class MilvusVectorStore(Milvus_VectorStore):
         df = pd.DataFrame()
 
         # Get SQL data
-        sql_data = await self.async_milvus_client.query(collection_name=self.sql_collection, output_fields=["*"], limit=1000)
+        sql_data = await self.async_milvus_client.query(collection_name=self.sql_collection,
+                                                        output_fields=["*"],
+                                                        limit=1000)
         if sql_data:
             df_sql = pd.DataFrame({
                 "id": [doc["id"] for doc in sql_data],
@@ -525,7 +527,9 @@ class MilvusVectorStore(Milvus_VectorStore):
             df = pd.concat([df, df_sql])
 
         # Get DDL data
-        ddl_data = await self.async_milvus_client.query(collection_name=self.ddl_collection, output_fields=["*"], limit=1000)
+        ddl_data = await self.async_milvus_client.query(collection_name=self.ddl_collection,
+                                                        output_fields=["*"],
+                                                        limit=1000)
         if ddl_data:
             df_ddl = pd.DataFrame({
                 "id": [doc["id"] for doc in ddl_data],
@@ -536,7 +540,9 @@ class MilvusVectorStore(Milvus_VectorStore):
             df = pd.concat([df, df_ddl])
 
         # Get documentation data
-        doc_data = await self.async_milvus_client.query(collection_name=self.doc_collection, output_fields=["*"], limit=1000)
+        doc_data = await self.async_milvus_client.query(collection_name=self.doc_collection,
+                                                        output_fields=["*"],
+                                                        limit=1000)
         if doc_data:
             df_doc = pd.DataFrame({
                 "id": [doc["id"] for doc in doc_data],
@@ -684,7 +690,8 @@ class VannaSingleton:
             milvus_search_limit: Maximum limit size for vector search operations
             reasoning_models: Models requiring special handling for think tags (defaults handled by VannaLangChainLLM)
             chat_models: Models using standard response handling (defaults handled by VannaLangChainLLM)
-            create_collections: Whether to create Milvus collections if they don't exist (default True for backward compatibility)
+            create_collections: Whether to create Milvus collections if they don't exist (default True for
+                                backward compatibility)
 
         Returns:
             Initialized Vanna instance
@@ -720,11 +727,11 @@ class VannaSingleton:
 
             logger.info(f"Creating new Vanna instance with LangChain (dialect: {dialect})")
             cls._instance = VannaLangChain(client=llm_client, config=config)
-            
+
             # Create collections if requested
             if create_collections:
                 await cls._instance._ensure_collections_created()  # type: ignore[attr-defined]
-            
+
             return cls._instance
 
     @classmethod
@@ -741,17 +748,17 @@ class VannaSingleton:
         cls._instance = None
 
 
-async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
+async def train_vanna(vn: VannaLangChain, auto_train: bool = False):
     """Train Vanna with DDL, documentation, and question-SQL examples.
 
     Args:
         vn: Vanna instance
-        auto_extract_ddl: Whether to automatically extract DDL from the database
+        auto_train: Whether to automatically train Vanna (auto-extract DDL and generate training data from database)
     """
     logger.info("Training Vanna...")
 
     # Train with DDL
-    if auto_extract_ddl:
+    if auto_train:
         from nat.plugins.vanna.db_schema import VANNA_ACTIVE_TABLES
 
         dialect = vn.dialect.lower()
@@ -766,7 +773,7 @@ async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
         else:
             error_msg = (f"Auto-extraction of DDL is currently only supported for Databricks. "
                          f"Current dialect: {vn.dialect}. "
-                         "Please either set auto_extract_ddl=False or use 'databricks' as the dialect.")
+                         "Please either set auto_train=False or use 'databricks' as the dialect.")
             logger.error(error_msg)
             raise NotImplementedError(error_msg)
     else:
@@ -779,39 +786,44 @@ async def train_vanna(vn: VannaLangChain, auto_extract_ddl: bool = False):
     for doc in VANNA_TRAINING_DOCUMENTATION:
         await vn.add_documentation(documentation=doc)
 
-    # Retrieve relevant context in parallel
-    retrieval_tasks = [vn.get_related_record(vn.ddl_collection), vn.get_related_record(vn.doc_collection)]
-
-    ddl_list, doc_list = await asyncio.gather(*retrieval_tasks)
-
-    prompt = vn.get_training_sql_prompt(
-        ddl_list=ddl_list,
-        doc_list=doc_list,
-    )
-
-    llm_response = await vn.submit_prompt(prompt)
-
-    # Validate and collect all examples
+    # Train with examples
+    # Add manual examples
     examples = []
     examples.extend(VANNA_TRAINING_EXAMPLES)
 
-    # Validate LLM-generated examples
-    try:
-        question_sql_list = extract_json_from_string(llm_response)
-        for question_sql in question_sql_list:
-            sql = question_sql.get("sql", "")
-            if not sql:
-                continue
-            try:
-                await vn.run_sql(sql)
-                examples.append({
-                    "question": question_sql.get("question", ""),
-                    "sql": sql,
-                })
-            except Exception as e:
-                logger.debug(f"Dropping invalid LLM-generated SQL: {e}")
-    except Exception as e:
-        logger.warning(f"Failed to parse LLM response for training examples: {e}")
+    if auto_train:
+        logger.info("Generating training examples with LLM...")
+        # Retrieve relevant context in parallel
+        retrieval_tasks = [vn.get_related_record(vn.ddl_collection), vn.get_related_record(vn.doc_collection)]
+
+        ddl_list, doc_list = await asyncio.gather(*retrieval_tasks)
+
+        prompt = vn.get_training_sql_prompt(
+            ddl_list=ddl_list,
+            doc_list=doc_list,
+        )
+
+        llm_response = await vn.submit_prompt(prompt)
+
+        # Validate LLM-generated examples
+        try:
+            question_sql_list = extract_json_from_string(llm_response)
+            for question_sql in question_sql_list:
+                sql = question_sql.get("sql", "")
+                if not sql:
+                    continue
+                try:
+                    await vn.run_sql(sql)
+                    examples.append({
+                        "question": question_sql.get("question", ""),
+                        "sql": sql,
+                    })
+                    log_msg = f"Adding valid LLM-generated Question-SQL:\n{question_sql.get('question', '')}\n{sql}"
+                    logger.info(log_msg)
+                except Exception as e:
+                    logger.debug(f"Dropping invalid LLM-generated SQL: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to parse LLM response for training examples: {e}")
 
     # Train with validated examples
     logger.info(f"Training Vanna with {len(examples)} validated examples")

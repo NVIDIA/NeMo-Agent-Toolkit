@@ -42,7 +42,8 @@ functions:
     # Vanna settings
     allow_llm_to_see_data: false
     execute_sql: false
-    train_on_startup: false
+    train_on_startup: true
+    auto_training: true
     n_results: 5 # number of similar SQL examples to retrieve
     sql_collection: "vannasql_vtest_10"
     ddl_collection: "vannaddl_vtest_10"

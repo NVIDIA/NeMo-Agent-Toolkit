@@ -69,12 +69,13 @@ class ExecuteDBQueryOutput(BaseModel):
 class ExecuteDBQueryConfig(FunctionBaseConfig, name="execute_db_query"):
     """
     Database query execution configuration.
-    
+
     Currently only Databricks is supported.
     """
 
     # Database configuration
-    database_type: str = Field(default="databricks", description="Database type (currently only 'databricks' is supported)")
+    database_type: str = Field(default="databricks",
+                               description="Database type (currently only 'databricks' is supported)")
     db_host: str | None = Field(default=None, description="Database host (Databricks server hostname)")
     db_password: str | None = Field(default=None, description="Database password (Databricks access token)")
     db_catalog: str | None = Field(default=None, description="Database catalog")
@@ -91,7 +92,7 @@ class ExecuteDBQueryConfig(FunctionBaseConfig, name="execute_db_query"):
 )
 async def execute_db_query(
     config: ExecuteDBQueryConfig,
-    builder: Builder,
+    _builder: Builder,
 ):
     """Register the Execute DB Query function."""
 
