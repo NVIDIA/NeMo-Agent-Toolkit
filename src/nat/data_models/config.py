@@ -356,8 +356,9 @@ class Config(HashableBaseModel):
                                                          Discriminator(TypedBaseModel.discriminator)]]
 
         FunctionInterceptsAnnotation = dict[str,
-                                           typing.Annotated[type_registry.compute_annotation(FunctionInterceptBaseConfig),
-                                                            Discriminator(TypedBaseModel.discriminator)]]
+                                            typing.Annotated[
+                                                type_registry.compute_annotation(FunctionInterceptBaseConfig),
+                                                Discriminator(TypedBaseModel.discriminator)]]
 
         MemoryAnnotation = dict[str,
                                 typing.Annotated[type_registry.compute_annotation(MemoryBaseConfig),
@@ -405,7 +406,8 @@ class Config(HashableBaseModel):
             should_rebuild = True
 
         function_intercepts_field = cls.model_fields.get("function_intercepts")
-        if function_intercepts_field is not None and function_intercepts_field.annotation != FunctionInterceptsAnnotation:
+        if (function_intercepts_field is not None
+                and function_intercepts_field.annotation != FunctionInterceptsAnnotation):
             function_intercepts_field.annotation = FunctionInterceptsAnnotation
             should_rebuild = True
 

@@ -265,7 +265,8 @@ def build_dependency_sequence(config: "Config") -> list[ComponentInstanceData]:
 
     total_node_count = (len(config.embedders) + len(config.functions) + len(config.function_groups) + len(config.llms) +
                         len(config.memory) + len(config.object_stores) + len(config.retrievers) +
-                        len(config.ttc_strategies) + len(config.authentication) + 1)  # +1 for the workflow
+                        len(config.ttc_strategies) + len(config.authentication) + len(config.function_intercepts) + 1
+                        )  # +1 for the workflow
 
     dependency_map: dict
     dependency_graph: nx.DiGraph

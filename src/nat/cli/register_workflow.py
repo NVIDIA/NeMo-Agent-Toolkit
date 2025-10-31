@@ -29,6 +29,8 @@ from nat.cli.type_registry import FrontEndRegisteredCallableT
 from nat.cli.type_registry import FunctionBuildCallableT
 from nat.cli.type_registry import FunctionGroupBuildCallableT
 from nat.cli.type_registry import FunctionGroupRegisteredCallableT
+from nat.cli.type_registry import FunctionInterceptBuildCallableT
+from nat.cli.type_registry import FunctionInterceptRegisteredCallableT
 from nat.cli.type_registry import FunctionRegisteredCallableT
 from nat.cli.type_registry import LLMClientBuildCallableT
 from nat.cli.type_registry import LLMClientRegisteredCallableT
@@ -55,8 +57,6 @@ from nat.cli.type_registry import TelemetryExporterConfigT
 from nat.cli.type_registry import ToolWrapperBuildCallableT
 from nat.cli.type_registry import TTCStrategyBuildCallableT
 from nat.cli.type_registry import TTCStrategyRegisterCallableT
-from nat.cli.type_registry import FunctionInterceptBuildCallableT
-from nat.cli.type_registry import FunctionInterceptRegisteredCallableT
 from nat.data_models.authentication import AuthProviderBaseConfigT
 from nat.data_models.component import ComponentEnum
 from nat.data_models.discovery_metadata import DiscoveryMetadata
@@ -246,10 +246,8 @@ def register_function_intercept(config_type: type[FunctionInterceptBaseConfigT])
 
         context_manager_fn = asynccontextmanager(fn)
 
-        discovery_metadata = DiscoveryMetadata.from_config_type(
-            config_type=config_type,
-            component_type=ComponentEnum.FUNCTION_INTERCEPT
-        )
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.FUNCTION_INTERCEPT)
 
         GlobalTypeRegistry.get().register_function_intercept(
             RegisteredFunctionInterceptInfo(

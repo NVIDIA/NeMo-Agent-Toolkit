@@ -85,7 +85,6 @@ class TestInterceptRegistration:
 class TestBuilderMethods:
     """Test builder methods for function intercepts."""
 
-    @pytest.mark.asyncio
     async def test_add_function_intercept(self):
         """Test adding a function intercept to the builder."""
         config = TestInterceptConfig(test_param="builder_test", call_order=[])
@@ -96,7 +95,6 @@ class TestBuilderMethods:
             assert isinstance(intercept, TestIntercept)
             assert intercept.test_param == "builder_test"
 
-    @pytest.mark.asyncio
     async def test_get_function_intercept(self):
         """Test retrieving a function intercept from the builder."""
         config = TestInterceptConfig(test_param="get_test", call_order=[])
@@ -108,7 +106,6 @@ class TestBuilderMethods:
             assert isinstance(retrieved, TestIntercept)
             assert retrieved.test_param == "get_test"
 
-    @pytest.mark.asyncio
     async def test_get_function_intercept_config(self):
         """Test retrieving intercept config from the builder."""
         config = TestInterceptConfig(test_param="config_test", call_order=[])
@@ -117,10 +114,9 @@ class TestBuilderMethods:
             await builder.add_function_intercept("test_intercept_3", config)
             retrieved_config = builder.get_function_intercept_config("test_intercept_3")
 
-            assert isinstance(retrieved_config, TestInterceptBaseConfig)
+            assert isinstance(retrieved_config, TestInterceptConfig)
             assert retrieved_config.test_param == "config_test"
 
-    @pytest.mark.asyncio
     async def test_get_function_intercepts_batch(self):
         """Test retrieving multiple intercepts at once."""
         config1 = TestInterceptConfig(test_param="batch1", call_order=[])
@@ -137,7 +133,6 @@ class TestBuilderMethods:
             params = {i.test_param for i in intercepts}
             assert params == {"batch1", "batch2"}
 
-    @pytest.mark.asyncio
     async def test_duplicate_intercept_raises_error(self):
         """Test that adding duplicate intercept raises error."""
         config = TestInterceptConfig(test_param="duplicate", call_order=[])
@@ -148,7 +143,6 @@ class TestBuilderMethods:
             with pytest.raises(ValueError, match="already exists"):
                 await builder.add_function_intercept("duplicate_test", config)
 
-    @pytest.mark.asyncio
     async def test_get_nonexistent_intercept_raises_error(self):
         """Test that getting nonexistent intercept raises error."""
         async with WorkflowBuilder() as builder:
@@ -159,7 +153,6 @@ class TestBuilderMethods:
 class TestYAMLIntegration:
     """Test YAML configuration integration."""
 
-    @pytest.mark.asyncio
     async def test_intercept_from_yaml_config(self):
         """Test building intercepts from YAML config."""
         config_dict = {
@@ -199,9 +192,7 @@ class TestInterceptWithFunctions:
         class TestFunctionConfig(FunctionBaseConfig, name="test_func_with_intercepts"):
             pass
 
-        @register_function(
-            config_type=TestFunctionConfig, intercept_names=["func_intercept_1", "func_intercept_2"]
-        )
+        @register_function(config_type=TestFunctionConfig, intercept_names=["func_intercept_1", "func_intercept_2"])
         async def test_function(config: TestFunctionConfig, builder: Builder):
             from nat.builder.function import LambdaFunction
             from nat.builder.function_info import FunctionInfo
@@ -212,7 +203,6 @@ class TestInterceptWithFunctions:
             info = FunctionInfo.from_fn(process)
             yield LambdaFunction.from_info(config=config, info=info, instance_name="test_func")
 
-    @pytest.mark.asyncio
     async def test_function_with_intercepts_via_builder(self, register_test_function):
         """Test that functions can use intercepts configured in builder."""
         call_order = []
@@ -257,7 +247,6 @@ class TestInterceptWithFunctions:
 class TestInterceptBuildOrder:
     """Test that intercepts are built before functions."""
 
-    @pytest.mark.asyncio
     async def test_intercepts_built_before_functions(self):
         """Test that component build order has intercepts before functions."""
         from nat.builder.component_utils import _component_group_order
@@ -275,7 +264,6 @@ class TestInterceptBuildOrder:
 class TestCacheInterceptComponent:
     """Test that the built-in cache intercept works as a component."""
 
-    @pytest.mark.asyncio
     async def test_cache_intercept_registration(self):
         """Test that cache intercept is registered."""
         from nat.intercepts.register import CacheInterceptConfig
@@ -286,7 +274,6 @@ class TestCacheInterceptComponent:
         assert registration.config_type == CacheInterceptConfig
         assert registration.full_type == CacheInterceptConfig.full_type
 
-    @pytest.mark.asyncio
     async def test_cache_intercept_from_yaml(self):
         """Test building cache intercept from YAML."""
         from nat.intercepts.cache_intercept import CacheIntercept
@@ -303,21 +290,22 @@ class TestCacheInterceptComponent:
         config = Config.model_validate(config_dict)
 
         async with WorkflowBuilder() as builder:
-            intercept = await builder.add_function_intercept(
-                "my_cache", config.function_intercepts["my_cache"]
-            )
+            intercept = await builder.add_function_intercept("my_cache", config.function_intercepts["my_cache"])
 
             assert isinstance(intercept, CacheIntercept)
             assert intercept.is_final is True
 
-    @pytest.mark.asyncio
     async def test_cache_intercept_with_different_configs(self):
         """Test cache intercept with various configurations."""
         from nat.intercepts.cache_intercept import CacheIntercept
 
         configs = [
-            {"enabled_mode": "always", "similarity_threshold": 1.0},
-            {"enabled_mode": "eval", "similarity_threshold": 0.95},
+            {
+                "enabled_mode": "always", "similarity_threshold": 1.0
+            },
+            {
+                "enabled_mode": "eval", "similarity_threshold": 0.95
+            },
         ]
 
         async with WorkflowBuilder() as builder:
@@ -325,9 +313,7 @@ class TestCacheInterceptComponent:
                 config_dict = {"function_intercepts": {f"cache_{i}": {"_type": "cache", **config_params}}}
                 config = Config.model_validate(config_dict)
 
-                intercept = await builder.add_function_intercept(
-                    f"cache_{i}", config.function_intercepts[f"cache_{i}"]
-                )
+                intercept = await builder.add_function_intercept(f"cache_{i}", config.function_intercepts[f"cache_{i}"])
 
                 assert isinstance(intercept, CacheIntercept)
 
@@ -335,16 +321,13 @@ class TestCacheInterceptComponent:
 class TestInterceptErrorHandling:
     """Test error handling for intercepts."""
 
-    @pytest.mark.asyncio
     async def test_missing_intercept_in_function_raises_error(self):
         """Test that referencing nonexistent intercept raises error."""
 
         class MissingInterceptFunctionConfig(FunctionBaseConfig, name="missing_intercept_func"):
             pass
 
-        @register_function(
-            config_type=MissingInterceptFunctionConfig, intercept_names=["nonexistent_intercept"]
-        )
+        @register_function(config_type=MissingInterceptFunctionConfig, intercept_names=["nonexistent_intercept"])
         async def function_with_missing_intercept(config, builder):
             from nat.builder.function import LambdaFunction
             from nat.builder.function_info import FunctionInfo
@@ -355,13 +338,7 @@ class TestInterceptErrorHandling:
             info = FunctionInfo.from_fn(process)
             yield LambdaFunction.from_info(config=config, info=info, instance_name="test")
 
-        config_dict = {
-            "functions": {
-                "test_func": {
-                    "_type": "missing_intercept_func",
-                }
-            }
-        }
+        config_dict = {"functions": {"test_func": {"_type": "missing_intercept_func", }}}
         config = Config.model_validate(config_dict)
 
         async with WorkflowBuilder() as builder:

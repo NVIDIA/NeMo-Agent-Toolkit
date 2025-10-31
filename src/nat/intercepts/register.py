@@ -12,48 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Registration module for built-in function intercepts."""
 
-from typing import Literal
+from __future__ import annotations
 
-from pydantic import Field
-
-from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_function_intercept
-from nat.data_models.function_intercept import FunctionInterceptBaseConfig
 from nat.intercepts.cache_intercept import CacheIntercept
-
-
-class CacheInterceptConfig(FunctionInterceptBaseConfig, name="cache"):
-    """Configuration for cache intercept middleware.
-
-    The cache intercept memoizes function outputs based on input similarity,
-    with support for both exact and fuzzy matching.
-
-    Args:
-        enabled_mode: Controls when caching is active:
-            - "always": Cache is always enabled
-            - "eval": Cache only active when Context.is_evaluating is True
-        similarity_threshold: Float between 0 and 1 for input matching:
-            - 1.0: Exact string matching (fastest)
-            - < 1.0: Fuzzy matching using difflib similarity
-    """
-
-    enabled_mode: Literal["always", "eval"] = Field(
-        default="eval",
-        description="When caching is enabled: 'always' or 'eval' (only during evaluation)"
-    )
-    similarity_threshold: float = Field(
-        default=1.0,
-        ge=0.0,
-        le=1.0,
-        description="Similarity threshold between 0 and 1. Use 1.0 for exact matching"
-    )
+from nat.intercepts.cache_intercept import CacheInterceptConfig
 
 
 @register_function_intercept(config_type=CacheInterceptConfig)
-async def cache_intercept(config: CacheInterceptConfig, builder: Builder):
+async def cache_intercept(config: CacheInterceptConfig, builder):
     """Build a cache intercept from configuration.
 
     Args:
@@ -63,7 +32,4 @@ async def cache_intercept(config: CacheInterceptConfig, builder: Builder):
     Yields:
         A configured cache intercept instance
     """
-    yield CacheIntercept(
-        enabled_mode=config.enabled_mode,
-        similarity_threshold=config.similarity_threshold
-    )
+    yield CacheIntercept(enabled_mode=config.enabled_mode, similarity_threshold=config.similarity_threshold)

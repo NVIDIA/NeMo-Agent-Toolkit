@@ -294,7 +294,7 @@ class Builder(ABC):
 
     @abstractmethod
     async def add_function_intercept(self, name: str | FunctionInterceptRef,
-                                      config: FunctionInterceptBaseConfig) -> FunctionIntercept:
+                                     config: FunctionInterceptBaseConfig) -> FunctionIntercept:
         """Add a function intercept to the builder.
 
         Args:
@@ -331,7 +331,7 @@ class Builder(ABC):
         pass
 
     async def get_function_intercepts(self,
-                                       intercept_names: Sequence[str | FunctionInterceptRef]) -> list[FunctionIntercept]:
+                                      intercept_names: Sequence[str | FunctionInterceptRef]) -> list[FunctionIntercept]:
         """Get multiple function intercepts by name.
 
         Args:

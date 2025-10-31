@@ -991,7 +991,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @override
     async def add_function_intercept(self, name: str | FunctionInterceptRef,
-                                      config: FunctionInterceptBaseConfig) -> FunctionIntercept:
+                                     config: FunctionInterceptBaseConfig) -> FunctionIntercept:
         """Add a function intercept to the builder.
 
         Args:
@@ -1010,8 +1010,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             intercept_info = self._registry.get_function_intercept(type(config))
 
-            intercept_instance = await self._get_exit_stack().enter_async_context(
-                intercept_info.build_fn(config, self))
+            intercept_instance = await self._get_exit_stack().enter_async_context(intercept_info.build_fn(config, self))
 
             self._function_intercepts[name] = ConfiguredFunctionIntercept(config=config, instance=intercept_instance)
 
@@ -1455,3 +1454,19 @@ class ChildBuilder(Builder):
     @override
     def get_function_group_dependencies(self, fn_name: str) -> FunctionDependencies:
         return self._workflow_builder.get_function_group_dependencies(fn_name)
+
+    @override
+    async def add_function_intercept(self, name: str | FunctionInterceptRef,
+                                     config: FunctionInterceptBaseConfig) -> FunctionIntercept:
+        """Add a function intercept to the builder."""
+        return await self._workflow_builder.add_function_intercept(name, config)
+
+    @override
+    async def get_function_intercept(self, intercept_name: str | FunctionInterceptRef) -> FunctionIntercept:
+        """Get a built function intercept by name."""
+        return await self._workflow_builder.get_function_intercept(intercept_name)
+
+    @override
+    def get_function_intercept_config(self, intercept_name: str | FunctionInterceptRef) -> FunctionInterceptBaseConfig:
+        """Get the configuration for a function intercept."""
+        return self._workflow_builder.get_function_intercept_config(intercept_name)

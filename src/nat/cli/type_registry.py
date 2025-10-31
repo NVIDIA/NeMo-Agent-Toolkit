@@ -58,12 +58,12 @@ from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionConfigT
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function import FunctionGroupConfigT
+from nat.data_models.function_intercept import FunctionInterceptBaseConfig
+from nat.data_models.function_intercept import FunctionInterceptBaseConfigT
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.llm import LLMBaseConfigT
 from nat.data_models.logging import LoggingBaseConfig
 from nat.data_models.logging import LoggingMethodConfigT
-from nat.data_models.function_intercept import FunctionInterceptBaseConfig
-from nat.data_models.function_intercept import FunctionInterceptBaseConfigT
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.memory import MemoryBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfig
@@ -189,7 +189,7 @@ class RegisteredFunctionInfo(RegisteredInfo[FunctionBaseConfig]):
 
     build_fn: FunctionRegisteredCallableT = Field(repr=False)
     framework_wrappers: list[str] = Field(default_factory=list)
-    intercepts: tuple[FunctionIntercept, ...] = Field(default_factory=tuple, repr=False)
+    intercept_names: tuple[str, ...] = Field(default_factory=tuple, repr=False)
 
 
 class RegisteredFunctionGroupInfo(RegisteredInfo[FunctionGroupBaseConfig]):
@@ -351,7 +351,7 @@ class TypeRegistry:
 
         # Function Intercepts
         self._registered_function_intercepts: dict[type[FunctionInterceptBaseConfig],
-                                                    RegisteredFunctionInterceptInfo] = {}
+                                                   RegisteredFunctionInterceptInfo] = {}
 
         # LLMs
         self._registered_llm_provider_infos: dict[type[LLMBaseConfig], RegisteredLLMProviderInfo] = {}
@@ -978,6 +978,9 @@ class TypeRegistry:
         if component_type == ComponentEnum.TTC_STRATEGY:
             return self._registered_ttc_strategies
 
+        if component_type == ComponentEnum.FUNCTION_INTERCEPT:
+            return self._registered_function_intercepts
+
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
     def get_registered_types_by_component_type(self, component_type: ComponentEnum) -> list[str]:
@@ -1103,6 +1106,9 @@ class TypeRegistry:
 
         if issubclass(cls, TTCStrategyBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_ttc_strategies())
+
+        if issubclass(cls, FunctionInterceptBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_function_intercepts())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 
