@@ -89,7 +89,7 @@ Some configuration parameters are only valid for certain models or may be depend
 - `ThinkingMixin`: adds a `thinking` field, with a default of `None` when supported by a model. If supported, the `thinking_system_prompt` property will return the system prompt to use for thinking.
 
 :::{note}
-The built-in mixins may reject certain fields for models that do not support them (for example, GPT-5 models currently reject `temperature` and `top_p`). If a gated field is explicitly set on an unsupported model, validation will fail.
+The built-in mixins may reject certain fields for models that do not support them (for example, GPT-5 models currently reject `temperature` and `top_p`). Claude Sonnet 4.5 models currently reject `top_p`. If a gated field is explicitly set on an unsupported model, validation will fail.
 :::
 
 #### TemperatureMixin
