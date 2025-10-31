@@ -120,16 +120,18 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                     from dask.distributed import LocalCluster
 
-                    self._cluster = LocalCluster(processes=True,
+                    use_threads = os.environ.get("NAT_DASK_WORKER", '').strip().lower() == 'threads'
+
+                    self._cluster = LocalCluster(processes=not use_threads,
                                                  silence_logs=dask_log_level,
-                                                 n_workers=self.front_end_config.max_running_async_jobs,
-                                                 threads_per_worker=1)
+                                                 n_workers=self.front_end_config.max_running_async_jobs)
 
                     self._scheduler_address = self._cluster.scheduler.address
 
-                    with self.blocking_client(self._scheduler_address) as client:
-                        # Client.run submits a function to be run on each worker
-                        client.run(self._setup_worker)
+                    if not use_threads:
+                        with self.blocking_client(self._scheduler_address) as client:
+                            # Client.run submits a function to be run on each worker
+                            client.run(self._setup_worker)
 
                     logger.info("Created local Dask cluster with scheduler at %s", self._scheduler_address)
 
