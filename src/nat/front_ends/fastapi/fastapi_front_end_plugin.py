@@ -130,7 +130,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                     self._scheduler_address = self._cluster.scheduler.address
 
-                    if not use_threads:
+                    if not use_threads and sys.platform != "win32":
                         with self.blocking_client(self._scheduler_address) as client:
                             # Client.run submits a function to be run on each worker
                             client.run(self._setup_worker)
