@@ -23,7 +23,7 @@ This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications w
 
 - [Key Features](#key-features)
 - [What You'll Learn](#what-youll-learn)
-- [Configuration][#configuration]
+- [Configuration](#configuration)
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
@@ -89,6 +89,17 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
         client_port: int | None = nat_context.metadata.client_port
         cookies: dict[str, str] | None = nat_context.metadata.cookies
         conversation_id: str | None = nat_context.conversation_id
+
+        return (f"Method: {method}, "
+                f"URL Path: {url_path}, "
+                f"URL Scheme: {url_scheme}, "
+                f"Headers: {dict(headers) if headers is not None else 'None'}, "
+                f"Query Params: {dict(query_params) if query_params is not None else 'None'}, "
+                f"Path Params: {path_params}, "
+                f"Client Host: {client_host}, "
+                f"Client Port: {client_port}, "
+                f"Cookies: {cookies}, "
+                f"Conversation Id: {conversation_id}")
 
     yield FunctionInfo.from_fn(_get_request_attributes,
                                description="Returns the acquired user defined request attributes.")

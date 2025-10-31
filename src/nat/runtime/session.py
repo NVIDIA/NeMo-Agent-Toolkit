@@ -15,7 +15,6 @@
 
 import asyncio
 import contextvars
-import typing
 import uuid
 from collections.abc import Awaitable
 from collections.abc import Callable
@@ -35,12 +34,41 @@ from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.config import Config
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import InteractionPrompt
+from nat.runtime.runner import Runner
 
-_T = typing.TypeVar("_T")
 
+class UserSession:
 
-class UserManagerBase:
-    pass
+    def __init__(self, workflow: Workflow, max_concurrency: int = 8):
+        """
+        The UserSession class is used to run and manage a user workflow session. It runs and manages the context,
+        and configuration of a workflow with the specified concurrency.
+
+        Parameters
+        ----------
+        workflow : Workflow
+            The workflow to run
+        max_concurrency : int, optional
+            The maximum number of simultaneous workflow invocations, by default 8
+        """
+        if (workflow is None):
+            raise ValueError("Workflow cannot be None")
+
+        self._workflow: Workflow = workflow
+
+        self._max_concurrency = max_concurrency
+        self._context_state = ContextState.get()
+        self._context = Context(self._context_state)
+
+        # We save the context because Uvicorn spawns a new process
+        # for each request, and we need to restore the context vars
+        self._saved_context = contextvars.copy_context()
+
+        if (max_concurrency > 0):
+            self._semaphore = asyncio.Semaphore(max_concurrency)
+        else:
+            # If max_concurrency is 0, then we don't need to limit the concurrency but we still need a context
+            self._semaphore = nullcontext()
 
 
 class SessionManager:
