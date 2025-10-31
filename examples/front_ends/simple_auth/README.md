@@ -98,8 +98,6 @@ docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-d
 docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-directory examples/front_ends/simple_auth down -v
 ```
 
-Browse to **`http://localhost:5001/`** – you should see the demo home page. Sign up with any name.
-
 ## Registering a Dummy Client (“test”)
 
 1. Open **Clients → Create New Client** in the demo UI.
