@@ -133,10 +133,7 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
         pytest.param("5_observability_evaluation_and_profiling.ipynb", ["retail_sales_agent"],
                      1000,
                      id="5_observability_evaluation_and_profiling"),
-        pytest.param("6_optimize_model_selection.ipynb", ["tmp_workflow"],
-                     1000,
-                     id="6_optimize_model_selection",
-                     marks=pytest.mark.skip(reason="Notebook takes over an hour to run completely.")),
+        pytest.param("6_optimize_model_selection.ipynb", ["tmp_workflow"], 300, id="6_optimize_model_selection"),
     ])
 def test_notebooks(notebooks_dir: Path, notebook_file_name: str, expected_packages: list[str], timeout_seconds: int):
     _run_notebook(notebooks_dir / notebook_file_name,
