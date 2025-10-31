@@ -58,6 +58,13 @@ class A2AClientFunctionGroup(FunctionGroup):
             card = self._client.agent_card
             logger.info("Agent: %s v%s", card.name, card.version)
 
+        # Register the function with NAT
+        self.add_function(
+            name="send_message",
+            fn=self.send_message,
+            description="Send a message to the A2A agent and get a response",
+        )
+
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
