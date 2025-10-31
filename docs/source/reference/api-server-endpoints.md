@@ -69,7 +69,7 @@ Asynchronous jobs are managed using [Dask](https://docs.dask.org/en/stable/). By
 The following CLI flags are available to configure the asynchronous generate endpoint when using `nat serve`:
 * --scheduler_address: The address of an existing Dask scheduler to connect to. If not set, a local Dask cluster will be created.
 * --db_url: The [SQLAlchemy database](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) URL to use for storing job history and metadata. If not set, a temporary SQLite database will be created.
-* --max_concurrent_jobs: The maximum number of asynchronous jobs to run concurrently. This controls the number of Dask workers created when a local Dask cluster is used. Default is 10. This is only used when `scheduler_address` is not set.
+* --max_concurrent_jobs: The maximum number of asynchronous jobs to run concurrently. Default is 10. This is only used when `scheduler_address` is not set.
 * --dask_workers: The type of Dask workers to use. Options are `threads` for Threaded Dask workers or `processes` for Process based Dask workers. Default is `processes`. This is only used when `scheduler_address` is not set.
 * --dask_log_level: The logging level for Dask. Default is `WARNING`.
 
