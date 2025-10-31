@@ -196,6 +196,14 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         span_kind = event_type_to_span_kind(event.event_type)
         sub_span.set_attribute(f"{self._span_prefix}.span.kind", span_kind.value)
 
+        # Enable session grouping by setting session.id from conversation_id
+        try:
+            conversation_id = self._context_state.conversation_id.get()
+            if conversation_id:
+                sub_span.set_attribute("session.id", conversation_id)
+        except (AttributeError, LookupError):
+            pass
+
         if event.payload.data and event.payload.data.input:
             match = re.search(r"Human:\s*Question:\s*(.*)", str(event.payload.data.input))
             if match:
