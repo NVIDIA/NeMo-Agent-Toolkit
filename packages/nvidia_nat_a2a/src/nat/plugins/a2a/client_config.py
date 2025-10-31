@@ -21,7 +21,9 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
 
-from nat.data_models.function_group import FunctionGroupBaseConfig
+from nat.data_models.component_ref import AuthenticationRef
+from nat.data_models.function import FunctionGroupBaseConfig
+
 
 
 class A2AAgentConfig(BaseModel):
@@ -57,10 +59,10 @@ class A2AAgentConfig(BaseModel):
         description="Exponential backoff multiplier for retries",
     )
 
-    auth_provider: str | None = Field(
-        default=None,
-        description="Name of NAT auth provider for authentication",
-    )
+    # Authentication configuration
+    auth_provider: str | AuthenticationRef | None = Field(default=None,
+                                                          description="Reference to authentication provider")
+
 
 
 class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
@@ -68,17 +70,6 @@ class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
 
     This configuration enables NAT workflows to connect to remote A2A agents
     and expose their skills as NAT functions.
-
-    Example:
-        ```yaml
-        function_groups:
-          research_agent:
-            _type: a2a_client
-            agent:
-              url: https://research-agent.example.com
-              task_timeout: 300
-              auth_provider: a2a_oauth
-        ```
 
     Attributes:
         agent: Configuration for the remote A2A agent
