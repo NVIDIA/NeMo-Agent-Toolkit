@@ -49,33 +49,36 @@ class AutoMemoryAgentConfig(AgentBaseConfig, name="auto_memory_agent"):
     - This is necessary to pass multiple messages (including system messages) to the agent
 
     **Example:**
-    ```yaml
-    functions:
-      my_react_agent:
-        _type: react_agent
-        llm_name: nim_llm
-        tool_names: [calculator, web_search]
-        use_openai_api: true  # REQUIRED for auto_memory_agent
 
-    memory:
-      zep_memory:
-        _type: nat.plugins.zep_cloud/zep_memory
+    .. code-block:: yaml
 
-    workflow:
-      _type: auto_memory_agent
-      inner_agent_name: my_react_agent
-      memory_name: zep_memory
-      llm_name: nim_llm
-      user_id: "user123"  # Configure user ID for memory isolation
-      verbose: true
-    ```
+        functions:
+          my_react_agent:
+            _type: react_agent
+            llm_name: nim_llm
+            tool_names: [calculator, web_search]
+            use_openai_api: true  # REQUIRED for auto_memory_agent
+
+        memory:
+          zep_memory:
+            _type: nat.plugins.zep_cloud/zep_memory
+
+        workflow:
+          _type: auto_memory_agent
+          inner_agent_name: my_react_agent
+          memory_name: zep_memory
+          llm_name: nim_llm
+          verbose: true
+
+    **Multi-tenant User Isolation:**
+
+    User ID is automatically extracted from runtime context (user_manager.get_id()) for proper
+    multi-tenant memory isolation. Set user_manager via SessionManager.session() in production.
+    Defaults to "default_user" for testing/development. See README.md for deployment examples.
     """
 
     # Memory configuration
     memory_name: MemoryRef = Field(..., description="Name of the memory backend (from memory section of config)")
-
-    # User ID for memory operations
-    user_id: str = Field(default="default_user", description="User ID for memory isolation. Set this to identify the user for multi-tenant scenarios.")
 
     # Reference to inner agent by NAME (not inline config)
     inner_agent_name: FunctionRef = Field(..., description="Name of the agent workflow to wrap with automatic memory")
@@ -110,8 +113,7 @@ class AutoMemoryAgentConfig(AgentBaseConfig, name="auto_memory_agent"):
             "  - ignore_roles (list[str]): Role types to exclude from graph memory (e.g., ['assistant'])\n"
             "    Available roles: norole, system, assistant, user, function, tool\n\n"
             "Additional parameters:\n"
-            "  - Any additional parameters that the chosen memory backend supports in its add_items function\n\n"
-        ))
+            "  - Any additional parameters that the chosen memory backend supports in its add_items function\n\n"))
 
 
 @register_function(config_type=AutoMemoryAgentConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -127,9 +129,9 @@ async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder):
     from langchain_core.messages.human import HumanMessage
     from langgraph.graph.state import CompiledStateGraph
 
-    from nat.agent.base import AGENT_LOG_PREFIX
     from nat.agent.auto_memory_wrapper.agent import AutoMemoryWrapperGraph
     from nat.agent.auto_memory_wrapper.state import AutoMemoryWrapperState
+    from nat.agent.base import AGENT_LOG_PREFIX
     from nat.builder.function_info import FunctionInfo
 
     # Get memory editor from builder
@@ -170,16 +172,13 @@ async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder):
     inner_agent_recursion = (inner_max_calls + 1) * 2
 
     # Create wrapper
-    wrapper_graph = AutoMemoryWrapperGraph(
-        inner_agent_fn=inner_agent_fn,
-        memory_editor=memory_editor,
-        user_id=config.user_id,
-        save_user_messages=config.save_user_messages_to_memory,
-        retrieve_memory=config.retrieve_memory_for_every_response,
-        save_ai_responses=config.save_ai_messages_to_memory,
-        search_params=config.search_params,
-        add_params=config.add_params
-    )
+    wrapper_graph = AutoMemoryWrapperGraph(inner_agent_fn=inner_agent_fn,
+                                           memory_editor=memory_editor,
+                                           save_user_messages=config.save_user_messages_to_memory,
+                                           retrieve_memory=config.retrieve_memory_for_every_response,
+                                           save_ai_responses=config.save_ai_messages_to_memory,
+                                           search_params=config.search_params,
+                                           add_params=config.add_params)
 
     # Calculate total recursion limit: wrapper overhead + inner agent needs
     wrapper_node_count = wrapper_graph.get_wrapper_node_count()

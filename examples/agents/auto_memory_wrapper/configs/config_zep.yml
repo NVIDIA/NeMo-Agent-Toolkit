@@ -43,18 +43,18 @@ memory:
     # API credentials are loaded from environment variables: ZEP_API_KEY
 
 # Tools for the inner agent (no memory tools needed!)
-functions:
-  # Simple calculator tool for testing
+function_groups:
   calculator:
-    _type: calculator_multiply
+    _type: calculator
 
+functions:
   # Define the ReAct agent that will be wrapped
   my_react_agent:
     _type: react_agent
     llm_name: nim_llm
     tool_names: [calculator]  # At least one tool required for ReAct agent
     verbose: true
-    use_openai_api: true
+    use_openai_api: true  # REQUIRED for auto_memory_agent to inject system messages
     parse_agent_response_max_retries: 3
 
 # Wrap the ReAct agent with automatic memory
@@ -65,3 +65,16 @@ workflow:
   llm_name: nim_llm                 # Required by AgentBaseConfig
   verbose: true
   description: "A ReAct agent with automatic Zep memory"
+
+  # Optional feature flags (all default to true)
+  # save_user_messages_to_memory: false      # Set false to skip saving user messages
+  # retrieve_memory_for_every_response: false # Set false to skip memory retrieval
+  # save_ai_messages_to_memory: false        # Set false to skip saving AI responses
+
+  # Optional memory retrieval parameters
+  # search_params:
+  #   mode: "summary"    # Zep: "basic" (fast) or "summary" (comprehensive)
+
+  # Optional memory storage parameters
+  # add_params:
+  #   ignore_roles: ["assistant"]  # Zep: Exclude specific roles from graph memory (e.g., ["assistant"])

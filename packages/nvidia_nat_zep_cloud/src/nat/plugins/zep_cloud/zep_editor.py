@@ -18,9 +18,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from zep_cloud import ApiError
 from zep_cloud import NotFoundError
 from zep_cloud.client import AsyncZep
+from zep_cloud.core.api_error import ApiError
 from zep_cloud.types import Message
 
 from nat.builder.context import Context
@@ -75,9 +75,11 @@ class ZepEditor(MemoryEditor):
 
                 logger.info("Created Zep user")
             except ApiError as e:
-                # Check if user was created by another request (409 Conflict)
-                if e.response_data and e.response_data.get("status_code") == 409:
-                    logger.info("Zep user already exists (409), continuing")
+                # Check if user was created by another request (409 Conflict or 400 with "already exists")
+                if e.status_code == 409:
+                    logger.info("Zep user already exists - 409, continuing")
+                elif e.status_code == 400 and "already exists" in str(e).lower():
+                    logger.info("Zep user already exists - 400, continuing")
                 else:
                     logger.error("Failed creating Zep user: %s", str(e))  # noqa: TRY400
                     raise
@@ -143,8 +145,12 @@ class ZepEditor(MemoryEditor):
                     logger.info("Created Zep thread (thread_id=%s)", thread_id)
                     created_threads.add(thread_id)
                 except ApiError as create_error:
-                    if create_error.response_data and create_error.response_data.get("status_code") == 409:
-                        logger.info("Zep thread already exists (thread_id=%s)", thread_id)
+                    # Check for both 409 (Conflict) and 400 (Bad Request) with "already exists" message
+                    if create_error.status_code == 409:
+                        logger.info("Zep thread already exists - 409 (thread_id=%s)", thread_id)
+                        created_threads.add(thread_id)
+                    elif create_error.status_code == 400 and "already exists" in str(create_error).lower():
+                        logger.info("Zep thread already exists - 400 (thread_id=%s)", thread_id)
                         created_threads.add(thread_id)
                     else:
                         logger.exception("Thread create failed (thread_id=%s)", thread_id)

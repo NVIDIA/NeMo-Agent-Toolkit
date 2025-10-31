@@ -17,7 +17,6 @@ import logging
 from collections.abc import Awaitable
 from collections.abc import Callable
 from typing import Any
-from typing import Optional
 
 from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage
@@ -26,6 +25,7 @@ from langchain_core.messages import SystemMessage
 from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from nat.builder.context import Context
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import Message
 from nat.data_models.api_server import UserMessageContentRoleType
@@ -49,23 +49,57 @@ class AutoMemoryWrapperGraph:
 
     def __init__(
         self,
-        inner_agent_fn: Callable[[ChatRequest], Awaitable[Any]],  # Inner agent as a Function (receives ChatRequest with multiple messages)
+        inner_agent_fn: Callable[
+            [ChatRequest], Awaitable[Any]],  # Inner agent as a Function (receives ChatRequest with multiple messages)
         memory_editor: MemoryEditor,  # Zep/Mem0/Redis memory client
-        user_id: str,  # User ID for memory operations
         save_user_messages: bool = True,  # Auto-save user messages
         retrieve_memory: bool = True,  # Auto-retrieve before agent
         save_ai_responses: bool = True,  # Auto-save agent responses
-        search_params: Optional[dict[str, Any]] = None,  # Backend-specific search parameters
-        add_params: Optional[dict[str, Any]] = None  # Backend-specific add parameters
+        search_params: dict[str, Any] | None = None,  # Backend-specific search parameters
+        add_params: dict[str, Any] | None = None  # Backend-specific add parameters
     ):
         self.inner_agent_fn = inner_agent_fn
         self.memory_editor = memory_editor
-        self.user_id = user_id
         self.save_user_messages = save_user_messages
         self.retrieve_memory = retrieve_memory
         self.save_ai_responses = save_ai_responses
         self.search_params = search_params or {}
         self.add_params = add_params or {}
+        self._context = Context.get()
+
+    def _get_user_id_from_context(self) -> str:
+        """
+        Extract user_id from runtime context.
+
+        Priority order:
+        1. user_manager.get_id() - For authenticated sessions (set via SessionManager.session())
+        2. X-User-ID HTTP header - For testing/simple auth without middleware
+        3. "default_user" - Fallback for development/testing without authentication
+
+        Returns:
+            str: The user ID for memory operations
+        """
+        # Priority 1: Get user_id from user_manager (for authenticated sessions)
+        user_manager = self._context.user_manager
+        if user_manager and hasattr(user_manager, 'get_id'):
+            try:
+                user_id = user_manager.get_id()
+                if user_id:
+                    logger.debug(f"Using user_id from user_manager: {user_id}")
+                    return user_id
+            except Exception as e:
+                logger.debug(f"Failed to get user_id from user_manager: {e}")
+
+        # Priority 2: Extract from X-User-ID HTTP header (temporary workaround for testing)
+        if self._context.metadata and self._context.metadata.headers:
+            user_id = self._context.metadata.headers.get("x-user-id")
+            if user_id:
+                logger.debug(f"Using user_id from X-User-ID header: {user_id}")
+                return user_id
+
+        # Fallback: default for development/testing
+        logger.debug("Using default user_id: default_user")
+        return "default_user"
 
     def get_wrapper_node_count(self) -> int:
         """
@@ -114,14 +148,15 @@ class AutoMemoryWrapperGraph:
         # Get the latest user message
         user_message = state.messages[-1]
         if isinstance(user_message, HumanMessage):
+            # Get user_id from runtime context
+            user_id = self._get_user_id_from_context()
+
             # Add to memory
             await self.memory_editor.add_items(
-                [MemoryItem(
-                    conversation=[{"role": "user", "content": str(user_message.content)}],
-                    user_id=self.user_id
-                )],
-                **self.add_params
-            )
+                [MemoryItem(conversation=[{
+                    "role": "user", "content": str(user_message.content)
+                }], user_id=user_id)],
+                **self.add_params)
         return state
 
     async def memory_retrieve_node(self, state: AutoMemoryWrapperState) -> AutoMemoryWrapperState:
@@ -132,10 +167,13 @@ class AutoMemoryWrapperGraph:
         # Get the latest user message
         user_message = state.messages[-1]
 
+        # Get user_id from runtime context
+        user_id = self._get_user_id_from_context()
+
         # Retrieve memory from memory provider
         memory_items = await self.memory_editor.search(
             query=user_message.content,  # Reasonable default for memory retrieval
-            user_id=self.user_id,
+            user_id=user_id,
             **self.search_params  # User-configured params (e.g., top_k, mode)
         )
 
@@ -195,14 +233,15 @@ class AutoMemoryWrapperGraph:
         # Get the latest AI message
         ai_message = state.messages[-1]
         if isinstance(ai_message, AIMessage):
+            # Get user_id from runtime context
+            user_id = self._get_user_id_from_context()
+
             # Add to memory
             await self.memory_editor.add_items(
-                [MemoryItem(
-                    conversation=[{"role": "assistant", "content": str(ai_message.content)}],
-                    user_id=self.user_id
-                )],
-                **self.add_params
-            )
+                [MemoryItem(conversation=[{
+                    "role": "assistant", "content": str(ai_message.content)
+                }], user_id=user_id)],
+                **self.add_params)
         return state
 
     def build_graph(self) -> CompiledStateGraph:
