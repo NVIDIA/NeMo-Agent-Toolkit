@@ -19,133 +19,107 @@ limitations under the License.
 
 ## Overview
 
-Function intercepts provide a powerful middleware mechanism for adding cross-cutting concerns to functions in the NeMo Agent toolkit without modifying the function implementation itself. Like middleware in web frameworks (Express.js, FastAPI, etc.), intercepts wrap function calls with a four-phase pattern:
+Function intercepts provide a powerful middleware mechanism for adding cross-cutting concerns to functions in the NeMo Agent Toolkit without modifying the function implementation itself. Like middleware in web frameworks (Express.js, FastAPI, etc.), intercepts wrap function calls with a four-phase pattern:
 
 1. **Preprocess** - Inspect and modify inputs before calling next
 2. **Call Next** - Delegate to the next middleware or function
 3. **Postprocess** - Process, transform, or augment outputs
 4. **Continue** - Return or yield the final result
 
-This middleware pattern enables capabilities such as caching, logging, authentication, rate limiting, input validation, and more.
+Function intercepts are first-class components in NAT, configured in YAML and built by the workflow builder, just like retrievers, memory providers, and other components.
 
-### Key Concepts
+## Key Concepts
 
-**Function Intercept (Middleware)**: A middleware component that wraps a function's `ainvoke` or `astream` methods, with the ability to:
-- **Preprocess**: Inspect and modify function inputs
-- **Call Next**: Delegate to the next middleware or the function itself
-- **Postprocess**: Transform or augment function outputs
-- **Continue**: Return or yield the final result
-- **Short-circuit**: Skip calling next entirely (e.g., return cached results)
+**Function Intercept Component**: A middleware component that:
+- Is configured in YAML with a `function_intercepts` section
+- Is built by the workflow builder before functions
+- Wraps a function's `ainvoke` or `astream` methods
+- Can preprocess inputs, postprocess outputs, or short-circuit execution
 
-**Middleware Chain**: A sequence of middleware intercepts that execute in order, with each intercept wrapping the next. The chain forms an "onion" structure where control flows in through preprocessing, down to the function, and back out through postprocessing.
+**Middleware Chain**: A sequence of intercepts that execute in order, forming an "onion" structure where control flows in through preprocessing, down to the function, and back out through postprocessing.
 
-**Final Intercept**: A special middleware that terminates the chain. Only one final intercept is allowed per function, and it must be the last intercept in the chain.
+**Final Intercept**: A special middleware marked with `is_final=True` that can terminate the chain. Only one final intercept is allowed per function, and it must be the last in the chain.
 
-### When to Use Function Intercepts
+## Component-Based Architecture
 
-Function intercepts are ideal for implementing:
+Function intercepts follow the same component pattern as other NAT components:
 
-- **Caching**: Store and retrieve function results to avoid redundant computation
-- **Authentication and Authorization**: Verify user permissions before function execution
-- **Rate Limiting**: Control the frequency of function invocations
-- **Logging and Monitoring**: Track function calls and performance metrics
-- **Input Validation**: Verify inputs meet requirements before processing
-- **Retry Logic**: Automatically retry failed function calls
-- **Request Transformation**: Modify inputs before they reach the function
-- **Response Transformation**: Modify outputs before they're returned
+```yaml
+function_intercepts:
+  my_cache:
+    _type: cache
+    enabled_mode: always
+    similarity_threshold: 1.0
 
-## How Function Intercepts Work
+  my_logger:
+    _type: logging_intercept
+    log_level: INFO
 
-### Middleware Architecture
-
-Function intercepts use a middleware pattern similar to web frameworks. Each middleware wraps the next one in the chain, creating an "onion" structure. The four phases of middleware execution are:
-
-1. **Preprocess** - Inspect and optionally modify the input
-2. **Call Next** - Delegate to the next middleware or function
-3. **Postprocess** - Process and optionally modify the output
-4. **Continue** - Return or yield the final result
-
-Middleware can also **short-circuit** the chain by skipping the call to next and returning a result directly (e.g., cached values).
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ Function Call                                           │
-└────────────┬────────────────────────────────────────────┘
-             │
-             │ ┌──────────────────────────────────┐
-             │ │ Middleware 1 (Logging)           │
-             ├─┤ ┌ Preprocess: Log input          │
-             │ │ ├ Call Next ──────────────┐      │
-             │ │ │                          │      │
-             │ │ │ ┌─────────────────────────────────┐
-             │ │ │ │ Middleware 2 (Validation)       │
-             │ │ │ │ ┌ Preprocess: Validate input    │
-             │ │ │ ├─┤ ├ Call Next ───────────┐      │
-             │ │ │ │ │ │                       │      │
-             │ │ │ │ │ │ ┌──────────────────────────────┐
-             │ │ │ │ │ │ │ Middleware 3 (Cache-Final)   │
-             │ │ │ │ │ │ │ ┌ Check cache               │
-             │ │ │ │ │ │ ├─┤ ├ Call Next (if miss) ───┐ │
-             │ │ │ │ │ │ │ │ │                         │ │
-             │ │ │ │ │ │ │ │ │ ┌────────────────┐      │ │
-             │ │ │ │ │ │ │ │ └→│ Actual Function│      │ │
-             │ │ │ │ │ │ │ │   └────────┬───────┘      │ │
-             │ │ │ │ │ │ │ │            │ Return       │ │
-             │ │ │ │ │ │ │ └────────────┤              │ │
-             │ │ │ │ │ │ │ └ Store in cache            │ │
-             │ │ │ │ │ └─┤ ← Return result              │ │
-             │ │ │ │ │   └───────────────────────────────┘
-             │ │ │ └─┤ ← Return result
-             │ │ │   └ Postprocess: Validate output
-             │ │ │   └──────────────────────────────────┘
-             │ └─┤ ← Return result
-             │   └ Postprocess: Log output
-             │   └──────────────────────────────────┘
-             ▼
-    Final Result
+functions:
+  my_function:
+    _type: my_function_type
+    # Other function config...
 ```
 
-### Execution Flow
-
-1. **Registration**: Middleware intercepts are registered with a function at build time
-2. **Chain Construction**: The builder creates a middleware chain when building the workflow
-3. **Invocation**: When the function is called, the chain executes with the middleware pattern:
-   - **Phase 1 (Preprocess)**: Each middleware preprocesses in order (1 → 2 → 3)
-   - **Phase 2 (Call Next)**: Control flows to the actual function
-   - **Phase 3 (Postprocess)**: Each middleware postprocesses in reverse order (3 → 2 → 1)
-   - **Phase 4 (Continue)**: Final result returns to the caller
-4. **Delegation**: Each middleware delegates using the `call_next` parameter
-5. **Return**: Results flow back through the middleware chain to the caller
-
-### Final Intercepts
-
-A final intercept is marked with `is_final=True` and has special properties:
-
-- **Must be last**: Final intercepts must be the last in the chain
-- **Only one allowed**: Only one final intercept is permitted per function
-- **Termination**: By default, final intercepts do not delegate to the function unless explicitly implemented
-
-Final intercepts are useful for behaviors like caching where you want to potentially bypass the function entirely.
+```python
+@register_function(
+    config_type=MyFunctionConfig,
+    intercept_names=["my_logger", "my_cache"]  # Reference by name
+)
+async def my_function(config, builder):
+    # Function implementation
+    ...
+```
 
 ## Creating Custom Function Intercepts
 
-### Basic Middleware Implementation
+### Step 1: Define the Configuration
 
-All middleware intercepts must inherit from the `FunctionIntercept` base class:
+Create a configuration class inheriting from `FunctionInterceptBaseConfig`:
+
+```python
+from pydantic import Field
+from nat.data_models.function_intercept import FunctionInterceptBaseConfig
+
+
+class LoggingInterceptConfig(FunctionInterceptBaseConfig, name="logging_intercept"):
+    """Configuration for logging intercept."""
+
+    log_level: str = Field(
+        default="INFO",
+        description="Logging level (DEBUG, INFO, WARNING, ERROR)"
+    )
+    include_inputs: bool = Field(
+        default=True,
+        description="Whether to log function inputs"
+    )
+    include_outputs: bool = Field(
+        default=True,
+        description="Whether to log function outputs"
+    )
+```
+
+### Step 2: Implement the Intercept Class
+
+Create the intercept class inheriting from `FunctionIntercept`:
 
 ```python
 from nat.intercepts import FunctionIntercept, FunctionInterceptContext
 from nat.intercepts import CallNext, CallNextStream
+import logging
 from typing import Any
 from collections.abc import AsyncIterator
 
 
-class MyCustomIntercept(FunctionIntercept):
-    """A custom middleware that logs function calls."""
+class LoggingIntercept(FunctionIntercept):
+    """Logging middleware that tracks function calls."""
 
-    def __init__(self, *, log_level: str = "INFO"):
+    def __init__(self, *, log_level: str, include_inputs: bool, include_outputs: bool):
         super().__init__(is_final=False)
-        self.log_level = log_level
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(getattr(logging, log_level.upper()))
+        self.include_inputs = include_inputs
+        self.include_outputs = include_outputs
 
     async def intercept_invoke(
         self,
@@ -155,14 +129,15 @@ class MyCustomIntercept(FunctionIntercept):
     ) -> Any:
         """Middleware for single-output invocations."""
         # Phase 1: Preprocess
-        print(f"[{self.log_level}] Calling function: {context.name}")
-        print(f"[{self.log_level}] Input: {value}")
+        if self.include_inputs:
+            self.logger.info(f"Calling {context.name} with input: {value}")
 
-        # Phase 2: Call next middleware or function
+        # Phase 2: Call next
         result = await call_next(value)
 
         # Phase 3: Postprocess
-        print(f"[{self.log_level}] Result: {result}")
+        if self.include_outputs:
+            self.logger.info(f"Function {context.name} returned: {result}")
 
         # Phase 4: Continue
         return result
@@ -175,187 +150,84 @@ class MyCustomIntercept(FunctionIntercept):
     ) -> AsyncIterator[Any]:
         """Middleware for streaming invocations."""
         # Phase 1: Preprocess
-        print(f"[{self.log_level}] Streaming call to: {context.name}")
+        if self.include_inputs:
+            self.logger.info(f"Streaming call to {context.name} with input: {value}")
 
-        # Phase 2-3: Call next and process chunks
+        # Phase 2-3: Call next and yield chunks
+        chunk_count = 0
         async for chunk in call_next(value):
-            print(f"[{self.log_level}] Chunk: {chunk}")
+            chunk_count += 1
             yield chunk
 
-        # Phase 4: Cleanup after stream (implicit)
+        # Phase 4: Cleanup
+        if self.include_outputs:
+            self.logger.info(f"Streamed {chunk_count} chunks from {context.name}")
 ```
 
-### Intercept Context
+### Step 3: Register the Component
 
-The `FunctionInterceptContext` provides metadata about the function being intercepted:
+Create a registration module following the idiomatic pattern:
 
 ```python
-@dataclasses.dataclass(frozen=True)
-class FunctionInterceptContext:
-    """Context information supplied to each intercept."""
-    
-    name: str                               # Function name
-    config: FunctionBaseConfig              # Function configuration
-    description: str | None                 # Function description
-    input_schema: type[BaseModel]           # Input schema
-    single_output_schema: type[BaseModel] | type[None]  # Single output schema
-    stream_output_schema: type[BaseModel] | type[None]  # Stream output schema
+# File: src/nat/intercepts/my_module/register.py
+
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_function_intercept
+from .logging_intercept import LoggingIntercept, LoggingInterceptConfig
+
+
+@register_function_intercept(config_type=LoggingInterceptConfig)
+async def logging_intercept(config: LoggingInterceptConfig, builder: Builder):
+    """Build a logging intercept from configuration.
+
+    Args:
+        config: The logging intercept configuration
+        builder: The workflow builder (can access other components if needed)
+
+    Yields:
+        A configured logging intercept instance
+    """
+    yield LoggingIntercept(
+        log_level=config.log_level,
+        include_inputs=config.include_inputs,
+        include_outputs=config.include_outputs
+    )
 ```
 
-### Implementing a Final Middleware
+### Step 4: Configure in YAML
 
-Here's an example of a validation middleware that short-circuits on invalid input:
+Add the intercept to your YAML configuration:
 
-```python
-from pydantic import ValidationError
+```yaml
+function_intercepts:
+  request_logger:
+    _type: logging_intercept
+    log_level: DEBUG
+    include_inputs: true
+    include_outputs: true
 
-
-class ValidationIntercept(FunctionIntercept):
-    """A final middleware that validates inputs."""
-
-    def __init__(self, *, strict: bool = True):
-        super().__init__(is_final=True)
-        self.strict = strict
-
-    async def intercept_invoke(
-        self,
-        value: Any,
-        call_next: CallNext,
-        context: FunctionInterceptContext
-    ) -> Any:
-        """Validate input before calling next."""
-        # Phase 1: Preprocess - validate input
-        try:
-            # Validate against the input schema
-            validated = context.input_schema.model_validate(value)
-        except ValidationError as e:
-            if self.strict:
-                # Short-circuit: skip call_next and raise error
-                raise ValueError(f"Invalid input for {context.name}: {e}")
-            else:
-                # In non-strict mode, try to proceed anyway
-                validated = value
-
-        # Phase 2: Call next - delegate to function with validated input
-        result = await call_next(validated)
-
-        # Phase 3-4: Postprocess and continue - return result as-is
-        return result
+functions:
+  my_api_function:
+    _type: api_call
+    endpoint: https://api.example.com
 ```
 
-## Using Function Intercepts
+### Step 5: Reference in Function Registration
 
-### Registering Intercepts with Functions
-
-Intercepts are configured when registering functions using the `@register_function` decorator:
+Use the intercept by name in your function registration:
 
 ```python
 from nat.cli.register_workflow import register_function
-from nat.intercepts import CacheIntercept
-from nat.data_models.function import FunctionBaseConfig
-
-
-class MyFunctionConfig(FunctionBaseConfig, name="my_function"):
-    use_cache: bool = True
+from nat.builder.builder import Builder
 
 
 @register_function(
-    config_type=MyFunctionConfig,
-    intercepts=[CacheIntercept(enabled_mode="always", similarity_threshold=1.0)]
+    config_type=MyAPIFunctionConfig,
+    intercept_names=["request_logger"]  # Reference by YAML name
 )
-async def my_function(config: MyFunctionConfig, builder: Builder):
-    """A function with caching enabled."""
-    
-    async def process(input_data: dict) -> dict:
-        # Expensive computation here
-        return {"result": input_data["value"] * 2}
-    
-    from nat.builder.function import LambdaFunction
-    from nat.builder.function_info import FunctionInfo
-    
-    function_info = FunctionInfo.from_fn(
-        process,
-        description="Process input data"
-    )
-    
-    yield LambdaFunction.from_info(
-        config=config,
-        info=function_info
-    )
-```
-
-### Chaining Multiple Middleware
-
-You can chain multiple middleware together. They execute in the order provided, forming an "onion" structure:
-
-```python
-from nat.intercepts import CacheIntercept
-
-
-class LoggingIntercept(FunctionIntercept):
-    """Logging middleware."""
-
-    async def intercept_invoke(self, value, call_next, context):
-        # Phase 1: Preprocess
-        logger.info(f"Calling {context.name} with {value}")
-
-        # Phase 2: Call next
-        result = await call_next(value)
-
-        # Phase 3: Postprocess
-        logger.info(f"Function {context.name} returned {result}")
-
-        # Phase 4: Continue
-        return result
-
-
-@register_function(
-    config_type=MyFunctionConfig,
-    intercepts=[
-        LoggingIntercept(),              # Outer layer - first to preprocess, last to postprocess
-        ValidationIntercept(strict=True),  # Middle layer
-        CacheIntercept(
-            enabled_mode="eval",          # Inner layer (final) - last to preprocess, first to postprocess
-            similarity_threshold=0.95
-        )
-    ]
-)
-async def my_function(config: MyFunctionConfig, builder: Builder):
+async def my_api_function(config: MyAPIFunctionConfig, builder: Builder):
+    """API function with logging."""
     # Function implementation
-    ...
-```
-
-### Configuration-Driven Intercepts
-
-You can make intercepts configurable through the function's configuration:
-
-```python
-class MyFunctionConfig(FunctionBaseConfig, name="my_function"):
-    enable_caching: bool = True
-    cache_threshold: float = 1.0
-    enable_logging: bool = False
-
-
-@register_function(config_type=MyFunctionConfig)
-async def my_function(config: MyFunctionConfig, builder: Builder):
-    """A function with conditional intercepts."""
-    
-    # Build intercepts based on configuration
-    intercepts = []
-    
-    if config.enable_logging:
-        intercepts.append(LoggingIntercept())
-    
-    if config.enable_caching:
-        intercepts.append(
-            CacheIntercept(
-                enabled_mode="always",
-                similarity_threshold=config.cache_threshold
-            )
-        )
-    
-    # Create function with dynamic intercepts
-    # (Implementation depends on how you construct your function)
     ...
 ```
 
@@ -363,426 +235,381 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
 
 ### Cache Intercept
 
-The `CacheIntercept` is a built-in final intercept that caches function outputs based on input similarity. It's particularly useful for expensive computations or API calls.
+The cache intercept is a built-in component that memoizes function outputs based on input similarity.
 
-#### Features
+#### Configuration
 
-- **Input Serialization**: Automatically serializes function inputs to strings for comparison
-- **Similarity Matching**: Supports both exact matching and fuzzy similarity matching
-- **Evaluation Mode**: Can be configured to cache only during evaluation
-- **Streaming Bypass**: Automatically bypasses caching for streaming calls
-- **Fast Exact Matching**: Uses optimized exact string matching when threshold is 1.0
+```yaml
+function_intercepts:
+  exact_cache:
+    _type: cache
+    enabled_mode: always
+    similarity_threshold: 1.0  # Exact matching only
 
-#### Basic Usage
+  eval_cache:
+    _type: cache
+    enabled_mode: eval  # Only cache during evaluation
+    similarity_threshold: 1.0
 
-```python
-from nat.intercepts import CacheIntercept
-
-# Create a cache intercept with exact matching
-cache = CacheIntercept(
-    enabled_mode="always",      # Always cache
-    similarity_threshold=1.0     # Exact match only
-)
-
-# Use with function registration
-@register_function(
-    config_type=MyFunctionConfig,
-    intercepts=[cache]
-)
-async def expensive_function(config, builder):
-    # Expensive function that benefits from caching
-    ...
+  fuzzy_cache:
+    _type: cache
+    enabled_mode: always
+    similarity_threshold: 0.95  # Allow 95% similarity
 ```
 
 #### Parameters
 
-**enabled_mode** (str, default: "eval")
-- `"always"`: Cache is always active
-- `"eval"`: Cache is active only when `Context.is_evaluating` is `True`
+- **enabled_mode**: `"always"` or `"eval"`
+  - `"always"`: Cache is always active
+  - `"eval"`: Cache only active when `Context.is_evaluating` is True
 
-**similarity_threshold** (float, default: 1.0)
-- Range: 0.0 to 1.0
-- `1.0`: Exact string matching (fastest, recommended for most cases)
-- `< 1.0`: Fuzzy matching using Python's `difflib.SequenceMatcher`
-- Lower values allow more flexibility but may cache overly similar inputs
+- **similarity_threshold**: Float from 0.0 to 1.0
+  - `1.0`: Exact string matching (fastest)
+  - `< 1.0`: Fuzzy matching using difflib
 
-#### Configuration Examples
+#### Usage Example
 
-**Always Cache with Exact Matching**
+```yaml
+function_intercepts:
+  api_cache:
+    _type: cache
+    enabled_mode: always
+    similarity_threshold: 1.0
 
-```python
-# Best for deterministic functions where inputs must match exactly
-cache = CacheIntercept(
-    enabled_mode="always",
-    similarity_threshold=1.0
-)
+functions:
+  call_external_api:
+    _type: api_caller
+    endpoint: https://api.example.com
 ```
 
-**Cache Only During Evaluation**
-
 ```python
-# Useful when you want caching during testing but not in production
-cache = CacheIntercept(
-    enabled_mode="eval",
-    similarity_threshold=1.0
-)
-```
-
-**Fuzzy Matching for Similar Inputs**
-
-```python
-# Allows caching for inputs that are 90% similar
-# Use with caution as this may cache different logical inputs
-cache = CacheIntercept(
-    enabled_mode="always",
-    similarity_threshold=0.9
-)
-```
-
-#### Practical Examples
-
-**Caching API Responses**
-
-```python
-from pydantic import BaseModel
-
-
-class APIInput(BaseModel):
-    query: str
-    params: dict
-
-
-class APIOutput(BaseModel):
-    response: dict
-    status: int
-
-
 @register_function(
-    config_type=APIFunctionConfig,
-    intercepts=[
-        CacheIntercept(
-            enabled_mode="always",
-            similarity_threshold=1.0
-        )
-    ]
+    config_type=APICallerConfig,
+    intercept_names=["api_cache"]
 )
-async def call_external_api(config, builder):
-    """Call external API with caching."""
-    
-    async def api_call(input_data: APIInput) -> APIOutput:
+async def call_external_api(config: APICallerConfig, builder: Builder):
+    """API caller with caching."""
+    async def make_api_call(query: str) -> dict:
         # Expensive API call
-        response = await external_service.query(
-            input_data.query,
-            **input_data.params
-        )
-        return APIOutput(
-            response=response,
-            status=200
-        )
-    
-    # Create and return function
+        response = await external_api.call(query)
+        return response
+
+    # Return function implementation
     ...
 ```
 
-**Caching Database Queries**
+#### Behavior
+
+- **Exact Matching** (threshold=1.0): Uses fast dictionary lookup
+- **Fuzzy Matching** (threshold<1.0): Uses difflib.SequenceMatcher for similarity
+- **Streaming**: Always bypasses cache to avoid buffering
+- **Serialization**: Falls back to function call if input can't be serialized
+
+## Advanced Patterns
+
+### Accessing the Builder
+
+Intercepts have access to the workflow builder during construction, allowing them to use other components:
+
+```python
+@register_function_intercept(config_type=CachingInterceptConfig)
+async def caching_intercept(config: CachingInterceptConfig, builder: Builder):
+    """Intercept that uses an object store for caching."""
+
+    # Access object store component
+    object_store = await builder.get_object_store_client(config.object_store_name)
+
+    yield CachingIntercept(
+        object_store=object_store,
+        ttl=config.cache_ttl
+    )
+```
+
+### Final Intercepts
+
+Final intercepts can short-circuit execution:
+
+```python
+class ValidationInterceptConfig(FunctionInterceptBaseConfig, name="validation"):
+    strict_mode: bool = Field(default=True)
+
+
+class ValidationIntercept(FunctionIntercept):
+    """Validates inputs and short-circuits on failure."""
+
+    def __init__(self, *, strict_mode: bool):
+        super().__init__(is_final=True)  # Mark as final
+        self.strict_mode = strict_mode
+
+    async def intercept_invoke(self, value, call_next, context):
+        # Validate input against schema
+        try:
+            validated = context.input_schema.model_validate(value)
+        except ValidationError as e:
+            if self.strict_mode:
+                # Short-circuit: don't call next
+                raise ValueError(f"Validation failed: {e}")
+            else:
+                validated = value
+
+        # Only call next if validation passed
+        return await call_next(validated)
+```
+
+### Chaining Multiple Intercepts
+
+Intercepts execute in the order specified:
+
+```yaml
+function_intercepts:
+  logger:
+    _type: logging_intercept
+    log_level: INFO
+
+  validator:
+    _type: validation
+    strict_mode: true
+
+  cache:
+    _type: cache
+    enabled_mode: always
+    similarity_threshold: 1.0
+
+functions:
+  protected_function:
+    _type: my_function
+```
 
 ```python
 @register_function(
-    config_type=DatabaseFunctionConfig,
-    intercepts=[
-        CacheIntercept(
-            enabled_mode="eval",  # Only cache during testing
-            similarity_threshold=1.0
-        )
-    ]
+    config_type=MyFunctionConfig,
+    intercept_names=["logger", "validator", "cache"]  # Execution order
 )
-async def query_database(config, builder):
-    """Query database with evaluation-time caching."""
-    
-    async def execute_query(query: str) -> list[dict]:
-        # Expensive database query
-        return await db.execute(query)
-    
-    # Create and return function
+async def protected_function(config, builder):
+    # 1. Logger logs the call
+    # 2. Validator validates input
+    # 3. Cache checks for cached result or calls function
     ...
 ```
 
-**Caching LLM Responses**
-
-```python
-@register_function(
-    config_type=LLMFunctionConfig,
-    intercepts=[
-        CacheIntercept(
-            enabled_mode="eval",
-            similarity_threshold=0.95  # Allow slight prompt variations
-        )
-    ]
-)
-async def llm_completion(config, builder):
-    """LLM completion with fuzzy caching."""
-    
-    async def complete(prompt: str) -> str:
-        # Expensive LLM call
-        return await llm.complete(prompt)
-    
-    # Create and return function
-    ...
+Execution flow:
+```
+Request → Logger (pre) → Validator (pre) → Cache (pre) → Function
+                                                            ↓
+Response ← Logger (post) ← Validator (post) ← Cache (post) ←
 ```
 
-#### Behavior and Limitations
+## Testing Intercepts
 
-**Serialization Failures**
+### Unit Testing
 
-If the cache intercept cannot serialize an input, it gracefully falls back to calling the function:
+Test intercepts in isolation:
 
 ```python
-# This will bypass cache if serialization fails
-result = await function(non_serializable_object)
+import pytest
+from unittest.mock import MagicMock
+
+
+@pytest.mark.asyncio
+async def test_logging_intercept():
+    """Test logging intercept logs correctly."""
+    intercept = LoggingIntercept(
+        log_level="DEBUG",
+        include_inputs=True,
+        include_outputs=True
+    )
+
+    # Mock context
+    context = FunctionInterceptContext(
+        name="test_fn",
+        config=MagicMock(),
+        description="Test",
+        input_schema=dict,
+        single_output_schema=dict,
+        stream_output_schema=None
+    )
+
+    # Mock call_next
+    async def mock_next(value):
+        return {"result": value * 2}
+
+    # Test intercept
+    result = await intercept.intercept_invoke(5, mock_next, context)
+    assert result == {"result": 10}
 ```
 
-**Streaming Calls**
+### Integration Testing
 
-The cache intercept always bypasses caching for streaming calls to avoid buffering entire streams in memory:
+Test intercepts with actual functions:
 
-```python
-# Streaming calls are never cached
-async for chunk in function.astream(input_data):
-    process(chunk)
+```yaml
+# test_config.yml
+function_intercepts:
+  test_cache:
+    _type: cache
+    enabled_mode: always
+    similarity_threshold: 1.0
+
+functions:
+  test_function:
+    _type: test_func
 ```
 
-**Memory Considerations**
-
-The cache intercept stores results in memory. For functions with many unique inputs or large outputs, consider:
-- Using shorter cache lifetimes
-- Implementing cache eviction policies
-- Using external caching solutions for production
-
-#### Advanced Usage with Context
-
-The cache intercept can access the workflow context to make caching decisions:
-
 ```python
-from nat.builder.context import Context, ContextState
+@pytest.mark.asyncio
+async def test_function_with_cache():
+    """Test function with cache intercept."""
+    from nat.builder.workflow_builder import WorkflowBuilder
+    from nat.data_models.config import Config
 
+    config = Config.from_yaml("test_config.yml")
 
-# In your workflow
-context_state = ContextState.get()
-context = Context(context_state)
+    async with WorkflowBuilder() as builder:
+        workflow = await builder.build_from_config(config)
 
-# Set evaluation mode
-context_state.is_evaluating.set(True)
+        # First call
+        result1 = await workflow.ainvoke("input")
 
-# Now functions with eval mode caching will cache results
-result = await function(input_data)
+        # Second call should use cache
+        result2 = await workflow.ainvoke("input")
+
+        assert result1 == result2
 ```
 
 ## Best Practices
 
 ### Design Principles
 
-1. **Keep Intercepts Focused**: Each intercept should have a single, well-defined responsibility
-2. **Preserve Function Contracts**: Intercepts should not change input/output schemas
-3. **Handle Errors Gracefully**: Intercepts should fail gracefully and log errors appropriately
-4. **Document Side Effects**: Clearly document any side effects (logging, caching, and so on)
-5. **Consider Performance**: Intercepts add overhead; keep them lightweight
+1. **Single Responsibility**: Each intercept should do one thing well
+2. **Composability**: Intercepts should work well when chained
+3. **Configuration**: Make intercepts configurable via YAML
+4. **Error Handling**: Fail gracefully and log errors
+5. **Performance**: Keep intercepts lightweight
 
-### Intercept Ordering
+### Recommended Order
 
-Order matters when chaining intercepts. Consider this recommended order:
+When chaining multiple intercepts:
 
-1. **Logging/Monitoring**: First to capture all calls
-2. **Authentication/Authorization**: Early to reject unauthorized calls
-3. **Validation**: Validate inputs before expensive operations
+1. **Logging/Monitoring**: First to capture everything
+2. **Authentication**: Early rejection of unauthorized calls
+3. **Validation**: Validate before expensive operations
 4. **Rate Limiting**: Prevent excessive calls
-5. **Caching**: Final intercept to potentially skip execution
+5. **Caching**: Final intercept to skip execution
 
-```python
-intercepts=[
-    LoggingIntercept(),           # 1. Log everything
-    AuthenticationIntercept(),    # 2. Check permissions
-    ValidationIntercept(),        # 3. Validate inputs
-    RateLimitIntercept(),        # 4. Check rate limits
-    CacheIntercept(...)          # 5. Cache results (final)
-]
+```yaml
+function_intercepts:
+  logger:
+    _type: logging_intercept
+  auth:
+    _type: authentication
+  validator:
+    _type: validation
+  rate_limiter:
+    _type: rate_limit
+  cache:
+    _type: cache
+
+functions:
+  protected_api:
+    _type: api_call
 ```
 
-### Testing Intercepts
-
-Always test intercepts independently and as part of the chain:
-
 ```python
-import pytest
-from unittest.mock import AsyncMock
-
-
-@pytest.mark.asyncio
-async def test_cache_intercept():
-    """Test cache intercept behavior."""
-    cache = CacheIntercept(enabled_mode="always", similarity_threshold=1.0)
-    
-    # Create mock context
-    context = FunctionInterceptContext(
-        name="test_function",
-        config=MockConfig(),
-        description="Test function",
-        input_schema=dict,
-        single_output_schema=dict,
-        stream_output_schema=None
-    )
-    
-    # Create mock function
-    call_count = 0
-    async def mock_function(value):
-        nonlocal call_count
-        call_count += 1
-        return {"result": value * 2}
-    
-    # First call should invoke function
-    input1 = {"value": 5}
-    result1 = await cache.intercept_invoke(input1, mock_function, context)
-    assert call_count == 1
-    assert result1 == {"result": 10}
-    
-    # Second call should use cache
-    result2 = await cache.intercept_invoke(input1, mock_function, context)
-    assert call_count == 1  # Not called again
-    assert result2 == {"result": 10}
+@register_function(
+    config_type=APIConfig,
+    intercept_names=["logger", "auth", "validator", "rate_limiter", "cache"]
+)
+async def protected_api(config, builder):
+    ...
 ```
 
-### Performance Considerations
+### Build Order
 
-1. **Minimize Intercept Overhead**: Keep intercept logic lightweight
-2. **Async-First**: Use async operations in intercepts to avoid blocking
-3. **Cache Wisely**: Only cache when the computation is expensive
-4. **Monitor Performance**: Track intercept impact on latency
+Function intercepts are built **before** functions in the workflow builder. This ensures all intercepts are available when functions are constructed.
 
-### Security Considerations
-
-1. **Validate Inputs**: Use intercepts to validate and sanitize inputs
-2. **Authentication**: Implement authentication intercepts for sensitive functions
-3. **Audit Logging**: Log security-relevant events in intercepts
-4. **Rate Limiting**: Prevent abuse with rate-limiting intercepts
-
-## Common Patterns
-
-### Conditional Execution
-
-```python
-class ConditionalIntercept(FunctionIntercept):
-    """Middleware that executes logic only when condition is met."""
-
-    def __init__(self, *, condition: Callable[[], bool]):
-        super().__init__()
-        self.condition = condition
-
-    async def intercept_invoke(self, value, call_next, context):
-        # Phase 1: Preprocess with conditional logic
-        if self.condition():
-            # Execute conditional logic
-            pass
-
-        # Phase 2: Call next
-        result = await call_next(value)
-
-        # Phase 3-4: Postprocess and continue
-        return result
-```
-
-### Input and Output Transformation
-
-```python
-class TransformIntercept(FunctionIntercept):
-    """Middleware that transforms inputs and outputs."""
-
-    async def intercept_invoke(self, value, call_next, context):
-        # Phase 1: Preprocess - transform input
-        transformed_input = self.transform_input(value)
-
-        # Phase 2: Call next with transformed input
-        result = await call_next(transformed_input)
-
-        # Phase 3: Postprocess - transform output
-        transformed_output = self.transform_output(result)
-
-        # Phase 4: Continue with transformed output
-        return transformed_output
-```
-
-### Error Handling and Retry
-
-```python
-class RetryIntercept(FunctionIntercept):
-    """Middleware that retries failed function calls."""
-
-    def __init__(self, *, max_retries: int = 3, backoff: float = 1.0):
-        super().__init__()
-        self.max_retries = max_retries
-        self.backoff = backoff
-
-    async def intercept_invoke(self, value, call_next, context):
-        # Phase 2: Call next with retry logic (no preprocessing needed)
-        for attempt in range(self.max_retries):
-            try:
-                result = await call_next(value)
-                # Phase 3-4: Success - return result
-                return result
-            except Exception as e:
-                # Phase 3: Handle error
-                if attempt == self.max_retries - 1:
-                    raise
-                await asyncio.sleep(self.backoff * (2 ** attempt))
-```
+Build order:
+1. Authentication providers
+2. Embedders
+3. LLMs
+4. Memory
+5. Object stores
+6. Retrievers
+7. TTC strategies
+8. **Function intercepts** ← Built here
+9. Function groups
+10. Functions ← Use intercepts here
 
 ## Troubleshooting
 
 ### Common Issues
 
-**Intercept Not Executing**
+**Intercept not found error**
+```
+ValueError: Function intercept `my_cache` not found
+```
+Solution: Ensure the intercept is defined in the `function_intercepts` section of your YAML.
 
-- Verify intercept is registered with the function
-- Check intercept order in the chain
-- Ensure intercept methods are properly implemented
+**Import errors**
+```
+ModuleNotFoundError: No module named 'nat.intercepts.register'
+```
+Solution: Ensure the register module is imported. NAT automatically imports `nat.intercepts.register` when importing `nat.intercepts`.
 
-**Cache Not Working**
-
+**Cache not working**
 - Check `enabled_mode` setting
-- Verify `Context.is_evaluating` is set correctly for eval mode
-- Ensure inputs are serializable
-- Check similarity threshold setting
+- For eval mode, ensure `Context.is_evaluating` is set
+- Verify inputs are serializable
+- Check similarity threshold
 
-**Performance Degradation**
-
+**Performance issues**
 - Profile intercepts to find bottlenecks
-- Consider making intercepts async
+- Use exact matching (threshold=1.0) for caching
 - Reduce logging verbosity
-- Optimize caching strategy
+- Consider async operations
 
-### Debugging Intercepts
+## Migration from Old Pattern
 
-Enable detailed logging to troubleshoot intercept behavior:
+If you have existing code using the old pattern:
+
+**Old Pattern** (instantiate at registration):
+```python
+@register_function(
+    config_type=MyFunctionConfig,
+    intercepts=[CacheIntercept(enabled_mode="always")]
+)
+async def my_function(config, builder):
+    ...
+```
+
+**New Pattern** (reference by name):
+```yaml
+function_intercepts:
+  my_cache:
+    _type: cache
+    enabled_mode: always
+    similarity_threshold: 1.0
+```
 
 ```python
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("nat.intercepts")
-logger.setLevel(logging.DEBUG)
+@register_function(
+    config_type=MyFunctionConfig,
+    intercept_names=["my_cache"]
+)
+async def my_function(config, builder):
+    ...
 ```
 
 ## API Reference
 
-For detailed API documentation, refer to:
-
-- {py:class}`~nat.intercepts.function_intercept.FunctionIntercept`: Base intercept class
-- {py:class}`~nat.intercepts.function_intercept.FunctionInterceptContext`: Context information
+- {py:class}`~nat.intercepts.function_intercept.FunctionIntercept`: Base class
+- {py:class}`~nat.intercepts.function_intercept.FunctionInterceptContext`: Context info
 - {py:class}`~nat.intercepts.function_intercept.FunctionInterceptChain`: Chain management
-- {py:class}`~nat.intercepts.cache_intercept.CacheIntercept`: Built-in cache intercept
-- {py:func}`~nat.intercepts.function_intercept.validate_intercepts`: Validation utility
+- {py:class}`~nat.intercepts.register.CacheInterceptConfig`: Cache configuration
+- {py:class}`~nat.intercepts.cache_intercept.CacheIntercept`: Cache implementation
+- {py:func}`~nat.cli.register_workflow.register_function_intercept`: Registration decorator
 
 ## See Also
 
-- [Writing Custom Functions](../extend/functions.md): Guide to creating custom functions
-- [Function Groups](../extend/function-groups.md): Organizing related functions
-- [Plugin System](../extend/plugins.md): Extending the NeMo Agent toolkit
-
+- [Writing Custom Functions](../extend/functions.md)
+- [Function Groups](../extend/function-groups.md)
+- [Plugin System](../extend/plugins.md)

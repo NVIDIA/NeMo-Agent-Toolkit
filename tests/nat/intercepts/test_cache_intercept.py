@@ -54,8 +54,8 @@ class TestCacheInterceptInitialization:
     """Test CacheIntercept initialization and configuration."""
 
     def test_default_initialization(self):
-        """Test default initialization."""
-        intercept = CacheIntercept()
+        """Test default initialization with required parameters."""
+        intercept = CacheIntercept(enabled_mode="eval", similarity_threshold=1.0)
         # Check internal attributes
         assert hasattr(intercept, '_enabled_mode')
         assert hasattr(intercept, '_similarity_threshold')
@@ -68,25 +68,10 @@ class TestCacheInterceptInitialization:
         assert hasattr(intercept, '_enabled_mode')
         assert hasattr(intercept, '_similarity_threshold')
 
-    def test_invalid_enabled_mode(self):
-        """Test invalid enabled_mode raises ValueError."""
-        with pytest.raises(ValueError, match="enabled_mode must be 'always' or 'eval'"):
-            CacheIntercept(enabled_mode="invalid")
-
-    def test_invalid_similarity_threshold(self):
-        """Test invalid similarity_threshold raises ValueError."""
-        msg = "similarity_threshold must be between 0 and 1"
-        with pytest.raises(ValueError, match=msg):
-            CacheIntercept(similarity_threshold=1.5)
-
-        with pytest.raises(ValueError, match=msg):
-            CacheIntercept(similarity_threshold=-0.1)
-
 
 class TestCacheInterceptCaching:
     """Test caching behavior."""
 
-    @pytest.mark.asyncio
     async def test_exact_match_caching(self, intercept_context):
         """Test exact match caching with similarity_threshold=1.0."""
         intercept = CacheIntercept(enabled_mode="always", similarity_threshold=1.0)
@@ -116,7 +101,6 @@ class TestCacheInterceptCaching:
         assert call_count == 2
         assert result3.result == "Result for test"
 
-    @pytest.mark.asyncio
     async def test_fuzzy_match_caching(self, intercept_context):
         """Test fuzzy matching with similarity_threshold < 1.0."""
         intercept = CacheIntercept(enabled_mode="always", similarity_threshold=0.8)
@@ -146,7 +130,6 @@ class TestCacheInterceptCaching:
         assert call_count == 2
         assert result3.result == "Result 2"
 
-    @pytest.mark.asyncio
     async def test_eval_mode_caching(self, intercept_context):
         """Test caching only works in eval mode when configured."""
         intercept = CacheIntercept(enabled_mode="eval", similarity_threshold=1.0)
@@ -186,7 +169,6 @@ class TestCacheInterceptCaching:
             await intercept.intercept_invoke(input1, mock_next_call, intercept_context)
             assert call_count == 3  # No additional call
 
-    @pytest.mark.asyncio
     async def test_serialization_failure(self, intercept_context):
         """Test behavior when input serialization fails."""
         intercept = CacheIntercept(enabled_mode="always", similarity_threshold=1.0)
@@ -218,7 +200,6 @@ class TestCacheInterceptCaching:
 class TestCacheInterceptStreaming:
     """Test streaming behavior."""
 
-    @pytest.mark.asyncio
     async def test_streaming_bypass(self, intercept_context):
         """Test that streaming always bypasses cache."""
         intercept = CacheIntercept(enabled_mode="always", similarity_threshold=1.0)
@@ -250,7 +231,6 @@ class TestCacheInterceptStreaming:
 class TestCacheInterceptEdgeCases:
     """Test edge cases and error handling."""
 
-    @pytest.mark.asyncio
     async def test_context_retrieval_failure(self, intercept_context):
         """Test behavior when context retrieval fails in eval mode."""
         intercept = CacheIntercept(enabled_mode="eval", similarity_threshold=1.0)
@@ -287,7 +267,6 @@ class TestCacheInterceptEdgeCases:
         # Too different - use a completely different string
         assert intercept._find_similar_key("xyz123abc") is None  # noqa
 
-    @pytest.mark.asyncio
     async def test_multiple_similar_entries(self, intercept_context):
         """Test behavior with multiple similar cached entries."""
         intercept = CacheIntercept(enabled_mode="always", similarity_threshold=0.7)

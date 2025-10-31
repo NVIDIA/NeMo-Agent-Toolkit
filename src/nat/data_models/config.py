@@ -41,6 +41,7 @@ from .authentication import AuthProviderBaseConfig
 from .common import HashableBaseModel
 from .common import TypedBaseModel
 from .embedder import EmbedderBaseConfig
+from .function_intercept import FunctionInterceptBaseConfig
 from .llm import LLMBaseConfig
 from .memory import MemoryBaseConfig
 from .object_store import ObjectStoreBaseConfig
@@ -86,6 +87,8 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
                 registered_keys = GlobalTypeRegistry.get().get_registered_front_ends()
             elif (info.field_name == "ttc_strategies"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_ttc_strategies()
+            elif (info.field_name == "function_intercepts"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_function_intercepts()
 
             else:
                 assert False, f"Unknown field name {info.field_name} in validator"
@@ -253,6 +256,9 @@ class Config(HashableBaseModel):
     # Function Groups Configuration
     function_groups: dict[str, FunctionGroupBaseConfig] = Field(default_factory=dict)
 
+    # Function Intercepts Configuration
+    function_intercepts: dict[str, FunctionInterceptBaseConfig] = Field(default_factory=dict)
+
     # LLMs Configuration
     llms: dict[str, LLMBaseConfig] = Field(default_factory=dict)
 
@@ -303,6 +309,7 @@ class Config(HashableBaseModel):
 
     @field_validator("functions",
                      "function_groups",
+                     "function_intercepts",
                      "llms",
                      "embedders",
                      "memory",
@@ -348,6 +355,11 @@ class Config(HashableBaseModel):
                                         typing.Annotated[type_registry.compute_annotation(FunctionGroupBaseConfig),
                                                          Discriminator(TypedBaseModel.discriminator)]]
 
+        FunctionInterceptsAnnotation = dict[str,
+                                            typing.Annotated[
+                                                type_registry.compute_annotation(FunctionInterceptBaseConfig),
+                                                Discriminator(TypedBaseModel.discriminator)]]
+
         MemoryAnnotation = dict[str,
                                 typing.Annotated[type_registry.compute_annotation(MemoryBaseConfig),
                                                  Discriminator(TypedBaseModel.discriminator)]]
@@ -391,6 +403,12 @@ class Config(HashableBaseModel):
         function_groups_field = cls.model_fields.get("function_groups")
         if function_groups_field is not None and function_groups_field.annotation != FunctionGroupsAnnotation:
             function_groups_field.annotation = FunctionGroupsAnnotation
+            should_rebuild = True
+
+        function_intercepts_field = cls.model_fields.get("function_intercepts")
+        if (function_intercepts_field is not None
+                and function_intercepts_field.annotation != FunctionInterceptsAnnotation):
+            function_intercepts_field.annotation = FunctionInterceptsAnnotation
             should_rebuild = True
 
         memory_field = cls.model_fields.get("memory")

@@ -34,6 +34,7 @@ from nat.cli.register_workflow import register_embedder_client
 from nat.cli.register_workflow import register_embedder_provider
 from nat.cli.register_workflow import register_function
 from nat.cli.register_workflow import register_function_group
+from nat.cli.register_workflow import register_function_intercept
 from nat.cli.register_workflow import register_llm_client
 from nat.cli.register_workflow import register_llm_provider
 from nat.cli.register_workflow import register_memory
@@ -48,6 +49,7 @@ from nat.data_models.config import GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
+from nat.data_models.function_intercept import FunctionInterceptBaseConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
@@ -1644,3 +1646,81 @@ async def test_integration_error_logging_with_workflow_failure(caplog_fixture):
     # Should include the original error
     assert "Original error:" in log_text
     assert "Function initialization failed" in log_text
+
+
+# Function Intercept Tests
+
+
+class TFunctionInterceptConfig(FunctionInterceptBaseConfig, name="test_function_intercept"):
+    raise_error: bool = False
+
+
+@register_function_intercept(config_type=TFunctionInterceptConfig)
+async def register_test_function_intercept(config: TFunctionInterceptConfig, b: Builder):
+    from nat.intercepts.function_intercept import FunctionIntercept
+
+    class TestFunctionIntercept(FunctionIntercept):
+
+        def __init__(self, raise_error: bool = False):
+            super().__init__()
+            self.raise_error = raise_error
+
+    if config.raise_error:
+        raise ValueError("Function intercept initialization failed")
+
+    yield TestFunctionIntercept(raise_error=config.raise_error)
+
+
+async def test_add_function_intercept():
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_function_intercept("intercept_name", TFunctionInterceptConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_function_intercept("intercept_name2", TFunctionInterceptConfig(raise_error=True))
+
+        # Try and add the same name
+        with pytest.raises(ValueError):
+            await builder.add_function_intercept("intercept_name", TFunctionInterceptConfig())
+
+
+async def test_get_function_intercept():
+
+    async with WorkflowBuilder() as builder:
+        config = TFunctionInterceptConfig()
+
+        intercept = await builder.add_function_intercept("intercept_name", config)
+
+        assert intercept == await builder.get_function_intercept("intercept_name")
+
+        with pytest.raises(ValueError):
+            await builder.get_function_intercept("intercept_name_not_exist")
+
+
+async def test_get_function_intercept_config():
+
+    async with WorkflowBuilder() as builder:
+        config = TFunctionInterceptConfig()
+
+        await builder.add_function_intercept("intercept_name", config)
+
+        assert builder.get_function_intercept_config("intercept_name") == config
+
+        with pytest.raises(ValueError):
+            builder.get_function_intercept_config("intercept_name_not_exist")
+
+
+async def test_get_function_intercepts_batch():
+    """Test getting multiple function intercepts at once."""
+
+    async with WorkflowBuilder() as builder:
+        config1 = TFunctionInterceptConfig()
+        config2 = TFunctionInterceptConfig()
+
+        await builder.add_function_intercept("intercept1", config1)
+        await builder.add_function_intercept("intercept2", config2)
+
+        intercepts = await builder.get_function_intercepts(["intercept1", "intercept2"])
+
+        assert len(intercepts) == 2
+        assert all(i is not None for i in intercepts)

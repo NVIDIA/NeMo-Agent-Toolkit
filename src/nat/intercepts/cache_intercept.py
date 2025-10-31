@@ -32,9 +32,13 @@ import json
 import logging
 from collections.abc import AsyncIterator
 from typing import Any
+from typing import Literal
+
+from pydantic import Field
 
 from nat.builder.context import Context
 from nat.builder.context import ContextState
+from nat.data_models.function_intercept import FunctionInterceptBaseConfig
 from nat.intercepts.function_intercept import CallNext
 from nat.intercepts.function_intercept import CallNextStream
 from nat.intercepts.function_intercept import FunctionIntercept
@@ -66,7 +70,7 @@ class CacheIntercept(FunctionIntercept):
             computation.
     """
 
-    def __init__(self, *, enabled_mode: str = "eval", similarity_threshold: float = 1.0) -> None:
+    def __init__(self, *, enabled_mode: str, similarity_threshold: float) -> None:
         """Initialize the cache intercept.
 
         Args:
@@ -74,21 +78,8 @@ class CacheIntercept(FunctionIntercept):
                 when Context.is_evaluating is True.
             similarity_threshold: Similarity threshold between 0 and 1.
                 If 1.0, performs exact matching. Otherwise uses fuzzy matching.
-
-        Raises:
-            ValueError: If enabled_mode is not "always" or "eval", or if
-                similarity_threshold is not between 0 and 1.
         """
         super().__init__(is_final=True)
-
-        if enabled_mode not in ("always", "eval"):
-            raise ValueError(f"enabled_mode must be 'always' or 'eval', "
-                             f"got '{enabled_mode}'")
-
-        if not 0 <= similarity_threshold <= 1:
-            raise ValueError(f"similarity_threshold must be between 0 and 1, "
-                             f"got {similarity_threshold}")
-
         self._enabled_mode = enabled_mode
         self._similarity_threshold = similarity_threshold
         self._cache: dict[str, Any] = {}
@@ -236,4 +227,27 @@ class CacheIntercept(FunctionIntercept):
         # Phase 4: Continue - stream is complete (implicit)
 
 
-__all__ = ["CacheIntercept"]
+class CacheInterceptConfig(FunctionInterceptBaseConfig, name="cache"):
+    """Configuration for cache intercept middleware.
+
+    The cache intercept memoizes function outputs based on input similarity,
+    with support for both exact and fuzzy matching.
+
+    Args:
+        enabled_mode: Controls when caching is active:
+            - "always": Cache is always enabled
+            - "eval": Cache only active when Context.is_evaluating is True
+        similarity_threshold: Float between 0 and 1 for input matching:
+            - 1.0: Exact string matching (fastest)
+            - < 1.0: Fuzzy matching using difflib similarity
+    """
+
+    enabled_mode: Literal["always", "eval"] = Field(
+        default="eval", description="When caching is enabled: 'always' or 'eval' (only during evaluation)")
+    similarity_threshold: float = Field(default=1.0,
+                                        ge=0.0,
+                                        le=1.0,
+                                        description="Similarity threshold between 0 and 1. Use 1.0 for exact matching")
+
+
+__all__ = ["CacheIntercept", "CacheInterceptConfig"]

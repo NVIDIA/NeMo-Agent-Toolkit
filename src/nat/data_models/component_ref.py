@@ -177,3 +177,14 @@ class TTCStrategyRef(ComponentRef):
     @override
     def component_group(self):
         return ComponentGroup.TTC_STRATEGIES
+
+
+class FunctionInterceptRef(ComponentRef):
+    """
+    A reference to a function intercept in a NAT configuration object.
+    """
+
+    @property
+    @override
+    def component_group(self):
+        return ComponentGroup.FUNCTION_INTERCEPTS

@@ -29,10 +29,12 @@ from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
 from nat.cli.type_registry import GlobalTypeRegistry
 from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.component_ref import FunctionInterceptRef
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
+from nat.data_models.function_intercept import FunctionInterceptBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
@@ -40,6 +42,7 @@ from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.intercepts import FunctionIntercept
 from nat.memory.interfaces import MemoryEditor
 from nat.object_store.interfaces import ObjectStore
 from nat.runtime.loader import PluginTypes
@@ -288,6 +291,25 @@ class MockBuilder(Builder):
     def get_function_group_dependencies(self, fn_name: str) -> FunctionDependencies:
         """Mock implementation."""
         return FunctionDependencies()
+
+    async def get_function_intercepts(self,
+                                      intercept_names: Sequence[str | FunctionInterceptRef]) -> list[FunctionIntercept]:
+        """Mock implementation."""
+        return [FunctionIntercept()]
+
+    async def get_function_intercept(self, intercept_name: str | FunctionInterceptRef) -> FunctionIntercept:
+        """Mock implementation."""
+        return FunctionIntercept()
+
+    async def get_function_intercept_config(self,
+                                            intercept_name: str | FunctionInterceptRef) -> FunctionInterceptBaseConfig:
+        """Mock implementation."""
+        return FunctionInterceptBaseConfig()
+
+    async def add_function_intercept(self, name: str | FunctionInterceptRef,
+                                     config: FunctionInterceptBaseConfig) -> FunctionIntercept:
+        """Mock implementation."""
+        return FunctionIntercept()
 
 
 class ToolTestRunner:
