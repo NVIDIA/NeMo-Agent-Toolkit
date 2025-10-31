@@ -562,6 +562,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                             description="Optional time (in seconds) before the job expires. "
                                             "Clamped between 600 (10 min) and 86400 (24h).")
 
+                def validate_model(self):
+                    # Override to ensure that the parent class validator is not called
+                    return self
+
         # Ensure that the input is in the body. POD types are treated as query parameters
         if (not issubclass(GenerateBodyType, BaseModel)):
             GenerateBodyType = typing.Annotated[GenerateBodyType, Body()]
@@ -760,17 +764,18 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             return AsyncGenerateResponse(job_id=job.job_id, status=job.status)
 
                     job_id = self._job_store.ensure_job_id(request.job_id)
-                    (_, job) = await self._job_store.submit_job(job_id=job_id,
-                                                                expiry_seconds=request.expiry_seconds,
-                                                                job_fn=run_generation,
-                                                                sync_timeout=request.sync_timeout,
-                                                                job_args=[
-                                                                    self._scheduler_address,
-                                                                    self._db_url,
-                                                                    self._config_file_path,
-                                                                    job_id,
-                                                                    request.model_dump(mode="json")
-                                                                ])
+                    (_, job) = await self._job_store.submit_job(
+                        job_id=job_id,
+                        expiry_seconds=request.expiry_seconds,
+                        job_fn=run_generation,
+                        sync_timeout=request.sync_timeout,
+                        job_args=[
+                            self._scheduler_address,
+                            self._db_url,
+                            self._config_file_path,
+                            job_id,
+                            request.model_dump(mode="json", exclude=["job_id", "sync_timeout", "expiry_seconds"])
+                        ])
 
                     if job is not None:
                         response.status_code = 200
