@@ -58,14 +58,12 @@ function_intercepts:
 functions:
   my_function:
     _type: my_function_type
+    intercepts: ["my_logger", "my_cache"]  # Apply intercepts in order
     # Other function config...
 ```
 
 ```python
-@register_function(
-    config_type=MyFunctionConfig,
-    intercept_names=["my_logger", "my_cache"]  # Reference by name
-)
+@register_function(config_type=MyFunctionConfig)
 async def my_function(config, builder):
     # Function implementation
     ...
@@ -210,21 +208,19 @@ functions:
   my_api_function:
     _type: api_call
     endpoint: https://api.example.com
+    intercepts: ["request_logger"]  # Apply logging intercept
 ```
 
-### Step 5: Reference in Function Registration
+### Step 5: Register the Function
 
-Use the intercept by name in your function registration:
+Register your function without needing to specify intercepts in the decorator:
 
 ```python
 from nat.cli.register_workflow import register_function
 from nat.builder.builder import Builder
 
 
-@register_function(
-    config_type=MyAPIFunctionConfig,
-    intercept_names=["request_logger"]  # Reference by YAML name
-)
+@register_function(config_type=MyAPIFunctionConfig)
 async def my_api_function(config: MyAPIFunctionConfig, builder: Builder):
     """API function with logging."""
     # Function implementation
@@ -280,13 +276,11 @@ functions:
   call_external_api:
     _type: api_caller
     endpoint: https://api.example.com
+    intercepts: ["api_cache"]  # Apply cache intercept
 ```
 
 ```python
-@register_function(
-    config_type=APICallerConfig,
-    intercept_names=["api_cache"]
-)
+@register_function(config_type=APICallerConfig)
 async def call_external_api(config: APICallerConfig, builder: Builder):
     """API caller with caching."""
     async def make_api_call(query: str) -> dict:
@@ -378,13 +372,11 @@ function_intercepts:
 functions:
   protected_function:
     _type: my_function
+    intercepts: ["logger", "validator", "cache"]  # Execution order
 ```
 
 ```python
-@register_function(
-    config_type=MyFunctionConfig,
-    intercept_names=["logger", "validator", "cache"]  # Execution order
-)
+@register_function(config_type=MyFunctionConfig)
 async def protected_function(config, builder):
     # 1. Logger logs the call
     # 2. Validator validates input
@@ -512,13 +504,11 @@ function_intercepts:
 functions:
   protected_api:
     _type: api_call
+    intercepts: ["logger", "auth", "validator", "rate_limiter", "cache"]
 ```
 
 ```python
-@register_function(
-    config_type=APIConfig,
-    intercept_names=["logger", "auth", "validator", "rate_limiter", "cache"]
-)
+@register_function(config_type=APIConfig)
 async def protected_api(config, builder):
     ...
 ```
@@ -569,35 +559,44 @@ Solution: Ensure the register module is imported. NAT automatically imports `nat
 
 ## Migration from Old Pattern
 
-If you have existing code using the old pattern:
+If you have existing code using the decorator-based intercept pattern:
 
-**Old Pattern** (instantiate at registration):
+**Old Pattern** (intercepts in decorator):
 ```python
 @register_function(
     config_type=MyFunctionConfig,
-    intercepts=[CacheIntercept(enabled_mode="always")]
+    intercept_names=["my_cache"]  # ❌ No longer supported
 )
 async def my_function(config, builder):
     ...
 ```
 
-**New Pattern** (reference by name):
+**New Pattern** (intercepts in YAML config):
 ```yaml
 function_intercepts:
   my_cache:
     _type: cache
     enabled_mode: always
     similarity_threshold: 1.0
+
+functions:
+  my_function:
+    _type: my_function_type
+    intercepts: ["my_cache"]  # ✅ Configure in YAML
 ```
 
 ```python
-@register_function(
-    config_type=MyFunctionConfig,
-    intercept_names=["my_cache"]
-)
+@register_function(config_type=MyFunctionConfig)  # ✅ No intercept_names parameter
 async def my_function(config, builder):
     ...
 ```
+
+### Benefits of the New Pattern
+
+1. **Better Separation of Concerns**: Configuration stays in YAML, code stays clean
+2. **More Flexible**: Change intercepts without modifying code
+3. **Easier Testing**: Different intercept configurations for different environments
+4. **Type Safety**: Intercept configuration validated by Pydantic models
 
 ## API Reference
 
