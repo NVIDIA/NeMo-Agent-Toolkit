@@ -196,7 +196,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         span_kind = event_type_to_span_kind(event.event_type)
         sub_span.set_attribute(f"{self._span_prefix}.span.kind", span_kind.value)
 
-        # Enable Phoenix session grouping by setting session.id from conversation_id
+        # Enable session grouping by setting session.id from conversation_id
         try:
             conversation_id = self._context_state.conversation_id.get()
             if conversation_id:
