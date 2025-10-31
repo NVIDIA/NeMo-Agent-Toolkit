@@ -126,6 +126,7 @@ Export your saved client ID and secret to the following environment variables:
 ```bash
 export NAT_OAUTH_CLIENT_ID=<your_client_id>
 export NAT_OAUTH_CLIENT_SECRET=<your_client_secret>
+export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
 ## Serve The Agent
