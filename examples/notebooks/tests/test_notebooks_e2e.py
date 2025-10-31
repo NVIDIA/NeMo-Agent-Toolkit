@@ -29,10 +29,25 @@ _ALL_WORKFLOWS = [
 
 # Other files produced by notebooks, relative to the notebooks directory
 _OTHER_FILES = [
+    "average_daily_revenue.png",
     "data/rag/product_catalog.md",
     "data/retail_sales_data.csv",
+    "eval_output/accuracy_output.json",
+    "eval_output/groundedness_output.json",
+    "eval_output/relevance_output.json",
+    "eval_output/trajectory_accuracy_output.json",
+    "eval_output/workflow_output.json",
     "langchain_agent.py",
     "nat_embedded.py",
+    "profile_output/all_requests_profiler_traces.json",
+    "profile_output/gantt_chart.png",
+    "profile_output/inference_optimization.json",
+    "profile_output/standardized_data_all.csv",
+    "profile_output/workflow_output.json",
+    "profile_output/workflow_profiling_metrics.json",
+    "profile_output/workflow_profiling_report.txt",
+    "revenue_across_stores.png",
+    "sales_trend.png",
     "search_agent.yml",
 ]
 
@@ -111,10 +126,10 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
         pytest.param("4_multi_agent_orchestration.ipynb", ["retail_sales_agent"], 120,
                      id="4_multi_agent_orchestration"),
         pytest.param("5_observability_evaluation_and_profiling.ipynb", ["retail_sales_agent"],
-                     120,
+                     1000,
                      id="5_observability_evaluation_and_profiling"),
         pytest.param("6_optimize_model_selection.ipynb", ["tmp_workflow"],
-                     120,
+                     1000,
                      id="6_optimize_model_selection",
                      marks=pytest.mark.skip(reason="Notebook takes over an hour to run completely.")),
     ])
