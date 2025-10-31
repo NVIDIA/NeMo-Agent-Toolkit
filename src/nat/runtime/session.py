@@ -16,7 +16,7 @@
 import asyncio
 import contextvars
 import uuid
-from collections.abc import Awaitable
+from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
@@ -41,8 +41,8 @@ class UserSession:
 
     def __init__(self, workflow: Workflow, max_concurrency: int = 8):
         """
-        The UserSession class is used to run and manage a user workflow session. It runs and manages the context,
-        and configuration of a workflow with the specified concurrency.
+        The UserSession class is used to run and manage a user workflow session. It runs a workflow for a single user
+        with the specified concurrency limit.
 
         Parameters
         ----------
@@ -51,24 +51,36 @@ class UserSession:
         max_concurrency : int, optional
             The maximum number of simultaneous workflow invocations, by default 8
         """
-        if (workflow is None):
-            raise ValueError("Workflow cannot be None")
+        if workflow is None:
+            raise ValueError("Workflow must be provided to initialize a UserSession")
 
         self._workflow: Workflow = workflow
-
         self._max_concurrency = max_concurrency
-        self._context_state = ContextState.get()
-        self._context = Context(self._context_state)
 
-        # We save the context because Uvicorn spawns a new process
-        # for each request, and we need to restore the context vars
-        self._saved_context = contextvars.copy_context()
-
-        if (max_concurrency > 0):
+        if max_concurrency > 0:
             self._semaphore = asyncio.Semaphore(max_concurrency)
         else:
             # If max_concurrency is 0, then we don't need to limit the concurrency but we still need a context
             self._semaphore = nullcontext()
+
+    @property
+    def workflow(self) -> Workflow:
+        "Get the user's workflow instance"
+        return self._workflow
+
+    @property
+    def config(self) -> Config:
+        "Get the user's workflow configuration"
+        return self._workflow.config
+
+    @asynccontextmanager
+    async def run(self, message) -> AsyncGenerator[Runner, None]:
+        """
+        Run a workflow for a single user
+        """
+        async with self._semaphore:
+            async with self._workflow.run(message) as runner:
+                yield runner
 
 
 class SessionManager:
