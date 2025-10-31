@@ -103,6 +103,7 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
         "jupyter",
         "execute",
         f"--timeout={timeout_seconds}",
+        "--NbClientApp.skip_cells_with_tag=skip_e2e_test",
         str(notebook_path.absolute()),
     ]
 
