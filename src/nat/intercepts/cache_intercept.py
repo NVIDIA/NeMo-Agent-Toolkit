@@ -32,42 +32,15 @@ import json
 import logging
 from collections.abc import AsyncIterator
 from typing import Any
-from typing import Literal
-
-from pydantic import Field
 
 from nat.builder.context import Context
 from nat.builder.context import ContextState
-from nat.data_models.function_intercept import FunctionInterceptBaseConfig
 from nat.intercepts.function_intercept import CallNext
 from nat.intercepts.function_intercept import CallNextStream
 from nat.intercepts.function_intercept import FunctionIntercept
 from nat.intercepts.function_intercept import FunctionInterceptContext
 
 logger = logging.getLogger(__name__)
-
-
-class CacheInterceptConfig(FunctionInterceptBaseConfig, name="cache"):
-    """Configuration for cache intercept middleware.
-
-    Args:
-        enabled_mode: Either "always" to always cache, or "eval" to only
-            cache when Context.is_evaluating is True.
-        similarity_threshold: Float between 0 and 1. If 1.0, performs
-            exact string matching. Otherwise uses difflib for similarity
-            computation.
-    """
-
-    enabled_mode: Literal["always", "eval"] = Field(
-        default="eval",
-        description="When caching is enabled: 'always' or 'eval' (only during evaluation)"
-    )
-    similarity_threshold: float = Field(
-        default=1.0,
-        ge=0.0,
-        le=1.0,
-        description="Similarity threshold between 0 and 1. Use 1.0 for exact matching"
-    )
 
 
 class CacheIntercept(FunctionIntercept):

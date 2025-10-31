@@ -22,6 +22,9 @@ from nat.intercepts.function_intercept import FunctionInterceptChain
 from nat.intercepts.function_intercept import FunctionInterceptContext
 from nat.intercepts.function_intercept import validate_intercepts
 
+# Import register module to trigger registration of built-in intercepts
+from nat.intercepts import register as _register  # noqa: F401
+
 __all__ = [
     "CacheIntercept",
     "CallNext",
