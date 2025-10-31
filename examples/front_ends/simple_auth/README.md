@@ -100,17 +100,17 @@ docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-d
 
 ## Registering a Dummy Client (“test”)
 
-1. Open **Clients → Create New Client** in the demo UI.
+1. Click **Create Client** in the demo UI.
 2. Fill the form exactly as below and click **Submit**:
 
 | Field                      | Value                                                 |
 |----------------------------|-------------------------------------------------------|
 | Client Name                | `test`                                                |
 | Client URI                 | `https://test.com`                                    |
+| Allowed Scope              | `openid profile email`                                |
 | Redirect URIs              | `http://localhost:8000/auth/redirect`                 |
 | Allowed Grant Types        | `authorization_code` and `refresh_token` on new lines |
 | Allowed Response Types     | `code`                                                |
-| Allowed Scope              | `openid profile email`                                |
 | Token Endpoint Auth Method | `client_secret_post`                                  |
 
 3. Copy the generated **Client ID** and **Client Secret** – you’ll need them in your agent’s config.
