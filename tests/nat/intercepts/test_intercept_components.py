@@ -192,7 +192,7 @@ class TestInterceptWithFunctions:
         class TestFunctionConfig(FunctionBaseConfig, name="test_func_with_intercepts"):
             pass
 
-        @register_function(config_type=TestFunctionConfig, intercept_names=["func_intercept_1", "func_intercept_2"])
+        @register_function(config_type=TestFunctionConfig)
         async def test_function(config: TestFunctionConfig, builder: Builder):
             from nat.builder.function import LambdaFunction
             from nat.builder.function_info import FunctionInfo
@@ -221,6 +221,7 @@ class TestInterceptWithFunctions:
             "functions": {
                 "test_func": {
                     "_type": "test_func_with_intercepts",
+                    "intercepts": ["func_intercept_1", "func_intercept_2"],
                 }
             },
         }
@@ -327,7 +328,7 @@ class TestInterceptErrorHandling:
         class MissingInterceptFunctionConfig(FunctionBaseConfig, name="missing_intercept_func"):
             pass
 
-        @register_function(config_type=MissingInterceptFunctionConfig, intercept_names=["nonexistent_intercept"])
+        @register_function(config_type=MissingInterceptFunctionConfig)
         async def function_with_missing_intercept(config, builder):
             from nat.builder.function import LambdaFunction
             from nat.builder.function_info import FunctionInfo
@@ -338,7 +339,7 @@ class TestInterceptErrorHandling:
             info = FunctionInfo.from_fn(process)
             yield LambdaFunction.from_info(config=config, info=info, instance_name="test")
 
-        config_dict = {"functions": {"test_func": {"_type": "missing_intercept_func", }}}
+        config_dict = {"functions": {"test_func": {"_type": "missing_intercept_func", "intercepts": ["nonexistent_intercept"]}}}
         config = Config.model_validate(config_dict)
 
         async with WorkflowBuilder() as builder:

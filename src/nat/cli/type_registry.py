@@ -189,7 +189,6 @@ class RegisteredFunctionInfo(RegisteredInfo[FunctionBaseConfig]):
 
     build_fn: FunctionRegisteredCallableT = Field(repr=False)
     framework_wrappers: list[str] = Field(default_factory=list)
-    intercept_names: tuple[str, ...] = Field(default_factory=tuple, repr=False)
 
 
 class RegisteredFunctionGroupInfo(RegisteredInfo[FunctionGroupBaseConfig]):

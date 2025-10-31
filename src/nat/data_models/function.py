@@ -24,7 +24,16 @@ from .common import TypedBaseModel
 
 
 class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
-    pass
+    """Base configuration for functions.
+
+    Attributes:
+        intercepts: List of function intercept names to apply to this function.
+            These must match names defined in the `function_intercepts` section of the YAML configuration.
+    """
+    intercepts: list[str] = Field(
+        default_factory=list,
+        description="List of function intercept names to apply to this function in order",
+    )
 
 
 class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):

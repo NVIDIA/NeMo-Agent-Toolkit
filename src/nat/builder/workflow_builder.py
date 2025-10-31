@@ -433,12 +433,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError("Expected a function, FunctionInfo object, or FunctionBase object to be "
                              f"returned from the function builder. Got {type(build_result)}")
 
-        # Resolve intercept names to intercept instances
+        # Resolve intercept names from config to intercept instances
         intercept_instances = []
-        for intercept_name in registration.intercept_names:
+        for intercept_name in config.intercepts:
             if intercept_name not in self._function_intercepts:
                 raise ValueError(
-                    f"Function intercept `{intercept_name}` not found. "
+                    f"Function intercept `{intercept_name}` not found for function `{name}`. "
                     f"It must be configured in the `function_intercepts` section of the YAML configuration.")
             intercept_instances.append(self._function_intercepts[intercept_name].instance)
 
