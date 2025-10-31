@@ -120,7 +120,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                     from dask.distributed import LocalCluster
 
-                    use_threads = os.environ.get("NAT_DASK_WORKER", '').strip().lower() == 'threads'
+                    use_threads = self.front_end_config.dask_workers == 'threads'
 
                     # set n_workers to max_running_async_jobs + 1 to allow for one worker to handle the cleanup task
                     self._cluster = LocalCluster(processes=not use_threads,
