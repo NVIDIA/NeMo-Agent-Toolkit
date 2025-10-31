@@ -125,6 +125,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                     # set n_workers to max_running_async_jobs + 1 to allow for one worker to handle the cleanup task
                     self._cluster = LocalCluster(processes=not use_threads,
                                                  silence_logs=dask_log_level,
+                                                 protocol="tcp",
                                                  n_workers=self.front_end_config.max_running_async_jobs + 1)
 
                     self._scheduler_address = self._cluster.scheduler.address
