@@ -135,7 +135,9 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                             # Client.run submits a function to be run on each worker
                             client.run(self._setup_worker)
 
-                    logger.info("Created local Dask cluster with scheduler at %s", self._scheduler_address)
+                    logger.info("Created local Dask cluster with scheduler at %s using %s workers",
+                                self._scheduler_address,
+                                self.front_end_config.dask_workers)
 
                 except ImportError:
                     logger.warning("Dask is not installed, async execution and evaluation will not be available.")
