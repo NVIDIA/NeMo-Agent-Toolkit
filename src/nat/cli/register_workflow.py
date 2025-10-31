@@ -55,6 +55,8 @@ from nat.cli.type_registry import TelemetryExporterConfigT
 from nat.cli.type_registry import ToolWrapperBuildCallableT
 from nat.cli.type_registry import TTCStrategyBuildCallableT
 from nat.cli.type_registry import TTCStrategyRegisterCallableT
+from nat.cli.type_registry import FunctionInterceptBuildCallableT
+from nat.cli.type_registry import FunctionInterceptRegisteredCallableT
 from nat.data_models.authentication import AuthProviderBaseConfigT
 from nat.data_models.component import ComponentEnum
 from nat.data_models.discovery_metadata import DiscoveryMetadata
@@ -63,13 +65,12 @@ from nat.data_models.evaluator import EvaluatorBaseConfigT
 from nat.data_models.front_end import FrontEndConfigT
 from nat.data_models.function import FunctionConfigT
 from nat.data_models.function import FunctionGroupConfigT
+from nat.data_models.function_intercept import FunctionInterceptBaseConfigT
 from nat.data_models.llm import LLMBaseConfigT
 from nat.data_models.memory import MemoryBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfigT
 from nat.data_models.retriever import RetrieverBaseConfigT
-from nat.intercepts.function_intercept import FunctionIntercept
-from nat.intercepts.function_intercept import validate_intercepts
 
 
 def register_telemetry_exporter(config_type: type[TelemetryExporterConfigT]):
@@ -149,9 +150,15 @@ def register_front_end(config_type: type[FrontEndConfigT]):
 
 def register_function(config_type: type[FunctionConfigT],
                       framework_wrappers: list[LLMFrameworkEnum | str] | None = None,
-                      intercepts: list[FunctionIntercept] | None = None):
+                      intercept_names: list[str] | None = None):
     """
     Register a workflow with optional framework_wrappers for automatic profiler hooking.
+
+    Args:
+        config_type: The function configuration type
+        framework_wrappers: Optional list of framework wrappers for automatic profiler hooking
+        intercept_names: Optional list of function intercept names to apply to this function.
+            These must match the names of registered function intercept components.
     """
 
     def register_function_inner(
@@ -162,7 +169,7 @@ def register_function(config_type: type[FunctionConfigT],
         context_manager_fn = asynccontextmanager(fn)
 
         framework_wrappers_list = list(framework_wrappers or [])
-        intercept_chain = validate_intercepts(intercepts)
+        intercept_names_tuple = tuple(intercept_names or [])
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
                                                                 component_type=ComponentEnum.FUNCTION)
@@ -173,7 +180,7 @@ def register_function(config_type: type[FunctionConfigT],
                 config_type=config_type,
                 build_fn=context_manager_fn,
                 framework_wrappers=framework_wrappers_list,
-                intercepts=intercept_chain,
+                intercept_names=intercept_names_tuple,
                 discovery_metadata=discovery_metadata,
             ))
 
@@ -214,6 +221,47 @@ def register_function_group(config_type: type[FunctionGroupConfigT],
         return context_manager_fn
 
     return register_function_group_inner
+
+
+def register_function_intercept(config_type: type[FunctionInterceptBaseConfigT]):
+    """
+    Register a function intercept middleware component.
+
+    Function intercepts provide middleware-style wrapping of function calls with
+    preprocessing and postprocessing logic. They are built as components that can
+    be configured in YAML and referenced by name in function configurations.
+
+    Args:
+        config_type: The function intercept configuration type to register
+
+    Returns:
+        A decorator that wraps the build function as an async context manager
+    """
+
+    def register_function_intercept_inner(
+        fn: FunctionInterceptBuildCallableT[FunctionInterceptBaseConfigT]
+    ) -> FunctionInterceptRegisteredCallableT[FunctionInterceptBaseConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredFunctionInterceptInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(
+            config_type=config_type,
+            component_type=ComponentEnum.FUNCTION_INTERCEPT
+        )
+
+        GlobalTypeRegistry.get().register_function_intercept(
+            RegisteredFunctionInterceptInfo(
+                full_type=config_type.full_type,
+                config_type=config_type,
+                build_fn=context_manager_fn,
+                discovery_metadata=discovery_metadata,
+            ))
+
+        return context_manager_fn
+
+    return register_function_intercept_inner
 
 
 def register_llm_provider(config_type: type[LLMBaseConfigT]):

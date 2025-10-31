@@ -32,15 +32,42 @@ import json
 import logging
 from collections.abc import AsyncIterator
 from typing import Any
+from typing import Literal
+
+from pydantic import Field
 
 from nat.builder.context import Context
 from nat.builder.context import ContextState
+from nat.data_models.function_intercept import FunctionInterceptBaseConfig
 from nat.intercepts.function_intercept import CallNext
 from nat.intercepts.function_intercept import CallNextStream
 from nat.intercepts.function_intercept import FunctionIntercept
 from nat.intercepts.function_intercept import FunctionInterceptContext
 
 logger = logging.getLogger(__name__)
+
+
+class CacheInterceptConfig(FunctionInterceptBaseConfig, name="cache"):
+    """Configuration for cache intercept middleware.
+
+    Args:
+        enabled_mode: Either "always" to always cache, or "eval" to only
+            cache when Context.is_evaluating is True.
+        similarity_threshold: Float between 0 and 1. If 1.0, performs
+            exact string matching. Otherwise uses difflib for similarity
+            computation.
+    """
+
+    enabled_mode: Literal["always", "eval"] = Field(
+        default="eval",
+        description="When caching is enabled: 'always' or 'eval' (only during evaluation)"
+    )
+    similarity_threshold: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Similarity threshold between 0 and 1. Use 1.0 for exact matching"
+    )
 
 
 class CacheIntercept(FunctionIntercept):
@@ -66,7 +93,7 @@ class CacheIntercept(FunctionIntercept):
             computation.
     """
 
-    def __init__(self, *, enabled_mode: str = "eval", similarity_threshold: float = 1.0) -> None:
+    def __init__(self, *, enabled_mode: str, similarity_threshold: float) -> None:
         """Initialize the cache intercept.
 
         Args:
@@ -74,21 +101,8 @@ class CacheIntercept(FunctionIntercept):
                 when Context.is_evaluating is True.
             similarity_threshold: Similarity threshold between 0 and 1.
                 If 1.0, performs exact matching. Otherwise uses fuzzy matching.
-
-        Raises:
-            ValueError: If enabled_mode is not "always" or "eval", or if
-                similarity_threshold is not between 0 and 1.
         """
         super().__init__(is_final=True)
-
-        if enabled_mode not in ("always", "eval"):
-            raise ValueError(f"enabled_mode must be 'always' or 'eval', "
-                             f"got '{enabled_mode}'")
-
-        if not 0 <= similarity_threshold <= 1:
-            raise ValueError(f"similarity_threshold must be between 0 and 1, "
-                             f"got {similarity_threshold}")
-
         self._enabled_mode = enabled_mode
         self._similarity_threshold = similarity_threshold
         self._cache: dict[str, Any] = {}
@@ -236,4 +250,31 @@ class CacheIntercept(FunctionIntercept):
         # Phase 4: Continue - stream is complete (implicit)
 
 
-__all__ = ["CacheIntercept"]
+# Register the cache intercept as a component
+def _register_cache_intercept():
+    """Register the cache intercept with the global type registry."""
+    from nat.builder.builder import Builder
+    from nat.cli.register_workflow import register_function_intercept
+
+    @register_function_intercept(config_type=CacheInterceptConfig)
+    async def cache_intercept(config: CacheInterceptConfig, builder: Builder):
+        """Build a cache intercept from configuration.
+
+        Args:
+            config: The cache intercept configuration
+            builder: The workflow builder (unused but required by component pattern)
+
+        Yields:
+            A configured cache intercept instance
+        """
+        yield CacheIntercept(
+            enabled_mode=config.enabled_mode,
+            similarity_threshold=config.similarity_threshold
+        )
+
+
+# Register on module import
+_register_cache_intercept()
+
+
+__all__ = ["CacheIntercept", "CacheInterceptConfig"]

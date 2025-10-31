@@ -48,6 +48,7 @@ from nat.data_models.component import ComponentGroup
 from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import FunctionGroupRef
+from nat.data_models.component_ref import FunctionInterceptRef
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import MemoryRef
@@ -60,6 +61,7 @@ from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
+from nat.data_models.function_intercept import FunctionInterceptBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
@@ -70,6 +72,7 @@ from nat.experimental.decorators.experimental_warning_decorator import experimen
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.intercepts.function_intercept import FunctionIntercept
 from nat.memory.interfaces import MemoryEditor
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
@@ -141,6 +144,12 @@ class ConfiguredTTCStrategy:
     instance: StrategyBase
 
 
+@dataclasses.dataclass
+class ConfiguredFunctionIntercept:
+    config: FunctionInterceptBaseConfig
+    instance: FunctionIntercept
+
+
 class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     def __init__(self, *, general_config: GeneralConfig | None = None, registry: TypeRegistry | None = None):
@@ -170,6 +179,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._object_stores: dict[str, ConfiguredObjectStore] = {}
         self._retrievers: dict[str, ConfiguredRetriever] = {}
         self._ttc_strategies: dict[str, ConfiguredTTCStrategy] = {}
+        self._function_intercepts: dict[str, ConfiguredFunctionIntercept] = {}
 
         self._context_state = ContextState.get()
 
@@ -423,7 +433,16 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError("Expected a function, FunctionInfo object, or FunctionBase object to be "
                              f"returned from the function builder. Got {type(build_result)}")
 
-        build_result.configure_intercepts(registration.intercepts)
+        # Resolve intercept names to intercept instances
+        intercept_instances = []
+        for intercept_name in registration.intercept_names:
+            if intercept_name not in self._function_intercepts:
+                raise ValueError(
+                    f"Function intercept `{intercept_name}` not found. "
+                    f"It must be configured in the `function_intercepts` section of the YAML configuration.")
+            intercept_instances.append(self._function_intercepts[intercept_name].instance)
+
+        build_result.configure_intercepts(intercept_instances)
 
         return ConfiguredFunction(config=config, instance=build_result)
 
@@ -971,6 +990,73 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return config
 
     @override
+    async def add_function_intercept(self, name: str | FunctionInterceptRef,
+                                      config: FunctionInterceptBaseConfig) -> FunctionIntercept:
+        """Add a function intercept to the builder.
+
+        Args:
+            name: The name or reference for the function intercept
+            config: The configuration for the function intercept
+
+        Returns:
+            The built function intercept instance
+
+        Raises:
+            ValueError: If the function intercept already exists
+        """
+        if name in self._function_intercepts:
+            raise ValueError(f"Function intercept `{name}` already exists in the list of function intercepts")
+
+        try:
+            intercept_info = self._registry.get_function_intercept(type(config))
+
+            intercept_instance = await self._get_exit_stack().enter_async_context(
+                intercept_info.build_fn(config, self))
+
+            self._function_intercepts[name] = ConfiguredFunctionIntercept(config=config, instance=intercept_instance)
+
+            return intercept_instance
+        except Exception as e:
+            logger.error("Error adding function intercept `%s` with config `%s`: %s", name, config, e)
+            raise
+
+    @override
+    async def get_function_intercept(self, intercept_name: str | FunctionInterceptRef) -> FunctionIntercept:
+        """Get a built function intercept by name.
+
+        Args:
+            intercept_name: The name or reference of the function intercept
+
+        Returns:
+            The built function intercept instance
+
+        Raises:
+            ValueError: If the function intercept is not found
+        """
+        if intercept_name not in self._function_intercepts:
+            raise ValueError(f"Function intercept `{intercept_name}` not found")
+
+        return self._function_intercepts[intercept_name].instance
+
+    @override
+    def get_function_intercept_config(self, intercept_name: str | FunctionInterceptRef) -> FunctionInterceptBaseConfig:
+        """Get the configuration for a function intercept.
+
+        Args:
+            intercept_name: The name or reference of the function intercept
+
+        Returns:
+            The configuration for the function intercept
+
+        Raises:
+            ValueError: If the function intercept is not found
+        """
+        if intercept_name not in self._function_intercepts:
+            raise ValueError(f"Function intercept `{intercept_name}` not found")
+
+        return self._function_intercepts[intercept_name].config
+
+    @override
     def get_user_manager(self):
         return UserManagerHolder(context=Context(self._context_state))
 
@@ -1110,6 +1196,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 elif component_instance.component_group == ComponentGroup.RETRIEVERS:
                     await self.add_retriever(component_instance.name,
                                              cast(RetrieverBaseConfig, component_instance.config))
+                # Instantiate a function intercept
+                elif component_instance.component_group == ComponentGroup.FUNCTION_INTERCEPTS:
+                    await self.add_function_intercept(component_instance.name,
+                                                      cast(FunctionInterceptBaseConfig, component_instance.config))
                 # Instantiate a function group
                 elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
                     await self.add_function_group(component_instance.name,

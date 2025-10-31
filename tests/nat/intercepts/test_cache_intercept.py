@@ -54,8 +54,8 @@ class TestCacheInterceptInitialization:
     """Test CacheIntercept initialization and configuration."""
 
     def test_default_initialization(self):
-        """Test default initialization."""
-        intercept = CacheIntercept()
+        """Test default initialization with required parameters."""
+        intercept = CacheIntercept(enabled_mode="eval", similarity_threshold=1.0)
         # Check internal attributes
         assert hasattr(intercept, '_enabled_mode')
         assert hasattr(intercept, '_similarity_threshold')
@@ -67,20 +67,6 @@ class TestCacheInterceptInitialization:
         # Check attributes are set
         assert hasattr(intercept, '_enabled_mode')
         assert hasattr(intercept, '_similarity_threshold')
-
-    def test_invalid_enabled_mode(self):
-        """Test invalid enabled_mode raises ValueError."""
-        with pytest.raises(ValueError, match="enabled_mode must be 'always' or 'eval'"):
-            CacheIntercept(enabled_mode="invalid")
-
-    def test_invalid_similarity_threshold(self):
-        """Test invalid similarity_threshold raises ValueError."""
-        msg = "similarity_threshold must be between 0 and 1"
-        with pytest.raises(ValueError, match=msg):
-            CacheIntercept(similarity_threshold=1.5)
-
-        with pytest.raises(ValueError, match=msg):
-            CacheIntercept(similarity_threshold=-0.1)
 
 
 class TestCacheInterceptCaching:

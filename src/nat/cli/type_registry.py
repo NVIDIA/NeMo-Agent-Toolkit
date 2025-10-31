@@ -62,6 +62,8 @@ from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.llm import LLMBaseConfigT
 from nat.data_models.logging import LoggingBaseConfig
 from nat.data_models.logging import LoggingMethodConfigT
+from nat.data_models.function_intercept import FunctionInterceptBaseConfig
+from nat.data_models.function_intercept import FunctionInterceptBaseConfigT
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.memory import MemoryBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfig
@@ -90,6 +92,7 @@ EvaluatorBuildCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AsyncIte
 FrontEndBuildCallableT = Callable[[FrontEndConfigT, Config], AsyncIterator[FrontEndBase]]
 FunctionBuildCallableT = Callable[[FunctionConfigT, Builder], AsyncIterator[FunctionInfo | Callable | FunctionBase]]
 FunctionGroupBuildCallableT = Callable[[FunctionGroupConfigT, Builder], AsyncIterator[FunctionGroup]]
+FunctionInterceptBuildCallableT = Callable[[FunctionInterceptBaseConfigT, Builder], AsyncIterator[FunctionIntercept]]
 TTCStrategyBuildCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AsyncIterator[StrategyBase]]
 LLMClientBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[typing.Any]]
 LLMProviderBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[LLMProviderInfo]]
@@ -112,6 +115,8 @@ FrontEndRegisteredCallableT = Callable[[FrontEndConfigT, Config], AbstractAsyncC
 FunctionRegisteredCallableT = Callable[[FunctionConfigT, Builder],
                                        AbstractAsyncContextManager[FunctionInfo | Callable | FunctionBase]]
 FunctionGroupRegisteredCallableT = Callable[[FunctionGroupConfigT, Builder], AbstractAsyncContextManager[FunctionGroup]]
+FunctionInterceptRegisteredCallableT = Callable[[FunctionInterceptBaseConfigT, Builder],
+                                                AbstractAsyncContextManager[FunctionIntercept]]
 TTCStrategyRegisterCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
 LLMClientRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[LLMProviderInfo]]
@@ -195,6 +200,15 @@ class RegisteredFunctionGroupInfo(RegisteredInfo[FunctionGroupBaseConfig]):
 
     build_fn: FunctionGroupRegisteredCallableT = Field(repr=False)
     framework_wrappers: list[str] = Field(default_factory=list)
+
+
+class RegisteredFunctionInterceptInfo(RegisteredInfo[FunctionInterceptBaseConfig]):
+    """
+    Represents a registered function intercept. Function intercepts provide middleware-style wrapping of function
+    calls with preprocessing and postprocessing logic.
+    """
+
+    build_fn: FunctionInterceptRegisteredCallableT = Field(repr=False)
 
 
 class RegisteredLLMProviderInfo(RegisteredInfo[LLMBaseConfig]):
@@ -334,6 +348,10 @@ class TypeRegistry:
 
         # Function Groups
         self._registered_function_groups: dict[type[FunctionGroupBaseConfig], RegisteredFunctionGroupInfo] = {}
+
+        # Function Intercepts
+        self._registered_function_intercepts: dict[type[FunctionInterceptBaseConfig],
+                                                    RegisteredFunctionInterceptInfo] = {}
 
         # LLMs
         self._registered_llm_provider_infos: dict[type[LLMBaseConfig], RegisteredLLMProviderInfo] = {}
@@ -543,6 +561,50 @@ class TypeRegistry:
             list[RegisteredInfo[FunctionGroupBaseConfig]]: List of all registered function groups
         """
         return list(self._registered_function_groups.values())
+
+    def register_function_intercept(self, registration: RegisteredFunctionInterceptInfo):
+        """Register a function intercept with the type registry.
+
+        Args:
+            registration: The function intercept registration information
+
+        Raises:
+            ValueError: If a function intercept with the same config type is already registered
+        """
+        if (registration.config_type in self._registered_function_intercepts):
+            raise ValueError(
+                f"A function intercept with the same config type `{registration.config_type}` has already been "
+                "registered.")
+
+        self._registered_function_intercepts[registration.config_type] = registration
+
+        self._registration_changed()
+
+    def get_function_intercept(self, config_type: type[FunctionInterceptBaseConfig]) -> RegisteredFunctionInterceptInfo:
+        """Get a registered function intercept by its config type.
+
+        Args:
+            config_type: The function intercept configuration type
+
+        Returns:
+            RegisteredFunctionInterceptInfo: The registered function intercept information
+
+        Raises:
+            KeyError: If no function intercept is registered for the given config type
+        """
+        try:
+            return self._registered_function_intercepts[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered function intercept for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_function_intercepts.keys())}") from err
+
+    def get_registered_function_intercepts(self) -> list[RegisteredInfo[FunctionInterceptBaseConfig]]:
+        """Get all registered function intercepts.
+
+        Returns:
+            list[RegisteredInfo[FunctionInterceptBaseConfig]]: List of all registered function intercepts
+        """
+        return list(self._registered_function_intercepts.values())
 
     def register_llm_provider(self, info: RegisteredLLMProviderInfo):
 
