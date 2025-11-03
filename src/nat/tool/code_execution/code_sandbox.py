@@ -101,7 +101,7 @@ class Sandbox(abc.ABC):
             import io
             warnings.filterwarnings('ignore')
             os.environ['OPENBLAS_NUM_THREADS'] = '16'
-        """).strip()
+        """)
 
         # Use json.dumps to properly escape the generated_code instead of repr()
         escaped_code = json.dumps(generated_code)
