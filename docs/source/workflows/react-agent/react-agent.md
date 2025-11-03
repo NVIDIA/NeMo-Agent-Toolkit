@@ -15,22 +15,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# ReAct Agent
-This is a ReAct (Reasoning and Acting) agent, based on the [ReAct paper](https://react-lm.github.io/). The ReAct agent's prompt is directly inspired by the prompt examples in the appendix of the
-paper. The agent uses NeMo Agent toolkit's core library agents and tools to perform ReAct reasoning between tool calls. In your YAML config files, you can customize prompts for your specific needs. 
-
+# Configure a ReAct Agent
+Configure the ReAct agent as a workflow or a function.
 ---
 
 ## Requirements
-The ReAct agent requires the `nvidia-nat[langchain]` plugin to be installed.
+The ReAct agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
 
-If you performed a source code checkout, you can install the plugin with the following command:
+- If you have performed a source code checkout:
 
 ```bash
 uv pip install -e '.[langchain]'
 ```
 
-If you installed the NeMo Agent toolkit from a package, you can install the plugin with the following command:
+- If you have installed the NeMo Agent toolkit from a package:
 
 ```bash
 uv pip install "nvidia-nat[langchain]"
@@ -71,7 +69,7 @@ The following are more ways you can configure your config file when using the Re
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file.
 
-* `verbose`: Defaults to `False` (useful to prevent logging of sensitive data).  If set to `True`, the agent will log input, output, and intermediate steps.
+* `verbose`: Defaults to `False` (useful to prevent logging of sensitive data). If set to `True`, the agent will log input, output, and intermediate steps.
 
 * `retry_agent_response_parsing_errors`: Defaults to `True`.  If set to `True`, the agent will retry parsing errors.  If set to `False`, the agent will raise an exception.
 
@@ -98,12 +96,12 @@ If modifying the prompt, see the limitations section below. The prompt must have
 * `additional_instructions`: Optional.  Additional instructions to provide to the agent in addition to the base prompt.
 ---
 
-## How the ReAct Agent works
+## How the ReAct Agent Works
 
 A **ReAct agent** is an AI system that decides what actions to take by reasoning step-by-step. Instead of making a decision in one go, it follows an iterative thought process. The agent uses an LLM to make the decisions and to summarize the tool responses in natural human language. To decide which tool to use to answer the question, the ReAct agent uses the names and descriptions of its tools.
 
 ### ReAct Agent Workflow
-When you enter a prompt, the agent workflow runs through the following steps:
+When you enter a prompt with the ReAct agent, it runs through the following workflow:
 1. **Observation** – The agent receives an input or problem to solve.
 2. **Reasoning (Thought)** – The agent thinks about what to do next.
 3. **Action** – The agent calls a tool (for example, a search API, calculator, or database query).
@@ -147,7 +145,7 @@ Thought: I now know the final answer
 Final Answer: Djikstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist. He is best known for his work on the shortest path problem and the development of Dijkstra's algorithm, which is used to find the shortest path between nodes in a weighted graph.
 ```
 
-We may tweak, modify, or completely change the ReAct agent prompt, but the LLM output must match the ReAct output format, and the prompt must have a prompt variable named `{tools}` and `{tool_names}`
+You can tweak, modify, or completely change the ReAct agent prompt, but the LLM output must match the ReAct output format, and the prompt must have a prompt variable named `{tools}` and `{tool_names}`
 
 A sample ReAct agent prompt is provided in prompt.py:
 

@@ -15,29 +15,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Reasoning Agent
-
-The reasoning agent is an AI system that directly invokes an underlying function while performing reasoning on top. Unlike ReAct agents, it does not reason between steps but instead through planning ahead of time. However, an LLM that support reasoning needs to be chosen for use with a reasoning agent.
-
-## Features
-- **Pre-built Tools**: Leverages core library agent and tools.
-- **Reasoning on top of an Agent:** Leverages an underlying function, and performs reasoning on top.
-- **Custom Plugin System**: Developers can bring in new tools using plugins.
-- **Agentic Workflows**: Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use**: Simplifies developer experience and deployment.
-
+# Configure a Reasoning Agent
+Configure the reasoning agent as a workflow or a function.
 ---
 
 ## Requirements
-The Reasoning agent requires the `nvidia-nat[langchain]` plugin to be installed.
+The reasoning agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
 
-If you have performed a source code checkout, you can install this with the following command:
+- If you have performed a source code checkout:
 
 ```bash
 uv pip install -e '.[langchain]'
 ```
 
-If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+- If you have installed the NeMo Agent toolkit from a package:
 
 ```bash
 uv pip install "nvidia-nat[langchain]"
@@ -45,10 +36,8 @@ uv pip install "nvidia-nat[langchain]"
 
 ## Configuration
 
-The reasoning agent may be utilized as a workflow or a function.
+The reasoning agent can be used as a workflow or a function. Follow the example below to configure your `config.yml` YAML file.
 
-### Example `config.yml`
-In your YAML file, to use the reasoning agent as a workflow:
 ```yaml
 workflow:
   _type: reasoning_agent
@@ -59,7 +48,7 @@ workflow:
 ```
 
 ### Configurable Options:
-
+The following are more ways you can configure your config file when using the reasoning agent:
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the Reasoning agent is configured as a workflow and need to expose a customized name as a tool.
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file. The LLM must support thinking tags.
