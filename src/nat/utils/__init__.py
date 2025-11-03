@@ -29,7 +29,8 @@ async def run_workflow(*,
                        config: "Config | None" = None,
                        config_file: "StrPath | None" = None,
                        prompt: str,
-                       to_type: type[_T] = str) -> _T:
+                       to_type: type[_T] = str,
+                       session_kwargs: dict[str, typing.Any] = None) -> _T:
     """
     Wrapper to run a workflow given either a config or a config file path and a prompt, returning the result in the
     type specified by the `to_type`.
@@ -66,7 +67,10 @@ async def run_workflow(*,
 
         config = load_config(config_file)
 
+    session_kwargs = session_kwargs or {}
+
     async with WorkflowBuilder.from_config(config=config) as workflow_builder:
-        workflow = SessionManager(await workflow_builder.build())
-        async with workflow.run(prompt) as runner:
-            return await runner.result(to_type=to_type)
+        session_manager = SessionManager(await workflow_builder.build())
+        async with session_manager.session(**session_kwargs) as session:
+            async with session.run(prompt) as runner:
+                return await runner.result(to_type=to_type)
