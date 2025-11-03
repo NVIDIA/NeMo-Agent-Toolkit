@@ -142,9 +142,17 @@ class WeaveEvaluationIntegration:
         coros = []
         for eval_output_item in eval_output.eval_output_items:
             if eval_output_item.id in self.pred_loggers:
+                # Structure the score as a dict and include reasoning if available
+                score_value = {
+                    "score": eval_output_item.score,
+                }
+
+                if eval_output_item.reasoning is not None:
+                    score_value["reasoning"] = eval_output_item.reasoning
+
                 coros.append(self.pred_loggers[eval_output_item.id].alog_score(
                     scorer=evaluator_name,
-                    score=eval_output_item.score,
+                    score=score_value,
                 ))
 
         # Execute all coroutines concurrently
