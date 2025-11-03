@@ -82,7 +82,7 @@ class WeaveEvaluationIntegration:
         """Get the full dataset for Weave."""
         return [item.full_dataset_entry for item in eval_input.eval_input_items]
 
-    def initialize_logger(self, workflow_alias: str, eval_input: EvalInput, config: Any):
+    def initialize_logger(self, workflow_alias: str, eval_input: EvalInput, config: Any, job_id: str | None = None):
         """Initialize the Weave evaluation logger."""
         if not self.client and not self.initialize_client():
             # lazy init the client
@@ -92,10 +92,16 @@ class WeaveEvaluationIntegration:
             weave_dataset = self._get_weave_dataset(eval_input)
             config_dict = config.model_dump(mode="json")
             config_dict["name"] = workflow_alias
+
+            # Include job_id in eval_attributes if provided
+            eval_attributes = {}
+            if job_id:
+                eval_attributes["job_id"] = job_id
+
             self.eval_logger = self.evaluation_logger_cls(model=config_dict,
                                                           dataset=weave_dataset,
                                                           name=workflow_alias,
-                                                          eval_attributes={})
+                                                          eval_attributes=eval_attributes)
             self.pred_loggers = {}
 
             # Capture the current evaluation call for context propagation
