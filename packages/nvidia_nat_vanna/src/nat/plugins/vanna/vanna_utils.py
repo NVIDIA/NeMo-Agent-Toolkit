@@ -17,11 +17,11 @@ import asyncio
 import logging
 import uuid
 
-from nat.plugins.vanna.db_schema import VANNA_RESPONSE_GUIDELINES
-from nat.plugins.vanna.db_schema import VANNA_TRAINING_DDL
-from nat.plugins.vanna.db_schema import VANNA_TRAINING_DOCUMENTATION
-from nat.plugins.vanna.db_schema import VANNA_TRAINING_EXAMPLES
-from nat.plugins.vanna.db_schema import VANNA_TRAINING_PROMPT
+from nat.plugins.vanna.training_db_schema import VANNA_RESPONSE_GUIDELINES
+from nat.plugins.vanna.training_db_schema import VANNA_TRAINING_DDL
+from nat.plugins.vanna.training_db_schema import VANNA_TRAINING_DOCUMENTATION
+from nat.plugins.vanna.training_db_schema import VANNA_TRAINING_EXAMPLES
+from nat.plugins.vanna.training_db_schema import VANNA_TRAINING_PROMPT
 from vanna.base import VannaBase
 from vanna.milvus import Milvus_VectorStore
 

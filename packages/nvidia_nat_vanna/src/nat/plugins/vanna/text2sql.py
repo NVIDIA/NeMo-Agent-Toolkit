@@ -76,7 +76,7 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     auto_training: bool = Field(default=False,
                                 description=("Auto-train Vanna (auto-extract DDL and generate training data "
                                              "from database) or manually train Vanna (uses training data from "
-                                             "db_schema.py)"))
+                                             "training_db_schema.py)"))
     initial_prompt: str | None = Field(default=None, description="Custom system prompt")
     n_results: int = Field(default=5, description="Number of similar examples")
     sql_collection: str = Field(default="vanna_sql", description="Milvus collection for SQL examples")
