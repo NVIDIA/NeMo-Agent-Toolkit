@@ -583,6 +583,8 @@ class VannaLangChain(MilvusVectorStore, VannaLangChainLLM):
         """
         MilvusVectorStore.__init__(self, config=config)
         VannaLangChainLLM.__init__(self, client=client, config=config)
+        # Store database engine (if any) - lifecycle matches Vanna singleton
+        self.db_engine = None
 
     async def generate_sql(
         self,
@@ -739,9 +741,18 @@ class VannaSingleton:
         """Reset the singleton Vanna instance.
 
         Useful for testing or when configuration changes.
+        Properly disposes of database engine if present.
         """
         if cls._instance is not None:
             try:
+                # Dispose database engine if present
+                if hasattr(cls._instance, "db_engine") and cls._instance.db_engine is not None:
+                    try:
+                        cls._instance.db_engine.dispose()
+                        logger.info("Disposed database engine pool")
+                    except Exception as e:
+                        logger.warning(f"Error disposing database engine: {e}")
+
                 await cls._instance.close()
             except Exception as e:
                 logger.warning(f"Error closing Vanna instance: {e}")

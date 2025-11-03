@@ -21,12 +21,12 @@ Vanna-based Text-to-SQL integration for NeMo Agent Toolkit.
 
 ## Overview
 
-This package provides production-ready text-to-SQL capabilities using the Vanna framework with support for multiple databases including Databricks, PostgreSQL, MySQL, and SQLite.
+This package provides production-ready text-to-SQL capabilities using the Vanna framework with Databricks support.
 
 ## Features
 
 - **AI-Powered SQL Generation**: Convert natural language to SQL using LLMs
-- **Multi-Database Support**: Works with Databricks, PostgreSQL, MySQL, SQLite
+- **Databricks Support**: Optimized for Databricks SQL warehouses
 - **Vector-Based Similarity Search**: Milvus integration for few-shot learning
 - **Streaming Support**: Real-time progress updates
 - **Query Execution**: Optional database execution with formatted results
@@ -48,8 +48,16 @@ functions:
     _type: text2sql
     llm_name: my_llm
     embedder_name: my_embedder
+    milvus_retriever: my_retriever
     database_type: databricks
+    connection_url: "${CONNECTION_URL}"
     execute_sql: false
+
+  execute_db_query:
+    _type: execute_db_query
+    database_type: databricks
+    connection_url: "${CONNECTION_URL}"
+    max_rows: 100
 
 llms:
   my_llm:
@@ -63,9 +71,21 @@ embedders:
     model_name: nvidia/llama-3.2-nv-embedqa-1b-v2
     api_key: "${NVIDIA_API_KEY}"
 
+retrievers:
+  my_retriever:
+    _type: milvus_retriever
+    uri: "${MILVUS_URI}"
+    connection_args:
+      user: "developer"
+      password: "${MILVUS_PASSWORD}"
+      db_name: "default"
+    embedding_model: my_embedder
+    content_field: text
+    use_async_client: true
+
 workflow:
-  _type: tool_calling_agent
-  tool_names: [text2sql]
+  _type: rewoo_agent
+  tool_names: [text2sql, execute_db_query]
   llm_name: my_llm
 ```
 
@@ -88,10 +108,10 @@ Generates SQL queries from natural language using:
 ### execute_db_query Function
 
 Executes SQL queries and returns formatted results:
-- Multiple database support
-- Automatic table prefix handling
+- Databricks SQL execution
 - Result limiting and pagination
 - Structured output format
+- SQLAlchemy Object Relational Mapper (ORM)-based connection
 
 ## Use Cases
 
@@ -105,7 +125,7 @@ Executes SQL queries and returns formatted results:
 - Python 3.11+
 - NVIDIA NeMo Agent Toolkit
 - Milvus (for vector storage)
-- Database connector (databricks-sql-connector, psycopg2, etc.)
+- Databricks SQL connector (included with package)
 
 ## Documentation
 

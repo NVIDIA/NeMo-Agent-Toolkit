@@ -33,11 +33,7 @@ functions:
 
     # Database configuration
     database_type: databricks
-    db_host: "${DB_HOST}"  # Databricks server hostname
-    db_password: "${DB_PASSWORD}"  # Databricks access token
-    http_path: "${HTTP_PATH}"  # Databricks HTTP path
-    db_catalog: "main"
-    db_schema: "default"
+    connection_url: "${CONNECTION_URL}"  # Database connection string
 
     # Vanna settings
     allow_llm_to_see_data: false
@@ -54,11 +50,7 @@ functions:
   execute_db_query:
     _type: execute_db_query
     database_type: databricks
-    db_host: "${DB_HOST}"  # Databricks server hostname
-    db_password: "${DB_PASSWORD}"  # Databricks access token
-    http_path: "${HTTP_PATH}"  # Databricks HTTP path
-    db_catalog: "main"
-    db_schema: "default"
+    connection_url: "${CONNECTION_URL}"  # Database connection string
     max_rows: 100
 
 # LLM configuration
@@ -134,7 +126,7 @@ retrievers:
     use_async_client: true
 
 workflow:
-  _type: nat.agent.rewoo_agent/rewoo_agent
+  _type: rewoo_agent
   tool_names:
     - text2sql
     - execute_db_query

@@ -27,6 +27,7 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.function import FunctionBaseConfig
+from nat.plugins.vanna.db_utils import RequiredSecretStr
 
 logger = logging.getLogger(__name__)
 
@@ -76,11 +77,7 @@ class ExecuteDBQueryConfig(FunctionBaseConfig, name="execute_db_query"):
     # Database configuration
     database_type: str = Field(default="databricks",
                                description="Database type (currently only 'databricks' is supported)")
-    db_host: str | None = Field(default=None, description="Database host (Databricks server hostname)")
-    db_password: str | None = Field(default=None, description="Database password (Databricks access token)")
-    db_catalog: str | None = Field(default=None, description="Database catalog")
-    db_schema: str | None = Field(default=None, description="Database schema")
-    http_path: str | None = Field(default=None, description="HTTP path for database connection (Databricks)")
+    connection_url: RequiredSecretStr = Field(description="Database connection string")
 
     # Query configuration
     max_rows: int = Field(default=100, description="Maximum rows to return")
@@ -138,14 +135,11 @@ async def execute_db_query(
                 )
                 return
 
-            if not all([
-                    config.db_host,
-                    config.http_path,
-                    config.db_password,
-            ]):
+            connection_url_value = config.connection_url.get_secret_value()
+            if not connection_url_value:
                 yield ExecuteDBQueryOutput(
                     success=False,
-                    failure_reason="Missing required connection parameters (db_host, http_path, db_password)",
+                    failure_reason="Missing required connection URL",
                     sql_query=sql_query,
                     dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
                 )
@@ -153,9 +147,7 @@ async def execute_db_query(
 
             connection = connect_to_database(
                 database_type=config.database_type,
-                host=config.db_host,
-                password=config.db_password,
-                http_path=config.http_path,
+                connection_url=connection_url_value,
             )
 
             if connection is None:
@@ -167,52 +159,44 @@ async def execute_db_query(
                 )
                 return
 
-            # Ensure connection is always closed
-            try:
-                # Execute query
-                df = await async_execute_query(connection,
-                                               sql_query,
-                                               config.db_catalog,
-                                               config.db_schema,
-                                               config.database_type)
+            # Execute query
+            query_result = await async_execute_query(connection, sql_query)
+            df = query_result.to_dataframe()
 
-                # Store original row count before limiting
-                original_row_count = len(df)
+            # Store original row count before limiting
+            original_row_count = len(df)
 
-                # Limit results
-                if original_row_count > config.max_rows:
-                    df = df.head(config.max_rows)
+            # Limit results
+            if original_row_count > config.max_rows:
+                df = df.head(config.max_rows)
 
-                # Create response
-                dataframe_info = DataFrameInfo(
-                    shape=[len(df), len(df.columns)] if not df.empty else [0, 0],
-                    dtypes=({
-                        str(k): str(v)
-                        for k, v in df.dtypes.to_dict().items()
-                    } if not df.empty else {}),
-                    columns=df.columns.tolist() if not df.empty else [],
-                )
+            # Create response
+            dataframe_info = DataFrameInfo(
+                shape=[len(df), len(df.columns)] if not df.empty else [0, 0],
+                dtypes=({
+                    str(k): str(v)
+                    for k, v in df.dtypes.to_dict().items()
+                } if not df.empty else {}),
+                columns=df.columns.tolist() if not df.empty else [],
+            )
 
-                response = ExecuteDBQueryOutput(
-                    success=True,
-                    columns=df.columns.tolist() if not df.empty else [],
-                    row_count=original_row_count,
-                    sql_query=sql_query,
-                    query_executed=sql_query,
-                    dataframe_records=df.to_dict("records") if not df.empty else [],
-                    dataframe_info=dataframe_info,
-                )
+            response = ExecuteDBQueryOutput(
+                success=True,
+                columns=df.columns.tolist() if not df.empty else [],
+                row_count=original_row_count,
+                sql_query=sql_query,
+                query_executed=sql_query,
+                dataframe_records=df.to_dict("records") if not df.empty else [],
+                dataframe_info=dataframe_info,
+            )
 
-                if original_row_count > config.max_rows:
-                    response.limited_to = config.max_rows
-                    response.truncated = True
+            if original_row_count > config.max_rows:
+                response.limited_to = config.max_rows
+                response.truncated = True
 
-                # Yield final result as ExecuteDBQueryOutput
-                yield response
-            finally:
-                # Always close connection
-                connection.close()
-                logger.debug("Database connection closed")
+            # Yield final result as ExecuteDBQueryOutput
+            yield response
+            # Note: Engine is left alive; connections are managed internally by SQLAlchemy pool
 
         except Exception as e:
             logger.error(f"Error executing SQL query: {e}")

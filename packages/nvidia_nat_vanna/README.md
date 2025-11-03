@@ -33,6 +33,7 @@ Production-ready text-to-SQL integration for NeMo Agent Toolkit using the Vanna 
 ```bash
 uv venv --python 3.12
 uv pip install -e packages/nvidia_nat_vanna
+source .venv/bin/activate
 ```
 
 ### Required Dependencies
@@ -66,9 +67,7 @@ Create a `.env` file:
 NVIDIA_API_KEY=nvapi-xxx
 
 # Database (Databricks)
-DB_HOST=your-workspace.cloud.databricks.com
-DB_PASSWORD=dapi-xxx
-HTTP_PATH=/sql/1.0/warehouses/abc123
+CONNECTION_URL=databricks://token:<token>@<db_host>:443/default?http_path=<http_path>&catalog=main&schema=default
 
 # Milvus
 MILVUS_URI=http://localhost:19530
@@ -90,36 +89,29 @@ general:
 functions:
   text2sql:
     _type: text2sql
-    llm_name: my_llm
-    embedder_name: my_embedder
+    llm_name: nim_llm
+    embedder_name: nim_embedder
+    milvus_retriever: milvus_retriever
 
     # Database config
     database_type: databricks
-    db_host: "${DB_HOST}"
-    db_password: "${DB_PASSWORD}"
-    http_path: "${HTTP_PATH}"
-    db_catalog: main
-    db_schema: default
+    connection_url: "${CONNECTION_URL}"
 
     # Vanna settings
     execute_sql: false
     train_on_startup: true
-    auto_training: true # Auto-train Vanna (auto-extract DDL and generate training data from database) or manually train Vanna (uses training data from db_schema.py
+    auto_training: true # Auto-train Vanna (auto-extract DDL and generate training data from database) or manually train Vanna (uses training data from training_db_schema.py)
     n_results: 5
     milvus_search_limit: 1000
 
   execute_db_query:
     _type: execute_db_query
     database_type: databricks
-    db_host: "${DB_HOST}"
-    db_password: "${DB_PASSWORD}"
-    http_path: "${HTTP_PATH}"
-    db_catalog: main
-    db_schema: default
+    connection_url: "${CONNECTION_URL}"
     max_rows: 100
 
 llms:
-  my_llm:
+  nim_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     api_key: "${NVIDIA_API_KEY}"
@@ -127,28 +119,43 @@ llms:
     temperature: 0.0
 
 embedders:
-  my_embedder:
+  nim_embedder:
     _type: nim
     model_name: nvidia/llama-3.2-nv-embedqa-1b-v2
     api_key: "${NVIDIA_API_KEY}"
     base_url: https://integrate.api.nvidia.com/v1
 
+retrievers:
+  milvus_retriever:
+    _type: milvus_retriever
+    uri: "${MILVUS_URI}"
+    connection_args:
+      user: "developer"
+      password: "${MILVUS_PASSWORD}"
+      db_name: "default"
+    embedding_model: nim_embedder
+    content_field: text
+    use_async_client: true
+
 workflow:
   _type: rewoo_agent
   tool_names: [text2sql, execute_db_query]
-  llm_name: my_llm
+  llm_name: nim_llm
   tool_call_max_retries: 3
 ```
 
-Update training materials:
-- `VANNA_TRAINING_DOCUMENTATION`
-- `VANNA_TRAINING_DDL`
-   - If auto_training is set to true, make sure `VANNA_ACTIVE_TABLES` is updated with the tables in your database. This ensures that automatic DDL extraction works properly.
-- `VANNA_TRAINING_EXAMPLES`
+Update training materials in `training_db_schema.py`:
+- `VANNA_TRAINING_DOCUMENTATION`: Add documentation about your tables and business logic
+- `VANNA_TRAINING_DDL`: Provide DDL statements for your database schema
+   - If `auto_training` is set to `true`, make sure `VANNA_ACTIVE_TABLES` is updated with the tables in your database. This ensures that automatic DDL extraction works properly.
+- `VANNA_TRAINING_EXAMPLES`: Provide question-SQL example pairs for few-shot learning
 
 #### 3.2 Create inference config `text2sql_config.yml`
-Set `train_on_startup` and `auto_training` to false.
-```
+
+Set `train_on_startup` to `false` for faster startup when using pre-trained data:
+```yaml
+functions:
+  text2sql:
     train_on_startup: false
     auto_training: false
 ```
@@ -161,7 +168,7 @@ See `text2sql_training_config.yml` and `text2sql_config.yml` for reference.
 # If auto_training is set to true, training takes approximately 7 minutes depending on endpoints and network conditions.
 uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_training_config.yml --input "Retrieve the total number of customers."
 
-# OOnce training is complete, use the inference configuration for faster generation.
+# Once training is complete, use the inference configuration for faster generation.
 uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "What is the total profit?"
 
 # Or programmatically
@@ -208,18 +215,13 @@ Results: 42 customers found
 |-----------|------|-------------|---------|
 | `llm_name` | str | LLM reference for SQL generation | Required |
 | `embedder_name` | str | Embedder reference for vector ops | Required |
+| `milvus_retriever` | str | Milvus retriever reference (must use `use_async_client=true`) | Required |
 | `database_type` | str | Database type (must be 'databricks') | "databricks" |
-| `db_host` | str | Database host (Databricks server hostname) | null |
-| `db_password` | str | Database password (Databricks access token) | null |
-| `http_path` | str | HTTP path for database connection | null |
-| `db_catalog` | str | Database catalog | null |
-| `db_schema` | str | Database schema | null |
+| `connection_url` | str | Database connection string (SQLAlchemy format) | Required |
 | `execute_sql` | bool | Execute SQL or just return query | false |
 | `allow_llm_to_see_data` | bool | Allow intermediate queries | false |
 | `train_on_startup` | bool | Train Vanna on startup | false |
-| `training_ddl` | list[str] | DDL statements for training | null |
-| `training_examples` | list[dict] | Question-SQL pairs | null |
-| `training_documentation` | list[str] | Contextual information | null |
+| `auto_training` | bool | Auto-extract DDL and generate training data | false |
 | `initial_prompt` | str | Custom system prompt | null |
 | `n_results` | int | Number of similar examples | 5 |
 | `sql_collection` | str | Milvus collection name for SQL examples | "vanna_sql" |
@@ -233,44 +235,67 @@ Results: 42 customers found
 
 **Default chat models**: `meta/llama-3.1-70b-instruct`
 
-#### Understanding `train_on_startup`
+#### Understanding `train_on_startup` and `auto_training`
 
-The `train_on_startup` parameter controls whether Vanna initializes and loads training data when the workflow starts:
+**`train_on_startup`**: Controls whether Vanna initializes and loads training data when the workflow starts:
 
-- **`true`**: Automatically creates Milvus collections with names specified by `sql_collection`, `ddl_collection`, and `doc_collection` parameters (defaults: "vanna_sql", "vanna_ddl", "vanna_documentation") and ingests all training data (`training_ddl`, `training_examples`, `training_documentation`) during workflow initialization. This ensures the vector store is populated and ready for similarity search before the first query is processed. Use this setting when you want to ensure fresh training data is loaded each time the workflow starts.
+- **`true`**: Automatically creates Milvus collections with names specified by `sql_collection`, `ddl_collection`, and `doc_collection` parameters (defaults: "vanna_sql", "vanna_ddl", "vanna_documentation") and ingests training data during workflow initialization. This ensures the vector store is populated and ready for similarity search before the first query is processed. Use this setting when you want to ensure fresh training data is loaded each time the workflow starts.
 
 - **`false`** (default): Skips automatic collection creation and training data ingestion. The workflow assumes Milvus collections already exist and contain previously trained data. Use this setting in production environments where training data is already loaded.
+
+**`auto_training`**: Controls the source of training data (only used when `train_on_startup=true`):
+
+- **`true`**: Automatically extracts DDL from the database using `VANNA_ACTIVE_TABLES` and generates question-SQL training pairs using the LLM. This is useful when you want to quickly bootstrap the system with your existing database schema.
+
+- **`false`** (default): Uses manually defined training data from `training_db_schema.py` (`VANNA_TRAINING_DDL`, `VANNA_TRAINING_EXAMPLES`, `VANNA_TRAINING_DOCUMENTATION`). This gives you full control over the training data quality.
 
 ### Database Configuration
 
 **Databricks:**
 ```yaml
 database_type: databricks
-db_host: "your-workspace.cloud.databricks.com"
-db_password: "${DB_PASSWORD}"  # Databricks access token
-http_path: "/sql/1.0/warehouses/abc123"
-db_catalog: "main"
-db_schema: "default"
+connection_url: "databricks://token:${DB_TOKEN}@${DB_HOST}:443/default?http_path=${HTTP_PATH}&catalog=main&schema=default"
 ```
 
-**Note**: Only Databricks is supported. The configuration requires:
-- `db_host`: Your Databricks workspace URL (server hostname)
-- `db_password`: Databricks personal access token or service principal token
-- `http_path`: Path to your SQL warehouse or compute cluster
-- `db_catalog`: Optional catalog name (defaults to "main")
-- `db_schema`: Optional schema name (defaults to "default")
+**Connection URL Format:**
+```
+databricks://token:<token>@<db_host>:443/default?http_path=<http_path>&catalog=<catalog>&schema=<schema>
+```
+
+**Parameters:**
+- `<token>`: Databricks personal access token or service principal token
+- `<db_host>`: Your Databricks workspace URL (such as `your-workspace.cloud.databricks.com`)
+- `<http_path>`: Path to your SQL warehouse or compute cluster (such as `/sql/1.0/warehouses/abc123`)
+- `<catalog>`: Catalog name (such as `main`)
+- `<schema>`: Schema name (such as `default`)
+
+**Example:**
+```bash
+CONNECTION_URL="databricks://token:dapi-xxx@your-workspace.cloud.databricks.com:443/default?http_path=/sql/1.0/warehouses/abc123&catalog=main&schema=default"
+```
+
+**Note**:
+- Only Databricks is currently supported. The connection uses SQLAlchemy with the `databricks-sql-connector` driver.
+- Other databases can be customized as following:
+```
+# PostgreSQL
+engine = create_engine("postgresql+psycopg://user:password@localhost:5432/mydb")
+
+# MS SQL Server
+engine = create_engine(
+    "mssql+pyodbc://user:password@server/db?driver=ODBC+Driver+18+for+SQL+Server"
+)
+# SQLite
+engine = create_engine("sqlite:///local.db")
+```
 
 ### Execute DB Query Function
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
 | `database_type` | str | Database type (must be 'databricks') | "databricks" |
-| `db_host` | str | Database host (Databricks server hostname) | Required |
-| `db_password` | str | Database password (Databricks access token) | Required |
-| `http_path` | str | HTTP path for connection (Databricks) | Required |
+| `connection_url` | str | Database connection string (SQLAlchemy format) | Required |
 | `max_rows` | int | Maximum rows to return | 100 |
-| `db_catalog` | str | Database catalog | null |
-| `db_schema` | str | Database schema | null |
 
 ### Milvus Configuration
 
@@ -286,42 +311,59 @@ retrievers:
       user: "developer"
       password: "${MILVUS_PASSWORD}"
       db_name: "default"
-    embedding_model: my_embedder
+    embedding_model: nim_embedder
     use_async_client: true
 ```
 
 ## Training Data
 
+Training data is defined in `training_db_schema.py` and is used when `train_on_startup=true`.
+
 ### DDL (Data Definition Language)
 
-Provide table schemas to help Vanna understand your database structure:
+Provide table schemas to help Vanna understand your database structure in `VANNA_TRAINING_DDL`:
 
-```yaml
-training_ddl:
-  - "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100), created_at TIMESTAMP)"
-  - "CREATE TABLE orders (id INT PRIMARY KEY, user_id INT, total DECIMAL(10,2))"
+```python
+VANNA_TRAINING_DDL: list[str] = [
+    "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100), created_at TIMESTAMP)",
+    "CREATE TABLE orders (id INT PRIMARY KEY, user_id INT, total DECIMAL(10,2))",
+]
 ```
 
 ### Documentation
 
-Add contextual information about your data:
+Add contextual information about your data in `VANNA_TRAINING_DOCUMENTATION`:
 
-```yaml
-training_documentation:
-  - "The users table contains customer information. The created_at field shows when they signed up."
-  - "Orders table tracks all purchases. The total field is in USD."
+```python
+VANNA_TRAINING_DOCUMENTATION: list[str] = [
+    "The users table contains customer information. The created_at field shows when they signed up.",
+    "Orders table tracks all purchases. The total field is in USD.",
+]
 ```
 
 ### Examples (Few-Shot Learning)
 
-Provide question-SQL pairs for better accuracy:
+Provide question-SQL pairs for better accuracy in `VANNA_TRAINING_EXAMPLES`:
 
-```yaml
-training_examples:
-  - question: "Who are our top 10 customers by revenue?"
-    sql: "SELECT u.name, SUM(o.total) as revenue FROM users u JOIN orders o ON u.id = o.user_id GROUP BY u.id ORDER BY revenue DESC LIMIT 10"
-  - question: "How many new users signed up last month?"
-    sql: "SELECT COUNT(*) FROM users WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')"
+```python
+VANNA_TRAINING_EXAMPLES: list[dict[str, str]] = [
+    {
+        "question": "Who are our top 10 customers by revenue?",
+        "sql": "SELECT u.name, SUM(o.total) as revenue FROM users u JOIN orders o ON u.id = o.user_id GROUP BY u.id ORDER BY revenue DESC LIMIT 10",
+    },
+    {
+        "question": "How many new users signed up last month?",
+        "sql": "SELECT COUNT(*) FROM users WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')",
+    },
+]
+```
+
+### Active Tables (for Auto-Training)
+
+When `auto_training=true`, specify which tables to extract DDL from in `VANNA_ACTIVE_TABLES`:
+
+```python
+VANNA_ACTIVE_TABLES = ['catalog.schema.table_a', 'catalog.schema.table_b']
 ```
 
 ## Advanced Usage
@@ -338,7 +380,7 @@ You can customize the planning and solving prompts:
 workflow:
   _type: rewoo_agent
   tool_names: [text2sql, execute_db_query]
-  llm_name: my_llm
+  llm_name: nim_llm
   tool_call_max_retries: 3
   additional_planner_instructions: |
     When generating SQL queries, prioritize performance and accuracy.
@@ -353,7 +395,7 @@ For alternative agent types (such as ReAct for multi-turn conversations):
 workflow:
   _type: react_agent
   tool_names: [text2sql, execute_db_query]
-  llm_name: my_llm
+  llm_name: nim_llm
   max_history: 10
 ```
 
@@ -458,7 +500,8 @@ Error: Failed to connect to database
 - Verify catalog and schema names
 
 **No training data found:**
-- Vanna needs examples to work. Add at least 3-5 training examples in your config
+- Vanna needs examples to work. Set `train_on_startup: true` and add at least 3-5 training examples in `training_db_schema.py`
+- Or use `auto_training: true` to automatically generate training data from your database
 
 ### Known Limitations
 
@@ -483,7 +526,7 @@ nvidia_nat_vanna/
 │               ├── execute_db_query.py # Query execution function
 │               ├── vanna_utils.py      # Vanna framework integration
 │               ├── db_utils.py         # Database utilities
-│               └── milvus_utils.py     # Milvus client utilities
+│               └── training_db_schema.py  # Training data and prommpt
 ```
 
 ## Contributing

@@ -15,12 +15,31 @@
 
 import logging
 import re
+import typing
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import PlainSerializer
+from pydantic import SecretStr
 
 logger = logging.getLogger(__name__)
+
+
+def _serialize_secret(v: SecretStr) -> str:
+    """Serialize SecretStr to plain string for required secret fields."""
+    return v.get_secret_value()
+
+
+# Required SecretStr that follows OptionalSecretStr pattern
+RequiredSecretStr = typing.Annotated[SecretStr, PlainSerializer(_serialize_secret)]
+
+
+class SupportedDatabase(str, Enum):
+    """Supported database types for Vanna text-to-SQL."""
+
+    DATABRICKS = "databricks"
 
 
 class QueryResult(BaseModel):
@@ -121,42 +140,29 @@ def extract_sql_from_message(sql_query: str | Any) -> str:
     return sql_query
 
 
-def connect_to_databricks(server_hostname: str, http_path: str, access_token: str) -> Any:
+def connect_to_databricks(connection_url: str) -> Any:
     """Connect to Databricks SQL Warehouse.
 
     Args:
-        server_hostname: Databricks server hostname
-        http_path: HTTP path to SQL warehouse
-        access_token: Access token for authentication
+        connection_url: Database connection string
 
     Returns:
         Databricks connection object
     """
     try:
-        from databricks import sql
+        from sqlalchemy import create_engine
 
-        connection = sql.connect(
-            server_hostname=server_hostname,
-            http_path=http_path,
-            access_token=access_token,
-        )
+        connection = create_engine(url=connection_url, echo=False)
         logger.info("Connected to Databricks")
         return connection
-    except ImportError:
-        logger.error("databricks-sql-connector not installed")
-        raise
     except Exception as e:
         logger.error(f"Failed to connect to Databricks: {e}")
         raise
 
 
 def connect_to_database(
-    database_type: str,
-    host: str | None = None,
-    port: int | None = None,
-    database: str | None = None,
-    username: str | None = None,
-    password: str | None = None,
+    database_type: str | SupportedDatabase,
+    connection_url: str,
     **kwargs,
 ) -> Any:
     """Connect to a database based on type.
@@ -165,155 +171,122 @@ def connect_to_database(
 
     Args:
         database_type: Type of database (currently only 'databricks' is supported)
-        host: Database host
-        port: Database port
-        database: Database name
-        username: Username for authentication
-        password: Password for authentication
+        connection_url: Database connection string
         **kwargs: Additional database-specific parameters
 
     Returns:
         Database connection object
 
     Raises:
-        ValueError: If database_type is not 'databricks'
+        ValueError: If database_type is not supported
     """
-    database_type = database_type.lower()
-
-    if database_type == "databricks":
-        return connect_to_databricks(
-            server_hostname=kwargs.get("server_hostname", host),
-            http_path=kwargs.get("http_path", ""),
-            access_token=kwargs.get("access_token", password),
-        )
+    # Convert string to enum for validation
+    if isinstance(database_type, str):
+        try:
+            db_type = SupportedDatabase(database_type.lower())
+        except ValueError:
+            supported = ", ".join([f"'{db.value}'" for db in SupportedDatabase])
+            msg = f"Unsupported database type: '{database_type}'. Supported types: {supported}"
+            raise ValueError(msg) from None
     else:
-        msg = f"Only Databricks is currently supported. Got database_type: {database_type}"
-        raise ValueError(msg)
+        db_type = database_type
+
+    # Route to appropriate database connector
+    if db_type == SupportedDatabase.DATABRICKS:
+        return connect_to_databricks(connection_url=connection_url)
+
+    # This should never be reached if enum is properly defined
+    msg = f"Database type '{db_type.value}' has no connector implementation"
+    raise NotImplementedError(msg)
 
 
-def execute_query(
-    connection: Any,
-    query: str,
-    catalog: str | None = None,
-    schema: str | None = None,
-    database_type: str | None = None,
-) -> QueryResult:
+def execute_query(connection: Any, query: str) -> QueryResult:
     """Execute a query and return results.
 
     Args:
         connection: Database connection object
         query: SQL query to execute
-        catalog: Optional catalog to use (Databricks only)
-        schema: Optional schema to use
-        database_type: Type of database for proper catalog/schema handling
 
     Returns:
         QueryResult object containing results and column names
     """
+    from sqlalchemy import text
     try:
-        with connection.cursor() as cursor:
-            # Set catalog and schema for Databricks
-            if database_type and database_type.lower() == "databricks":
-                if catalog:
-                    cursor.execute(f"USE CATALOG {catalog}")
-                if schema:
-                    cursor.execute(f"USE SCHEMA {schema}")
-
+        with connection.connect() as conn:
             logger.info(f"Executing query: {query}")
-            cursor.execute(query)
+            result = conn.execute(text(query))
+            rows = result.fetchall()
+            columns = list(result.keys()) if result.keys() else []
 
-            results = cursor.fetchall()
-            columns = ([desc[0] for desc in cursor.description] if cursor.description else [])
-
-            logger.info(f"Query completed, retrieved {len(results)} rows")
-            return QueryResult(results=results, column_names=columns)
+            logger.info(f"Query completed, retrieved {len(rows)} rows")
+            return QueryResult(results=rows, column_names=columns)
 
     except Exception as e:
         logger.error(f"Error executing query: {e}")
         raise
 
 
-async def async_execute_query(
-    connection: Any,
-    query: str,
-    catalog: str | None = None,
-    schema: str | None = None,
-    database_type: str | None = None,
-):
-    """Execute query asynchronously and return DataFrame.
+async def async_execute_query(connection: Any, query: str) -> QueryResult:
+    """Execute query asynchronously and return QueryResult.
 
     Args:
         connection: Database connection object
         query: SQL query to execute
-        catalog: Optional catalog to use (Databricks)
-        schema: Optional schema to use
-        database_type: Type of database for proper catalog/schema handling
 
     Returns:
-        DataFrame with query results
+        QueryResult object containing results and column names
     """
     import asyncio
 
     # Run synchronous query in executor
     loop = asyncio.get_event_loop()
-    query_result = await loop.run_in_executor(None, execute_query, connection, query, catalog, schema, database_type)
+    query_result = await loop.run_in_executor(None, execute_query, connection, query)
 
-    return query_result.to_dataframe()
+    return query_result
 
 
 def setup_vanna_db_connection(
     vn: Any,
-    database_type: str,
-    host: str | None = None,
-    port: int | None = None,
-    database: str | None = None,
-    username: str | None = None,
-    password: str | None = None,
-    catalog: str | None = None,
-    schema: str | None = None,
+    database_type: str | SupportedDatabase,
+    connection_url: str,
     **kwargs,
-) -> Any:
+) -> None:
     """Set up database connection for Vanna instance.
 
     Currently only Databricks is supported.
 
+    The database Engine is stored in the Vanna instance (vn.db_engine) and will
+    persist for the lifetime of the Vanna singleton. The Engine will be disposed
+    when the Vanna singleton is reset.
+
     Args:
         vn: Vanna instance
         database_type: Type of database (currently only 'databricks' is supported)
-        host: Database host
-        port: Database port
-        database: Database name
-        username: Username
-        password: Password
-        catalog: Catalog name (for Databricks)
-        schema: Schema name
+        connection_url: Database connection string
         **kwargs: Additional connection parameters
 
-    Returns:
-        Database connection object (must be closed by caller)
-
     Raises:
-        ValueError: If database_type is not 'databricks'
+        ValueError: If database_type is not supported
     """
     import pandas as pd
 
-    # Validate database type
-    if database_type.lower() != "databricks":
-        msg = f"Only Databricks is currently supported. Got database_type: {database_type}"
-        raise ValueError(msg)
-
-    # Connect to database
-    connection = connect_to_databricks(
-        server_hostname=kwargs.get("server_hostname", host),
-        http_path=kwargs.get("http_path", ""),
-        access_token=kwargs.get("access_token", password),
-    )
+    # Reuse existing engine if already connected to same URL
+    if hasattr(vn, "db_engine") and vn.db_engine is not None:
+        logger.info("Reusing existing database engine from Vanna instance")
+        engine = vn.db_engine
+    else:
+        # Connect to database (validation handled by connect_to_database)
+        engine = connect_to_database(database_type=database_type, connection_url=connection_url)
+        # Store engine in Vanna instance - lifecycle matches singleton
+        vn.db_engine = engine
+        logger.info(f"Created and stored database engine in Vanna instance for {database_type}")
 
     # Define async run_sql function for Vanna
     async def run_sql(sql_query: str) -> pd.DataFrame:
         """Execute SQL asynchronously and return DataFrame."""
         try:
-            return await async_execute_query(connection, sql_query, catalog, schema, database_type)
+            query_result = await async_execute_query(engine, sql_query)
+            return query_result.to_dataframe()
         except Exception as e:
             logger.error(f"Error executing SQL: {e}")
             raise
@@ -323,4 +296,3 @@ def setup_vanna_db_connection(
     vn.run_sql_is_set = True
 
     logger.info(f"Database connection configured for {database_type}")
-    return connection

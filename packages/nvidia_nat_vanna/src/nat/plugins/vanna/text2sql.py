@@ -29,6 +29,7 @@ from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import RetrieverRef
 from nat.data_models.function import FunctionBaseConfig
+from nat.plugins.vanna.db_utils import RequiredSecretStr
 
 logger = logging.getLogger(__name__)
 
@@ -62,11 +63,7 @@ class Text2SQLConfig(FunctionBaseConfig, name="text2sql"):
     # Database configuration
     database_type: str = Field(default="databricks",
                                description="Database type (currently only 'databricks' is supported)")
-    db_host: str | None = Field(default=None, description="Database host (Databricks server hostname)")
-    db_password: str | None = Field(default=None, description="Database password (Databricks access token)")
-    db_catalog: str | None = Field(default=None, description="Database catalog")
-    db_schema: str | None = Field(default=None, description="Database schema")
-    http_path: str | None = Field(default=None, description="HTTP path for database connection (Databricks)")
+    connection_url: RequiredSecretStr = Field(description="Database connection string")
 
     # Vanna Milvus configuration
     milvus_search_limit: int = Field(default=1000,
@@ -108,9 +105,6 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
     from nat.plugins.vanna.vanna_utils import train_vanna
 
     logger.info("Initializing Text2SQL function")
-
-    # Track database connection for cleanup
-    db_connection = None
 
     # Check if singleton exists to avoid unnecessary client creation
     existing_instance = VannaSingleton.instance()
@@ -160,15 +154,11 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
         msg = f"Only Databricks is currently supported. Got database_type: {config.database_type}"
         raise ValueError(msg)
 
-    # Setup database connection
-    db_connection = setup_vanna_db_connection(
+    # Setup database connection (Engine stored in vanna_instance.db_engine)
+    setup_vanna_db_connection(
         vn=vanna_instance,
         database_type=config.database_type,
-        host=config.db_host,
-        password=config.db_password,
-        catalog=config.db_catalog,
-        schema=config.db_schema,
-        http_path=config.http_path,
+        connection_url=config.connection_url.get_secret_value(),
     )
 
     # Train on startup if configured
@@ -252,19 +242,8 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
     if config.execute_sql:
         description += " Also executes queries and returns results."
 
-    try:
-        yield FunctionInfo.create(
-            single_fn=_generate_sql,
-            stream_fn=_generate_sql_stream,
-            description=description,
-        )
-    finally:
-        logger.info("Cleaning up Text2SQL function")
-
-        # Close database connection
-        if db_connection is not None:
-            try:
-                db_connection.close()
-                logger.info("Closed database connection")
-            except Exception as e:
-                logger.warning(f"Error closing database connection: {e}")
+    yield FunctionInfo.create(
+        single_fn=_generate_sql,
+        stream_fn=_generate_sql_stream,
+        description=description,
+    )
