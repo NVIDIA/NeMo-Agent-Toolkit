@@ -103,15 +103,17 @@ docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-d
 1. Click **Create Client** in the demo UI.
 2. Fill the form exactly as below and click **Submit**:
 
-| Field                      | Value                                                 |
-|----------------------------|-------------------------------------------------------|
-| Client Name                | `test`                                                |
-| Client URI                 | `https://test.com`                                    |
-| Allowed Scope              | `openid profile email`                                |
-| Redirect URIs              | `http://localhost:8000/auth/redirect`                 |
-| Allowed Grant Types        | `authorization_code` and `refresh_token` on new lines |
-| Allowed Response Types     | `code`                                                |
-| Token Endpoint Auth Method | `client_secret_post`                                  |
+   | Field                      | Value                                                 |
+   |----------------------------|-------------------------------------------------------|
+   | Client Name                | `test`                                                |
+   | Client URI                 | `https://test.com`                                    |
+   | Allowed Scope              | `openid profile email`                                |
+   | Redirect URIs              | `http://localhost:8000/auth/redirect`                 |
+   | Allowed Grant Types        | `authorization_code` and `refresh_token` on new lines |
+   | Allowed Response Types     | `code`                                                |
+   | Token Endpoint Auth Method | `client_secret_post`                                  |
+
+   Ensure all values are entered correctly as the authorization server uses this information to validate redirect URIs, client credentials, and grant types during the OAuth token exchange. Incorrect entries may cause the OAuth flow to fail. If you encounter any errors, double-check that the information entered matches the expected configuration.
 
 3. Copy the generated **Client ID** and **Client Secret** – you’ll need them in your agent’s config.
 
