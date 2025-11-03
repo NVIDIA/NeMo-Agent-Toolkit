@@ -244,8 +244,7 @@ When processes are used Dask workers, standard output and standard error from th
           "role": "user",
           "content":  "Is 4 + 4 greater than the current hour of the day"
         }
-      ],
-      "use_knowledge_base": true
+      ]
     }'
     ```
 - **HTTP Response Example:**
@@ -286,8 +285,7 @@ When processes are used Dask workers, standard output and standard error from th
           "role": "user",
           "content":  "Is 4 + 4 greater than the current hour of the day"
         }
-      ],
-      "use_knowledge_base": true
+      ]
     }'
     ```
 - **HTTP Intermediate Step Example:**
