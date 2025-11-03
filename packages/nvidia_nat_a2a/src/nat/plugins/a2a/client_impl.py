@@ -45,6 +45,7 @@ class A2AClientFunctionGroup(FunctionGroup):
         # Create simple A2A client without auth
         self._client = A2ABaseClient(
             base_url=base_url,
+            agent_card_path=config.agent.agent_card_path,
             task_timeout=config.agent.task_timeout,
         )
 

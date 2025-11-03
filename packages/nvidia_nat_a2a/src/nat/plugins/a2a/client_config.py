@@ -42,21 +42,14 @@ class A2AAgentConfig(BaseModel):
         description="Base URL of the A2A agent",
     )
 
+    agent_card_path: str = Field(
+        default='/.well-known/agent-card.json',
+        description="Path to the agent card",
+    )
+
     task_timeout: timedelta = Field(
         default=timedelta(seconds=300),
         description="Maximum time to wait for task completion",
-    )
-
-    retry_max_attempts: int = Field(
-        default=3,
-        ge=0,
-        description="Maximum number of retry attempts for failed requests",
-    )
-
-    retry_backoff: float = Field(
-        default=1.5,
-        gt=1.0,
-        description="Exponential backoff multiplier for retries",
     )
 
     # Authentication configuration
