@@ -17,7 +17,7 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Vanna
 
-Vanna-based Text-to-SQL integration for NeMo Agent Toolkit.
+Vanna-based Text-to-SQL integration for NeMo Agent toolkit.
 
 ## Overview
 
@@ -123,7 +123,7 @@ Executes SQL queries and returns formatted results:
 ## Requirements
 
 - Python 3.11+
-- NVIDIA NeMo Agent Toolkit
+- NVIDIA NeMo Agent toolkit
 - Milvus (for vector storage)
 - Databricks SQL connector (included with package)
 
@@ -133,4 +133,4 @@ Full documentation: https://docs.nvidia.com/nemo/agent-toolkit/latest/
 
 ## License
 
-Part of NVIDIA NeMo Agent Toolkit. See repository for license details.
+Part of NVIDIA NeMo Agent toolkit. See repository for license details.

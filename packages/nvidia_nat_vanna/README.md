@@ -17,7 +17,7 @@ limitations under the License.
 
 # nvidia-nat-vanna
 
-Production-ready text-to-SQL integration for NeMo Agent Toolkit using the Vanna framework with Databricks support and vector-based few-shot learning.
+Production-ready text-to-SQL integration for NVIDIA NeMo Agent toolkit using the Vanna framework with Databricks support and vector-based few-shot learning.
 
 ## Features
 
@@ -164,7 +164,7 @@ See `text2sql_training_config.yml` and `text2sql_config.yml` for reference.
 ### 4. Run the Workflow
 
 ```bash
-# Using NeMo Agent Toolkit CLI
+# Using NeMo Agent toolkit CLI
 # If auto_training is set to true, training takes approximately 7 minutes depending on endpoints and network conditions.
 uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_training_config.yml --input "Retrieve the total number of customers."
 
@@ -463,7 +463,7 @@ general:
 ```
 
 Other features include:
-- Full integration with NeMo Agent Toolkit's intermediate step tracking system
+- Full integration with NeMo Agent toolkit's intermediate step tracking system
 - Better UI Display - Front-ends can now properly render intermediate steps
 - Parent Tracking - Each function call has a parent_id to group related steps
 
@@ -521,7 +521,7 @@ nvidia_nat_vanna/
 │   └── nat/
 │       └── plugins/
 │           └── vanna/
-│               ├── register.py         # NeMo Agent Toolkit component registration
+│               ├── register.py         # NeMo Agent toolkit component registration
 │               ├── text2sql.py         # Text-to-SQL function
 │               ├── execute_db_query.py # Query execution function
 │               ├── vanna_utils.py      # Vanna framework integration
@@ -531,15 +531,15 @@ nvidia_nat_vanna/
 
 ## Contributing
 
-Contributions are welcome! Please see the main NeMo Agent Toolkit repository for contribution guidelines.
+Contributions are welcome! Please see the main NeMo Agent toolkit repository for contribution guidelines.
 
 ## License
 
-This package is part of the NVIDIA NeMo Agent Toolkit and follows the same license.
+This package is part of the NVIDIA NeMo Agent toolkit and follows the same license.
 
 ## Support
 
 For questions and support:
 - GitHub Issues: https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues
 - Documentation: https://docs.nvidia.com/nemo/agent-toolkit/latest/
-- Discord: Join the NeMo Agent Toolkit community Discord
+- Discord: Join the NeMo Agent toolkit community Discord
