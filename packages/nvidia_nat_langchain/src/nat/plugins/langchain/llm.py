@@ -144,25 +144,88 @@ async def aws_sagemaker_langchain(llm_config: AWSSageMakerModelConfig, _builder:
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    # Create a default content handler if not provided
-    class DefaultContentHandler(LLMContentHandler):
+    # Create a default content handler for NIM-based endpoints
+    class NIMContentHandler(LLMContentHandler):
         content_type = "application/json"
         accepts = "application/json"
 
         def transform_input(self, prompt: str, model_kwargs: dict) -> bytes:
             import json
-            # Format for Mistral models on SageMaker JumpStart
-            # These models expect specific parameter names
+            # Format for NVIDIA NIM models on SageMaker
+            # NIM models expect OpenAI-compatible message format
+
+            # Parse the prompt string back into messages
+            # The wrapper formats messages as "System: ...\nUser: ...\n"
+            messages = []
+
+            # Split by the role prefixes
+            lines = prompt.split('\n')
+            current_role = None
+            current_content = []
+
+            for line in lines:
+                if line.startswith('System: '):
+                    if current_role and current_content:
+                        messages.append({
+                            "role": current_role,
+                            "content": '\n'.join(current_content).strip()
+                        })
+                    current_role = "system"
+                    current_content = [line[8:]]  # Remove "System: " prefix
+                elif line.startswith('User: '):
+                    if current_role and current_content:
+                        messages.append({
+                            "role": current_role,
+                            "content": '\n'.join(current_content).strip()
+                        })
+                    current_role = "user"
+                    current_content = [line[6:]]  # Remove "User: " prefix
+                elif line.startswith('Assistant: '):
+                    if current_role and current_content:
+                        messages.append({
+                            "role": current_role,
+                            "content": '\n'.join(current_content).strip()
+                        })
+                    current_role = "assistant"
+                    current_content = [line[11:]]  # Remove "Assistant: " prefix
+                elif current_role:
+                    current_content.append(line)
+
+            # Add the last message
+            if current_role and current_content:
+                messages.append({
+                    "role": current_role,
+                    "content": '\n'.join(current_content).strip()
+                })
+
+            # If no messages were parsed (shouldn't happen), create a simple user message
+            if not messages:
+                messages = [{"role": "user", "content": prompt}]
+
             input_dict = {
-                "inputs": prompt,
-                "parameters": {
-                    "max_new_tokens": model_kwargs.get("max_new_tokens", 1024),
-                    "temperature": model_kwargs.get("temperature", 0.5),
-                    "top_p": model_kwargs.get("top_p", 1.0),
-                    "do_sample": True,
-                }
+                "messages": messages,
+                "max_tokens": model_kwargs.get("max_new_tokens", model_kwargs.get("max_tokens", 1024)),
+                "temperature": model_kwargs.get("temperature", 0.0),
+                "top_p": model_kwargs.get("top_p", 1.0),
+                "stream": False,  # Explicitly disable streaming
             }
-            return json.dumps(input_dict).encode('utf-8')
+
+            # Model parameter is REQUIRED for NIM endpoints
+            # If not provided in model_kwargs, we need to raise a clear error
+            if "model" in model_kwargs:
+                input_dict["model"] = model_kwargs["model"]
+            else:
+                raise ValueError(
+                    "The 'model' parameter is required for NIM-based SageMaker endpoints. "
+                    "Please add it to your config under model_kwargs. Example:\n"
+                    "  model_kwargs:\n"
+                    "    model: \"your-model-name-here\"\n"
+                    "Check your SageMaker endpoint documentation or NIM deployment to find the correct model name."
+                )
+
+            payload = json.dumps(input_dict).encode('utf-8')
+            # logger.info(f"Sending request to SageMaker NIM endpoint: {json.dumps(input_dict, indent=2)}")
+            return payload
 
         def transform_output(self, output: bytes) -> str:
             import json
@@ -174,22 +237,34 @@ async def aws_sagemaker_langchain(llm_config: AWSSageMakerModelConfig, _builder:
 
             response_json = json.loads(output_bytes.decode("utf-8"))
 
-            # Handle different response formats from SageMaker
-            # Format 1: List with generated_text
-            if isinstance(response_json, list) and len(response_json) > 0:
-                if isinstance(response_json[0], dict) and "generated_text" in response_json[0]:
-                    return response_json[0]["generated_text"]
-            # Format 2: Dict with generated_text
-            elif isinstance(response_json, dict):
-                if "generated_text" in response_json:
+            # Log the response for debugging
+            #logger.info(f"Received response from SageMaker NIM endpoint: {json.dumps(response_json, indent=2)}")
+
+            # Handle NIM/OpenAI-compatible response format
+            if isinstance(response_json, dict):
+                # Check for error response
+                if "error" in response_json:
+                    logger.error(f"Error response from endpoint: {json.dumps(response_json, indent=2)}")
+                    error_msg = response_json.get("error", {})
+                    if isinstance(error_msg, dict):
+                        raise ValueError(f"Endpoint error: {error_msg.get('message', str(error_msg))}")
+                    else:
+                        raise ValueError(f"Endpoint error: {error_msg}")
+
+                # Format 1: OpenAI-style choices array (NIM format)
+                if "choices" in response_json and len(response_json["choices"]) > 0:
+                    choice = response_json["choices"][0]
+                    if "message" in choice:
+                        return choice["message"].get("content", "")
+                    elif "text" in choice:
+                        return choice["text"]
+                # Format 2: Direct content field
+                elif "content" in response_json:
+                    return response_json["content"]
+                # Format 3: Generated text field (fallback)
+                elif "generated_text" in response_json:
                     return response_json["generated_text"]
-                # Format 3: Direct output in a list
-                elif isinstance(response_json.get("outputs"), list) and len(response_json["outputs"]) > 0:
-                    return response_json["outputs"][0]
-                # Format 4: Single output field
-                elif "output" in response_json:
-                    return response_json["output"]
-            # Format 5: Plain string
+            # Format 4: Plain string
             elif isinstance(response_json, str):
                 return response_json
 
@@ -216,7 +291,7 @@ async def aws_sagemaker_langchain(llm_config: AWSSageMakerModelConfig, _builder:
 
     base_llm = SagemakerEndpoint(
         **config_dict,
-        content_handler=DefaultContentHandler(),
+        content_handler=NIMContentHandler(),
         model_kwargs=endpoint_kwargs,
     )
 
@@ -241,9 +316,12 @@ async def aws_sagemaker_langchain(llm_config: AWSSageMakerModelConfig, _builder:
             # Use _call instead of invoke to avoid nested callback issues
             try:
                 text_response = self.llm._call(prompt, stop=stop, **kwargs)
-            except AttributeError:
-                # Fallback to invoke if _call not available
-                text_response = self.llm.invoke(prompt, stop=stop, config={"callbacks": []}, **kwargs)
+            except Exception as e:
+                logger.error(f"Error calling SageMaker endpoint: {e}")
+                # Try to extract more details from the error
+                if hasattr(e, 'response'):
+                    logger.error(f"Error response: {e.response}")
+                raise
             # Convert to ChatGeneration
             message = AIMessage(content=text_response)
             generation = ChatGeneration(message=message)
@@ -256,34 +334,39 @@ async def aws_sagemaker_langchain(llm_config: AWSSageMakerModelConfig, _builder:
             # Use _acall instead of ainvoke to avoid nested callback issues
             try:
                 text_response = await self.llm._acall(prompt, stop=stop, **kwargs)
-            except AttributeError:
-                # Fallback to ainvoke if _acall not available
-                text_response = await self.llm.ainvoke(prompt, stop=stop, config={"callbacks": []}, **kwargs)
+            except Exception as e:
+                logger.error(f"Error calling SageMaker endpoint: {e}")
+                # Try to extract more details from the error
+                if hasattr(e, 'response'):
+                    logger.error(f"Error response: {e.response}")
+                raise
             # Convert to ChatGeneration
             message = AIMessage(content=text_response)
             generation = ChatGeneration(message=message)
             return ChatResult(generations=[generation])
 
         def _messages_to_prompt(self, messages) -> str:
-            """Convert a list of messages to a string prompt using Mistral format."""
+            """Convert a list of messages to a string prompt.
+
+            For NIM models, we create a conversational format without special tags.
+            The actual message formatting will be handled by the content handler.
+            """
             prompt_parts = []
 
-            # Mistral specific formatting
             for message in messages:
                 if isinstance(message, SystemMessage):
-                    # Mistral models handle system prompts at the beginning
-                    prompt_parts.append(f"[INST] {message.content} [/INST]")
+                    # Include system message as context
+                    prompt_parts.append(f"System: {message.content}")
                 elif isinstance(message, HumanMessage):
-                    prompt_parts.append(f"[INST] {message.content} [/INST]")
+                    prompt_parts.append(f"User: {message.content}")
                 elif isinstance(message, AIMessage):
-                    # AI responses don't need special formatting
-                    prompt_parts.append(message.content)
+                    prompt_parts.append(f"Assistant: {message.content}")
                 elif isinstance(message, BaseMessage):
-                    prompt_parts.append(f"[INST] {message.content} [/INST]")
+                    prompt_parts.append(f"User: {message.content}")
                 else:
                     prompt_parts.append(str(message))
 
-            # Join with newlines and ensure proper formatting
+            # Join with newlines
             return "\n".join(prompt_parts)
 
     client = SageMakerChatWrapper(llm=base_llm)

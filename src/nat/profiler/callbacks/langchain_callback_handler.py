@@ -154,7 +154,10 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
 
         model_name = ""
         try:
-            model_name = metadata["ls_model_name"] if metadata else kwargs.get("metadata")["ls_model_name"]
+            if metadata and "ls_model_name" in metadata:
+                model_name = metadata["ls_model_name"]
+            elif kwargs.get("metadata") and "ls_model_name" in kwargs.get("metadata", {}):
+                model_name = kwargs["metadata"]["ls_model_name"]
         except Exception as e:
             logger.exception("Error getting model name: %s", e)
 

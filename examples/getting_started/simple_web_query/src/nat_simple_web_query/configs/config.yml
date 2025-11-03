@@ -28,11 +28,6 @@ llms:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
-  sagemaker_llm:
-    _type: aws_sagemaker
-    endpoint_name: jumpstart-dft-hf-llm-mistral-small-20251028-215914
-    max_tokens: 1024
-    temperature: 0.0
 
 embedders:
   nv-embedqa-e5-v5:
@@ -42,7 +37,7 @@ embedders:
 workflow:
   _type: react_agent
   tool_names: [webpage_query, current_datetime]
-  llm_name: sagemaker_llm
+  llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 5
   system_prompt: |
