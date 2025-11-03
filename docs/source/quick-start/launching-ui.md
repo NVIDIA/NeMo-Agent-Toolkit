@@ -71,8 +71,7 @@ curl --request POST \
   --url http://localhost:8000/generate \
   --header 'Content-Type: application/json' \
   --data '{
-    "input_message": "Is 4 + 4 greater than the current hour of the day?",
-    "use_knowledge_base": true
+    "input_message": "Is 4 + 4 greater than the current hour of the day?"
 }'
 ```
 
