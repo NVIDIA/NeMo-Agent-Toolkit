@@ -151,10 +151,10 @@ nvidia_haystack = [
   "nvidia-haystack~=0.3.0",
 ]
 litellm = [
-  "litellm==1.74.9"
+  "litellm==1.74.9",
 ]
 openai = [
-  "openai~=1.106"
+  "openai~=1.106",
 ]
 
 [tool.uv]
@@ -223,6 +223,7 @@ exclude = ["packages/compat"]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
   "asgi-lifespan~=2.1",
+  "beautifulsoup4~=4.13",
   "httpx-sse~=0.4",
   "ipython~=8.31",
   "myst-parser~=4.0",
@@ -318,7 +319,7 @@ select = [
   # Enable partial pylint support
   "PL",
   # Enable pyupgrade support
-  "UP"
+  "UP",
 ]
 
 extend-ignore = [
