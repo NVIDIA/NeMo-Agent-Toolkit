@@ -33,6 +33,7 @@ class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
         url: The base URL of the A2A agent (e.g., https://agent.example.com)
         agent_card_path: Path to the agent card (default: /.well-known/agent-card.json)
         task_timeout: Maximum time to wait for task completion (default: 300 seconds)
+        include_skills_in_description: Include skill details in high-level function description (default: True)
         auth_provider: Optional reference to NAT auth provider for authentication
     """
 
@@ -49,6 +50,13 @@ class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
     task_timeout: timedelta = Field(
         default=timedelta(seconds=300),
         description="Maximum time to wait for task completion",
+    )
+
+    include_skills_in_description: bool = Field(
+        default=True,
+        description="Include skill details in the high-level agent function description. "
+        "Set to False for shorter descriptions (useful for token optimization). "
+        "Skills are always available via get_skills() helper.",
     )
 
     auth_provider: str | AuthenticationRef | None = Field(default=None,

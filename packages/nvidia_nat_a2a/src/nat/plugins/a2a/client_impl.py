@@ -37,6 +37,7 @@ class A2AClientFunctionGroup(FunctionGroup):
         super().__init__(config=config)
         self._builder = builder
         self._client: A2ABaseClient | None = None
+        self._include_skills_in_description = config.include_skills_in_description
 
     async def __aenter__(self):
         """Initialize the A2A client and register functions."""
@@ -138,15 +139,21 @@ class A2AClientFunctionGroup(FunctionGroup):
         """Create description for the main agent function."""
         description = f"{agent_card.description}\n\n"
 
-        if agent_card.skills:
+        # Conditionally include skills based on configuration
+        if self._include_skills_in_description and agent_card.skills:
             description += "**Capabilities:**\n"
             for skill in agent_card.skills:
                 description += f"\n• **{skill.name}**: {skill.description}"
                 if skill.examples:
                     examples = skill.examples[:2]  # Limit to 2 examples
                     description += f"\n  Examples: {', '.join(examples)}"
+            description += "\n\n"
+        elif agent_card.skills:
+            # Brief mention that skills are available
+            description += f"**{len(agent_card.skills)} capabilities available.** "
+            description += "Use get_skills() for detailed information.\n\n"
 
-        description += "\n\n**Usage:** Send natural language queries to interact with this agent."
+        description += "**Usage:** Send natural language queries to interact with this agent."
 
         return description
 
