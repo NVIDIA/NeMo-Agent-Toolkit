@@ -135,7 +135,8 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
     [
         pytest.param("1_getting_started_with_nat.ipynb", ["getting_started"], 120, id="1_getting_started_with_nat"),
         pytest.param("3_adding_tools_to_agents.ipynb", ["retail_sales_agent"], 300, id="3_adding_tools_to_agents"),
-        pytest.param("4_mcp_setup_and_integration.ipynb", ["mcp_dev_workflow", "nat_simple_calculator"], 300,
+        pytest.param("4_mcp_setup_and_integration.ipynb", ["mcp_dev_workflow", "nat_simple_calculator"],
+                     300,
                      id="4_mcp_setup_and_integration"),
         pytest.param("5_multi_agent_orchestration.ipynb", ["retail_sales_agent"], 120,
                      id="5_multi_agent_orchestration"),
