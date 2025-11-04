@@ -27,15 +27,7 @@ class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
     """Configuration for A2A client function group.
 
     This configuration enables NAT workflows to connect to remote A2A agents
-    and expose their skills as NAT functions.
-
-    Example YAML:
-        ```yaml
-        functions:
-          - type: a2a_client
-            url: http://localhost:9999
-            task_timeout: 300
-        ```
+    and publish the primary agent function and helper functions.
 
     Attributes:
         url: The base URL of the A2A agent (e.g., https://agent.example.com)
