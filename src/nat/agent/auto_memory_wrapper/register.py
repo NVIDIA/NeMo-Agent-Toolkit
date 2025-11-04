@@ -136,15 +136,6 @@ async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder):
     # This gives us a function that accepts ChatRequest with multiple messages
     inner_agent_fn = await builder.get_function(config.inner_agent_name)
 
-    # Validate that inner agent has use_openai_api = True
-    # This is required to pass multiple messages (including system messages with memory context)
-    inner_agent_config = builder.get_function_config(config.inner_agent_name)
-    if hasattr(inner_agent_config, 'use_openai_api') and not inner_agent_config.use_openai_api:
-        raise ValueError(f"Auto-memory wrapper requires inner agent '{config.inner_agent_name}' "
-                         f"to have 'use_openai_api: true'. This is necessary to pass multiple "
-                         f"messages (including system messages with memory context) to the inner agent. "
-                         f"Please add 'use_openai_api: true' to your '{config.inner_agent_name}' configuration.")
-
     # Calculate recursion_limit based on inner agent's configuration
     # This ensures the wrapper is transparent - users only configure the inner agent's limits
     # and the wrapper automatically accounts for its own overhead
