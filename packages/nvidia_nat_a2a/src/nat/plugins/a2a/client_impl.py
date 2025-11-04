@@ -15,6 +15,7 @@
 """Minimal A2A client implementation for NAT workflows."""
 
 import logging
+import re
 
 from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import Builder
@@ -38,11 +39,11 @@ class A2AClientFunctionGroup(FunctionGroup):
         self._client: A2ABaseClient | None = None
 
     async def __aenter__(self):
-        """Initialize the A2A client."""
+        """Initialize the A2A client and register functions."""
         config: A2AClientConfig = self._config  # type: ignore[assignment]
         base_url = str(config.agent.url)
 
-        # Create simple A2A client without auth
+        # Create A2A client
         self._client = A2ABaseClient(
             base_url=base_url,
             agent_card_path=config.agent.agent_card_path,
@@ -54,19 +55,64 @@ class A2AClientFunctionGroup(FunctionGroup):
 
         logger.info("Connected to A2A agent at %s", base_url)
 
-        # Log agent card if available
-        if self._client.agent_card:
-            card = self._client.agent_card
-            logger.info("Agent: %s v%s", card.name, card.version)
+        # Get agent card
+        agent_card = self._client.agent_card
+        if not agent_card:
+            raise RuntimeError("Agent card not available")
 
-        # Register the function with NAT
-        self.add_function(
-            name="send_message",
-            fn=self.send_message,
-            description="Send a message to the A2A agent and get a response",
-        )
+        logger.info("Agent: %s v%s", agent_card.name, agent_card.version)
+        if agent_card.skills:
+            logger.info("Skills: %s", [skill.name for skill in agent_card.skills])
+
+        # Register functions using three-level API
+        self._register_functions(agent_card)
 
         return self
+
+    def _register_functions(self, agent_card):
+        """Register the three-level API: high-level, helpers, and low-level."""
+        agent_name = self._sanitize_function_name(agent_card.name)
+
+        # LEVEL 1: High-level main function (LLM-friendly)
+        self.add_function(
+            name=agent_name,
+            fn=self._create_high_level_function(),
+            description=self._format_main_function_description(agent_card),
+        )
+
+        # LEVEL 2: Standard helpers (metadata/utility)
+        self.add_function(
+            name="get_skills",
+            fn=self._get_skills,
+            description="Get the list of skills and capabilities available from this agent",
+        )
+
+        self.add_function(
+            name="get_info",
+            fn=self._get_agent_info,
+            description="Get metadata about this agent (name, version, provider, capabilities)",
+        )
+
+        self.add_function(
+            name="get_task",
+            fn=self._wrap_get_task(),
+            description="Get the status and details of a specific task by task_id",
+        )
+
+        self.add_function(
+            name="cancel_task",
+            fn=self._wrap_cancel_task(),
+            description="Cancel a running task by task_id",
+        )
+
+        # LEVEL 3: Low-level protocol (advanced)
+        self.add_function(
+            name="send_message",
+            fn=self._send_message_advanced,
+            description=(f"Advanced: Send a message with full control over the A2A protocol. "
+                         f"Returns raw events as a list. For most use cases, prefer using the "
+                         f"high-level '{agent_name}()' function instead."),
+        )
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         """Clean up the A2A client."""
@@ -75,44 +121,174 @@ class A2AClientFunctionGroup(FunctionGroup):
             self._client = None
             logger.info("Disconnected from A2A agent")
 
-    async def send_message(self, message: str) -> str:
+    def _sanitize_function_name(self, name: str) -> str:
+        """Convert agent name to valid Python function name."""
+        # Replace spaces and special chars with underscores
+        sanitized = re.sub(r'[^a-zA-Z0-9_]', '_', name.lower())
+        # Remove consecutive underscores
+        sanitized = re.sub(r'_+', '_', sanitized)
+        # Remove leading/trailing underscores
+        sanitized = sanitized.strip('_')
+        return sanitized or 'agent'
+
+    def _format_main_function_description(self, agent_card) -> str:
+        """Create description for the main agent function."""
+        description = f"{agent_card.description}\n\n"
+
+        if agent_card.skills:
+            description += "**Capabilities:**\n"
+            for skill in agent_card.skills:
+                description += f"\n• **{skill.name}**: {skill.description}"
+                if skill.examples:
+                    examples = skill.examples[:2]  # Limit to 2 examples
+                    description += f"\n  Examples: {', '.join(examples)}"
+
+        description += "\n\n**Usage:** Send natural language queries to interact with this agent."
+
+        return description
+
+    def _create_high_level_function(self):
+        """High-level function that simplifies the response."""
+
+        async def high_level_fn(query: str, task_id: str | None = None, context_id: str | None = None) -> str:
+            """
+            Send a query to the agent and get a simple text response.
+
+            This is the recommended method for LLM usage.
+            For advanced use cases, use send_message() for raw events.
+            """
+            if not self._client:
+                raise RuntimeError("A2A client not initialized")
+
+            events = []
+            async for event in self._client.send_message(query, task_id, context_id):
+                events.append(event)
+
+            # Extract and return just the text response
+            return self._extract_text_response(events)
+
+        return high_level_fn
+
+    def _extract_text_response(self, events: list) -> str:
+        """Extract simple text response from events."""
+        from a2a.types import Message as A2AMessage
+
+        if not events:
+            return "No response"
+
+        # Get the last event
+        last_event = events[-1]
+
+        # If it's a Message, extract text from parts
+        if isinstance(last_event, A2AMessage):
+            text_parts = self._extract_text_from_parts(last_event.parts)
+            return " ".join(text_parts) if text_parts else str(last_event)
+
+        # If it's a ClientEvent (Task, UpdateEvent), extract from task
+        if isinstance(last_event, tuple):
+            task, _ = last_event
+            if task.history:
+                last_msg = task.history[-1]
+                text_parts = self._extract_text_from_parts(last_msg.parts)
+                return " ".join(text_parts) if text_parts else str(last_msg)
+
+        return str(last_event)
+
+    def _extract_text_from_parts(self, parts: list) -> list[str]:
+        """Extract text from message parts safely."""
+        text_parts = []
+        for part in parts:
+            # Handle Part wrapper (RootModel)
+            if hasattr(part, 'root'):
+                part_content = part.root
+            else:
+                part_content = part
+
+            # Extract text from TextPart
+            if hasattr(part_content, 'text'):
+                text_parts.append(part_content.text)
+            # Could also handle DataPart, FilePart here if needed
+
+        return text_parts
+
+    async def _get_skills(self) -> dict:
+        """Helper function to list agent skills."""
+        if not self._client or not self._client.agent_card:
+            return {"skills": []}
+
+        agent_card = self._client.agent_card
+        return {
+            "agent":
+                agent_card.name,
+            "skills": [{
+                "id": skill.id,
+                "name": skill.name,
+                "description": skill.description,
+                "examples": skill.examples or [],
+                "tags": skill.tags or []
+            } for skill in agent_card.skills]
+        }
+
+    async def _get_agent_info(self) -> dict:
+        """Helper function to get agent metadata."""
+        if not self._client or not self._client.agent_card:
+            return {}
+
+        agent_card = self._client.agent_card
+        return {
+            "name": agent_card.name,
+            "description": agent_card.description,
+            "version": agent_card.version,
+            "provider": agent_card.provider.model_dump() if agent_card.provider else None,
+            "url": agent_card.url,
+            "capabilities": {
+                "streaming": agent_card.capabilities.streaming if agent_card.capabilities else False,
+            },
+            "num_skills": len(agent_card.skills)
+        }
+
+    def _wrap_get_task(self):
+        """Wrapper for get_task that delegates to client_base."""
+
+        async def get_task_fn(task_id: str, history_length: int | None = None):
+            """Get task status and history."""
+            if not self._client:
+                raise RuntimeError("A2A client not initialized")
+            return await self._client.get_task(task_id, history_length)
+
+        return get_task_fn
+
+    def _wrap_cancel_task(self):
+        """Wrapper for cancel_task that delegates to client_base."""
+
+        async def cancel_task_fn(task_id: str):
+            """Cancel a specific task."""
+            if not self._client:
+                raise RuntimeError("A2A client not initialized")
+            return await self._client.cancel_task(task_id)
+
+        return cancel_task_fn
+
+    async def _send_message_advanced(self,
+                                     query: str,
+                                     task_id: str | None = None,
+                                     context_id: str | None = None) -> list:
         """
-        Send a message to the A2A agent.
+        Send a message with full A2A protocol control.
 
-        Args:
-            message: The message text to send
-
-        Returns:
-            str: The agent's response as a string
+        Returns: List of ClientEvent|Message objects containing:
+        - Task information
+        - Status updates
+        - Artifact updates
+        - Full message details
         """
         if not self._client:
             raise RuntimeError("A2A client not initialized")
 
-        result = await self._client.send_message(message_text=message)
-
-        # Extract text response
-        from a2a.types import Message as A2AMessage
-        from a2a.types import Task as A2ATask
-
-        if isinstance(result, A2AMessage):
-            # Extract text from message parts
-            parts = []
-            for part in result.parts:
-                if hasattr(part, "text"):
-                    parts.append(part.text)
-            return "\n".join(parts) if parts else str(result)
-
-        if isinstance(result, A2ATask):
-            # Extract the last message from the task
-            if result.messages:
-                last_msg = result.messages[-1]
-                parts = []
-                for part in last_msg.parts:
-                    if hasattr(part, "text"):
-                        parts.append(part.text)
-                return "\n".join(parts) if parts else str(last_msg)
-
-        return str(result)
+        events = []
+        async for event in self._client.send_message(query, task_id, context_id):
+            events.append(event)
+        return events
 
 
 @register_function_group(config_type=A2AClientConfig)
