@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+       
 functions:
   knowledge_base:
     _type: url_directory
@@ -26,7 +26,7 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-405b-instruct
+    model_name: meta/llama-3.3-70b-instruct
     temperature: 0.5
     max_tokens: 4000
   bedrock_llm:

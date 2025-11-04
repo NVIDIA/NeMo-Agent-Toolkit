@@ -48,6 +48,7 @@ class TestOpenAIStrands:
         return OpenAIModelConfig(model_name="gpt-4", api_type=APITypeEnum.RESPONSES)
 
     @patch("strands.models.openai.OpenAIModel")
+    @pytest.mark.asyncio
     async def test_openai_strands_basic(self, mock_model, openai_config, mock_builder):
         """Test that openai_strands as async context manager."""
         mock_instance = MagicMock()
@@ -58,6 +59,7 @@ class TestOpenAIStrands:
             mock_model.assert_called_once()
 
     @patch("strands.models.openai.OpenAIModel")
+    @pytest.mark.asyncio
     async def test_openai_strands_with_params(self, mock_model, openai_config, mock_builder):
         """Test openai_strands with additional parameters."""
         mock_instance = MagicMock()
@@ -71,6 +73,7 @@ class TestOpenAIStrands:
             mock_model.assert_called_once()
 
     @patch("strands.models.openai.OpenAIModel")
+    @pytest.mark.asyncio
     async def test_api_type_validation(self, mock_model, openai_config_wrong_api, mock_builder):
         """Non-chat-completion API types must raise a ValueError."""
         with pytest.raises(ValueError):
@@ -105,6 +108,7 @@ class TestBedrockStrands:
         )
 
     @patch("strands.models.bedrock.BedrockModel")
+    @pytest.mark.asyncio
     async def test_bedrock_strands_basic(self, mock_model, bedrock_config, mock_builder):
         """Test that bedrock_strands creates a BedrockModel."""
         mock_instance = MagicMock()
@@ -115,6 +119,7 @@ class TestBedrockStrands:
             mock_model.assert_called_once()
 
     @patch("strands.models.bedrock.BedrockModel")
+    @pytest.mark.asyncio
     async def test_api_type_validation(self, mock_model, bedrock_config_wrong_api, mock_builder):
         """Non-chat-completion API types must raise a ValueError."""
         with pytest.raises(ValueError):
@@ -150,6 +155,7 @@ class TestNIMStrands:
             api_type=APITypeEnum.RESPONSES,
         )
 
+    @pytest.mark.asyncio
     async def test_nim_strands_basic(self, nim_config, mock_builder):
         """Test that nim_strands creates a NIMCompatibleOpenAIModel."""
         # Patch OpenAIModel.__init__ to track the call
@@ -175,6 +181,7 @@ class TestNIMStrands:
                 # Verify model_id
                 assert call_kwargs["model_id"] == "meta/llama-3.1-8b-instruct"
 
+    @pytest.mark.asyncio
     async def test_nim_strands_with_env_var(self, mock_builder):
         """Test nim_strands with environment variable for API key."""
         nim_config = NIMModelConfig(model_name="test-model")
@@ -188,6 +195,7 @@ class TestNIMStrands:
                     client_args = call_kwargs["client_args"]
                     assert client_args["api_key"] == "env-api-key"
 
+    @pytest.mark.asyncio
     async def test_nim_strands_default_base_url(self, mock_builder):
         """Test nim_strands uses default base_url when not provided."""
         nim_config = NIMModelConfig(model_name="test-model", api_key="test-key")
@@ -280,11 +288,12 @@ class TestNIMStrands:
 
         if "reasoningContent" in content:
             # This should not be executed for text content
-            assert False, "reasoningContent handling should not be triggered for text content"
+            raise AssertionError("reasoningContent handling should not be triggered for text content")
         else:
             # This is the expected path for non-reasoning content
             assert True
 
+    @pytest.mark.asyncio
     async def test_nim_strands_excludes_nat_specific_params(self, mock_builder):
         """Test that NAT-specific parameters are excluded."""
         nim_config = NIMModelConfig(
@@ -306,6 +315,7 @@ class TestNIMStrands:
                 assert "thinking" not in params
                 assert "retry_on_status_codes" not in params
 
+    @pytest.mark.asyncio
     async def test_api_type_validation(self, nim_config_wrong_api, mock_builder):
         """Non-chat-completion API types must raise a ValueError."""
         with patch("strands.models.openai.OpenAIModel.__init__", return_value=None) as mock_init:

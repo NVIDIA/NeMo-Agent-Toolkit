@@ -623,11 +623,15 @@ async def test_strands_handler_tool_execution(reactive_stream: Subject):
     pytest.importorskip("strands", reason="Strands not available")
 
     from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
+    from nat.plugins.strands.strands_callback_handler import StrandsToolInstrumentationHook
 
     # Set up handler and collect results
     all_stats = []
     handler = StrandsProfilerHandler()
     reactive_stream.subscribe(all_stats.append)
+
+    # Create a tool hook instance (this is normally done per-agent-instance)
+    tool_hook = StrandsToolInstrumentationHook(handler)
 
     # Simulate tool execution events that would come from Strands hooks
     tool_use_id = "strands-tool-123"
@@ -660,8 +664,8 @@ async def test_strands_handler_tool_execution(reactive_stream: Subject):
     after_event = MockAfterEvent()
 
     # Call the hook methods directly
-    handler.tool_hook.on_before_tool_invocation(before_event)
-    handler.tool_hook.on_after_tool_invocation(after_event)
+    tool_hook.on_before_tool_invocation(before_event)
+    tool_hook.on_after_tool_invocation(after_event)
 
     # Verify events were generated
     assert len(all_stats) >= 2, f"Expected at least 2 events, got {len(all_stats)}"

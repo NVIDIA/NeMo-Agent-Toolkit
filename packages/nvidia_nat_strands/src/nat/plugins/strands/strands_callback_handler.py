@@ -16,6 +16,7 @@
 import asyncio
 import copy
 import importlib
+import json
 import logging
 import time
 import uuid
@@ -39,7 +40,7 @@ logger = logging.getLogger(__name__)
 class StrandsToolInstrumentationHook:
     """Hook callbacks for instrumenting Strands tool invocations.
 
-    This class provides callbacks for Strands' experimental hooks API to
+    This class provides callbacks for Strands' hooks API to
     capture tool execution events and emit proper TOOL_START/END spans.
     """
 
@@ -95,7 +96,7 @@ class StrandsToolInstrumentationHook:
 
             logger.debug("TOOL_START: %s (ID: %s)", tool_name, tool_use_id)
         except Exception:  # noqa: BLE001
-            logger.exception("Error in before_tool_invocation")
+            logger.error("Error in before_tool_invocation")
             raise
 
     def on_after_tool_invocation(self, event: Any) -> None:
@@ -152,7 +153,7 @@ class StrandsToolInstrumentationHook:
             logger.debug("TOOL_END: %s (ID: %s)", tool_name, tool_use_id)
 
         except Exception:  # noqa: BLE001
-            logger.exception("Failed to handle after_tool_invocation")
+            logger.error("Failed to handle after_tool_invocation")
             raise
 
     def _extract_tool_info(self, selected_tool: Any, tool_use: dict) -> tuple[str, str, dict]:
@@ -166,7 +167,10 @@ class StrandsToolInstrumentationHook:
             Tuple of (tool_name, tool_use_id, tool_input)
         """
         tool_name = getattr(selected_tool, 'tool_name', tool_use.get('name', 'unknown_tool'))
-        tool_use_id = tool_use.get('toolUseId', str(uuid.uuid4()))
+        tool_use_id = tool_use.get('toolUseId')
+        if tool_use_id is None:
+            logger.warning("Missing toolUseId in tool_use event, using 'unknown' fallback")
+            tool_use_id = "unknown"
         tool_input = tool_use.get('input', {}) or {}
         return tool_name, tool_use_id, tool_input
 
@@ -176,12 +180,10 @@ class StrandsProfilerHandler(BaseProfilerCallback):
     def __init__(self) -> None:
         super().__init__()
         self._patched: bool = False
-        self._hooks_registered: bool = False
         self.last_call_ts = time.time()
-        self._run_id_to_start_time = {}
 
-        # Create the tool instrumentation hook
-        self.tool_hook = StrandsToolInstrumentationHook(self)
+        # Note: tool hooks are now created per-agent-instance in wrapped_init
+        # to avoid shared state in concurrent execution
 
     def instrument(self) -> None:
         """
@@ -191,7 +193,7 @@ class StrandsProfilerHandler(BaseProfilerCallback):
         1. Model streaming methods (OpenAI/Bedrock) for LLM spans
         2. Agent.__init__ to auto-register tool hooks on Agent creation
 
-        Tool instrumentation uses Strands' experimental hooks API,
+        Tool instrumentation uses Strands' hooks API,
         which is automatically registered when an Agent is instantiated.
         """
         if self._patched:
@@ -240,7 +242,7 @@ class StrandsProfilerHandler(BaseProfilerCallback):
             self._patched = True
 
         except Exception:  # noqa: BLE001
-            logger.exception("Failed to instrument Strands models")
+            logger.error("Failed to instrument Strands models")
             raise
 
     def _instrument_agent_init(self) -> None:
@@ -271,16 +273,18 @@ class StrandsProfilerHandler(BaseProfilerCallback):
                 original_init(agent_self, *args, **kwargs)
 
                 # Auto-register tool hooks on this agent instance
-                # Note: Each agent instance needs its own hook registration
                 try:
                     # Import hook event types
                     # pylint: disable=import-outside-toplevel
                     from strands.hooks import AfterToolCallEvent
                     from strands.hooks import BeforeToolCallEvent
 
+                    # Create a dedicated hook instance for this agent
+                    agent_tool_hook = StrandsToolInstrumentationHook(handler)
+
                     # Register tool hooks on this agent instance
-                    agent_self.hooks.add_callback(BeforeToolCallEvent, handler.tool_hook.on_before_tool_invocation)
-                    agent_self.hooks.add_callback(AfterToolCallEvent, handler.tool_hook.on_after_tool_invocation)
+                    agent_self.hooks.add_callback(BeforeToolCallEvent, agent_tool_hook.on_before_tool_invocation)
+                    agent_self.hooks.add_callback(AfterToolCallEvent, agent_tool_hook.on_after_tool_invocation)
 
                     logger.debug("Strands tool hooks registered on Agent instance")
 
@@ -296,7 +300,7 @@ class StrandsProfilerHandler(BaseProfilerCallback):
             logger.exception("Failed to instrument Agent.__init__")
 
     def _extract_model_info(self, model_instance: Any) -> tuple[str, dict[str, Any]]:
-        """Extract model name and parameters from Strands model instance."""
+        """Extract model name from Strands model instance."""
         model_name = ""
 
         for attr_name in ['config', 'client_args']:
@@ -310,23 +314,7 @@ class StrandsProfilerHandler(BaseProfilerCallback):
                 if model_name:
                     break
 
-        # Extract model parameters
-        model_params = {}
-        try:
-            params = getattr(model_instance, "params", {})
-            if isinstance(params, dict):
-                model_params = {
-                    "temperature": params.get("temperature"),
-                    "max_tokens": params.get("max_tokens"),
-                    "top_p": params.get("top_p"),
-                    "stream": params.get("stream", True),
-                }
-                # Remove None values
-                model_params = {k: v for k, v in model_params.items() if v is not None}
-        except Exception:
-            logger.debug("Failed to extract model params", exc_info=True)
-
-        return str(model_name), model_params
+        return str(model_name), {}
 
     def _wrap_stream_method(self, original: Callable[..., Any]) -> Callable[..., Any]:
         # Capture handler reference in closure
@@ -350,6 +338,7 @@ class StrandsProfilerHandler(BaseProfilerCallback):
             # Signature: stream(self, messages, tool_specs=None,
             #                   system_prompt=None, **kwargs)
             raw_messages = args[0] if args else []
+            tool_specs = args[1] if len(args) > 1 else kwargs.get("tool_specs")
             system_prompt = (args[2] if len(args) > 2 else kwargs.get("system_prompt"))
 
             # Build chat_inputs with system prompt and messages
@@ -359,14 +348,45 @@ class StrandsProfilerHandler(BaseProfilerCallback):
             if isinstance(raw_messages, list):
                 all_messages.extend(copy.deepcopy(raw_messages))
 
+            # Extract tools schema for metadata
+            tools_schema = []
+            if tool_specs and isinstance(tool_specs, list):
+                try:
+                    tools_schema = [{
+                        "type": "function",
+                        "function": {
+                            "name": tool_spec.get("name", "unknown"),
+                            "description": tool_spec.get("description", ""),
+                            "parameters": tool_spec.get("inputSchema", {}).get("json", {})
+                        }
+                    } for tool_spec in tool_specs]
+                except Exception:  # noqa: BLE001
+                    logger.debug("Failed to extract tools schema", exc_info=True)
+                    tools_schema = []
+
+            # Extract string representation of last user message for data.input
+            # (full message history is in metadata.chat_inputs)
+            llm_input_str = ""
+            if all_messages:
+                last_msg = all_messages[-1]
+                if isinstance(last_msg, dict) and 'text' in last_msg:
+                    llm_input_str = last_msg['text']
+                elif isinstance(last_msg, dict):
+                    llm_input_str = str(last_msg)
+                else:
+                    llm_input_str = str(last_msg)
+
             # Always emit START first (before streaming begins)
             start_payload = IntermediateStepPayload(
                 event_type=IntermediateStepType.LLM_START,
                 framework=LLMFrameworkEnum.STRANDS,
                 name=str(model_name),
                 UUID=event_uuid,
-                data=StreamEventData(input=copy.deepcopy(all_messages), output=""),
-                metadata=TraceMetadata(chat_inputs=copy.deepcopy(all_messages), ),
+                data=StreamEventData(input=llm_input_str, output=""),
+                metadata=TraceMetadata(
+                    chat_inputs=copy.deepcopy(all_messages),
+                    tools_schema=copy.deepcopy(tools_schema),
+                ),
                 usage_info=UsageInfo(
                     token_usage=TokenUsageBaseModel(),
                     num_llm_calls=1,
@@ -375,10 +395,11 @@ class StrandsProfilerHandler(BaseProfilerCallback):
             )
             step_manager.push_intermediate_step(start_payload)
             self.last_call_ts = time.time()
-            self._run_id_to_start_time[event_uuid] = time.time()
 
-            # Collect output text and token usage while streaming
+            # Collect output text, tool calls, and token usage while streaming
             output_text = ""
+            tool_calls = []  # List of tool calls made by the LLM
+            current_tool_call = None  # Currently accumulating tool call
             token_usage = TokenUsageBaseModel()
             ended: bool = False
 
@@ -387,24 +408,39 @@ class StrandsProfilerHandler(BaseProfilerCallback):
                 if ended:
                     return
 
+                # Determine the output to show in the span
+                # If there are tool calls, format them as the output
+                # Otherwise, use the text response
+                if tool_calls:
+                    # Format tool calls as readable output
+                    tool_call_strs = []
+                    for tc in tool_calls:
+                        tool_name = tc.get('name', 'unknown')
+                        tool_input = tc.get('input', {})
+                        tool_call_strs.append(f"Tool: {tool_name}\nInput: {tool_input}")
+                    output_content = "\n\n".join(tool_call_strs)
+                else:
+                    output_content = output_text
+
                 chat_responses_list = []
-                if output_text:
-                    chat_responses_list = [output_text]
+                if output_content:
+                    chat_responses_list = [output_content]
 
                 # Build metadata with standard NAT structure
                 metadata = TraceMetadata(
                     chat_responses=chat_responses_list,
                     chat_inputs=all_messages,
+                    tools_schema=copy.deepcopy(tools_schema),
                 )
 
-                # Push END with input/output text and token usage
+                # Push END with input/output and token usage
                 end_payload = IntermediateStepPayload(
                     event_type=IntermediateStepType.LLM_END,
                     span_event_timestamp=start_time,
                     framework=LLMFrameworkEnum.STRANDS,
                     name=str(model_name),
                     UUID=event_uuid,
-                    data=StreamEventData(input=copy.deepcopy(all_messages), output=output_text),
+                    data=StreamEventData(input=llm_input_str, output=output_content),
                     usage_info=UsageInfo(token_usage=token_usage, num_llm_calls=1),
                     metadata=metadata,
                 )
@@ -421,13 +457,32 @@ class StrandsProfilerHandler(BaseProfilerCallback):
                             if text_content:
                                 output_text += text_content
 
-                            # Extract usage information
-                            usage_info = self._extract_usage_from_event(ev)
-                            if usage_info and not ended:
-                                token_usage = TokenUsageBaseModel(**usage_info)
-                                _push_end_if_needed()
+                            # Extract tool call information
+                            tool_call_info = self._extract_tool_call_from_event(ev)
+                            if tool_call_info:
+                                if "name" in tool_call_info:
+                                    # New tool call starting
+                                    if current_tool_call:
+                                        # Finalize and save previous tool call
+                                        self._finalize_tool_call(current_tool_call)
+                                        tool_calls.append(current_tool_call)
+                                    current_tool_call = tool_call_info
+                                elif "input_chunk" in tool_call_info and current_tool_call:
+                                    # Accumulate input JSON string chunks
+                                    current_tool_call["input_str"] += tool_call_info["input_chunk"]
 
-                        except Exception:
+                            # Check for contentBlockStop to finalize current tool call
+                            if "contentBlockStop" in ev and current_tool_call:
+                                self._finalize_tool_call(current_tool_call)
+                                tool_calls.append(current_tool_call)
+                                current_tool_call = None
+
+                            # Extract usage information (but don't push END yet - wait for all text)
+                            usage_info = self._extract_usage_from_event(ev)
+                            if usage_info:
+                                token_usage = TokenUsageBaseModel(**usage_info)
+
+                        except Exception:  # noqa: BLE001
                             logger.debug("Failed to extract streaming fields from event", exc_info=True)
                         yield ev
                 else:
@@ -454,10 +509,81 @@ class StrandsProfilerHandler(BaseProfilerCallback):
         if not isinstance(ev, dict):
             return ""
 
+        # Try multiple possible locations for text content
         if "data" in ev:
             return str(ev["data"])
 
+        # Check for Strands contentBlockDelta structure (for streaming text responses)
+        if "contentBlockDelta" in ev and isinstance(ev["contentBlockDelta"], dict):
+            delta = ev["contentBlockDelta"].get("delta", {})
+            if isinstance(delta, dict) and "text" in delta:
+                return str(delta["text"])
+
+        # Check for other common text fields
+        if "content" in ev:
+            return str(ev["content"])
+
+        if "text" in ev:
+            return str(ev["text"])
+
+        # Check for nested content
+        if "message" in ev and isinstance(ev["message"], dict):
+            if "content" in ev["message"]:
+                return str(ev["message"]["content"])
+
         return ""
+
+    def _finalize_tool_call(self, tool_call: dict[str, Any]) -> None:
+        """Parse the accumulated input_str JSON and store in the input field.
+
+        Args:
+            tool_call: Tool call dictionary with input_str to parse
+        """
+        input_str = tool_call.get("input_str", "")
+        if input_str:
+            try:
+                tool_call["input"] = json.loads(input_str)
+            except (json.JSONDecodeError, ValueError):
+                logger.debug("Failed to parse tool input JSON: %s", input_str)
+                tool_call["input"] = {"raw": input_str}
+        # Remove the temporary input_str field
+        tool_call.pop("input_str", None)
+
+    def _extract_tool_call_from_event(self, ev: dict) -> dict[str, Any] | None:
+        """Extract tool call information from a Strands event.
+
+        Args:
+            ev: Event dictionary from Strands stream
+
+        Returns:
+            Dictionary with tool call info (name, input_chunk) or None if not a tool call
+        """
+        if not isinstance(ev, dict):
+            return None
+
+        # Check for contentBlockStart with toolUse
+        if "contentBlockStart" in ev:
+            start = ev["contentBlockStart"].get("start", {})
+            if isinstance(start, dict) and "toolUse" in start:
+                tool_use = start["toolUse"]
+                return {
+                    "name": tool_use.get("name", "unknown"),
+                    "id": tool_use.get("toolUseId", "unknown"),
+                    "input_str": "",  # Will accumulate JSON string chunks
+                    "input": {}  # Will be parsed at the end
+                }
+
+        # Check for contentBlockDelta with toolUse input (streaming chunks)
+        if "contentBlockDelta" in ev:
+            delta = ev["contentBlockDelta"].get("delta", {})
+            if isinstance(delta, dict) and "toolUse" in delta:
+                tool_use_delta = delta["toolUse"]
+                input_chunk = tool_use_delta.get("input", "")
+                if input_chunk:
+                    # Return the chunk to be accumulated
+                    return {"input_chunk": input_chunk}
+
+        return None
 
     def _extract_usage_from_event(self, ev: dict) -> dict[str, int] | None:
         """Extract usage information from a Strands event.
