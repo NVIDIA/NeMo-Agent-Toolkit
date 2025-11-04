@@ -142,23 +142,34 @@ async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder):
     # Calculate recursion_limit based on inner agent's configuration
     # This ensures the wrapper is transparent - users only configure the inner agent's limits
     # and the wrapper automatically accounts for its own overhead
+    inner_max_calls = None
+
     if hasattr(inner_agent_config, 'max_tool_calls'):
         # ReAct agent and similar agents use max_tool_calls
-        inner_max_calls = inner_agent_config.max_tool_calls
-    elif hasattr(inner_agent_config, 'max_iterations'):
+        value = inner_agent_config.max_tool_calls
+        if value is not None and isinstance(value, int | float):
+            inner_max_calls = value
+
+    if inner_max_calls is None and hasattr(inner_agent_config, 'max_iterations'):
         # Some agents use max_iterations as an alias
-        inner_max_calls = inner_agent_config.max_iterations
-    elif hasattr(inner_agent_config, 'tool_call_max_retries'):
+        value = inner_agent_config.max_iterations
+        if value is not None and isinstance(value, int | float):
+            inner_max_calls = value
+
+    if inner_max_calls is None and hasattr(inner_agent_config, 'tool_call_max_retries'):
         # ReWOO agent uses tool_call_max_retries - needs more steps per retry
-        inner_max_calls = inner_agent_config.tool_call_max_retries * 3
-    else:
+        value = inner_agent_config.tool_call_max_retries
+        if value is not None and isinstance(value, int | float):
+            inner_max_calls = value * 3
+
+    if inner_max_calls is None:
         # Safe default for agents without explicit limits
         inner_max_calls = 15
 
     # Use same calculation formula as react_agent for consistency
     # Formula: (max_tool_calls + 1) * 2 allows proper tool calling cycles with retries
     # See src/nat/agent/react_agent/register.py:145 for reference
-    inner_agent_recursion = (inner_max_calls + 1) * 2
+    inner_agent_recursion = (int(inner_max_calls) + 1) * 2
 
     # Create wrapper
     wrapper_graph = AutoMemoryWrapperGraph(inner_agent_fn=inner_agent_fn,
