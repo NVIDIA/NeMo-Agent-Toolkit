@@ -136,6 +136,9 @@ async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder):
     # This gives us a function that accepts ChatRequest with multiple messages
     inner_agent_fn = await builder.get_function(config.inner_agent_name)
 
+    # Get inner agent config to calculate recursion limits
+    inner_agent_config = builder.get_function_config(config.inner_agent_name)
+
     # Calculate recursion_limit based on inner agent's configuration
     # This ensures the wrapper is transparent - users only configure the inner agent's limits
     # and the wrapper automatically accounts for its own overhead

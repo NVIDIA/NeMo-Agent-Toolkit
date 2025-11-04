@@ -46,7 +46,6 @@ functions:
     _type: react_agent
     llm_name: nim_llm
     tool_names: [calculator]
-    use_openai_api: true  # REQUIRED for memory context injection
 
 workflow:
   _type: auto_memory_agent
@@ -187,9 +186,8 @@ workflow:
 
 ## Important Notes
 
-1. **Inner agent MUST have `use_openai_api: true`** - Required to pass multiple messages (including system messages with memory context)
-2. **User ID is runtime-only** - Set via `user_manager` or `X-User-ID` header, not in config
-3. **Memory backends are pluggable** - Works with any implementation of `MemoryEditor` interface
+1. **User ID is runtime-only** - Set via `user_manager` or `X-User-ID` header, not in config
+2. **Memory backends are pluggable** - Works with any implementation of `MemoryEditor` interface
 
 ## Examples
 

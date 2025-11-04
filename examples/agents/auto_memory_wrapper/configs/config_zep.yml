@@ -54,7 +54,6 @@ functions:
     llm_name: nim_llm
     tool_names: [calculator]  # At least one tool required for ReAct agent
     verbose: true
-    use_openai_api: true  # REQUIRED for auto_memory_agent to inject system messages
     parse_agent_response_max_retries: 3
 
 # Wrap the ReAct agent with automatic memory
