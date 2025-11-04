@@ -107,6 +107,7 @@ examples = [
   "nat_haystack_deep_research_agent",
   "nat_alert_triage_agent",
   "nat_automated_description_generation",
+  "nat_currency_agent_a2a",
   "nat_email_phishing_analyzer",
   "nat_multi_frameworks",
   "nat_plot_charts",
@@ -191,6 +192,7 @@ nvidia-nat-zep-cloud = { workspace = true }
 # All examples here
 nat_adk_demo = { path = "examples/frameworks/adk_demo", editable = true }
 nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
+nat_currency_agent_a2a = { path = "examples/A2A/currency_agent_a2a", editable = true }
 nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
 nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
