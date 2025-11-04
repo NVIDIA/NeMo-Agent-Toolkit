@@ -665,8 +665,8 @@ def oauth2_client_credentials_fixture(oauth2_server_url: str, fail_missing: bool
         from bs4 import BeautifulSoup
         username = os.getenv("NAT_CI_OAUTH2_CLIENT_USERNAME", "Testy Testerson")
 
-        # This post request responds with a cookie that we need for future requests and a redirect, the response for the
-        # redirect request doesn't contain the cookie, so we disable redirects and just use the cookie from this response
+        # This post request responds with a cookie that we need for future requests and a 302 redirect, the response
+        # for the redirected url doesn't contain the cookie, so we disable the redirect here to capture the cookie
         user_create_response = requests.post(oauth2_server_url,
                                              data=[("username", username)],
                                              headers={"Content-Type": "application/x-www-form-urlencoded"},
