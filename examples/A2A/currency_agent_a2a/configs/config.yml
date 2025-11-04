@@ -20,6 +20,12 @@ function_groups:
       transport: stdio
       command: "python"
       args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
+    tool_overrides:
+      get_current_time:
+        alias: get_current_time_mcp_tool
+        description: "Use this tool to get dates"
+    include:
+      - get_current_time_mcp_tool
 
   currency_agent:
     _type: a2a_client
@@ -36,7 +42,7 @@ llms:
 workflow:
   _type: react_agent
   tool_names:
-    - mcp_date_time
+    - mcp_date_time.get_current_time_mcp_tool
     - currency_agent
   llm_name: nim_llm
   verbose: true

@@ -16,6 +16,10 @@
 
 import logging
 import re
+from typing import Any
+
+from pydantic import BaseModel
+from pydantic import Field
 
 from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import Builder
@@ -24,6 +28,25 @@ from nat.plugins.a2a.client_base import A2ABaseClient
 from nat.plugins.a2a.client_config import A2AClientConfig
 
 logger = logging.getLogger(__name__)
+
+
+# Input models for helper functions
+class GetTaskInput(BaseModel):
+    """Input for get_task function."""
+    task_id: str = Field(..., description="The ID of the task to retrieve")
+    history_length: int | None = Field(default=None, description="Number of history items to include")
+
+
+class CancelTaskInput(BaseModel):
+    """Input for cancel_task function."""
+    task_id: str = Field(..., description="The ID of the task to cancel")
+
+
+class SendMessageInput(BaseModel):
+    """Input for send_message function."""
+    query: str = Field(..., description="The query to send to the agent")
+    task_id: str | None = Field(default=None, description="Optional task ID for continuation")
+    context_id: str | None = Field(default=None, description="Optional context ID for session management")
 
 
 class A2AClientFunctionGroup(FunctionGroup):
@@ -99,13 +122,13 @@ class A2AClientFunctionGroup(FunctionGroup):
 
         self.add_function(
             name="get_task",
-            fn=self._wrap_get_task(),
+            fn=self._wrap_get_task,
             description="Get the status and details of a specific task by task_id",
         )
 
         self.add_function(
             name="cancel_task",
-            fn=self._wrap_cancel_task(),
+            fn=self._wrap_cancel_task,
             description="Cancel a running task by task_id",
         )
 
@@ -221,7 +244,7 @@ class A2AClientFunctionGroup(FunctionGroup):
 
         return text_parts
 
-    async def _get_skills(self) -> dict:
+    async def _get_skills(self, params: dict | None = None) -> dict:
         """Helper function to list agent skills."""
         if not self._client or not self._client.agent_card:
             return {"skills": []}
@@ -239,7 +262,7 @@ class A2AClientFunctionGroup(FunctionGroup):
             } for skill in agent_card.skills]
         }
 
-    async def _get_agent_info(self) -> dict:
+    async def _get_agent_info(self, params: dict | None = None) -> dict:
         """Helper function to get agent metadata."""
         if not self._client or not self._client.agent_card:
             return {}
@@ -257,32 +280,19 @@ class A2AClientFunctionGroup(FunctionGroup):
             "num_skills": len(agent_card.skills)
         }
 
-    def _wrap_get_task(self):
+    async def _wrap_get_task(self, params: GetTaskInput) -> Any:
         """Wrapper for get_task that delegates to client_base."""
+        if not self._client:
+            raise RuntimeError("A2A client not initialized")
+        return await self._client.get_task(params.task_id, params.history_length)
 
-        async def get_task_fn(task_id: str, history_length: int | None = None):
-            """Get task status and history."""
-            if not self._client:
-                raise RuntimeError("A2A client not initialized")
-            return await self._client.get_task(task_id, history_length)
-
-        return get_task_fn
-
-    def _wrap_cancel_task(self):
+    async def _wrap_cancel_task(self, params: CancelTaskInput) -> Any:
         """Wrapper for cancel_task that delegates to client_base."""
+        if not self._client:
+            raise RuntimeError("A2A client not initialized")
+        return await self._client.cancel_task(params.task_id)
 
-        async def cancel_task_fn(task_id: str):
-            """Cancel a specific task."""
-            if not self._client:
-                raise RuntimeError("A2A client not initialized")
-            return await self._client.cancel_task(task_id)
-
-        return cancel_task_fn
-
-    async def _send_message_advanced(self,
-                                     query: str,
-                                     task_id: str | None = None,
-                                     context_id: str | None = None) -> list:
+    async def _send_message_advanced(self, params: SendMessageInput) -> list:
         """
         Send a message with full A2A protocol control.
 
@@ -296,7 +306,7 @@ class A2AClientFunctionGroup(FunctionGroup):
             raise RuntimeError("A2A client not initialized")
 
         events = []
-        async for event in self._client.send_message(query, task_id, context_id):
+        async for event in self._client.send_message(params.query, params.task_id, params.context_id):
             events.append(event)
         return events
 
