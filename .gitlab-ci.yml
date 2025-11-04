@@ -137,7 +137,7 @@ test:python_tests:
       command: ["milvus", "run", "standalone"]
       pull_policy: if-not-present
 
-    - name: $CI_REGISTRY/oauth2_server
+    - name: $CI_REGISTRY_IMAGE/oauth2_server
       alias: oauth2-server
       pull_policy: if-not-present
       variables:
