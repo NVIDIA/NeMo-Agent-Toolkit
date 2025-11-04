@@ -41,13 +41,13 @@ class A2AClientFunctionGroup(FunctionGroup):
     async def __aenter__(self):
         """Initialize the A2A client and register functions."""
         config: A2AClientConfig = self._config  # type: ignore[assignment]
-        base_url = str(config.agent.url)
+        base_url = str(config.url)
 
         # Create A2A client
         self._client = A2ABaseClient(
             base_url=base_url,
-            agent_card_path=config.agent.agent_card_path,
-            task_timeout=config.agent.task_timeout,
+            agent_card_path=config.agent_card_path,
+            task_timeout=config.task_timeout,
         )
 
         # Initialize the client
@@ -294,14 +294,19 @@ class A2AClientFunctionGroup(FunctionGroup):
 @register_function_group(config_type=A2AClientConfig)
 async def a2a_client_function_group(config: A2AClientConfig, _builder: Builder):
     """
-    Connect to an A2A agent and expose send_message as a function.
+    Connect to an A2A agent and expose its skills as NAT functions.
+
+    This function group creates a three-level API:
+    - High-level: Agent function named after the agent (e.g., dice_agent)
+    - Helpers: get_skills, get_info, get_task, cancel_task
+    - Low-level: send_message for advanced usage
 
     Example workflow YAML:
     ```yaml
     functions:
       - type: a2a_client
-        agent:
-          url: http://localhost:9999
+        url: http://localhost:9999
+        task_timeout: 300
     ```
     """
     async with A2AClientFunctionGroup(config, _builder) as group:

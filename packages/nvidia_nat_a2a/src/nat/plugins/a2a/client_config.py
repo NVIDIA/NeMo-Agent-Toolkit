@@ -15,9 +15,7 @@
 """Configuration models for A2A client."""
 
 from datetime import timedelta
-from typing import Literal
 
-from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
 
@@ -25,16 +23,25 @@ from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.function import FunctionGroupBaseConfig
 
 
+class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
+    """Configuration for A2A client function group.
 
-class A2AAgentConfig(BaseModel):
-    """Configuration for connecting to a remote A2A agent.
+    This configuration enables NAT workflows to connect to remote A2A agents
+    and expose their skills as NAT functions.
+
+    Example YAML:
+        ```yaml
+        functions:
+          - type: a2a_client
+            url: http://localhost:9999
+            task_timeout: 300
+        ```
 
     Attributes:
         url: The base URL of the A2A agent (e.g., https://agent.example.com)
+        agent_card_path: Path to the agent card (default: /.well-known/agent-card.json)
         task_timeout: Maximum time to wait for task completion (default: 300 seconds)
-        retry_max_attempts: Maximum number of retry attempts for failed requests (default: 3)
-        retry_backoff: Exponential backoff multiplier for retries (default: 1.5)
-        auth_provider: Optional name of NAT auth provider for authentication
+        auth_provider: Optional reference to NAT auth provider for authentication
     """
 
     url: HttpUrl = Field(
@@ -52,23 +59,5 @@ class A2AAgentConfig(BaseModel):
         description="Maximum time to wait for task completion",
     )
 
-    # Authentication configuration
     auth_provider: str | AuthenticationRef | None = Field(default=None,
                                                           description="Reference to authentication provider")
-
-
-
-class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
-    """Configuration for A2A client function group.
-
-    This configuration enables NAT workflows to connect to remote A2A agents
-    and expose their skills as NAT functions.
-
-    Attributes:
-        agent: Configuration for the remote A2A agent
-    """
-
-    agent: A2AAgentConfig = Field(
-        ...,
-        description="Configuration for the remote A2A agent",
-    )
