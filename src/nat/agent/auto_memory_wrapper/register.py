@@ -14,12 +14,14 @@
 # limitations under the License.
 
 import logging
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.component_ref import FunctionRef
@@ -112,7 +114,7 @@ class AutoMemoryAgentConfig(AgentBaseConfig, name="auto_memory_agent"):
 
 
 @register_function(config_type=AutoMemoryAgentConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder):
+async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder) -> AsyncGenerator[FunctionInfo, None]:
     """
     Build the auto-memory agent that wraps another agent.
 
@@ -127,7 +129,6 @@ async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder):
     from nat.agent.auto_memory_wrapper.agent import AutoMemoryWrapperGraph
     from nat.agent.auto_memory_wrapper.state import AutoMemoryWrapperState
     from nat.agent.base import AGENT_LOG_PREFIX
-    from nat.builder.function_info import FunctionInfo
 
     # Get memory editor from builder
     memory_editor = await builder.get_memory_client(config.memory_name)
