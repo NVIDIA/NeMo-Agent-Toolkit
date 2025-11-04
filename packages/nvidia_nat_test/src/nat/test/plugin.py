@@ -654,6 +654,9 @@ def oauth2_server_url_fixture(fail_missing: bool) -> str:
 def oauth2_client_credentials_fixture(oauth2_server_url: str, fail_missing: bool) -> dict[str, typing.Any]:
     """
     Fixture to provide OAuth2 client credentials for testing
+
+    Simulates the steps a user would take in a web browser to create a new OAuth2 client as documented in:
+    examples/front_ends/simple_auth/README.md
     """
 
     try:
