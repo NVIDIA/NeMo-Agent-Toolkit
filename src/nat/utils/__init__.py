@@ -30,7 +30,7 @@ async def run_workflow(*,
                        config_file: "StrPath | None" = None,
                        prompt: str,
                        to_type: type[_T] = str,
-                       session_kwargs: dict[str, typing.Any] = None) -> _T:
+                       session_kwargs: dict[str, typing.Any] | None = None) -> _T:
     """
     Wrapper to run a workflow given either a config or a config file path and a prompt, returning the result in the
     type specified by the `to_type`.
