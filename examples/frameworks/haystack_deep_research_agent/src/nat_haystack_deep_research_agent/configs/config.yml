@@ -17,9 +17,11 @@ llms:
   rag_llm:
     _type: nim
     model: nvidia/llama-3.3-nemotron-super-49b-v1
+    temperature: 0.0
   agent_llm:
     _type: nim
     model: nvidia/llama-3.3-nemotron-super-49b-v1
+    temperature: 0.0
 
 workflow:
   _type: haystack_deep_research_agent
