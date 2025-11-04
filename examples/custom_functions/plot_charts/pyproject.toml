@@ -11,7 +11,7 @@ name = "nat_plot_charts"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.4",
-  "matplotlib==3.9.*",
+  "matplotlib~=3.9",
   "seaborn==0.13.*",
 ]
 requires-python = ">=3.11,<3.14"
