@@ -151,10 +151,10 @@ nvidia_haystack = [
   "nvidia-haystack~=0.3.0",
 ]
 litellm = [
-  "litellm==1.74.9",
+  "litellm==1.74.9"
 ]
 openai = [
-  "openai~=1.106",
+  "openai~=1.106"
 ]
 
 [tool.uv]
@@ -319,7 +319,7 @@ select = [
   # Enable partial pylint support
   "PL",
   # Enable pyupgrade support
-  "UP",
+  "UP"
 ]
 
 extend-ignore = [
