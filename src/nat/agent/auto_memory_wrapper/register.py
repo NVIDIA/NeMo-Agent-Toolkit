@@ -44,10 +44,6 @@ class AutoMemoryAgentConfig(AgentBaseConfig, name="auto_memory_agent"):
     - You want the LLM to decide when to access memory
     - Memory operations should be selective based on context
 
-    **Requirements:**
-    - Inner agent MUST have `use_openai_api: true` to properly receive memory context
-    - This is necessary to pass multiple messages (including system messages) to the agent
-
     **Example:**
 
     .. code-block:: yaml
@@ -57,7 +53,6 @@ class AutoMemoryAgentConfig(AgentBaseConfig, name="auto_memory_agent"):
             _type: react_agent
             llm_name: nim_llm
             tool_names: [calculator, web_search]
-            use_openai_api: true  # REQUIRED for auto_memory_agent
 
         memory:
           zep_memory:
