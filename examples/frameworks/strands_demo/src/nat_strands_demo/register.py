@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from collections.abc import AsyncGenerator
 
 from pydantic import Field
 
@@ -24,6 +25,7 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.optimizable import OptimizableMixin
 
 from . import ping_tool  # noqa: F401, pylint: disable=unused-import
 from . import url_directory  # noqa: F401, pylint: disable=unused-import
@@ -31,7 +33,13 @@ from . import url_directory  # noqa: F401, pylint: disable=unused-import
 logger = logging.getLogger(__name__)
 
 
-class StrandsDemoConfig(FunctionBaseConfig, name="strands_demo"):
+class StrandsDemoConfig(FunctionBaseConfig, OptimizableMixin, name="strands_demo"):
+    """
+    Configuration for Strands demo workflow.
+
+    Note: OptimizableMixin enables parameter optimization when using `nat optimize`.
+    For basic usage, this has no effect and can be ignored.
+    """
     tool_names: list[FunctionRef] = Field(
         default_factory=list,
         description="NAT tools exposed to the Strands agent",
@@ -44,7 +52,7 @@ class StrandsDemoConfig(FunctionBaseConfig, name="strands_demo"):
     config_type=StrandsDemoConfig,
     framework_wrappers=[LLMFrameworkEnum.STRANDS],
 )
-async def strands_demo(config: StrandsDemoConfig, builder: Builder):
+async def strands_demo(config: StrandsDemoConfig, builder: Builder) -> AsyncGenerator[FunctionInfo, None]:
     """
     Create a Strands agent workflow that queries documentation URLs.
 
@@ -76,11 +84,11 @@ async def strands_demo(config: StrandsDemoConfig, builder: Builder):
     # Combine NAT tools with Strands http_request tool
     all_tools = [*nat_tools, http_request]
 
-    # Create Agent
-    agent = Agent(model=llm, tools=all_tools, system_prompt=config.system_prompt)
-
     async def _run(inputs: str) -> str:
         try:
+
+            agent = Agent(model=llm, tools=all_tools, system_prompt=config.system_prompt)
+
             text: str = ""
             async for ev in agent.stream_async(inputs):
                 if "data" in ev:
