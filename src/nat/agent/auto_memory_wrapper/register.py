@@ -221,6 +221,7 @@ async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder) -> 
     try:
         yield FunctionInfo.from_fn(_response_fn, description=config.description)
     except GeneratorExit:
-        logger.exception("%s Workflow exited early!", AGENT_LOG_PREFIX)
+        logger.debug("%s Workflow exited early!", AGENT_LOG_PREFIX)
+        raise
     finally:
         logger.debug("%s Cleaning up auto_memory_agent workflow.", AGENT_LOG_PREFIX)
