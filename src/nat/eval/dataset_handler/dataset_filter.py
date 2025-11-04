@@ -54,10 +54,11 @@ class DatasetFilter:
         # Initialize boolean mask
         matches = pd.Series([False] * len(series), index=series.index)
 
-        # Check each pattern using fnmatch
+        # Check each pattern using fnmatch with list comprehension to avoid lambda capture
         for pattern in patterns:
             pattern_str = str(pattern)
-            pattern_matches = str_series.apply(lambda x: fnmatch.fnmatch(x, pattern_str))
+            pattern_matches = pd.Series([fnmatch.fnmatch(val, pattern_str) for val in str_series],
+                                        index=str_series.index)
             matches |= pattern_matches
 
         return matches
