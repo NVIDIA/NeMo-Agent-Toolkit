@@ -121,6 +121,7 @@ async def test_full_workflow(oauth2_client_credentials: dict[str, str]):
     config.authentication['test_auth_provider'].token_url = f"{oauth_url}/oauth/token"
     config.authentication['test_auth_provider'].client_id = oauth2_client_credentials["id"]
     config.authentication['test_auth_provider'].client_secret = SecretStr(oauth2_client_credentials["secret"])
+    config.functions['who_am_i_function'].api_url = f"{oauth_url}/api/me"
 
     await run_workflow(config=config,
                        question="Who am I logged in as?",
