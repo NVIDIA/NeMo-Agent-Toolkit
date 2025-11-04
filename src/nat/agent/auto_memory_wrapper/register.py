@@ -216,7 +216,7 @@ async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder) -> 
             logger.exception(f"{AGENT_LOG_PREFIX} Auto-memory agent failed with exception")
             if config.verbose:
                 return str(ex)
-            return f"Auto-memory agent failed with exception: {ex}"
+            return "Auto-memory agent failed"
 
     try:
         yield FunctionInfo.from_fn(_response_fn, description=config.description)
