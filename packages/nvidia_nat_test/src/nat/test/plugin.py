@@ -691,7 +691,7 @@ def oauth2_client_credentials_fixture(oauth2_server_url: str, fail_missing: bool
 
         # Unfortunately the response is HTML so we need to parse it to get the client ID and secret, which are not
         # locatable via ID tags
-        soup = BeautifulSoup(client_create_response.text)
+        soup = BeautifulSoup(client_create_response.text, 'html.parser')
         strong_tags = soup.find_all('strong')
         i = 0
         client_id = None
