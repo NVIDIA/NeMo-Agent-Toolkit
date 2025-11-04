@@ -651,7 +651,7 @@ def oauth2_server_url_fixture(fail_missing: bool) -> str:
 
 
 @pytest.fixture(name="oauth2_client_credentials", scope="session")
-def oauth2_client_credentials_fixture(oauth2_server_url: str, fail_missing: bool) -> dict[str, str]:
+def oauth2_client_credentials_fixture(oauth2_server_url: str, fail_missing: bool) -> dict[str, typing.Any]:
     """
     Fixture to provide OAuth2 client credentials for testing
     """
@@ -705,7 +705,14 @@ def oauth2_client_credentials_fixture(oauth2_server_url: str, fail_missing: bool
 
         assert client_id is not None and client_secret is not None, "Failed to parse client credentials from response"
 
-        return {"id": client_id, "secret": client_secret, "username": username, "url": oauth2_server_url}
+        return {
+            "id": client_id,
+            "secret": client_secret,
+            "username": username,
+            "url": oauth2_server_url,
+            "cookies": cookies
+        }
+
     except Exception as e:
         reason = f"Unable to create OAuth2 client: {e}"
         if fail_missing:
