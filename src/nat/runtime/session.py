@@ -15,12 +15,17 @@
 
 import asyncio
 import contextvars
+import logging
+import re
 import uuid
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
+from datetime import datetime
+from datetime import timedelta
 
+import aiorwlock
 from fastapi import WebSocket
 from starlette.requests import HTTPConnection
 from starlette.requests import Request
@@ -28,13 +33,17 @@ from starlette.requests import Request
 from nat.builder.context import Context
 from nat.builder.context import ContextState
 from nat.builder.workflow import Workflow
+from nat.builder.workflow_builder import SharedWorkflowBuilder
 from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.config import Config
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import InteractionPrompt
+from nat.data_models.user_workflow_data import UserWorkflowData
 from nat.runtime.runner import Runner
+
+logger = logging.getLogger(__name__)
 
 
 class UserSession:
@@ -85,49 +94,131 @@ class UserSession:
 
 class SessionManager:
 
-    def __init__(self, workflow: Workflow, max_concurrency: int = 8):
+    def __init__(self,
+                 config: Config,
+                 max_concurrency: int = 8,
+                 max_users: int = 100,
+                 user_idle_timeout: timedelta = timedelta(minutes=30),
+                 cleanup_check_interval: timedelta = timedelta(minutes=10),
+                 require_user_id: bool = False):
         """
-        The SessionManager class is used to run and manage a user workflow session. It runs and manages the context,
-        and configuration of a workflow with the specified concurrency.
+        The SessionManager class is for per-user workflow management.
+
+        Accepts config and builds workflows on-demand for each user.
 
         Parameters
         ----------
-        workflow : Workflow
-            The workflow to run
+        config : Config
+            The configuration for building the workflow
         max_concurrency : int, optional
             The maximum number of simultaneous workflow invocations, by default 8
+        max_users : int, optional
+            The maximum number of users to support, by default 100
+        user_idle_timeout : timedelta, optional
+            The timeout for user inactivity, by default 30 minutes
+        cleanup_check_interval : timedelta, optional
+            The interval for checking for idle users, by default 10 minutes
+        require_user_id : bool, optional
+            Whether to require a user_id in the request, by default False
         """
 
-        if (workflow is None):
-            raise ValueError("Workflow cannot be None")
-
-        self._workflow: Workflow = workflow
-
+        self._config = config
         self._max_concurrency = max_concurrency
+        self._max_users = max_users
+        self._user_idle_timeout = user_idle_timeout
+        self._cleanup_check_interval = cleanup_check_interval
+        self._require_user_id = require_user_id
+
+        # Per-user workflow registry
+        self._user_workflows: dict[str, UserWorkflowData] = {}
+        self._users_lock = aiorwlock.RWLock()
+
+        # Shared builder
+        self._shared_builder: SharedWorkflowBuilder | None = None
+        self._shared_builder_lock = asyncio.Lock()
+
+        # Cleanup task
+        self._cleanup_task: asyncio.Task | None = None
+        self._shutdown_event: asyncio.Event = asyncio.Event()
+
+        # Context state
         self._context_state = ContextState.get()
         self._context = Context(self._context_state)
 
-        # We save the context because Uvicorn spawns a new process
-        # for each request, and we need to restore the context vars
-        self._saved_context = contextvars.copy_context()
-
-        if (max_concurrency > 0):
-            self._semaphore = asyncio.Semaphore(max_concurrency)
-        else:
-            # If max_concurrency is 0, then we don't need to limit the concurrency but we still need a context
-            self._semaphore = nullcontext()
-
     @property
     def config(self) -> Config:
-        return self._workflow.config
+        return self._config
 
     @property
-    def workflow(self) -> Workflow:
-        return self._workflow
+    def max_concurrency(self) -> int:
+        return self._max_concurrency
 
     @property
-    def context(self) -> Context:
-        return self._context
+    def max_users(self) -> int:
+        return self._max_users
+
+    @property
+    def user_idle_timeout(self) -> timedelta:
+        return self._user_idle_timeout
+
+    @property
+    def cleanup_check_interval(self) -> timedelta:
+        return self._cleanup_check_interval
+
+    @property
+    def require_user_id(self) -> bool:
+        return self._require_user_id
+
+    def _validate_user_id(self, user_id: str) -> str | None:
+        """
+        Validates user_id format.
+        TODO: Implement actual validation logic.
+        """
+        if not user_id or not isinstance(user_id, str):
+            return None
+
+        user_id = user_id.strip()
+
+        # Check if empty after trimming
+        if len(user_id) == 0:
+            return None
+
+        # Check reasonable length (prevent memory issues)
+        if len(user_id) > 256:
+            logger.warning(f"user_id too long: {len(user_id)} characters")
+            return None
+
+    def _extract_user_id(self, http_connection: HTTPConnection | None = None) -> str | None:
+        """
+        Extracts the user ID from the HTTP connection.
+        """
+        if http_connection is None:
+            return None
+
+        # Extract from nat-session cookie (NAT's standard approach)
+        if hasattr(http_connection, 'cookies'):
+            user_id = http_connection.cookies.get('nat-session')
+            if user_id:
+                validated = self._validate_user_id(user_id)
+                if validated:
+                    logger.debug(f"Extracted user_id from nat-session cookie: {validated[:8]}...")
+                    return validated
+
+        # For WebSocket connections, extract from scope/headers
+        if isinstance(http_connection, WebSocket):
+            if hasattr(http_connection, 'scope') and 'headers' in http_connection.scope:
+                for header_name, header_value in http_connection.scope.get('headers', []):
+                    if header_name == b'cookie':
+                        cookie_header = header_value.decode('utf-8')
+                        # Parse cookie header for nat-session
+                        for cookie in cookie_header.split(';'):
+                            cookie = cookie.strip()
+                            if cookie.startswith('nat-session='):
+                                user_id = cookie.split('=', 1)[1]
+                                validated = self._validate_user_id(user_id)
+                                if validated:
+                                    logger.debug(f"Extracted user_id from WebSocket cookie: {validated[:8]}...")
+                                    return validated
 
     @asynccontextmanager
     async def session(self,
