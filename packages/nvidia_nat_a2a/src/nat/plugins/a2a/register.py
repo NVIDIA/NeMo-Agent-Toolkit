@@ -16,5 +16,4 @@
 # flake8: noqa
 # isort:skip_file
 
-# Import any providers which need to be automatically registered here
-# Currently empty - will be populated as A2A client implementation progresses
+from . import client_impl

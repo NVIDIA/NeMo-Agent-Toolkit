@@ -43,34 +43,37 @@ class A2AClientFunctionGroup(FunctionGroup):
         config: A2AClientConfig = self._config  # type: ignore[assignment]
         base_url = str(config.url)
 
-        # Create A2A client
+        # Create and initialize A2A client
         self._client = A2ABaseClient(
             base_url=base_url,
             agent_card_path=config.agent_card_path,
             task_timeout=config.task_timeout,
         )
-
-        # Initialize the client
         await self._client.__aenter__()
-
         logger.info("Connected to A2A agent at %s", base_url)
 
-        # Get agent card
+        # Discover agent card and register functions
+        self._register_functions()
+
+        return self
+
+    def _register_functions(self):
+        """Retrieve agent card and register the three-level API: high-level, helpers, and low-level."""
+        # Validate client is initialized
+        if not self._client:
+            raise RuntimeError("A2A client not initialized")
+
+        # Get and validate agent card
         agent_card = self._client.agent_card
         if not agent_card:
             raise RuntimeError("Agent card not available")
 
+        # Log agent information
         logger.info("Agent: %s v%s", agent_card.name, agent_card.version)
         if agent_card.skills:
             logger.info("Skills: %s", [skill.name for skill in agent_card.skills])
 
-        # Register functions using three-level API
-        self._register_functions(agent_card)
-
-        return self
-
-    def _register_functions(self, agent_card):
-        """Register the three-level API: high-level, helpers, and low-level."""
+        # Register functions
         agent_name = self._sanitize_function_name(agent_card.name)
 
         # LEVEL 1: High-level main function (LLM-friendly)
@@ -294,20 +297,13 @@ class A2AClientFunctionGroup(FunctionGroup):
 @register_function_group(config_type=A2AClientConfig)
 async def a2a_client_function_group(config: A2AClientConfig, _builder: Builder):
     """
-    Connect to an A2A agent and expose its skills as NAT functions.
+    Connect to an A2A agent, discover agent card and publish the primary
+    agent function and helper functions.
 
     This function group creates a three-level API:
     - High-level: Agent function named after the agent (e.g., dice_agent)
     - Helpers: get_skills, get_info, get_task, cancel_task
     - Low-level: send_message for advanced usage
-
-    Example workflow YAML:
-    ```yaml
-    functions:
-      - type: a2a_client
-        url: http://localhost:9999
-        task_timeout: 300
-    ```
     """
     async with A2AClientFunctionGroup(config, _builder) as group:
         yield group
