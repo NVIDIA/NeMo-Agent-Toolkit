@@ -16,6 +16,7 @@
 import io
 import logging
 import typing
+from pathlib import Path
 
 import expandvars
 import yaml
@@ -44,10 +45,34 @@ def _interpolate_variables(value: str | int | float | bool | None) -> str | int 
     return expandvars.expandvars(value)
 
 
+def deep_merge(base: dict, override: dict) -> dict:
+    """
+    Recursively merge override dictionary into base dictionary.
+
+    Args:
+        base (dict): The base configuration dictionary.
+        override (dict): The override configuration dictionary.
+
+    Returns:
+        dict: The merged configuration dictionary.
+    """
+    result = base.copy()
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
 def yaml_load(config_path: StrPath) -> dict:
     """
     Load a YAML file and interpolate variables in the format
     ${VAR:-default_value}.
+
+    If the YAML file contains a "base" key, the file at that path will be
+    loaded first, and the current config will be merged on top of it. This enables
+    config inheritance to reduce duplication across similar configuration files.
 
     Args:
         config_path (StrPath): The path to the YAML file to load.
@@ -60,7 +85,27 @@ def yaml_load(config_path: StrPath) -> dict:
     with open(config_path, encoding="utf-8") as stream:
         config_str = stream.read()
 
-    return yaml_loads(config_str)
+    config = yaml_loads(config_str)
+
+    # Check if config specifies a base for inheritance
+    if "base" in config:
+        base_path_str = config["base"]
+
+        # Resolve base path relative to current config
+        config_path_obj = Path(config_path)
+        if not Path(base_path_str).is_absolute():
+            base_path = config_path_obj.parent / base_path_str
+        else:
+            base_path = Path(base_path_str)
+
+        # Load base config (recursively, so bases can have bases)
+        base_config = yaml_load(base_path)
+
+        # Remove 'base' key from override and merge
+        config.pop("base")
+        config = deep_merge(base_config, config)
+
+    return config
 
 
 def yaml_loads(config: str) -> dict:
