@@ -29,6 +29,7 @@ from requests.exceptions import RequestException
 from requests.exceptions import Timeout
 
 
+@pytest.mark.integration
 class TestCodeExecutionSandbox:
     """Test suite for the Code Execution Sandbox service."""
 
