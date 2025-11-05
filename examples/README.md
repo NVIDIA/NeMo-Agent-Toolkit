@@ -116,13 +116,13 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NVIDIA/NeMo-Agent-Toolkit/)
 
-1. [Getting Started](notebooks/1_getting_started_with_nat.ipynb) - Getting started with the NeMo Agent toolkit
-2. [Bringing Your Own Agent](notebooks/2_bringing_your_own_agent.ipynb) - Bringing your own agent to the NeMo Agent toolkit
-3. [Adding Tools and Agents](notebooks/3_adding_tools_to_agents.ipynb) - Adding tools to your agentic workflow
-4. [MCP Client and Servers Setup](notebooks/4_mcp_setup_and_integration.ipynb) - Deploy and integrate MCP clients and servers with NeMo Agent toolkit workflows
-5. [Multi-Agent Orchestration](notebooks/5_multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
-6. [Observability, Evaluation, and Profiling](notebooks/6_observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
-7. [Optimizing Model Selection, Parameters, and Prompts](notebooks/7_optimize_model_selection.ipynb) - Use NAT Optimize to compare models, parameters, and prompt variations
+1. [Getting Started](notebooks/getting_started_with_nat.ipynb) - Getting started with the NeMo Agent toolkit
+2. [Bringing Your Own Agent](notebooks/bringing_your_own_agent.ipynb) - Bringing your own agent to the NeMo Agent toolkit
+3. [Adding Tools and Agents](notebooks/adding_tools_to_agents.ipynb) - Adding tools to your agentic workflow
+4. [MCP Client and Servers Setup](notebooks/mcp_setup_and_integration.ipynb) - Deploy and integrate MCP clients and servers with NeMo Agent toolkit workflows
+5. [Multi-Agent Orchestration](notebooks/multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
+6. [Observability, Evaluation, and Profiling](notebooks/observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
+7. [Optimizing Model Selection, Parameters, and Prompts](notebooks/optimize_model_selection.ipynb) - Use NAT Optimize to compare models, parameters, and prompt variations
 
 #### Brev Launchables
 
