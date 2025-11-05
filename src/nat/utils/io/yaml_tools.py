@@ -65,7 +65,7 @@ def deep_merge(base: dict, override: dict) -> dict:
     return result
 
 
-def yaml_load(config_path: StrPath) -> dict:
+def yaml_load(config_path: StrPath, _visited: set[Path] | None = None) -> dict:
     """
     Load a YAML file and interpolate variables in the format
     ${VAR:-default_value}.
@@ -76,6 +76,7 @@ def yaml_load(config_path: StrPath) -> dict:
 
     Args:
         config_path (StrPath): The path to the YAML file to load.
+        _visited (set[Path] | None): Internal parameter for circular dependency detection.
 
     Returns:
         dict: The processed configuration dictionary.
@@ -83,9 +84,19 @@ def yaml_load(config_path: StrPath) -> dict:
     Raises:
         TypeError: If the "base" key is not a string.
         FileNotFoundError: If the base configuration file does not exist.
+        ValueError: If a circular dependency is detected in configuration inheritance.
     """
-    # Normalize the config path
+    # Normalize the config path and detect circular dependencies
     config_path_obj = Path(config_path).resolve()
+
+    if _visited is None:
+        _visited = set()
+
+    if config_path_obj in _visited:
+        raise ValueError(f"Circular dependency detected in configuration inheritance: {config_path_obj} "
+                         f"is already in the inheritance chain")
+
+    _visited.add(config_path_obj)
 
     # Read YAML file
     with open(config_path_obj, encoding="utf-8") as stream:
@@ -113,7 +124,7 @@ def yaml_load(config_path: StrPath) -> dict:
             raise FileNotFoundError(f"Base configuration file not found: {base_path}")
 
         # Load base config (recursively, so bases can have bases)
-        base_config = yaml_load(base_path)
+        base_config = yaml_load(base_path, _visited=_visited)
 
         # Perform deep merge and remove 'base' key from result
         config = deep_merge(base_config, config)

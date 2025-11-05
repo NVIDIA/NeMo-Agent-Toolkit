@@ -435,3 +435,31 @@ def test_yaml_load_base_file_not_found():
             yaml_load(config_file_path)
     finally:
         os.unlink(config_file_path)
+
+
+def test_yaml_load_circular_dependency():
+    # Test that circular dependencies are detected
+    # Create config A that inherits from B
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as file_a:
+        file_a_path = file_a.name
+    # Create config B that inherits from A
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as file_b:
+        file_b_path = file_b.name
+    try:
+        # Write config A (inherits from B)
+        with open(file_a_path, 'w') as f:
+            f.write(f"""
+            base: {os.path.basename(file_b_path)}
+            key_a: value_a
+            """)
+        # Write config B (inherits from A - creates cycle)
+        with open(file_b_path, 'w') as f:
+            f.write(f"""
+            base: {os.path.basename(file_a_path)}
+            key_b: value_b
+            """)
+        with pytest.raises(ValueError, match="Circular dependency detected"):
+            yaml_load(file_a_path)
+    finally:
+        os.unlink(file_a_path)
+        os.unlink(file_b_path)
