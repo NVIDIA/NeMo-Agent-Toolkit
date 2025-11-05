@@ -20,6 +20,7 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
@@ -40,7 +41,7 @@ class OpenAIModelConfig(LLMBaseConfig,
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
-    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
+    api_key: OptionalSecretStr = Field(default=None, description="OpenAI API key to interact with hosted model.")
     base_url: str | None = Field(default=None, description="Base url to the hosted model.")
     model_name: str = OptimizableField(validation_alias=AliasChoices("model_name", "model"),
                                        serialization_alias="model",

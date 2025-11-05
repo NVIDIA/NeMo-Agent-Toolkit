@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import json
+import os
 import typing
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pydantic
 import pytest
 
 from nat.data_models import common
@@ -422,3 +424,77 @@ class TestTypedBaseModelInheritance:
         assert base_schema["properties"]["type"]["default"] == "schema_base"
         assert middle_schema["properties"]["type"]["default"] == "schema_middle"
         assert leaf_schema["properties"]["type"]["default"] == "schema_leaf"
+
+
+class ModelWithSecret(pydantic.BaseModel):
+    name: str
+    secret: common.OptionalSecretStr = pydantic.Field(default=None)
+
+
+@pytest.mark.parametrize("input_value, expected_output", [
+    (pydantic.SecretStr("pydantic_secret"), "pydantic_secret"),
+    (None, None),
+],
+                         ids=["SecretStr", "None"])
+@pytest.mark.parametrize("use_model", [True, False], ids=["use_model", "direct"])
+def test_get_secret_value(input_value: str | pydantic.SecretStr, expected_output: str | None, use_model: bool):
+    if use_model:
+        model = ModelWithSecret(name="test", secret=input_value)
+        input_value = model.secret
+
+    output = common.get_secret_value(input_value)
+    if expected_output is None:
+        assert output is None
+    else:
+        assert output == expected_output
+
+
+def test_optional_secret_str():
+    secret_value = "top_secret"
+
+    model = ModelWithSecret(name="test", secret=secret_value)
+    assert model.secret.get_secret_value() == secret_value
+
+    # Test serialization
+    assert secret_value not in str(model)
+    assert secret_value not in repr(model)
+
+    # we do serialize this value in model_dump
+    assert secret_value in model.model_dump().values()
+    assert secret_value in model.model_dump_json()
+
+
+def test_optional_secret_str_none():
+    model = ModelWithSecret(name="test")
+    assert model.secret is None
+
+    # Test serialization
+    assert "None" in str(model)
+    assert "None" in repr(model)
+
+    # we do serialize this value in model_dump
+    assert None in model.model_dump().values()
+    assert "null" in model.model_dump_json()
+
+
+@pytest.mark.parametrize("initial_value", ["secret_1", None])
+@pytest.mark.usefixtures("restore_environ")
+def test_set_secret_from_env(initial_value: str | None):
+    os.environ["TEST_API_KEY"] = "secret_from_env"
+    model = ModelWithSecret(name="test", secret=initial_value)
+    common.set_secret_from_env(model, 'secret', 'TEST_API_KEY')
+    assert isinstance(model.secret, pydantic.SecretStr)
+    assert model.secret.get_secret_value() == "secret_from_env"
+
+
+@pytest.mark.parametrize("initial_value", ["secret_1", None])
+@pytest.mark.usefixtures("restore_environ")
+def test_set_secret_from_env_unset(initial_value: str | None):
+    assert "TEST_API_KEY" not in os.environ
+    model = ModelWithSecret(name="test", secret=initial_value)
+    common.set_secret_from_env(model, 'secret', 'TEST_API_KEY')
+    if initial_value is None:
+        assert model.secret is None
+    else:
+        assert isinstance(model.secret, pydantic.SecretStr)
+        assert model.secret.get_secret_value() == initial_value
