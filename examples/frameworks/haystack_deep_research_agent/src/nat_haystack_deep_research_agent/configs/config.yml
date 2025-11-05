@@ -16,10 +16,10 @@
 llms:
   rag_llm:
     _type: nim
-    model: nvidia/llama-3.3-nemotron-super-49b-v1
+    model: nvidia/llama-3.3-nemotron-super-49b-v1.5
   agent_llm:
     _type: nim
-    model: nvidia/llama-3.3-nemotron-super-49b-v1
+    model: nvidia/llama-3.3-nemotron-super-49b-v1.5
 
 workflow:
   _type: haystack_deep_research_agent
