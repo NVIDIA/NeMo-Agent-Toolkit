@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import subprocess
 from pathlib import Path
+import os
 
 import pytest
 
@@ -25,6 +25,9 @@ _ALL_WORKFLOWS = [
     "second_agent_attempt",
     "third_agent_attempt",
     "retail_sales_agent",
+    "retail_sales_agent_nb3",
+    "retail_sales_agent_nb5",
+    "retail_sales_agent_nb6",
     "tmp_workflow",
     "mcp_dev_workflow",
     "simple_calculator_notebook"
@@ -115,12 +118,12 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
         str(notebook_path.absolute()),
     ]
 
-    env = os.environ.copy()
-    env["NAT_NOTEBOOK_INSTALL_MODE"] = "develop"
+    # env = os.environ.copy()
+    # env["NAT_NOTEBOOK_INSTALL_MODE"] = "local"
 
     # Ideally if the notebook times out we want jupyter to catch it and exit gracefully with the most informative error
     # possible. However in the potential situation where jupyter itself hangs, we add a 10s buffer to the timeout.
-    result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout_seconds + 10, env=env)
+    result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout_seconds + 10)
     assert result.returncode == 0, f"Notebook execution failed:\n{result.stderr}"
 
     for package in expected_packages:
@@ -134,12 +137,13 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
     "notebook_file_name, expected_packages, timeout_seconds",
     [
         pytest.param("getting_started_with_nat.ipynb", ["getting_started"], 120, id="getting_started_with_nat"),
-        pytest.param("adding_tools_to_agents.ipynb", ["retail_sales_agent"], 300, id="adding_tools_to_agents"),
+        pytest.param("adding_tools_to_agents.ipynb", ["retail_sales_agent_nb3"], 300, id="adding_tools_to_agents"),
         pytest.param("mcp_setup_and_integration.ipynb", ["mcp_dev_workflow", "nat_simple_calculator_notebook"],
                      300,
                      id="mcp_setup_and_integration"),
-        pytest.param("multi_agent_orchestration.ipynb", ["retail_sales_agent"], 120, id="multi_agent_orchestration"),
-        pytest.param("observability_evaluation_and_profiling.ipynb", ["retail_sales_agent"],
+        pytest.param("multi_agent_orchestration.ipynb", ["retail_sales_agent_nb5"], 120,
+                     id="multi_agent_orchestration"),
+        pytest.param("observability_evaluation_and_profiling.ipynb", ["retail_sales_agent_nb6"],
                      1000,
                      id="observability_evaluation_and_profiling"),
         pytest.param("optimize_model_selection.ipynb", ["tmp_workflow"], 300, id="optimize_model_selection"),
