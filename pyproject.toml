@@ -24,7 +24,7 @@ dependencies = [
   "colorama~=0.4.6",
   "datasets~=4.0", # workaround for uv's solver choosing different versions of datasets based on sys_platform
   "expandvars~=1.0",
-  "fastapi~=0.115.5",
+  "fastapi~=0.120.1",
   "httpx~=0.27",
   "jinja2~=3.1",
   "jsonpath-ng~=1.7",
@@ -151,10 +151,10 @@ nvidia_haystack = [
   "nvidia-haystack~=0.3.0",
 ]
 litellm = [
-  "litellm==1.74.9"
+  "litellm==1.74.9",
 ]
 openai = [
-  "openai~=1.106"
+  "openai~=1.106",
 ]
 
 [tool.uv]
@@ -224,6 +224,7 @@ exclude = ["packages/compat"]
 dev = [
   "asgi-lifespan~=2.1",
   "galileo~=1.27",
+  "beautifulsoup4~=4.13",
   "httpx-sse~=0.4",
   "ipython~=8.31",
   "langsmith", # this is currently a transitive dependency of nat, not specifying a version to avoid conflicts
@@ -320,7 +321,7 @@ select = [
   # Enable partial pylint support
   "PL",
   # Enable pyupgrade support
-  "UP"
+  "UP",
 ]
 
 extend-ignore = [

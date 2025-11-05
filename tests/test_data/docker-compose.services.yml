@@ -97,6 +97,7 @@ services:
       LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY: ${LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY:-minioadmin} # CHANGEME
       LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE: ${LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE:-true}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      REDIS_AUTH: ${REDIS_PASSWORD:-redis}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       SALT: ${LANGFUSE_SALT:-mysalt}
@@ -163,6 +164,22 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-my_password}
     restart: unless-stopped
 
+  oauth2-server:
+    build: ../../examples/front_ends/simple_auth
+    container_name: test-oauth2-server
+    ports:
+      - "5001:5000"
+    environment:
+      - AUTHLIB_INSECURE_TRANSPORT=1
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   opensearch:
     image: opensearchproject/opensearch:2.11.1
     container_name: test-opensearch
@@ -201,6 +218,7 @@ services:
   redis:
     image: redis:8.0
     container_name: test-redis
+    command: "--requirepass ${REDIS_PASSWORD:-redis}"
     ports:
       - 6379:6379
     healthcheck:

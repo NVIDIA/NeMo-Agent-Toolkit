@@ -25,6 +25,7 @@ from nat.authentication.exceptions.api_key_exceptions import HeaderNameFieldErro
 from nat.authentication.exceptions.api_key_exceptions import HeaderPrefixFieldError
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.authentication import HeaderAuthScheme
+from nat.data_models.common import SerializableSecretStr
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +38,9 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
     API Key authentication configuration model.
     """
 
-    raw_key: str = Field(description=("Raw API token or credential to be injected into the request parameter. "
-                                      "Used for 'bearer','x-api-key','custom', and other schemes. "))
+    raw_key: SerializableSecretStr = Field(
+        description=("Raw API token or credential to be injected into the request parameter. "
+                     "Used for 'bearer','x-api-key','custom', and other schemes. "))
 
     auth_scheme: HeaderAuthScheme = Field(default=HeaderAuthScheme.BEARER,
                                           description=("The HTTP authentication scheme to use. "
@@ -53,7 +55,7 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
 
     @field_validator('raw_key')
     @classmethod
-    def validate_raw_key(cls, value: str) -> str:
+    def validate_raw_key(cls, value: SerializableSecretStr) -> SerializableSecretStr:
         if not value:
             raise APIKeyFieldError('value_missing', 'raw_key field value is required.')
 
@@ -63,11 +65,12 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
                 'raw_key field value must be at least 8 characters long for security. '
                 f'Got: {len(value)} characters.')
 
-        if len(value.strip()) != len(value):
+        str_value = value.get_secret_value()
+        if len(str_value.strip()) != len(value):
             raise APIKeyFieldError('whitespace_found',
                                    'raw_key field value cannot have leading or trailing whitespace.')
 
-        if any(c in string.whitespace for c in value):
+        if any(c in string.whitespace for c in str_value):
             raise APIKeyFieldError('contains_whitespace', 'raw_key must not contain any '
                                    'whitespace characters.')
 

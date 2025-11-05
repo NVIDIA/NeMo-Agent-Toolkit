@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-import os
 
 from pydantic import Field
 
@@ -22,6 +21,9 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.common import OptionalSecretStr
+from nat.data_models.common import get_secret_value
+from nat.data_models.common import set_secret_from_env
 from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -32,7 +34,7 @@ class SerpApiToolConfig(FunctionBaseConfig, name="serp_api_tool"):
     Tool that retrieves search results from the web using SerpAPI.
     Requires a SERP_API_KEY.
     """
-    api_key: str | None = Field(default=None, description="The API key for the SerpAPI service.")
+    api_key: OptionalSecretStr = Field(default=None, description="The API key for the SerpAPI service.")
     max_results: int = Field(default=5, description="The maximum number of results to return.")
 
 
@@ -54,14 +56,14 @@ async def serp_api_tool(tool_config: SerpApiToolConfig, builder: Builder):
     from agno.tools.serpapi import SerpApiTools
 
     if (not tool_config.api_key):
-        tool_config.api_key = os.getenv("SERP_API_KEY")
+        set_secret_from_env(tool_config, "api_key", "SERP_API_KEY")
 
     if not tool_config.api_key:
         raise ValueError(
             "API token must be provided in the configuration or in the environment variable `SERP_API_KEY`")
 
     # Create the SerpAPI tools instance
-    search_tool = SerpApiTools(api_key=tool_config.api_key)
+    search_tool = SerpApiTools(api_key=get_secret_value(tool_config.api_key))
 
     # Simple search function with a single string parameter
     async def _serp_api_search(query: str) -> str:

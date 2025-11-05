@@ -81,7 +81,16 @@ workflows:
   tool_names:
     - mcp_tools.tool_a
 ```
-This is useful when you need to build a custom tool that uses a tool from an MCP server as a sub-tool.
+
+An additional case to note is when a function group is served by a NAT MCP server. The tools must still be accessed by their full name. This is the same as the prior case, but there is an important difference. Consider the following example:
+```yaml
+workflow:
+  _type: react_agent
+  tool_names:
+    - mcp_tools.calculator.add
+```
+
+`mcp_tools` is the name of the function group, and `calculator.add` is the name of the tool within the function group. This is because the tools are added to the function group as functions, and the function group is then added to the workflow as a tool.
 
 #### Configuration Options
 
@@ -130,6 +139,9 @@ Example with all options:
 function_groups:
   mcp_tools:
     _type: mcp_client
+    include:
+      - calculator.add
+      - calculator.multiply
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
@@ -143,10 +155,10 @@ function_groups:
     max_sessions: 50  # Maximum concurrent sessions
     session_idle_timeout: 7200  # 2 hours (in seconds)
     tool_overrides:
-      calculator_add:
+      calculator.add:
         alias: "add_numbers"
         description: "Add two numbers together"
-      calculator_multiply:
+      calculator.multiply:
         description: "Multiply two numbers"  # Keeps original name
 ```
 
@@ -171,7 +183,7 @@ workflows:
 You can use `mcp_tool_wrapper` to wrap a single MCP tool as a NeMo Agent toolkit function. Specify the server URL and the tool name for each tool you want to wrap. This approach requires a separate configuration entry for each individual tool.
 
 ## Transport Configuration
-The `mcp_client` function group can connect to MCP servers using different transport types. Choose the transport that matches your MCP server's configuration to ensure proper communication.
+The `mcp_client` function group and `mcp_tool_wrapper` can connect to MCP servers using different transport types. Choose the transport that matches your MCP server's configuration to ensure proper communication.
 
 ### Transport Types
 
@@ -289,11 +301,12 @@ For SSE transport, ensure the MCP server starts with the `--transport sse` flag.
 
 Sample output:
 ```text
-calculator_multiply
-calculator_inequality
+calculator.add
+calculator.multiply
+calculator.subtract
+calculator.divide
+calculator.compare
 current_datetime
-calculator_divide
-calculator_subtract
 react_agent
 ```
 
@@ -302,39 +315,42 @@ react_agent
 To get detailed information about a specific tool, use the `--tool` flag:
 
 ```bash
-nat mcp client tool list --url http://localhost:9901/mcp --tool calculator_multiply
+nat mcp client tool list --url http://localhost:9901/mcp --tool calculator.multiply
 ```
 
 Sample output:
 ```text
-Tool: calculator_multiply
-Description: This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.
+Tool: calculator.multiply
+Description: Multiply two or more numbers together
 Input Schema:
 {
   "properties": {
-    "text": {
+    "numbers": {
       "description": "",
-      "title": "Text",
-      "type": "string"
+      "items": {
+        "type": "number"
+      },
+      "title": "Numbers",
+      "type": "array"
     }
   },
   "required": [
-    "text"
+    "numbers"
   ],
-  "title": "CalculatorMultiplyInputSchema",
+  "title": "Calculator.MultiplyInputSchema",
   "type": "object"
 }
-------------------------------------------------------------
 ```
 ### Call a Tool
 
 To call a tool and get its output:
 
-```bash
+```console
 # Pass arguments as JSON
-nat mcp client tool call calculator_multiply \
+$ nat mcp client tool call calculator.multiply \
   --url http://localhost:9901/mcp \
-  --json-args '{"text": "2 * 3"}'
+  --json-args '{"numbers": [1, 3, 6, 10]}'
+180.0
 ```
 
 ### Using Protected MCP Servers
@@ -383,6 +399,7 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
       "server": "stdio:python",
       "transport": "stdio",
       "session_healthy": true,
+      "protected": false,
       "tools": [
         {
           "name": "convert_time",
@@ -405,34 +422,41 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
       "server": "streamable-http:http://localhost:9901/mcp",
       "transport": "streamable-http",
       "session_healthy": true,
+      "protected": false,
       "tools": [
         {
-          "name": "calculator_divide",
-          "description": "This is a mathematical tool used to divide one number by another. It takes 2 numbers as an input and computes their numeric quotient as the output.",
+          "name": "calculator.add",
+          "description": "Add two or more numbers together",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator_inequality",
-          "description": "This is a mathematical tool used to perform an inequality comparison between two numbers. It takes two numbers as an input and determines if one is greater or are equal.",
+          "name": "calculator.compare",
+          "description": "Compare two numbers",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator_multiply",
-          "description": "This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.",
+          "name": "calculator.divide",
+          "description": "Divide one number by another",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator_subtract",
-          "description": "This is a mathematical tool used to subtract one number from another. It takes 2 numbers as an input and computes their numeric difference as the output.",
+          "name": "calculator.multiply",
+          "description": "Multiply two or more numbers together",
+          "server": "streamable-http:http://localhost:9901/mcp",
+          "available": true
+        },
+        {
+          "name": "calculator.subtract",
+          "description": "Subtract one number from another",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         }
       ],
-      "total_tools": 4,
-      "available_tools": 4
+      "total_tools": 5,
+      "available_tools": 5
     }
   ]
 }
