@@ -158,14 +158,11 @@ class SessionManager:
     @property
     def workflow(self) -> Workflow:
         """
-        DEPRECATED: Not available in per-user architecture.
-
         Raises:
-            RuntimeError: Always - use session() to get user-specific workflow
+            RuntimeError: Always, since this property has been deprecated
         """
 
-        raise RuntimeError("SessionManager.workflow is not available in per-user mode. "
-                           "Use session() context manager to get user-specific workflow.")
+        raise RuntimeError("SessionManager.workflow has been deprecated.")
 
     @property
     def max_concurrency(self) -> int:
@@ -194,6 +191,13 @@ class SessionManager:
     @property
     def user_limit(self) -> int:
         return self._max_users
+
+    async def get_workflow(self, user_id: str) -> Workflow:
+        """
+        Get the workflow for a specific user.
+        """
+        workflow_data = await self._get_or_create_user_workflow(user_id)
+        return workflow_data.workflow
 
     def _validate_user_id(self, user_id: str) -> str | None:
         """
