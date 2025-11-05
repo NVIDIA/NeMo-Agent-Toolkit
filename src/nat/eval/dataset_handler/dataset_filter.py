@@ -26,7 +26,7 @@ class DatasetFilter:
         - If a allowlist is provided, only keep rows matching the filter values.
         - If a denylist is provided, remove rows matching the filter values.
         - If the filter column does not exist in the DataFrame, the filtering is skipped for that column.
-        - Supports Unix shell-style wildcards (*, ?, [seq], [!seq]) for string matching
+        - Supports Unix shell-style wildcards (``*``, ``?``, ``[seq]``, ``[!seq]``) for string matching.
 
     This is a utility class that is dataset agnostic and can be used to filter any DataFrame based on the provided
     filter configuration.
@@ -42,11 +42,11 @@ class DatasetFilter:
         Match series values against wildcard patterns and exact values.
 
         Args:
-            series: pandas Series to match against
-            patterns: List of patterns/values
+            series (pd.Series): pandas Series to match against
+            patterns (list[str | int | float]): List of patterns/values
 
         Returns:
-            Boolean Series indicating matches
+            pd.Series: Boolean Series indicating matches
         """
         # Convert series to string for pattern matching
         str_series = series.astype(str)
