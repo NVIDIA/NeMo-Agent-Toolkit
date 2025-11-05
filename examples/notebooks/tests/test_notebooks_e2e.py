@@ -117,9 +117,6 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
         str(notebook_path.absolute()),
     ]
 
-    # env = os.environ.copy()
-    # env["NAT_NOTEBOOK_INSTALL_MODE"] = "local"
-
     # Ideally if the notebook times out we want jupyter to catch it and exit gracefully with the most informative error
     # possible. However in the potential situation where jupyter itself hangs, we add a 10s buffer to the timeout.
     result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout_seconds + 10)
