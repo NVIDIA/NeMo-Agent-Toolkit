@@ -187,6 +187,14 @@ class SessionManager:
     def require_user_id(self) -> bool:
         return self._require_user_id
 
+    @property
+    def active_user_count(self) -> int:
+        return len(self._user_workflows)
+
+    @property
+    def user_limit(self) -> int:
+        return self._max_users
+
     def _validate_user_id(self, user_id: str) -> str | None:
         """
         Validates user_id format.
