@@ -405,3 +405,33 @@ def test_yaml_load_chained_inheritance():
         os.unlink(base_file_path)
         os.unlink(middle_file_path)
         os.unlink(final_file_path)
+
+
+def test_yaml_load_base_type_validation():
+    # Test that base key must be a string
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as config_file:
+        config_file.write("""
+        base: 123
+        key: value
+        """)
+        config_file_path = config_file.name
+    try:
+        with pytest.raises(TypeError, match="Configuration 'base' key must be a string"):
+            yaml_load(config_file_path)
+    finally:
+        os.unlink(config_file_path)
+
+
+def test_yaml_load_base_file_not_found():
+    # Test that missing base file raises FileNotFoundError
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as config_file:
+        config_file.write("""
+        base: nonexistent_file.yml
+        key: value
+        """)
+        config_file_path = config_file.name
+    try:
+        with pytest.raises(FileNotFoundError, match="Base configuration file not found"):
+            yaml_load(config_file_path)
+    finally:
+        os.unlink(config_file_path)

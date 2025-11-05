@@ -79,10 +79,16 @@ def yaml_load(config_path: StrPath) -> dict:
 
     Returns:
         dict: The processed configuration dictionary.
+
+    Raises:
+        TypeError: If the "base" key is not a string.
+        FileNotFoundError: If the base configuration file does not exist.
     """
+    # Normalize the config path
+    config_path_obj = Path(config_path).resolve()
 
     # Read YAML file
-    with open(config_path, encoding="utf-8") as stream:
+    with open(config_path_obj, encoding="utf-8") as stream:
         config_str = stream.read()
 
     config = yaml_loads(config_str)
@@ -91,19 +97,27 @@ def yaml_load(config_path: StrPath) -> dict:
     if "base" in config:
         base_path_str = config["base"]
 
+        # Validate that base is a string
+        if not isinstance(base_path_str, str):
+            raise TypeError(f"Configuration 'base' key must be a string, got {type(base_path_str).__name__}")
+
         # Resolve base path relative to current config
-        config_path_obj = Path(config_path)
         if not Path(base_path_str).is_absolute():
             base_path = config_path_obj.parent / base_path_str
         else:
             base_path = Path(base_path_str)
 
+        # Normalize and check if base file exists
+        base_path = base_path.resolve()
+        if not base_path.exists():
+            raise FileNotFoundError(f"Base configuration file not found: {base_path}")
+
         # Load base config (recursively, so bases can have bases)
         base_config = yaml_load(base_path)
 
-        # Remove 'base' key from override and merge
-        config.pop("base")
+        # Perform deep merge and remove 'base' key from result
         config = deep_merge(base_config, config)
+        config.pop("base", None)
 
     return config
 
