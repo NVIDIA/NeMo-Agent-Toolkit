@@ -47,6 +47,7 @@ variables:
   POSTGRES_USER: postgres
   POSTGRES_DB: postgres
   REDIS_PASSWORD: ${REDIS_PASSWORD}
+  SANDBOX_URL: "http://local-sandbox:6000"
   NAT_CI_ETCD_HOST: "etcd"
   NAT_CI_LANGFUSE_BUCKET: "langfuse"
   NAT_CI_LANGFUSE_HOST: "langfuse"
@@ -97,6 +98,10 @@ test:python_tests:
       pull_policy: if-not-present
       variables:
         CLICKHOUSE_DB: default
+
+    - name: $CI_REGISTRY_IMAGE/local-sandbox
+      alias: local-sandbox
+      pull_policy: if-not-present
 
     - name: minio/minio:RELEASE.2025-07-18T21-56-31Z
       alias: minio
