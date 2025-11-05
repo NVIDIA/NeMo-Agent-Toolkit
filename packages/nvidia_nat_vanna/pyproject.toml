@@ -22,13 +22,13 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat~=1.4",
   "nvidia-nat-langchain~=1.4",
-  "vanna[chromadb]~=0.7.9",
-  "pymilvus[model]~=2.5.11",
-  "pandas~=2.0",
   "databricks-sql-connector~=4.1.4",
   "databricks-sqlalchemy~=2.0.8",
-  "sqlglot~=26.33.0",
   "langchain-core", # determined from nvidia-nat-langchain
+  "pandas~=2.0",
+  "pymilvus[model]~=2.5.11",
+  "sqlglot~=26.33.0",
+  "vanna[chromadb]~=0.7.9",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Vanna-based Text-to-SQL integration for NeMo Agent Toolkit with Databricks support"

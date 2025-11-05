@@ -649,7 +649,14 @@ class VannaSingleton:
     """Singleton manager for Vanna instances."""
 
     _instance: VannaLangChain | None = None
-    _lock: asyncio.Lock = asyncio.Lock()
+    _lock: asyncio.Lock | None = None
+
+    @classmethod
+    def _get_lock(cls) -> asyncio.Lock:
+        """Get or create the lock in the current event loop."""
+        if cls._lock is None:
+            cls._lock = asyncio.Lock()
+        return cls._lock
 
     @classmethod
     def instance(cls) -> VannaLangChain | None:
@@ -706,7 +713,7 @@ class VannaSingleton:
             return cls._instance
 
         # Slow path - create new instance
-        async with cls._lock:
+        async with cls._get_lock():
             # Double check after acquiring lock
             if cls._instance is not None:
                 logger.info("Vanna instance already exists")
