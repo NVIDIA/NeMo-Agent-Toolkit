@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import shutil
 import subprocess
 from pathlib import Path
+import os
 
 import pytest
 
@@ -90,9 +90,6 @@ def _delete_other_files(notebooks_dir: Path):
     for file in _OTHER_FILES:
         file_path = notebooks_dir / file
         if file_path.exists():
-            # if file_path.is_dir():
-            #     shutil.rmtree(file_path)
-            # else:
             file_path.unlink()
 
 
@@ -118,9 +115,12 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
         str(notebook_path.absolute()),
     ]
 
+    env = os.environ.copy()
+    env["NAT_NOTEBOOK_INSTALL_MODE"] = "local"
+
     # Ideally if the notebook times out we want jupyter to catch it and exit gracefully with the most informative error
     # possible. However in the potential situation where jupyter itself hangs, we add a 10s buffer to the timeout.
-    result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout_seconds + 10)
+    result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout_seconds + 10, env=env)
     assert result.returncode == 0, f"Notebook execution failed:\n{result.stderr}"
 
     for package in expected_packages:
