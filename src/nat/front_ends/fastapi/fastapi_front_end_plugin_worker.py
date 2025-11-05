@@ -290,6 +290,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         app.root_path = self.front_end_config.root_path
 
         # Initialize evaluators for single-item evaluation
+        # TODO: we need config control over this as it's not always needed
         await self.initialize_evaluators(self._config)
 
         await self.add_routes(app, builder)
