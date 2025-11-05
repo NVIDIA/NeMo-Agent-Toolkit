@@ -1,0 +1,25 @@
+/* Override the maximum width of the main content area */
+.bd-page-width {
+    max-width: 100% !important;
+    width: 100%;
+}
+
+.bd-container__inner {
+    max-width: 100% !important;
+    width: 100%;
+}
+
+.bd-main .bd-content {
+    max-width: 100% !important;
+    width: 100%;
+}
+
+.bd-container {
+    max-width: 100% !important;
+    width: 100%;
+}
+
+.bd-article-container {
+    max-width: 100% !important;
+    width: 100%;
+}
