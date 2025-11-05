@@ -514,7 +514,7 @@ class EvaluationRun:
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
             # Initialize Weave integration
-            self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config)
+            self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config, job_id=job_id)
 
             with self.eval_trace_context.evaluation_context():
                 # Run workflow

@@ -27,6 +27,7 @@ We showcase the building blocks that make up the agentic system, including tools
 4. [Multi-Agent Orchestration](4_multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
 5. [Observability, Evaluation, and Profiling](5_observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
 6. [Optimizing Model Selection, Parameters, and Prompts](6_optimize_model_selection.ipynb) - Use NAT Optimize to compare models, parameters, and prompt variations
+7. [MCP Client and Servers Setup](7_mcp_setup_and_integration.ipynb) - Deploy and integrate MCP clients and servers with NeMo Agent toolkit workflows
    
 We recommend opening these notebooks in a Jupyter Lab environment or Google Colab environment.
 
