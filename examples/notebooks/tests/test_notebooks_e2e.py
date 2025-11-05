@@ -27,7 +27,7 @@ _ALL_WORKFLOWS = [
     "retail_sales_agent",
     "tmp_workflow",
     "mcp_dev_workflow",
-    "nat_simple_calculator"
+    "simple_calculator_notebook"
 ]
 
 # Other files produced by notebooks, relative to the notebooks directory, please keep this list sorted
@@ -116,7 +116,7 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
     ]
 
     env = os.environ.copy()
-    env["NAT_NOTEBOOK_INSTALL_MODE"] = "local"
+    env["NAT_NOTEBOOK_INSTALL_MODE"] = "develop"
 
     # Ideally if the notebook times out we want jupyter to catch it and exit gracefully with the most informative error
     # possible. However in the potential situation where jupyter itself hangs, we add a 10s buffer to the timeout.
