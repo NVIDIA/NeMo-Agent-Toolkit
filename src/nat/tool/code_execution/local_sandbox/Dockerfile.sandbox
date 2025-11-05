@@ -48,7 +48,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY local_sandbox_server.py /app/main.py
 
 # Set the working directory to /app
-WORKDIR /app
+WORKDIR /workspace
 
 # Set Flask app environment variables and ports
 ARG UWSGI_CHEAPER
@@ -58,3 +58,4 @@ ARG UWSGI_PROCESSES
 ENV UWSGI_PROCESSES=$UWSGI_PROCESSES
 
 ENV LISTEN_PORT=6000
+EXPOSE 6000
