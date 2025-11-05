@@ -35,8 +35,8 @@ from nat.data_models.api_server import UserMessageContentRoleType
 from nat.memory.models import MemoryItem
 
 
-@pytest.fixture
-def mock_memory_editor():
+@pytest.fixture(name="mock_memory_editor")
+def fixture_mock_memory_editor() -> AsyncMock:
     """Create a mock MemoryEditor for testing."""
     editor = AsyncMock()
     editor.add_items = AsyncMock()
@@ -44,8 +44,8 @@ def mock_memory_editor():
     return editor
 
 
-@pytest.fixture
-def mock_inner_agent():
+@pytest.fixture(name="mock_inner_agent")
+def fixture_mock_inner_agent() -> Mock:
     """Create a mock inner agent function for testing."""
     mock_fn = Mock()
 
@@ -65,8 +65,8 @@ def mock_inner_agent():
     return mock_fn
 
 
-@pytest.fixture
-def mock_context():
+@pytest.fixture(name="mock_context")
+def fixture_mock_context() -> Mock:
     """Create a mock Context for testing."""
     context = Mock(spec=Context)
     context.user_manager = None
@@ -74,8 +74,8 @@ def mock_context():
     return context
 
 
-@pytest.fixture
-def wrapper_graph(mock_inner_agent, mock_memory_editor, mock_context):
+@pytest.fixture(name="wrapper_graph")
+def fixture_wrapper_graph(mock_inner_agent, mock_memory_editor, mock_context) -> AutoMemoryWrapperGraph:
     """Create an AutoMemoryWrapperGraph instance for testing."""
     with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
         return AutoMemoryWrapperGraph(inner_agent_fn=mock_inner_agent,
