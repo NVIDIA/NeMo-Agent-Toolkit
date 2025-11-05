@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# nvidia-nat-vanna
+# Text-to-SQL with Vanna
 
-Production-ready text-to-SQL integration for NVIDIA NeMo Agent toolkit using the Vanna framework with Databricks support and vector-based few-shot learning.
+The NVIDIA NeMo Agent toolkit provides text-to-SQL capabilities through the `text2sql` and `execute_db_query` functions, powered by the Vanna framework with Databricks support and vector-based few-shot learning.
 
 ## Features
 
@@ -29,6 +29,8 @@ Production-ready text-to-SQL integration for NVIDIA NeMo Agent toolkit using the
 - **Customizable**: Flexible configuration for prompts, examples, and database connections
 
 ## Installation
+
+The text-to-SQL plugin is distributed as a separate package that can be installed alongside the NeMo Agent toolkit.
 
 ```bash
 uv venv --python 3.12
@@ -50,7 +52,7 @@ The Databricks SQL connector is automatically installed with the package:
 ### Prerequisites
 
 - Python 3.11+
-- NVIDIA API Key from [NVIDIA API Catalog](https://build.nvidia.com)
+- NVIDIA API Key (refer to [Obtaining API Keys](../../quick-start/installing.md#obtaining-api-keys))
 - Milvus vector database (local or cloud)
 - Databricks workspace with SQL warehouse or compute cluster access
 
@@ -163,6 +165,8 @@ See `text2sql_training_config.yml` and `text2sql_config.yml` for reference.
 
 ### 4. Run the Workflow
 
+The following examples show how to use the text-to-SQL workflow with the NeMo Agent toolkit CLI or programmatically.
+
 ```bash
 # Using NeMo Agent toolkit CLI
 # If auto_training is set to true, training takes approximately 7 minutes depending on endpoints and network conditions.
@@ -170,11 +174,9 @@ uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_training_config.
 
 # Once training is complete, use the inference configuration for faster generation.
 uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "What is the total profit?"
-
-# Or programmatically
 ```
 
-Python code:
+Or use the Python API:
 ```python
 import asyncio
 from nat.core import Workflow
@@ -237,13 +239,13 @@ Results: 42 customers found
 
 #### Understanding `train_on_startup` and `auto_training`
 
-**`train_on_startup`**: Controls whether Vanna initializes and loads training data when the workflow starts:
+**`train_on_startup`**: Controls whether Vanna initializes and loads training data when the workflow starts.
 
 - **`true`**: Automatically creates Milvus collections with names specified by `sql_collection`, `ddl_collection`, and `doc_collection` parameters (defaults: "vanna_sql", "vanna_ddl", "vanna_documentation") and ingests training data during workflow initialization. This ensures the vector store is populated and ready for similarity search before the first query is processed. Use this setting when you want to ensure fresh training data is loaded each time the workflow starts.
 
 - **`false`** (default): Skips automatic collection creation and training data ingestion. The workflow assumes Milvus collections already exist and contain previously trained data. Use this setting in production environments where training data is already loaded.
 
-**`auto_training`**: Controls the source of training data (only used when `train_on_startup=true`):
+**`auto_training`**: Controls the source of training data (only used when `train_on_startup=true`).
 
 - **`true`**: Automatically extracts DDL from the database using `VANNA_ACTIVE_TABLES` and generates question-SQL training pairs using the LLM. This is useful when you want to quickly bootstrap the system with your existing database schema.
 
@@ -264,19 +266,17 @@ databricks://token:<token>@<db_host>:443/default?http_path=<http_path>&catalog=<
 
 **Parameters:**
 - `<token>`: Databricks personal access token or service principal token
-- `<db_host>`: Your Databricks workspace URL (such as `your-workspace.cloud.databricks.com`)
-- `<http_path>`: Path to your SQL warehouse or compute cluster (such as `/sql/1.0/warehouses/abc123`)
-- `<catalog>`: Catalog name (such as `main`)
-- `<schema>`: Schema name (such as `default`)
+- `<db_host>`: Your Databricks workspace URL, for example `your-workspace.cloud.databricks.com`
+- `<http_path>`: Path to your SQL warehouse or compute cluster, for example `/sql/1.0/warehouses/abc123`
+- `<catalog>`: Catalog name, for example `main`
+- `<schema>`: Schema name, for example `default`
 
 **Example:**
 ```bash
 CONNECTION_URL="databricks://token:dapi-xxx@your-workspace.cloud.databricks.com:443/default?http_path=/sql/1.0/warehouses/abc123&catalog=main&schema=default"
 ```
 
-**Note**:
-- Only Databricks is currently supported. The connection uses SQLAlchemy with the `databricks-sql-connector` driver.
-- Other databases can be customized as following:
+**Note**: Only Databricks is currently supported. The connection uses SQLAlchemy with the `databricks-sql-connector` driver. Other databases can be customized as following:
 ```
 # PostgreSQL
 engine = create_engine("postgresql+psycopg://user:password@localhost:5432/mydb")
@@ -389,7 +389,7 @@ workflow:
     Format the final results in a clear, user-friendly manner.
 ```
 
-For alternative agent types (such as ReAct for multi-turn conversations):
+For alternative agent types, for example ReAct for multi-turn conversations:
 
 ```yaml
 workflow:
@@ -505,41 +505,17 @@ Error: Failed to connect to database
 
 ### Known Limitations
 
-**LLM Limitations:**
+**LLM Limitations**:
 - The `llama-3.1-70b-instruct` model does not always strictly follow instructions to output in the expected JSON format, which can cause parsing issues. A parsing fallback mechanism has been implemented to handle these cases.
 - To ensure optimal performance and consistent JSON output formatting, we recommend using reasoning models in the configuration. These models demonstrate better instruction-following capabilities and reliably produce output in the expected format.
-**Database Privileges:**
+
+**Database Privileges**:
 - This package provides text-to-SQL functionality without built-in guardrails. To prevent destructive operations, always configure the database connection with read-only privileges.
 
-## Package Structure
+## Additional Resources
 
-```
-nvidia_nat_vanna/
-├── pyproject.toml                      # Package metadata and dependencies
-├── README.md                           # This file
-├── src/
-│   └── nat/
-│       └── plugins/
-│           └── vanna/
-│               ├── register.py         # NeMo Agent toolkit component registration
-│               ├── text2sql.py         # Text-to-SQL function
-│               ├── execute_db_query.py # Query execution function
-│               ├── vanna_utils.py      # Vanna framework integration
-│               ├── db_utils.py         # Database utilities
-│               └── training_db_schema.py  # Training data and prompt
-```
-
-## Contributing
-
-Contributions are welcome! Please see the main NeMo Agent toolkit repository for contribution guidelines.
-
-## License
-
-This package is part of the NVIDIA NeMo Agent toolkit and follows the same license.
-
-## Support
-
-For questions and support:
-- GitHub Issues: https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues
-- Documentation: https://docs.nvidia.com/nemo/agent-toolkit/latest/
-- Discord: Join the NeMo Agent toolkit community Discord
+For more information:
+- [Writing Custom Functions](../../extend/functions.md) - Learn how to create your own functions
+- [Workflow Configuration](../workflow-configuration.md) - Complete configuration reference
+- [Contributing Guidelines](../../resources/contributing.md) - How to contribute to the NeMo Agent toolkit
+- [Support](../../support.md) - Get help and support
