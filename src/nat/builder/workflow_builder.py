@@ -1520,6 +1520,24 @@ class UserWorkflowBuilder(WorkflowBuilder):
     def user_id(self) -> str:
         return self._user_id
 
+    async def __aenter__(self):
+
+        result = await super().__aenter__()
+
+        if self._user_id:
+            self._user_id_token = self._context_state.user_id.set(self._user_id)
+        else:
+            self._user_id_token = None
+
+        return result
+
+    async def __aexit__(self, *exc_details):
+
+        if hasattr(self, "_user_id_token") and self._user_id_token is not None:
+            self._context_state.user_id.reset(self._user_id_token)
+
+        return await super().__aexit__(*exc_details)
+
     @override
     def _should_build_component(self, config: TypedBaseModel) -> bool:
         """Determine if a component should be built based on the configuration.

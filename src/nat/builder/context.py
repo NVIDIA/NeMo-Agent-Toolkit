@@ -68,6 +68,7 @@ class ContextState(metaclass=Singleton):
     def __init__(self):
         self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
         self.user_message_id: ContextVar[str | None] = ContextVar("user_message_id", default=None)
+        self.user_id: ContextVar[str | None] = ContextVar("user_id", default=None)
         self.workflow_run_id: ContextVar[str | None] = ContextVar("workflow_run_id", default=None)
         self.workflow_trace_id: ContextVar[int | None] = ContextVar("workflow_trace_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
