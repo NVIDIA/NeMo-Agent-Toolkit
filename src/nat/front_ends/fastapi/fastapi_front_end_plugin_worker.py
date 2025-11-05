@@ -243,7 +243,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             return
 
         try:
-            # Build evaluators using WorkflowEvalBuilder
+            # Build evaluators using WorkflowEvalBuilder (same pattern as nat eval)
+            # Start with registry=None and let populate_builder set everything up
             self._eval_builder = WorkflowEvalBuilder(general_config=config.general,
                                                      eval_general_config=config.eval.general,
                                                      registry=None)
@@ -251,9 +252,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             # Enter the async context and keep it alive
             await self._eval_builder.__aenter__()
 
-            # Populate evaluators
-            for name, evaluator_config in config.eval.evaluators.items():
-                await self._eval_builder.add_evaluator(name, evaluator_config)
+            # Populate builder with config (this sets up LLMs, functions, etc.)
+            # Skip workflow build since we already have it from the main builder
+            await self._eval_builder.populate_builder(config, skip_workflow=True)
+
+            # Now evaluators should be populated by populate_builder
+            for name in config.eval.evaluators.keys():
                 self._evaluators[name] = self._eval_builder.get_evaluator(name)
                 logger.info(f"Initialized evaluator: {name}")
 
