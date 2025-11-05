@@ -92,7 +92,9 @@ class Sandbox(abc.ABC):
             raise ValueError(f"Language {language} not supported")
 
         generated_code = generated_code.strip().strip("`")
-        code_to_execute = textwrap.dedent("""
+        # Use json.dumps to properly escape the generated_code instead of repr()
+        escaped_code = json.dumps(generated_code)
+        code_to_execute = textwrap.dedent(f"""
             import traceback
             import json
             import os
@@ -101,11 +103,6 @@ class Sandbox(abc.ABC):
             import io
             warnings.filterwarnings('ignore')
             os.environ['OPENBLAS_NUM_THREADS'] = '16'
-        """).strip()
-
-        # Use json.dumps to properly escape the generated_code instead of repr()
-        escaped_code = json.dumps(generated_code)
-        code_to_execute += textwrap.dedent(f"""
 
             generated_code = {escaped_code}
 
