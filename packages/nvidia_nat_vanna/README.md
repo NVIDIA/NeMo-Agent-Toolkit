@@ -526,7 +526,7 @@ nvidia_nat_vanna/
 │               ├── execute_db_query.py # Query execution function
 │               ├── vanna_utils.py      # Vanna framework integration
 │               ├── db_utils.py         # Database utilities
-│               └── training_db_schema.py  # Training data and prommpt
+│               └── training_db_schema.py  # Training data and prompt
 ```
 
 ## Contributing

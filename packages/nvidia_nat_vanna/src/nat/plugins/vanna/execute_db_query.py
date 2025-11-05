@@ -202,7 +202,7 @@ async def execute_db_query(
             logger.error(f"Error executing SQL query: {e}")
             yield ExecuteDBQueryOutput(
                 success=False,
-                failure_reason=str(e),
+                failure_reason="SQL execution failed. Please check server logs for details.",
                 sql_query=sql_query,
                 dataframe_info=DataFrameInfo(shape=[0, 0], dtypes={}, columns=[]),
             )
