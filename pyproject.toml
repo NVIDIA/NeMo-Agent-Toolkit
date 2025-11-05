@@ -97,6 +97,7 @@ telemetry = [
   "nvidia-nat-ragaai",
   "nvidia-nat-weave",
 ]
+test = ["nvidia-nat-test"]
 weave = ["nvidia-nat-weave"]
 zep-cloud = ["nvidia-nat-zep-cloud"]
 
