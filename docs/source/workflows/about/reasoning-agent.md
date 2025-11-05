@@ -75,24 +75,24 @@ workflow:
 
   **Description:**
   {augmented_function_desc}
-  
+
   Given the following input and a list of available tools, please provide a detailed step-by-step plan that an instruction following system can use to address the input. Ensure the plan includes:
   1. Identifying the key components of the input.
   2. Determining the most suitable tools for each task.
   3. Outlining the sequence of actions to be taken.
-  
+
   **Input:**
   {input_text}
-  
+
   **Tools and description of the tool:**
   {tools}
-  
+
   An example plan could look like this:
   1. Call tool A with input X
   2. Call tool B with input Y
   3. Interpret the output of tool A and B
   4. Return the final result
-  
+
   **PLAN:**
   {plan}
   """
@@ -103,12 +103,12 @@ workflow:
   ```python
   """
   Answer the following question based on message history: {input_text}
-  
+
   Here is a plan for execution that you could use to guide you if you wanted to:
   {reasoning_output}
-  
+
   NOTE: Remember to follow your guidance on how to format output, etc.
-  
+
   You must respond with the answer to the original question directly to the user.
   """
   ```
@@ -124,10 +124,10 @@ workflow:
 ### Comparing ReAct Agent With and Without the Reasoning Agent
 
 #### ReAct Agent Without Reasoning Agent
-![Running Workflows](../../_static/agent_without_reasoning_wrapper.png)
+[![Running Workflows](../../_static/agent_without_reasoning_wrapper.png)](../../_static/agent_without_reasoning_wrapper.png)
 
 #### ReAct Agent With Reasoning Agent
-![Running Workflows](../../_static/agent_with_reasoning_wrapper.png)
+[![Running Workflows](../../_static/agent_with_reasoning_wrapper.png)](../../_static/agent_with_reasoning_wrapper.png)
 
 ---
 
