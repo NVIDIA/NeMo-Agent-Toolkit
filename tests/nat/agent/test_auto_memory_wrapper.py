@@ -30,7 +30,6 @@ from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChoice
 from nat.data_models.api_server import ChoiceMessage
-from nat.data_models.api_server import Message
 from nat.data_models.api_server import Usage
 from nat.data_models.api_server import UserMessageContentRoleType
 from nat.memory.models import MemoryItem
@@ -52,15 +51,14 @@ def mock_inner_agent():
 
     async def _ainvoke(chat_request: ChatRequest):
         # Simulate agent processing and return a ChatResponse
-        return ChatResponse(
-            id="test-response-id",
-            created=datetime.datetime.now(),
-            usage=Usage(prompt_tokens=10, completion_tokens=20, total_tokens=30),
-            choices=[
-                ChatResponseChoice(index=0,
-                                   message=ChoiceMessage(role=UserMessageContentRoleType.ASSISTANT,
-                                                         content="Agent response"))
-            ])
+        return ChatResponse(id="test-response-id",
+                            created=datetime.datetime.now(),
+                            usage=Usage(prompt_tokens=10, completion_tokens=20, total_tokens=30),
+                            choices=[
+                                ChatResponseChoice(index=0,
+                                                   message=ChoiceMessage(role=UserMessageContentRoleType.ASSISTANT,
+                                                                         content="Agent response"))
+                            ])
 
     # Wrap the async function in AsyncMock so we can track calls
     mock_fn.ainvoke = AsyncMock(side_effect=_ainvoke)
@@ -288,9 +286,8 @@ class TestAutoMemoryWrapperGraph:
     async def test_inner_agent_node_with_memory_context(self, wrapper_graph, mock_inner_agent):
         """Test inner_agent_node passes memory context to inner agent."""
         state = AutoMemoryWrapperState(
-            messages=[SystemMessage(content="Memory context"),
-                      HumanMessage(content="User query")])
-        result = await wrapper_graph.inner_agent_node(state)
+            messages=[SystemMessage(content="Memory context"), HumanMessage(content="User query")])
+        await wrapper_graph.inner_agent_node(state)
 
         # Verify inner agent received both messages
         call_args = mock_inner_agent.ainvoke.call_args
@@ -301,10 +298,7 @@ class TestAutoMemoryWrapperGraph:
 
     async def test_capture_ai_response_node(self, wrapper_graph, mock_memory_editor):
         """Test capture_ai_response_node saves AI responses."""
-        state = AutoMemoryWrapperState(messages=[
-            HumanMessage(content="Question"),
-            AIMessage(content="Answer")
-        ])
+        state = AutoMemoryWrapperState(messages=[HumanMessage(content="Question"), AIMessage(content="Answer")])
         result = await wrapper_graph.capture_ai_response_node(state)
 
         assert result == state
