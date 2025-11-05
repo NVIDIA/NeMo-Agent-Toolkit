@@ -164,6 +164,22 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-my_password}
     restart: unless-stopped
 
+  oauth2-server:
+    build: ../../examples/front_ends/simple_auth
+    container_name: test-oauth2-server
+    ports:
+      - "5001:5000"
+    environment:
+      - AUTHLIB_INSECURE_TRANSPORT=1
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   opensearch:
     image: opensearchproject/opensearch:2.11.1
     container_name: test-opensearch
