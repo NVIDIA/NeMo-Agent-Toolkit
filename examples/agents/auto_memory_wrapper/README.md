@@ -187,7 +187,7 @@ workflow:
 ## Important Notes
 
 1. **User ID is runtime-only** - Set via `user_manager` or `X-User-ID` header, not in config
-2. **Memory backends are pluggable** - Works with any implementation of `MemoryEditor` interface
+2. **Memory backends are interchangeable** - Works with any implementation of `MemoryEditor` interface
 
 ## Examples
 
