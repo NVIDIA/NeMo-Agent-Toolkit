@@ -194,5 +194,10 @@ def execute():
     return do_execute(request)
 
 
+@app.route("/", methods=["GET"])
+def status():
+    return ({"status": "ok"}, 200)
+
+
 if __name__ == '__main__':
     app.run(port=6000)
