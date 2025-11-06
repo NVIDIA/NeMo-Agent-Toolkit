@@ -32,8 +32,6 @@ class RequestAttributesTool(FunctionBaseConfig, name="current_request_attributes
 @register_function(config_type=RequestAttributesTool)
 async def current_request_attributes(config: RequestAttributesTool, builder: Builder):
 
-    import typing
-
     from pydantic import RootModel
     from pydantic.types import JsonValue
     from starlette.datastructures import Headers, QueryParams
@@ -62,7 +60,7 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
         conversation_id: str | None = nat_context.conversation_id
 
         # Access the request body data - can be any valid JSON type
-        request_body_data: typing.Any = request_body.root
+        request_body_data: JsonValue = request_body.root
 
         return (f"Method: {method}, "
                 f"URL Path: {url_path}, "
