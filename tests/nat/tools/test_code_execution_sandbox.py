@@ -275,8 +275,8 @@ import numpy as np
 # Read back the files we created
 print('=== Reading persistence_test.txt ===')
 with open('persistence_test.txt', 'r') as f:
-content = f.read()
-print(f'Content: {content}')
+    content = f.read()
+    print(f'Content: {content}')
 
 print('\\n=== Reading persistence_test.csv ===')
 df = pd.read_csv('persistence_test.csv')
@@ -310,27 +310,27 @@ import os
 
 # Create a complex JSON file
 data = {
-'test_name': 'sandbox_persistence',
-'timestamp': '2024-07-03',
-'results': {
-    'numpy_test': True,
-    'pandas_test': True,
-    'file_operations': True
-},
-'metrics': [1.5, 2.3, 3.7, 4.1],
-'metadata': {
-    'working_dir': os.getcwd(),
-    'python_version': '3.x'
-}
+    'test_name': 'sandbox_persistence',
+    'timestamp': '2024-07-03',
+    'results': {
+        'numpy_test': True,
+        'pandas_test': True,
+        'file_operations': True
+    },
+    'metrics': [1.5, 2.3, 3.7, 4.1],
+    'metadata': {
+        'working_dir': os.getcwd(),
+        'python_version': '3.x'
+    }
 }
 
 # Save JSON file
 with open('persistence_test.json', 'w') as f:
-json.dump(data, f, indent=2)
+    json.dump(data, f, indent=2)
 
 # Read it back
 with open('persistence_test.json', 'r') as f:
-loaded_data = json.load(f)
+    loaded_data = json.load(f)
 
 print('JSON file created and loaded successfully')
 print(f'Test name: {loaded_data["test_name"]}')
