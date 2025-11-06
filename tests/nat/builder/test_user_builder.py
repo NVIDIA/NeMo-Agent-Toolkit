@@ -19,14 +19,14 @@ from nat.builder.workflow_builder import SharedWorkflowBuilder
 from nat.builder.workflow_builder import UserWorkflowBuilder
 from nat.data_models.config import Config
 
-from .conftest import PerUserFunctionConfig
-from .conftest import SharedFunctionConfig
+from .conftest import TAuthConfig
 from .conftest import TEmbedderProviderConfig
-from .conftest import TestAuthConfig
 from .conftest import TLLMProviderConfig
 from .conftest import TMemoryConfig
 from .conftest import TObjectStoreConfig
+from .conftest import TPerUserFunctionConfig
 from .conftest import TRetrieverProviderConfig
+from .conftest import TSharedFunctionConfig
 from .conftest import TTTCStrategyConfig
 
 
@@ -91,9 +91,9 @@ async def test_user_builder_should_build_component():
 
     async with SharedWorkflowBuilder() as shared_builder:
         user_builder = UserWorkflowBuilder(user_id="test", shared_builder=shared_builder)
-        assert user_builder._should_build_component(PerUserFunctionConfig()) is True
-        assert user_builder._should_build_component(TestAuthConfig()) is True
-        assert user_builder._should_build_component(SharedFunctionConfig()) is False
+        assert user_builder._should_build_component(TPerUserFunctionConfig()) is True
+        assert user_builder._should_build_component(TAuthConfig()) is True
+        assert user_builder._should_build_component(TSharedFunctionConfig()) is False
 
 
 async def test_user_builder_builds_workflow():
@@ -101,10 +101,10 @@ async def test_user_builder_builds_workflow():
     # Create config with both shared and per-user components
     config = Config(
         functions={
-            "test_per_user_function": PerUserFunctionConfig(),
-            "test_shared_function": SharedFunctionConfig(),
+            "test_per_user_function": TPerUserFunctionConfig(),
+            "test_shared_function": TSharedFunctionConfig(),
         },
-        authentication={"test_auth": TestAuthConfig()},
+        authentication={"test_auth": TAuthConfig()},
     )
 
     async with SharedWorkflowBuilder() as shared_builder:

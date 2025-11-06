@@ -57,19 +57,6 @@ from nat.object_store.in_memory_object_store import InMemoryObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 
 
-# Test Configuration Classes
-class TestAuthConfig(AuthProviderBaseConfig, name="test_auth"):
-    pass
-
-
-class SharedFunctionConfig(FunctionBaseConfig, name="test_shared_function"):
-    scope: ComponentScope = ComponentScope.SHARED
-
-
-class PerUserFunctionConfig(FunctionBaseConfig, name="test_per_user_function"):
-    scope: ComponentScope = ComponentScope.PER_USER
-
-
 class FunctionReturningFunctionConfig(FunctionBaseConfig, name="fn_return_fn"):
     pass
 
@@ -80,6 +67,18 @@ class FunctionReturningInfoConfig(FunctionBaseConfig, name="fn_return_info"):
 
 class FunctionReturningDerivedConfig(FunctionBaseConfig, name="fn_return_derived"):
     pass
+
+
+class TAuthConfig(AuthProviderBaseConfig, name="test_auth"):
+    pass
+
+
+class TSharedFunctionConfig(FunctionBaseConfig, name="test_shared_function"):
+    scope: ComponentScope = ComponentScope.SHARED
+
+
+class TPerUserFunctionConfig(FunctionBaseConfig, name="test_per_user_function"):
+    scope: ComponentScope = ComponentScope.PER_USER
 
 
 class TLLMProviderConfig(LLMBaseConfig, name="test_llm"):
@@ -153,11 +152,11 @@ class FailingFunctionGroupConfig(FunctionGroupBaseConfig, name="failing_function
 @pytest.fixture(scope="module", autouse=True)
 async def _register():
 
-    @register_auth_provider(config_type=TestAuthConfig)
-    async def register_test_auth(config: TestAuthConfig, b: Builder):
+    @register_auth_provider(config_type=TAuthConfig)
+    async def register_test_auth(config: TAuthConfig, b: Builder):
         """Register test authentication provider."""
 
-        class TestAuthProvider(AuthProviderBase[TestAuthConfig]):
+        class TestAuthProvider(AuthProviderBase[TAuthConfig]):
             """Mock auth provider for testing."""
 
             async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
@@ -166,8 +165,8 @@ async def _register():
 
         yield TestAuthProvider(config)
 
-    @register_function(config_type=SharedFunctionConfig)
-    async def register_shared_function(config: SharedFunctionConfig, b: Builder):
+    @register_function(config_type=TSharedFunctionConfig)
+    async def register_shared_function(config: TSharedFunctionConfig, b: Builder):
         """Register shared function."""
 
         async def _shared_fn(some_input: str) -> str:
@@ -175,8 +174,8 @@ async def _register():
 
         yield _shared_fn
 
-    @register_function(config_type=PerUserFunctionConfig)
-    async def register_per_user_function(config: PerUserFunctionConfig, b: Builder):
+    @register_function(config_type=TPerUserFunctionConfig)
+    async def register_per_user_function(config: TPerUserFunctionConfig, b: Builder):
         """Register per-user function."""
 
         async def _per_user_fn(some_input: str) -> str:
