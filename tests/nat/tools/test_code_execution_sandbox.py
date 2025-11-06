@@ -24,9 +24,6 @@ from typing import Any
 
 import pytest
 import requests
-from requests.exceptions import ConnectionError
-from requests.exceptions import RequestException
-from requests.exceptions import Timeout
 
 
 @pytest.mark.integration
@@ -48,9 +45,9 @@ class TestCodeExecutionSandbox:
     def check_sandbox_running(self, fail_missing: bool, sandbox_config):
         """Check if sandbox server is running before running tests."""
         try:
-            _ = requests.get(sandbox_config["base_url"], timeout=sandbox_config["connection_timeout"])
-            print(f"✓ Sandbox server is running at {sandbox_config['url']}")
-        except (ConnectionError, Timeout, RequestException):
+            response = requests.get(sandbox_config["base_url"], timeout=sandbox_config["connection_timeout"])
+            response.raise_for_status()
+        except:
             reason = (f"Sandbox server is not running at {sandbox_config['url']}. "
                       "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
             if fail_missing:
