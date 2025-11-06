@@ -51,6 +51,7 @@ llms:
   openai_llm:
     _type: openai
     model_name: gpt-3.5-turbo
+    temperature: 0.0
 
 workflow:
   _type: semantic_kernel
