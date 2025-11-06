@@ -78,7 +78,7 @@ Get the instance of the `nat.builder.context.Context` object using the `nat.buil
 
 **Note**:
 
-- To accept arbitrary JSON payloads of any type (objects, arrays, strings, numbers, booleans) use Pydantic's `RootModel[typing.Any]`. This allows the function to receive any valid JSON type. Access the raw data through the `.root` attribute.
+- To accept arbitrary JSON payloads of any type (objects, arrays, strings, numbers, Boolean values) use Pydantic's `RootModel[typing.Any]`. This allows the function to receive any valid JSON type. Access the raw data through the `.root` attribute.
 - Custom routes using `RootModel` do not support async generation (background jobs) as `RootModel` schemas are incompatible with the async generation field injection. Custom routes using `RootModel` are intended for direct request-response patterns.
 
 ```python
