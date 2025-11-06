@@ -120,7 +120,7 @@ To enable WebSocket mode:
 
 ### Connect the User Interface to the NeMo Agent Toolkit Server Using HTTP API
 
-Settings can be configured by selecting the *Settings* icon located on the bottom left corner of the home page.
+Configure the settings by selecting the *Settings* icon located on the bottom left corner of the home page.
 
 ![NeMo Agent toolkit Web UI Settings](../_static/ui_settings_example.png)
 
