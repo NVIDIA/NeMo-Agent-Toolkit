@@ -18,40 +18,52 @@ import json
 import logging
 import os
 import typing
-from abc import ABC, abstractmethod
-from collections.abc import Awaitable, Callable
+from abc import ABC
+from abc import abstractmethod
+from collections.abc import Awaitable
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
 from authlib.common.errors import AuthlibBaseError as OAuthError
-from fastapi import Body, FastAPI, HTTPException, Request, Response, UploadFile
+from fastapi import Body
+from fastapi import FastAPI
+from fastapi import HTTPException
+from fastapi import Request
+from fastapi import Response
+from fastapi import UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import Field
 from starlette.websockets import WebSocket
 
 from nat.builder.function import Function
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.data_models.api_server import (ChatRequest, ChatResponse, ChatResponseChunk, ResponseIntermediateStep)
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.config import Config
-from nat.data_models.object_store import KeyAlreadyExistsError, NoSuchKeyError
+from nat.data_models.object_store import KeyAlreadyExistsError
+from nat.data_models.object_store import NoSuchKeyError
 from nat.eval.config import EvaluationRunOutput
-from nat.eval.evaluate import EvaluationRun, EvaluationRunConfig
-from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import \
-    HTTPAuthenticationFlowHandler
-from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import (FlowState,
-                                                                              WebSocketAuthenticationFlowHandler)
-from nat.front_ends.fastapi.fastapi_front_end_config import (AsyncGenerateResponse,
-                                                             AsyncGenerationStatusResponse,
-                                                             EvaluateRequest,
-                                                             EvaluateResponse,
-                                                             EvaluateStatusResponse,
-                                                             FastApiFrontEndConfig)
+from nat.eval.evaluate import EvaluationRun
+from nat.eval.evaluate import EvaluationRunConfig
+from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
+from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
+from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
+from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerateResponse
+from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerationStatusResponse
+from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
+from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
+from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
+from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
-from nat.front_ends.fastapi.response_helpers import (generate_single_response,
-                                                     generate_streaming_response_as_str,
-                                                     generate_streaming_response_full_as_str)
+from nat.front_ends.fastapi.response_helpers import generate_single_response
+from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
+from nat.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 from nat.front_ends.fastapi.utils import get_config_file_path
 from nat.object_store.models import ObjectStoreItem

@@ -21,7 +21,6 @@ This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications w
 
 ## Table of Contents
 
-<<<<<<< HEAD
 - [Simple Calculator - Custom Routes and Metadata Access](#simple-calculator---custom-routes-and-metadata-access)
   - [Table of Contents](#table-of-contents)
   - [Key Features](#key-features)
@@ -39,7 +38,6 @@ This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications w
       - [JSON String](#json-string)
       - [JSON Number](#json-number)
       - [JSON Boolean](#json-boolean)
->>>>>>> d54a34f1 (Enable flexible request body acceptance for custom routes.)
 
 ## Key Features
 
