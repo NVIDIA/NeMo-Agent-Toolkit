@@ -29,7 +29,7 @@ This example demonstrates how to use YAML configuration inheritance in the NeMo 
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
-  - [Run the Workflows with Variant Configs](#run-the-workflows-with-variant-configs)
+  - [Run Workflows with Variant Configurations](#run-workflows-with-variant-configurations)
 - [Real-World Use Cases](#real-world-use-cases)
 
 ---
@@ -146,7 +146,7 @@ If you have not already done so, follow the [Obtaining API Keys](../../docs/sour
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-### Run the Workflows with Variant Configs
+### Run Workflows with Variant Configurations
 
 This example shows a simple calculator workflow with several configuration variants:
 
@@ -176,10 +176,10 @@ nat run --config_file examples/config_inheritance/configs/config-debug.yml --inp
 
 Configuration inheritance is particularly useful for:
 
-- **Environment-specific configs**: Create separate variants for development, staging, and production environments
+- **Environment-specific configurations**: Create separate variants for development, staging, and production environments
 - **Evaluation configurations**: Define different evaluation scenarios while maintaining consistent base workflow settings
 - **Model experiments**: Test different hyperparameters while keeping the workflow structure unchanged
 - **LLM provider variations**: Switch between different LLM backends without duplicating configuration
 - **Feature toggles**: Enable or disable features through small configuration overrides
-- **Team member configs**: Allow team members to overlay personal preferences on shared defaults
+- **Team member configurations**: Allow team members to overlay personal preferences on shared defaults
 - **Progressive customization**: Start with a base configuration and incrementally add features
