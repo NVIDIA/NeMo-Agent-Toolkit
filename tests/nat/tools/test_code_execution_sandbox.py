@@ -43,15 +43,17 @@ class TestCodeExecutionSandbox:
         }
 
     @pytest.fixture(scope="class", autouse=True)
-    def check_sandbox_running(self, sandbox_config):
+    def check_sandbox_running(self, fail_missing: bool, sandbox_config):
         """Check if sandbox server is running before running tests."""
         try:
             _ = requests.get(sandbox_config["url"], timeout=sandbox_config["connection_timeout"])
             print(f"✓ Sandbox server is running at {sandbox_config['url']}")
         except (ConnectionError, Timeout, RequestException):
-            pytest.skip(
-                f"Sandbox server is not running at {sandbox_config['url']}. "
-                "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
+            reason = (f"Sandbox server is not running at {sandbox_config['url']}. "
+                      "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
+            if fail_missing:
+                raise RuntimeError(reason)
+            pytest.skip(reason)
 
     def execute_code(self, sandbox_config: dict[str, Any], code: str, language: str = "python") -> dict[str, Any]:
         """
@@ -387,29 +389,3 @@ time.sleep(2.0)
         response = requests.post(sandbox_config["url"], json=payload)
         assert response.json()["process_status"] == "timeout"
         assert response.status_code == 200
-
-
-# Pytest configuration and fixtures for command-line options
-def pytest_addoption(parser):
-    """Add custom command-line options for pytest."""
-    parser.addoption("--sandbox-url",
-                     action="store",
-                     default="http://127.0.0.1:6000/execute",
-                     help="Sandbox URL for testing")
-    parser.addoption("--sandbox-timeout",
-                     action="store",
-                     type=int,
-                     default=30,
-                     help="Timeout in seconds for sandbox operations")
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_environment(request):
-    """Setup environment variables from command-line options."""
-    os.environ["SANDBOX_URL"] = request.config.getoption("--sandbox-url", "http://127.0.0.1:6000/execute")
-    os.environ["SANDBOX_TIMEOUT"] = str(request.config.getoption("--sandbox-timeout", 30))
-
-
-if __name__ == "__main__":
-    # Allow running as a script
-    pytest.main([__file__, "-v"])
