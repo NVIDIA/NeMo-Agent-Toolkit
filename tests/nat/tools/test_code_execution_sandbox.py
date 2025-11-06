@@ -286,7 +286,7 @@ def test_code(code: str,
               sandbox_type: str,
               local_sandbox_workflow: Path,
               piston_sandbox_workflow: Path,
-              sandbox_config,
+              sandbox_config: dict[str, Any],
               skip_piston: bool):
     """Test simple print statement execution."""
 
@@ -313,7 +313,7 @@ def test_code(code: str,
 
 
 @pytest.mark.integration
-def test_syntax_error_handling(sandbox_config):
+def test_syntax_error_handling(sandbox_config: dict[str, Any]):
     """Test handling of syntax errors."""
     code = """
 print('Hello World'
@@ -326,7 +326,7 @@ print('Hello World'
 
 
 @pytest.mark.integration
-def test_runtime_error_handling(sandbox_config):
+def test_runtime_error_handling(sandbox_config: dict[str, Any]):
     """Test handling of runtime errors."""
     code = """
 x = 1 / 0
@@ -339,7 +339,7 @@ print('This should not print')
 
 
 @pytest.mark.integration
-def test_import_error_handling(sandbox_config):
+def test_import_error_handling(sandbox_config: dict[str, Any]):
     """Test handling of import errors."""
     code = """
 import nonexistent_module
@@ -352,7 +352,7 @@ print('This should not print')
 
 
 @pytest.mark.integration
-def test_mixed_output(sandbox_config):
+def test_mixed_output(sandbox_config: dict[str, Any]):
     """Test code that produces both stdout and stderr output."""
     code = """
 import sys
@@ -369,7 +369,7 @@ print('Back to stdout')
 
 
 @pytest.mark.integration
-def test_long_running_code(sandbox_config):
+def test_long_running_code(sandbox_config: dict[str, Any]):
     """Test code that takes some time to execute but completes within timeout."""
     code = """
 import time
@@ -389,7 +389,7 @@ print('Completed')
 
 
 @pytest.mark.integration
-def test_missing_generated_code_field(sandbox_config):
+def test_missing_generated_code_field(sandbox_config: dict[str, Any]):
     """Test request missing the generated_code field."""
     payload = {"timeout": 10, "language": "python"}
 
@@ -400,7 +400,7 @@ def test_missing_generated_code_field(sandbox_config):
 
 
 @pytest.mark.integration
-def test_missing_timeout_field(sandbox_config):
+def test_missing_timeout_field(sandbox_config: dict[str, Any]):
     """Test request missing the timeout field."""
     payload = {"generated_code": "print('test')", "language": "python"}
 
@@ -412,7 +412,7 @@ def test_missing_timeout_field(sandbox_config):
 
 
 @pytest.mark.integration
-def test_invalid_json(sandbox_config):
+def test_invalid_json(sandbox_config: dict[str, Any]):
     """Test request with invalid JSON."""
     invalid_json = '{"generated_code": "print("test")", "timeout": 10}'
 
@@ -426,7 +426,7 @@ def test_invalid_json(sandbox_config):
 
 
 @pytest.mark.integration
-def test_non_json_request(sandbox_config):
+def test_non_json_request(sandbox_config: dict[str, Any]):
     """Test request with non-JSON content."""
     response = requests.post(sandbox_config["execute_url"],
                              data="This is not JSON",
@@ -438,7 +438,7 @@ def test_non_json_request(sandbox_config):
 
 
 @pytest.mark.integration
-def test_timeout_too_low(sandbox_config):
+def test_timeout_too_low(sandbox_config: dict[str, Any]):
     """Test request with timeout too low."""
     code = """
 import time
