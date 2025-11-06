@@ -306,8 +306,8 @@ def test_code(code: str,
         result = result["value"]
 
     assert "process_status" in result, f"Sandbox execution failed: {result}"
-    assert result["process_status"] == "completed"
-    assert expected_output in result["stdout"]
+    assert result["process_status"] == "completed", f"Sandbox execution did not complete: {result}"
+    assert expected_output in result["stdout"], f"Expected output not found in stdout: {result}"
     assert result["stderr"] == ""
 
 
