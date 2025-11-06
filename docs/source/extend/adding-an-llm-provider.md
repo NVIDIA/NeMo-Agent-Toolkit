@@ -84,54 +84,11 @@ class OpenAIModelConfig(LLMBaseConfig, RetryMixin, name="openai"):
 
 Some configuration parameters are only valid for certain models or may be dependent on other parameters. The toolkit provides built-in mixins that automatically validate and default these parameters based on a specified field. For details on the mechanism, see [Gated Fields](./gated-fields.md).
 
-- `TemperatureMixin`: adds a `temperature` field in [0, 1], with a default of `0.0` when supported by a model
-- `TopPMixin`: adds a `top_p` field in [0, 1], with a default of `1.0` when supported by a model
 - `ThinkingMixin`: adds a `thinking` field, with a default of `None` when supported by a model. If supported, the `thinking_system_prompt` property will return the system prompt to use for thinking.
 
 :::{note}
 The built-in mixins may reject certain fields for models that do not support them (for example, GPT-5 models currently reject `temperature` and `top_p`). If a gated field is explicitly set on an unsupported model, validation will fail.
 :::
-
-#### TemperatureMixin
-
-The {class}`nat.data_models.temperature_mixin.TemperatureMixin` is a mixin that adds a `temperature` field to the provider config. The `temperature` field is a float in [0, 1] that specifies the sampling temperature for the model.
-
-```python
-from nat.data_models.temperature_mixin import TemperatureMixin
-
-
-class OpenAIModelConfig(LLMBaseConfig, TemperatureMixin, name="openai"):
-    """An OpenAI LLM provider to be used with an LLM client."""
-
-    model_config = ConfigDict(protected_namespaces=(), extra="allow")
-
-
-    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
-    base_url: str | None = Field(default=None, description="Base url to the hosted model.")
-    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
-                            serialization_alias="model",
-                            description="The OpenAI hosted model name.")
-    seed: int | None = Field(default=None, description="Random seed to set for generation.")
-```
-
-#### TopPMixin
-
-The {class}`nat.data_models.top_p_mixin.TopPMixin` is a mixin that adds a `top_p` field to the provider config. The `top_p` field is a float in [0, 1] that specifies the top-p for distribution sampling.
-
-```python
-from nat.data_models.top_p_mixin import TopPMixin
-
-class OpenAIModelConfig(LLMBaseConfig, TopPMixin, name="openai"):
-    """An OpenAI LLM provider to be used with an LLM client."""
-
-    model_config = ConfigDict(protected_namespaces=(), extra="allow")
-
-    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
-    base_url: str | None = Field(default=None, description="Base url to the hosted model.")
-    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
-                            serialization_alias="model",
-                            description="The OpenAI hosted model name.")
-```
 
 #### ThinkingMixin
 
