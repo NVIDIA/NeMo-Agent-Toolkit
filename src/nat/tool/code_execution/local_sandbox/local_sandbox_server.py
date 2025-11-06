@@ -195,7 +195,7 @@ def execute():
 
 
 @app.route("/", methods=["GET"])
-def status():
+def status() -> tuple[dict[str, str], int]:
     return ({"status": "ok"}, 200)
 
 

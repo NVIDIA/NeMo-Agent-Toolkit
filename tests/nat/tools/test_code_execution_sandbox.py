@@ -34,7 +34,8 @@ def sandbox_url_fixture(local_sandbox_url: str) -> str:
     return local_sandbox_url
 
 
-def _write_sandbox_workflow_config(tmp_path_factory, sandbox_url, sandbox_type) -> Path:
+def _write_sandbox_workflow_config(tmp_path_factory: pytest.TempPathFactory, sandbox_url: str,
+                                   sandbox_type: str) -> Path:
     config_path = tmp_path_factory.mktemp(f"{sandbox_type}_sandbox_workflow") / "config.yaml"
     with open(config_path, "w", encoding="utf-8") as f:
         f.write(
@@ -50,12 +51,12 @@ def _write_sandbox_workflow_config(tmp_path_factory, sandbox_url, sandbox_type) 
 
 
 @pytest.fixture(name="local_sandbox_workflow", scope="session")
-def local_sandbox_workflow_fixture(local_sandbox_url: str, tmp_path_factory) -> Path:
+def local_sandbox_workflow_fixture(local_sandbox_url: str, tmp_path_factory: pytest.TempPathFactory) -> Path:
     return _write_sandbox_workflow_config(tmp_path_factory, local_sandbox_url, sandbox_type="local")
 
 
 @pytest.fixture(name="piston_sandbox_workflow", scope="session")
-def piston_sandbox_workflow_fixture(piston_url: str, tmp_path_factory) -> Path:
+def piston_sandbox_workflow_fixture(piston_url: str, tmp_path_factory: pytest.TempPathFactory) -> Path:
     return _write_sandbox_workflow_config(tmp_path_factory, f"{piston_url.rstrip('/')}/execute", sandbox_type="piston")
 
 
@@ -392,7 +393,7 @@ def test_missing_generated_code_field(sandbox_config):
     """Test request missing the generated_code field."""
     payload = {"timeout": 10, "language": "python"}
 
-    response = requests.post(sandbox_config["execute_url"], json=payload)
+    response = requests.post(sandbox_config["execute_url"], json=payload, timeout=sandbox_config["timeout"] + 5)
 
     # Should return an error status code or error in response
     assert response.status_code != 200 or "error" in response.json()
@@ -403,7 +404,7 @@ def test_missing_timeout_field(sandbox_config):
     """Test request missing the timeout field."""
     payload = {"generated_code": "print('test')", "language": "python"}
 
-    response = requests.post(sandbox_config["execute_url"], json=payload)
+    response = requests.post(sandbox_config["execute_url"], json=payload, timeout=sandbox_config["timeout"] + 5)
 
     # Should return error for missing timeout field
     result = response.json()
@@ -417,7 +418,8 @@ def test_invalid_json(sandbox_config):
 
     response = requests.post(sandbox_config["execute_url"],
                              data=invalid_json,
-                             headers={"Content-Type": "application/json"})
+                             headers={"Content-Type": "application/json"},
+                             timeout=sandbox_config["timeout"] + 5)
 
     # Should return error for invalid JSON
     assert response.status_code != 200
@@ -428,7 +430,8 @@ def test_non_json_request(sandbox_config):
     """Test request with non-JSON content."""
     response = requests.post(sandbox_config["execute_url"],
                              data="This is not JSON",
-                             headers={"Content-Type": "text/plain"})
+                             headers={"Content-Type": "text/plain"},
+                             timeout=sandbox_config["timeout"] + 5)
 
     # Should return error for non-JSON content
     assert response.status_code != 200
@@ -442,6 +445,6 @@ import time
 time.sleep(2.0)
 """
     payload = {"generated_code": code, "timeout": 1, "language": "python"}
-    response = requests.post(sandbox_config["execute_url"], json=payload)
+    response = requests.post(sandbox_config["execute_url"], json=payload, timeout=sandbox_config["timeout"] + 5)
     assert response.json()["process_status"] == "timeout"
     assert response.status_code == 200
