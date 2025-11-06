@@ -44,4 +44,4 @@ ENV LISTEN_PORT=6000
 EXPOSE 6000
 
 WORKDIR /app
-CMD uwsgi --http 127.0.0.1:${LISTEN_PORT} --master -p ${UWSGI_PROCESSES} --force-cwd /workspace -w main:app
+CMD uwsgi --http 0.0.0.0:${LISTEN_PORT} --master -p ${UWSGI_PROCESSES} --force-cwd /workspace -w main:app
