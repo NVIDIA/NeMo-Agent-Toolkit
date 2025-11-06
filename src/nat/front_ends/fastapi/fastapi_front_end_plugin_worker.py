@@ -75,7 +75,9 @@ logger = logging.getLogger(__name__)
 _DASK_AVAILABLE = False
 
 try:
-    from nat.front_ends.fastapi.job_store import JobInfo, JobStatus, JobStore
+    from nat.front_ends.fastapi.job_store import JobInfo
+    from nat.front_ends.fastapi.job_store import JobStatus
+    from nat.front_ends.fastapi.job_store import JobStore
     _DASK_AVAILABLE = True
 except ImportError:
     JobInfo = None
@@ -1020,8 +1022,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         from fastapi.responses import HTMLResponse
 
-        from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import \
-            AUTH_REDIRECT_SUCCESS_HTML
+        from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
 
         async def redirect_uri(request: Request):
             """
