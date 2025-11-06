@@ -184,7 +184,7 @@ Expected Response Format:
 
 ### Additional Request Body Examples
 
-The following examples demonstrate the different JSON primitive types supported by the `RootModel[typing.Any]` implementation:
+The following examples demonstrate the different JSON primitive types supported by the `RootModel[JsonValue]` implementation:
 
 #### JSON Array
 
