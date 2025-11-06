@@ -21,14 +21,25 @@ This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications w
 
 ## Table of Contents
 
-- [Key Features](#key-features)
-- [What You'll Learn](#what-youll-learn)
-- [Configuration][#configuration]
-- [Installation and Setup](#installation-and-setup)
-  - [Install this Workflow](#install-this-workflow)
-  - [Set Up API Keys](#set-up-api-keys)
-- [Example Usage](#example-usage)
-  - [Run the Workflow](#run-the-workflow)
+<<<<<<< HEAD
+- [Simple Calculator - Custom Routes and Metadata Access](#simple-calculator---custom-routes-and-metadata-access)
+  - [Table of Contents](#table-of-contents)
+  - [Key Features](#key-features)
+  - [What You'll Learn](#what-youll-learn)
+  - [Configuration](#configuration)
+    - [Defining Custom Routes](#defining-custom-routes)
+    - [Complete Metadata Access Example](#complete-metadata-access-example)
+  - [Installation and Setup](#installation-and-setup)
+    - [Install this Workflow:](#install-this-workflow)
+    - [Set Up API Keys](#set-up-api-keys)
+  - [Example Usage](#example-usage)
+    - [Run the Workflow](#run-the-workflow)
+    - [Additional Request Body Examples](#additional-request-body-examples)
+      - [JSON Array](#json-array)
+      - [JSON String](#json-string)
+      - [JSON Number](#json-number)
+      - [JSON Boolean](#json-boolean)
+>>>>>>> d54a34f1 (Enable flexible request body acceptance for custom routes.)
 
 ## Key Features
 
@@ -67,18 +78,31 @@ general:
 ### Complete Metadata Access Example
 Get the instance of the `nat.builder.context.Context` object using the `nat.builder.context.Context.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `src/nat/tool/server_tools.py`.
 
+**Note**:
+
+- To accept arbitrary JSON payloads of any type (objects, arrays, strings, numbers, booleans) use Pydantic's `RootModel[typing.Any]`. This allows the function to receive any valid JSON type. Access the raw data through the `.root` attribute.
+- Custom routes using `RootModel` do not support async generation (background jobs) as `RootModel` schemas are incompatible with the async generation field injection. Custom routes using `RootModel` are intended for direct request-response patterns.
+
 ```python
 @register_function(config_type=RequestAttributesTool)
 async def current_request_attributes(config: RequestAttributesTool, builder: Builder):
 
-    from starlette.datastructures import Headers
-    from starlette.datastructures import QueryParams
+    import typing
+    from pydantic import RootModel
+    from starlette.datastructures import Headers, QueryParams
 
-    async def _get_request_attributes(unused: str) -> str:
+    class RequestBody(RootModel[typing.Any]):
+        """
+        Data model that accepts a request body of any type.
+        """
+        root: typing.Any
+
+    async def _get_request_attributes(request_body: RequestBody) -> str:
 
         from nat.builder.context import Context
         nat_context = Context.get()
 
+        # Access request attributes from context
         method: str | None = nat_context.metadata.method
         url_path: str | None = nat_context.metadata.url_path
         url_scheme: str | None = nat_context.metadata.url_scheme
@@ -89,6 +113,21 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
         client_port: int | None = nat_context.metadata.client_port
         cookies: dict[str, str] | None = nat_context.metadata.cookies
         conversation_id: str | None = nat_context.conversation_id
+
+        # Access the request body data - can be any valid JSON type
+        request_body_data: typing.Any = request_body.root
+
+        return (f"Method: {method}, "
+                f"URL Path: {url_path}, "
+                f"URL Scheme: {url_scheme}, "
+                f"Headers: {dict(headers) if headers is not None else 'None'}, "
+                f"Query Params: {dict(query_params) if query_params is not None else 'None'}, "
+                f"Path Params: {path_params}, "
+                f"Client Host: {client_host}, "
+                f"Client Port: {client_port}, "
+                f"Cookies: {cookies}, "
+                f"Conversation Id: {conversation_id}, "
+                f"Request Body: {request_body_data}")
 
     yield FunctionInfo.from_fn(_get_request_attributes,
                                description="Returns the acquired user defined request attributes.")
@@ -129,18 +168,61 @@ The server starts with both standard and custom endpoints:
 Access comprehensive request metadata:
 
 ```bash
-curl -X 'POST' \
-  'http://localhost:8000/get_request_metadata' \
+curl -X POST http://localhost:8000/get_request_metadata \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer token123' \
   -d '{"unused": "show me request details"}'
 ```
 
-Expected Response:
+Expected Response Format:
 
 <!-- path-check-skip-begin -->
 ```console
-{"value":"Method: POST, URL Path: /get_request_metadata, URL Scheme: http, Headers: {'host': 'localhost:8000', 'user-agent': 'curl/8.7.1', 'accept': 'application/json', 'content-type': 'application/json', 'authorization': 'Bearer token123', 'content-length': '37'}, Query Params: {}, Path Params: {}, Client Host: ::1, Client Port: 56922, Cookies: {}, Conversation Id: None"}
+{"value":"Method: POST, URL Path: /get_request_metadata, URL Scheme: http, Headers: {'host': 'localhost:8000', 'user-agent': 'curl/8.7.1', 'accept': 'application/json', 'content-type': 'application/json', 'authorization': 'Bearer token123', 'content-length': '95'}, Query Params: {}, Path Params: {}, Client Host: ::1, Client Port: 56922, Cookies: {}, Conversation Id: None, Request Body: {'message': 'show me request details', 'user_id': 123, 'tags': ['test', 'demo'], 'active': True}"}
 ```
 <!-- path-check-skip-end -->
+
+### Additional Request Body Examples
+
+The following examples demonstrate the different JSON primitive types supported by the `RootModel[typing.Any]` implementation:
+
+#### JSON Array
+
+```bash
+curl -X POST http://localhost:8000/get_request_metadata \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer token123' \
+  -d '[1, 2, 3, 4, 5]'
+```
+
+#### JSON String
+
+```bash
+curl -X POST http://localhost:8000/get_request_metadata \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer token123' \
+  -d '"hello world"'
+```
+
+#### JSON Number
+
+```bash
+curl -X POST http://localhost:8000/get_request_metadata \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer token123' \
+  -d '42'
+```
+
+#### JSON Boolean
+
+```bash
+curl -X POST http://localhost:8000/get_request_metadata \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer token123' \
+  -d 'true'
+```

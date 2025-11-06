@@ -18,52 +18,40 @@ import json
 import logging
 import os
 import typing
-from abc import ABC
-from abc import abstractmethod
-from collections.abc import Awaitable
-from collections.abc import Callable
+from abc import ABC, abstractmethod
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
 from authlib.common.errors import AuthlibBaseError as OAuthError
-from fastapi import Body
-from fastapi import FastAPI
-from fastapi import HTTPException
-from fastapi import Request
-from fastapi import Response
-from fastapi import UploadFile
+from fastapi import Body, FastAPI, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 from starlette.websockets import WebSocket
 
 from nat.builder.function import Function
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.data_models.api_server import ChatRequest
-from nat.data_models.api_server import ChatResponse
-from nat.data_models.api_server import ChatResponseChunk
-from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.api_server import (ChatRequest, ChatResponse, ChatResponseChunk, ResponseIntermediateStep)
 from nat.data_models.config import Config
-from nat.data_models.object_store import KeyAlreadyExistsError
-from nat.data_models.object_store import NoSuchKeyError
+from nat.data_models.object_store import KeyAlreadyExistsError, NoSuchKeyError
 from nat.eval.config import EvaluationRunOutput
-from nat.eval.evaluate import EvaluationRun
-from nat.eval.evaluate import EvaluationRunConfig
-from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
-from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
-from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
-from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerateResponse
-from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerationStatusResponse
-from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
-from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
-from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
-from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+from nat.eval.evaluate import EvaluationRun, EvaluationRunConfig
+from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import \
+    HTTPAuthenticationFlowHandler
+from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import (FlowState,
+                                                                              WebSocketAuthenticationFlowHandler)
+from nat.front_ends.fastapi.fastapi_front_end_config import (AsyncGenerateResponse,
+                                                             AsyncGenerationStatusResponse,
+                                                             EvaluateRequest,
+                                                             EvaluateResponse,
+                                                             EvaluateStatusResponse,
+                                                             FastApiFrontEndConfig)
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
-from nat.front_ends.fastapi.response_helpers import generate_single_response
-from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
-from nat.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
+from nat.front_ends.fastapi.response_helpers import (generate_single_response,
+                                                     generate_streaming_response_as_str,
+                                                     generate_streaming_response_full_as_str)
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 from nat.front_ends.fastapi.utils import get_config_file_path
 from nat.object_store.models import ObjectStoreItem
@@ -75,9 +63,7 @@ logger = logging.getLogger(__name__)
 _DASK_AVAILABLE = False
 
 try:
-    from nat.front_ends.fastapi.job_store import JobInfo
-    from nat.front_ends.fastapi.job_store import JobStatus
-    from nat.front_ends.fastapi.job_store import JobStore
+    from nat.front_ends.fastapi.job_store import JobInfo, JobStatus, JobStore
     _DASK_AVAILABLE = True
 except ImportError:
     JobInfo = None
@@ -544,7 +530,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         GenerateStreamResponseType = workflow.streaming_output_schema
         GenerateSingleResponseType = workflow.single_output_schema
 
-        if self._dask_available:
+        # Skip async generation for custom routes (those with function_name)
+        if self._dask_available and not hasattr(endpoint, 'function_name'):
             # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
             # Consider prefixing these with "nat_" to avoid conflicts
 
@@ -921,7 +908,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     responses={500: response_500},
                 )
 
-                if self._dask_available:
+                if self._dask_available and not hasattr(endpoint, 'function_name'):
                     app.add_api_route(
                         path=f"{endpoint.path}/async",
                         endpoint=post_async_generation(request_type=AsyncGenerateRequest),
@@ -935,7 +922,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             else:
                 raise ValueError(f"Unsupported method {endpoint.method}")
 
-            if self._dask_available:
+            if self._dask_available and not hasattr(endpoint, 'function_name'):
                 app.add_api_route(
                     path=f"{endpoint.path}/async/job/{{job_id}}",
                     endpoint=get_async_job_status,
@@ -1021,7 +1008,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         from fastapi.responses import HTMLResponse
 
-        from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
+        from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import \
+            AUTH_REDIRECT_SUCCESS_HTML
 
         async def redirect_uri(request: Request):
             """
