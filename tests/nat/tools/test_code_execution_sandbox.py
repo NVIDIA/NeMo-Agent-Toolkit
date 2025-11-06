@@ -140,132 +140,131 @@ def run_workflow_code(config_path: Path,
     [
         ("print('Hello, World!')", "Hello, World!", False),
         ("""
-                              result = 2 + 3
-                              print(f'Result: {result}')
-                              """,
-         "Result: 5",
-         False),
+         result = 2 + 3
+         print(f'Result: {result}')
+         """, "Result: 5", False),
         ("""
-                              import numpy as np
-                              arr = np.array([1, 2, 3, 4, 5])
-                              print(f'Array: {arr}')
-                              print(f'Mean: {np.mean(arr)}')
-                              """,
+         import numpy as np
+         arr = np.array([1, 2, 3, 4, 5])
+         print(f'Array: {arr}')
+         print(f'Mean: {np.mean(arr)}')
+         """,
          "Mean: 3.0",
          False),
         ("""
-                                import pandas as pd
-                                df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
-                                print(df)
-                                print(f'Sum of column A: {df["A"].sum()}')
-                                """,
+         import pandas as pd
+         df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+         print(df)
+         print(f'Sum of column A: {df["A"].sum()}')
+         """,
          "Sum of column A: 6",
          False),
         ("""
-                                import plotly.graph_objects as go
-                                print('Plotly imported successfully')
-                                fig = go.Figure()
-                                fig.add_trace(go.Scatter(x=[1, 2, 3], y=[4, 5, 6]))
-                                print('Plot created successfully')
-                                """,
+         import plotly.graph_objects as go
+         print('Plotly imported successfully')
+         fig = go.Figure()
+         fig.add_trace(go.Scatter(x=[1, 2, 3], y=[4, 5, 6]))
+         print('Plot created successfully')
+         """,
          "Plot created successfully",
          True),  # Skip piston due to no plotly support
         ("""
-                                import os
-                                print(f'Current directory: {os.getcwd()}')
-                                with open('test_file.txt', 'w') as f:
-                                    f.write('Hello, World!')
-                                with open('test_file.txt', 'r') as f:
-                                    content = f.read()
-                                print(f'File content: {content}')
-                                os.remove('test_file.txt')
-                                print('File operations completed')
-                                """,
+         import os
+         print(f'Current directory: {os.getcwd()}')
+         with open('test_file.txt', 'w') as f:
+             f.write('Hello, World!')
+         with open('test_file.txt', 'r') as f:
+             content = f.read()
+         print(f'File content: {content}')
+         os.remove('test_file.txt')
+         print('File operations completed')
+         """,
          "File operations completed",
          False),
         ("""
-                            import os
-                            import pandas as pd
-                            import numpy as np
-                            print('Current directory:', os.getcwd())
-                            print('Directory contents:', os.listdir('.'))
+         import os
+         import pandas as pd
+         import numpy as np
+         print('Current directory:', os.getcwd())
+         print('Directory contents:', os.listdir('.'))
 
-                            # Create a test file
-                            with open('persistence_test.txt', 'w') as f:
-                                f.write('Hello from sandbox persistence test!')
+         # Create a test file
+         with open('persistence_test.txt', 'w') as f:
+             f.write('Hello from sandbox persistence test!')
 
-                            # Create a CSV file
-                            df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
-                            df.to_csv('persistence_test.csv', index=False)
+         # Create a CSV file
+         df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+         df.to_csv('persistence_test.csv', index=False)
 
-                            # Create a numpy array file
-                            arr = np.array([1, 2, 3, 4, 5])
-                            np.save('persistence_test.npy', arr)
+         # Create a numpy array file
+         arr = np.array([1, 2, 3, 4, 5])
+         np.save('persistence_test.npy', arr)
 
-                            print('Files created:')
-                            for file in os.listdir('.'):
-                                if 'persistence_test' in file:
-                                    print('  -', file)
-                            """,
+         print('Files created:')
+         for file in os.listdir('.'):
+             if 'persistence_test' in file:
+                 print('  -', file)
+         """,
          "persistence_test.npy",
          False),
         ("""
-                            import pandas as pd
-import numpy as np
+         import pandas as pd
+         import numpy as np
 
-# Read back the files we created
-print('=== Reading persistence_test.txt ===')
-with open('persistence_test.txt', 'r') as f:
-    content = f.read()
-    print(f'Content: {content}')
+         # Read back the files we created
+         print('=== Reading persistence_test.txt ===')
+         with open('persistence_test.txt', 'r') as f:
+             content = f.read()
+             print(f'Content: {content}')
 
-print('\\n=== Reading persistence_test.csv ===')
-df = pd.read_csv('persistence_test.csv')
-print(df)
-print(f'DataFrame shape: {df.shape}')
+         print('\\n=== Reading persistence_test.csv ===')
+         df = pd.read_csv('persistence_test.csv')
+         print(df)
+         print(f'DataFrame shape: {df.shape}')
 
-print('\\n=== Reading persistence_test.npy ===')
-arr = np.load('persistence_test.npy')
-print(f'Array: {arr}')
-print(f'Array sum: {np.sum(arr)}')
+         print('\\n=== Reading persistence_test.npy ===')
+         arr = np.load('persistence_test.npy')
+         print(f'Array: {arr}')
+         print(f'Array sum: {np.sum(arr)}')
 
-print('\\n=== File persistence test PASSED! ===')""",
+         print('\\n=== File persistence test PASSED! ===')
+         """,
          "File persistence test PASSED!",
          True),  # Skip piston due to no file persistence between requests
         ("""
-import json
-import os
+         import json
+         import os
 
-# Create a complex JSON file
-data = {
-    'test_name': 'sandbox_persistence',
-    'timestamp': '2024-07-03',
-    'results': {
-        'numpy_test': True,
-        'pandas_test': True,
-        'file_operations': True
-    },
-    'metrics': [1.5, 2.3, 3.7, 4.1],
-    'metadata': {
-        'working_dir': os.getcwd(),
-        'python_version': '3.x'
-    }
-}
+         # Create a complex JSON file
+         data = {
+             'test_name': 'sandbox_persistence',
+             'timestamp': '2024-07-03',
+             'results': {
+                 'numpy_test': True,
+                 'pandas_test': True,
+                 'file_operations': True
+             },
+             'metrics': [1.5, 2.3, 3.7, 4.1],
+             'metadata': {
+                 'working_dir': os.getcwd(),
+                 'python_version': '3.x'
+             }
+         }
 
-# Save JSON file
-with open('persistence_test.json', 'w') as f:
-    json.dump(data, f, indent=2)
+         # Save JSON file
+         with open('persistence_test.json', 'w') as f:
+             json.dump(data, f, indent=2)
 
-# Read it back
-with open('persistence_test.json', 'r') as f:
-    loaded_data = json.load(f)
+         # Read it back
+         with open('persistence_test.json', 'r') as f:
+             loaded_data = json.load(f)
 
-print('JSON file created and loaded successfully')
-print(f'Test name: {loaded_data["test_name"]}')
-print(f'Results count: {len(loaded_data["results"])}')
-print(f'Metrics: {loaded_data["metrics"]}')
-print('JSON persistence test completed!')
-""",
+         print('JSON file created and loaded successfully')
+         print(f'Test name: {loaded_data["test_name"]}')
+         print(f'Results count: {len(loaded_data["results"])}')
+         print(f'Metrics: {loaded_data["metrics"]}')
+         print('JSON persistence test completed!')
+         """,
          "JSON persistence test completed!",
          False)
     ],
