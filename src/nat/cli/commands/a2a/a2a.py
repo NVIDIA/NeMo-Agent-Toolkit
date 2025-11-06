@@ -277,88 +277,70 @@ async def get_a2a_function_group(url: str, timeout: int = 30):
 
 
 def format_info_display(info: dict):
-    """Format agent info for rich console display."""
-    from rich.console import Console
-    from rich.panel import Panel
-
-    console = Console()
-
-    content = []
-    content.append(f"[bold]Name:[/bold] {info.get('name', 'N/A')}")
-    content.append(f"[bold]Version:[/bold] {info.get('version', 'N/A')}")
-    content.append(f"[bold]URL:[/bold] {info.get('url', 'N/A')}")
+    """Format agent info for simple text display."""
+    click.secho("Agent Information", fg='cyan', bold=True)
+    click.echo(f"  Name:        {info.get('name', 'N/A')}")
+    click.echo(f"  Version:     {info.get('version', 'N/A')}")
+    click.echo(f"  URL:         {info.get('url', 'N/A')}")
 
     if info.get('description'):
-        content.append(f"[bold]Description:[/bold] {info['description']}")
+        click.echo(f"  Description: {info['description']}")
 
     if info.get('provider'):
         provider = info['provider']
         if provider.get('name'):
-            content.append(f"[bold]Provider:[/bold] {provider['name']}")
+            click.echo(f"  Provider:    {provider['name']}")
 
     caps = info.get('capabilities', {})
     streaming = "✓" if caps.get('streaming') else "✗"
-    content.append(f"[bold]Streaming:[/bold] {streaming}")
+    click.echo(f"  Streaming:   {streaming}")
 
-    content.append(f"[bold]Number of Skills:[/bold] {info.get('num_skills', 0)}")
-
-    panel = Panel("\n".join(content), title="[bold]Agent Information[/bold]", border_style="blue", padding=(1, 2))
-    console.print(panel)
+    click.echo(f"  Skills:      {info.get('num_skills', 0)}")
 
 
 def format_skills_display(skills_data: dict):
-    """Format agent skills for rich console display."""
-    from rich.console import Console
-    from rich.panel import Panel
-
-    console = Console()
-
+    """Format agent skills for simple text display."""
     agent_name = skills_data.get('agent', 'Unknown')
     skills = skills_data.get('skills', [])
 
-    content = []
-    content.append(f"[bold]Agent:[/bold] {agent_name}")
-    content.append(f"[bold]Skills:[/bold] ({len(skills)})")
-    content.append("")
+    click.secho(f"Agent Skills ({len(skills)})", fg='cyan', bold=True)
+    click.echo(f"  Agent: {agent_name}")
+    click.echo()
 
-    for skill in skills:
-        content.append(f"  • [cyan]{skill['id']}[/cyan]")
+    for i, skill in enumerate(skills, 1):
+        click.secho(f"  [{i}] {skill['id']}", fg='yellow')
         if skill.get('name'):
-            content.append(f"    Name: {skill['name']}")
-        content.append(f"    Description: {skill['description']}")
+            click.echo(f"      Name:        {skill['name']}")
+        click.echo(f"      Description: {skill['description']}")
 
         if skill.get('examples'):
             examples = skill['examples']
             if len(examples) == 1:
-                content.append(f"    Example: {repr(examples[0])}")
+                click.echo(f"      Example:     {examples[0]}")
             else:
-                content.append(f"    Examples: {', '.join(repr(e) for e in examples[:2])}")
+                click.echo(f"      Examples:    {examples[0]}")
+                if len(examples) > 1:
+                    click.secho(f"                   (+{len(examples)-1} more)", fg='bright_black')
 
         if skill.get('tags'):
-            content.append(f"    Tags: {', '.join(skill['tags'])}")
+            click.echo(f"      Tags:        {', '.join(skill['tags'])}")
 
-        content.append("")  # Blank line between skills
-
-    panel = Panel("\n".join(content), title="[bold]Agent Skills[/bold]", border_style="blue", padding=(1, 2))
-    console.print(panel)
+        if i < len(skills):
+            click.echo()  # Blank line between skills
 
 
 def format_call_response_display(message: str, response: str, elapsed: float):
-    """Format agent call response for rich console display."""
-    from rich.console import Console
-    from rich.panel import Panel
+    """Format agent call response for simple text display."""
+    # Show query for context
+    click.secho(f"Query: {message}", fg='cyan')
+    click.echo()
 
-    console = Console()
+    # Show response (main output)
+    click.echo(response)
 
-    content = []
-    content.append(f"[bold]Query:[/bold] {message}")
-    content.append("")
-    content.append("[bold]Response:[/bold]")
-    content.append(response)
-
-    panel = Panel("\n".join(content), title="[bold]Agent Response[/bold]", border_style="green", padding=(1, 2))
-    console.print(panel)
-    click.echo(f"\n✓ Completed in {elapsed:.2f}s")
+    # Show timing info in bright green to stderr
+    click.echo()
+    click.secho(f"({elapsed:.2f}s)", fg='bright_green', err=True)
 
 
 @a2a_client_command.command(name="get_info", help="Get agent metadata and information.")
