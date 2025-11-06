@@ -34,7 +34,8 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
 
     from pydantic import RootModel
     from pydantic.types import JsonValue
-    from starlette.datastructures import Headers, QueryParams
+    from starlette.datastructures import Headers
+    from starlette.datastructures import QueryParams
 
     class RequestBody(RootModel[JsonValue]):
         """
