@@ -36,7 +36,7 @@ class TestCodeExecutionSandbox:
         base_url = os.environ.get("NAT_CI_SANDBOX_URL", "http://127.0.0.1:6000")
         return {
             "base_url": base_url,
-            "url": f"{base_url.rstrip('/')}/execute",
+            "execute_url": f"{base_url.rstrip('/')}/execute",
             "timeout": int(os.environ.get("SANDBOX_TIMEOUT", "30")),
             "connection_timeout": 5
         }
@@ -48,7 +48,7 @@ class TestCodeExecutionSandbox:
             response = requests.get(sandbox_config["base_url"], timeout=sandbox_config["connection_timeout"])
             response.raise_for_status()
         except:
-            reason = (f"Sandbox server is not running at {sandbox_config['url']}. "
+            reason = (f"Sandbox server is not running at {sandbox_config['base_url']}. "
                       "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
             if fail_missing:
                 raise RuntimeError(reason)
@@ -69,7 +69,7 @@ class TestCodeExecutionSandbox:
         payload = {"generated_code": code, "timeout": sandbox_config["timeout"], "language": language}
 
         response = requests.post(
-            sandbox_config["url"],
+            sandbox_config["execute_url"],
             json=payload,
             timeout=sandbox_config["timeout"] + 5  # Add buffer to request timeout
         )
@@ -347,7 +347,7 @@ print('JSON persistence test completed!')
         """Test request missing the generated_code field."""
         payload = {"timeout": 10, "language": "python"}
 
-        response = requests.post(sandbox_config["url"], json=payload)
+        response = requests.post(sandbox_config["execute_url"], json=payload)
 
         # Should return an error status code or error in response
         assert response.status_code != 200 or "error" in response.json()
@@ -356,7 +356,7 @@ print('JSON persistence test completed!')
         """Test request missing the timeout field."""
         payload = {"generated_code": "print('test')", "language": "python"}
 
-        response = requests.post(sandbox_config["url"], json=payload)
+        response = requests.post(sandbox_config["execute_url"], json=payload)
 
         # Should return error for missing timeout field
         result = response.json()
@@ -366,14 +366,18 @@ print('JSON persistence test completed!')
         """Test request with invalid JSON."""
         invalid_json = '{"generated_code": "print("test")", "timeout": 10}'
 
-        response = requests.post(sandbox_config["url"], data=invalid_json, headers={"Content-Type": "application/json"})
+        response = requests.post(sandbox_config["execute_url"],
+                                 data=invalid_json,
+                                 headers={"Content-Type": "application/json"})
 
         # Should return error for invalid JSON
         assert response.status_code != 200
 
     def test_non_json_request(self, sandbox_config):
         """Test request with non-JSON content."""
-        response = requests.post(sandbox_config["url"], data="This is not JSON", headers={"Content-Type": "text/plain"})
+        response = requests.post(sandbox_config["execute_url"],
+                                 data="This is not JSON",
+                                 headers={"Content-Type": "text/plain"})
 
         # Should return error for non-JSON content
         assert response.status_code != 200
@@ -385,6 +389,6 @@ import time
 time.sleep(2.0)
 """
         payload = {"generated_code": code, "timeout": 1, "language": "python"}
-        response = requests.post(sandbox_config["url"], json=payload)
+        response = requests.post(sandbox_config["execute_url"], json=payload)
         assert response.json()["process_status"] == "timeout"
         assert response.status_code == 200
