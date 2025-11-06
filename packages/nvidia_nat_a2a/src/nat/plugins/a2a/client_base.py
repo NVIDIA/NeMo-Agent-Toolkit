@@ -47,7 +47,10 @@ class A2ABaseClient:
         task_timeout: Timeout for task operations (default: 300 seconds)
     """
 
-    def __init__(self, base_url: str, agent_card_path: str, task_timeout: timedelta):
+    def __init__(self,
+                 base_url: str,
+                 agent_card_path: str = '/.well-known/agent-card.json',
+                 task_timeout: timedelta = timedelta(seconds=300)):
         self._base_url = base_url
         self._agent_card_path = agent_card_path
         self._task_timeout = task_timeout
