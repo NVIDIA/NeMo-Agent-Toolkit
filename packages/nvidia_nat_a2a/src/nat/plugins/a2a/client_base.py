@@ -185,3 +185,130 @@ class A2ABaseClient:
         from a2a.types import TaskIdParams
         params = TaskIdParams(id=task_id)
         return await self._client.cancel_task(params)
+
+    async def send_message_streaming(self,
+                                     message_text: str,
+                                     task_id: str | None = None,
+                                     context_id: str | None = None) -> AsyncGenerator[ClientEvent | Message, None]:
+        """
+        Send a message to the agent and stream response events (alias for send_message).
+
+        This method provides an explicit streaming interface that mirrors the A2A SDK pattern.
+        It is functionally identical to send_message(), which already streams events.
+
+        Args:
+            message_text: The message text to send
+            task_id: Optional task ID to continue an existing conversation
+            context_id: Optional context ID for the conversation
+
+        Yields:
+            ClientEvent | Message: The agent's response events as they arrive.
+        """
+        async for event in self.send_message(message_text, task_id=task_id, context_id=context_id):
+            yield event
+
+    def extract_text_from_parts(self, parts: list) -> list[str]:
+        """
+        Extract text content from A2A message parts.
+
+        Args:
+            parts: List of A2A Part objects
+
+        Returns:
+            List of text strings extracted from the parts
+        """
+        text_parts = []
+        for part in parts:
+            # Handle Part wrapper (RootModel)
+            if hasattr(part, 'root'):
+                part_content = part.root
+            else:
+                part_content = part
+
+            # Extract text from TextPart
+            if hasattr(part_content, 'text'):
+                text_parts.append(part_content.text)
+
+        return text_parts
+
+    def extract_text_from_task(self, task) -> str:
+        """
+        Extract text response from an A2A Task object.
+
+        This method understands the A2A protocol structure and extracts the final
+        text response from a completed task, prioritizing artifacts over history.
+
+        Args:
+            task: A2A Task object
+
+        Returns:
+            Extracted text response or status message
+
+        Priority order:
+            1. Check task status (return error/progress if not completed)
+            2. Extract from task.artifacts (structured output)
+            3. Fallback to last agent message in task.history
+        """
+        from a2a.types import TaskState
+
+        # Check task status
+        if task.status and task.status.state != TaskState.completed:
+            # Task not completed - return status message or indicate in progress
+            if task.status.state == TaskState.failed:
+                return f"Task failed: {task.status.message or 'Unknown error'}"
+            return f"Task in progress (state: {task.status.state})"
+
+        # Priority 1: Extract from artifacts (structured output)
+        if task.artifacts:
+            # Get text from all artifacts
+            all_text = []
+            for artifact in task.artifacts:
+                if artifact.parts:
+                    text_parts = self.extract_text_from_parts(artifact.parts)
+                    if text_parts:
+                        all_text.extend(text_parts)
+            if all_text:
+                return " ".join(all_text)
+
+        # Priority 2: Fallback to history (conversational messages)
+        if task.history:
+            # Get the last agent message from history
+            for msg in reversed(task.history):
+                if msg.role.value == 'agent':  # Get last agent message
+                    text_parts = self.extract_text_from_parts(msg.parts)
+                    if text_parts:
+                        return " ".join(text_parts)
+
+        return "No response"
+
+    def extract_text_from_events(self, events: list) -> str:
+        """
+        Extract text response from a list of A2A events.
+
+        This is a convenience method that handles both Message and ClientEvent types.
+
+        Args:
+            events: List of A2A events (ClientEvent or Message objects)
+
+        Returns:
+            Extracted text response
+        """
+        from a2a.types import Message as A2AMessage
+
+        if not events:
+            return "No response"
+
+        # Get the last event
+        last_event = events[-1]
+
+        # If it's a Message, extract text from parts
+        if isinstance(last_event, A2AMessage):
+            text_parts = self.extract_text_from_parts(last_event.parts)
+            return " ".join(text_parts) if text_parts else str(last_event)
+
+        # If it's a ClientEvent (Task, TaskStatusUpdateEvent), extract from task
+        if isinstance(last_event, tuple):
+            task, _ = last_event
+            return self.extract_text_from_task(task)
+
+        return str(last_event)

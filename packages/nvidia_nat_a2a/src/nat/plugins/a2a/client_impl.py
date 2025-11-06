@@ -15,7 +15,6 @@
 """Minimal A2A client implementation for NAT workflows."""
 
 import logging
-import re
 from typing import Any
 
 from pydantic import BaseModel
@@ -98,11 +97,9 @@ class A2AClientFunctionGroup(FunctionGroup):
             logger.info("Skills: %s", [skill.name for skill in agent_card.skills])
 
         # Register functions
-        agent_name = self._sanitize_function_name(agent_card.name)
-
         # LEVEL 1: High-level main function (LLM-friendly)
         self.add_function(
-            name=agent_name,
+            name="call",
             fn=self._create_high_level_function(),
             description=self._format_main_function_description(agent_card),
         )
@@ -136,9 +133,17 @@ class A2AClientFunctionGroup(FunctionGroup):
         self.add_function(
             name="send_message",
             fn=self._send_message_advanced,
-            description=(f"Advanced: Send a message with full control over the A2A protocol. "
-                         f"Returns raw events as a list. For most use cases, prefer using the "
-                         f"high-level '{agent_name}()' function instead."),
+            description=("Advanced: Send a message with full control over the A2A protocol. "
+                         "Returns raw events as a list. For most use cases, prefer using the "
+                         "high-level 'call()' function instead."),
+        )
+
+        self.add_function(
+            name="send_message_streaming",
+            fn=self._send_message_streaming,
+            description=("Advanced: Send a message and stream response events as they arrive. "
+                         "Yields raw events one by one. This is an async generator function. "
+                         "For most use cases, prefer using the high-level 'call()' function instead."),
         )
 
     async def __aexit__(self, exc_type, exc_value, traceback):
@@ -147,16 +152,6 @@ class A2AClientFunctionGroup(FunctionGroup):
             await self._client.__aexit__(exc_type, exc_value, traceback)
             self._client = None
             logger.info("Disconnected from A2A agent")
-
-    def _sanitize_function_name(self, name: str) -> str:
-        """Convert agent name to valid Python function name."""
-        # Replace spaces and special chars with underscores
-        sanitized = re.sub(r'[^a-zA-Z0-9_]', '_', name.lower())
-        # Remove consecutive underscores
-        sanitized = re.sub(r'_+', '_', sanitized)
-        # Remove leading/trailing underscores
-        sanitized = sanitized.strip('_')
-        return sanitized or 'agent'
 
     def _format_main_function_description(self, agent_card) -> str:
         """Create description for the main agent function."""
@@ -197,52 +192,10 @@ class A2AClientFunctionGroup(FunctionGroup):
             async for event in self._client.send_message(query, task_id, context_id):
                 events.append(event)
 
-            # Extract and return just the text response
-            return self._extract_text_response(events)
+            # Extract and return just the text response using base client helper
+            return self._client.extract_text_from_events(events)
 
         return high_level_fn
-
-    def _extract_text_response(self, events: list) -> str:
-        """Extract simple text response from events."""
-        from a2a.types import Message as A2AMessage
-
-        if not events:
-            return "No response"
-
-        # Get the last event
-        last_event = events[-1]
-
-        # If it's a Message, extract text from parts
-        if isinstance(last_event, A2AMessage):
-            text_parts = self._extract_text_from_parts(last_event.parts)
-            return " ".join(text_parts) if text_parts else str(last_event)
-
-        # If it's a ClientEvent (Task, UpdateEvent), extract from task
-        if isinstance(last_event, tuple):
-            task, _ = last_event
-            if task.history:
-                last_msg = task.history[-1]
-                text_parts = self._extract_text_from_parts(last_msg.parts)
-                return " ".join(text_parts) if text_parts else str(last_msg)
-
-        return str(last_event)
-
-    def _extract_text_from_parts(self, parts: list) -> list[str]:
-        """Extract text from message parts safely."""
-        text_parts = []
-        for part in parts:
-            # Handle Part wrapper (RootModel)
-            if hasattr(part, 'root'):
-                part_content = part.root
-            else:
-                part_content = part
-
-            # Extract text from TextPart
-            if hasattr(part_content, 'text'):
-                text_parts.append(part_content.text)
-            # Could also handle DataPart, FilePart here if needed
-
-        return text_parts
 
     async def _get_skills(self, params: dict | None = None) -> dict:
         """Helper function to list agent skills."""
@@ -309,6 +262,24 @@ class A2AClientFunctionGroup(FunctionGroup):
         async for event in self._client.send_message(params.query, params.task_id, params.context_id):
             events.append(event)
         return events
+
+    async def _send_message_streaming(self, params: SendMessageInput):
+        """
+        Send a message with full A2A protocol control and stream events.
+
+        This is an async generator that yields events as they arrive from the agent.
+
+        Yields: ClientEvent|Message objects containing:
+        - Task information
+        - Status updates
+        - Artifact updates
+        - Full message details
+        """
+        if not self._client:
+            raise RuntimeError("A2A client not initialized")
+
+        async for event in self._client.send_message_streaming(params.query, params.task_id, params.context_id):
+            yield event
 
 
 @register_function_group(config_type=A2AClientConfig)
