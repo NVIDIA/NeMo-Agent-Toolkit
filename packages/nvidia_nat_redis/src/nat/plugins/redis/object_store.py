@@ -23,7 +23,7 @@ from nat.data_models.object_store import ObjectStoreBaseConfig
 
 class RedisObjectStoreClientConfig(ObjectStoreBaseConfig, name="redis"):
     """
-    Object store that stores objects in a Redis database.
+    Object store that stores objects in a Redis database with optional TTL
     """
 
     host: str = Field(default="localhost", description="The host of the Redis server")
@@ -31,6 +31,7 @@ class RedisObjectStoreClientConfig(ObjectStoreBaseConfig, name="redis"):
     port: int = Field(default=6379, description="The port of the Redis server")
     bucket_name: str = Field(description="The name of the bucket to use for the object store")
     password: OptionalSecretStr = Field(default=None, description="The password for the Redis server")
+    ttl: int | None = Field(default=None, description="TTL in seconds for objects (None = no expiration)")
 
 
 @register_object_store(config_type=RedisObjectStoreClientConfig)
