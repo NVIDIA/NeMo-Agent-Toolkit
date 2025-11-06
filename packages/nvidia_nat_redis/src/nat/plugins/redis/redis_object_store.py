@@ -28,9 +28,10 @@ logger = logging.getLogger(__name__)
 
 class RedisObjectStore(ObjectStore):
     """
-    Implementation of ObjectStore that stores objects in Redis.
+    Implementation of ObjectStore that stores objects in Redis with optional TTL.
 
     Each object is stored as a single binary value at key "nat/object_store/{bucket_name}/{object_key}".
+    When TTL is configured, keys will automatically expire after the specified duration in seconds.
     """
 
     def __init__(

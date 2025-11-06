@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from pydantic import Field
+from pydantic import field_validator
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_object_store
@@ -23,7 +24,7 @@ from nat.data_models.object_store import ObjectStoreBaseConfig
 
 class RedisObjectStoreClientConfig(ObjectStoreBaseConfig, name="redis"):
     """
-    Object store that stores objects in a Redis database with optional TTL
+    Object store that stores objects in a Redis database with optional TTL.
     """
 
     host: str = Field(default="localhost", description="The host of the Redis server")
@@ -32,6 +33,13 @@ class RedisObjectStoreClientConfig(ObjectStoreBaseConfig, name="redis"):
     bucket_name: str = Field(description="The name of the bucket to use for the object store")
     password: OptionalSecretStr = Field(default=None, description="The password for the Redis server")
     ttl: int | None = Field(default=None, description="TTL in seconds for objects (None = no expiration)")
+
+    @field_validator("ttl")
+    @classmethod
+    def validate_ttl(cls, v: int | None) -> int | None:
+        if v is not None and v <= 0:
+            raise ValueError("TTL must be a positive integer greater than 0")
+        return v
 
 
 @register_object_store(config_type=RedisObjectStoreClientConfig)
