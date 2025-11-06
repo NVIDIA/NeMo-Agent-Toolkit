@@ -19,200 +19,198 @@ This module provides comprehensive testing for the code execution sandbox servic
 replacing the original bash script with a more maintainable Python implementation.
 """
 
-import os
 from typing import Any
 
 import pytest
 import requests
 
 
+@pytest.fixture(name="sandbox_url", scope="session", autouse=True)
+def sandbox_url_fixture(sandbox_url: str) -> str:
+    return sandbox_url
+
+
+def execute_sandbox_code(sandbox_config: dict[str, Any], code: str, language: str = "python") -> dict[str, Any]:
+    """
+    Execute code in the sandbox and return the response.
+
+    Args:
+        sandbox_config: Configuration dictionary
+        code: Code to execute
+        language: Programming language (default: python)
+
+    Returns:
+        dictionary containing the response from the sandbox
+    """
+    payload = {"generated_code": code, "timeout": sandbox_config["timeout"], "language": language}
+
+    response = requests.post(
+        sandbox_config["execute_url"],
+        json=payload,
+        timeout=sandbox_config["timeout"] + 5  # Add buffer to request timeout
+    )
+
+    # Ensure we got a response
+    response.raise_for_status()
+    return response.json()
+
+
 @pytest.mark.integration
-class TestCodeExecutionSandbox:
-    """Test suite for the Code Execution Sandbox service."""
+def test_simple_print(sandbox_config):
+    """Test simple print statement execution."""
+    code = "print('Hello, World!')"
+    result = execute_sandbox_code(sandbox_config, code)
 
-    @pytest.fixture(scope="class")
-    def sandbox_config(self):
-        """Configuration for sandbox testing."""
-        base_url = os.environ.get("NAT_CI_SANDBOX_URL", "http://127.0.0.1:6000")
-        return {
-            "base_url": base_url,
-            "execute_url": f"{base_url.rstrip('/')}/execute",
-            "timeout": int(os.environ.get("SANDBOX_TIMEOUT", "30")),
-            "connection_timeout": 5
-        }
+    assert result["process_status"] == "completed"
+    assert "Hello, World!" in result["stdout"]
+    assert result["stderr"] == ""
 
-    @pytest.fixture(scope="class", autouse=True)
-    def check_sandbox_running(self, fail_missing: bool, sandbox_config):
-        """Check if sandbox server is running before running tests."""
-        try:
-            response = requests.get(sandbox_config["base_url"], timeout=sandbox_config["connection_timeout"])
-            response.raise_for_status()
-        except:
-            reason = (f"Sandbox server is not running at {sandbox_config['base_url']}. "
-                      "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
-            if fail_missing:
-                raise RuntimeError(reason)
-            pytest.skip(reason)
 
-    def execute_code(self, sandbox_config: dict[str, Any], code: str, language: str = "python") -> dict[str, Any]:
-        """
-        Execute code in the sandbox and return the response.
-
-        Args:
-            sandbox_config: Configuration dictionary
-            code: Code to execute
-            language: Programming language (default: python)
-
-        Returns:
-            dictionary containing the response from the sandbox
-        """
-        payload = {"generated_code": code, "timeout": sandbox_config["timeout"], "language": language}
-
-        response = requests.post(
-            sandbox_config["execute_url"],
-            json=payload,
-            timeout=sandbox_config["timeout"] + 5  # Add buffer to request timeout
-        )
-
-        # Ensure we got a response
-        response.raise_for_status()
-        return response.json()
-
-    def test_simple_print(self, sandbox_config):
-        """Test simple print statement execution."""
-        code = "print('Hello, World!')"
-        result = self.execute_code(sandbox_config, code)
-
-        assert result["process_status"] == "completed"
-        assert "Hello, World!" in result["stdout"]
-        assert result["stderr"] == ""
-
-    def test_basic_arithmetic(self, sandbox_config):
-        """Test basic arithmetic operations."""
-        code = """
+@pytest.mark.integration
+def test_basic_arithmetic(sandbox_config):
+    """Test basic arithmetic operations."""
+    code = """
 result = 2 + 3
 print(f'Result: {result}')
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "completed"
-        assert "Result: 5" in result["stdout"]
-        assert result["stderr"] == ""
+    assert result["process_status"] == "completed"
+    assert "Result: 5" in result["stdout"]
+    assert result["stderr"] == ""
 
-    def test_numpy_operations(self, sandbox_config):
-        """Test numpy dependency availability and operations."""
-        code = """
+
+@pytest.mark.integration
+def test_numpy_operations(sandbox_config):
+    """Test numpy dependency availability and operations."""
+    code = """
 import numpy as np
 arr = np.array([1, 2, 3, 4, 5])
 print(f'Array: {arr}')
 print(f'Mean: {np.mean(arr)}')
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "completed"
-        assert "Array: [1 2 3 4 5]" in result["stdout"]
-        assert "Mean: 3.0" in result["stdout"]
-        assert result["stderr"] == ""
+    assert result["process_status"] == "completed"
+    assert "Array: [1 2 3 4 5]" in result["stdout"]
+    assert "Mean: 3.0" in result["stdout"]
+    assert result["stderr"] == ""
 
-    def test_pandas_operations(self, sandbox_config):
-        """Test pandas dependency availability and operations."""
-        code = """
+
+@pytest.mark.integration
+def test_pandas_operations(sandbox_config):
+    """Test pandas dependency availability and operations."""
+    code = """
 import pandas as pd
 df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
 print(df)
 print(f'Sum of column A: {df["A"].sum()}')
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "completed"
-        assert "Sum of column A: 6" in result["stdout"]
-        assert result["stderr"] == ""
+    assert result["process_status"] == "completed"
+    assert "Sum of column A: 6" in result["stdout"]
+    assert result["stderr"] == ""
 
-    def test_plotly_import(self, sandbox_config):
-        """Test plotly dependency availability."""
-        code = """
+
+@pytest.mark.integration
+def test_plotly_import(sandbox_config):
+    """Test plotly dependency availability."""
+    code = """
 import plotly.graph_objects as go
 print('Plotly imported successfully')
 fig = go.Figure()
 fig.add_trace(go.Scatter(x=[1, 2, 3], y=[4, 5, 6]))
 print('Plot created successfully')
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "completed"
-        assert "Plotly imported successfully" in result["stdout"]
-        assert "Plot created successfully" in result["stdout"]
-        assert result["stderr"] == ""
+    assert result["process_status"] == "completed"
+    assert "Plotly imported successfully" in result["stdout"]
+    assert "Plot created successfully" in result["stdout"]
+    assert result["stderr"] == ""
 
-    def test_syntax_error_handling(self, sandbox_config):
-        """Test handling of syntax errors."""
-        code = """
+
+@pytest.mark.integration
+def test_syntax_error_handling(sandbox_config):
+    """Test handling of syntax errors."""
+    code = """
 print('Hello World'
 # Missing closing parenthesis
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "error"
-        assert "SyntaxError" in result["stderr"] or "SyntaxError" in result["stdout"]
+    assert result["process_status"] == "error"
+    assert "SyntaxError" in result["stderr"] or "SyntaxError" in result["stdout"]
 
-    def test_runtime_error_handling(self, sandbox_config):
-        """Test handling of runtime errors."""
-        code = """
+
+@pytest.mark.integration
+def test_runtime_error_handling(sandbox_config):
+    """Test handling of runtime errors."""
+    code = """
 x = 1 / 0
 print('This should not print')
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "error"
-        assert "ZeroDivisionError" in result["stderr"] or "ZeroDivisionError" in result["stdout"]
+    assert result["process_status"] == "error"
+    assert "ZeroDivisionError" in result["stderr"] or "ZeroDivisionError" in result["stdout"]
 
-    def test_import_error_handling(self, sandbox_config):
-        """Test handling of import errors."""
-        code = """
+
+@pytest.mark.integration
+def test_import_error_handling(sandbox_config):
+    """Test handling of import errors."""
+    code = """
 import nonexistent_module
 print('This should not print')
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "error"
-        assert "ModuleNotFoundError" in result["stderr"] or "ImportError" in result["stderr"]
+    assert result["process_status"] == "error"
+    assert "ModuleNotFoundError" in result["stderr"] or "ImportError" in result["stderr"]
 
-    def test_mixed_output(self, sandbox_config):
-        """Test code that produces both stdout and stderr output."""
-        code = """
+
+@pytest.mark.integration
+def test_mixed_output(sandbox_config):
+    """Test code that produces both stdout and stderr output."""
+    code = """
 import sys
 print('This goes to stdout')
 print('This goes to stderr', file=sys.stderr)
 print('Back to stdout')
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "completed"
-        assert "This goes to stdout" in result["stdout"]
-        assert "Back to stdout" in result["stdout"]
-        assert "This goes to stderr" in result["stderr"]
+    assert result["process_status"] == "completed"
+    assert "This goes to stdout" in result["stdout"]
+    assert "Back to stdout" in result["stdout"]
+    assert "This goes to stderr" in result["stderr"]
 
-    def test_long_running_code(self, sandbox_config):
-        """Test code that takes some time to execute but completes within timeout."""
-        code = """
+
+@pytest.mark.integration
+def test_long_running_code(sandbox_config):
+    """Test code that takes some time to execute but completes within timeout."""
+    code = """
 import time
 for i in range(3):
     print(f'Iteration {i}')
     time.sleep(0.5)
 print('Completed')
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "completed"
-        assert "Iteration 0" in result["stdout"]
-        assert "Iteration 1" in result["stdout"]
-        assert "Iteration 2" in result["stdout"]
-        assert "Completed" in result["stdout"]
-        assert result["stderr"] == ""
+    assert result["process_status"] == "completed"
+    assert "Iteration 0" in result["stdout"]
+    assert "Iteration 1" in result["stdout"]
+    assert "Iteration 2" in result["stdout"]
+    assert "Completed" in result["stdout"]
+    assert result["stderr"] == ""
 
-    def test_file_operations(self, sandbox_config):
-        """Test basic file operations in the sandbox."""
-        code = """
+
+@pytest.mark.integration
+def test_file_operations(sandbox_config):
+    """Test basic file operations in the sandbox."""
+    code = """
 import os
 print(f'Current directory: {os.getcwd()}')
 with open('test_file.txt', 'w') as f:
@@ -223,16 +221,18 @@ print(f'File content: {content}')
 os.remove('test_file.txt')
 print('File operations completed')
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "completed"
-        assert "File content: Hello, World!" in result["stdout"]
-        assert "File operations completed" in result["stdout"]
-        assert result["stderr"] == ""
+    assert result["process_status"] == "completed"
+    assert "File content: Hello, World!" in result["stdout"]
+    assert "File operations completed" in result["stdout"]
+    assert result["stderr"] == ""
 
-    def test_file_persistence_create(self, sandbox_config):
-        """Test file persistence - create various file types."""
-        code = """
+
+@pytest.mark.integration
+def test_file_persistence_create(sandbox_config):
+    """Test file persistence - create various file types."""
+    code = """
 import os
 import pandas as pd
 import numpy as np
@@ -256,25 +256,27 @@ for file in os.listdir('.'):
     if 'persistence_test' in file:
         print('  -', file)
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "completed"
-        assert "persistence_test.txt" in result["stdout"]
-        assert "persistence_test.csv" in result["stdout"]
-        assert "persistence_test.npy" in result["stdout"]
-        assert result["stderr"] == ""
+    assert result["process_status"] == "completed"
+    assert "persistence_test.txt" in result["stdout"]
+    assert "persistence_test.csv" in result["stdout"]
+    assert "persistence_test.npy" in result["stdout"]
+    assert result["stderr"] == ""
 
-    def test_file_persistence_read(self, sandbox_config):
-        """Test file persistence - read back created files."""
-        code = """
+
+@pytest.mark.integration
+def test_file_persistence_read(sandbox_config):
+    """Test file persistence - read back created files."""
+    code = """
 import pandas as pd
 import numpy as np
 
 # Read back the files we created
 print('=== Reading persistence_test.txt ===')
 with open('persistence_test.txt', 'r') as f:
-    content = f.read()
-    print(f'Content: {content}')
+content = f.read()
+print(f'Content: {content}')
 
 print('\\n=== Reading persistence_test.csv ===')
 df = pd.read_csv('persistence_test.csv')
@@ -288,45 +290,47 @@ print(f'Array sum: {np.sum(arr)}')
 
 print('\\n=== File persistence test PASSED! ===')
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "completed"
-        assert "Content: Hello from sandbox persistence test!" in result["stdout"]
-        assert "DataFrame shape: (3, 2)" in result["stdout"]
-        assert "Array: [1 2 3 4 5]" in result["stdout"]
-        assert "Array sum: 15" in result["stdout"]
-        assert "File persistence test PASSED!" in result["stdout"]
-        assert result["stderr"] == ""
+    assert result["process_status"] == "completed"
+    assert "Content: Hello from sandbox persistence test!" in result["stdout"]
+    assert "DataFrame shape: (3, 2)" in result["stdout"]
+    assert "Array: [1 2 3 4 5]" in result["stdout"]
+    assert "Array sum: 15" in result["stdout"]
+    assert "File persistence test PASSED!" in result["stdout"]
+    assert result["stderr"] == ""
 
-    def test_json_operations(self, sandbox_config):
-        """Test JSON file operations for persistence."""
-        code = """
+
+@pytest.mark.integration
+def test_json_operations(sandbox_config):
+    """Test JSON file operations for persistence."""
+    code = """
 import json
 import os
 
 # Create a complex JSON file
 data = {
-    'test_name': 'sandbox_persistence',
-    'timestamp': '2024-07-03',
-    'results': {
-        'numpy_test': True,
-        'pandas_test': True,
-        'file_operations': True
-    },
-    'metrics': [1.5, 2.3, 3.7, 4.1],
-    'metadata': {
-        'working_dir': os.getcwd(),
-        'python_version': '3.x'
-    }
+'test_name': 'sandbox_persistence',
+'timestamp': '2024-07-03',
+'results': {
+    'numpy_test': True,
+    'pandas_test': True,
+    'file_operations': True
+},
+'metrics': [1.5, 2.3, 3.7, 4.1],
+'metadata': {
+    'working_dir': os.getcwd(),
+    'python_version': '3.x'
+}
 }
 
 # Save JSON file
 with open('persistence_test.json', 'w') as f:
-    json.dump(data, f, indent=2)
+json.dump(data, f, indent=2)
 
 # Read it back
 with open('persistence_test.json', 'r') as f:
-    loaded_data = json.load(f)
+loaded_data = json.load(f)
 
 print('JSON file created and loaded successfully')
 print(f'Test name: {loaded_data["test_name"]}')
@@ -334,61 +338,71 @@ print(f'Results count: {len(loaded_data["results"])}')
 print(f'Metrics: {loaded_data["metrics"]}')
 print('JSON persistence test completed!')
 """
-        result = self.execute_code(sandbox_config, code)
+    result = execute_sandbox_code(sandbox_config, code)
 
-        assert result["process_status"] == "completed"
-        assert "JSON file created and loaded successfully" in result["stdout"]
-        assert "Test name: sandbox_persistence" in result["stdout"]
-        assert "Results count: 3" in result["stdout"]
-        assert "JSON persistence test completed!" in result["stdout"]
-        assert result["stderr"] == ""
+    assert result["process_status"] == "completed"
+    assert "JSON file created and loaded successfully" in result["stdout"]
+    assert "Test name: sandbox_persistence" in result["stdout"]
+    assert "Results count: 3" in result["stdout"]
+    assert "JSON persistence test completed!" in result["stdout"]
+    assert result["stderr"] == ""
 
-    def test_missing_generated_code_field(self, sandbox_config):
-        """Test request missing the generated_code field."""
-        payload = {"timeout": 10, "language": "python"}
 
-        response = requests.post(sandbox_config["execute_url"], json=payload)
+@pytest.mark.integration
+def test_missing_generated_code_field(sandbox_config):
+    """Test request missing the generated_code field."""
+    payload = {"timeout": 10, "language": "python"}
 
-        # Should return an error status code or error in response
-        assert response.status_code != 200 or "error" in response.json()
+    response = requests.post(sandbox_config["execute_url"], json=payload)
 
-    def test_missing_timeout_field(self, sandbox_config):
-        """Test request missing the timeout field."""
-        payload = {"generated_code": "print('test')", "language": "python"}
+    # Should return an error status code or error in response
+    assert response.status_code != 200 or "error" in response.json()
 
-        response = requests.post(sandbox_config["execute_url"], json=payload)
 
-        # Should return error for missing timeout field
-        result = response.json()
-        assert response.status_code == 400 and result["process_status"] == "error"
+@pytest.mark.integration
+def test_missing_timeout_field(sandbox_config):
+    """Test request missing the timeout field."""
+    payload = {"generated_code": "print('test')", "language": "python"}
 
-    def test_invalid_json(self, sandbox_config):
-        """Test request with invalid JSON."""
-        invalid_json = '{"generated_code": "print("test")", "timeout": 10}'
+    response = requests.post(sandbox_config["execute_url"], json=payload)
 
-        response = requests.post(sandbox_config["execute_url"],
-                                 data=invalid_json,
-                                 headers={"Content-Type": "application/json"})
+    # Should return error for missing timeout field
+    result = response.json()
+    assert response.status_code == 400 and result["process_status"] == "error"
 
-        # Should return error for invalid JSON
-        assert response.status_code != 200
 
-    def test_non_json_request(self, sandbox_config):
-        """Test request with non-JSON content."""
-        response = requests.post(sandbox_config["execute_url"],
-                                 data="This is not JSON",
-                                 headers={"Content-Type": "text/plain"})
+@pytest.mark.integration
+def test_invalid_json(sandbox_config):
+    """Test request with invalid JSON."""
+    invalid_json = '{"generated_code": "print("test")", "timeout": 10}'
 
-        # Should return error for non-JSON content
-        assert response.status_code != 200
+    response = requests.post(sandbox_config["execute_url"],
+                             data=invalid_json,
+                             headers={"Content-Type": "application/json"})
 
-    def test_timeout_too_low(self, sandbox_config):
-        """Test request with timeout too low."""
-        code = """
+    # Should return error for invalid JSON
+    assert response.status_code != 200
+
+
+@pytest.mark.integration
+def test_non_json_request(sandbox_config):
+    """Test request with non-JSON content."""
+    response = requests.post(sandbox_config["execute_url"],
+                             data="This is not JSON",
+                             headers={"Content-Type": "text/plain"})
+
+    # Should return error for non-JSON content
+    assert response.status_code != 200
+
+
+@pytest.mark.integration
+def test_timeout_too_low(sandbox_config):
+    """Test request with timeout too low."""
+    code = """
 import time
 time.sleep(2.0)
 """
-        payload = {"generated_code": code, "timeout": 1, "language": "python"}
-        response = requests.post(sandbox_config["execute_url"], json=payload)
-        assert response.json()["process_status"] == "timeout"
-        assert response.status_code == 200
+    payload = {"generated_code": code, "timeout": 1, "language": "python"}
+    response = requests.post(sandbox_config["execute_url"], json=payload)
+    assert response.json()["process_status"] == "timeout"
+    assert response.status_code == 200
