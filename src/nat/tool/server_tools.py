@@ -35,13 +35,14 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
     import typing
 
     from pydantic import RootModel
+    from pydantic.types import JsonValue
     from starlette.datastructures import Headers, QueryParams
 
-    class RequestBody(RootModel[typing.Any]):
+    class RequestBody(RootModel[JsonValue]):
         """
-        Data model that accepts a request body of any type.
+        Data model that accepts a request body of any valid JSON type.
         """
-        root: typing.Any
+        root: JsonValue
 
     async def _get_request_attributes(request_body: RequestBody) -> str:
 

@@ -76,10 +76,11 @@ general:
 ### Complete Metadata Access Example
 Get the instance of the `nat.builder.context.Context` object using the `nat.builder.context.Context.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `src/nat/tool/server_tools.py`.
 
-**Note**:
-
-- To accept arbitrary JSON payloads of any type (objects, arrays, strings, numbers, Boolean values) use Pydantic's `RootModel[typing.Any]`. This allows the function to receive any valid JSON type. Access the raw data through the `.root` attribute.
-- Custom routes using `RootModel` do not support async generation (background jobs) as `RootModel` schemas are incompatible with the async generation field injection. Custom routes using `RootModel` are intended for direct request-response patterns.
+> [NOTE!]
+>
+> To accept arbitrary JSON payloads of any type (objects, arrays, strings, numbers, Boolean values) use Pydantic's `RootModel[JsonValue]`. This allows the function to receive any valid JSON type. Access the raw data through the `.root` attribute.
+>
+> Custom routes using `RootModel` do not support async generation (background jobs) as `RootModel` schemas are incompatible with the async generation field injection. Custom routes using `RootModel` are intended for direct request-response patterns.
 
 ```python
 @register_function(config_type=RequestAttributesTool)
@@ -87,13 +88,14 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
 
     import typing
     from pydantic import RootModel
+    from pydantic.types import JsonValue
     from starlette.datastructures import Headers, QueryParams
 
-    class RequestBody(RootModel[typing.Any]):
+    class RequestBody(RootModel[JsonValue]):
         """
-        Data model that accepts a request body of any type.
+        Data model that accepts a request body of any valid JSON type.
         """
-        root: typing.Any
+        root: JsonValue
 
     async def _get_request_attributes(request_body: RequestBody) -> str:
 
@@ -170,7 +172,7 @@ curl -X POST http://localhost:8000/get_request_metadata \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer token123' \
-  -d '{"unused": "show me request details"}'
+  -d '{"message": "show me request details", "user_id": 123, "tags": ["test", "demo"], "active": true}'
 ```
 
 Expected Response Format:
