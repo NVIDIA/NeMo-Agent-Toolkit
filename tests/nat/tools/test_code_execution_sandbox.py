@@ -36,8 +36,10 @@ class TestCodeExecutionSandbox:
     @pytest.fixture(scope="class")
     def sandbox_config(self):
         """Configuration for sandbox testing."""
+        base_url = os.environ.get("NAT_CI_SANDBOX_URL", "http://127.0.0.1:6000")
         return {
-            "url": os.environ.get("SANDBOX_URL", "http://127.0.0.1:6000/execute"),
+            "base_url": base_url,
+            "url": f"{base_url.rstrip('/')}/execute",
             "timeout": int(os.environ.get("SANDBOX_TIMEOUT", "30")),
             "connection_timeout": 5
         }
@@ -46,7 +48,7 @@ class TestCodeExecutionSandbox:
     def check_sandbox_running(self, fail_missing: bool, sandbox_config):
         """Check if sandbox server is running before running tests."""
         try:
-            _ = requests.get(sandbox_config["url"], timeout=sandbox_config["connection_timeout"])
+            _ = requests.get(sandbox_config["base_url"], timeout=sandbox_config["connection_timeout"])
             print(f"✓ Sandbox server is running at {sandbox_config['url']}")
         except (ConnectionError, Timeout, RequestException):
             reason = (f"Sandbox server is not running at {sandbox_config['url']}. "

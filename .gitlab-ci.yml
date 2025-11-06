@@ -47,7 +47,7 @@ variables:
   POSTGRES_USER: postgres
   POSTGRES_DB: postgres
   REDIS_PASSWORD: ${REDIS_PASSWORD}
-  SANDBOX_URL: "http://local-sandbox:6000/execute"
+  NAT_CI_SANDBOX_URL: "http://local-sandbox:6000"
   NAT_CI_ETCD_HOST: "etcd"
   NAT_CI_LANGFUSE_BUCKET: "langfuse"
   NAT_CI_LANGFUSE_HOST: "langfuse"
