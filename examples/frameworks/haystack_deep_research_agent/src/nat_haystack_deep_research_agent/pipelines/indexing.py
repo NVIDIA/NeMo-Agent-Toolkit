@@ -22,6 +22,7 @@ from haystack.components.preprocessors import DocumentSplitter
 from haystack.components.writers import DocumentWriter
 from haystack.core.pipeline import Pipeline
 from haystack.document_stores.types import DuplicatePolicy
+from haystack_integrations.components.embedders.nvidia import NvidiaDocumentEmbedder
 
 
 def _gather_sources(base_dir: Path) -> tuple[list[Path], list[Path]]:
@@ -30,12 +31,19 @@ def _gather_sources(base_dir: Path) -> tuple[list[Path], list[Path]]:
     return pdfs, texts
 
 
-def _build_indexing_pipeline(document_store) -> Pipeline:
+DEFAULT_EMBEDDER_MODEL = "nvidia/nv-embedqa-e5-v5"
+
+
+def _build_indexing_pipeline(document_store, embedder_model: str) -> Pipeline:
     p = Pipeline()
     p.add_component("cleaner", DocumentCleaner())
     p.add_component(
         "splitter",
         DocumentSplitter(split_by="sentence", split_length=10, split_overlap=2),
+    )
+    p.add_component(
+        "embedder",
+        NvidiaDocumentEmbedder(model=embedder_model),
     )
     p.add_component(
         "writer",
@@ -44,8 +52,15 @@ def _build_indexing_pipeline(document_store) -> Pipeline:
     return p
 
 
-def run_startup_indexing(document_store, data_dir: str, logger) -> None:
+def run_startup_indexing(
+    document_store,
+    data_dir: str,
+    logger,
+    *,
+    embedder_model: str | None = None,
+) -> None:
     try:
+        embedder_model = embedder_model or DEFAULT_EMBEDDER_MODEL
         data_dir_path = Path(data_dir).expanduser()
         if not data_dir_path.is_absolute():
             data_dir_path = (Path.cwd() / data_dir_path).resolve()
@@ -76,14 +91,15 @@ def run_startup_indexing(document_store, data_dir: str, logger) -> None:
                 len(text_sources),
             )
 
-            indexing_pipeline = _build_indexing_pipeline(document_store)
+            indexing_pipeline = _build_indexing_pipeline(document_store, embedder_model)
             indexing_pipeline.add_component("pdf_converter", PyPDFToDocument())
             indexing_pipeline.add_component("text_converter", TextFileToDocument(encoding="utf-8"))
 
             indexing_pipeline.connect("pdf_converter.documents", "cleaner.documents")
             indexing_pipeline.connect("text_converter.documents", "cleaner.documents")
             indexing_pipeline.connect("cleaner.documents", "splitter.documents")
-            indexing_pipeline.connect("splitter.documents", "writer.documents")
+            indexing_pipeline.connect("splitter.documents", "embedder.documents")
+            indexing_pipeline.connect("embedder.documents", "writer.documents")
 
             indexing_pipeline.warm_up()
 
