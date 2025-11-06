@@ -16,6 +16,7 @@
 
 import logging
 from typing import Any
+from typing import AsyncGenerator
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -263,7 +264,7 @@ class A2AClientFunctionGroup(FunctionGroup):
             events.append(event)
         return events
 
-    async def _send_message_streaming(self, params: SendMessageInput):
+    async def _send_message_streaming(self, params: SendMessageInput) -> AsyncGenerator[Any, None]:
         """
         Send a message with full A2A protocol control and stream events.
 
