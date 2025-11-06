@@ -45,6 +45,8 @@ class HaystackDeepResearchWorkflowConfig(FunctionBaseConfig, name="haystack_deep
     # Default to "/data" so users can mount a volume or place files at repo_root/data.
     # If it doesn't exist, we fall back to this example's bundled data folder.
     data_dir: str = "/data"
+    embedding_model: str = "nvidia/nv-embedqa-e5-v5"
+    embedding_dim: int = 1024
 
 
 @register_function(config_type=HaystackDeepResearchWorkflowConfig)
@@ -71,12 +73,21 @@ async def haystack_deep_research_agent_workflow(config: HaystackDeepResearchWork
     search_tool = create_search_tool(top_k=config.search_top_k)
 
     # Create document store
-    document_store = OpenSearchDocumentStore(hosts=[config.opensearch_url], index="deep_research_docs")
+    document_store = OpenSearchDocumentStore(
+        hosts=[config.opensearch_url],
+        index="deep_research_docs",
+        embedding_dim=config.embedding_dim,
+    )
     logger.info("Connected to OpenSearch successfully")
 
     # Optionally index local data at startup
     if config.index_on_startup:
-        run_startup_indexing(document_store=document_store, data_dir=config.data_dir, logger=logger)
+        run_startup_indexing(
+            document_store=document_store,
+            data_dir=config.data_dir,
+            logger=logger,
+            embedder_model=config.embedding_model,
+        )
 
     def _nim_to_haystack_generator(cfg: NIMModelConfig) -> NvidiaChatGenerator:
         return NvidiaChatGenerator(model=cfg.model_name)
@@ -95,6 +106,7 @@ async def haystack_deep_research_agent_workflow(config: HaystackDeepResearchWork
         document_store=document_store,
         top_k=config.rag_top_k,
         generator=rag_generator,
+        embedder_model=config.embedding_model,
     )
 
     # Create the agent
