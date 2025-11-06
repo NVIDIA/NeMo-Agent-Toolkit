@@ -1484,6 +1484,14 @@ class SharedWorkflowBuilder(WorkflowBuilder):
 
         self._validate_shared_dependencies(config)
 
+    @override
+    async def build(self, entry_function: str | None = None) -> Workflow:
+        """
+        Raises:
+            RuntimeError: Always, since shared builders do not build workflows
+        """
+        raise RuntimeError("Shared builder does not support building workflows")
+
 
 class UserWorkflowBuilder(WorkflowBuilder):
 

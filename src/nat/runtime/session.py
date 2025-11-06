@@ -19,6 +19,7 @@ import logging
 import re
 import uuid
 from collections.abc import AsyncGenerator
+from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
