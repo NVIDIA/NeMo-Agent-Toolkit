@@ -201,6 +201,13 @@ class Context:
         return self._context_state.user_message_id.get()
 
     @property
+    def user_id(self) -> str | None:
+        """
+        This property retrieves the user ID which is the unique identifier for the current user.
+        """
+        return self._context_state.user_id.get()
+
+    @property
     def workflow_run_id(self) -> str | None:
         """
         Returns a stable identifier for the current workflow/agent invocation (UUID string).
