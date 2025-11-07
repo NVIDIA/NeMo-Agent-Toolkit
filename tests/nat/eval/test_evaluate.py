@@ -193,7 +193,7 @@ def session_manager(generated_answer, mock_pull_intermediate):
 
     # Define an async context manager for runner
     @asynccontextmanager
-    async def mock_run(_message, is_evaluating=False):
+    async def mock_run(_message, runtime_type=None):
         """Mock async context manager for runner."""
         yield mock_runner
 
@@ -284,7 +284,7 @@ async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_inpu
     mock_error_runner.result = AsyncMock(side_effect=mock_result)
 
     @asynccontextmanager
-    async def mock_error_run(_message, is_evaluating=False):
+    async def mock_error_run(_message, runtime_type=None):
         """Mock async context manager for runner."""
         yield mock_error_runner
 

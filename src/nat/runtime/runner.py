@@ -26,6 +26,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
+from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.observability.exporter_manager import ExporterManager
 from nat.utils.reactive.subject import Subject
 
@@ -54,7 +55,7 @@ class Runner:
                  entry_fn: Function,
                  context_state: ContextState,
                  exporter_manager: ExporterManager,
-                 is_evaluating: bool = False):
+                 runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
         """
         The Runner class is used to run a workflow. It handles converting input and output data types and running the
         workflow with the specified concurrency.
@@ -69,9 +70,8 @@ class Runner:
             The context state to use
         exporter_manager : ExporterManager
             The exporter manager to use
-        is_evaluating : bool, optional
-            Whether the runner is being used for evaluation. If True, some context
-            variables are set, by default False
+        runtime_type : RuntimeTypeEnum
+            The runtime type (RUN_OR_SERVE, EVALUATE, OTHER)
         """
 
         if (entry_fn is None):
@@ -90,7 +90,8 @@ class Runner:
 
         self._exporter_manager = exporter_manager
 
-        self._is_evaluating = is_evaluating
+        self._runtime_type = runtime_type
+        self._runtime_type_token = None
 
     @property
     def context(self) -> Context:
@@ -111,8 +112,7 @@ class Runner:
             function_id="root",
         ))
 
-        if self._is_evaluating:
-            self._context_state.is_evaluating.set(True)
+        self._runtime_type_token = self._context_state.runtime_type.set(self._runtime_type)
 
         if (self._state == RunnerState.UNINITIALIZED):
             self._state = RunnerState.INITIALIZED
@@ -128,7 +128,7 @@ class Runner:
 
         self._context_state.input_message.reset(self._input_message_token)
 
-        self._context_state.is_evaluating.set(False)
+        self._context_state.runtime_type.reset(self._runtime_type_token)
 
         if (self._state not in (RunnerState.COMPLETED, RunnerState.FAILED)):
             raise ValueError("Cannot exit the context without completing the workflow")

@@ -35,6 +35,7 @@ from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.config import Config
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import InteractionPrompt
+from nat.data_models.runtime_enum import RuntimeTypeEnum
 
 _T = typing.TypeVar("_T")
 
@@ -45,7 +46,10 @@ class UserManagerBase:
 
 class SessionManager:
 
-    def __init__(self, workflow: Workflow, max_concurrency: int = 8, is_evaluating: bool = False):
+    def __init__(self,
+                 workflow: Workflow,
+                 max_concurrency: int = 8,
+                 runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
         """
         The SessionManager class is used to run and manage a user workflow session. It runs and manages the context,
         and configuration of a workflow with the specified concurrency.
@@ -56,9 +60,8 @@ class SessionManager:
             The workflow to run
         max_concurrency : int, optional
             The maximum number of simultaneous workflow invocations, by default 8
-        is_evaluating : bool, optional
-            Whether the session is being used for evaluation. If True, some context
-            variables are set, by default False
+        runtime_type : RuntimeTypeEnum, optional
+            The type of runtime the session manager is operating in, by default RuntimeTypeEnum.RUN_OR_SERVE
         """
 
         if (workflow is None):
@@ -69,7 +72,7 @@ class SessionManager:
         self._max_concurrency = max_concurrency
         self._context_state = ContextState.get()
         self._context = Context(self._context_state)
-        self._is_evaluating = is_evaluating
+        self._runtime_type = runtime_type
 
         # We save the context because Uvicorn spawns a new process
         # for each request, and we need to restore the context vars
@@ -132,7 +135,7 @@ class SessionManager:
                 self._context_state.user_auth_callback.reset(token_user_authentication)
 
     @asynccontextmanager
-    async def run(self, message, is_evaluating: bool = False):
+    async def run(self, message, runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
         """
         Start a workflow run
         """
@@ -141,7 +144,7 @@ class SessionManager:
             for k, v in self._saved_context.items():
                 k.set(v)
 
-            async with self._workflow.run(message, is_evaluating=is_evaluating) as runner:
+            async with self._workflow.run(message, runtime_type=runtime_type) as runner:
                 yield runner
 
     def set_metadata_from_http_request(self, request: Request) -> None:

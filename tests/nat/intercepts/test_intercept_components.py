@@ -339,7 +339,13 @@ class TestInterceptErrorHandling:
             info = FunctionInfo.from_fn(process)
             yield LambdaFunction.from_info(config=config, info=info, instance_name="test")
 
-        config_dict = {"functions": {"test_func": {"_type": "missing_intercept_func", "intercepts": ["nonexistent_intercept"]}}}
+        config_dict = {
+            "functions": {
+                "test_func": {
+                    "_type": "missing_intercept_func", "intercepts": ["nonexistent_intercept"]
+                }
+            }
+        }
         config = Config.model_validate(config_dict)
 
         async with WorkflowBuilder() as builder:

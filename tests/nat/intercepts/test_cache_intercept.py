@@ -24,6 +24,7 @@ from pydantic import BaseModel
 
 from nat.builder.context import Context  # noqa: F401
 from nat.builder.context import ContextState  # noqa: F401
+from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.intercepts.cache_intercept import CacheIntercept
 from nat.intercepts.function_intercept import FunctionInterceptContext
 
@@ -148,7 +149,7 @@ class TestCacheInterceptCaching:
             mock_context_state.get.return_value = mock_state
 
             # First, test when NOT evaluating
-            mock_state.is_evaluating.get.return_value = False
+            mock_state.runtime_type.get.return_value = RuntimeTypeEnum.RUN_OR_SERVE
 
             input1 = {"value": "test", "number": 42}
             await intercept.intercept_invoke(input1, mock_next_call, intercept_context)
@@ -159,7 +160,7 @@ class TestCacheInterceptCaching:
             assert call_count == 2  # Called again
 
             # Now test when evaluating
-            mock_state.is_evaluating.get.return_value = True
+            mock_state.runtime_type.get.return_value = RuntimeTypeEnum.EVALUATE
 
             # Same input - should call function (no cache before)
             await intercept.intercept_invoke(input1, mock_next_call, intercept_context)

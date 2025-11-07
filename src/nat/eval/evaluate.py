@@ -25,6 +25,7 @@ from tqdm import tqdm
 
 from nat.data_models.evaluate import EvalConfig
 from nat.data_models.evaluate import JobEvictionPolicy
+from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.eval.config import EvaluationRunConfig
 from nat.eval.config import EvaluationRunOutput
 from nat.eval.dataset_handler.dataset_handler import DatasetHandler
@@ -161,7 +162,7 @@ class EvaluationRun:
             if stop_event.is_set():
                 return "", []
 
-            async with session_manager.run(item.input_obj, is_evaluating=True) as runner:
+            async with session_manager.run(item.input_obj, runtime_type=RuntimeTypeEnum.EVALUATE) as runner:
                 if not session_manager.workflow.has_single_output:
                     # raise an error if the workflow has multiple outputs
                     raise NotImplementedError("Multiple outputs are not supported")

@@ -34,6 +34,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
+from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.runtime.user_metadata import RequestAttributes
 from nat.utils.reactive.subject import Subject
 
@@ -72,7 +73,8 @@ class ContextState(metaclass=Singleton):
         self.workflow_trace_id: ContextVar[int | None] = ContextVar("workflow_trace_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
-        self.is_evaluating: ContextVar[bool] = ContextVar("is_evaluating", default=False)
+        self.runtime_type: ContextVar[RuntimeTypeEnum] = ContextVar("runtime_type",
+                                                                    default=RuntimeTypeEnum.RUN_OR_SERVE)
         self._metadata: ContextVar[RequestAttributes | None] = ContextVar("request_attributes", default=None)
         self._event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=None)
         self._active_function: ContextVar[InvocationNode | None] = ContextVar("active_function", default=None)
@@ -315,7 +317,7 @@ class Context:
         Returns:
             bool: True if in evaluation mode, False otherwise.
         """
-        return self._context_state.is_evaluating.get()
+        return self._context_state.runtime_type.get() == RuntimeTypeEnum.EVALUATE
 
     @staticmethod
     def get() -> "Context":
