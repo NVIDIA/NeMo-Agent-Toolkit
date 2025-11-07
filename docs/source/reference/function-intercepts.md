@@ -266,7 +266,7 @@ function_intercepts:
 
 - **`similarity_threshold`**: Float from 0.0 to 1.0
   - `1.0`: Exact string matching (fastest)
-  - `< 1.0`: Fuzzy matching using difflib
+  - `< 1.0`: Fuzzy matching using `difflib`
 
 #### Usage Example
 
@@ -300,7 +300,7 @@ async def call_external_api(config: APICallerConfig, builder: Builder):
 #### Behavior
 
 - **Exact Matching** (threshold=1.0): Uses fast dictionary lookup
-- **Fuzzy Matching** (threshold<1.0): Uses difflib.SequenceMatcher for similarity
+- **Fuzzy Matching** (threshold<1.0): Uses `difflib.SequenceMatcher` for similarity
 - **Streaming**: Always bypasses cache to avoid buffering
 - **Serialization**: Falls back to function call if input can't be serialized
 
@@ -575,7 +575,7 @@ async def test_function_with_cache():
 ### Design Principles
 
 1. **Single Responsibility**: Each intercept should do one thing well
-2. **Composability**: Intercepts should work well when chained
+2. **Modularity**: Intercepts should work well when chained
 3. **Configuration**: Make intercepts configurable via YAML
 4. **Error Handling**: Fail gracefully and log errors
 5. **Performance**: Keep intercepts lightweight
