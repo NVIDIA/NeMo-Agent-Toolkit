@@ -76,7 +76,7 @@ general:
 ### Complete Metadata Access Example
 Get the instance of the `nat.builder.context.Context` object using the `nat.builder.context.Context.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `src/nat/tool/server_tools.py`.
 
-> [NOTE!]
+> [!NOTE]
 >
 > To accept arbitrary JSON payloads of any type (objects, arrays, strings, numbers, Boolean values) use Pydantic's `RootModel[JsonValue]`. This allows the function to receive any valid JSON type. Access the raw data through the `.root` attribute.
 >
