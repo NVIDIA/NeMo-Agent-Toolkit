@@ -22,15 +22,13 @@ from haystack_integrations.components.embedders.nvidia import NvidiaTextEmbedder
 from haystack_integrations.components.generators.nvidia import NvidiaChatGenerator
 from haystack_integrations.components.retrievers.opensearch import OpenSearchEmbeddingRetriever
 
-from .indexing import DEFAULT_EMBEDDER_MODEL
-
 
 def create_rag_tool(
     document_store,
     *,
     top_k: int = 15,
     generator: NvidiaChatGenerator | None = None,
-    embedder_model: str | None = None,
+    embedder_model: str,
 ) -> tuple[ComponentTool, Pipeline]:
     """
     Build a RAG tool composed of OpenSearch retriever and NvidiaChatGenerator.
@@ -39,6 +37,7 @@ def create_rag_tool(
         document_store: OpenSearch document store instance.
         top_k: Number of documents to retrieve for RAG.
         generator: Pre-configured NvidiaChatGenerator created from builder LLM config.
+        embedder_model: The name of the embedding model to use for query encoding.
 
     Returns:
         (ComponentTool, Pipeline): The tool and underlying pipeline.
@@ -46,7 +45,8 @@ def create_rag_tool(
     Raises:
         ValueError: If a generator is not provided.
     """
-    embedder_model = embedder_model or DEFAULT_EMBEDDER_MODEL
+    if not embedder_model:
+        raise ValueError("An embedder model name must be provided for the RAG tool.")
 
     retriever = OpenSearchEmbeddingRetriever(document_store=document_store, top_k=top_k)
     query_embedder = NvidiaTextEmbedder(model=embedder_model)

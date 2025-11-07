@@ -31,9 +31,6 @@ def _gather_sources(base_dir: Path) -> tuple[list[Path], list[Path]]:
     return pdfs, texts
 
 
-DEFAULT_EMBEDDER_MODEL = "nvidia/nv-embedqa-e5-v5"
-
-
 def _build_indexing_pipeline(document_store, embedder_model: str) -> Pipeline:
     p = Pipeline()
     p.add_component("cleaner", DocumentCleaner())
@@ -57,10 +54,11 @@ def run_startup_indexing(
     data_dir: str,
     logger,
     *,
-    embedder_model: str | None = None,
+    embedder_model: str,
 ) -> None:
     try:
-        embedder_model = embedder_model or DEFAULT_EMBEDDER_MODEL
+        if not embedder_model:
+            raise ValueError("An embedder model name must be provided for indexing.")
         data_dir_path = Path(data_dir).expanduser()
         if not data_dir_path.is_absolute():
             data_dir_path = (Path.cwd() / data_dir_path).resolve()
