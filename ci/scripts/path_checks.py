@@ -197,6 +197,7 @@ IGNORED_FILES: set[str] = {
     r"data/.*$",  #
     # Versions json file for the documentation version switcher button
     r"^docs/source/versions1.json$",
+    r"^docs/source/resources/security-considerations\.md$",
 }
 
 # Paths to ignore -- regex pattern
