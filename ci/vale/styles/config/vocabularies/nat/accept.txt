@@ -87,7 +87,6 @@ libcudf
 LLM(s?)
 # https://github.com/logpai/loghub/
 Loghub
-MCP(s?)
 Mem0
 Milvus
 [Mm]ixin(s?)
