@@ -19,6 +19,7 @@ from nat.builder.builder import Builder
 from nat.builder.context import Context
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
+from nat.plugins.mcp.client_base import MCPBaseClient
 from nat.plugins.mcp.client_config import MCPClientConfig
 from nat.plugins.mcp.client_config import MCPToolOverrideConfig
 from nat.plugins.mcp.tool import mcp_tool_function
@@ -31,42 +32,14 @@ class MCPFunctionGroup(FunctionGroup):
     A specialized FunctionGroup for MCP clients that includes MCP-specific attributes.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, client: MCPBaseClient | None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # MCP client attributes with proper typing
-        self._mcp_client = None  # Will be set to the actual MCP client instance
-        self._mcp_client_server_name: str | None = None
-        self._mcp_client_transport: str | None = None
+        self._mcp_client = client
 
     @property
     def mcp_client(self):
         """Get the MCP client instance."""
         return self._mcp_client
-
-    @mcp_client.setter
-    def mcp_client(self, client):
-        """Set the MCP client instance."""
-        self._mcp_client = client
-
-    @property
-    def mcp_client_server_name(self) -> str | None:
-        """Get the MCP client server name."""
-        return self._mcp_client_server_name
-
-    @mcp_client_server_name.setter
-    def mcp_client_server_name(self, server_name: str | None):
-        """Set the MCP client server name."""
-        self._mcp_client_server_name = server_name
-
-    @property
-    def mcp_client_transport(self) -> str | None:
-        """Get the MCP client transport type."""
-        return self._mcp_client_transport
-
-    @mcp_client_transport.setter
-    def mcp_client_transport(self, transport: str | None):
-        """Set the MCP client transport type."""
-        self._mcp_client_transport = transport
 
 
 @register_function_group(config_type=MCPClientConfig)
@@ -127,15 +100,10 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
 
     logger.info("Configured to use MCP server at %s", client.server_name)
 
-    # Create the MCP function group
-    group = MCPFunctionGroup(config=config)
-
     async with client:
         # Expose the live MCP client on the function group instance so other components (e.g., HTTP endpoints)
         # can reuse the already-established session instead of creating a new client per request.
-        group.mcp_client = client
-        group.mcp_client_server_name = client.server_name
-        group.mcp_client_transport = client.transport
+        group = MCPFunctionGroup(config=config, client=client)
 
         all_tools = await client.get_tools()
         tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
