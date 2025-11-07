@@ -30,7 +30,7 @@ This example demonstrates how to use YAML configuration inheritance in the NeMo 
   - [Install this Workflow](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
   - [Run Workflows with Variant Configurations](#run-workflows-with-variant-configurations)
-- [Real-World Use Cases](#real-world-use-cases)
+- [Use Cases](#use-cases)
 
 ---
 
@@ -86,7 +86,7 @@ The result is a fully merged configuration with:
 
 ### Chained Inheritance
 
-You can chain inheritance multiple levels deep:
+You can create multi-level inheritance chains where variant configurations inherit from other variants, allowing progressive customization. For example:
 
 ```yaml
 # base-config.yml
@@ -98,15 +98,19 @@ general:
     logging:
       console:
         level: INFO
+```
 
+```yaml
 # config-high-temp.yml
 base: base-config.yml
 llms:
   nim_llm:
     temperature: 0.9
+```
 
+```yaml
 # config-high-temp-debug.yml
-base: config-high-temp.yml  # Inherits from variant, not base!
+base: config-high-temp.yml  # Inherits from variant, not base
 general:
   telemetry:
     logging:
@@ -114,15 +118,12 @@ general:
         level: DEBUG
 ```
 
-**Result for `config-high-temp-debug.yml`:**
+Result for `config-high-temp-debug.yml`:
 - `temperature: 0.9` (from config-high-temp.yml)
 - `console.level: DEBUG` (from config-high-temp-debug.yml)
 - All other settings inherited from base-config.yml
 
-This creates a 3-level inheritance chain:
-```
-base-config.yml → config-high-temp.yml → config-high-temp-debug.yml
-```
+Configuration files can also reference base configurations in other directories using either relative or absolute paths.
 
 ---
 
@@ -172,7 +173,7 @@ nat run --config_file examples/config_inheritance/configs/config-debug.yml --inp
 
 ---
 
-## Real-World Use Cases
+## Use Cases
 
 Configuration inheritance is particularly useful for:
 
