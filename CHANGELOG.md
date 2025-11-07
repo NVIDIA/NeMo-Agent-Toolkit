@@ -33,7 +33,7 @@ This is a minor release with documentation updates, bug fixes, and non-breaking 
 * Fix code concatenation issue with `code_execution_tool` when using a Piston server by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1154
 ### 📝 Documentation Updates
 * Misc Documentation Fixes by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1136
-* Document the need to isntall `nvidia-nat-test` prior to using `ToolTestRunner` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1150
+* Document the need to install `nvidia-nat-test` prior to using `ToolTestRunner` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1150
 * Update reasoning diagrams by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1153
 * Update Quick Start UI documentation by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1156
 * Add SECURITY.md document by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1164
