@@ -18,6 +18,12 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit Release Notes
 This section contains the release notes for [NeMo Agent toolkit](./index.md).
 
+## Release 1.3.1
+### Summary
+This is a minor release with documentation updates, bug fixes, and non-breaking improvements. This release adds support for Claude Sonnet 4.5, fixes bugs, and improves documentation.
+
+Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/CHANGELOG.md) for a complete list of changes.
+
 ## Release 1.3.0
 ### Summary
 This release introduces support for Google Agent Development Kit (ADK), adds control-flow agents, function groups, hyperparameter agent optimizer, LLM provider improvements, MCP server improvements, and Python 3.13 support. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.

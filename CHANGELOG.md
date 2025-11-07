@@ -18,6 +18,31 @@ limitations under the License.
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2025-11-07
+
+### 📦 Overview
+This is a minor release with documentation updates, bug fixes, and non-breaking improvements.
+
+### ✨ New Features
+* feat: Add claude-sonnet-4.5 support by model-gating `top_p` by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1134
+### 🐛 Bug Fixes
+* bug: fix non json serializable objects in config by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1112
+* fix ADK demo multi-user session by @antoniomtz in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1120
+* Fixes to detect optional parameters in tool conversion used by "nat mcp serve" by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1133
+* Async Chat fixes by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1131
+* Fix code concatenation issue with `code_execution_tool` when using a Piston server by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1154
+### 📝 Documentation Updates
+* Misc Documentation Fixes by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1136
+* Document the need to isntall `nvidia-nat-test` prior to using `ToolTestRunner` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1150
+* Update reasoning diagrams by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1153
+* Update Quick Start UI documentation by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1156
+* Add SECURITY.md document by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1164
+* docs: 1.3.1 changelog by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1166
+
+### 🙌 New Contributors
+* @antoniomtz made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1120
+
+
 ## [1.3.0] - 2025-10-24
 
 ### 🚀 Notable Features and Improvements
