@@ -351,3 +351,326 @@ class TestInterceptErrorHandling:
         async with WorkflowBuilder() as builder:
             with pytest.raises(ValueError, match="Function intercept `nonexistent_intercept` not found"):
                 await builder.add_function("test_func", config.functions["test_func"])
+
+
+class TestFunctionGroupIntercepts:
+    """Test intercepts with function groups."""
+
+    @pytest.fixture(scope="class")
+    def register_test_function_group(self):
+        """Register a test function group."""
+        from nat.cli.register_workflow import register_function_group
+        from nat.data_models.function import FunctionGroupBaseConfig
+
+        class TestFunctionGroupConfig(FunctionGroupBaseConfig, name="test_func_group_with_intercepts"):
+            pass
+
+        @register_function_group(config_type=TestFunctionGroupConfig)
+        async def test_function_group(config: TestFunctionGroupConfig, builder: Builder):
+            from nat.builder.function import FunctionGroup
+
+            group = FunctionGroup(config=config)
+
+            async def func1(value: int) -> int:
+                return value * 2
+
+            async def func2(value: int) -> int:
+                return value + 10
+
+            group.add_function("func1", func1, description="Multiply by 2")
+            group.add_function("func2", func2, description="Add 10")
+
+            yield group
+
+    async def test_function_group_with_intercepts_via_builder(self, register_test_function_group):
+        """Test that function groups can use intercepts configured in builder."""
+        call_order = []
+
+        config_dict = {
+            "function_intercepts": {
+                "group_intercept_1": {
+                    "_type": "test_intercept",
+                    "test_param": "group_first",
+                },
+                "group_intercept_2": {
+                    "_type": "test_intercept",
+                    "test_param": "group_second",
+                },
+            },
+            "function_groups": {
+                "test_group": {
+                    "_type": "test_func_group_with_intercepts",
+                    "intercepts": ["group_intercept_1", "group_intercept_2"],
+                }
+            },
+        }
+        config = Config.model_validate(config_dict)
+
+        async with WorkflowBuilder() as builder:
+            # Manually build intercepts first
+            for name, intercept_config in config.function_intercepts.items():
+                # Pass shared call_order to track execution
+                intercept_config.call_order = call_order
+                await builder.add_function_intercept(name, intercept_config)
+
+            # Now build function group
+            group = await builder.add_function_group("test_group", config.function_groups["test_group"])
+
+            # Get accessible functions from the group
+            functions = await group.get_accessible_functions()
+
+            # Test that intercepts are applied to func1
+            func1 = functions["test_group.func1"]
+            result = await func1.ainvoke(5)
+            assert result == 10  # 5 * 2
+
+            # Verify intercepts were called in correct order for func1
+            assert call_order == ["group_first_pre", "group_second_pre", "group_second_post", "group_first_post"]
+
+            # Clear call order for next test
+            call_order.clear()
+
+            # Test that intercepts are applied to func2
+            func2 = functions["test_group.func2"]
+            result = await func2.ainvoke(5)
+            assert result == 15  # 5 + 10
+
+            # Verify intercepts were called for func2 as well
+            assert call_order == ["group_first_pre", "group_second_pre", "group_second_post", "group_first_post"]
+
+    async def test_function_group_intercepts_propagated_to_new_functions(self):
+        """Test that intercepts are propagated to functions added after group creation."""
+        from nat.builder.function import FunctionGroup
+        from nat.data_models.function import FunctionGroupBaseConfig
+
+        call_order = []
+
+        # Create test intercept
+        intercept = TestIntercept(test_param="dynamic", call_order=call_order)
+
+        # Create function group with intercepts
+        config = FunctionGroupBaseConfig()
+        group = FunctionGroup(config=config, intercepts=[intercept])
+
+        # Add function after group creation
+        async def new_func(value: int) -> int:
+            return value * 3
+
+        group.add_function("dynamic_func", new_func)
+
+        # Get the function and test it has intercepts
+        func = group._functions["dynamic_func"]
+        result = await func.ainvoke(4)
+        assert result == 12  # 4 * 3
+
+        # Verify intercepts were called
+        assert call_order == ["dynamic_pre", "dynamic_post"]
+
+    async def test_function_group_configure_intercepts_updates_existing(self):
+        """Test that configure_intercepts updates existing functions."""
+        from nat.builder.function import FunctionGroup
+        from nat.data_models.function import FunctionGroupBaseConfig
+
+        call_order1 = []
+        call_order2 = []
+
+        # Create function group without intercepts initially
+        config = FunctionGroupBaseConfig()
+        group = FunctionGroup(config=config)
+
+        # Add functions
+        async def func1(value: int) -> int:
+            return value * 2
+
+        async def func2(value: int) -> int:
+            return value + 5
+
+        group.add_function("func1", func1)
+        group.add_function("func2", func2)
+
+        # Test functions without intercepts
+        result1 = await group._functions["func1"].ainvoke(3)
+        assert result1 == 6
+        assert len(call_order1) == 0  # No intercepts called
+
+        # Now configure intercepts
+        intercept1 = TestIntercept(test_param="after1", call_order=call_order1)
+        intercept2 = TestIntercept(test_param="after2", call_order=call_order2)
+        group.configure_intercepts([intercept1, intercept2])
+
+        # Test functions with intercepts
+        result2 = await group._functions["func1"].ainvoke(3)
+        assert result2 == 6
+        assert call_order1 == ["after1_pre", "after1_post"]
+        assert call_order2 == ["after2_pre", "after2_post"]
+
+        # Clear and test func2
+        call_order1.clear()
+        call_order2.clear()
+        result3 = await group._functions["func2"].ainvoke(3)
+        assert result3 == 8
+        assert call_order1 == ["after1_pre", "after1_post"]
+        assert call_order2 == ["after2_pre", "after2_post"]
+
+    async def test_function_group_missing_intercept_raises_error(self):
+        """Test that referencing nonexistent intercept in function group raises error."""
+        from nat.cli.register_workflow import register_function_group
+        from nat.data_models.function import FunctionGroupBaseConfig
+
+        class MissingInterceptGroupConfig(FunctionGroupBaseConfig, name="missing_intercept_group"):
+            pass
+
+        @register_function_group(config_type=MissingInterceptGroupConfig)
+        async def function_group_with_missing_intercept(config, builder):
+            from nat.builder.function import FunctionGroup
+
+            group = FunctionGroup(config=config)
+
+            async def test_func(value: int) -> int:
+                return value
+
+            group.add_function("test", test_func)
+            yield group
+
+        config_dict = {
+            "function_groups": {
+                "test_group": {
+                    "_type": "missing_intercept_group", "intercepts": ["nonexistent_group_intercept"]
+                }
+            }
+        }
+        config = Config.model_validate(config_dict)
+
+        async with WorkflowBuilder() as builder:
+            with pytest.raises(ValueError,
+                               match="Function intercept `nonexistent_group_intercept` not found for function group"):
+                await builder.add_function_group("test_group", config.function_groups["test_group"])
+
+    async def test_function_group_intercepts_with_cache(self):
+        """Test function group with cache intercept."""
+        from nat.cli.register_workflow import register_function_group
+        from nat.data_models.function import FunctionGroupBaseConfig
+
+        class CachedGroupConfig(FunctionGroupBaseConfig, name="cached_group"):
+            pass
+
+        @register_function_group(config_type=CachedGroupConfig)
+        async def cached_function_group(config, builder):
+            from nat.builder.function import FunctionGroup
+
+            group = FunctionGroup(config=config)
+
+            # Counter to track function calls
+            call_count = {"func1": 0, "func2": 0}
+
+            async def func1(value: str) -> str:
+                call_count["func1"] += 1
+                return f"func1_result_{value}_{call_count['func1']}"
+
+            async def func2(value: str) -> str:
+                call_count["func2"] += 1
+                return f"func2_result_{value}_{call_count['func2']}"
+
+            group.add_function("func1", func1)
+            group.add_function("func2", func2)
+
+            # Store call_count for testing
+            group._test_call_count = call_count
+            yield group
+
+        config_dict = {
+            "function_intercepts": {
+                "group_cache": {
+                    "_type": "cache",
+                    "enabled_mode": "always",
+                    "similarity_threshold": 1.0,
+                }
+            },
+            "function_groups": {
+                "cached_group": {
+                    "_type": "cached_group",
+                    "intercepts": ["group_cache"],
+                }
+            }
+        }
+        config = Config.model_validate(config_dict)
+
+        async with WorkflowBuilder() as builder:
+            # Build intercepts
+            for name, intercept_config in config.function_intercepts.items():
+                await builder.add_function_intercept(name, intercept_config)
+
+            # Build function group
+            group = await builder.add_function_group("cached_group", config.function_groups["cached_group"])
+
+            # Get functions
+            functions = await group.get_accessible_functions()
+            func1 = functions["cached_group.func1"]
+            func2 = functions["cached_group.func2"]
+
+            # Test func1 caching
+            result1 = await func1.ainvoke("test1")
+            assert result1 == "func1_result_test1_1"
+            assert group._test_call_count["func1"] == 1
+
+            # Second call should use cache
+            result2 = await func1.ainvoke("test1")
+            assert result2 == "func1_result_test1_1"
+            assert group._test_call_count["func1"] == 1  # No additional call
+
+            # Different input should call function
+            result3 = await func1.ainvoke("different")
+            assert result3 == "func1_result_different_2"
+            assert group._test_call_count["func1"] == 2
+
+            # Test func2 also has cache (use different input to avoid cross-function cache hit)
+            result4 = await func2.ainvoke("test2")
+            assert result4 == "func2_result_test2_1"
+            assert group._test_call_count["func2"] == 1
+
+            # Second call should use cache
+            result5 = await func2.ainvoke("test2")
+            assert result5 == "func2_result_test2_1"
+            assert group._test_call_count["func2"] == 1  # No additional call
+
+    async def test_function_group_intercepts_order_matters(self):
+        """Test that intercept order is preserved and matters for function groups."""
+        from nat.builder.function import FunctionGroup
+        from nat.data_models.function import FunctionGroupBaseConfig
+
+        results = []
+
+        class OrderTestIntercept(FunctionIntercept):
+
+            def __init__(self, name: str):
+                super().__init__()
+                self.name = name
+
+            async def intercept_invoke(self, value, call_next, context):
+                results.append(f"{self.name}_pre")
+                # Modify value based on intercept name
+                if self.name == "first":
+                    value = value * 2
+                elif self.name == "second":
+                    value = value + 10
+                result = await call_next(value)
+                results.append(f"{self.name}_post")
+                return result
+
+        # Create function group with ordered intercepts
+        config = FunctionGroupBaseConfig()
+        intercepts = [OrderTestIntercept("first"), OrderTestIntercept("second")]
+        group = FunctionGroup(config=config, intercepts=intercepts)
+
+        async def test_func(value: int) -> int:
+            return value
+
+        group.add_function("order_test", test_func)
+
+        # Test the function
+        func = group._functions["order_test"]
+        result = await func.ainvoke(5)
+
+        # Value is first multiplied by 2 (10), then added 10 (20)
+        assert result == 20
+        assert results == ["first_pre", "second_pre", "second_post", "first_post"]

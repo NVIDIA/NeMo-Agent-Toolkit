@@ -399,7 +399,8 @@ class FunctionGroup:
                  *,
                  config: FunctionGroupBaseConfig,
                  instance_name: str | None = None,
-                 filter_fn: Callable[[Sequence[str]], Awaitable[Sequence[str]]] | None = None):
+                 filter_fn: Callable[[Sequence[str]], Awaitable[Sequence[str]]] | None = None,
+                 intercepts: Sequence[FunctionIntercept] | None = None):
         """
         Creates a new function group.
 
@@ -412,12 +413,15 @@ class FunctionGroup:
         filter_fn : Callable[[Sequence[str]], Awaitable[Sequence[str]]] | None, optional
             A callback function to additionally filter the functions in the function group dynamically when
             the functions are accessed via any accessor method.
+        intercepts : Sequence[FunctionIntercept] | None, optional
+            The intercept instances to apply to all functions in this group.
         """
         self._config = config
         self._instance_name = instance_name or config.type
         self._functions: dict[str, Function] = dict()
         self._filter_fn = filter_fn
         self._per_function_filter_fn: dict[str, Callable[[str], Awaitable[bool]]] = dict()
+        self._intercepts: tuple[FunctionIntercept, ...] = tuple(intercepts or ())
 
     def add_function(self,
                      name: str,
@@ -466,6 +470,9 @@ class FunctionGroup:
         info = FunctionInfo.from_fn(fn, input_schema=input_schema, description=description, converters=converters)
         full_name = self._get_fn_name(name)
         lambda_fn = LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name=full_name)
+        # Configure intercepts from the function group if any
+        if self._intercepts:
+            lambda_fn.configure_intercepts(self._intercepts)
         self._functions[name] = lambda_fn
         if filter_fn:
             self._per_function_filter_fn[name] = filter_fn
@@ -754,3 +761,25 @@ class FunctionGroup:
         Returns the instance name for the function group.
         """
         return self._instance_name
+
+    @property
+    def intercepts(self) -> tuple[FunctionIntercept, ...]:
+        """
+        Returns the intercepts configured for this function group.
+        """
+        return self._intercepts
+
+    def configure_intercepts(self, intercepts: Sequence[FunctionIntercept] | None = None) -> None:
+        """
+        Configure the intercepts for this function group.
+        These intercepts will be applied to all functions added to the group.
+
+        Parameters
+        ----------
+        intercepts : Sequence[FunctionIntercept] | None
+            The intercepts to configure for the function group.
+        """
+        self._intercepts = tuple(intercepts or ())
+        # Update existing functions with the new intercepts
+        for func in self._functions.values():
+            func.configure_intercepts(self._intercepts)

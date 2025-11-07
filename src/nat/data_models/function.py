@@ -49,6 +49,10 @@ class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
         default_factory=list,
         description="The list of function names which should be excluded from default access to the group",
     )
+    intercepts: list[str] = Field(
+        default_factory=list,
+        description="List of function intercept names to apply to all functions in this group",
+    )
 
     @field_validator("include", "exclude")
     @classmethod
