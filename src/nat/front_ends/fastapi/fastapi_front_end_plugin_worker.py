@@ -544,7 +544,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         GenerateStreamResponseType = workflow.streaming_output_schema
         GenerateSingleResponseType = workflow.single_output_schema
 
-        if self._dask_available:
+        # Skip async generation for custom routes (those with function_name)
+        if self._dask_available and not hasattr(endpoint, 'function_name'):
             # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
             # Consider prefixing these with "nat_" to avoid conflicts
 
@@ -921,7 +922,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     responses={500: response_500},
                 )
 
-                if self._dask_available:
+                if self._dask_available and not hasattr(endpoint, 'function_name'):
                     app.add_api_route(
                         path=f"{endpoint.path}/async",
                         endpoint=post_async_generation(request_type=AsyncGenerateRequest),
@@ -935,7 +936,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             else:
                 raise ValueError(f"Unsupported method {endpoint.method}")
 
-            if self._dask_available:
+            if self._dask_available and not hasattr(endpoint, 'function_name'):
                 app.add_api_route(
                     path=f"{endpoint.path}/async/job/{{job_id}}",
                     endpoint=get_async_job_status,
