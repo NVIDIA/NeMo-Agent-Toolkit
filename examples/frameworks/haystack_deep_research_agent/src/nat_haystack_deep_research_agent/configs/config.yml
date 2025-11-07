@@ -21,6 +21,11 @@ llms:
     _type: nim
     model: nvidia/llama-3.3-nemotron-super-49b-v1.5
 
+embedders:
+  nv-embed:
+    _type: nim
+    model: nvidia/nv-embedqa-e5-v5
+
 workflow:
   _type: haystack_deep_research_agent
   max_agent_steps: 20
@@ -29,5 +34,5 @@ workflow:
   opensearch_url: http://localhost:9200
   index_on_startup: true
   data_dir: /data
-  embedding_model: nvidia/nv-embedqa-e5-v5
+  embedder_name: nv-embed
   embedding_dim: 1024
