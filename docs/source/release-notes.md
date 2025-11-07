@@ -20,7 +20,10 @@ This section contains the release notes for [NeMo Agent toolkit](./index.md).
 
 ## Release 1.3.1
 ### Summary
-This is a minor release with documentation updates, bug fixes, and non-breaking improvements. This release adds support for Claude Sonnet 4.5, fixes bugs, and improves documentation.
+This is a minor release with documentation updates, bug fixes, and non-breaking improvements.
+
+### New Features
+This release adds support for the Claude Sonnet 4.5 model.
 
 Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/CHANGELOG.md) for a complete list of changes.
 
