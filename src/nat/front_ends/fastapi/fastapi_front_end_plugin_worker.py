@@ -554,7 +554,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         GenerateSingleResponseType = dict
 
         # Skip async generation for custom routes (those with function_name)
-        if self._dask_available and not hasattr(endpoint, 'function_name'):
+        # Skip async generation for custom routes (those with function_name)
+        if self._dask_available and not hasattr(endpoint, 'function_name') and not hasattr(endpoint, 'function_name'):
             # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
             # Consider prefixing these with "nat_" to avoid conflicts
 
