@@ -68,7 +68,7 @@ The observability and profiling features in NeMo Agent Toolkit capture detailed 
 - **Audit trail exposure**: Logs revealing system architecture or security measures
 - **Log storage security**: Insufficient protection of stored logs containing sensitive data
 - **Log retention policies**: Keeping logs longer than necessary, increasing exposure risk
-- **Log access control policies:** Making logs available may inadvertently violate access control on source data, including data manually entered into prompts, or data collected and inserted into prompts by tools such as MCPs that use delegated authorization from the user.
+- **Log access control policies:** Making logs available may inadvertently violate access control on source data, including data manually entered into prompts, or data collected and inserted into prompts by tools, such as an MCP tool, that use delegated authorization from the user.
 
 ### Supply Chain and Third Party Security Aspects
 
