@@ -38,7 +38,7 @@ This is a minor release with documentation updates, bug fixes, and non-breaking 
 * Document the need to install `nvidia-nat-test` prior to using `ToolTestRunner` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1150
 * Update reasoning diagrams by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1153
 * Update Quick Start UI documentation by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1156
-* Add `security-considerations.md` document by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1168
+* Add SECURITY.md document by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1164
 * docs: 1.3.1 changelog by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1166
 
 ### 🙌 New Contributors
