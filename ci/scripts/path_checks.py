@@ -114,7 +114,6 @@ ALLOWLISTED_WORDS: set[str] = {
     "Input/Observation",
     "input/output",
     "inputs/outputs",
-    "Input/output",
     "JavaScript/TypeScript",
     "JSON/YAML",
     "LangChain/LangGraph",

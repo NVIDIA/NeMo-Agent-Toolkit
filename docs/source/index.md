@@ -147,7 +147,6 @@ Troubleshooting <./troubleshooting.md>
 :caption: Resources
 
 FAQ <./resources/faq.md>
-Security Considerations <./resources/security-considerations.md>
 Code of Conduct <./resources/code-of-conduct.md>
 Migration Guide <./resources/migration-guide.md>
 Contributing <./resources/contributing.md>
