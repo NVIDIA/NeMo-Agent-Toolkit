@@ -13,6 +13,7 @@ arXiv
 [Aa]llowlist
 [Aa]nonymize(d?)
 Authlib
+[Bb]ackdoor(s?)
 [Bb]ackoff
 [Bb]ackpressure
 [Bb]atcher
@@ -39,6 +40,7 @@ CPython
 cuDF
 cuML
 CuPy
+CVE(s?)
 [Cc]yber
 [Cc]ybersecurity
 Cython
@@ -56,6 +58,7 @@ Dynatrace
 [Ee]ngineerable
 etcd
 [Ee]val
+[Ee]xfiltration
 [Ee]xplainability
 Faiss
 Gantt
@@ -126,6 +129,7 @@ pytest
 [Rr]etarget(ed?)
 [Rr]eusability
 [Rr]untime(s?)
+[Ss]andboxing
 [Ss]erializable
 [Ss]treamable
 [Ss]ubclassing
@@ -146,6 +150,7 @@ triages
 [Uu]nencrypted
 [Uu]nittest(s?)
 [Uu]nprocessable
+[Uu]ntrusted
 [Uu]ploader
 [Uu]psert
 uv
