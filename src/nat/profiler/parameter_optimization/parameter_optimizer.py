@@ -117,7 +117,7 @@ def optimize_parameters(
 
     # Save final results (out_dir already created and defined above)
     with (out_dir / "optimized_config.yml").open("w") as fh:
-        yaml.dump(tuned_cfg.model_dump(), fh)
+        yaml.dump(tuned_cfg.model_dump(mode='json'), fh)
     with (out_dir / "trials_dataframe_params.csv").open("w") as fh:
         # Export full trials DataFrame (values, params, timings, etc.).
         df = study.trials_dataframe()

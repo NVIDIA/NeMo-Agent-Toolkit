@@ -28,10 +28,13 @@ class TopPMixin(
         field_name="top_p",
         default_if_supported=1.0,
         keys=("model_name", "model", "azure_deployment"),
-        unsupported=(re.compile(r"gpt-?5", re.IGNORECASE), ),
+        unsupported=(
+            re.compile(r"gpt-?5", re.IGNORECASE),
+            re.compile(r"claude.?sonnet.?4.5", re.IGNORECASE),
+        ),
 ):
     """
-    Mixin class for top-p configuration. Unsupported on models like gpt-5.
+    Mixin class for top-p configuration. Unsupported on models like gpt-5 and claude-sonnet-4.5.
 
     Attributes:
         top_p: Top-p for distribution sampling. Defaults to 1.0 when supported on the model.
