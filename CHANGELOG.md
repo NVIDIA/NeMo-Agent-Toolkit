@@ -25,6 +25,7 @@ This is a minor release with documentation updates, bug fixes, and non-breaking 
 
 ### ✨ New Features
 * feat: Add claude-sonnet-4.5 support by model-gating `top_p` by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1134
+* Add support for arbitrary JSON body types in custom routes by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1163
 ### 🐛 Bug Fixes
 * bug: fix non json serializable objects in config by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1112
 * fix ADK demo multi-user session by @antoniomtz in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1120

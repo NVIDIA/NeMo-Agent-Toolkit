@@ -23,7 +23,7 @@ This section contains the release notes for [NeMo Agent toolkit](./index.md).
 This is a minor release with documentation updates, bug fixes, and non-breaking improvements.
 
 ### New Features
-This release adds support for the Claude Sonnet 4.5 model.
+This release adds support for the Claude Sonnet 4.5 model and adds support for arbitrary JSON body types in custom routes.
 
 Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/CHANGELOG.md) for a complete list of changes.
 
