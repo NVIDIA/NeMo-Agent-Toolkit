@@ -34,13 +34,5 @@ workflow:
   opensearch_url: http://localhost:9200
   index_on_startup: true
   data_dir: /data
-<<<<<<< HEAD
-<<<<<<< HEAD
   embedder_name: nv-embed
-=======
-  embedding_model: nvidia/nv-embedqa-e5-v5
->>>>>>> 17351f99 (Replace OpenSearchBM25Retriever with OpenSearchEmbeddingRetriever and NvidiaDocumentEmbedder ; Update tests)
-=======
-  embedder_name: nv-embed
->>>>>>> 2a3d1f27 (use EmbedderRef)
   embedding_dim: 1024
