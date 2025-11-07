@@ -627,3 +627,147 @@ def langfuse_trace_url_fixture(langfuse_url: str) -> str:
     the trace url which is what this fixture provides.
     """
     return f"{langfuse_url}/api/public/otel/v1/traces"
+
+
+@pytest.fixture(name="oauth2_server_url", scope="session")
+def oauth2_server_url_fixture(fail_missing: bool) -> str:
+    """
+    To run these tests, an oauth2 server must be running.
+    """
+    import requests
+
+    host = os.getenv("NAT_CI_OAUTH2_HOST", "localhost")
+    port = int(os.getenv("NAT_CI_OAUTH2_PORT", "5001"))
+    url = f"http://{host}:{port}"
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+
+        return url
+    except Exception as e:
+        reason = f"Unable to connect to OAuth2 server at {url}: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="oauth2_client_credentials", scope="session")
+def oauth2_client_credentials_fixture(oauth2_server_url: str, fail_missing: bool) -> dict[str, typing.Any]:
+    """
+    Fixture to provide OAuth2 client credentials for testing
+
+    Simulates the steps a user would take in a web browser to create a new OAuth2 client as documented in:
+    examples/front_ends/simple_auth/README.md
+    """
+
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        username = os.getenv("NAT_CI_OAUTH2_CLIENT_USERNAME", "Testy Testerson")
+
+        # This post request responds with a cookie that we need for future requests and a 302 redirect, the response
+        # for the redirected url doesn't contain the cookie, so we disable the redirect here to capture the cookie
+        user_create_response = requests.post(oauth2_server_url,
+                                             data=[("username", username)],
+                                             headers={"Content-Type": "application/x-www-form-urlencoded"},
+                                             allow_redirects=False,
+                                             timeout=5)
+        user_create_response.raise_for_status()
+        cookies = user_create_response.cookies
+
+        client_create_response = requests.post(f"{oauth2_server_url}/create_client",
+                                               cookies=cookies,
+                                               headers={"Content-Type": "application/x-www-form-urlencoded"},
+                                               data=[
+                                                   ("client_name", "test"),
+                                                   ("client_uri", "https://test.com"),
+                                                   ("scope", "openid profile email"),
+                                                   ("redirect_uri", "http://localhost:8000/auth/redirect"),
+                                                   ("grant_type", "authorization_code\nrefresh_token"),
+                                                   ("response_type", "code"),
+                                                   ("token_endpoint_auth_method", "client_secret_post"),
+                                               ],
+                                               timeout=5)
+        client_create_response.raise_for_status()
+
+        # Unfortunately the response is HTML so we need to parse it to get the client ID and secret, which are not
+        # locatable via ID tags
+        soup = BeautifulSoup(client_create_response.text, 'html.parser')
+        strong_tags = soup.find_all('strong')
+        i = 0
+        client_id = None
+        client_secret = None
+        while i < len(strong_tags) and None in (client_id, client_secret):
+            tag = strong_tags[i]
+            contents = "".join(tag.contents)
+            if client_id is None and "client_id:" in contents:
+                client_id = tag.next_sibling.strip()
+            elif client_secret is None and "client_secret:" in contents:
+                client_secret = tag.next_sibling.strip()
+
+            i += 1
+
+        assert client_id is not None and client_secret is not None, "Failed to parse client credentials from response"
+
+        return {
+            "id": client_id,
+            "secret": client_secret,
+            "username": username,
+            "url": oauth2_server_url,
+            "cookies": cookies
+        }
+
+    except Exception as e:
+        reason = f"Unable to create OAuth2 client: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="local_sandbox_url", scope="session")
+def local_sandbox_url_fixture(fail_missing: bool) -> str:
+    """Check if sandbox server is running before running tests."""
+    import requests
+    url = os.environ.get("NAT_CI_SANDBOX_URL", "http://127.0.0.1:6000")
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        return url
+    except Exception:
+        reason = (f"Sandbox server is not running at {url}. "
+                  "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason)
+
+
+@pytest.fixture(name="sandbox_config", scope="session")
+def sandbox_config_fixture(local_sandbox_url: str) -> dict[str, typing.Any]:
+    """Configuration for sandbox testing."""
+    return {
+        "base_url": local_sandbox_url,
+        "execute_url": f"{local_sandbox_url.rstrip('/')}/execute",
+        "timeout": int(os.environ.get("SANDBOX_TIMEOUT", "30")),
+        "connection_timeout": 5
+    }
+
+
+@pytest.fixture(name="piston_url", scope="session")
+def piston_url_fixture(fail_missing: bool) -> str:
+    """
+    Configuration for piston testing.
+
+    The public piston server limits usage to five requests per minute.
+    """
+    import requests
+    url = os.environ.get("NAT_CI_PISTON_URL", "https://emkc.org/api/v2/piston")
+    try:
+        response = requests.get(f"{url.rstrip('/')}/runtimes", timeout=30)
+        response.raise_for_status()
+        return url
+    except Exception:
+        reason = (f"Piston server is not running at {url}. "
+                  "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason)
