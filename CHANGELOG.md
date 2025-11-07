@@ -31,6 +31,7 @@ This is a minor release with documentation updates, bug fixes, and non-breaking 
 * Fixes to detect optional parameters in tool conversion used by "nat mcp serve" by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1133
 * Async Chat fixes by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1131
 * Fix code concatenation issue with `code_execution_tool` when using a Piston server by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1154
+* Fix documentation version switcher by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1167
 ### 📝 Documentation Updates
 * Misc Documentation Fixes by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1136
 * Document the need to install `nvidia-nat-test` prior to using `ToolTestRunner` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1150
