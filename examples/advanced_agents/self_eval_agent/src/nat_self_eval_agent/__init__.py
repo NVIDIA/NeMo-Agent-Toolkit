@@ -12,12 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""
-Self-Evaluation Agent.
-
-This package provides tools to aggregate contributions from multiple platforms
-(JIRA, GitLab, Confluence) and generate comprehensive self-evaluation reports.
-"""
-
-__all__ = []
