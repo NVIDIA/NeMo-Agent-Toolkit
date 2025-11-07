@@ -174,8 +174,6 @@ class LoggingIntercept(FunctionIntercept):
 Create a registration module following the idiomatic pattern:
 
 ```python
-# File: src/nat/intercepts/my_module/register.py
-
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_function_intercept
 from .logging_intercept import LoggingIntercept, LoggingInterceptConfig
@@ -238,7 +236,7 @@ async def my_api_function(config: MyAPIFunctionConfig, builder: Builder):
 
 ### Cache Intercept
 
-The cache intercept is a built-in component that memoizes function outputs based on input similarity.
+The cache intercept is a built-in component that caches function outputs based on input similarity.
 
 #### Configuration
 
@@ -262,11 +260,11 @@ function_intercepts:
 
 #### Parameters
 
-- **enabled_mode**: `"always"` or `"eval"`
+- **`enabled_mode`**: `"always"` or `"eval"`
   - `"always"`: Cache is always active
   - `"eval"`: Cache only active when `Context.is_evaluating` is True
 
-- **similarity_threshold**: Float from 0.0 to 1.0
+- **`similarity_threshold`**: Float from 0.0 to 1.0
   - `1.0`: Exact string matching (fastest)
   - `< 1.0`: Fuzzy matching using difflib
 
@@ -586,7 +584,7 @@ async def test_function_with_cache():
 
 When chaining multiple intercepts:
 
-1. **Logging/Monitoring**: First to capture everything
+1. **Logging or Monitoring**: First to capture everything
 2. **Authentication**: Early rejection of unauthorized calls
 3. **Validation**: Validate before expensive operations
 4. **Rate Limiting**: Prevent excessive calls

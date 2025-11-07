@@ -132,7 +132,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             self._intercepted_stream = None
             return
 
-        logger.info(f"Building intercepts for function '{self.instance_name}' in order of: ", intercepts_tuple)
+        logger.info(f"Building intercepts for function '{self.instance_name}' in order of: {intercepts_tuple}")
 
         context = FunctionInterceptContext(name=self.instance_name,
                                            config=self.config,

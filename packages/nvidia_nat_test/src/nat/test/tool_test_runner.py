@@ -301,7 +301,7 @@ class MockBuilder(Builder):
         """Mock implementation."""
         return FunctionIntercept()
 
-    async def get_function_intercept_config(self,
+    def get_function_intercept_config(self,
                                             intercept_name: str | FunctionInterceptRef) -> FunctionInterceptBaseConfig:
         """Mock implementation."""
         return FunctionInterceptBaseConfig()
