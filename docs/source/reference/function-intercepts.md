@@ -32,8 +32,9 @@ Function intercepts are first-class components in NAT, configured in YAML and bu
 
 **Function Intercept Component**: A middleware component that:
 - Is configured in YAML with a `function_intercepts` section
-- Is built by the workflow builder before functions
+- Is built by the workflow builder before functions and function groups
 - Wraps a function's `ainvoke` or `astream` methods
+- Can be applied to individual functions or entire function groups
 - Can preprocess inputs, postprocess outputs, or short-circuit execution
 
 **Middleware Chain**: A sequence of intercepts that execute in order, forming an "onion" structure where control flows in through preprocessing, down to the function, and back out through postprocessing.
@@ -60,6 +61,12 @@ functions:
     _type: my_function_type
     intercepts: ["my_logger", "my_cache"]  # Apply intercepts in order
     # Other function config...
+
+function_groups:
+  my_function_group:
+    _type: my_function_group_type
+    intercepts: ["my_logger", "my_cache"]  # Apply intercepts to all functions in the group
+    # Other function group config...
 ```
 
 ```python
@@ -391,6 +398,103 @@ Request → Logger (pre) → Validator (pre) → Cache (pre) → Function
 Response ← Logger (post) ← Validator (post) ← Cache (post) ←
 ```
 
+## Using Intercepts with Function Groups
+
+Function groups support intercepts at the group level, automatically applying them to all functions in the group. This is useful for applying common middleware (logging, caching, authentication, etc.) across multiple related functions.
+
+### Basic Function Group Intercepts
+
+```yaml
+function_intercepts:
+  api_logger:
+    _type: logging_intercept
+    log_level: INFO
+
+  api_cache:
+    _type: cache
+    enabled_mode: always
+    similarity_threshold: 1.0
+
+function_groups:
+  weather_api:
+    _type: weather_api_group
+    intercepts: ["api_logger", "api_cache"]  # Applied to all functions in the group
+```
+
+```python
+from nat.cli.register_workflow import register_function_group
+from nat.builder.function import FunctionGroup
+from nat.data_models.function import FunctionGroupBaseConfig
+
+
+class WeatherAPIGroupConfig(FunctionGroupBaseConfig, name="weather_api_group"):
+    api_key: str
+
+
+@register_function_group(config_type=WeatherAPIGroupConfig)
+async def weather_api_group(config: WeatherAPIGroupConfig, builder):
+    """Weather API function group with shared intercepts."""
+    group = FunctionGroup(config=config)
+
+    async def get_current_weather(location: str) -> dict:
+        # All calls to this function will be logged and cached
+        return await fetch_weather(location, config.api_key)
+
+    async def get_forecast(location: str, days: int = 5) -> dict:
+        # All calls to this function will also be logged and cached
+        return await fetch_forecast(location, days, config.api_key)
+
+    group.add_function("get_current_weather", get_current_weather)
+    group.add_function("get_forecast", get_forecast)
+
+    yield group
+```
+
+### How Function Group Intercepts Work
+
+When intercepts are configured on a function group:
+
+1. **Automatic Propagation**: All functions added to the group automatically receive the group's intercepts
+2. **Applied at Creation**: Intercepts are configured when each function is added via `add_function()`
+3. **Shared Instances**: All functions in the group share the same intercept instances (e.g., shared cache)
+4. **Dynamic Updates**: Calling `configure_intercepts()` on the group updates all existing functions
+
+### Benefits of Function Group Intercepts
+
+**Consistency**: Ensures all related functions have the same middleware
+```yaml
+function_groups:
+  database_operations:
+    _type: db_ops_group
+    intercepts: ["auth_check", "rate_limiter", "query_logger"]
+    # All database operations now require auth, are rate-limited, and logged
+```
+
+**Maintainability**: Change middleware for all functions in one place
+```python
+# Dynamically update intercepts for all functions in the group
+group.configure_intercepts([new_logger, new_cache])
+```
+
+**Shared State**: Intercepts can maintain shared state across all group functions
+```yaml
+function_intercepts:
+  shared_cache:
+    _type: cache
+    enabled_mode: always
+    similarity_threshold: 1.0
+
+function_groups:
+  api_group:
+    _type: external_api_group
+    intercepts: ["shared_cache"]
+    # Cache is shared across all API functions
+```
+
+### Advanced Pattern: Combining Group and Function Intercepts
+
+While function groups define intercepts at the group level, individual functions can have their own intercepts applied after the function is created programmatically if needed. However, the typical pattern is to use group-level intercepts for consistency.
+
 ## Testing Intercepts
 
 ### Unit Testing
@@ -515,7 +619,7 @@ async def protected_api(config, builder):
 
 ### Build Order
 
-Function intercepts are built **before** functions in the workflow builder. This ensures all intercepts are available when functions are constructed.
+Function intercepts are built **before** functions and function groups in the workflow builder. This ensures all intercepts are available when functions and function groups are constructed.
 
 Build order:
 1. Authentication providers
@@ -526,8 +630,8 @@ Build order:
 6. Retrievers
 7. TTC strategies
 8. **Function intercepts** ← Built here
-9. Function groups
-10. Functions ← Use intercepts here
+9. Function groups ← Can use intercepts
+10. Functions ← Can use intercepts
 
 ## Troubleshooting
 
@@ -536,8 +640,9 @@ Build order:
 **Intercept not found error**
 ```
 ValueError: Function intercept `my_cache` not found
+ValueError: Function intercept `my_cache` not found for function group `my_group`
 ```
-Solution: Ensure the intercept is defined in the `function_intercepts` section of your YAML.
+Solution: Ensure the intercept is defined in the `function_intercepts` section of your YAML before referencing it in functions or function groups.
 
 **Import errors**
 ```
