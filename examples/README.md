@@ -122,6 +122,8 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 4. [Multi-Agent Orchestration](notebooks/4_multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
 5. [Observability, Evaluation, and Profiling](notebooks/5_observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
 6. [Optimizing Model Selection, Parameters, and Prompts](notebooks/6_optimize_model_selection.ipynb) - Use NAT Optimize to compare models, parameters, and prompt variations
+7. [MCP Client and Servers Setup](notebooks/7_mcp_setup_and_integration.ipynb) - Deploy and integrate MCP clients and servers with NeMo Agent toolkit workflows
+
 
 #### Brev Launchables
 
