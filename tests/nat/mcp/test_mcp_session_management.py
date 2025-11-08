@@ -590,6 +590,7 @@ class TestMCPSessionManagement:
             with pytest.raises(RuntimeError, match="Failed to initialize session client: Connection failed"):
                 await function_group._create_session_client(session_id)
 
+    @pytest.mark.slow
     async def test_lifetime_task_timeout(self, function_group):
         """Test that lifetime task times out if initialization hangs."""
         session_id = "test-session-timeout"
