@@ -200,57 +200,6 @@ class SessionManager:
         workflow_data = await self._get_or_create_user_workflow(user_id)
         return workflow_data.workflow
 
-    def _validate_user_id(self, user_id: str) -> str | None:
-        """
-        Validates user_id format.
-        TODO: Implement actual validation logic.
-        """
-        if not user_id or not isinstance(user_id, str):
-            return None
-
-        user_id = user_id.strip()
-
-        # Check if empty after trimming
-        if len(user_id) == 0:
-            return None
-
-        # Check reasonable length (prevent memory issues)
-        if len(user_id) > 256:
-            logger.warning(f"user_id too long: {len(user_id)} characters")
-            return None
-
-    def _extract_user_id(self, http_connection: HTTPConnection | None = None) -> str | None:
-        """
-        Extracts the user ID from the HTTP connection.
-        """
-        if http_connection is None:
-            return None
-
-        # Extract from nat-session cookie (NAT's standard approach)
-        if hasattr(http_connection, 'cookies'):
-            user_id = http_connection.cookies.get('nat-session')
-            if user_id:
-                validated = self._validate_user_id(user_id)
-                if validated:
-                    logger.debug(f"Extracted user_id from nat-session cookie: {validated[:8]}...")
-                    return validated
-
-        # For WebSocket connections, extract from scope/headers
-        if isinstance(http_connection, WebSocket):
-            if hasattr(http_connection, 'scope') and 'headers' in http_connection.scope:
-                for header_name, header_value in http_connection.scope.get('headers', []):
-                    if header_name == b'cookie':
-                        cookie_header = header_value.decode('utf-8')
-                        # Parse cookie header for nat-session
-                        for cookie in cookie_header.split(';'):
-                            cookie = cookie.strip()
-                            if cookie.startswith('nat-session='):
-                                user_id = cookie.split('=', 1)[1]
-                                validated = self._validate_user_id(user_id)
-                                if validated:
-                                    logger.debug(f"Extracted user_id from WebSocket cookie: {validated[:8]}...")
-                                    return validated
-
     @staticmethod
     def _truncate_user_id(user_id: str, length: int = 8) -> str:
         """
@@ -377,23 +326,6 @@ class SessionManager:
                       user_authentication_callback: Callable[[AuthProviderBaseConfig, AuthFlowType],
                                                              Awaitable[AuthenticatedContext | None]] = None):
 
-        user_id = self._extract_user_id(http_connection)
-
-        if self._require_user_id and not user_id:
-            raise ValueError("user_id is required for this session but not found in the request.")
-
-        # Use default user_id if not provided and not required
-        if not user_id:
-            user_id = "default"
-            logger.debug("No user_id found, using default user_id")
-
-        user_data = await self._get_or_create_user_workflow(user_id)
-
-        # track active requests
-        async with user_data.lock:
-            user_data.ref_count += 1
-            logger.debug(f"User {self._truncate_user_id(user_id)} reference count increased to {user_data.ref_count}")
-
         token_user_input = None
         if user_input_callback is not None:
             token_user_input = self._context_state.user_input_callback.set(user_input_callback)
@@ -411,6 +343,26 @@ class SessionManager:
         elif isinstance(http_connection, Request):
             self.set_metadata_from_http_request(http_connection)
 
+        # Extract user_id from metadata
+        user_id = None
+        cookies = self._context.metadata.cookies
+        if cookies:
+            user_id = cookies.get("nat-session")
+
+        # Validate if required
+        if self._require_user_id and not user_id:
+            raise ValueError("user_id is required for this session but not found in the request.")
+
+        # Use default if not found
+        if not user_id:
+            user_id = "default_user"
+
+        user_data = await self._get_or_create_user_workflow(user_id)
+
+        # track active requests
+        async with user_data.lock:
+            user_data.ref_count += 1
+            logger.debug(f"User {self._truncate_user_id(user_id)} reference count increased to {user_data.ref_count}")
         user_session = UserSession(workflow=user_data.workflow, max_concurrency=self._max_concurrency)
 
         try:

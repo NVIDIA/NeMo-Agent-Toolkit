@@ -103,7 +103,7 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     async with client:
         # Expose the live MCP client on the function group instance so other components (e.g., HTTP endpoints)
         # can reuse the already-established session instead of creating a new client per request.
-        group = MCPFunctionGroup(config=config, client=client)
+        group = MCPFunctionGroup(client, config=config)
 
         all_tools = await client.get_tools()
         tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
