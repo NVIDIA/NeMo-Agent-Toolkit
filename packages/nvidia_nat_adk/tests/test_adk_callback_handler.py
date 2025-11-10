@@ -52,6 +52,31 @@ def handler(mock_context: MagicMock) -> ADKProfilerHandler:
 # ----------------------------
 
 
+def test_no_double_patching():
+    a1 = ADKProfilerHandler()
+    a2 = ADKProfilerHandler()
+    a1.instrument()
+    a2.instrument()
+    assert a1._original_llm_call is a2._original_llm_call
+    assert a1._original_tool_call is a2._original_tool_call
+
+
+def test_uninstrument_restores_originals():
+    import litellm
+    from google.adk.tools.function_tool import FunctionTool
+
+    handler = ADKProfilerHandler()
+    handler.instrument()
+    assert handler._instrumented
+    assert handler._original_llm_call is litellm.acompletion
+    assert handler._original_tool_call is FunctionTool.run_async
+
+    handler.uninstrument()
+    assert not handler._instrumented
+    assert handler._original_llm_call is None
+    assert handler._original_tool_call is None
+
+
 def test_adk_profiler_handler_initialization(handler, mock_context):
     """Test ADKProfilerHandler initialization."""
     assert handler._original_tool_call is None
