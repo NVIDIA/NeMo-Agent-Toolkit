@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure the Tool Calling Agent
-Configure the NVIDIA NeMo Agent toolkit ReAct agent as a workflow or a function.
+Configure the NVIDIA NeMo Agent toolkit tool calling agent as a workflow or a function.
 
 ## Requirements
 The tool calling agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
