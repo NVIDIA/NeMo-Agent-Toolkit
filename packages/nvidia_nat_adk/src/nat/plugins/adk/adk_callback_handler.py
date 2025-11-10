@@ -43,8 +43,15 @@ class ADKProfilerHandler(BaseProfilerCallback):
     and store them in NeMo Agent Toolkit's usage_stats queue for subsequent analysis.
     """
 
-    def __init__(self) -> None:
-        super().__init__()
+    _instance: "ADKProfilerHandler | None" = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(ADKProfilerHandler, cls).__new__(cls)
+
+        return cls._instance
+
+    def __init__(self):
         self._lock = threading.Lock()
         self.last_call_ts = 0.0
         self.step_manager = Context.get().intermediate_step_manager
