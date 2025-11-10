@@ -15,8 +15,12 @@
 
 import logging
 
+from pydantic import SecretStr
+
 from nat.authentication.interfaces import AuthProviderBase
 from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import Credential
+from nat.data_models.authentication import HeaderCred
 from nat.plugins.mcp.auth.service_account.provider_config import MCPServiceAccountProviderConfig
 from nat.plugins.mcp.auth.service_account.token_client import ServiceAccountTokenClient
 
@@ -54,10 +58,11 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
             token_cache_buffer_seconds=config.token_cache_buffer_seconds,
         )
 
-        logger.info(f"Initialized MCP service account auth provider: "
-                    f"token_url={config.token_url}, "
-                    f"scopes={config.scopes}, "
-                    f"has_service_token={config.service_token is not None}")
+        logger.info("Initialized MCP service account auth provider: "
+                    "token_url=%s, scopes=%s, has_service_token=%s",
+                    config.token_url,
+                    config.scopes,
+                    config.service_token is not None)
 
     async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
         """
@@ -66,31 +71,30 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
         Note: user_id is ignored for service accounts (non-session-specific).
 
         Returns:
-            AuthResult with custom headers for service account authentication
+            AuthResult with HeaderCred objects for service account authentication
         """
         # Get OAuth2 access token (cached if still valid)
         access_token = await self._token_client.get_access_token()
 
-        # Format Authorization header
+        # Format Authorization header value
         if self.config.token_prefix:
             bearer_token = f"{self.config.token_prefix}:{access_token}"
         else:
             # Standard Bearer token (no custom prefix)
             bearer_token = access_token
 
-        # Build headers
-        headers = {"Authorization": f"Bearer {bearer_token}"}
+        # Build credentials list using HeaderCred
+        credentials: list[Credential] = [HeaderCred(name="Authorization", value=SecretStr(f"Bearer {bearer_token}"))]
 
         # Add service-specific token if provided
         if self.config.service_token:
             service_token = self.config.service_token.get_secret_value()
-            headers[self.config.service_token_header] = service_token
-            logger.debug(f"Added {self.config.service_token_header} header")
+            credentials.append(HeaderCred(name=self.config.service_token_header, value=SecretStr(service_token)))
+            logger.debug("Added %s header credential", self.config.service_token_header)
 
-        # Return AuthResult with custom headers
+        # Return AuthResult with HeaderCred objects
         return AuthResult(
-            credentials=[],  # Service accounts don't use standard credentials
+            credentials=credentials,
             token_expires_at=self._token_client._token_expires_at,
             raw={},
-            headers=headers,  # NAT core will inject these
         )

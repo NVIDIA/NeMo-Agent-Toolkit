@@ -16,7 +16,7 @@ The `mcp_service_account` auth provider enables automated, headless authenticati
 
 - **Generic OAuth2 Support**: Works with any OAuth2-compliant token endpoint
 - **Custom Token Formats**: Supports custom token prefixes for non-standard Bearer token formats
-- **Multi-Header Support**: Can inject multiple headers (e.g., Authorization + service-specific token)
+- **Multi-Header Support**: Can inject multiple headers using NAT's HeaderCred (such as Authorization and service-specific tokens)
 - **Token Caching**: Automatic token caching and refresh with configurable buffer time
 - **Thread-Safe**: Concurrent request handling with proper locking
 - **No Hard-Coded Values**: All deployment-specific values provided via configuration or environment variables
