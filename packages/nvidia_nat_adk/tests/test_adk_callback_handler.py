@@ -80,11 +80,14 @@ def test_uninstrument_restores_originals():
     import litellm
     from google.adk.tools.function_tool import FunctionTool
 
+    original_acompletion = litellm.acompletion
+    original_function_tool_run_async = FunctionTool.run_async
+
     handler = ADKProfilerHandler()
     handler.instrument()
     assert handler._instrumented
-    assert handler._original_llm_call is litellm.acompletion
-    assert handler._original_tool_call is FunctionTool.run_async
+    assert handler._original_llm_call is original_acompletion
+    assert handler._original_tool_call is original_function_tool_run_async
 
     handler.uninstrument()
     assert not handler._instrumented
