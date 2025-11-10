@@ -53,11 +53,11 @@ class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, Thinkin
         default=None, description="Bedrock endpoint to use. Needed if you don't want to default to us-east-1 endpoint.")
     credentials_profile_name: str | None = Field(
         default=None, description="The name of the profile in the ~/.aws/credentials or ~/.aws/config files.")
-    temperature: float | None = OptimizableField(default=None,
-                                                 ge=0.0,
-                                                 le=1.0,
-                                                 description="Sampling temperature in [0, 1].",
-                                                 space=SearchSpace(high=0.9, low=0.1, step=0.2))
+    temperature: float | None = OptimizableField(
+        default=None,
+        ge=0.0,
+        description="Sampling temperature to control randomness in the output.",
+        space=SearchSpace(high=0.9, low=0.1, step=0.2))
     top_p: float | None = OptimizableField(default=None,
                                            ge=0.0,
                                            le=1.0,
