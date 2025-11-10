@@ -20,6 +20,5 @@ classifiers = ["Programming Language :: Python"]
 [project.entry-points.'nat.components']
 nat_strands_demo = "nat_strands_demo.register"
 
-
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }

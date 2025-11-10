@@ -94,9 +94,12 @@ async def url_directory(config: URLDirectoryConfig, _: Builder) -> AsyncGenerato
             directory_lines.extend([
                 "Usage Instructions:",
                 "1. Choose the appropriate URL from the list above",
-                "2. Use the http_request tool to fetch content from that URL",
-                ("3. Example: http_request(method='GET', "
-                 "url='<selected_url>', convert_to_markdown=True)"),
+                "2. Use the http_request tool with ONLY these 3 parameters:",
+                "   - method: 'GET'",
+                "   - url: '<selected_url>'",
+                "   - convert_to_markdown: true (boolean, NOT string)",
+                "3. Do NOT include any other optional parameters (no auth_type, headers, body, etc.)",
+                "4. Example: http_request(method='GET', url='<selected_url>', convert_to_markdown=true)",
                 "",
                 f"Query context: {query}",
             ])
