@@ -610,7 +610,7 @@ class TestMCPSessionManagement:
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
         with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
-            with pytest.raises(RuntimeError, match="Session client initialization timed out after 2.0s"):
+            with pytest.raises(RuntimeError, match=r"Session client initialization timed out after 2\.0s"):
                 await fg._create_session_client(session_id)
 
     async def test_lifetime_task_cleanup_on_stop_event(self, function_group):
