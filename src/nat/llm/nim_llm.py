@@ -43,11 +43,11 @@ class NIMModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin,
     max_tokens: PositiveInt = OptimizableField(default=300,
                                                description="Maximum number of tokens to generate.",
                                                space=SearchSpace(high=2176, low=128, step=512))
-    temperature: float | None = OptimizableField(default=None,
-                                                 ge=0.0,
-                                                 le=1.0,
-                                                 description="Sampling temperature in [0, 1].",
-                                                 space=SearchSpace(high=0.9, low=0.1, step=0.2))
+    temperature: float | None = OptimizableField(
+        default=None,
+        ge=0.0,
+        description="Sampling temperature to control randomness in the output.",
+        space=SearchSpace(high=0.9, low=0.1, step=0.2))
     top_p: float | None = OptimizableField(default=None,
                                            ge=0.0,
                                            le=1.0,
