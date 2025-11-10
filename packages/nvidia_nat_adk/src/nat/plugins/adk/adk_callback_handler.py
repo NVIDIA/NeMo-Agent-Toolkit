@@ -108,6 +108,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
                 self._original_llm_call = None
 
             self._instrumented = False
+            self.last_call_ts = 0.0
             logger.debug("ADKProfilerHandler uninstrumented successfully.")
         except Exception as _e:
             logger.exception("Failed to uninstrument ADKProfilerHandler")
