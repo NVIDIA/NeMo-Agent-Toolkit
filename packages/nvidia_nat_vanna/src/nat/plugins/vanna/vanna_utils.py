@@ -138,7 +138,7 @@ class VannaLangChainLLM(VannaBase):
     ) -> list:
         """Generate prompt for synthetic question-SQL pairs."""
         initial_prompt = (f"You are a {self.dialect} expert. "
-                          "Please generate diverse question–SQL pairs where each SQL "
+                          "Please generate diverse question-SQL pairs where each SQL "
                           "statement starts with either `SELECT` or `WITH`. "
                           "Your response should follow the response guidelines and format instructions.")
 
@@ -420,7 +420,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             msg = "Question and SQL cannot be empty"
             raise ValueError(msg)
         _id = str(uuid.uuid4()) + "-sql"
-        embedding = self.embedder.embed_documents([question])[0]
+        embedding = (await self.embedder.aembed_documents([question]))[0]
         data = {"id": _id, "text": question, "sql": sql, "vector": embedding}
         await self.async_milvus_client.insert(collection_name=self.sql_collection, data=data)
         return _id
@@ -475,7 +475,7 @@ class MilvusVectorStore(Milvus_VectorStore):
             for record in records:
                 record_list.append(record[output_field])
         except Exception as e:
-            logger.error(f"Error retrieving {collection_name}: {e}")
+            logger.exception(f"Error retrieving {collection_name}: {e}")
         return record_list
 
     async def get_similar_question_sql(self, question: str, **kwargs) -> list:
@@ -504,7 +504,7 @@ class MilvusVectorStore(Milvus_VectorStore):
 
             logger.info(f"Retrieved {len(list_sql)} similar SQL examples")
         except Exception as e:
-            logger.error(f"Error retrieving similar questions: {e}")
+            logger.exception(f"Error retrieving similar questions: {e}")
         return list_sql
 
     async def get_training_data(self, **kwargs):
@@ -777,7 +777,7 @@ async def train_vanna(vn: VannaLangChain, auto_train: bool = False):
 
     # Train with DDL
     if auto_train:
-        from nat.plugins.vanna.db_schema import VANNA_ACTIVE_TABLES
+        from nat.plugins.vanna.training_db_schema import VANNA_ACTIVE_TABLES
 
         dialect = vn.dialect.lower()
         ddls = []

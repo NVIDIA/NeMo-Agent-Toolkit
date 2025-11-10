@@ -287,8 +287,8 @@ def setup_vanna_db_connection(
         try:
             query_result = await async_execute_query(engine, sql_query)
             return query_result.to_dataframe()
-        except Exception as e:
-            logger.error(f"Error executing SQL: {e}")
+        except Exception:
+            logger.exception("Error executing SQL")
             raise
 
     # Set up Vanna

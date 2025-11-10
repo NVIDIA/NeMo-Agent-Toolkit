@@ -129,7 +129,7 @@ Executes SQL queries and returns formatted results:
 
 ## Documentation
 
-Full documentation: https://docs.nvidia.com/nemo/agent-toolkit/latest/
+Full documentation: <https://docs.nvidia.com/nemo/agent-toolkit/latest/>
 
 ## License
 

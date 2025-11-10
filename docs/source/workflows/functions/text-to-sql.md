@@ -149,7 +149,7 @@ workflow:
 Update training materials in `training_db_schema.py`:
 - `VANNA_TRAINING_DOCUMENTATION`: Add documentation about your tables and business logic
 - `VANNA_TRAINING_DDL`: Provide DDL statements for your database schema
-   - If `auto_training` is set to `true`, make sure `VANNA_ACTIVE_TABLES` is updated with the tables in your database. This ensures that automatic DDL extraction works properly.
+  - If `auto_training` is set to `true`, make sure `VANNA_ACTIVE_TABLES` is updated with the tables in your database. This ensures that automatic DDL extraction works properly.
 - `VANNA_TRAINING_EXAMPLES`: Provide question-SQL example pairs for few-shot learning
 
 #### 3.2 Create inference config `text2sql_config.yml`
@@ -190,7 +190,7 @@ asyncio.run(main())
 ```
 
 Expected output:
-```
+```text
 # Ingest DDL and synthesize query-SQL pairs for training
 Training Vanna...
 
@@ -260,7 +260,7 @@ connection_url: "databricks://token:${DB_TOKEN}@${DB_HOST}:443/default?http_path
 ```
 
 **Connection URL Format:**
-```
+```text
 databricks://token:<token>@<db_host>:443/default?http_path=<http_path>&catalog=<catalog>&schema=<schema>
 ```
 
@@ -277,7 +277,7 @@ CONNECTION_URL="databricks://token:dapi-xxx@your-workspace.cloud.databricks.com:
 ```
 
 **Note**: Only Databricks is currently supported. The connection uses SQLAlchemy with the `databricks-sql-connector` driver. Other databases can be customized as following:
-```
+```python
 # PostgreSQL
 engine = create_engine("postgresql+psycopg://user:password@localhost:5432/mydb")
 
@@ -472,7 +472,7 @@ Other features include:
 ### Connection Issues
 
 **Milvus connection failed:**
-```
+```text
 Error: Failed to connect to Milvus
 ```
 - Verify Milvus is running: `docker ps | grep milvus`
@@ -480,7 +480,7 @@ Error: Failed to connect to Milvus
 - Verify TLS settings match your Milvus deployment
 
 **Database connection failed:**
-```
+```text
 Error: Failed to connect to database
 ```
 - Verify credentials and connection parameters
