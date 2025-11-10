@@ -61,7 +61,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
         """
         import litellm
 
-        if getattr(self, "_instrumented", False):
+        if self._instrumented:
             logger.debug("ADKProfilerHandler already instrumented; skipping.")
             return
         try:
@@ -95,9 +95,15 @@ class ADKProfilerHandler(BaseProfilerCallback):
                 FunctionTool.run_async = self._original_tool_call
             if self._original_llm_call:
                 litellm.acompletion = self._original_llm_call
+
+            self._instrumented = False
             logger.debug("ADKProfilerHandler uninstrumented successfully.")
         except Exception as _e:
             logger.exception("Failed to uninstrument ADKProfilerHandler")
+
+    def __del__(self):
+        """ Ensure uninstrumentation on deletion. """
+        self.uninstrument()
 
     def _tool_use_monkey_patch(self) -> Callable[..., Any]:
         """

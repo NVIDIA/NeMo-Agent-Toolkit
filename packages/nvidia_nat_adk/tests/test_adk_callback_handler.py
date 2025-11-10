@@ -25,9 +25,24 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import LLMFrameworkEnum
 from nat.plugins.adk.adk_callback_handler import ADKProfilerHandler
 
+
 # ----------------------------
 # Test Fixtures and Helpers
 # ----------------------------
+@pytest.fixture(autouse=True)
+def reset_patches():
+    import litellm
+    from google.adk.tools.function_tool import FunctionTool
+
+    # Store original references
+    original_acompletion = litellm.acompletion
+    original_function_tool_run_async = FunctionTool.run_async
+
+    yield
+
+    # Restore original references
+    litellm.acompletion = original_acompletion
+    FunctionTool.run_async = original_function_tool_run_async
 
 
 @pytest.fixture
