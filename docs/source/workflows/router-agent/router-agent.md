@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Configuring the Router Agent
+# Configure the Router Agent
 Configure the NVIDIA NeMo Agent toolkit router agent as a workflow or a function. The router agent workflow consists of two phases: routing and execution.
 
 ## Requirements
