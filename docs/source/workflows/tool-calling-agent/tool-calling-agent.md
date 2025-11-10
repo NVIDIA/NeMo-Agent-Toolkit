@@ -15,31 +15,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Tool Calling Agent
-
-A tool calling agent is an AI system that directly invokes external tools based on structured function definitions. Unlike ReAct agents, it does not reason between steps but instead relies on predefined tool schemas to decide which tool to call. To decide which tools to use to answer the question, agent uses the name, description, and input parameter schema of each tool to decide which tools to use to answer the question. Not all LLMs support tool calling / function calling, and can be used with tool calling agents.
-
----
-
-## Features
-- **Pre-built Tools**: Leverages core library agent and tools.
-- **Tool Calling / Function calling Agent:** Leverages tool / function input schema to appropriately route to the correct tool
-- **Custom Plugin System**: Developers can bring in new tools using plugins.
-- **Agentic Workflows**: Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use**: Simplifies developer experience and deployment.
-
----
+# Configure the Tool Calling Agent
+Configure the NVIDIA NeMo Agent toolkit ReAct agent as a workflow or a function.
 
 ## Requirements
-The tool calling agent requires the `nvidia-nat[langchain]` plugin to be installed.
+The tool calling agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
 
-If you have performed a source code checkout, install this with the following command:
+- If you have performed a source code checkout:
 
 ```bash
 uv pip install -e '.[langchain]'
 ```
 
-If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+- If you have installed the NeMo Agent toolkit from a package:
 
 ```bash
 uv pip install "nvidia-nat[langchain]"

@@ -15,8 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Configure a ReAct Agent
-Configure the ReAct agent as a workflow or a function.
+# Configure the ReAct Agent
+Configure the NVIDIA NeMo Agent toolkit ReAct agent as a workflow or a function.
 ---
 
 ## Requirements

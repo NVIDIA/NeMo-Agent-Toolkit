@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure a Reasoning Agent
-Configure the reasoning agent as a workflow or a function.
+Configure the NVIDIA NeMo Agent toolkit reasoning agent as a workflow or a function. We recommend using the reasoning wrapper with any NVIDIA NeMo Agent toolkit function that could improve performance from task-specific plan generation.
 ---
 
 ## Requirements
@@ -47,7 +47,7 @@ workflow:
   verbose: true
 ```
 
-### Configurable Options:
+### Configurable Options
 The following are more ways you can configure your config file when using the reasoning agent:
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the Reasoning agent is configured as a workflow and need to expose a customized name as a tool.
 
@@ -104,11 +104,13 @@ The following are more ways you can configure your config file when using the re
 
 ---
 
-## Step-by-Step Breakdown of a Reasoning Agent
-
+## The Reasoning Agent Workflow
+When you enter a prompt with the reasoning agent, it runs through the following workflow:
 1. **User Query** – The agent receives an input or problem to solve.
 2. **Reasoning on top of Function** – The agent reasons the best plan of action to take, based on the input and the augmented underlying function.
 3. **Instruction / Plan Execution** – The agent invokes the underlying function, passing its plan of action along to it.
+
+For an example of using reasoning agent with the ReAct agent, refer to [Run the Workflow](https://github.com/NVIDIA/NeMo-Agent-Toolkit/tree/develop/examples/agents/react#run-the-workflow).
 
 ### Comparing ReAct Agent With and Without the Reasoning Agent
 
@@ -125,4 +127,4 @@ The following are the limitations of reasoning agents:
 * Requires a thinking/reasoning LLM, such as DeepSeek R1. There should be thought tags within the LLM output:
   >&lt;think&gt;&lt;/think&gt;
 
-* Performs reasoning up front, and does not revisit the plan to revise strategy during execution like a ReAct agent does. Revising the strategy is beneficial if a tool returns a non-useful response (let's say our retriever tool did not have any relevant search results to the user's original question).
+* Performs reasoning up front and does not revisit the plan to revise strategy during execution like a ReAct agent does. Revising the strategy is beneficial if a tool returns a non-useful response (let's say our retriever tool did not have any relevant search results to the user's original question).

@@ -16,4 +16,6 @@ limitations under the License.
 -->
 # About Reasoning Agent
 
-The reasoning agent is an AI system that uses NVIDIA NeMo Agent toolkit's core library agents and tools to directly invokes an underlying function while performing reasoning on top. Unlike ReAct agents, it does not reason between steps but instead through planning ahead of time. However, an LLM that supports reasoning needs to be chosen for use with a reasoning agent. In your YAML config files, you can customize prompts for your specific needs. 
+The reasoning agent is an AI system that uses NVIDIA NeMo Agent toolkit's core library agents and tools to directly invokes an underlying function, while performing reasoning on top. Unlike ReAct agents, it does not reason between steps but instead through planning ahead of time. However, an LLM that supports reasoning needs to be chosen for use with a reasoning agent. Additionally, you can customize prompts in your YAML config file for your specific needs. 
+
+To configure your reasoning agent, refer to [Configure the Reasoning Agent](./reasoning-agent.md).
