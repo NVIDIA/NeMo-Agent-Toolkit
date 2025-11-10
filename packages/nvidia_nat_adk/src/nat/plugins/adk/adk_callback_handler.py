@@ -71,15 +71,11 @@ class ADKProfilerHandler(BaseProfilerCallback):
             return
 
         # Save the originals
-        self._original_tool_call = getattr(FunctionTool, "run_async", None)
-        self._original_llm_call = getattr(litellm, "acompletion", None)
+        self._original_tool_call = FunctionTool.run_async
+        self._original_llm_call = litellm.acompletion
 
-        # Patch if available
-        if self._original_tool_call:
-            FunctionTool.run_async = self._tool_use_monkey_patch()
-
-        if self._original_llm_call:
-            litellm.acompletion = self._llm_call_monkey_patch()
+        FunctionTool.run_async = self._tool_use_monkey_patch()
+        litellm.acompletion = self._llm_call_monkey_patch()
 
         logger.debug("ADKProfilerHandler instrumentation applied successfully.")
         self._instrumented = True
@@ -91,19 +87,18 @@ class ADKProfilerHandler(BaseProfilerCallback):
         try:
             import litellm
             from google.adk.tools.function_tool import FunctionTool
-            if self._original_tool_call:
+            if self._original_tool_call is not None:
                 FunctionTool.run_async = self._original_tool_call
-            if self._original_llm_call:
+                self._original_tool_call = None
+
+            if self._original_llm_call is not None:
                 litellm.acompletion = self._original_llm_call
+                self._original_llm_call = None
 
             self._instrumented = False
             logger.debug("ADKProfilerHandler uninstrumented successfully.")
         except Exception as _e:
             logger.exception("Failed to uninstrument ADKProfilerHandler")
-
-    def __del__(self):
-        """ Ensure uninstrumentation on deletion. """
-        self.uninstrument()
 
     def _tool_use_monkey_patch(self) -> Callable[..., Any]:
         """
