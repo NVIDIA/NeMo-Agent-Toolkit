@@ -34,13 +34,13 @@ def reset_patches():
     import litellm
     from google.adk.tools.function_tool import FunctionTool
 
-    # Store original references
+    # Store original functions
     original_acompletion = litellm.acompletion
     original_function_tool_run_async = FunctionTool.run_async
 
     yield
 
-    # Restore original references
+    # Restore original functions
     litellm.acompletion = original_acompletion
     FunctionTool.run_async = original_function_tool_run_async
 

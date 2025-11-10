@@ -46,7 +46,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
     def __init__(self) -> None:
         super().__init__()
         self._lock = threading.Lock()
-        self.last_call_ts = time.time()
+        self.last_call_ts = 0.0
         self.step_manager = Context.get().intermediate_step_manager
 
         # Original references to Google ADK Tool and LLM methods (for uninstrumenting if needed)
@@ -59,10 +59,15 @@ class ADKProfilerHandler(BaseProfilerCallback):
         Monkey-patch the relevant Google ADK methods with usage-stat collection logic.
         Assumes the 'google-adk' library is installed.
         """
-        import litellm
 
         if self._instrumented:
             logger.debug("ADKProfilerHandler already instrumented; skipping.")
+            return
+
+        try:
+            import litellm
+        except Exception as _e:
+            logger.exception("litellm import failed; skipping instrumentation")
             return
         try:
             from google.adk.tools.function_tool import FunctionTool
@@ -100,6 +105,15 @@ class ADKProfilerHandler(BaseProfilerCallback):
         except Exception as _e:
             logger.exception("Failed to uninstrument ADKProfilerHandler")
 
+    def ensure_last_call_ts_initialized(self) -> float:
+        """ Ensure that last_call_ts is initialized to avoid issues in async calls. """
+        if self.last_call_ts == 0.0:
+            with self._lock:
+                # Now that we have the lock, double-check
+                if self.last_call_ts == 0.0:
+                    self.last_call_ts = time.time()
+        return self.last_call_ts
+
     def _tool_use_monkey_patch(self) -> Callable[..., Any]:
         """
         Returns a function that wraps calls to BaseTool.run_async with usage-logging.
@@ -119,6 +133,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
             Returns:
                 Any: The result of the tool execution.
             """
+            self.ensure_last_call_ts_initialized()
             now = time.time()
             tool_name = ""
 
@@ -204,6 +219,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
             Returns:
                 Any: The result of the LLM call.
             """
+            self.ensure_last_call_ts_initialized()
 
             now = time.time()
             with self._lock:
