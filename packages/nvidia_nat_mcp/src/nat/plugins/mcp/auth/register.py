@@ -16,10 +16,16 @@
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_auth_provider
 from nat.plugins.mcp.auth.auth_provider import MCPOAuth2Provider
+from nat.plugins.mcp.auth.service_account.service_account_provider import MCPServiceAccountProvider
 from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
-
+from nat.plugins.mcp.auth.service_account.service_account_provider_config import MCPServiceAccountProviderConfig
 
 @register_auth_provider(config_type=MCPOAuth2ProviderConfig)
 async def mcp_oauth2_provider(authentication_provider: MCPOAuth2ProviderConfig, builder: Builder):
     """Register MCP OAuth2 authentication provider with NAT system."""
     yield MCPOAuth2Provider(authentication_provider, builder=builder)
+
+@register_auth_provider(config_type=MCPServiceAccountProviderConfig)
+async def mcp_service_account_provider(authentication_provider: MCPServiceAccountProviderConfig, builder: Builder):
+    """Register MCP Service Account authentication provider with NAT system."""
+    yield MCPServiceAccountProvider(authentication_provider, builder=builder)

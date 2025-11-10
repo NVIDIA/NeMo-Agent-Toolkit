@@ -200,6 +200,9 @@ class AuthResult(BaseModel):
     token_expires_at: datetime | None = Field(default=None, description="Expiration time of the token, if applicable.")
     raw: dict[str, typing.Any] = Field(default_factory=dict,
                                        description="Raw response data from the authentication process.")
+    headers: dict[str, str] | None = Field(default=None,
+                                           description="Custom headers to inject into requests. "
+                                                       "Used by auth providers that need non-standard header formats.")
 
     model_config = ConfigDict(extra="forbid")
 
