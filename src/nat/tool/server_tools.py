@@ -32,14 +32,23 @@ class RequestAttributesTool(FunctionBaseConfig, name="current_request_attributes
 @register_function(config_type=RequestAttributesTool)
 async def current_request_attributes(config: RequestAttributesTool, builder: Builder):
 
+    from pydantic import RootModel
+    from pydantic.types import JsonValue
     from starlette.datastructures import Headers
     from starlette.datastructures import QueryParams
 
-    async def _get_request_attributes(unused: str) -> str:
+    class RequestBody(RootModel[JsonValue]):
+        """
+        Data model that accepts a request body of any valid JSON type.
+        """
+        root: JsonValue
+
+    async def _get_request_attributes(request_body: RequestBody) -> str:
 
         from nat.builder.context import Context
         nat_context = Context.get()
 
+        # Access request attributes from context
         method: str | None = nat_context.metadata.method
         url_path: str | None = nat_context.metadata.url_path
         url_scheme: str | None = nat_context.metadata.url_scheme
@@ -51,6 +60,9 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
         cookies: dict[str, str] | None = nat_context.metadata.cookies
         conversation_id: str | None = nat_context.conversation_id
 
+        # Access the request body data - can be any valid JSON type
+        request_body_data: JsonValue = request_body.root
+
         return (f"Method: {method}, "
                 f"URL Path: {url_path}, "
                 f"URL Scheme: {url_scheme}, "
@@ -60,7 +72,8 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
                 f"Client Host: {client_host}, "
                 f"Client Port: {client_port}, "
                 f"Cookies: {cookies}, "
-                f"Conversation Id: {conversation_id}")
+                f"Conversation Id: {conversation_id}, "
+                f"Request Body: {request_body_data}")
 
     yield FunctionInfo.from_fn(_get_request_attributes,
                                description="Returns the acquired user defined request attributes.")
