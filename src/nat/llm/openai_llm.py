@@ -41,11 +41,11 @@ class OpenAIModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMix
                                        description="The OpenAI hosted model name.")
     seed: int | None = Field(default=None, description="Random seed to set for generation.")
     max_retries: int = Field(default=10, description="The max number of retries for the request.")
-    temperature: float | None = OptimizableField(default=None,
-                                                 ge=0.0,
-                                                 le=1.0,
-                                                 description="Sampling temperature in [0, 1].",
-                                                 space=SearchSpace(high=0.9, low=0.1, step=0.2))
+    temperature: float | None = OptimizableField(
+        default=None,
+        ge=0.0,
+        description="Sampling temperature to control randomness in the output.",
+        space=SearchSpace(high=0.9, low=0.1, step=0.2))
     top_p: float | None = OptimizableField(default=None,
                                            ge=0.0,
                                            le=1.0,
