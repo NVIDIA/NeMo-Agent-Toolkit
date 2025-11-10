@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import logging
 from functools import partial
 from typing import Any
 
 from langchain_core.embeddings import Embeddings
-
 from pymilvus.client.abstract import Hit
 
 from nat.retriever.interface import Retriever
@@ -53,8 +53,12 @@ class MilvusRetriever(Retriever):
         self._client: Any = client
         self._embedder = embedder
 
-        # Detect if client is async
-        self._is_async = type(client).__name__ == "AsyncMilvusClient"
+        # Detect if client is async by inspecting method capabilities
+        search_method = getattr(client, "search", None)
+        list_collections_method = getattr(client, "list_collections", None)
+        self._is_async = any(
+            inspect.iscoroutinefunction(method) for method in (search_method, list_collections_method)
+            if method is not None)
         logger.info("Initialized Milvus Retriever with %s client", "async" if self._is_async else "sync")
 
         if use_iterator and "search_iterator" not in dir(self._client):

@@ -199,7 +199,7 @@ async def execute_db_query(
             # Note: Engine is left alive; connections are managed internally by SQLAlchemy pool
 
         except Exception as e:
-            logger.error(f"Error executing SQL query: {e}")
+            logger.error("Error executing SQL query", exc_info=e)
             yield ExecuteDBQueryOutput(
                 success=False,
                 failure_reason="SQL execution failed. Please check server logs for details.",

@@ -210,14 +210,15 @@ async def text2sql(config: Text2SQLConfig, builder: Builder):
             yield Text2SQLOutput(sql=sql, explanation=explanation)
 
         except Exception as e:
-            logger.error(f"SQL generation failed: {e}")
+            logger.error("SQL generation failed", exc_info=e)
             # Error status as ResponseIntermediateStep
             yield ResponseIntermediateStep(
                 id=str(uuid.uuid4()),
                 parent_id=parent_id,
                 type="markdown",
                 name="text2sql_error",
-                payload=StatusPayload(message=str(e)).model_dump_json(),
+                payload=StatusPayload(
+                    message="SQL generation failed. Please check server logs for details.").model_dump_json(),
             )
             raise
 
