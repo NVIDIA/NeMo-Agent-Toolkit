@@ -1,0 +1,149 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Self-Evaluation Agent Configuration
+#
+# This workflow aggregates contributions from JIRA, GitLab, and Confluence
+# and generates self-evaluation reports or top-contribution lists.
+#
+# Sample usage:
+#   nat run --config_file examples/advanced_agents/self_eval_agent/configs/config.yml \
+#     --input "Generate my top 5 contributions from the last 30 days"
+#
+# Environment variables required:
+#   - CORPORATE_MCP_JIRA_URL: URL for JIRA MCP server
+#   - CORPORATE_MCP_GITLAB_URL: URL for GitLab MCP server
+#   - CORPORATE_MCP_CONFLUENCE_URL: URL for Confluence MCP server
+#   - NAT_USER_ID: Your user ID for authentication
+#   - NVIDIA_API_KEY: API key for NVIDIA NIM
+#   - MINIO_ACCESS_KEY: MinIO access key for token storage (optional)
+#   - MINIO_SECRET_KEY: MinIO secret key for token storage (optional)
+
+# ==================== MCP Client Connections ====================
+# These function groups provide access to JIRA, GitLab, and Confluence
+# through their respective MCP servers
+
+function_groups:
+  mcp_jira:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: ${CORPORATE_MCP_JIRA_URL}
+      auth_provider: mcp_oauth2_jira
+
+  mcp_gitlab:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: ${CORPORATE_MCP_GITLAB_URL}
+      auth_provider: mcp_oauth2_gitlab
+
+  mcp_confluence:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: ${CORPORATE_MCP_CONFLUENCE_URL}
+      auth_provider: mcp_oauth2_confluence
+
+# ==================== Authentication ====================
+# OAuth2 authentication configuration for each MCP server
+
+authentication:
+  mcp_oauth2_jira:
+    _type: mcp_oauth2
+    server_url: ${CORPORATE_MCP_JIRA_URL}
+    redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
+    default_user_id: ${NAT_USER_ID}
+    allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
+    token_store: nat-mcp-token-store
+
+  mcp_oauth2_gitlab:
+    _type: mcp_oauth2
+    server_url: ${CORPORATE_MCP_GITLAB_URL}
+    redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
+    default_user_id: ${NAT_USER_ID}
+    allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
+    token_store: nat-mcp-token-store
+
+  mcp_oauth2_confluence:
+    _type: mcp_oauth2
+    server_url: ${CORPORATE_MCP_CONFLUENCE_URL}
+    redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
+    default_user_id: ${NAT_USER_ID}
+    allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
+    token_store: nat-mcp-token-store
+
+# ==================== Object Stores ====================
+# Token storage for OAuth authentication (optional - uses S3/MinIO)
+
+object_stores:
+  nat-mcp-token-store:
+    _type: s3
+    endpoint_url: ${MINIO_ENDPOINT_URL:-http://localhost:9000}
+    access_key: ${MINIO_ACCESS_KEY}
+    secret_key: ${MINIO_SECRET_KEY}
+    bucket_name: ${MINIO_BUCKET_NAME:-nat-mcp-bucket}
+
+# ==================== Custom Functions ====================
+# High-level contribution gathering tools
+
+functions:
+  # JIRA contribution gatherer
+  jira_gatherer:
+    _type: jira_gatherer
+    default_time_period_days: 30
+
+  # GitLab contribution gatherer
+  gitlab_gatherer:
+    _type: gitlab_gatherer
+    default_time_period_days: 30
+
+  # Confluence contribution gatherer
+  confluence_gatherer:
+    _type: confluence_gatherer
+    default_time_period_days: 30
+
+  # Utility function for date/time
+  current_datetime:
+    _type: current_datetime
+
+# ==================== LLM Configuration ====================
+# LLM used for analysis and report generation
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.2  # Lower temperature for consistent analysis
+    max_tokens: 4096  # Higher limit for comprehensive reports
+
+# ==================== Workflow Configuration ====================
+# Self-evaluation agent workflow using ReAct pattern
+
+workflow:
+  _type: self_eval_agent
+  tool_names:
+    # MCP client function groups (provide direct access to platform APIs)
+    - mcp_jira
+    - mcp_gitlab
+    - mcp_confluence
+    # High-level gatherer functions (provide query guidance)
+    - jira_gatherer
+    - gitlab_gatherer
+    - confluence_gatherer
+    # Utility functions
+    - current_datetime
+  llm_name: nim_llm
+  default_time_period_days: 30

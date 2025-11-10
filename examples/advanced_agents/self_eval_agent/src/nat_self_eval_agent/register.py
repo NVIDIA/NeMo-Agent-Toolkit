@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,11 +24,11 @@ from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
 
 # Import tools for automatic registration
-# These will be imported once they are created in the next steps
-# from . import jira_gatherer
-# from . import gitlab_gatherer
-# from . import confluence_gatherer
-# from . import contribution_aggregator
+from . import confluence_gatherer  # noqa: F401
+from . import gitlab_gatherer  # noqa: F401
+from . import jira_gatherer  # noqa: F401
+
+# from . import contribution_aggregator  # Will be added in Step 3
 from .prompts import SELF_EVAL_AGENT_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -73,75 +73,32 @@ async def self_eval_agent_workflow(config: SelfEvalAgentWorkflowConfig, builder:
     """
     logger.info("Initializing Self-Evaluation Agent workflow")
 
-    # Get the LLM for the agent
-    llm = await builder.get_llm(config.llm_name)
+    # Import ReAct agent
+    from nat.workflows.react_agent import ReActAgentConfig
+    from nat.workflows.react_agent import register_react_agent
 
-    # Get all the tools specified in the configuration
-    tools = []
-    for tool_name in config.tool_names:
-        try:
-            tool = await builder.get_function(tool_name)
-            tools.append(tool)
-            logger.debug(f"Loaded tool: {tool_name}")
-        except Exception as e:
-            logger.error(f"Failed to load tool {tool_name}: {e}")
-            raise
+    # Create ReAct agent configuration
+    react_config = ReActAgentConfig(
+        tool_names=config.tool_names,
+        llm_name=config.llm_name,
+        system_prompt=config.agent_prompt,
+        verbose=True,
+        max_tool_calls=50,  # Allow multiple tool calls for gathering data
+        retry_parsing_errors=True,
+        max_retries=3,
+    )
 
-    logger.info(f"Loaded {len(tools)} tools for self-evaluation agent")
+    # Register and get the ReAct agent
+    react_agent_gen = register_react_agent(react_config, builder)
+    react_agent = await react_agent_gen.__anext__()
 
-    async def _self_eval_agent(user_input: str) -> str:
-        """
-        Process a self-evaluation request.
+    logger.info("Self-Evaluation Agent initialized with ReAct orchestration")
 
-        Args:
-            user_input: User's request (e.g., "Generate my top 5 contributions from last month")
-
-        Returns:
-            Generated self-evaluation report or top contributions list
-        """
-        logger.info(f"Processing self-evaluation request: {user_input[:100]}...")
-
-        # For Phase 1, we'll use a simple ReAct agent pattern
-        # In later phases, this will be replaced with a more sophisticated
-        # LangGraph-based workflow
-
-        # Build the agent prompt with available tools
-        tool_descriptions = "\n".join([f"- {tool.name}: {tool.description}" for tool in tools])
-
-        full_prompt = f"""{config.agent_prompt}
-
-## Available Tools
-
-{tool_descriptions}
-
-## User Request
-
-{user_input}
-
-Please process this request by:
-1. Gathering contributions from the relevant platforms
-2. Analyzing and organizing the data
-3. Generating the requested report format
-"""
-
-        # For now, return a placeholder response
-        # In Step 2-3, we'll implement the actual tool calling logic
-        response = f"""Self-Evaluation Agent initialized successfully.
-
-Configuration:
-- Time period: Last {config.default_time_period_days} days
-- Available tools: {len(tools)}
-- LLM: {config.llm_name}
-
-User request: {user_input}
-
-[Phase 1: Core infrastructure complete. Tool execution will be implemented in Step 2-3]
-"""
-
-        logger.info("Self-evaluation request processed")
-        return response
-
-    yield _self_eval_agent
+    yield react_agent
 
     # Cleanup
+    try:
+        await react_agent_gen.__anext__()
+    except StopAsyncIteration:
+        pass
     logger.info("Self-Evaluation Agent workflow cleanup complete")
