@@ -23,7 +23,64 @@ limitations under the License.
    :class: highlight
 ```
 
-![NVIDIA NeMo Agent Toolkit](./_static/banner.png "NeMo Agent toolkit banner image")
+```{raw} html
+<div style="max-width:800px margin:auto">
+
+   <img src="./_static/toolkit.png" 
+      usemap="#toolkitmap" 
+      style="width:100%; height:auto; display:block;">
+
+   <map name="toolkitmap">
+      <area shape="rect" coords="1,1,127,50" href="tutorials/create-a-new-workflow.html#customizing-the-tool-function" alt="Tool creator allows creating customization and integration of tools." title="a Tool is essentially a component that an Agent can call to perform some action. It acts as a bridge between the Agent (which handles reasoning, planning, and dialogue) and some external functionality (like APIs, file operations, or calculations)">
+   
+      <area shape="rect" coords="143,1,268,50" href="tutorials/create-a-new-workflow.html" alt="Workflow Creation" title="Workflows are the heart of the NeMo Agent toolkit because they define which agentic tools and models are used to perform a given task or series of tasks. The workflow configuration is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings.">
+   
+      <area shape="rect" coords="285,1,410,50" href="tutorials/create-a-new-workflow.html" alt="" title="The NeMo Agent toolkit Profiler Module provides insight by collecting and recording invocation level statistics. It persists data which can be used for measuring and predicting bottlenecks, latency and concurrency spikes among other performance metrics.">
+   
+      <area shape="rect" coords="430,1,555,50" href="workflows/about/react-agent.html" alt="Agent Configuration" title="Agent configuration defines the identity and capabilities of an individual agent, including its name, description, the tools it can invoke, LLM settings (like model and temperature), and optional memory for context tracking.">
+   
+      <area shape="rect" coords="572,1,698,50" href="workflows/observe/index.html" alt="" title="Observability is the ability to monitor and track an agent’s internal behavior, decisions, and interactions with tools. It provides insights into which tools were invoked, the inputs and outputs of each tool, the agent’s reasoning process, and any errors or warnings.">
+   
+      <area shape="rect" coords="725,1,850,50" href="store-and-retrieve/memory.html" alt="Tool creator allows creationg customization and integration of tools." title="Memory modules enable multi-turn or context-aware interactions. Advanced configurations can include tool prioritization, callbacks for logging or monitoring, and multi-agent orchestration">
+
+      <area shape="rect" coords="100,320,225,373" href="workflows/about/reasoning-agent.html" alt="Agent Types" title="The reasoning agent is an AI system that directly invokes an underlying function while performing reasoning on top, &#10;&#10; ReAct (Reasoning and Acting) agent, Reasoning Agent which directly invokes an underlying function while performing reasoning on top. &#10; &#10; ReWOO (Reasoning WithOut Observation) are among the supported types. ">
+      
+      <area shape="rect" coords="650,320,775,373" href="extend/memory.html" alt="Memory subsystem" title="The NeMo Agent toolkit Memory subsystem allows storage and retrieve a user’s data in long-term memory. mem0, redis or zep memory is integrated in the code." >
+      
+      <area shape="rect" coords= "40,390,165,440" href="workflows/llms/index.html#llms" alt="LLMs Supported" title="NVIDIA NeMo Agent toolkit supports many LLM providers: NVIDIA NIM, OpenAI, AWS Bedrock, Azure OpenAI, LiteLLM">
+      
+      <area shape="rect" coords="180,385,300,440" href="workflows/embedders.html" alt="Embedders" title="NEmo Agent Toolkit supports converting raw input data (like text, images, or audio) into vector embeddings using standards like NVIDIA NIM, OpenAI, Azure OpenAI">
+      
+      <area shape="rect" coords="320,385,440,440" href="workflows/retrievers.html" alt="Retrievers" title="Retrievers are used to retrieve relevant documents from a vector database. NVIDIA NIM and Milvus are supported.">
+      
+      <area shape="rect" coords="470,385,575,440" href="workflows/mcp/index.html" alt="Model Control Protocol" title="NeMo Agent toolkit integrates with Model Context Protocol (MCP) including client, server and transport configuration support">
+      
+      <area shape="rect" coords="600,385,710,440" href="workflows/observe/index.html" alt="Observation" title="The NeMo Agent toolkit uses a flexible, plugin-based observability system that provides comprehensive support for configuring logging, tracing, and metrics for workflows. Catalyst, Dynatrace, Galileo, Langfuse, OpenTelemetry Collector, Patronus, Phoenix, and W&B Weave are all supported with examples.">
+      
+      <area shape="rect" coords="730,385,850,440" href="reference/optimizer.html" alt="Optimizing" title="The NeMo Agent toolkit Optimizer uses a combination of techniques to find the best parameters for your workflow. Hyperparameter optimizing uses Optuna. Prompt optimization uses a genetic algorithm (GA) that evolves a population of prompt candidates.">
+
+   </map>
+   
+<script>
+window.addEventListener("load", function() {
+  setTimeout(function() {
+    if (typeof imageMapResize === "function") imageMapResize();
+  }, 300);
+  window.addEventListener("resize", function() {
+    setTimeout(function() { if (typeof imageMapResize === "function") imageMapResize(); }, 200);
+  });
+});
+</script
+</div>
+```
+
+<script src="_static/imageMapResizer.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof imageMapResize === 'function') imageMapResize();
+});
+</script>
+
 
 # NVIDIA NeMo Agent Toolkit Overview
 
