@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 FilesToCheck = [
     # Get all of these extensions and templates (*.in)
-    re.compile(r"[.](cmake|cpp|cc|cu|cuh|h|hpp|md|rst|sh|pxd|py|pyx|yml|yaml)(\.in)?$"),
+    re.compile(r"[.](cmake|cpp|cc|css|cu|cuh|h|hpp|md|rst|sh|pxd|py|pyx|yml|yaml)(\.in)?$"),
     # And files with a particular file/extension combo
     re.compile(r"CMakeLists[.]txt$"),
     re.compile(r"setup[.]cfg$"),
@@ -444,6 +444,7 @@ EXT_LIC_MAPPING = {
     'c': A2_LIC_C,
     'cc': A2_LIC_C,
     'cmake': A2_LIC_HASH,
+    'css': A2_LIC_C,
     'cpp': A2_LIC_C,
     'cu': A2_LIC_C,
     'cuh': A2_LIC_C,
