@@ -34,6 +34,7 @@ _library_instrumented = {
     "semantic_kernel": False,
     "agno": False,
     "adk": False,
+    "autogen": False,
 }
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
@@ -130,6 +131,20 @@ def set_framework_profiler_handler(
                     handler.instrument()
                     _library_instrumented["adk"] = True
                     logger.debug("ADK callback handler registered")
+
+            if LLMFrameworkEnum.AUTOGEN in frameworks and not _library_instrumented["autogen"]:
+                try:
+                    from nat.plugins.autogen.autogen_callback_handler import AutoGenProfilerHandler
+                except ImportError as e:
+                    logger.warning(
+                        "AutoGen profiler not available. " +
+                        "Install NAT with AutoGen extras: pip install 'nvidia-nat[autogen]'. Error: %s",
+                        e)
+                else:
+                    handler = AutoGenProfilerHandler()
+                    handler.instrument()
+                    _library_instrumented["autogen"] = True
+                    logger.debug("AutoGen callback handler registered")
 
             # IMPORTANT: actually call the wrapped function as an async context manager
             async with func(workflow_config, builder) as result:

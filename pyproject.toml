@@ -75,6 +75,7 @@ source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 all = ["nvidia-nat-all"] # meta-package
 adk = ["nvidia-nat-adk"]
 agno = ["nvidia-nat-agno"]
+autogen = ["nvidia-nat-autogen"]
 crewai = ["nvidia-nat-crewai"]
 data-flywheel = ["nvidia-nat-data-flywheel"]
 ingestion = ["nvidia-nat-ingestion"] # meta-package
@@ -105,6 +106,7 @@ examples = [
   "nat_agno_personal_finance",
   "nat_haystack_deep_research_agent",
   "nat_alert_triage_agent",
+  "nat_autogen_demo",
   "nat_automated_description_generation",
   "nat_email_phishing_analyzer",
   "nat_multi_frameworks",
@@ -167,6 +169,7 @@ config-settings = { editable_mode = "compat" }
 nvidia-nat-all = { workspace = true }
 nvidia-nat-agno = { workspace = true }
 nvidia-nat-adk = { workspace = true }
+nvidia-nat-autogen = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
 nvidia-nat-data-flywheel = { workspace = true }
 nvidia-nat-ingestion = { workspace = true }
@@ -191,6 +194,7 @@ nat_adk_demo = { path = "examples/frameworks/adk_demo", editable = true }
 nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
 nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
 nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
+nat_autogen_demo = { path = "examples/frameworks/nat_autogen_demo", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
 nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }
@@ -345,6 +349,7 @@ force-single-line = true
 known-first-party = ["aiq", "nat", "nat_*", "_utils"]
 known-third-party = [
   "agno",
+  "autogen",
   "crewai",
   "google",
   "langchain",
