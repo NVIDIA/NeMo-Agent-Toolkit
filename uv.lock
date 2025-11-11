@@ -885,18 +885,6 @@ wheels = [
 ]
 
 [[package]]
-name = "bs4"
-version = "0.0.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "beautifulsoup4" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c9/aa/4acaf814ff901145da37332e05bb510452ebed97bc9602695059dd46ef39/bs4-0.0.2.tar.gz", hash = "sha256:a48685c58f50fe127722417bae83fe6badf500d54b55f7e39ffe43b798653925", size = 698, upload-time = "2024-01-17T18:15:47.371Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/bb/bf7aab772a159614954d84aa832c129624ba6c32faa559dfb200a534e50b/bs4-0.0.2-py2.py3-none-any.whl", hash = "sha256:abf8742c0805ef7f662dce4b51cca104cffe52b835238afc169142ab9b3fbccc", size = 1189, upload-time = "2024-01-17T18:15:48.613Z" },
-]
-
-[[package]]
 name = "build"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5071,7 +5059,7 @@ requires-dist = [
 name = "nat-email-phishing-analyzer"
 source = { editable = "examples/evaluation_and_profiling/email_phishing_analyzer" }
 dependencies = [
-    { name = "bs4" },
+    { name = "beautifulsoup4" },
     { name = "networkx" },
     { name = "nvidia-nat", extra = ["langchain", "phoenix"] },
     { name = "openinference-instrumentation-langchain" },
@@ -5079,7 +5067,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bs4", specifier = "==0.0.2" },
+    { name = "beautifulsoup4", specifier = "~=4.13" },
     { name = "networkx", specifier = "~=3.4" },
     { name = "nvidia-nat", extras = ["langchain", "phoenix"], editable = "." },
     { name = "openinference-instrumentation-langchain", specifier = "==0.1.29" },
@@ -5112,7 +5100,7 @@ name = "nat-multi-frameworks"
 source = { editable = "examples/frameworks/multi_frameworks" }
 dependencies = [
     { name = "arxiv" },
-    { name = "bs4" },
+    { name = "beautifulsoup4" },
     { name = "markdown-it-py" },
     { name = "nvidia-nat", extra = ["langchain", "llama-index", "nvidia-haystack", "openai"] },
 ]
@@ -5120,7 +5108,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "arxiv", specifier = "~=2.1.3" },
-    { name = "bs4", specifier = "==0.0.2" },
+    { name = "beautifulsoup4", specifier = "~=4.13" },
     { name = "markdown-it-py", specifier = "~=3.0" },
     { name = "nvidia-nat", extras = ["langchain", "llama-index", "nvidia-haystack", "openai"], editable = "." },
 ]
@@ -5775,6 +5763,9 @@ telemetry = [
     { name = "nvidia-nat-ragaai" },
     { name = "nvidia-nat-weave" },
 ]
+test = [
+    { name = "nvidia-nat-test" },
+]
 weave = [
     { name = "nvidia-nat-weave" },
 ]
@@ -5785,6 +5776,7 @@ zep-cloud = [
 [package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
+    { name = "beautifulsoup4" },
     { name = "httpx-sse" },
     { name = "ipython" },
     { name = "myst-parser" },
@@ -5883,6 +5875,7 @@ requires-dist = [
     { name = "nvidia-nat-redis", marker = "extra == 'redis'", editable = "packages/nvidia_nat_redis" },
     { name = "nvidia-nat-s3", marker = "extra == 's3'", editable = "packages/nvidia_nat_s3" },
     { name = "nvidia-nat-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "packages/nvidia_nat_semantic_kernel" },
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
     { name = "nvidia-nat-weave", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_weave" },
     { name = "nvidia-nat-weave", marker = "extra == 'weave'", editable = "packages/nvidia_nat_weave" },
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/nvidia_nat_zep_cloud" },
@@ -5905,11 +5898,12 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "<0.36" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["all", "adk", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
+provides-extras = ["all", "adk", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "test", "weave", "zep-cloud", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = "~=2.1" },
+    { name = "beautifulsoup4", specifier = "~=4.13" },
     { name = "httpx-sse", specifier = "~=0.4" },
     { name = "ipython", specifier = "~=8.31" },
     { name = "myst-parser", specifier = "~=4.0" },

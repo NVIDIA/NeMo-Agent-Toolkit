@@ -122,6 +122,7 @@ async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, _builder: Bui
         exclude={"type", "context_size", "thinking", "api_type"},
         by_alias=True,
         exclude_none=True,
+        exclude_unset=True,
     ))
 
     yield _patch_llm_based_on_config(client, llm_config)
@@ -134,8 +135,8 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    client = AzureChatOpenAI(
-        **llm_config.model_dump(exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True))
+    client = AzureChatOpenAI(**llm_config.model_dump(
+        exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -149,9 +150,12 @@ async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
 
     # prefer max_completion_tokens over max_tokens
     client = ChatNVIDIA(
-        **llm_config.model_dump(exclude={"type", "max_tokens", "thinking", "api_type"},
-                                by_alias=True,
-                                exclude_none=True),
+        **llm_config.model_dump(
+            exclude={"type", "max_tokens", "thinking", "api_type"},
+            by_alias=True,
+            exclude_none=True,
+            exclude_unset=True,
+        ),
         max_completion_tokens=llm_config.max_tokens,
     )
 
@@ -171,6 +175,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
                                 exclude={"type", "thinking", "api_type"},
                                 by_alias=True,
                                 exclude_none=True,
+                                exclude_unset=True,
                             ))
     else:
         # If stream_usage is specified, it will override the default value of True.
@@ -179,6 +184,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
                                 exclude={"type", "thinking", "api_type"},
                                 by_alias=True,
                                 exclude_none=True,
+                                exclude_unset=True,
                             ))
 
     yield _patch_llm_based_on_config(client, llm_config)
@@ -191,7 +197,7 @@ async def litellm_langchain(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    client = ChatLiteLLM(
-        **llm_config.model_dump(exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True))
+    client = ChatLiteLLM(**llm_config.model_dump(
+        exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
     yield _patch_llm_based_on_config(client, llm_config)

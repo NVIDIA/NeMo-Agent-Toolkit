@@ -26,6 +26,7 @@ from nat.data_models.config import Config
 from nat.data_models.config import HashableBaseModel
 from nat.data_models.function import FunctionBaseConfig
 from nat.utils.io.yaml_tools import _interpolate_variables
+from nat.utils.io.yaml_tools import deep_merge
 from nat.utils.io.yaml_tools import yaml_dump
 from nat.utils.io.yaml_tools import yaml_dumps
 from nat.utils.io.yaml_tools import yaml_load
@@ -271,3 +272,194 @@ def test_yaml_loads_with_invalid_yaml():
     malformed_yaml = "{"  # Unclosed bracket
     with pytest.raises(ValueError, match="Error loading YAML"):
         yaml_loads(malformed_yaml)
+
+
+def test_deep_merge():
+    # Test basic merge
+    base = {"a": 1, "b": 2}
+    override = {"b": 3, "c": 4}
+    result = deep_merge(base, override)
+    assert result == {"a": 1, "b": 3, "c": 4}
+
+    # Test nested merge
+    base = {"a": 1, "b": {"c": 2, "d": 3}, "e": 5}
+    override = {"b": {"d": 4}, "f": 6}
+    result = deep_merge(base, override)
+    assert result == {"a": 1, "b": {"c": 2, "d": 4}, "e": 5, "f": 6}
+
+    # Test deep nested merge
+    base = {"level1": {"level2": {"level3": {"value": 1, "other": 2}}}}
+    override = {"level1": {"level2": {"level3": {"value": 999}}}}
+    result = deep_merge(base, override)
+    assert result["level1"]["level2"]["level3"]["value"] == 999
+    assert result["level1"]["level2"]["level3"]["other"] == 2
+
+    # Test replacing non-dict with dict
+    base = {"a": "string"}
+    override = {"a": {"b": "dict"}}
+    result = deep_merge(base, override)
+    assert result == {"a": {"b": "dict"}}
+
+    # Test empty override
+    base = {"a": 1, "b": 2}
+    override = {}
+    result = deep_merge(base, override)
+    assert result == {"a": 1, "b": 2}
+
+
+def test_yaml_load_with_base_inheritance():
+    # Create a base config
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as base_file:
+        base_file.write("""
+        llms:
+          nim_llm:
+            model_name: meta/llama-3.1-70b-instruct
+            temperature: 0.0
+            max_tokens: 1024
+        workflow:
+          _type: react_agent
+          verbose: true
+        """)
+        base_file_path = base_file.name
+
+    # Create a variant config that inherits from base
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as variant_file:
+        variant_file.write(f"""
+        base: {os.path.basename(base_file_path)}
+        llms:
+          nim_llm:
+            temperature: 0.9
+        """)
+        variant_file_path = variant_file.name
+
+    try:
+        # Load variant config with inheritance
+        config = yaml_load(variant_file_path)
+        # Check overridden value
+        assert config["llms"]["nim_llm"]["temperature"] == 0.9
+        # Check inherited values
+        assert config["llms"]["nim_llm"]["model_name"] == "meta/llama-3.1-70b-instruct"
+        assert config["llms"]["nim_llm"]["max_tokens"] == 1024
+        assert config["workflow"]["_type"] == "react_agent"
+        assert config["workflow"]["verbose"] is True
+        # Verify 'base' key is removed from final config
+        assert "base" not in config
+    finally:
+        os.unlink(base_file_path)
+        os.unlink(variant_file_path)
+
+
+def test_yaml_load_without_base():
+    # Test that yaml_load works normally when no base key is present
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        temp_file.write("""
+        llms:
+          nim_llm:
+            temperature: 0.5
+        workflow:
+          verbose: false
+        """)
+        temp_file_path = temp_file.name
+
+    try:
+        config = yaml_load(temp_file_path)
+        assert config["llms"]["nim_llm"]["temperature"] == 0.5
+        assert config["workflow"]["verbose"] is False
+    finally:
+        os.unlink(temp_file_path)
+
+
+def test_yaml_load_chained_inheritance():
+    # Test yaml_load with multiple levels of inheritance
+    # Create base config
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as base_file:
+        base_file.write("""
+        level1: base
+        level2: base
+        level3: base
+        """)
+        base_file_path = base_file.name
+
+    # Create intermediate config
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as middle_file:
+        middle_file.write(f"""
+        base: {os.path.basename(base_file_path)}
+        level2: middle
+        """)
+        middle_file_path = middle_file.name
+
+    # Create final config
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as final_file:
+        final_file.write(f"""
+        base: {os.path.basename(middle_file_path)}
+        level3: final
+        """)
+        final_file_path = final_file.name
+
+    try:
+        config = yaml_load(final_file_path)
+        assert config["level1"] == "base"  # From base
+        assert config["level2"] == "middle"  # From intermediate
+        assert config["level3"] == "final"  # From final
+    finally:
+        os.unlink(base_file_path)
+        os.unlink(middle_file_path)
+        os.unlink(final_file_path)
+
+
+def test_yaml_load_base_type_validation():
+    # Test that base key must be a string
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as config_file:
+        config_file.write("""
+        base: 123
+        key: value
+        """)
+        config_file_path = config_file.name
+    try:
+        with pytest.raises(TypeError, match="Configuration 'base' key must be a string"):
+            yaml_load(config_file_path)
+    finally:
+        os.unlink(config_file_path)
+
+
+def test_yaml_load_base_file_not_found():
+    # Test that missing base file raises FileNotFoundError
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as config_file:
+        config_file.write("""
+        base: nonexistent_file.yml
+        key: value
+        """)
+        config_file_path = config_file.name
+    try:
+        with pytest.raises(FileNotFoundError, match="Base configuration file not found"):
+            yaml_load(config_file_path)
+    finally:
+        os.unlink(config_file_path)
+
+
+def test_yaml_load_circular_dependency():
+    # Test that circular dependencies are detected
+    # Create config A that inherits from B
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as file_a:
+        file_a_path = file_a.name
+    # Create config B that inherits from A
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as file_b:
+        file_b_path = file_b.name
+    try:
+        # Write config A (inherits from B)
+        with open(file_a_path, 'w') as f:
+            f.write(f"""
+            base: {os.path.basename(file_b_path)}
+            key_a: value_a
+            """)
+        # Write config B (inherits from A - creates cycle)
+        with open(file_b_path, 'w') as f:
+            f.write(f"""
+            base: {os.path.basename(file_a_path)}
+            key_b: value_b
+            """)
+        with pytest.raises(ValueError, match="Circular dependency detected"):
+            yaml_load(file_a_path)
+    finally:
+        os.unlink(file_a_path)
+        os.unlink(file_b_path)
