@@ -56,25 +56,27 @@ def _build_api_tree() -> Path:
         shutil.rmtree(api_tree.absolute())
 
     os.makedirs(api_tree.absolute())
-    shutil.copytree(nat_dir, dest_dir)
-    dest_plugins_dir = dest_dir / "plugins"
 
-    for sub_dir in (dest_dir, dest_plugins_dir):
-        with open(sub_dir / "__init__.py", "w", encoding="utf-8") as f:
-            f.write("")
+    # Temp disable API building, this adds 4 minutes to the build time, re-enable prior to merging
+    # shutil.copytree(nat_dir, dest_dir)
+    # dest_plugins_dir = dest_dir / "plugins"
 
-    plugin_dirs = [Path(p) for p in glob.glob(f'{plugins_dir}/nvidia_nat_*')]
-    for plugin_dir in plugin_dirs:
-        src_dir = plugin_dir / 'src/nat/plugins'
-        if src_dir.exists():
-            for plugin_subdir in src_dir.iterdir():
-                if plugin_subdir.is_dir():
-                    dest_subdir = dest_plugins_dir / plugin_subdir.name
-                    shutil.copytree(plugin_subdir, dest_subdir)
-                    package_file = dest_subdir / "__init__.py"
-                    if not package_file.exists():
-                        with open(package_file, "w", encoding="utf-8") as f:
-                            f.write("")
+    # for sub_dir in (dest_dir, dest_plugins_dir):
+    #     with open(sub_dir / "__init__.py", "w", encoding="utf-8") as f:
+    #         f.write("")
+
+    # plugin_dirs = [Path(p) for p in glob.glob(f'{plugins_dir}/nvidia_nat_*')]
+    # for plugin_dir in plugin_dirs:
+    #     src_dir = plugin_dir / 'src/nat/plugins'
+    #     if src_dir.exists():
+    #         for plugin_subdir in src_dir.iterdir():
+    #             if plugin_subdir.is_dir():
+    #                 dest_subdir = dest_plugins_dir / plugin_subdir.name
+    #                 shutil.copytree(plugin_subdir, dest_subdir)
+    #                 package_file = dest_subdir / "__init__.py"
+    #                 if not package_file.exists():
+    #                     with open(package_file, "w", encoding="utf-8") as f:
+    #                         f.write("")
 
     return api_tree
 
@@ -103,7 +105,8 @@ version = '.'.join(release.split('.')[:2])
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'autoapi.extension',
+    # Temp disable API building, this adds 4 minutes to the build time, re-enable prior to merging
+    #'autoapi.extension',
     'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive',
     'myst_parser',
@@ -344,6 +347,7 @@ def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonO
     return skip
 
 
-def setup(sphinx):
-    # Work-around for for Pydantic docstrings that trigger parsing warnings
-    sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+# Temp disable API building, this adds 4 minutes to the build time, re-enable prior to merging
+# def setup(sphinx):
+#     # Work-around for for Pydantic docstrings that trigger parsing warnings
+#     sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
