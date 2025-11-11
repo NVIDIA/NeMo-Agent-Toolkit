@@ -53,16 +53,16 @@ class MCPServiceAccountProviderConfig(AuthProviderBaseConfig, name="mcp_service_
         "Use empty string for standard 'Bearer <token>' format.",
     )
 
-    # Optional: Additional service-specific token
+    # Optional: Additional service-specific service account token for two-header authentication patterns
     service_token: SecretStr | None = Field(
         default=None,
-        description="Optional service-specific token for two-header authentication patterns",
+        description="Optional service account token for two-header authentication patterns",
     )
 
     # Optional: Custom header name for service token
     service_token_header: str = Field(
         default="Service-Account-Token",
-        description="Header name for service token (default: 'Service-Account-Token')",
+        description="Header name for service account token (default: 'Service-Account-Token')",
     )
 
     # Token caching configuration

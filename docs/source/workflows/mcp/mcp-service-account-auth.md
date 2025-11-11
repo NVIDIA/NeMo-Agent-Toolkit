@@ -42,7 +42,6 @@ The `mcp_service_account` authentication provider implements:
 - **Token Caching**: Automatic token caching with configurable refresh buffer to minimize token endpoint requests
 - **Custom Token Formats**: Support for non-standard Bearer token prefixes (for example, `Bearer service_account_ssa:token`)
 - **Multi-Header Authentication**: Ability to inject multiple authentication headers for services requiring additional tokens
-- **Thread-Safe Operations**: Concurrent request handling with proper locking mechanisms
 
 ## Configuring Service Account Auth Provider
 
@@ -54,7 +53,7 @@ authentication:
     _type: mcp_service_account
     client_id: ${SERVICE_ACCOUNT_CLIENT_ID}
     client_secret: ${SERVICE_ACCOUNT_CLIENT_SECRET}
-    token_url: https://auth.example.com/oauth/token
+    token_url: https://auth.example.com/service_account/token
     scopes: "api.read api.write"
 ```
 
@@ -135,9 +134,6 @@ authentication:
     scopes: ${SERVICE_ACCOUNT_SCOPES}
 ```
 
-:::{note}
-Service account authentication is only supported with the `streamable-http` transport. The `stdio` transport does not require authentication (local process), and the `sse` transport does not support authentication.
-:::
 
 ## Authentication Patterns
 
@@ -222,11 +218,6 @@ X-Service-Account-Token: <service_token>
 - **HTTPS required**: Always use HTTPS for token endpoint communications
 - **Protected logs**: Failed requests do not expose credentials in log messages
 
-### Access Controls
-
-- **Principle of least privilege**: Grant service accounts only necessary permissions
-- **Audit access**: Monitor and audit service account usage
-- **Separate accounts**: Use different service accounts for different services or environments
 
 ## Token Caching
 
@@ -247,150 +238,38 @@ authentication:
     token_cache_buffer_seconds: 600  # Refresh 10 minutes before expiry
 ```
 
-## Comparison: Service Account vs OAuth2 Interactive
-
-Choose the appropriate authentication method based on your use case:
-
-| Feature | Service Account (`mcp_service_account`) | OAuth2 Interactive (`mcp_oauth2`) |
-|---------|----------------------------------------|-----------------------------------|
-| User Interaction | None (headless) | Required (browser-based) |
-| Use Case | Automated workflows, CI/CD, backend services | User-facing applications |
-| Authentication Flow | Client credentials | Authorization code |
-| Token Scope | Service-level permissions | User-level permissions |
-| Session | Shared across invocations | Per-user sessions |
-| Setup Complexity | Simple (client ID and secret) | Complex (redirect URIs, consent screens) |
-| Best For | Automation and integration | Interactive applications with user context |
-
 ## Example Workflow
 
-The Service Account Authentication Example, `examples/MCP/service_account_auth_mcp/README.md`, provides a complete example of using service account authentication to access a protected MCP server.
+The Service Account Authentication Example, `examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jira.yml`, provides a complete example of using service account authentication to access a protected MCP server.
 
-### Example Configuration
-
-```yaml
-function_groups:
-  mcp_api:
-    _type: mcp_client
-    server:
-      transport: streamable-http
-      url: https://api.example.com/mcp
-      auth_provider: service_account_auth
-
-authentication:
-  service_account_auth:
-    _type: mcp_service_account
-    client_id: ${SERVICE_ACCOUNT_CLIENT_ID}
-    client_secret: ${SERVICE_ACCOUNT_CLIENT_SECRET}
-    token_url: ${SERVICE_ACCOUNT_TOKEN_URL}
-    scopes: ${SERVICE_ACCOUNT_SCOPES}
-
-llms:
-  nim_llm:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
-    temperature: 0.0
-
-workflow:
-  _type: react_agent
-  tool_names: [mcp_api]
-  llm_name: nim_llm
-```
-
-### Running the Example
-
-```bash
-# Set required environment variables
-export SERVICE_ACCOUNT_CLIENT_ID="your-client-id"
-export SERVICE_ACCOUNT_CLIENT_SECRET="your-client-secret"
-export SERVICE_ACCOUNT_TOKEN_URL="https://auth.example.com/oauth/token"
-export SERVICE_ACCOUNT_SCOPES="api.read api.write"
-
-# Run the workflow
-nat run --config_file config.yml --input "Your query here"
-```
-
-The workflow will authenticate automatically without any browser interaction.
+See the `examples/MCP/service_account_auth_mcp/README.md` for instructions on how to run the example.
 
 ## Troubleshooting
 
-### Common Issues and Solutions
-
 **Error: "client_id is required"**
 
-**Cause**: The `client_id` field is missing or not properly set.
-
-**Solution**: Ensure the `SERVICE_ACCOUNT_CLIENT_ID` environment variable is set or provide the value directly in the configuration.
-
-```bash
-export SERVICE_ACCOUNT_CLIENT_ID="your-client-id"
-```
-
----
+Ensure the `client_id` field is set in your configuration or the corresponding environment variable is defined.
 
 **Error: "Invalid service account credentials"**
 
-**Cause**: The client ID or client secret is incorrect, or the service account does not have access to the requested endpoint.
-
-**Solution**:
-- Verify client ID and client secret are correct
-- Check that the token endpoint URL is reachable
-- Confirm the service account has been granted necessary permissions
-
----
+Verify your client ID and client secret are correct, the token endpoint URL is reachable, and your service account has necessary permissions.
 
 **Error: "Service account rate limit exceeded"**
 
-**Cause**: Too many token requests to the OAuth2 endpoint.
+Wait before retrying. Consider increasing `token_cache_buffer_seconds` to reduce token refresh frequency.
 
-**Solution**:
-- Wait before retrying
-- Increase `token_cache_buffer_seconds` to reduce token refresh frequency
-- Check for issues causing excessive token requests (for example, incorrect expiration handling)
+**Error: "SSL: CERTIFICATE_VERIFY_FAILED"**
 
----
+The MCP server uses certificates from an internal Certificate Authority. Install your organization's CA certificates in your system's trust store.
 
-**Tokens expiring unexpectedly**
-
-**Cause**: Token cache buffer may be too aggressive, or OAuth2 server has short token lifetimes.
-
-**Solution**:
-- Adjust `token_cache_buffer_seconds` to a smaller value
-- Contact your OAuth2 administrator about token lifetime policies
-- Monitor token expiration times in debug logs
-
----
+The MCP Python SDK does not currently support disabling SSL verification. See [MCP Python SDK Issue #870](https://github.com/modelcontextprotocol/python-sdk/issues/870) for updates.
 
 **Authentication works locally but fails in CI/CD**
 
-**Cause**: Environment variables may not be properly configured in the CI/CD environment.
-
-**Solution**:
-- Verify all required environment variables are set in your CI/CD platform
-- Check for proper secret management configuration
-- Ensure the service account has necessary permissions in the target environment
-
-### Debug Logging
-
-Enable debug logging to troubleshoot authentication issues:
-
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-```
-
-Look for log messages from:
-- `nat.plugins.mcp.auth.service_account.provider`
-- `nat.plugins.mcp.auth.service_account.token_client`
-
-Debug logs will show:
-- Token acquisition attempts
-- Token cache hits and misses
-- Token expiration times
-- Authentication header formats
+Verify all environment variables are set in your CI/CD platform and check secret management configuration.
 
 ## See Also
 
 - [MCP Authentication](./mcp-auth.md) - OAuth2 interactive authentication for user-facing workflows
 - [Secure Token Storage](./mcp-auth-token-storage.md) - Token storage and management best practices
 - [MCP Client](./mcp-client.md) - Connecting to MCP servers
-- [Service Account Example](../../examples/MCP/service_account_auth_mcp/README.md) - Complete working example

@@ -126,9 +126,6 @@ class AuthAdapter(httpx.Auth):
                     # Generic header credential (supports custom formats and service accounts)
                     headers[cred.name] = cred.value.get_secret_value()
 
-            if not headers:
-                logger.info("Auth provider did not return any header-based credentials")
-
             return headers
         except Exception as e:
             logger.warning("Failed to get auth token: %s", e)

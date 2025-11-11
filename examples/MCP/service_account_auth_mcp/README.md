@@ -68,13 +68,15 @@ export SERVICE_ACCOUNT_CLIENT_ID="your-client-id"
 export SERVICE_ACCOUNT_CLIENT_SECRET="your-client-secret"
 
 # Service account token endpoint
-export SERVICE_ACCOUNT_TOKEN_URL="https://auth.example.com/oauth2/token"
+export SERVICE_ACCOUNT_TOKEN_URL="https://auth.example.com/service_account/token"
 
 # Service account scopes (space-separated)
 export SERVICE_ACCOUNT_SCOPES="api.read api.write"
 ```
-> [!IMPORTANT]
+
+:::{important}
 All environment variables here are for demonstration purposes. You must set the environment variables for your actual service account and MCP server URL.
+:::
 
 #### Optional Environment Variables
 
@@ -95,8 +97,9 @@ export JIRA_SERVICE_TOKEN="your-service-token"
 
 ```
 
-> [!IMPORTANT]
+:::{important}
 All environment variables here are for demonstration purposes. You must set the environment variables for your actual service account.
+:::
 
 :::{warning}
 Do not commit these environment variables to version control.
@@ -123,42 +126,21 @@ When using service account authentication:
 
 ## Troubleshooting
 
-### Common Issues
+For common issues and solutions, see the [Troubleshooting section](../../../docs/source/workflows/mcp/mcp-service-account-auth.md#troubleshooting) in the Service Account Authentication documentation.
 
-**Error: "client_id is required"**
+## Adapting This Example
 
-- **Solution**: Ensure `SERVICE_ACCOUNT_CLIENT_ID` environment variable is set
-- Check for typos in environment variable names
+To use this example with your own service:
 
-**Error: "Invalid service account credentials"**
+1. Update the environment variables to match your service's requirements
+2. Modify the MCP server URL in the configuration file
+3. Adjust authentication headers if your service uses different patterns (see the [Authentication Patterns](../../../docs/source/workflows/mcp/mcp-service-account-auth.md#authentication-patterns) section)
+4. Remove optional environment variables if your service only requires OAuth2 Bearer token
 
-- **Solution**: Verify your client ID and client secret are correct
-- Ensure the token endpoint URL is reachable
-- Check that your service account has been granted necessary permissions
+For detailed configuration options and authentication patterns, refer to the [MCP Service Account Authentication](../../../docs/source/workflows/mcp/mcp-service-account-auth.md) documentation.
 
-**Error: "Service account rate limit exceeded"**
+## See Also
 
-- **Solution**: Token endpoint rate limiting is active. Wait before retrying.
-- Consider increasing `token_cache_buffer_seconds` in the config to reduce token requests
-
-**Authentication works locally but fails in CI/CD**
-
-- **Solution**: Verify all environment variables are properly set in your CI/CD platform
-- Check secret management configuration in your CI/CD system
-- Ensure network access to the token endpoint from CI/CD environment
-service:
-
-### Single-Header Authentication
-
-If your service only needs a standard OAuth2 Bearer token:
-
-```yaml
-authentication:
-  my_service:
-    _type: mcp_service_account
-    client_id: ${SERVICE_ACCOUNT_CLIENT_ID}
-    client_secret: ${SERVICE_ACCOUNT_CLIENT_SECRET}
-    token_url: ${SERVICE_ACCOUNT_TOKEN_URL}
-    scopes: ${SERVICE_ACCOUNT_SCOPES}
-    token_prefix: ""  # Empty string for standard Bearer token
-```
+- [MCP Service Account Authentication](../../../docs/source/workflows/mcp/mcp-service-account-auth.md) - Complete configuration reference and authentication patterns
+- [MCP Authentication](../../../docs/source/workflows/mcp/mcp-auth.md) - OAuth2 interactive authentication for user-facing workflows
+- [MCP Client](../../../docs/source/workflows/mcp/mcp-client.md) - MCP client configuration guide

@@ -90,7 +90,6 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
         if self.config.service_token:
             service_token = self.config.service_token.get_secret_value()
             credentials.append(HeaderCred(name=self.config.service_token_header, value=SecretStr(service_token)))
-            logger.debug("Added %s header credential", self.config.service_token_header)
 
         # Return AuthResult with HeaderCred objects
         return AuthResult(
