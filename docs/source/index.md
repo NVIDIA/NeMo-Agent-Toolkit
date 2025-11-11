@@ -15,14 +15,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-
-<!-- This role is needed at the index to set the default backtick role -->
-```{eval-rst}
-.. role:: py(code)
-   :language: python
-   :class: highlight
-```
-
 ![NVIDIA NeMo Agent Toolkit](./_static/banner.png "NeMo Agent toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit Overview
@@ -59,6 +51,13 @@ For frequently asked questions, refer to [FAQ](./resources/faq.md).
 
 We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) if you have any feedback or feature requests.
 
+<!-- This role is needed at the index to set the default backtick role -->
+```{eval-rst}
+.. role:: py(code)
+   :language: python
+   :class: highlight
+```
+
 ```{toctree}
 :hidden:
 :caption: About NVIDIA NeMo Agent Toolkit
@@ -70,7 +69,8 @@ Release Notes <./release-notes.md>
 :hidden:
 :caption: Get Started
 
-Quick Start Guide <./quick-start/index.md>
+Install <./quick-start/installing.md>
+Quick Start Guide <./quick-start/quick-start.md>
 Tutorials <./tutorials/index.md>
 ```
 
@@ -122,6 +122,7 @@ Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
 Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
 Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
 Adding a Custom MCP Server Worker <./extend/mcp-server.md>
+Test With nat_test_llm <./test-with-nat-test-llm.md>
 ```
 
 ```{toctree}
