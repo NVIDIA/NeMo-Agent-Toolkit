@@ -60,40 +60,46 @@ This example includes a configuration file demonstrating service account authent
 Set these environment variables for your OAuth2 service account:
 
 ```bash
+# MCP server URL
+export CORPORATE_MCP_JIRA_URL="https://mcp.example.com/jira/mcp"
+
 # OAuth2 client credentials
 export SERVICE_ACCOUNT_CLIENT_ID="your-client-id"
 export SERVICE_ACCOUNT_CLIENT_SECRET="your-client-secret"
 
-# OAuth2 token endpoint
+# Service account token endpoint
 export SERVICE_ACCOUNT_TOKEN_URL="https://auth.example.com/oauth2/token"
 
-# OAuth2 scopes (space-separated)
+# Service account scopes (space-separated)
 export SERVICE_ACCOUNT_SCOPES="api.read api.write"
-
-# MCP server URL
-export JIRA_MCP_URL="https://mcp.example.com/jira/mcp"
 ```
-:::{warning}
-All environment variables here are for demonstration purposes. You must set the environment variables for your actual service account.
-:::
+> [!IMPORTANT]
+All environment variables here are for demonstration purposes. You must set the environment variables for your actual service account and MCP server URL.
 
 #### Optional Environment Variables
 
 For dual-header authentication patterns you may need to set additional environment variables.
 
 ```bash
-# Service-specific token (optional, only if your service requires it)
+# Custom token prefix for Authorization header. This is used to prefix the token in the Authorization header:
+# Example: "Authorization: Bearer: service_account_myauth:<access_token>"
+export AUTHORIZATION_TOKEN_PREFIX="service_account_myauth"
+
+# Custom header name for service token. This is used to add an additional header to the request:
+# Example: "MyCompany-Service-Account-Token: <your-service_token>"
+export SERVICE_TOKEN_HEADER="MyCompany-Service-Account-Token"
+
+# Service-specific token. This is used to add an additional header to the request:
+# Example: "MyCompany-Service-Account-Token: <your-service_token>"
 export JIRA_SERVICE_TOKEN="your-service-token"
 
-# Custom header name for service token (optional)
-export JIRA_SERVICE_TOKEN_HEADER="MyCompany-Service-Account-Token"
-
-# Custom token prefix for Authorization header (optional)
-export SERVICE_ACCOUNT_TOKEN_PREFIX="service_account_myauth"
 ```
 
-:::{warning}
+> [!IMPORTANT]
 All environment variables here are for demonstration purposes. You must set the environment variables for your actual service account.
+
+:::{warning}
+Do not commit these environment variables to version control.
 :::
 
 ## Run the Workflow
@@ -102,7 +108,7 @@ After setting the required environment variables, run the workflow:
 
 ```bash
 nat run --config_file examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jira.yml \
-    --input "What is status of ticket AIQ-1935?"
+    --input "What is status of jira ticket OCSW-2116?"
 ```
 
 ## Expected Behavior
