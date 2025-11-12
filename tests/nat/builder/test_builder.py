@@ -34,10 +34,10 @@ from nat.cli.register_workflow import register_embedder_client
 from nat.cli.register_workflow import register_embedder_provider
 from nat.cli.register_workflow import register_function
 from nat.cli.register_workflow import register_function_group
-from nat.cli.register_workflow import register_middleware
 from nat.cli.register_workflow import register_llm_client
 from nat.cli.register_workflow import register_llm_provider
 from nat.cli.register_workflow import register_memory
+from nat.cli.register_workflow import register_middleware
 from nat.cli.register_workflow import register_object_store
 from nat.cli.register_workflow import register_retriever_client
 from nat.cli.register_workflow import register_retriever_provider
@@ -49,10 +49,10 @@ from nat.data_models.config import GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
-from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig

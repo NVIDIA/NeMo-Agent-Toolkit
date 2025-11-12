@@ -30,9 +30,9 @@ from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
-from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import MemoryRef
+from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
 from nat.data_models.component_ref import TTCStrategyRef
@@ -41,17 +41,17 @@ from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
-from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
-from nat.middleware.middleware import Middleware
 from nat.memory.interfaces import MemoryEditor
+from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.retriever.interface import Retriever
 

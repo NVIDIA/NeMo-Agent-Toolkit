@@ -44,11 +44,11 @@ class TestOutput(BaseModel):
 def middleware_context():
     """Create a test FunctionMiddlewareContext."""
     return FunctionMiddlewareContext(name="test_function",
-                                    config=MagicMock(),
-                                    description="Test function",
-                                    input_schema=TestInput,
-                                    single_output_schema=TestOutput,
-                                    stream_output_schema=None)
+                                     config=MagicMock(),
+                                     description="Test function",
+                                     input_schema=TestInput,
+                                     single_output_schema=TestOutput,
+                                     stream_output_schema=None)
 
 
 class TestCacheMiddlewareInitialization:

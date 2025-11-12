@@ -34,16 +34,16 @@ from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
-from nat.data_models.middleware import FunctionMiddlewareBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import FunctionMiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
-from nat.middleware import FunctionMiddleware
 from nat.memory.interfaces import MemoryEditor
+from nat.middleware import FunctionMiddleware
 from nat.object_store.interfaces import ObjectStore
 from nat.runtime.loader import PluginTypes
 from nat.runtime.loader import discover_and_register_plugins
@@ -301,11 +301,9 @@ class MockBuilder(Builder):
         return FunctionMiddlewareBaseConfig()
 
     async def add_middleware(self, name: str | MiddlewareRef,
-                                     config: FunctionMiddlewareBaseConfig) -> FunctionMiddleware:
+                             config: FunctionMiddlewareBaseConfig) -> FunctionMiddleware:
         """Mock implementation."""
         return FunctionMiddleware()
-
-
 
 
 class ToolTestRunner:

@@ -54,13 +54,13 @@ class FunctionMiddleware(Middleware):
         return await self.function_middleware_invoke(value, call_next, context)
 
     async def middleware_stream(self, value: Any, call_next: CallNextStream,
-                               context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
+                                context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
         """Delegate to function_middleware_stream for function-specific handling."""
         async for chunk in self.function_middleware_stream(value, call_next, context):
             yield chunk
 
     async def function_middleware_invoke(self, value: Any, call_next: CallNext,
-                                        context: FunctionMiddlewareContext) -> Any:
+                                         context: FunctionMiddlewareContext) -> Any:
         """Function-specific middleware for single-output invocations.
 
         Args:
@@ -76,8 +76,10 @@ class FunctionMiddleware(Middleware):
         """
         return await call_next(value)
 
-    async def function_middleware_stream(self, value: Any, call_next: CallNextStream,
-                                        context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
+    async def function_middleware_stream(self,
+                                         value: Any,
+                                         call_next: CallNextStream,
+                                         context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
         """Function-specific middleware for streaming invocations.
 
         Args:
@@ -121,10 +123,7 @@ class FunctionMiddlewareChain:
         for mw in reversed(self._middleware):
             call_next = call
 
-            async def wrapped(value: Any,
-                              *,
-                              _middleware: Middleware = mw,
-                              _call_next: CallNext = call_next) -> Any:
+            async def wrapped(value: Any, *, _middleware: Middleware = mw, _call_next: CallNext = call_next) -> Any:
                 return await _middleware.middleware_invoke(value, _call_next, self._context)
 
             call = wrapped

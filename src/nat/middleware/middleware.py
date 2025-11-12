@@ -143,7 +143,7 @@ class Middleware(ABC):
         return await call_next(value)
 
     async def middleware_stream(self, value: Any, call_next: CallNextStream,
-                               context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
+                                context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
         """Middleware for streaming invocations.
 
         Args:

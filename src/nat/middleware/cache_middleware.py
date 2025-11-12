@@ -146,7 +146,7 @@ class CacheMiddleware(FunctionMiddleware):
         return best_match
 
     async def function_middleware_invoke(self, value: Any, call_next: CallNext,
-                                        context: FunctionMiddlewareContext) -> Any:
+                                         context: FunctionMiddlewareContext) -> Any:
         """Cache middleware for single-output invocations.
 
         Implements the four-phase middleware pattern:
@@ -196,8 +196,10 @@ class CacheMiddleware(FunctionMiddleware):
         # Phase 4: Continue - return the fresh result
         return result
 
-    async def function_middleware_stream(self, value: Any, call_next: CallNextStream,
-                                        context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
+    async def function_middleware_stream(self,
+                                         value: Any,
+                                         call_next: CallNextStream,
+                                         context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
         """Cache middleware for streaming invocations - bypasses caching.
 
         Streaming results are not cached as they would need to be buffered

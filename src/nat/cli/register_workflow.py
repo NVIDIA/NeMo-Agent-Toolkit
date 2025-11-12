@@ -30,8 +30,6 @@ from nat.cli.type_registry import FunctionBuildCallableT
 from nat.cli.type_registry import FunctionGroupBuildCallableT
 from nat.cli.type_registry import FunctionGroupRegisteredCallableT
 from nat.cli.type_registry import FunctionRegisteredCallableT
-from nat.cli.type_registry import MiddlewareBuildCallableT
-from nat.cli.type_registry import MiddlewareRegisteredCallableT
 from nat.cli.type_registry import LLMClientBuildCallableT
 from nat.cli.type_registry import LLMClientRegisteredCallableT
 from nat.cli.type_registry import LLMProviderBuildCallableT
@@ -40,6 +38,8 @@ from nat.cli.type_registry import LoggingMethodConfigT
 from nat.cli.type_registry import LoggingMethodRegisteredCallableT
 from nat.cli.type_registry import MemoryBuildCallableT
 from nat.cli.type_registry import MemoryRegisteredCallableT
+from nat.cli.type_registry import MiddlewareBuildCallableT
+from nat.cli.type_registry import MiddlewareRegisteredCallableT
 from nat.cli.type_registry import ObjectStoreBuildCallableT
 from nat.cli.type_registry import ObjectStoreRegisteredCallableT
 from nat.cli.type_registry import RegisteredLoggingMethod
@@ -65,9 +65,9 @@ from nat.data_models.evaluator import EvaluatorBaseConfigT
 from nat.data_models.front_end import FrontEndConfigT
 from nat.data_models.function import FunctionConfigT
 from nat.data_models.function import FunctionGroupConfigT
-from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.llm import LLMBaseConfigT
 from nat.data_models.memory import MemoryBaseConfigT
+from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfigT
 from nat.data_models.retriever import RetrieverBaseConfigT
@@ -234,7 +234,8 @@ def register_middleware(config_type: type[MiddlewareBaseConfigT]):
     """
 
     def register_middleware_inner(
-            fn: MiddlewareBuildCallableT[MiddlewareBaseConfigT]) -> MiddlewareRegisteredCallableT[MiddlewareBaseConfigT]:
+            fn: MiddlewareBuildCallableT[MiddlewareBaseConfigT]
+    ) -> MiddlewareRegisteredCallableT[MiddlewareBaseConfigT]:
         from .type_registry import GlobalTypeRegistry
         from .type_registry import RegisteredMiddlewareInfo
 

@@ -58,14 +58,14 @@ from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionConfigT
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function import FunctionGroupConfigT
-from nat.data_models.middleware import MiddlewareBaseConfig
-from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.llm import LLMBaseConfigT
 from nat.data_models.logging import LoggingBaseConfig
 from nat.data_models.logging import LoggingMethodConfigT
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.memory import MemoryBaseConfigT
+from nat.data_models.middleware import MiddlewareBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfig
@@ -77,8 +77,8 @@ from nat.data_models.telemetry_exporter import TelemetryExporterConfigT
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfigT
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
-from nat.middleware.middleware import Middleware
 from nat.memory.interfaces import MemoryEditor
+from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler

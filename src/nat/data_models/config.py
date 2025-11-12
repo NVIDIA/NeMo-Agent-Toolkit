@@ -41,9 +41,9 @@ from .authentication import AuthProviderBaseConfig
 from .common import HashableBaseModel
 from .common import TypedBaseModel
 from .embedder import EmbedderBaseConfig
-from .middleware import FunctionMiddlewareBaseConfig
 from .llm import LLMBaseConfig
 from .memory import MemoryBaseConfig
+from .middleware import FunctionMiddlewareBaseConfig
 from .object_store import ObjectStoreBaseConfig
 from .retriever import RetrieverBaseConfig
 

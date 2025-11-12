@@ -135,11 +135,11 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         logger.info(f"Building middleware for function '{self.instance_name}' in order of: {middleware_tuple}")
 
         context = FunctionMiddlewareContext(name=self.instance_name,
-                                           config=self.config,
-                                           description=self.description,
-                                           input_schema=self.input_schema,
-                                           single_output_schema=self.single_output_schema,
-                                           stream_output_schema=self.streaming_output_schema)
+                                            config=self.config,
+                                            description=self.description,
+                                            input_schema=self.input_schema,
+                                            single_output_schema=self.single_output_schema,
+                                            stream_output_schema=self.streaming_output_schema)
 
         chain = FunctionMiddlewareChain(middleware=middleware_tuple, context=context)
 

@@ -49,9 +49,9 @@ from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
-from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import MemoryRef
+from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
 from nat.data_models.component_ref import TTCStrategyRef
@@ -61,9 +61,9 @@ from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
-from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
@@ -72,9 +72,9 @@ from nat.experimental.decorators.experimental_warning_decorator import experimen
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.memory.interfaces import MemoryEditor
 from nat.middleware.function_middleware import FunctionMiddleware
 from nat.middleware.middleware import Middleware
-from nat.memory.interfaces import MemoryEditor
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
@@ -497,9 +497,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                  f"It must be configured in the `middleware` section of the YAML configuration.")
             middleware_obj = self._middleware[middleware_name].instance
             if not isinstance(middleware_obj, FunctionMiddleware):
-                raise TypeError(
-                    f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used with function groups. "
-                    f"Only FunctionMiddleware types support function-specific wrapping.")
+                raise TypeError(f"Middleware `{middleware_name}` is not a FunctionMiddleware and "
+                                f"cannot be used with function groups. "
+                                f"Only FunctionMiddleware types support function-specific wrapping.")
             middleware_instances.append(middleware_obj)
 
         # Configure middleware for the function group
@@ -1032,7 +1032,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             middleware_info = self._registry.get_function_middleware(type(config))
 
-            middleware_instance = await self._get_exit_stack().enter_async_context(middleware_info.build_fn(config, self))
+            middleware_instance = await self._get_exit_stack().enter_async_context(
+                middleware_info.build_fn(config, self))
 
             self._middleware[name] = ConfiguredMiddleware(config=config, instance=middleware_instance)
 
@@ -1220,7 +1221,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 # Instantiate middleware
                 elif component_instance.component_group == ComponentGroup.MIDDLEWARE:
                     await self.add_middleware(component_instance.name,
-                                             cast(MiddlewareBaseConfig, component_instance.config))
+                                              cast(MiddlewareBaseConfig, component_instance.config))
                 # Instantiate a function group
                 elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
                     await self.add_function_group(component_instance.name,

@@ -31,9 +31,9 @@ from nat.data_models.config import Config
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
-from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
