@@ -31,6 +31,20 @@ Service account authentication uses OAuth2 client credentials flow instead of th
 - **Container Deployments**: Containerized applications
 - **Any Headless Scenario**: Where browser interaction is not possible
 
+### Authentication Patterns
+
+This example demonstrates two service account authentication patterns:
+
+1. **Dual Authentication (Jira example)**: Requires both an OAuth2 service account token AND a service token
+   - Used by enterprise data MCP servers (such as Jira, GitLab)
+   - MCP server validates the OAuth2 service account token and uses the service token (service-specific token such as Jira service token or GitLab service token) to access backend APIs
+   - Two authentication headers sent with each request
+
+2. **Single Authentication (Jama Cache example)**: Requires only an OAuth2 service account token
+   - Used by custom MCP servers without service token delegation
+   - MCP server validates only the OAuth2 service account token
+   - Simpler authentication flow with one authentication header
+
 ## Prerequisites
 
 1. **MCP Server Access**: Access to an MCP server that supports service account authentication (for example, corporate Jira system via MCP)
@@ -51,54 +65,63 @@ uv pip install -e examples/MCP/service_account_auth_mcp
 
 ## Configuration
 
-This example includes a configuration file demonstrating service account authentication with a Jira MCP server. The configuration uses dual-header authentication (OAuth2 token + service-specific token), which is one possible pattern. Your service may only require the OAuth2 token.
+This example includes two configuration files demonstrating different service account authentication patterns:
+
+1. **`config-mcp-service-account-jira.yml`**: Demonstrates dual authentication (OAuth2 service account token + service token)
+2. **`config-mcp-service-account-jama.yml`**: Demonstrates single authentication (OAuth2 service account token only)
+
+Choose the configuration pattern that matches your MCP server's requirements.
 
 ### Environment Setup
 
-#### Required Environment Variables
+#### Required Environment Variables (Both Patterns)
 
 Set these environment variables for your OAuth2 service account:
+
+```bash
+# OAuth2 client credentials (required for both patterns)
+export SERVICE_ACCOUNT_CLIENT_ID="your-client-id"
+export SERVICE_ACCOUNT_CLIENT_SECRET="your-client-secret"
+
+# Service account token endpoint (required for both patterns)
+export SERVICE_ACCOUNT_TOKEN_URL="https://auth.example.com/service_account/token"
+
+# Service account scopes - space-separated (required for both patterns)
+export SERVICE_ACCOUNT_SCOPES="api.read api.write"
+
+# Custom token prefix for Authorization header (optional)
+# Example: "service_account_ssa" produces "Authorization: Bearer service_account_ssa:<token>"
+# Use empty string "" for standard "Authorization: Bearer <token>" format
+export AUTHORIZATION_TOKEN_PREFIX="service_account_ssa"
+```
+
+#### Pattern 1: Single Authentication (Jama Cache Example)
+
+For custom MCP servers that only require OAuth2 service account token validation:
+
+```bash
+# MCP server URL
+export CORPORATE_MCP_SERVICE_ACCOUNT_JAMA_URL="https://mcp.example.com/jama/mcp"
+```
+
+#### Pattern 2: Dual Authentication (Jira Example)
+
+For enterprise MCP servers that require both OAuth2 service account token and service token:
 
 ```bash
 # MCP server URL
 export CORPORATE_MCP_SERVICE_ACCOUNT_JIRA_URL="https://mcp.example.com/jira/mcp"
 
-# OAuth2 client credentials
-export SERVICE_ACCOUNT_CLIENT_ID="your-client-id"
-export SERVICE_ACCOUNT_CLIENT_SECRET="your-client-secret"
+# Custom header name for service token
+# Example: "X-Service-Account-Token: <your-service_token>"
+export SERVICE_TOKEN_HEADER="X-Service-Account-Token"
 
-# Service account token endpoint
-export SERVICE_ACCOUNT_TOKEN_URL="https://auth.example.com/service_account/token"
-
-# Service account scopes (space-separated)
-export SERVICE_ACCOUNT_SCOPES="api.read api.write"
+# Service-specific token for accessing backend APIs
+export JIRA_SERVICE_TOKEN="your-jira-service-token"
 ```
 
 :::{important}
 All environment variables here are for demonstration purposes. You must set the environment variables for your actual service account and MCP server URL.
-:::
-
-#### Optional Environment Variables
-
-For dual-header authentication patterns you may need to set additional environment variables.
-
-```bash
-# Custom token prefix for Authorization header. This is used to prefix the token in the Authorization header:
-# Example: "Authorization: Bearer: service_account_myauth:<access_token>"
-export AUTHORIZATION_TOKEN_PREFIX="service_account_myauth"
-
-# Custom header name for service token. This is used to add an additional header to the request:
-# Example: "MyCompany-Service-Account-Token: <your-service_token>"
-export SERVICE_TOKEN_HEADER="MyCompany-Service-Account-Token"
-
-# Service-specific token. This is used to add an additional header to the request:
-# Example: "MyCompany-Service-Account-Token: <your-service_token>"
-export JIRA_SERVICE_TOKEN="your-service-token"
-
-```
-
-:::{important}
-All environment variables here are for demonstration purposes. You must set the environment variables for your actual service account.
 :::
 
 :::{warning}
@@ -107,7 +130,16 @@ Do not commit these environment variables to version control.
 
 ## Run the Workflow
 
-After setting the required environment variables, run the workflow:
+After setting the required environment variables, run the workflow with the appropriate configuration file:
+
+### Single Authentication Pattern (Jama Cache)
+
+```bash
+nat run --config_file examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jama.yml \
+    --input "Search for requirements related to authentication in Jama"
+```
+
+### Dual Authentication Pattern (Jira)
 
 ```bash
 nat run --config_file examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jira.yml \
@@ -130,12 +162,29 @@ For common issues and solutions, see the [Troubleshooting section](../../../docs
 
 ## Adapting This Example
 
+### Choosing the Right Pattern
+
+First, determine which authentication pattern your MCP server requires:
+
+- **Use Single Authentication (Jama Cache pattern)** if your MCP server:
+  - Only validates OAuth2 service account tokens
+  - Does not require service tokens
+  - Is a custom MCP server without backend system delegation
+
+- **Use Dual Authentication (Jira pattern)** if your MCP server:
+  - Requires both OAuth2 service account token validation and service tokens
+  - Delegates access to backend systems (such as Jira, GitLab)
+  - Needs dual-header authentication
+
+### Adapting the Configuration
+
 To use this example with your own service:
 
-1. Update the environment variables to match your service's requirements
-2. Modify the MCP server URL in the configuration file
-3. Adjust authentication headers if your service uses different patterns (see the [Authentication Patterns](../../../docs/source/workflows/mcp/mcp-service-account-auth.md#authentication-patterns) section)
-4. Remove optional environment variables if your service only requires OAuth2 Bearer token
+1. Choose the appropriate configuration file as your starting point
+2. Update the environment variables to match your service's requirements
+3. Modify the MCP server URL in the configuration file
+4. For dual authentication, configure the service token header name and service token
+5. Adjust the token prefix if your service uses a different format
 
 For detailed configuration options and authentication patterns, refer to the [MCP Service Account Authentication](../../../docs/source/workflows/mcp/mcp-service-account-auth.md) documentation.
 
