@@ -174,4 +174,4 @@ Installing from source is required to run any examples provided in the repositor
 
 ## Next Steps
 
-* Follow the [Quick Start Guide](./index.md) to get started running workflows with NeMo Agent toolkit.
+* Follow the [Quick Start Guide](./quick-start.md) to get started running workflows with NeMo Agent toolkit.

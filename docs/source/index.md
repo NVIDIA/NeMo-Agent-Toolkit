@@ -122,7 +122,7 @@ Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
 Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
 Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
 Adding a Custom MCP Server Worker <./extend/mcp-server.md>
-Test With nat_test_llm <./test-with-nat-test-llm.md>
+Test With nat_test_llm <./extend/test-with-nat-test-llm.md>
 ```
 
 ```{toctree}
