@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import patch
+
 import pytest
 from httpx_sse import aconnect_sse
 
@@ -146,6 +148,48 @@ def test_nat_chat_response_chunk_create_streaming_chunk():
     assert chunk.choices[0].finish_reason == "stop"
 
 
+def test_nat_chat_response_chunk_create_streaming_chunk_with_weave_id():
+    """Test create_streaming_chunk method with weave_call_id"""
+    # Test with explicit weave_call_id
+    chunk = ChatResponseChunk.create_streaming_chunk(content="Hello with weave",
+                                                     role=UserMessageContentRoleType.ASSISTANT,
+                                                     weave_call_id="explicit-weave-id")
+
+    assert chunk.choices[0].delta.content == "Hello with weave"
+    assert chunk.choices[0].delta.role == UserMessageContentRoleType.ASSISTANT
+    assert chunk.weave_call_id == "explicit-weave-id"
+    assert chunk.object == "chat.completion.chunk"
+
+    # Test with context-based weave_call_id
+    with patch('nat.builder.context.Context.get') as mock_context:
+        mock_context.return_value.weave_call_id = "context-weave-id"
+
+        chunk = ChatResponseChunk.create_streaming_chunk(content="Hello from context",
+                                                         role=UserMessageContentRoleType.ASSISTANT)
+
+        assert chunk.choices[0].delta.content == "Hello from context"
+        assert chunk.weave_call_id == "context-weave-id"
+
+
+def test_nat_chat_response_chunk_from_string_with_weave_id():
+    """Test ChatResponseChunk.from_string method with weave_call_id"""
+    # Test with explicit weave_call_id
+    chunk = ChatResponseChunk.from_string("Hello", weave_call_id="explicit-chunk-weave-id")
+
+    assert chunk.weave_call_id == "explicit-chunk-weave-id"
+    assert chunk.object == "chat.completion.chunk"
+    assert chunk.choices[0].delta.content == "Hello"
+
+    # Test with context-based weave_call_id
+    with patch('nat.builder.context.Context.get') as mock_context:
+        mock_context.return_value.weave_call_id = "context-chunk-weave-id"
+
+        chunk = ChatResponseChunk.from_string("Hello from context")
+
+        assert chunk.weave_call_id == "context-chunk-weave-id"
+        assert chunk.choices[0].delta.content == "Hello from context"
+
+
 def test_nat_chat_response_timestamp_serialization():
     """Test that timestamps are serialized as Unix timestamps for OpenAI compatibility"""
     import datetime
@@ -166,6 +210,55 @@ def test_nat_chat_response_timestamp_serialization():
     chunk = ChatResponseChunk.from_string("Hello", created=test_time)
     chunk_json = chunk.model_dump()
     assert chunk_json["created"] == 1704110400
+
+
+def test_nat_chat_response_from_string_with_weave_id():
+    """Test ChatResponse.from_string method with weave_call_id integration"""
+    # Test with explicit weave_call_id
+    usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
+    response = ChatResponse.from_string("Hello with weave", usage=usage, weave_call_id="explicit-response-weave-id")
+
+    assert response.choices[0].message.content == "Hello with weave"
+    assert response.weave_call_id == "explicit-response-weave-id"
+    assert response.object == "chat.completion"
+
+    # Test with context-based weave_call_id
+    with patch('nat.builder.context.Context.get') as mock_context:
+        mock_context.return_value.weave_call_id = "context-response-weave-id"
+
+        response = ChatResponse.from_string("Hello from context", usage=usage)
+
+        assert response.choices[0].message.content == "Hello from context"
+        assert response.weave_call_id == "context-response-weave-id"
+
+    # Test fallback behavior when context is unavailable
+    with patch('nat.builder.context.Context.get', side_effect=Exception("No context")):
+        response = ChatResponse.from_string("Hello without context", usage=usage)
+
+        assert response.choices[0].message.content == "Hello without context"
+        assert response.weave_call_id is None
+
+
+def test_nat_openai_compatibility_weave_id_serialization():
+    """Test that weave_call_id is properly serialized in OpenAI-compatible responses"""
+    # Test ChatResponse serialization with weave_call_id
+    usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
+    response = ChatResponse.from_string("Test response", usage=usage, weave_call_id="serialization-test-weave-id")
+
+    json_data = response.model_dump()
+    assert json_data["weave_call_id"] == "serialization-test-weave-id"
+    assert "choices" in json_data
+    assert "usage" in json_data
+
+    # Test ChatResponseChunk serialization with weave_call_id
+    chunk = ChatResponseChunk.create_streaming_chunk(content="Test chunk",
+                                                     role=UserMessageContentRoleType.ASSISTANT,
+                                                     weave_call_id="chunk-serialization-weave-id")
+
+    chunk_json = chunk.model_dump()
+    assert chunk_json["weave_call_id"] == "chunk-serialization-weave-id"
+    assert chunk_json["object"] == "chat.completion.chunk"
+    assert "choices" in chunk_json
 
 
 @pytest.mark.parametrize("openai_api_v1_path", ["/v1/chat/completions", None])
