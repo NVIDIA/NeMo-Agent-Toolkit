@@ -19,6 +19,7 @@ from datetime import datetime
 from datetime import timedelta
 
 import httpx
+from pydantic import SecretStr
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class ServiceAccountTokenClient:
     def __init__(
         self,
         client_id: str,
-        client_secret: str,
+        client_secret: SecretStr,
         token_url: str,
         scopes: str,
         token_cache_buffer_seconds: int = 300,
@@ -43,7 +44,7 @@ class ServiceAccountTokenClient:
 
         Args:
             client_id: OAuth2 client identifier
-            client_secret: OAuth2 client secret
+            client_secret: OAuth2 client secret (SecretStr)
             token_url: OAuth2 token endpoint URL
             scopes: Space-separated list of scopes
             token_cache_buffer_seconds: Seconds before expiry to refresh (default: 5 min)
@@ -55,7 +56,7 @@ class ServiceAccountTokenClient:
         self.token_cache_buffer_seconds = token_cache_buffer_seconds
 
         # Token cache
-        self._cached_token: str | None = None
+        self._cached_token: SecretStr | None = None
         self._token_expires_at: datetime | None = None
         self._lock = None  # Will be initialized as asyncio.Lock when needed
 
@@ -74,12 +75,12 @@ class ServiceAccountTokenClient:
         buffer = timedelta(seconds=self.token_cache_buffer_seconds)
         return datetime.now() < (self._token_expires_at - buffer)
 
-    async def get_access_token(self) -> str:
+    async def get_access_token(self) -> SecretStr:
         """
         Get OAuth2 access token, using cache if valid.
 
         Returns:
-            Access token string
+            Access token as SecretStr
 
         Raises:
             RuntimeError: If token acquisition fails
@@ -87,6 +88,7 @@ class ServiceAccountTokenClient:
         # Fast path: check cache without lock
         if self._is_token_valid():
             logger.debug("Using cached service account token")
+            assert self._cached_token is not None  # _is_token_valid() ensures this
             return self._cached_token
 
         # Slow path: acquire lock and refresh token
@@ -95,23 +97,24 @@ class ServiceAccountTokenClient:
             # Double-check after acquiring lock
             if self._is_token_valid():
                 logger.debug("Using cached service account token (acquired during lock wait)")
+                assert self._cached_token is not None  # _is_token_valid() ensures this
                 return self._cached_token
 
             logger.info("Fetching new service account token")
             return await self._fetch_new_token()
 
-    async def _fetch_new_token(self) -> str:
+    async def _fetch_new_token(self) -> SecretStr:
         """
         Fetch a new token from the OAuth2 token endpoint.
 
         Returns:
-            New access token
+            New access token as SecretStr
 
         Raises:
             RuntimeError: If token request fails
         """
         # Encode credentials for Basic authentication
-        credentials = f"{self.client_id}:{self.client_secret}"
+        credentials = f"{self.client_id}:{self.client_secret.get_secret_value()}"
         encoded_credentials = base64.b64encode(credentials.encode()).decode()
 
         headers = {"Authorization": f"Basic {encoded_credentials}", "Content-Type": "application/x-www-form-urlencoded"}
@@ -126,11 +129,11 @@ class ServiceAccountTokenClient:
                     token_data = response.json()
 
                     # Cache the token
-                    self._cached_token = token_data["access_token"]
+                    self._cached_token = SecretStr(token_data["access_token"])
                     expires_in = token_data.get("expires_in", 3600)
                     self._token_expires_at = datetime.now() + timedelta(seconds=expires_in)
 
-                    logger.info(f"Service account token acquired (expires in {expires_in}s)")
+                    logger.info("Service account token acquired (expires in %ss)", expires_in)
                     return self._cached_token
 
                 elif response.status_code == 401:

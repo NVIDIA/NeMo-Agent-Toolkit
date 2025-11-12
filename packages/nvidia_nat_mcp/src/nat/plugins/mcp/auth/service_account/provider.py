@@ -52,7 +52,7 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
         # Initialize token client
         self._token_client = ServiceAccountTokenClient(
             client_id=config.client_id,
-            client_secret=config.client_secret.get_secret_value(),
+            client_secret=config.client_secret,
             token_url=config.token_url,
             scopes=config.scopes,
             token_cache_buffer_seconds=config.token_cache_buffer_seconds,
@@ -78,10 +78,10 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
 
         # Format Authorization header value
         if self.config.token_prefix:
-            bearer_token = f"{self.config.token_prefix}:{access_token}"
+            bearer_token = f"{self.config.token_prefix}:{access_token.get_secret_value()}"
         else:
             # Standard Bearer token (no custom prefix)
-            bearer_token = access_token
+            bearer_token = access_token.get_secret_value()
 
         # Build credentials list using HeaderCred
         credentials: list[Credential] = [HeaderCred(name="Authorization", value=SecretStr(f"Bearer {bearer_token}"))]
