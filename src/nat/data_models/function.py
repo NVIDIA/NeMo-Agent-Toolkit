@@ -27,13 +27,14 @@ from .component import ComponentScope
 class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     """Base configuration for functions.
 
-    Functions are the core building blocks for defining workflow logic.
+    Attributes:
+        middleware: List of function middleware names to apply to this function.
+            These must match names defined in the `middleware` section of the YAML configuration.
     """
-    scope: ComponentScope = Field(
-        default=ComponentScope.PER_USER,
-        description="The scope of the function. Default to per-user. If set to shared, the function instance will be \
-        shared across all users once it is built. If set to per-user, each user will have their own separate instance \
-        of the function.")
+    middleware: list[str] = Field(
+        default_factory=list,
+        description="List of function middleware names to apply to this function in order",
+    )
 
 
 class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
@@ -54,6 +55,10 @@ class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
         description="The scope of the function group. Default to per-user. If set to shared, the function group \
         instance will be shared across all users once it is built. If set to per-user, each user will have their own \
         separate instance of the function group.")
+    middleware: list[str] = Field(
+        default_factory=list,
+        description="List of function middleware names to apply to all functions in this group",
+    )
 
     @field_validator("include", "exclude")
     @classmethod
