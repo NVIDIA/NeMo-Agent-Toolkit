@@ -175,7 +175,7 @@ authentication:
 ```
 
 This produces the following header:
-```
+```text
 Authorization: Bearer service_account_ssa:<access_token>
 ```
 
@@ -197,7 +197,7 @@ authentication:
 ```
 
 This produces the following headers:
-```
+```text
 Authorization: Bearer service_account_ssa:<access_token>
 X-Service-Account-Token: <service_token>
 ```
@@ -245,26 +245,25 @@ The Service Account Authentication Example, `examples/MCP/service_account_auth_m
 See the `examples/MCP/service_account_auth_mcp/README.md` for instructions on how to run the example.
 
 ## Troubleshooting
-
-**Error: "`client_id` is required"**
+### Error: "`client_id` is required"
 
 Ensure the `client_id` field is set in your configuration or the corresponding environment variable is defined.
 
-**Error: "Invalid service account credentials"**
+### Error: "Invalid service account credentials"
 
 Verify your client ID and client secret are correct, the token endpoint URL is reachable, and your service account has necessary permissions.
 
-**Error: "Service account rate limit exceeded"**
+### Error: "Service account rate limit exceeded"
 
 Wait before retrying. Consider increasing `token_cache_buffer_seconds` to reduce token refresh frequency.
 
-**Error: "SSL: CERTIFICATE_VERIFY_FAILED"**
+### Error: "SSL: CERTIFICATE_VERIFY_FAILED"
 
 The MCP server uses certificates from an internal Certificate Authority. Install your organization's CA certificates in your system's trust store.
 
 The MCP Python SDK does not currently support disabling SSL verification. See [MCP Python SDK Issue #870](https://github.com/modelcontextprotocol/python-sdk/issues/870) for updates.
 
-**Authentication works locally but fails in CI/CD**
+### Authentication works locally but fails in CI/CD
 
 Verify all environment variables are set in your CI/CD platform and check secret management configuration.
 

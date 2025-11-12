@@ -61,7 +61,7 @@ Set these environment variables for your OAuth2 service account:
 
 ```bash
 # MCP server URL
-export CORPORATE_MCP_JIRA_URL="https://mcp.example.com/jira/mcp"
+export CORPORATE_MCP_SERVICE_ACCOUNT_JIRA_URL="https://mcp.example.com/jira/mcp"
 
 # OAuth2 client credentials
 export SERVICE_ACCOUNT_CLIENT_ID="your-client-id"
