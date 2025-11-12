@@ -46,7 +46,7 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-405b-instruct
+    model_name: meta/llama-3.3-70b-instruct
     temperature: 0.5
     max_tokens: 4000
   bedrock_llm:
