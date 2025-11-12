@@ -29,8 +29,8 @@ from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import FunctionGroupRef
-from nat.data_models.component_ref import FunctionInterceptRef
 from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import MemoryRef
 from nat.data_models.component_ref import ObjectStoreRef
@@ -41,7 +41,7 @@ from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
-from nat.data_models.function_intercept import FunctionInterceptBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
@@ -50,7 +50,7 @@ from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
-from nat.intercepts.function_intercept import FunctionIntercept
+from nat.middleware.middleware import Middleware
 from nat.memory.interfaces import MemoryEditor
 from nat.object_store.interfaces import ObjectStore
 from nat.retriever.interface import Retriever
@@ -293,54 +293,52 @@ class Builder(ABC):
         pass
 
     @abstractmethod
-    async def add_function_intercept(self, name: str | FunctionInterceptRef,
-                                     config: FunctionInterceptBaseConfig) -> FunctionIntercept:
-        """Add a function intercept to the builder.
+    async def add_middleware(self, name: str | MiddlewareRef, config: MiddlewareBaseConfig) -> Middleware:
+        """Add middleware to the builder.
 
         Args:
-            name: The name or reference for the function intercept
-            config: The configuration for the function intercept
+            name: The name or reference for the middleware
+            config: The configuration for the middleware
 
         Returns:
-            The built function intercept instance
+            The built middleware instance
         """
         pass
 
     @abstractmethod
-    async def get_function_intercept(self, intercept_name: str | FunctionInterceptRef) -> FunctionIntercept:
-        """Get a built function intercept by name.
+    async def get_middleware(self, middleware_name: str | MiddlewareRef) -> Middleware:
+        """Get built middleware by name.
 
         Args:
-            intercept_name: The name or reference of the function intercept
+            middleware_name: The name or reference of the middleware
 
         Returns:
-            The built function intercept instance
+            The built middleware instance
         """
         pass
 
     @abstractmethod
-    def get_function_intercept_config(self, intercept_name: str | FunctionInterceptRef) -> FunctionInterceptBaseConfig:
-        """Get the configuration for a function intercept.
+    def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> MiddlewareBaseConfig:
+        """Get the configuration for middleware.
 
         Args:
-            intercept_name: The name or reference of the function intercept
+            middleware_name: The name or reference of the middleware
 
         Returns:
-            The configuration for the function intercept
+            The configuration for the middleware
         """
         pass
 
-    async def get_function_intercepts(self,
-                                      intercept_names: Sequence[str | FunctionInterceptRef]) -> list[FunctionIntercept]:
-        """Get multiple function intercepts by name.
+    async def get_middleware_list(self, middleware_names: Sequence[str | MiddlewareRef]) -> list[Middleware]:
+        """Get multiple middleware by name.
 
         Args:
-            intercept_names: The names or references of the function intercepts
+            middleware_names: The names or references of the middleware
 
         Returns:
-            List of built function intercept instances
+            List of built middleware instances
         """
-        tasks = [self.get_function_intercept(name) for name in intercept_names]
+        tasks = [self.get_middleware(name) for name in middleware_names]
         return list(await asyncio.gather(*tasks, return_exceptions=False))
 
 

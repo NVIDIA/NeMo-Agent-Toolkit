@@ -34,9 +34,9 @@ from nat.builder.function_info import FunctionInfo
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
-from nat.intercepts.function_intercept import FunctionIntercept
-from nat.intercepts.function_intercept import FunctionInterceptChain
-from nat.intercepts.function_intercept import FunctionInterceptContext
+from nat.middleware.function_middleware import FunctionMiddlewareChain
+from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import Middleware
 
 _InvokeFnT = Callable[[InputT], Awaitable[SingleOutputT]]
 _StreamFnT = Callable[[InputT], AsyncGenerator[StreamingOutputT]]
@@ -67,9 +67,9 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         self.description = description
         self.instance_name = instance_name or config.type
         self._context = Context.get()
-        self._configured_intercepts: tuple[FunctionIntercept, ...] = tuple()
-        self._intercepted_single: _InvokeFnT | None = None
-        self._intercepted_stream: _StreamFnT | None = None
+        self._configured_middleware: tuple[Middleware, ...] = tuple()
+        self._middlewared_single: _InvokeFnT | None = None
+        self._middlewared_stream: _StreamFnT | None = None
 
     def convert(self, value: typing.Any, to_type: type[_T]) -> _T:
         """
@@ -115,36 +115,36 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         return self._converter.try_convert(value, to_type=to_type)
 
     @property
-    def intercepts(self) -> tuple[FunctionIntercept, ...]:
-        """Return the currently configured intercept chain."""
+    def middleware(self) -> tuple[Middleware, ...]:
+        """Return the currently configured middleware chain."""
 
-        return self._configured_intercepts
+        return self._configured_middleware
 
-    def configure_intercepts(self, intercepts: Sequence[FunctionIntercept] | None = None) -> None:
-        """Attach an ordered list of intercepts to this function instance."""
+    def configure_middleware(self, middleware: Sequence[Middleware] | None = None) -> None:
+        """Attach an ordered list of middleware to this function instance."""
 
-        intercepts_tuple: tuple[FunctionIntercept, ...] = tuple(intercepts or ())
+        middleware_tuple: tuple[Middleware, ...] = tuple(middleware or ())
 
-        self._configured_intercepts = intercepts_tuple
+        self._configured_middleware = middleware_tuple
 
-        if not intercepts_tuple:
-            self._intercepted_single = None
-            self._intercepted_stream = None
+        if not middleware_tuple:
+            self._middlewared_single = None
+            self._middlewared_stream = None
             return
 
-        logger.info(f"Building intercepts for function '{self.instance_name}' in order of: {intercepts_tuple}")
+        logger.info(f"Building middleware for function '{self.instance_name}' in order of: {middleware_tuple}")
 
-        context = FunctionInterceptContext(name=self.instance_name,
+        context = FunctionMiddlewareContext(name=self.instance_name,
                                            config=self.config,
                                            description=self.description,
                                            input_schema=self.input_schema,
                                            single_output_schema=self.single_output_schema,
                                            stream_output_schema=self.streaming_output_schema)
 
-        chain = FunctionInterceptChain(intercepts=intercepts_tuple, context=context)
+        chain = FunctionMiddlewareChain(middleware=middleware_tuple, context=context)
 
-        self._intercepted_single = chain.build_single(self._ainvoke) if self.has_single_output else None
-        self._intercepted_stream = chain.build_stream(self._astream) if self.has_streaming_output else None
+        self._middlewared_single = chain.build_single(self._ainvoke) if self.has_single_output else None
+        self._middlewared_stream = chain.build_stream(self._astream) if self.has_streaming_output else None
 
     @abstractmethod
     async def _ainvoke(self, value: InputT) -> SingleOutputT:
@@ -188,7 +188,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             try:
                 converted_input: InputT = self._convert_input(value)
 
-                invoke_callable = self._intercepted_single or self._ainvoke
+                invoke_callable = self._middlewared_single or self._ainvoke
 
                 result = await invoke_callable(converted_input)
 
@@ -283,7 +283,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                 # Collect streaming outputs to capture the final result
                 final_output: list[typing.Any] = []
 
-                stream_callable = self._intercepted_stream or self._astream
+                stream_callable = self._middlewared_stream or self._astream
 
                 async for data in stream_callable(converted_input):
                     if to_type is not None and not isinstance(data, to_type):
@@ -400,7 +400,7 @@ class FunctionGroup:
                  config: FunctionGroupBaseConfig,
                  instance_name: str | None = None,
                  filter_fn: Callable[[Sequence[str]], Awaitable[Sequence[str]]] | None = None,
-                 intercepts: Sequence[FunctionIntercept] | None = None):
+                 middleware: Sequence[Middleware] | None = None):
         """
         Creates a new function group.
 
@@ -413,15 +413,15 @@ class FunctionGroup:
         filter_fn : Callable[[Sequence[str]], Awaitable[Sequence[str]]] | None, optional
             A callback function to additionally filter the functions in the function group dynamically when
             the functions are accessed via any accessor method.
-        intercepts : Sequence[FunctionIntercept] | None, optional
-            The intercept instances to apply to all functions in this group.
+        middleware : Sequence[Middleware] | None, optional
+            The middleware instances to apply to all functions in this group.
         """
         self._config = config
         self._instance_name = instance_name or config.type
         self._functions: dict[str, Function] = dict()
         self._filter_fn = filter_fn
         self._per_function_filter_fn: dict[str, Callable[[str], Awaitable[bool]]] = dict()
-        self._intercepts: tuple[FunctionIntercept, ...] = tuple(intercepts or ())
+        self._middleware: tuple[Middleware, ...] = tuple(middleware or ())
 
     def add_function(self,
                      name: str,
@@ -470,9 +470,9 @@ class FunctionGroup:
         info = FunctionInfo.from_fn(fn, input_schema=input_schema, description=description, converters=converters)
         full_name = self._get_fn_name(name)
         lambda_fn = LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name=full_name)
-        # Configure intercepts from the function group if any
-        if self._intercepts:
-            lambda_fn.configure_intercepts(self._intercepts)
+        # Configure middleware from the function group if any
+        if self._middleware:
+            lambda_fn.configure_middleware(self._middleware)
         self._functions[name] = lambda_fn
         if filter_fn:
             self._per_function_filter_fn[name] = filter_fn
@@ -763,23 +763,23 @@ class FunctionGroup:
         return self._instance_name
 
     @property
-    def intercepts(self) -> tuple[FunctionIntercept, ...]:
+    def middleware(self) -> tuple[Middleware, ...]:
         """
-        Returns the intercepts configured for this function group.
+        Returns the middleware configured for this function group.
         """
-        return self._intercepts
+        return self._middleware
 
-    def configure_intercepts(self, intercepts: Sequence[FunctionIntercept] | None = None) -> None:
+    def configure_middleware(self, middleware: Sequence[Middleware] | None = None) -> None:
         """
-        Configure the intercepts for this function group.
-        These intercepts will be applied to all functions added to the group.
+        Configure the middleware for this function group.
+        These middleware will be applied to all functions added to the group.
 
         Parameters
         ----------
-        intercepts : Sequence[FunctionIntercept] | None
-            The intercepts to configure for the function group.
+        middleware : Sequence[Middleware] | None
+            The middleware to configure for the function group.
         """
-        self._intercepts = tuple(intercepts or ())
-        # Update existing functions with the new intercepts
+        self._middleware = tuple(middleware or ())
+        # Update existing functions with the new middleware
         for func in self._functions.values():
-            func.configure_intercepts(self._intercepts)
+            func.configure_middleware(self._middleware)

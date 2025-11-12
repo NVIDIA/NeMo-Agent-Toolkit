@@ -29,9 +29,9 @@ from nat.cli.type_registry import FrontEndRegisteredCallableT
 from nat.cli.type_registry import FunctionBuildCallableT
 from nat.cli.type_registry import FunctionGroupBuildCallableT
 from nat.cli.type_registry import FunctionGroupRegisteredCallableT
-from nat.cli.type_registry import FunctionInterceptBuildCallableT
-from nat.cli.type_registry import FunctionInterceptRegisteredCallableT
 from nat.cli.type_registry import FunctionRegisteredCallableT
+from nat.cli.type_registry import MiddlewareBuildCallableT
+from nat.cli.type_registry import MiddlewareRegisteredCallableT
 from nat.cli.type_registry import LLMClientBuildCallableT
 from nat.cli.type_registry import LLMClientRegisteredCallableT
 from nat.cli.type_registry import LLMProviderBuildCallableT
@@ -65,7 +65,7 @@ from nat.data_models.evaluator import EvaluatorBaseConfigT
 from nat.data_models.front_end import FrontEndConfigT
 from nat.data_models.function import FunctionConfigT
 from nat.data_models.function import FunctionGroupConfigT
-from nat.data_models.function_intercept import FunctionInterceptBaseConfigT
+from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.llm import LLMBaseConfigT
 from nat.data_models.memory import MemoryBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfigT
@@ -218,34 +218,33 @@ def register_function_group(config_type: type[FunctionGroupConfigT],
     return register_function_group_inner
 
 
-def register_function_intercept(config_type: type[FunctionInterceptBaseConfigT]):
+def register_middleware(config_type: type[MiddlewareBaseConfigT]):
     """
-    Register a function intercept middleware component.
+    Register a middleware component.
 
-    Function intercepts provide middleware-style wrapping of function calls with
+    Middleware provides middleware-style wrapping of calls with
     preprocessing and postprocessing logic. They are built as components that can
-    be configured in YAML and referenced by name in function configurations.
+    be configured in YAML and referenced by name in configurations.
 
     Args:
-        config_type: The function intercept configuration type to register
+        config_type: The middleware configuration type to register
 
     Returns:
         A decorator that wraps the build function as an async context manager
     """
 
-    def register_function_intercept_inner(
-        fn: FunctionInterceptBuildCallableT[FunctionInterceptBaseConfigT]
-    ) -> FunctionInterceptRegisteredCallableT[FunctionInterceptBaseConfigT]:
+    def register_middleware_inner(
+            fn: MiddlewareBuildCallableT[MiddlewareBaseConfigT]) -> MiddlewareRegisteredCallableT[MiddlewareBaseConfigT]:
         from .type_registry import GlobalTypeRegistry
-        from .type_registry import RegisteredFunctionInterceptInfo
+        from .type_registry import RegisteredMiddlewareInfo
 
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=ComponentEnum.FUNCTION_INTERCEPT)
+                                                                component_type=ComponentEnum.MIDDLEWARE)
 
-        GlobalTypeRegistry.get().register_function_intercept(
-            RegisteredFunctionInterceptInfo(
+        GlobalTypeRegistry.get().register_middleware(
+            RegisteredMiddlewareInfo(
                 full_type=config_type.full_type,
                 config_type=config_type,
                 build_fn=context_manager_fn,
@@ -254,7 +253,11 @@ def register_function_intercept(config_type: type[FunctionInterceptBaseConfigT])
 
         return context_manager_fn
 
-    return register_function_intercept_inner
+    return register_middleware_inner
+
+
+# Compatibility alias for backwards compatibility
+register_function_middleware = register_middleware
 
 
 def register_llm_provider(config_type: type[LLMBaseConfigT]):

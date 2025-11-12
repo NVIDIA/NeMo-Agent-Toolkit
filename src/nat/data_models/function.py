@@ -27,12 +27,12 @@ class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     """Base configuration for functions.
 
     Attributes:
-        intercepts: List of function intercept names to apply to this function.
-            These must match names defined in the `function_intercepts` section of the YAML configuration.
+        middleware: List of function middleware names to apply to this function.
+            These must match names defined in the `middleware` section of the YAML configuration.
     """
-    intercepts: list[str] = Field(
+    middleware: list[str] = Field(
         default_factory=list,
-        description="List of function intercept names to apply to this function in order",
+        description="List of function middleware names to apply to this function in order",
     )
 
 
@@ -49,9 +49,9 @@ class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
         default_factory=list,
         description="The list of function names which should be excluded from default access to the group",
     )
-    intercepts: list[str] = Field(
+    middleware: list[str] = Field(
         default_factory=list,
-        description="List of function intercept names to apply to all functions in this group",
+        description="List of function middleware names to apply to all functions in this group",
     )
 
     @field_validator("include", "exclude")

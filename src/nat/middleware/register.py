@@ -12,24 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Registration module for built-in function intercepts."""
+"""Registration module for built-in middleware."""
 
 from __future__ import annotations
 
-from nat.cli.register_workflow import register_function_intercept
-from nat.intercepts.cache_intercept import CacheIntercept
-from nat.intercepts.cache_intercept import CacheInterceptConfig
+from nat.cli.register_workflow import register_middleware
+from nat.middleware.cache_middleware import CacheMiddleware
+from nat.middleware.cache_middleware import CacheMiddlewareConfig
 
 
-@register_function_intercept(config_type=CacheInterceptConfig)
-async def cache_intercept(config: CacheInterceptConfig, builder):
-    """Build a cache intercept from configuration.
+@register_middleware(config_type=CacheMiddlewareConfig)
+async def cache_middleware(config: CacheMiddlewareConfig, builder):
+    """Build a cache middleware from configuration.
 
     Args:
-        config: The cache intercept configuration
+        config: The cache middleware configuration
         builder: The workflow builder (unused but required by component pattern)
 
     Yields:
-        A configured cache intercept instance
+        A configured cache middleware instance
     """
-    yield CacheIntercept(enabled_mode=config.enabled_mode, similarity_threshold=config.similarity_threshold)
+    yield CacheMiddleware(enabled_mode=config.enabled_mode, similarity_threshold=config.similarity_threshold)

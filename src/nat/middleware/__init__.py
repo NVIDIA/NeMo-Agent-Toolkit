@@ -12,22 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Function intercept implementations for NeMo Agent Toolkit."""
+"""Middleware implementations for NeMo Agent Toolkit."""
 
-from nat.intercepts.cache_intercept import CacheIntercept
-from nat.intercepts.function_intercept import CallNext
-from nat.intercepts.function_intercept import CallNextStream
-from nat.intercepts.function_intercept import FunctionIntercept
-from nat.intercepts.function_intercept import FunctionInterceptChain
-from nat.intercepts.function_intercept import FunctionInterceptContext
-from nat.intercepts.function_intercept import validate_intercepts
+from nat.middleware.cache_middleware import CacheMiddleware
+from nat.middleware.function_middleware import FunctionMiddleware
+from nat.middleware.function_middleware import FunctionMiddlewareChain
+from nat.middleware.function_middleware import validate_middleware
+from nat.middleware.middleware import CallNext
+from nat.middleware.middleware import CallNextStream
+from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import Middleware
 
 __all__ = [
-    "CacheIntercept",
+    "CacheMiddleware",
     "CallNext",
     "CallNextStream",
-    "FunctionIntercept",
-    "FunctionInterceptChain",
-    "FunctionInterceptContext",
-    "validate_intercepts",
+    "FunctionMiddlewareContext",
+    "Middleware",
+    "FunctionMiddleware",
+    "FunctionMiddlewareChain",
+    "validate_middleware",
 ]

@@ -19,13 +19,17 @@ from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
 
 
-class FunctionInterceptBaseConfig(TypedBaseModel, BaseModelRegistryTag):
-    """The base level config object for a function intercept.
+class MiddlewareBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+    """The base level config object for middleware.
 
-    Function intercepts provide middleware-style wrapping of function calls with
+    Middleware provides middleware-style wrapping of calls with
     preprocessing and postprocessing logic.
     """
     pass
 
 
-FunctionInterceptBaseConfigT = typing.TypeVar("FunctionInterceptBaseConfigT", bound=FunctionInterceptBaseConfig)
+MiddlewareBaseConfigT = typing.TypeVar("MiddlewareBaseConfigT", bound=MiddlewareBaseConfig)
+
+# Specialized type for function-specific middleware
+FunctionMiddlewareBaseConfig = MiddlewareBaseConfig
+FunctionMiddlewareBaseConfigT = MiddlewareBaseConfigT

@@ -15,57 +15,57 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Function Intercepts
+# Middleware
 
 ## Overview
 
-Function intercepts provide a powerful middleware mechanism for adding cross-cutting concerns to functions in the NeMo Agent Toolkit without modifying the function implementation itself. Like middleware in web frameworks (Express.js, FastAPI, etc.), intercepts wrap function calls with a four-phase pattern:
+Middleware provides a powerful mechanism for adding cross-cutting concerns to functions in the NeMo Agent Toolkit without modifying the function implementation itself. Like middleware in web frameworks (Express.js, FastAPI, etc.), middleware wraps function calls with a four-phase pattern:
 
 1. **Preprocess** - Inspect and modify inputs before calling next
 2. **Call Next** - Delegate to the next middleware or function
 3. **Postprocess** - Process, transform, or augment outputs
 4. **Continue** - Return or yield the final result
 
-Function intercepts are first-class components in NAT, configured in YAML and built by the workflow builder, just like retrievers, memory providers, and other components.
+Middleware components are first-class components in NAT, configured in YAML and built by the workflow builder, just like retrievers, memory providers, and other components.
 
 ## Key Concepts
 
-**Function Intercept Component**: A middleware component that:
-- Is configured in YAML with a `function_intercepts` section
+**Middleware Component**: A middleware component that:
+- Is configured in YAML with a `middleware` section
 - Is built by the workflow builder before functions and function groups
 - Wraps a function's `ainvoke` or `astream` methods
 - Can be applied to individual functions or entire function groups
 - Can preprocess inputs, postprocess outputs, or short-circuit execution
 
-**Middleware Chain**: A sequence of intercepts that execute in order, forming an "onion" structure where control flows in through preprocessing, down to the function, and back out through postprocessing.
+**Middleware Chain**: A sequence of middleware that execute in order, forming an "onion" structure where control flows in through preprocessing, down to the function, and back out through postprocessing.
 
-**Final Intercept**: A special middleware marked with `is_final=True` that can terminate the chain. Only one final intercept is allowed per function, and it must be the last in the chain.
+**Final Middleware**: A special middleware marked with `is_final=True` that can terminate the chain. Only one final middleware is allowed per function, and it must be the last in the chain.
 
 ## Component-Based Architecture
 
-Function intercepts follow the same component pattern as other NAT components:
+Middleware follows the same component pattern as other NAT components:
 
 ```yaml
-function_intercepts:
+middleware:
   my_cache:
     _type: cache
     enabled_mode: always
     similarity_threshold: 1.0
 
   my_logger:
-    _type: logging_intercept
+    _type: logging_middleware
     log_level: INFO
 
 functions:
   my_function:
     _type: my_function_type
-    intercepts: ["my_logger", "my_cache"]  # Apply intercepts in order
+    middleware: ["my_logger", "my_cache"]  # Apply middleware in order
     # Other function config...
 
 function_groups:
   my_function_group:
     _type: my_function_group_type
-    intercepts: ["my_logger", "my_cache"]  # Apply intercepts to all functions in the group
+    middleware: ["my_logger", "my_cache"]  # Apply middleware to all functions in the group
     # Other function group config...
 ```
 
@@ -76,47 +76,47 @@ async def my_function(config, builder):
     ...
 ```
 
-## Creating Custom Function Intercepts
+## Creating Custom Function Middleware
 
 ### Step 1: Define the Configuration
 
-Create a configuration class inheriting from `FunctionInterceptBaseConfig`:
+Create a configuration class inheriting from `FunctionMiddlewareBaseConfig`:
 
 ```python
 from pydantic import Field
-from nat.data_models.function_intercept import FunctionInterceptBaseConfig
+from nat.data_models.middleware import FunctionMiddlewareBaseConfig
 
 
-class LoggingInterceptConfig(FunctionInterceptBaseConfig, name="logging_intercept"):
-    """Configuration for logging intercept."""
+class LoggingMiddlewareConfig(FunctionMiddlewareBaseConfig, name="logging_middleware"):
+  """Configuration for logging middleware."""
 
-    log_level: str = Field(
-        default="INFO",
-        description="Logging level (DEBUG, INFO, WARNING, ERROR)"
-    )
-    include_inputs: bool = Field(
-        default=True,
-        description="Whether to log function inputs"
-    )
-    include_outputs: bool = Field(
-        default=True,
-        description="Whether to log function outputs"
-    )
+  log_level: str = Field(
+    default="INFO",
+    description="Logging level (DEBUG, INFO, WARNING, ERROR)"
+  )
+  include_inputs: bool = Field(
+    default=True,
+    description="Whether to log function inputs"
+  )
+  include_outputs: bool = Field(
+    default=True,
+    description="Whether to log function outputs"
+  )
 ```
 
-### Step 2: Implement the Intercept Class
+### Step 2: Implement the Middleware Class
 
-Create the intercept class inheriting from `FunctionIntercept`:
+Create the middleware class inheriting from `FunctionMiddleware`:
 
 ```python
-from nat.intercepts import FunctionIntercept, FunctionInterceptContext
-from nat.intercepts import CallNext, CallNextStream
+from nat.middleware import FunctionMiddleware, FunctionMiddlewareContext
+from nat.middleware import CallNext, CallNextStream
 import logging
 from typing import Any
 from collections.abc import AsyncIterator
 
 
-class LoggingIntercept(FunctionIntercept):
+class LoggingMiddleware(FunctionMiddleware):
     """Logging middleware that tracks function calls."""
 
     def __init__(self, *, log_level: str, include_inputs: bool, include_outputs: bool):
@@ -126,11 +126,11 @@ class LoggingIntercept(FunctionIntercept):
         self.include_inputs = include_inputs
         self.include_outputs = include_outputs
 
-    async def intercept_invoke(
+    async def function_middleware_invoke(
         self,
         value: Any,
         call_next: CallNext,
-        context: FunctionInterceptContext
+        context: FunctionMiddlewareContext
     ) -> Any:
         """Middleware for single-output invocations."""
         # Phase 1: Preprocess
@@ -147,11 +147,11 @@ class LoggingIntercept(FunctionIntercept):
         # Phase 4: Continue
         return result
 
-    async def intercept_stream(
+    async def function_middleware_stream(
         self,
         value: Any,
         call_next: CallNextStream,
-        context: FunctionInterceptContext
+        context: FunctionMiddlewareContext
     ) -> AsyncIterator[Any]:
         """Middleware for streaming invocations."""
         # Phase 1: Preprocess
@@ -175,22 +175,22 @@ Create a registration module following the idiomatic pattern:
 
 ```python
 from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_function_intercept
-from .logging_intercept import LoggingIntercept, LoggingInterceptConfig
+from nat.cli.register_workflow import register_middleware
+from .logging_middleware import LoggingMiddleware, LoggingMiddlewareConfig
 
 
-@register_function_intercept(config_type=LoggingInterceptConfig)
-async def logging_intercept(config: LoggingInterceptConfig, builder: Builder):
-    """Build a logging intercept from configuration.
+@register_middleware(config_type=LoggingMiddlewareConfig)
+async def logging_middleware(config: LoggingMiddlewareConfig, builder: Builder):
+    """Build logging middleware from configuration.
 
     Args:
-        config: The logging intercept configuration
+        config: The logging middleware configuration
         builder: The workflow builder (can access other components if needed)
 
     Yields:
-        A configured logging intercept instance
+        A configured logging middleware instance
     """
-    yield LoggingIntercept(
+    yield LoggingMiddleware(
         log_level=config.log_level,
         include_inputs=config.include_inputs,
         include_outputs=config.include_outputs
@@ -199,12 +199,12 @@ async def logging_intercept(config: LoggingInterceptConfig, builder: Builder):
 
 ### Step 4: Configure in YAML
 
-Add the intercept to your YAML configuration:
+Add the middleware to your YAML configuration:
 
 ```yaml
-function_intercepts:
+middleware:
   request_logger:
-    _type: logging_intercept
+    _type: logging_middleware
     log_level: DEBUG
     include_inputs: true
     include_outputs: true
@@ -213,12 +213,12 @@ functions:
   my_api_function:
     _type: api_call
     endpoint: https://api.example.com
-    intercepts: ["request_logger"]  # Apply logging intercept
+    middleware: ["request_logger"]  # Apply logging middleware
 ```
 
 ### Step 5: Register the Function
 
-Register your function without needing to specify intercepts in the decorator:
+Register your function without needing to specify middleware in the decorator:
 
 ```python
 from nat.cli.register_workflow import register_function
@@ -232,16 +232,16 @@ async def my_api_function(config: MyAPIFunctionConfig, builder: Builder):
     ...
 ```
 
-## Built-in Intercepts
+## Built-in Middleware
 
-### Cache Intercept
+### Cache Middleware
 
-The cache intercept is a built-in component that caches function outputs based on input similarity.
+The cache middleware is a built-in component that caches function outputs based on input similarity.
 
 #### Configuration
 
 ```yaml
-function_intercepts:
+middleware:
   exact_cache:
     _type: cache
     enabled_mode: always
@@ -271,7 +271,7 @@ function_intercepts:
 #### Usage Example
 
 ```yaml
-function_intercepts:
+middleware:
   api_cache:
     _type: cache
     enabled_mode: always
@@ -281,7 +281,7 @@ functions:
   call_external_api:
     _type: api_caller
     endpoint: https://api.example.com
-    intercepts: ["api_cache"]  # Apply cache intercept
+    middleware: ["api_cache"]  # Apply cache middleware
 ```
 
 ```python
@@ -308,39 +308,39 @@ async def call_external_api(config: APICallerConfig, builder: Builder):
 
 ### Accessing the Builder
 
-Intercepts have access to the workflow builder during construction, allowing them to use other components:
+Middleware has access to the workflow builder during construction, allowing them to use other components:
 
 ```python
-@register_function_intercept(config_type=CachingInterceptConfig)
-async def caching_intercept(config: CachingInterceptConfig, builder: Builder):
-    """Intercept that uses an object store for caching."""
+@register_middleware(config_type=CachingMiddlewareConfig)
+async def caching_middleware(config: CachingMiddlewareConfig, builder: Builder):
+    """Middleware that uses an object store for caching."""
 
     # Access object store component
     object_store = await builder.get_object_store_client(config.object_store_name)
 
-    yield CachingIntercept(
+    yield CachingMiddleware(
         object_store=object_store,
         ttl=config.cache_ttl
     )
 ```
 
-### Final Intercepts
+### Final Middleware
 
-Final intercepts can short-circuit execution:
+Final middleware can short-circuit execution:
 
 ```python
-class ValidationInterceptConfig(FunctionInterceptBaseConfig, name="validation"):
+class ValidationMiddlewareConfig(FunctionMiddlewareBaseConfig, name="validation"):
     strict_mode: bool = Field(default=True)
 
 
-class ValidationIntercept(FunctionIntercept):
+class ValidationMiddleware(FunctionMiddleware):
     """Validates inputs and short-circuits on failure."""
 
     def __init__(self, *, strict_mode: bool):
         super().__init__(is_final=True)  # Mark as final
         self.strict_mode = strict_mode
 
-    async def intercept_invoke(self, value, call_next, context):
+    async def function_middleware_invoke(self, value, call_next, context):
         # Validate input against schema
         try:
             validated = context.input_schema.model_validate(value)
@@ -355,14 +355,14 @@ class ValidationIntercept(FunctionIntercept):
         return await call_next(validated)
 ```
 
-### Chaining Multiple Intercepts
+### Chaining Multiple Middleware
 
-Intercepts execute in the order specified:
+Middleware execute in the order specified:
 
 ```yaml
-function_intercepts:
+middleware:
   logger:
-    _type: logging_intercept
+    _type: logging_middleware
     log_level: INFO
 
   validator:
@@ -377,7 +377,7 @@ function_intercepts:
 functions:
   protected_function:
     _type: my_function
-    intercepts: ["logger", "validator", "cache"]  # Execution order
+    middleware: ["logger", "validator", "cache"]  # Execution order
 ```
 
 ```python
@@ -396,16 +396,16 @@ Request → Logger (pre) → Validator (pre) → Cache (pre) → Function
 Response ← Logger (post) ← Validator (post) ← Cache (post) ←
 ```
 
-## Using Intercepts with Function Groups
+## Using Middleware with Function Groups
 
-Function groups support intercepts at the group level, automatically applying them to all functions in the group. This is useful for applying common middleware (logging, caching, authentication, etc.) across multiple related functions.
+Function groups support middleware at the group level, automatically applying them to all functions in the group. This is useful for applying common middleware (logging, caching, authentication, etc.) across multiple related functions.
 
-### Basic Function Group Intercepts
+### Basic Function Group Middleware
 
 ```yaml
-function_intercepts:
+middleware:
   api_logger:
-    _type: logging_intercept
+    _type: logging_middleware
     log_level: INFO
 
   api_cache:
@@ -416,7 +416,7 @@ function_intercepts:
 function_groups:
   weather_api:
     _type: weather_api_group
-    intercepts: ["api_logger", "api_cache"]  # Applied to all functions in the group
+    middleware: ["api_logger", "api_cache"]  # Applied to all functions in the group
 ```
 
 ```python
@@ -431,7 +431,7 @@ class WeatherAPIGroupConfig(FunctionGroupBaseConfig, name="weather_api_group"):
 
 @register_function_group(config_type=WeatherAPIGroupConfig)
 async def weather_api_group(config: WeatherAPIGroupConfig, builder):
-    """Weather API function group with shared intercepts."""
+    """Weather API function group with shared middleware."""
     group = FunctionGroup(config=config)
 
     async def get_current_weather(location: str) -> dict:
@@ -448,35 +448,35 @@ async def weather_api_group(config: WeatherAPIGroupConfig, builder):
     yield group
 ```
 
-### How Function Group Intercepts Work
+### How Function Group Middleware Works
 
-When intercepts are configured on a function group:
+When middleware is configured on a function group:
 
-1. **Automatic Propagation**: All functions added to the group automatically receive the group's intercepts
-2. **Applied at Creation**: Intercepts are configured when each function is added via `add_function()`
-3. **Shared Instances**: All functions in the group share the same intercept instances (e.g., shared cache)
-4. **Dynamic Updates**: Calling `configure_intercepts()` on the group updates all existing functions
+1. **Automatic Propagation**: All functions added to the group automatically receive the group's middleware
+2. **Applied at Creation**: Middleware is configured when each function is added via `add_function()`
+3. **Shared Instances**: All functions in the group share the same middleware instances (e.g., shared cache)
+4. **Dynamic Updates**: Calling `configure_middleware()` on the group updates all existing functions
 
-### Benefits of Function Group Intercepts
+### Benefits of Function Group Middleware
 
 **Consistency**: Ensures all related functions have the same middleware
 ```yaml
 function_groups:
   database_operations:
     _type: db_ops_group
-    intercepts: ["auth_check", "rate_limiter", "query_logger"]
+    middleware: ["auth_check", "rate_limiter", "query_logger"]
     # All database operations now require auth, are rate-limited, and logged
 ```
 
 **Maintainability**: Change middleware for all functions in one place
 ```python
-# Dynamically update intercepts for all functions in the group
-group.configure_intercepts([new_logger, new_cache])
+# Dynamically update middleware for all functions in the group
+group.configure_middleware([new_logger, new_cache])
 ```
 
-**Shared State**: Intercepts can maintain shared state across all group functions
+**Shared State**: Middleware can maintain shared state across all group functions
 ```yaml
-function_intercepts:
+middleware:
   shared_cache:
     _type: cache
     enabled_mode: always
@@ -485,19 +485,19 @@ function_intercepts:
 function_groups:
   api_group:
     _type: external_api_group
-    intercepts: ["shared_cache"]
+    middleware: ["shared_cache"]
     # Cache is shared across all API functions
 ```
 
-### Advanced Pattern: Combining Group and Function Intercepts
+### Advanced Pattern: Combining Group and Function Middleware
 
-While function groups define intercepts at the group level, individual functions can have their own intercepts applied after the function is created programmatically if needed. However, the typical pattern is to use group-level intercepts for consistency.
+While function groups define middleware at the group level, individual functions can have their own middleware applied after the function is created programmatically if needed. However, the typical pattern is to use group-level middleware for consistency.
 
-## Testing Intercepts
+## Testing Middleware
 
 ### Unit Testing
 
-Test intercepts in isolation:
+Test middleware in isolation:
 
 ```python
 import pytest
@@ -505,16 +505,16 @@ from unittest.mock import MagicMock
 
 
 @pytest.mark.asyncio
-async def test_logging_intercept():
-    """Test logging intercept logs correctly."""
-    intercept = LoggingIntercept(
+async def test_logging_middleware():
+    """Test logging middleware logs correctly."""
+    middleware = LoggingMiddleware(
         log_level="DEBUG",
         include_inputs=True,
         include_outputs=True
     )
 
     # Mock context
-    context = FunctionInterceptContext(
+    context = FunctionMiddlewareContext(
         name="test_fn",
         config=MagicMock(),
         description="Test",
@@ -527,18 +527,18 @@ async def test_logging_intercept():
     async def mock_next(value):
         return {"result": value * 2}
 
-    # Test intercept
-    result = await intercept.intercept_invoke(5, mock_next, context)
+    # Test middleware
+    result = await middleware.function_middleware_invoke(5, mock_next, context)
     assert result == {"result": 10}
 ```
 
 ### Integration Testing
 
-Test intercepts with actual functions:
+Test middleware with actual functions:
 
 ```yaml
 # test_config.yml
-function_intercepts:
+middleware:
   test_cache:
     _type: cache
     enabled_mode: always
@@ -552,7 +552,7 @@ functions:
 ```python
 @pytest.mark.asyncio
 async def test_function_with_cache():
-    """Test function with cache intercept."""
+    """Test function with cache middleware."""
     from nat.builder.workflow_builder import WorkflowBuilder
     from nat.data_models.config import Config
 
@@ -574,26 +574,26 @@ async def test_function_with_cache():
 
 ### Design Principles
 
-1. **Single Responsibility**: Each intercept should do one thing well
-2. **Modularity**: Intercepts should work well when chained
-3. **Configuration**: Make intercepts configurable via YAML
+1. **Single Responsibility**: Each middleware should do one thing well
+2. **Modularity**: Middleware should work well when chained
+3. **Configuration**: Make middleware configurable via YAML
 4. **Error Handling**: Fail gracefully and log errors
-5. **Performance**: Keep intercepts lightweight
+5. **Performance**: Keep middleware lightweight
 
 ### Recommended Order
 
-When chaining multiple intercepts:
+When chaining multiple middleware:
 
 1. **Logging or Monitoring**: First to capture everything
 2. **Authentication**: Early rejection of unauthorized calls
 3. **Validation**: Validate before expensive operations
 4. **Rate Limiting**: Prevent excessive calls
-5. **Caching**: Final intercept to skip execution
+5. **Caching**: Final middleware to skip execution
 
 ```yaml
-function_intercepts:
+middleware:
   logger:
-    _type: logging_intercept
+    _type: logging_middleware
   auth:
     _type: authentication
   validator:
@@ -606,7 +606,7 @@ function_intercepts:
 functions:
   protected_api:
     _type: api_call
-    intercepts: ["logger", "auth", "validator", "rate_limiter", "cache"]
+    middleware: ["logger", "auth", "validator", "rate_limiter", "cache"]
 ```
 
 ```python
@@ -617,7 +617,7 @@ async def protected_api(config, builder):
 
 ### Build Order
 
-Function intercepts are built **before** functions and function groups in the workflow builder. This ensures all intercepts are available when functions and function groups are constructed.
+Middleware is built **before** functions and function groups in the workflow builder. This ensures all middleware is available when functions and function groups are constructed.
 
 Build order:
 1. Authentication providers
@@ -627,26 +627,26 @@ Build order:
 5. Object stores
 6. Retrievers
 7. TTC strategies
-8. **Function intercepts** ← Built here
-9. Function groups ← Can use intercepts
-10. Functions ← Can use intercepts
+8. **Middleware** ← Built here
+9. Function groups ← Can use middleware
+10. Functions ← Can use middleware
 
 ## Troubleshooting
 
 ### Common Issues
 
-**Intercept not found error**
+**Middleware not found error**
 ```
-ValueError: Function intercept `my_cache` not found
-ValueError: Function intercept `my_cache` not found for function group `my_group`
+ValueError: Middleware `my_cache` not found
+ValueError: Middleware `my_cache` not found for function group `my_group`
 ```
-Solution: Ensure the intercept is defined in the `function_intercepts` section of your YAML before referencing it in functions or function groups.
+Solution: Ensure the middleware is defined in the `middleware` section of your YAML before referencing it in functions or function groups.
 
 **Import errors**
 ```
-ModuleNotFoundError: No module named 'nat.intercepts.register'
+ModuleNotFoundError: No module named 'nat.middleware.register'
 ```
-Solution: Ensure the register module is imported. NAT automatically imports `nat.intercepts.register` when importing `nat.intercepts`.
+Solution: Ensure the register module is imported. NAT automatically imports `nat.middleware.register` when importing `nat.middleware`.
 
 **Cache not working**
 - Check `enabled_mode` setting
@@ -655,19 +655,19 @@ Solution: Ensure the register module is imported. NAT automatically imports `nat
 - Check similarity threshold
 
 **Performance issues**
-- Profile intercepts to find bottlenecks
+- Profile middleware to find bottlenecks
 - Use exact matching (threshold=1.0) for caching
 - Reduce logging verbosity
 - Consider async operations
 
 ## API Reference
 
-- {py:class}`~nat.intercepts.function_intercept.FunctionIntercept`: Base class
-- {py:class}`~nat.intercepts.function_intercept.FunctionInterceptContext`: Context info
-- {py:class}`~nat.intercepts.function_intercept.FunctionInterceptChain`: Chain management
-- {py:class}`~nat.intercepts.register.CacheInterceptConfig`: Cache configuration
-- {py:class}`~nat.intercepts.cache_intercept.CacheIntercept`: Cache implementation
-- {py:func}`~nat.cli.register_workflow.register_function_intercept`: Registration decorator
+- {py:class}`~nat.middleware.function_middleware.FunctionMiddleware`: Base class
+- {py:class}`~nat.middleware.function_middleware.FunctionMiddlewareContext`: Context info
+- {py:class}`~nat.middleware.function_middleware.FunctionMiddlewareChain`: Chain management
+- {py:class}`~nat.middleware.register.CacheMiddlewareConfig`: Cache configuration
+- {py:class}`~nat.middleware.cache_middleware.CacheMiddleware`: Cache implementation
+- {py:func}`~nat.cli.register_workflow.register_middleware`: Registration decorator
 
 ## See Also
 

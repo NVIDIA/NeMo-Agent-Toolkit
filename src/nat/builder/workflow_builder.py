@@ -48,8 +48,8 @@ from nat.data_models.component import ComponentGroup
 from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import FunctionGroupRef
-from nat.data_models.component_ref import FunctionInterceptRef
 from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import MemoryRef
 from nat.data_models.component_ref import ObjectStoreRef
@@ -61,7 +61,7 @@ from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
-from nat.data_models.function_intercept import FunctionInterceptBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
@@ -72,7 +72,8 @@ from nat.experimental.decorators.experimental_warning_decorator import experimen
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
-from nat.intercepts.function_intercept import FunctionIntercept
+from nat.middleware.function_middleware import FunctionMiddleware
+from nat.middleware.middleware import Middleware
 from nat.memory.interfaces import MemoryEditor
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
@@ -145,9 +146,9 @@ class ConfiguredTTCStrategy:
 
 
 @dataclasses.dataclass
-class ConfiguredFunctionIntercept:
-    config: FunctionInterceptBaseConfig
-    instance: FunctionIntercept
+class ConfiguredMiddleware:
+    config: MiddlewareBaseConfig
+    instance: Middleware
 
 
 class WorkflowBuilder(Builder, AbstractAsyncContextManager):
@@ -179,7 +180,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._object_stores: dict[str, ConfiguredObjectStore] = {}
         self._retrievers: dict[str, ConfiguredRetriever] = {}
         self._ttc_strategies: dict[str, ConfiguredTTCStrategy] = {}
-        self._function_intercepts: dict[str, ConfiguredFunctionIntercept] = {}
+        self._middleware: dict[str, ConfiguredMiddleware] = {}
 
         self._context_state = ContextState.get()
 
@@ -433,16 +434,21 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError("Expected a function, FunctionInfo object, or FunctionBase object to be "
                              f"returned from the function builder. Got {type(build_result)}")
 
-        # Resolve intercept names from config to intercept instances
-        intercept_instances = []
-        for intercept_name in config.intercepts:
-            if intercept_name not in self._function_intercepts:
-                raise ValueError(
-                    f"Function intercept `{intercept_name}` not found for function `{name}`. "
-                    f"It must be configured in the `function_intercepts` section of the YAML configuration.")
-            intercept_instances.append(self._function_intercepts[intercept_name].instance)
+        # Resolve middleware names from config to middleware instances
+        # Only FunctionMiddleware types can be used with functions
+        middleware_instances = []
+        for middleware_name in config.middleware:
+            if middleware_name not in self._middleware:
+                raise ValueError(f"Middleware `{middleware_name}` not found for function `{name}`. "
+                                 f"It must be configured in the `middleware` section of the YAML configuration.")
+            middleware_obj = self._middleware[middleware_name].instance
+            if not isinstance(middleware_obj, FunctionMiddleware):
+                raise TypeError(
+                    f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used with functions. "
+                    f"Only FunctionMiddleware types support function-specific wrapping.")
+            middleware_instances.append(middleware_obj)
 
-        build_result.configure_intercepts(intercept_instances)
+        build_result.configure_middleware(middleware_instances)
 
         return ConfiguredFunction(config=config, instance=build_result)
 
@@ -482,17 +488,22 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError("Expected a FunctionGroup object to be returned from the function group builder. "
                              f"Got {type(build_result)}")
 
-        # Resolve intercept names from config to intercept instances
-        intercept_instances = []
-        for intercept_name in config.intercepts:
-            if intercept_name not in self._function_intercepts:
-                raise ValueError(
-                    f"Function intercept `{intercept_name}` not found for function group `{name}`. "
-                    f"It must be configured in the `function_intercepts` section of the YAML configuration.")
-            intercept_instances.append(self._function_intercepts[intercept_name].instance)
+        # Resolve middleware names from config to middleware instances
+        # Only FunctionMiddleware types can be used with function groups
+        middleware_instances = []
+        for middleware_name in config.middleware:
+            if middleware_name not in self._middleware:
+                raise ValueError(f"Middleware `{middleware_name}` not found for function group `{name}`. "
+                                 f"It must be configured in the `middleware` section of the YAML configuration.")
+            middleware_obj = self._middleware[middleware_name].instance
+            if not isinstance(middleware_obj, FunctionMiddleware):
+                raise TypeError(
+                    f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used with function groups. "
+                    f"Only FunctionMiddleware types support function-specific wrapping.")
+            middleware_instances.append(middleware_obj)
 
-        # Configure intercepts for the function group
-        build_result.configure_intercepts(intercept_instances)
+        # Configure middleware for the function group
+        build_result.configure_middleware(middleware_instances)
 
         # set the instance name for the function group based on the workflow-provided name
         build_result.set_instance_name(name)
@@ -1002,70 +1013,69 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return config
 
     @override
-    async def add_function_intercept(self, name: str | FunctionInterceptRef,
-                                     config: FunctionInterceptBaseConfig) -> FunctionIntercept:
-        """Add a function intercept to the builder.
+    async def add_middleware(self, name: str | MiddlewareRef, config: MiddlewareBaseConfig) -> Middleware:
+        """Add middleware to the builder.
 
         Args:
-            name: The name or reference for the function intercept
-            config: The configuration for the function intercept
+            name: The name or reference for the middleware
+            config: The configuration for the middleware
 
         Returns:
-            The built function intercept instance
+            The built middleware instance
 
         Raises:
-            ValueError: If the function intercept already exists
+            ValueError: If the middleware already exists
         """
-        if name in self._function_intercepts:
-            raise ValueError(f"Function intercept `{name}` already exists in the list of function intercepts")
+        if name in self._middleware:
+            raise ValueError(f"Middleware `{name}` already exists in the list of middleware")
 
         try:
-            intercept_info = self._registry.get_function_intercept(type(config))
+            middleware_info = self._registry.get_function_middleware(type(config))
 
-            intercept_instance = await self._get_exit_stack().enter_async_context(intercept_info.build_fn(config, self))
+            middleware_instance = await self._get_exit_stack().enter_async_context(middleware_info.build_fn(config, self))
 
-            self._function_intercepts[name] = ConfiguredFunctionIntercept(config=config, instance=intercept_instance)
+            self._middleware[name] = ConfiguredMiddleware(config=config, instance=middleware_instance)
 
-            return intercept_instance
+            return middleware_instance
         except Exception as e:
-            logger.error("Error adding function intercept `%s` with config `%s`: %s", name, config, e)
+            logger.error("Error adding function middleware `%s` with config `%s`: %s", name, config, e)
             raise
 
     @override
-    async def get_function_intercept(self, intercept_name: str | FunctionInterceptRef) -> FunctionIntercept:
-        """Get a built function intercept by name.
+    async def get_middleware(self, middleware_name: str | MiddlewareRef) -> Middleware:
+        """Get built middleware by name.
 
         Args:
-            intercept_name: The name or reference of the function intercept
+            middleware_name: The name or reference of the middleware
 
         Returns:
-            The built function intercept instance
+            The built middleware instance
 
         Raises:
-            ValueError: If the function intercept is not found
+            ValueError: If the middleware is not found
         """
-        if intercept_name not in self._function_intercepts:
-            raise ValueError(f"Function intercept `{intercept_name}` not found")
+        if middleware_name not in self._middleware:
+            raise ValueError(f"Middleware `{middleware_name}` not found")
 
-        return self._function_intercepts[intercept_name].instance
+        return self._middleware[middleware_name].instance
 
     @override
-    def get_function_intercept_config(self, intercept_name: str | FunctionInterceptRef) -> FunctionInterceptBaseConfig:
-        """Get the configuration for a function intercept.
+    def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> MiddlewareBaseConfig:
+        """Get the configuration for middleware.
 
         Args:
-            intercept_name: The name or reference of the function intercept
+            middleware_name: The name or reference of the middleware
 
         Returns:
-            The configuration for the function intercept
+            The configuration for the middleware
 
         Raises:
-            ValueError: If the function intercept is not found
+            ValueError: If the middleware is not found
         """
-        if intercept_name not in self._function_intercepts:
-            raise ValueError(f"Function intercept `{intercept_name}` not found")
+        if middleware_name not in self._middleware:
+            raise ValueError(f"Middleware `{middleware_name}` not found")
 
-        return self._function_intercepts[intercept_name].config
+        return self._middleware[middleware_name].config
 
     @override
     def get_user_manager(self):
@@ -1207,10 +1217,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 elif component_instance.component_group == ComponentGroup.RETRIEVERS:
                     await self.add_retriever(component_instance.name,
                                              cast(RetrieverBaseConfig, component_instance.config))
-                # Instantiate a function intercept
-                elif component_instance.component_group == ComponentGroup.FUNCTION_INTERCEPTS:
-                    await self.add_function_intercept(component_instance.name,
-                                                      cast(FunctionInterceptBaseConfig, component_instance.config))
+                # Instantiate middleware
+                elif component_instance.component_group == ComponentGroup.MIDDLEWARE:
+                    await self.add_middleware(component_instance.name,
+                                             cast(MiddlewareBaseConfig, component_instance.config))
                 # Instantiate a function group
                 elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
                     await self.add_function_group(component_instance.name,
@@ -1468,17 +1478,16 @@ class ChildBuilder(Builder):
         return self._workflow_builder.get_function_group_dependencies(fn_name)
 
     @override
-    async def add_function_intercept(self, name: str | FunctionInterceptRef,
-                                     config: FunctionInterceptBaseConfig) -> FunctionIntercept:
-        """Add a function intercept to the builder."""
-        return await self._workflow_builder.add_function_intercept(name, config)
+    async def add_middleware(self, name: str | MiddlewareRef, config: MiddlewareBaseConfig) -> Middleware:
+        """Add middleware to the builder."""
+        return await self._workflow_builder.add_middleware(name, config)
 
     @override
-    async def get_function_intercept(self, intercept_name: str | FunctionInterceptRef) -> FunctionIntercept:
-        """Get a built function intercept by name."""
-        return await self._workflow_builder.get_function_intercept(intercept_name)
+    async def get_middleware(self, middleware_name: str | MiddlewareRef) -> Middleware:
+        """Get built middleware by name."""
+        return await self._workflow_builder.get_middleware(middleware_name)
 
     @override
-    def get_function_intercept_config(self, intercept_name: str | FunctionInterceptRef) -> FunctionInterceptBaseConfig:
-        """Get the configuration for a function intercept."""
-        return self._workflow_builder.get_function_intercept_config(intercept_name)
+    def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> MiddlewareBaseConfig:
+        """Get the configuration for middleware."""
+        return self._workflow_builder.get_middleware_config(middleware_name)

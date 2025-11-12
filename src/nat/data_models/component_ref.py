@@ -179,12 +179,12 @@ class TTCStrategyRef(ComponentRef):
         return ComponentGroup.TTC_STRATEGIES
 
 
-class FunctionInterceptRef(ComponentRef):
+class MiddlewareRef(ComponentRef):
     """
-    A reference to a function intercept in a NAT configuration object.
+    A reference to middleware in a NAT configuration object.
     """
 
     @property
     @override
     def component_group(self):
-        return ComponentGroup.FUNCTION_INTERCEPTS
+        return ComponentGroup.MIDDLEWARE

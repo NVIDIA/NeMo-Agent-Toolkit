@@ -41,11 +41,11 @@ class LambdaStreamFnConfig(FunctionBaseConfig, name="test_lambda_stream"):
     pass
 
 
-class OrderedInterceptConfig(FunctionBaseConfig, name="test_ordered_intercept"):
+class OrderedMiddlewareConfig(FunctionBaseConfig, name="test_ordered_middleware"):
     pass
 
 
-class FinalInterceptConfig(FunctionBaseConfig, name="test_final_intercept"):
+class FinalMiddlewareConfig(FunctionBaseConfig, name="test_final_middleware"):
     pass
 
 

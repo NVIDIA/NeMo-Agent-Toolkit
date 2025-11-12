@@ -31,7 +31,7 @@ from nat.data_models.config import Config
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
-from nat.data_models.function_intercept import FunctionInterceptBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
@@ -42,7 +42,7 @@ from nat.utils.type_utils import DecomposedType
 logger = logging.getLogger(__name__)
 
 # Order in which we want to process the component groups
-# IMPORTANT: FUNCTION_INTERCEPTS must be built before FUNCTIONS
+# IMPORTANT: MIDDLEWARE must be built before FUNCTIONS
 _component_group_order = [
     ComponentGroup.AUTHENTICATION,
     ComponentGroup.EMBEDDERS,
@@ -51,7 +51,7 @@ _component_group_order = [
     ComponentGroup.OBJECT_STORES,
     ComponentGroup.RETRIEVERS,
     ComponentGroup.TTC_STRATEGIES,
-    ComponentGroup.FUNCTION_INTERCEPTS,
+    ComponentGroup.MIDDLEWARE,
     ComponentGroup.FUNCTION_GROUPS,
     ComponentGroup.FUNCTIONS,
 ]
@@ -114,8 +114,8 @@ def group_from_component(component: TypedBaseModel) -> ComponentGroup | None:
         return ComponentGroup.FUNCTIONS
     if (isinstance(component, FunctionGroupBaseConfig)):
         return ComponentGroup.FUNCTION_GROUPS
-    if (isinstance(component, FunctionInterceptBaseConfig)):
-        return ComponentGroup.FUNCTION_INTERCEPTS
+    if (isinstance(component, MiddlewareBaseConfig)):
+        return ComponentGroup.MIDDLEWARE
     if (isinstance(component, LLMBaseConfig)):
         return ComponentGroup.LLMS
     if (isinstance(component, MemoryBaseConfig)):
@@ -265,7 +265,7 @@ def build_dependency_sequence(config: "Config") -> list[ComponentInstanceData]:
 
     total_node_count = (len(config.embedders) + len(config.functions) + len(config.function_groups) + len(config.llms) +
                         len(config.memory) + len(config.object_stores) + len(config.retrievers) +
-                        len(config.ttc_strategies) + len(config.authentication) + len(config.function_intercepts) + 1
+                        len(config.ttc_strategies) + len(config.authentication) + len(config.middleware) + 1
                         )  # +1 for the workflow
 
     dependency_map: dict

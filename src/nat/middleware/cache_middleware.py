@@ -38,16 +38,16 @@ from pydantic import Field
 
 from nat.builder.context import Context
 from nat.builder.context import ContextState
-from nat.data_models.function_intercept import FunctionInterceptBaseConfig
-from nat.intercepts.function_intercept import CallNext
-from nat.intercepts.function_intercept import CallNextStream
-from nat.intercepts.function_intercept import FunctionIntercept
-from nat.intercepts.function_intercept import FunctionInterceptContext
+from nat.data_models.middleware import FunctionMiddlewareBaseConfig
+from nat.middleware.function_middleware import CallNext
+from nat.middleware.function_middleware import CallNextStream
+from nat.middleware.function_middleware import FunctionMiddleware
+from nat.middleware.function_middleware import FunctionMiddlewareContext
 
 logger = logging.getLogger(__name__)
 
 
-class CacheIntercept(FunctionIntercept):
+class CacheMiddleware(FunctionMiddleware):
     """Cache middleware that memoizes function outputs based on input similarity.
 
     This middleware demonstrates the four-phase middleware pattern:
@@ -71,7 +71,7 @@ class CacheIntercept(FunctionIntercept):
     """
 
     def __init__(self, *, enabled_mode: str, similarity_threshold: float) -> None:
-        """Initialize the cache intercept.
+        """Initialize the cache middleware.
 
         Args:
             enabled_mode: Either "always" or "eval". If "eval", only caches
@@ -145,7 +145,8 @@ class CacheIntercept(FunctionIntercept):
 
         return best_match
 
-    async def intercept_invoke(self, value: Any, call_next: CallNext, context: FunctionInterceptContext) -> Any:
+    async def function_middleware_invoke(self, value: Any, call_next: CallNext,
+                                        context: FunctionMiddlewareContext) -> Any:
         """Cache middleware for single-output invocations.
 
         Implements the four-phase middleware pattern:
@@ -158,7 +159,7 @@ class CacheIntercept(FunctionIntercept):
         Args:
             value: The input value to process
             call_next: Callable to invoke the next middleware or function
-            context: Metadata about the function being intercepted
+            context: Metadata about the function being wrapped
 
         Returns:
             The cached output if found, otherwise the fresh output
@@ -195,8 +196,8 @@ class CacheIntercept(FunctionIntercept):
         # Phase 4: Continue - return the fresh result
         return result
 
-    async def intercept_stream(self, value: Any, call_next: CallNextStream,
-                               context: FunctionInterceptContext) -> AsyncIterator[Any]:
+    async def function_middleware_stream(self, value: Any, call_next: CallNextStream,
+                                        context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
         """Cache middleware for streaming invocations - bypasses caching.
 
         Streaming results are not cached as they would need to be buffered
@@ -212,7 +213,7 @@ class CacheIntercept(FunctionIntercept):
         Args:
             value: The input value to process
             call_next: Callable to invoke the next middleware or function stream
-            context: Metadata about the function being intercepted
+            context: Metadata about the function being wrapped
 
         Yields:
             Chunks from the stream (unmodified)
@@ -227,10 +228,10 @@ class CacheIntercept(FunctionIntercept):
         # Phase 4: Continue - stream is complete (implicit)
 
 
-class CacheInterceptConfig(FunctionInterceptBaseConfig, name="cache"):
-    """Configuration for cache intercept middleware.
+class CacheMiddlewareConfig(FunctionMiddlewareBaseConfig, name="cache"):
+    """Configuration for cache middleware.
 
-    The cache intercept memoizes function outputs based on input similarity,
+    The cache middleware memoizes function outputs based on input similarity,
     with support for both exact and fuzzy matching.
 
     Args:
@@ -250,4 +251,4 @@ class CacheInterceptConfig(FunctionInterceptBaseConfig, name="cache"):
                                         description="Similarity threshold between 0 and 1. Use 1.0 for exact matching")
 
 
-__all__ = ["CacheIntercept", "CacheInterceptConfig"]
+__all__ = ["CacheMiddleware", "CacheMiddlewareConfig"]
