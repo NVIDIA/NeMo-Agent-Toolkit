@@ -71,6 +71,7 @@ Release Notes <./release-notes.md>
 
 Install <./quick-start/installing.md>
 Quick Start Guide <./quick-start/quick-start.md>
+Launching UI <./quick-start/launching-ui.md>
 Tutorials <./tutorials/index.md>
 ```
 
