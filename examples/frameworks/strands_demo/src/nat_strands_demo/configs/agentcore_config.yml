@@ -61,6 +61,6 @@ llms:
 
 workflow:
   _type: strands_demo
-  llm_name: bedrock_llm
+  llm_name: nim_llm
   tool_names: [knowledge_base, current_datetime]
   system_prompt: "You are a helpful assistant. All answers must be sourced from the curated knowledge base via your available tools. Find the information first, then respond succinctly."
