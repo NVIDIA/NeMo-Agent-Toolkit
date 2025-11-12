@@ -79,7 +79,7 @@ Tutorials <./tutorials/index.md>
 :hidden:
 :caption: Manage Workflows
 
-About Workflows <./workflows/about/index.md>
+About Workflows <./workflows/about.md>
 ./workflows/run-workflows.md
 Workflow Configuration <./workflows/workflow-configuration.md>
 ./workflows/llms/index.md
@@ -93,6 +93,12 @@ Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 Profiling Workflows <./workflows/profiler.md>
 Sizing Calculator <./workflows/sizing-calc.md>
 ./workflows/observe/index.md
+```
+
+```{toctree}
+:hidden:
+:caption: Components
+Agents <./components/agents.md>
 ```
 
 ```{toctree}
