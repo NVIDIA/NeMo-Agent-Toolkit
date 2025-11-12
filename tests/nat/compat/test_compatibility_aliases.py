@@ -13,13 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import importlib
 import subprocess
 
 import pytest
 
-# Prevent isort from removing the pylint disable comments
-# isort:skip_file
+
+@pytest.fixture(autouse=True)
+def remove_aiq_compat_finder():
+    import sys
+    # Restore the original sys.meta_path this ensures that the AIQ compatibility finder is removed after each test
+    original_meta_path = copy.copy(sys.meta_path)
+    yield
+    sys.meta_path = original_meta_path
+
+    # Remove aiq from sys.modules so that the compatibility finder will be added on the next import of aiq
+    sys.modules.pop('aiq', None)
 
 
 def test_aiq_subclass_is_nat_subclass():
