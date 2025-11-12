@@ -226,13 +226,17 @@ class WebSocketMessageHandler:
 
             content: BaseModel = await self._message_validator.convert_data_to_message_content(data_model)
 
+            # Extract weave_call_id from source data_model if available
+            weave_call_id = getattr(data_model, 'weave_call_id', None)
+
             if issubclass(message_schema, WebSocketSystemResponseTokenMessage):
                 message = await self._message_validator.create_system_response_token_message(
                     message_id=message_id,
                     parent_id=self._message_parent_id,
                     conversation_id=self._conversation_id,
                     content=content,
-                    status=status)
+                    status=status,
+                    weave_call_id=weave_call_id)
 
             elif issubclass(message_schema, WebSocketSystemIntermediateStepMessage):
                 message = await self._message_validator.create_system_intermediate_step_message(
@@ -240,7 +244,8 @@ class WebSocketMessageHandler:
                     parent_id=await self._message_validator.get_intermediate_step_parent_id(data_model),
                     conversation_id=self._conversation_id,
                     content=content,
-                    status=status)
+                    status=status,
+                    weave_call_id=weave_call_id)
 
             elif issubclass(message_schema, WebSocketSystemInteractionMessage):
                 message = await self._message_validator.create_system_interaction_message(
@@ -248,7 +253,8 @@ class WebSocketMessageHandler:
                     parent_id=self._message_parent_id,
                     conversation_id=self._conversation_id,
                     content=content,
-                    status=status)
+                    status=status,
+                    weave_call_id=weave_call_id)
 
             elif isinstance(content, Error):
                 raise ValidationError(f"Invalid input data creating websocket message. {data_model.model_dump_json()}")
