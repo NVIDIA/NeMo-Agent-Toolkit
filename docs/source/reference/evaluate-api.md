@@ -32,11 +32,12 @@ graph TD
 ```
 
 ## Start NeMo Agent Toolkit API Server
-See NeMo Agent toolkit [UI and Server](./../quick-start/launching-ui.md) guide for instructions on starting the NeMo Agent toolkit server.
 Sample Usage:
 ```bash
 nat serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
 ```
+
+Refer to the [API Server Endpoints](./api-server-endpoints.md) guide for details on the NeMo Agent toolkit server.
 
 ## Evaluate Request and Response
 The /evaluate endpoint allows you to start an evaluation job. The request is stored for background processing, and the server returns a job ID for tracking the job status.
