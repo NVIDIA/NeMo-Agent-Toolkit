@@ -87,7 +87,7 @@ export SERVICE_ACCOUNT_CLIENT_SECRET="your-client-secret"
 export SERVICE_ACCOUNT_TOKEN_URL="https://auth.example.com/service_account/token"
 
 # Service account scopes - space-separated (required for both patterns)
-export SERVICE_ACCOUNT_SCOPES="api.read api.write"
+export SERVICE_ACCOUNT_SCOPES="corporate-mcp-scope-jira corporate-mcp-scope-jama_cache"
 
 # Custom token prefix for Authorization header (optional)
 # Example: "service_account_ssa" produces "Authorization: Bearer service_account_ssa:<token>"
