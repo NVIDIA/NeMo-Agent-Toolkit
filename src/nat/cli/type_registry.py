@@ -576,7 +576,7 @@ class TypeRegistry:
 
         self._registration_changed()
 
-    def get_function_middleware(self, config_type: type[MiddlewareBaseConfig]) -> RegisteredMiddlewareInfo:
+    def get_middleware(self, config_type: type[MiddlewareBaseConfig]) -> RegisteredMiddlewareInfo:
         """Get registered middleware by its config type.
 
         Args:
@@ -594,7 +594,7 @@ class TypeRegistry:
             raise KeyError(f"Could not find registered middleware for config `{config_type}`. "
                            f"Registered configs: {set(self._registered_middleware.keys())}") from err
 
-    def get_registered_function_middleware(self) -> list[RegisteredInfo[MiddlewareBaseConfig]]:
+    def get_registered_middleware(self) -> list[RegisteredInfo[MiddlewareBaseConfig]]:
         """Get all registered middleware.
 
         Returns:
@@ -1104,7 +1104,7 @@ class TypeRegistry:
             return self._do_compute_annotation(cls, self.get_registered_ttc_strategies())
 
         if issubclass(cls, MiddlewareBaseConfig):
-            return self._do_compute_annotation(cls, self.get_registered_function_middleware())
+            return self._do_compute_annotation(cls, self.get_registered_middleware())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 

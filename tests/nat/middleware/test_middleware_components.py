@@ -67,7 +67,7 @@ class TestMiddlewareRegistration:
     def test_middleware_registered_in_global_registry(self):
         """Test that middleware is registered in global registry."""
         registry = GlobalTypeRegistry.get()
-        registered = registry.get_registered_function_middleware()
+        registered = registry.get_registered_middleware()
 
         # Find our test middleware
         test_middlewares = [r for r in registered if r.config_type == TestMiddlewareConfig]
@@ -77,7 +77,7 @@ class TestMiddlewareRegistration:
     def test_can_retrieve_middleware_registration(self):
         """Test that we can retrieve middleware registration info."""
         registry = GlobalTypeRegistry.get()
-        registration = registry.get_function_middleware(TestMiddlewareConfig)
+        registration = registry.get_middleware(TestMiddlewareConfig)
 
         assert registration.config_type == TestMiddlewareConfig
         assert registration.full_type == TestMiddlewareConfig.full_type
@@ -272,7 +272,7 @@ class TestCacheMiddlewareComponent:
         from nat.middleware.register import CacheMiddlewareConfig
 
         registry = GlobalTypeRegistry.get()
-        registration = registry.get_function_middleware(CacheMiddlewareConfig)
+        registration = registry.get_middleware(CacheMiddlewareConfig)
 
         assert registration.config_type == CacheMiddlewareConfig
         assert registration.full_type == CacheMiddlewareConfig.full_type

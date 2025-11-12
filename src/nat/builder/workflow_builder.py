@@ -1030,7 +1030,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError(f"Middleware `{name}` already exists in the list of middleware")
 
         try:
-            middleware_info = self._registry.get_function_middleware(type(config))
+            middleware_info = self._registry.get_middleware(type(config))
 
             middleware_instance = await self._get_exit_stack().enter_async_context(
                 middleware_info.build_fn(config, self))

@@ -88,7 +88,7 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
             elif (info.field_name == "ttc_strategies"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_ttc_strategies()
             elif (info.field_name == "middleware"):
-                registered_keys = GlobalTypeRegistry.get().get_registered_function_middleware()
+                registered_keys = GlobalTypeRegistry.get().get_registered_middleware()
 
             else:
                 assert False, f"Unknown field name {info.field_name} in validator"
