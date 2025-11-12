@@ -246,7 +246,7 @@ See the `examples/MCP/service_account_auth_mcp/README.md` for instructions on ho
 
 ## Troubleshooting
 
-**Error: "client_id is required"**
+**Error: "`client_id` is required"**
 
 Ensure the `client_id` field is set in your configuration or the corresponding environment variable is defined.
 

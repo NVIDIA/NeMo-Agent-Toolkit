@@ -17,7 +17,6 @@ import base64
 import logging
 from datetime import datetime
 from datetime import timedelta
-from typing import Optional
 
 import httpx
 
@@ -56,8 +55,8 @@ class ServiceAccountTokenClient:
         self.token_cache_buffer_seconds = token_cache_buffer_seconds
 
         # Token cache
-        self._cached_token: Optional[str] = None
-        self._token_expires_at: Optional[datetime] = None
+        self._cached_token: str | None = None
+        self._token_expires_at: datetime | None = None
         self._lock = None  # Will be initialized as asyncio.Lock when needed
 
     async def _get_lock(self):
