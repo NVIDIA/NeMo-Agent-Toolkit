@@ -16,13 +16,13 @@
 import copy
 import importlib
 import subprocess
+import sys
 
 import pytest
 
 
 @pytest.fixture(autouse=True)
 def remove_aiq_compat_finder():
-    import sys
     # Restore the original sys.meta_path this ensures that the AIQ compatibility finder is removed after each test
     original_meta_path = copy.copy(sys.meta_path)
     yield
