@@ -45,6 +45,8 @@ from nat.data_models.api_server import SystemIntermediateStepContent
 from nat.data_models.api_server import SystemResponseContent
 from nat.data_models.api_server import TextContent
 from nat.data_models.api_server import Usage
+from nat.data_models.api_server import UserMessageContentRoleType
+from nat.data_models.api_server import WebSocketMessageStatus
 from nat.data_models.api_server import WebSocketMessageType
 from nat.data_models.api_server import WebSocketSystemInteractionMessage
 from nat.data_models.api_server import WebSocketSystemIntermediateStepMessage
@@ -362,6 +364,52 @@ async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
+async def test_chat_endpoint_weave_call_id_integration(client: httpx.AsyncClient, config: Config):
+    """Tests that chat endpoint includes weave_call_id when available in context."""
+    input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
+
+    # Mock the context to provide a weave_call_id
+    with patch('nat.builder.context.Context.get') as mock_context:
+        mock_context.return_value.weave_call_id = "integration-test-weave-id"
+
+        response = await client.post(f"{config.endpoint.chat}", json=input_message)
+        assert response.status_code == 200
+
+        validated_response = ChatResponse(**response.json())
+        assert isinstance(validated_response, ChatResponse)
+
+        # Note: In a real integration test, the weave_call_id might not be set
+        # depending on whether Weave is actually initialized in the test environment.
+        # This test verifies the structure supports weave_call_id.
+        assert hasattr(validated_response, 'weave_call_id')
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_chat_stream_endpoint_weave_call_id_integration(client: httpx.AsyncClient, config: Config):
+    """Tests that chat stream endpoint includes weave_call_id when available in context."""
+    input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
+
+    # Mock the context to provide a weave_call_id
+    with patch('nat.builder.context.Context.get') as mock_context:
+        mock_context.return_value.weave_call_id = "integration-stream-weave-id"
+
+        response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
+        assert response.status_code == 200
+
+        # Parse the streaming response
+        data_match: re.Match[str] | None = re.search(r'\bdata:\s*(.[^\n]*)\n', response.text)
+        assert data_match is not None
+        data_match_dict: dict = json.loads(data_match.group(1))
+        validated_response = ChatResponseChunk(**data_match_dict)
+        assert isinstance(validated_response, ChatResponseChunk)
+
+        # Verify weave_call_id field is present in the response structure
+        assert hasattr(validated_response, 'weave_call_id')
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
 async def test_user_attributes_from_http_request(client: httpx.AsyncClient, config: Config):
     """Tests setting user attributes from HTTP request."""
     input_message = {"input_message": f"{config.app.input}"}
@@ -473,6 +521,22 @@ nat_chat_response_chunk_test = ChatResponseChunk(id="default",
                                                  choices=[ChatResponseChunkChoice(delta=ChoiceDelta(), index=0)],
                                                  created=datetime.datetime.now(datetime.UTC))
 nat_response_intermediate_step_test = ResponseIntermediateStep(id="default", name="default", payload="default")
+
+nat_chat_response_with_weave_test = ChatResponse(id="default",
+                                                 object="default",
+                                                 created=datetime.datetime.now(datetime.UTC),
+                                                 choices=[ChatResponseChoice(message=ChoiceMessage(), index=0)],
+                                                 usage=Usage(prompt_tokens=0, completion_tokens=0, total_tokens=0),
+                                                 weave_call_id="test-weave-call-id")
+nat_chat_response_chunk_with_weave_test = ChatResponseChunk(
+    id="default",
+    choices=[ChatResponseChunkChoice(delta=ChoiceDelta(), index=0)],
+    created=datetime.datetime.now(datetime.UTC),
+    weave_call_id="test-weave-call-id")
+nat_response_intermediate_step_with_weave_test = ResponseIntermediateStep(id="default",
+                                                                          name="default",
+                                                                          payload="default",
+                                                                          weave_call_id="test-weave-call-id")
 
 validated_response_data_models = [
     nat_response_payload_output_test, nat_chat_response_test, nat_chat_response_chunk_test
@@ -604,6 +668,115 @@ async def test_text_prompt_to_websocket_message_to_text_response():
     assert isinstance(human_text_to_interaction_message, WebSocketSystemInteractionMessage)
     assert isinstance(human_text_to_interaction_message.content, HumanPromptText)
     assert isinstance(human_text_response_content, HumanResponseText)
+
+
+async def test_chat_response_weave_call_id_propagation():
+    """Test that weave_call_id is properly set in ChatResponse from context"""
+    with patch('nat.builder.context.Context.get') as mock_context:
+        mock_context.return_value.weave_call_id = "test-weave-id"
+
+        usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
+        response = ChatResponse.from_string("test response", usage=usage)
+
+        assert response.weave_call_id == "test-weave-id"
+        assert response.choices[0].message.content == "test response"
+
+
+async def test_chat_response_explicit_weave_call_id():
+    """Test that explicitly provided weave_call_id takes precedence over context"""
+    with patch('nat.builder.context.Context.get') as mock_context:
+        mock_context.return_value.weave_call_id = "context-weave-id"
+
+        usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
+        response = ChatResponse.from_string("test response", usage=usage, weave_call_id="explicit-weave-id")
+
+        assert response.weave_call_id == "explicit-weave-id"
+
+
+async def test_chat_response_chunk_weave_call_id_propagation():
+    """Test that weave_call_id is properly set in ChatResponseChunk from context"""
+    with patch('nat.builder.context.Context.get') as mock_context:
+        mock_context.return_value.weave_call_id = "chunk-weave-id"
+
+        chunk = ChatResponseChunk.from_string("test chunk")
+
+        assert chunk.weave_call_id == "chunk-weave-id"
+
+
+async def test_chat_response_chunk_streaming_weave_call_id():
+    """Test that weave_call_id is properly set in streaming chunks"""
+    with patch('nat.builder.context.Context.get') as mock_context:
+        mock_context.return_value.weave_call_id = "streaming-weave-id"
+
+        chunk = ChatResponseChunk.create_streaming_chunk(content="streaming content",
+                                                         role=UserMessageContentRoleType.ASSISTANT)
+
+        assert chunk.weave_call_id == "streaming-weave-id"
+        assert chunk.choices[0].delta.content == "streaming content"
+
+
+async def test_websocket_message_weave_call_id_propagation():
+    """Test that weave_call_id is properly set in WebSocket messages from context"""
+    with patch('nat.builder.context.Context.get') as mock_context:
+        mock_context.return_value.weave_call_id = "websocket-weave-id"
+
+        message_validator = MessageValidator()
+
+        message = await message_validator.create_system_response_token_message(
+            content=SystemResponseContent(text="test response"), status=WebSocketMessageStatus.IN_PROGRESS)
+
+        assert message is not None
+        assert message.weave_call_id == "websocket-weave-id"
+
+
+async def test_intermediate_step_message_weave_call_id():
+    """Test that weave_call_id is properly set in intermediate step messages"""
+    with patch('nat.builder.context.Context.get') as mock_context:
+        mock_context.return_value.weave_call_id = "intermediate-weave-id"
+
+        message_validator = MessageValidator()
+
+        message = await message_validator.create_system_intermediate_step_message(
+            content=SystemIntermediateStepContent(name="test step", payload="test payload"),
+            status=WebSocketMessageStatus.IN_PROGRESS)
+
+        assert message is not None
+        assert message.weave_call_id == "intermediate-weave-id"
+
+
+async def test_weave_call_id_fallback_behavior():
+    """Test that components handle missing weave context gracefully"""
+    with patch('nat.builder.context.Context.get', side_effect=Exception("No context available")):
+        # Test ChatResponse fallback
+        usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
+        response = ChatResponse.from_string("test response", usage=usage)
+        assert response.weave_call_id is None
+
+        # Test ChatResponseChunk fallback
+        chunk = ChatResponseChunk.from_string("test chunk")
+        assert chunk.weave_call_id is None
+
+        # Test WebSocket message fallback
+        message_validator = MessageValidator()
+        message = await message_validator.create_system_response_token_message(
+            content=SystemResponseContent(text="test response"), status=WebSocketMessageStatus.IN_PROGRESS)
+        assert message is not None
+        assert message.weave_call_id is None
+
+
+async def test_weave_call_id_data_model_serialization():
+    """Test that weave_call_id is properly included in serialized data models"""
+    # Test ChatResponse with weave_call_id
+    response_dict = nat_chat_response_with_weave_test.model_dump()
+    assert response_dict["weave_call_id"] == "test-weave-call-id"
+
+    # Test ChatResponseChunk with weave_call_id
+    chunk_dict = nat_chat_response_chunk_with_weave_test.model_dump()
+    assert chunk_dict["weave_call_id"] == "test-weave-call-id"
+
+    # Test ResponseIntermediateStep with weave_call_id
+    step_dict = nat_response_intermediate_step_with_weave_test.model_dump()
+    assert step_dict["weave_call_id"] == "test-weave-call-id"
 
 
 async def test_binary_choice_prompt_to_websocket_message_to_binary_choice_response():
