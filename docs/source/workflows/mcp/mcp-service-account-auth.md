@@ -43,6 +43,14 @@ The `mcp_service_account` authentication provider implements:
 - **Custom Token Formats**: Support for non-standard Bearer token prefixes (for example, `Bearer service_account_ssa:token`)
 - **Multi-Header Authentication**: Ability to inject multiple authentication headers for services requiring additional tokens
 
+## Authentication Token Types
+
+Service account authentication uses two types of tokens depending on the MCP server requirements:
+
+1. **OAuth2 Service Account Token**: Obtained via OAuth2 client credentials flow. Always required for authentication and authorization.
+
+2. **Service Token**: Optional service-specific token (such as Jira service token or GitLab service token) required by some MCP servers for delegating access to backend systems.
+
 ## Configuring Service Account Auth Provider
 
 The `mcp_service_account` provider is a built-in authentication provider in the NVIDIA NeMo Agent toolkit. Configure it in your workflow YAML file:
@@ -81,8 +89,8 @@ Customize the authentication behavior with these optional fields:
 | Field | Default | Description |
 |-------|---------|-------------|
 | `token_prefix` | `service_account` | Prefix for the Authorization header token. Use empty string (`""`) for standard Bearer tokens. |
-| `service_token` | None | Additional service-specific token for dual-header authentication patterns |
-| `service_token_header` | `Service-Account-Token` | Header name for the service-specific token |
+| `service_token` | None | Service token (service-specific token such as Jira service token or GitLab service token) for dual authentication patterns |
+| `service_token_header` | `Service-Account-Token` | Header name for the service token |
 | `token_cache_buffer_seconds` | `300` | Seconds before token expiry to refresh the token (default: 5 minutes) |
 
 ## Environment Variables
@@ -137,11 +145,13 @@ authentication:
 
 ## Authentication Patterns
 
-The service account provider supports multiple authentication patterns to accommodate different service requirements.
+The service account provider supports two authentication patterns depending on MCP server requirements.
 
-### Standard Bearer Token (Single Header)
+### Single Authentication Pattern
 
-The simplest configuration uses a standard OAuth2 Bearer token:
+Use for custom MCP servers that only require OAuth2 service account token validation. This pattern uses one authentication header.
+
+**Standard Bearer Token:**
 
 ```yaml
 authentication:
@@ -154,14 +164,9 @@ authentication:
     token_prefix: ""  # Empty string for standard Bearer token
 ```
 
-This produces the following header:
-```
-Authorization: Bearer <access_token>
-```
+Produces: `Authorization: Bearer <access_token>`
 
-### Custom Token Prefix (Single Header)
-
-Some services require a custom token prefix:
+**Custom Token Prefix:**
 
 ```yaml
 authentication:
@@ -174,18 +179,15 @@ authentication:
     token_prefix: service_account_ssa
 ```
 
-This produces the following header:
-```text
-Authorization: Bearer service_account_ssa:<access_token>
-```
+Produces: `Authorization: Bearer service_account_ssa:<access_token>`
 
-### Dual-Header Pattern
+### Dual Authentication Pattern
 
-Some services require two separate authentication headers:
+Use for enterprise MCP servers (such as Jira, GitLab) that require both OAuth2 service account token and service token for backend system delegation. This pattern uses two authentication headers.
 
 ```yaml
 authentication:
-  dual_header_auth:
+  dual_auth:
     _type: mcp_service_account
     client_id: ${CLIENT_ID}
     client_secret: ${CLIENT_SECRET}
@@ -196,7 +198,7 @@ authentication:
     service_token_header: X-Service-Account-Token
 ```
 
-This produces the following headers:
+Produces:
 ```text
 Authorization: Bearer service_account_ssa:<access_token>
 X-Service-Account-Token: <service_token>
@@ -238,11 +240,14 @@ authentication:
     token_cache_buffer_seconds: 600  # Refresh 10 minutes before expiry
 ```
 
-## Example Workflow
+## Example Workflows
 
-The Service Account Authentication Example, `examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jira.yml`, provides a complete example of using service account authentication to access a protected MCP server.
+The Service Account Authentication Example demonstrates both authentication patterns:
 
-See the `examples/MCP/service_account_auth_mcp/README.md` for instructions on how to run the example.
+- **Single Authentication**: `examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jama.yml`
+- **Dual Authentication**: `examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jira.yml`
+
+See `examples/MCP/service_account_auth_mcp/README.md` for complete instructions and guidance on choosing the right pattern for your MCP server.
 
 ## Troubleshooting
 ### Error: "`client_id` is required"
