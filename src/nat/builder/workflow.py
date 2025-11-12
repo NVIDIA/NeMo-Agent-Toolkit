@@ -28,6 +28,7 @@ from nat.builder.function_base import StreamingOutputT
 from nat.builder.llm import LLMProviderInfo
 from nat.builder.retriever import RetrieverProviderInfo
 from nat.data_models.config import Config
+from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
 from nat.memory.interfaces import MemoryEditor
 from nat.object_store.interfaces import ObjectStore
@@ -94,7 +95,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         return self._exporter_manager.get()
 
     @asynccontextmanager
-    async def run(self, message: InputT):
+    async def run(self, message: InputT, runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
         """
         Called each time we start a new workflow run. We'll create
         a new top-level workflow span here.
@@ -103,7 +104,8 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         async with Runner(input_message=message,
                           entry_fn=self._entry_fn,
                           context_state=self._context_state,
-                          exporter_manager=self.exporter_manager) as runner:
+                          exporter_manager=self.exporter_manager,
+                          runtime_type=runtime_type) as runner:
 
             # The caller can `yield runner` so they can do `runner.result()` or `runner.result_stream()`
             yield runner
