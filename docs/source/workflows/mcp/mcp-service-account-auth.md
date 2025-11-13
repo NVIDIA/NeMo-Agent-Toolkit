@@ -41,7 +41,7 @@ The `mcp_service_account` authentication provider implements:
 - **OAuth2 Client Credentials Flow**: Standard [RFC 6749 Section 4.4](https://www.rfc-editor.org/rfc/rfc6749#section-4.4) client credentials grant
 - **Token Caching**: Automatic token caching with configurable refresh buffer to minimize token endpoint requests
 - **Custom Token Formats**: Support for non-standard Bearer token prefixes (for example, `Bearer service_account_ssa:token`)
-- **Multi-Header Authentication**: Ability to inject multiple authentication headers for services requiring additional tokens
+- **Multi-Header Authentication**: Ability to inject multiple authentication headers for services using backend system delegation patterns
 
 ## Authentication Token Types
 
@@ -62,7 +62,7 @@ authentication:
     client_id: ${SERVICE_ACCOUNT_CLIENT_ID}
     client_secret: ${SERVICE_ACCOUNT_CLIENT_SECRET}
     token_url: https://auth.example.com/service_account/token
-    scopes: "api.read api.write"
+    scopes: "service-account-scope-jira service-account-scope-jama_cache"
 ```
 
 To view all configuration options for the `mcp_service_account` authentication provider, run the following command:
@@ -151,22 +151,17 @@ The service account provider supports two authentication patterns depending on M
 
 Use for custom MCP servers that only require OAuth2 service account token validation. This pattern uses one authentication header.
 
-**Standard Bearer Token:**
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Token Endpoint
+    participant MCP Server
 
-```yaml
-authentication:
-  standard_auth:
-    _type: mcp_service_account
-    client_id: ${CLIENT_ID}
-    client_secret: ${CLIENT_SECRET}
-    token_url: https://auth.example.com/oauth/token
-    scopes: "api.read"
-    token_prefix: ""  # Empty string for standard Bearer token
+    Client->>Token Endpoint: POST /oauth/token<br/>(client_id, client_secret, scopes)
+    Token Endpoint-->>Client: access_token
+    Client->>MCP Server: Request<br/>Authorization: Bearer service_account_ssa:<access_token>
+    MCP Server-->>Client: Response
 ```
-
-Produces: `Authorization: Bearer <access_token>`
-
-**Custom Token Prefix:**
 
 ```yaml
 authentication:
@@ -184,6 +179,19 @@ Produces: `Authorization: Bearer service_account_ssa:<access_token>`
 ### Dual Authentication Pattern
 
 Use for enterprise MCP servers (such as Jira, GitLab) that require both OAuth2 service account token and service token for backend system delegation. This pattern uses two authentication headers.
+
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Token Endpoint
+    participant MCP Server
+
+    Client->>Token Endpoint: POST /oauth/token<br/>(client_id, client_secret, scopes)
+    Token Endpoint-->>Client: access_token
+    Client->>MCP Server: Request<br/>Authorization: Bearer service_account_ssa:<access_token><br/>X-Service-Account-Token: <service_token>
+    MCP Server-->>Client: Response
+```
 
 ```yaml
 authentication:
@@ -247,7 +255,7 @@ The Service Account Authentication Example demonstrates both authentication patt
 - **Single Authentication**: `examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jama.yml`
 - **Dual Authentication**: `examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jira.yml`
 
-See `examples/MCP/service_account_auth_mcp/README.md` for complete instructions and guidance on choosing the right pattern for your MCP server.
+See `examples/MCP/service_account_auth_mcp/README.md` for complete instructions on running the example workflows.
 
 ## Troubleshooting
 ### Error: "`client_id` is required"
@@ -260,20 +268,17 @@ Verify your client ID and client secret are correct, the token endpoint URL is r
 
 ### Error: "Service account rate limit exceeded"
 
-Wait before retrying. Consider increasing `token_cache_buffer_seconds` to reduce token refresh frequency.
+Wait before retrying.
 
 ### Error: "SSL: CERTIFICATE_VERIFY_FAILED"
 
-The MCP server uses certificates from an internal Certificate Authority. Install your organization's CA certificates in your system's trust store.
-
-The MCP Python SDK does not currently support disabling SSL verification. See [MCP Python SDK Issue #870](https://github.com/modelcontextprotocol/python-sdk/issues/870) for updates.
+The MCP server may use certificates from an internal Certificate Authority. Install your organization's CA certificates in your system's trust store.
 
 ### Authentication works locally but fails in CI/CD
 
-Verify all environment variables are set in your CI/CD platform and check secret management configuration.
+Verify all environment variables are set in your CI/CD platform.
 
 ## See Also
 
 - [MCP Authentication](./mcp-auth.md) - OAuth2 interactive authentication for user-facing workflows
-- [Secure Token Storage](./mcp-auth-token-storage.md) - Token storage and management best practices
 - [MCP Client](./mcp-client.md) - Connecting to MCP servers

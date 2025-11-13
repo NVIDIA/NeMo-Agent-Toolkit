@@ -17,7 +17,7 @@ limitations under the License.
 
 # MCP Service Account Authentication Example
 
-This example demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that require service account authentication. Service account authentication enables headless, automated workflows without requiring browser-based user interaction.
+This example demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that support service account authentication. Service account authentication enables headless, automated workflows without requiring browser-based user interaction.
 
 It is recommended to read the [MCP Service Account Authentication](../../../docs/source/workflows/mcp/mcp-service-account-auth.md) documentation first.
 
@@ -87,7 +87,7 @@ export SERVICE_ACCOUNT_CLIENT_SECRET="your-client-secret"
 export SERVICE_ACCOUNT_TOKEN_URL="https://auth.example.com/service_account/token"
 
 # Service account scopes - space-separated (required for both patterns)
-export SERVICE_ACCOUNT_SCOPES="corporate-mcp-scope-jira corporate-mcp-scope-jama_cache"
+export SERVICE_ACCOUNT_SCOPES="service-account-scope-jama_cache service-account-scope-jira"
 
 # Custom token prefix for Authorization header (optional)
 # Example: "service_account_ssa" produces "Authorization: Bearer service_account_ssa:<token>"
