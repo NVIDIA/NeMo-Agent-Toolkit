@@ -97,7 +97,7 @@ nat run --config config.yml --input "How many customers do we have?"
 
 ## Components
 
-### text2sql Function
+### `text2sql` Function
 
 Generates SQL queries from natural language using:
 - Few-shot learning with similar examples
@@ -105,7 +105,7 @@ Generates SQL queries from natural language using:
 - Custom documentation
 - LLM-powered query generation
 
-### execute_db_query Function
+### `execute_db_query` Function
 
 Executes SQL queries and returns formatted results:
 - Databricks SQL execution
