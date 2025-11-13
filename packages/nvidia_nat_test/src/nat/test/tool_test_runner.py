@@ -29,18 +29,21 @@ from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
 from nat.cli.type_registry import GlobalTypeRegistry
 from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import FunctionMiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.memory.interfaces import MemoryEditor
+from nat.middleware import FunctionMiddleware
 from nat.object_store.interfaces import ObjectStore
 from nat.runtime.loader import PluginTypes
 from nat.runtime.loader import discover_and_register_plugins
@@ -288,6 +291,19 @@ class MockBuilder(Builder):
     def get_function_group_dependencies(self, fn_name: str) -> FunctionDependencies:
         """Mock implementation."""
         return FunctionDependencies()
+
+    async def get_middleware(self, middleware_name: str | MiddlewareRef) -> FunctionMiddleware:
+        """Mock implementation."""
+        return FunctionMiddleware()
+
+    def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> FunctionMiddlewareBaseConfig:
+        """Mock implementation."""
+        return FunctionMiddlewareBaseConfig()
+
+    async def add_middleware(self, name: str | MiddlewareRef,
+                             config: FunctionMiddlewareBaseConfig) -> FunctionMiddleware:
+        """Mock implementation."""
+        return FunctionMiddleware()
 
 
 class ToolTestRunner:

@@ -120,6 +120,21 @@ services:
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_USER_PW:-password123}
       NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-mysecret}
 
+  local-sandbox:
+    build:
+      context: ../../src/nat/tool/code_execution/local_sandbox
+      dockerfile: Dockerfile.sandbox
+    container_name: test-local-sandbox
+    ports:
+      - "6000:6000"
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   milvus:
     container_name: test-milvus-standalone
     image: milvusdb/milvus:v2.3.1

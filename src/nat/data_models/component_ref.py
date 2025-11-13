@@ -177,3 +177,14 @@ class TTCStrategyRef(ComponentRef):
     @override
     def component_group(self):
         return ComponentGroup.TTC_STRATEGIES
+
+
+class MiddlewareRef(ComponentRef):
+    """
+    A reference to middleware in a NAT configuration object.
+    """
+
+    @property
+    @override
+    def component_group(self):
+        return ComponentGroup.MIDDLEWARE
