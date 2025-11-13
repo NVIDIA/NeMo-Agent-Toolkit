@@ -536,6 +536,26 @@ If you're migrating from OpenAI's API:
 2. **Update Model Names**: Use your configured model identifiers
 3. **Test Compatibility**: Verify all features work as expected
 
+## Feedback Endpoint
+- **Route:** `/feedback`
+- **Description:** Add reaction feedback for an assistant message through Weave call ID. This endpoint is automatically available when Weave telemetry is configured in the workflow.
+- **HTTP Request Example:**
+  ```bash
+  curl --request POST \
+    --url http://localhost:8000/feedback \
+    --header 'Content-Type: application/json' \
+    --data '{
+      "weave_call_id": "01933b2e-1234-5678-9abc-def012345678",
+      "reaction_type": "👍"
+    }'
+  ```
+- **HTTP Response Example:**
+  ```json
+  {
+    "message": "Added reaction '👍' to call 01933b2e-1234-5678-9abc-def012345678"
+  }
+  ```
+
 ## Evaluation Endpoint
 You can also evaluate workflows via the NeMo Agent toolkit `evaluate` endpoint. For more information, refer to the [NeMo Agent toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
 

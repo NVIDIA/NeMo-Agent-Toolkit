@@ -160,7 +160,7 @@ For complete configuration examples and setup instructions, refer to the individ
 | OpenTelemetry Collector | Logging, Tracing |
 | Patronus | Logging, Tracing |
 | Phoenix | Logging, Tracing |
-| W&B Weave | Logging, Tracing, W&B Weave Redaction, Evaluation Metrics |
+| W&B Weave | Logging, Tracing, W&B Weave Redaction, Evaluation Metrics, User Feedback |
 
 ### NeMo Agent Toolkit Observability Components
 
