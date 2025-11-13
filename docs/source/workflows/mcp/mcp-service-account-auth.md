@@ -62,7 +62,9 @@ authentication:
     client_id: ${SERVICE_ACCOUNT_CLIENT_ID}
     client_secret: ${SERVICE_ACCOUNT_CLIENT_SECRET}
     token_url: https://auth.example.com/service_account/token
-    scopes: "service-account-scope-jira service-account-scope-jama_cache"
+    scopes:
+      - service-account-scope-1
+      - service-account-scope-2
 ```
 
 To view all configuration options for the `mcp_service_account` authentication provider, run the following command:
@@ -80,7 +82,7 @@ The following fields must be provided in your configuration:
 | `client_id` | OAuth2 client identifier for your service account | `my-service-client` |
 | `client_secret` | OAuth2 client secret (keep secure, never commit to version control) | `${SERVICE_ACCOUNT_CLIENT_SECRET}` |
 | `token_url` | OAuth2 token endpoint URL | `https://auth.example.com/oauth/token` |
-| `scopes` | Space-separated list of OAuth2 scopes required for access | `api.read api.write` |
+| `scopes` | List of OAuth2 scopes required for access (can also be space-delimited string) | `[api.read, api.write]` |
 
 ### Optional Configuration Fields
 
@@ -95,8 +97,11 @@ Customize the authentication behavior with these optional fields:
 
 ## Environment Variables
 
-Service account credentials are typically provided through environment variables to avoid committing secrets to version control. Reference them in your configuration using the `${VARIABLE_NAME}` syntax:
+Service account credentials are typically provided through environment variables to avoid committing secrets to version control. Reference them in your configuration using the `${VARIABLE_NAME}` syntax.
 
+For `scopes`, you can use either a list (recommended for clarity) or a space-delimited string from an environment variable:
+
+**List format (recommended):**
 ```yaml
 authentication:
   my_service_account:
@@ -104,7 +109,20 @@ authentication:
     client_id: ${SERVICE_ACCOUNT_CLIENT_ID}
     client_secret: ${SERVICE_ACCOUNT_CLIENT_SECRET}
     token_url: ${SERVICE_ACCOUNT_TOKEN_URL}
-    scopes: ${SERVICE_ACCOUNT_SCOPES}
+    scopes:
+      - service-account-scope-1
+      - service-account-scope-2
+```
+
+**String format (for environment variables):**
+```yaml
+authentication:
+  my_service_account:
+    _type: mcp_service_account
+    client_id: ${SERVICE_ACCOUNT_CLIENT_ID}
+    client_secret: ${SERVICE_ACCOUNT_CLIENT_SECRET}
+    token_url: ${SERVICE_ACCOUNT_TOKEN_URL}
+    scopes: ${SERVICE_ACCOUNT_SCOPES}  # Space-delimited string
 ```
 
 Set the environment variables in your shell:
@@ -113,7 +131,7 @@ Set the environment variables in your shell:
 export SERVICE_ACCOUNT_CLIENT_ID="your-client-id"
 export SERVICE_ACCOUNT_CLIENT_SECRET="your-client-secret"
 export SERVICE_ACCOUNT_TOKEN_URL="https://auth.example.com/oauth/token"
-export SERVICE_ACCOUNT_SCOPES="api.read api.write"
+export SERVICE_ACCOUNT_SCOPES="service-account-scope-1 service-account-scope-2"  # For string format
 ```
 
 :::{warning}
@@ -139,7 +157,9 @@ authentication:
     client_id: ${SERVICE_ACCOUNT_CLIENT_ID}
     client_secret: ${SERVICE_ACCOUNT_CLIENT_SECRET}
     token_url: ${SERVICE_ACCOUNT_TOKEN_URL}
-    scopes: ${SERVICE_ACCOUNT_SCOPES}
+    scopes:
+      - api.read
+      - api.write
 ```
 
 
@@ -170,7 +190,8 @@ authentication:
     client_id: ${CLIENT_ID}
     client_secret: ${CLIENT_SECRET}
     token_url: https://auth.example.com/oauth/token
-    scopes: "service.scope"
+    scopes:
+      - service.scope
     token_prefix: service_account_ssa
 ```
 
@@ -200,7 +221,8 @@ authentication:
     client_id: ${CLIENT_ID}
     client_secret: ${CLIENT_SECRET}
     token_url: ${TOKEN_URL}
-    scopes: "service.scope"
+    scopes:
+      - service.scope
     token_prefix: service_account_ssa
     service_token: ${SERVICE_TOKEN}
     service_token_header: X-Service-Account-Token

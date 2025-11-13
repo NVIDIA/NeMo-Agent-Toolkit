@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from pydantic import Field
+from pydantic import field_validator
 
 from nat.authentication.interfaces import AuthProviderBaseConfig
 from nat.data_models.common import OptionalSecretStr
@@ -45,7 +46,7 @@ class MCPServiceAccountProviderConfig(AuthProviderBaseConfig, name="mcp_service_
     token_url: str = Field(description="OAuth2 token endpoint URL")
 
     # Required: OAuth2 scopes
-    scopes: str = Field(description="Space-separated OAuth2 scopes")
+    scopes: list[str] = Field(description="List of OAuth2 scopes (will be joined with spaces for OAuth2 request)")
 
     # Optional: Custom token prefix for Authorization header
     token_prefix: str = Field(
@@ -69,3 +70,15 @@ class MCPServiceAccountProviderConfig(AuthProviderBaseConfig, name="mcp_service_
     # Token caching configuration
     token_cache_buffer_seconds: int = Field(default=300,
                                             description="Seconds before token expiry to refresh (default: 300s/5min)")
+
+    @field_validator("scopes", mode="before")
+    @classmethod
+    def validate_scopes(cls, v):
+        """
+        Accept both list[str] and space-delimited string formats for scopes.
+        Converts string to list for consistency.
+        """
+        if isinstance(v, str):
+            # Split space-delimited string into list
+            return [scope.strip() for scope in v.split() if scope.strip()]
+        return v

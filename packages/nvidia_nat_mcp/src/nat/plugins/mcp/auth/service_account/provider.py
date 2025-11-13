@@ -41,7 +41,9 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
             client_id: ${SERVICE_ACCOUNT_CLIENT_ID}
             client_secret: ${SERVICE_ACCOUNT_CLIENT_SECRET}
             token_url: https://auth.example.com/oauth/token
-            scopes: "api.read api.write"
+            scopes:
+              - api.read
+              - api.write
             token_prefix: service_account  # Optional
             service_token: ${SERVICE_TOKEN}  # Optional
     """
@@ -54,7 +56,7 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
             client_id=config.client_id,
             client_secret=config.client_secret,
             token_url=config.token_url,
-            scopes=config.scopes,
+            scopes=" ".join(config.scopes),  # Convert list to space-delimited string for OAuth2
             token_cache_buffer_seconds=config.token_cache_buffer_seconds,
         )
 
