@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# About the Router Agent
+# About Router Agent
 
 The router agent is a control flow component that analyzes incoming requests and directs them to the most appropriate branch based on the request configuration. The agent pairs single-pass architecture with intelligent request routing to analyze prompts and selects one branch that best handles the request. The agent is ideal for scenarios where different types of requests need specialized handling.
 

@@ -101,7 +101,7 @@ workflow:
 
 ## The Sequential Executor Workflow
 
-Instead of using LLMS for decision making, the sequential executor follows a fixed execution path where each function's output directly becomes the input for the next function.
+The sequential executor follows a fixed execution path where each function's output directly becomes the input for the next function.
 
 The sequential executor follows a fixed execution path where each function's output directly becomes the input for the next function.
 
