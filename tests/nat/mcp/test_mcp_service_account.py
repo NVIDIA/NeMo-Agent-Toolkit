@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -58,7 +57,9 @@ def minimal_config() -> MCPServiceAccountProviderConfig:
 @pytest.fixture
 def mock_token_response():
     """Mock successful OAuth2 token response."""
-    return {"access_token": "mock_access_token_12345", "token_type": "Bearer", "expires_in": 3600, "scope": "read write"}
+    return {
+        "access_token": "mock_access_token_12345", "token_type": "Bearer", "expires_in": 3600, "scope": "read write"
+    }
 
 
 # --------------------------------------------------------------------------- #
