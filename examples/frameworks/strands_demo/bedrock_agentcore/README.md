@@ -34,18 +34,37 @@ uv pip install -e examples/frameworks/strands_demo
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
   -t strands_demo \
-  -f examples/frameworks/strands_demo/Dockerfile \
+  -f examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \
   --load .
 ```
 
+### Configure AWS CLI
+
+```bash
+aws configure
+```
+Enter your AWS ACCESS KEY, AWS SECRET ACCESS KEY, and REGION for your AWS Account.
+
+### Setup AWS ENV Variables
+
+```bash
+    export AWS_ACCESS_KEY_ID=$(aws configure get default.aws_access_key_id)
+    export AWS_SECRET_ACCESS_KEY=$(aws configure get default.aws_secret_access_key)
+    export AWS_DEFAULT_REGION=$(aws configure get default.region)
+```
+
 ### Run the Container Locally
+
+> **Note:** The `NVIDIA_API_KEY` is required only when using NVIDIA-hosted NIM endpoints (default configuration). If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` specified in your configuration file (such as shown in `sizing_config.yml`), you do not need to set the `NVIDIA_API_KEY` environment variable.
 
 ```bash
 docker run \
   -p 8080:8080 \
   -p 6006:6006 \
   -e NVIDIA_API_KEY \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
   strands_demo \
   --platform linux/arm64
 ```
@@ -72,11 +91,7 @@ Workflow Result:
 
 ## Step 3: Set Up AWS Environment
 
-### Configure AWS CLI
-
-```bash
-aws configure
-```
+If you have not set up the AWS environment in the previous step, do so now.
 
 ### Create ECR Repository
 
@@ -109,10 +124,12 @@ aws ecr get-login-password --region <AWS_REGION> | \
 
 > **Important:** Never pass credentials as build arguments. Use AWS IAM roles and environment variables instead. The example below shows the structure but credentials should be managed securely.
 
+> **Note:** The `NVIDIA_API_KEY` is required only when using NVIDIA-hosted NIM endpoints (default configuration). If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` specified in your configuration file (such as `base_url: <base url to NIM instance>` in `sizing_config.yml`), you do not need to provide the `NVIDIA_API_KEY`.
+
 Replace the following placeholders:
 - `<AWS_ACCOUNT_ID>` - Your AWS account ID
 - `<AWS_REGION>` - Your AWS region
-- `<NVIDIA_API_KEY>` - Your NVIDIA API key (use environment variables or secrets manager)
+- `<NVIDIA_API_KEY>` - Your NVIDIA API key for hosted NIM endpoints (use environment variables or secrets manager; not needed for self-hosted NVIDIA NIM or models with custom base_url)
 - `<AWS_ACCESS_KEY_ID>` - Your AWS access key (use IAM roles instead)
 - `<AWS_SECRET_ACCESS_KEY>` - Your AWS secret key (use IAM roles instead)
 
@@ -123,14 +140,14 @@ docker build \
   --build-arg AWS_ACCESS_KEY_ID="<AWS_ACCESS_KEY_ID>" \
   --build-arg AWS_SECRET_ACCESS_KEY="<AWS_SECRET_ACCESS_KEY>" \
   -t <AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/strands-demo:latest \
-  -f examples/frameworks/strands_demo/Dockerfile \
+  -f examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \
   --push .
 ```
 
 ### Update Deployment Script
 
-Update `examples/frameworks/strands_demo/scripts/deploy_nat.py` with:
+Update `examples/frameworks/strands_demo/bedrock_agentcore/scripts/deploy_nat.py` with:
 - Your AWS account ID
 - Your AWS region
 - ECR image URI
@@ -162,14 +179,14 @@ print(f"Status: {response['status']}")
 ### Deploy the Agent
 
 ```bash
-uv run examples/frameworks/strands_demo/scripts/deploy_nat.py
+uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/deploy_nat.py
 ```
 
 **Important:** Record the runtime ID from the output for the next steps. It will look something like: `strands_demo-abc123XYZ`
 
 ### Test the Deployment
 
-Update `examples/frameworks/strands_demo/scripts/test_nat2.py` with:
+Update `examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py` with:
 - Your AWS account ID
 - Your AWS region
 - Runtime ID from previous step
@@ -197,7 +214,7 @@ print("Agent Response:", response_data)
 ### Run the Test
 
 ```bash
-uv run examples/frameworks/strands_demo/scripts/test_nat2.py
+uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 ```
 
 ## Step 5: Instrument for OpenTelemetry
@@ -225,8 +242,35 @@ And uncomment the OpenTelemetry instrumented entry point:
 ```dockerfile
 ENTRYPOINT ["sh", "-c", "exec opentelemetry-instrument nat serve --config_file=$NAT_CONFIG_FILE --host 0.0.0.0"]
 ```
+Save the updated Dockerfile
 
-## Step 6: Update the Agent with New Version
+
+### ReBuild and Push Docker Image to ECR
+
+> **Important:** Never pass credentials as build arguments. Use AWS IAM roles and environment variables instead. The example below shows the structure but credentials should be managed securely.
+
+> **Note:** The `NVIDIA_API_KEY` is required only when using NVIDIA-hosted NIM endpoints (default configuration). If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` specified in your configuration file (such as `base_url: <base url to NIM instance>` in `sizing_config.yml`), you do not need to provide the `NVIDIA_API_KEY`.
+
+Replace the following placeholders:
+- `<AWS_ACCOUNT_ID>` - Your AWS account ID
+- `<AWS_REGION>` - Your AWS region
+- `<NVIDIA_API_KEY>` - Your NVIDIA API key for hosted NIM endpoints (use environment variables or secrets manager; not needed for self-hosted NVIDIA NIM or models with custom base_url)
+- `<AWS_ACCESS_KEY_ID>` - Your AWS access key (use IAM roles instead)
+- `<AWS_SECRET_ACCESS_KEY>` - Your AWS secret key (use IAM roles instead)
+
+```bash
+docker build \
+  --build-arg NAT_VERSION=$(python -m setuptools_scm) \
+  --build-arg NVIDIA_API_KEY \
+  --build-arg AWS_ACCESS_KEY_ID \
+  --build-arg AWS_SECRET_ACCESS_KEY \
+  -t <AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/strands-demo:latest \
+  -f examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
+  --platform linux/arm64 \
+  --push .
+```
+
+### Update the Agent with New Version
 
 ### Update the Update Script
 
@@ -237,7 +281,7 @@ Update `update_nat2.py` with:
 - ECR image URI
 - IAM Role ARN
 
-**update_nat2.py:**
+**update_nat.py:**
 
 ```python
 import boto3
@@ -263,13 +307,13 @@ print(f"Status: {response['status']}")
 ### Run the Update Script
 
 ```bash
-uv run examples/frameworks/strands_demo/scripts/update_nat.py
+uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/update_nat.py
 ```
 
-### Test Again
+### Final Test 
 
 ```bash
-uv run examples/frameworks/strands_demo/scripts/test_nat2.py
+uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 ```
 
 > **Note:** If you do not see OpenTelemetry telemetry for your agent after a few test runs, please refer to Appendix 2 to ensure you have enabled OpenTelemetry support in CloudWatch.
@@ -735,8 +779,11 @@ ENTRYPOINT ["sh", "-c", "exec opentelemetry-instrument nat serve --config_file=$
 ### Recommended Approach
 
 **For NVIDIA API Key:**
+
+> **Note:** The NVIDIA API key is only required when using NVIDIA-hosted NIM endpoints. If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` in your configuration (such as `base_url: <base url to NIM instance>` in your workflow config), you do not need the NVIDIA API key.
+
 ```bash
-# Store in AWS Secrets Manager
+# Store in AWS Secrets Manager (only if using NVIDIA-hosted endpoints)
 aws secretsmanager create-secret \
   --name nvidia-api-key \
   --secret-string "<NVIDIA_API_KEY>" \
@@ -783,7 +830,7 @@ Throughout this guide, replace the following placeholders with your actual value
 | `<AWS_ACCOUNT_ID>` | Your AWS account ID | `123456789012` |
 | `<AWS_REGION>` | Your AWS region | `us-west-2`, `us-east-1`, `eu-west-1` |
 | `<RUNTIME_ID>` | AgentCore runtime ID | `strands_demo-abc123XYZ` |
-| `<NVIDIA_API_KEY>` | Your NVIDIA API key | Retrieve from secrets manager |
+| `<NVIDIA_API_KEY>` | Your NVIDIA API key (only for hosted NIM endpoints) | Retrieve from secrets manager; not needed for self-hosted NVIDIA NIM or models with custom base_url |
 | `<AWS_ACCESS_KEY_ID>` | AWS access key | Use IAM roles instead |
 | `<AWS_SECRET_ACCESS_KEY>` | AWS secret key | Use IAM roles instead |
 
