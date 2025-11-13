@@ -14,9 +14,10 @@
 # limitations under the License.
 
 from pydantic import Field
-from pydantic import SecretStr
 
 from nat.authentication.interfaces import AuthProviderBaseConfig
+from nat.data_models.common import OptionalSecretStr
+from nat.data_models.common import SerializableSecretStr
 
 
 class MCPServiceAccountProviderConfig(AuthProviderBaseConfig, name="mcp_service_account"):
@@ -38,7 +39,7 @@ class MCPServiceAccountProviderConfig(AuthProviderBaseConfig, name="mcp_service_
     # Required: OAuth2 client credentials
     client_id: str = Field(description="OAuth2 client identifier")
 
-    client_secret: SecretStr = Field(description="OAuth2 client secret")
+    client_secret: SerializableSecretStr = Field(description="OAuth2 client secret")
 
     # Required: Token endpoint URL
     token_url: str = Field(description="OAuth2 token endpoint URL")
@@ -54,7 +55,7 @@ class MCPServiceAccountProviderConfig(AuthProviderBaseConfig, name="mcp_service_
     )
 
     # Optional: Additional service-specific service account token for two-header authentication patterns
-    service_token: SecretStr | None = Field(
+    service_token: OptionalSecretStr = Field(
         default=None,
         description="Optional service account token for two-header authentication patterns",
     )
