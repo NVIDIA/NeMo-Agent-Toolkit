@@ -2114,6 +2114,41 @@ http = [
 ]
 
 [[package]]
+name = "galileo"
+version = "1.31.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "backoff" },
+    { name = "galileo-core" },
+    { name = "pydantic" },
+    { name = "pyjwt" },
+    { name = "python-dateutil" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ce/93/20d4ca8cde8ff6e1ba45a005979d17b724867619bcd2dd16dfe61e41480d/galileo-1.31.0.tar.gz", hash = "sha256:6456627a900887e96e9065fa06f25e5e1f18bf9ae090678fec8dcb2fc74714b7", size = 510852, upload-time = "2025-11-12T20:30:26.701Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7d/80/4a1fdc87564b1616a164f0c7fa9dbf50bdae8a8670cd62b3ae851d434c1c/galileo-1.31.0-py3-none-any.whl", hash = "sha256:a912ba49c6fcd2d70a62e9a306a4063e686422e3964ca1d054546bc6bac399d6", size = 1207621, upload-time = "2025-11-12T20:30:24.721Z" },
+]
+
+[[package]]
+name = "galileo-core"
+version = "3.71.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pyjwt" },
+    { name = "typing-extensions" },
+    { name = "uvloop", marker = "sys_platform != 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/38/82/70d9e24a986c1655910b14929a06138bc914ef349b1c26c31d445c4cea00/galileo_core-3.71.0.tar.gz", hash = "sha256:4269b3a3143656765991e39a0d685e35b0a54525dac2e0f254c6f7a329e7d08e", size = 58273, upload-time = "2025-11-13T18:48:06.125Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/d4/a7ad1acebcec5a1cac4e4176220164f788c4205c87db58ec17f9abcb38ba/galileo_core-3.71.0-py3-none-any.whl", hash = "sha256:f8c21091dbebcac781b836a8694a19ab952076a199aa91e76d28422994b0c72e", size = 99876, upload-time = "2025-11-13T18:48:04.491Z" },
+]
+
+[[package]]
 name = "ghapi"
 version = "1.0.8"
 source = { registry = "https://pypi.org/simple" }
@@ -5948,8 +5983,10 @@ zep-cloud = [
 dev = [
     { name = "asgi-lifespan" },
     { name = "beautifulsoup4" },
+    { name = "galileo" },
     { name = "httpx-sse" },
     { name = "ipython" },
+    { name = "langsmith" },
     { name = "myst-parser" },
     { name = "nbconvert" },
     { name = "nbsphinx" },
@@ -6076,8 +6113,10 @@ provides-extras = ["all", "adk", "agno", "crewai", "data-flywheel", "ingestion",
 dev = [
     { name = "asgi-lifespan", specifier = "~=2.1" },
     { name = "beautifulsoup4", specifier = "~=4.13" },
+    { name = "galileo", specifier = "~=1.27" },
     { name = "httpx-sse", specifier = "~=0.4" },
     { name = "ipython", specifier = "~=8.31" },
+    { name = "langsmith" },
     { name = "myst-parser", specifier = "~=4.0" },
     { name = "nbconvert" },
     { name = "nbsphinx", specifier = "~=0.9" },
