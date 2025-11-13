@@ -55,10 +55,19 @@ uv pip install -e examples/frameworks/strands_demo
 
 ### Set Up API Keys
 
+> **Note:** The `NVIDIA_API_KEY` is required only when using NVIDIA-hosted NIM endpoints (default configuration). If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` specified in your configuration file (such as in `examples/frameworks/strands_demo/configs/sizing_config.yml`), you do not need to set the `NVIDIA_API_KEY`.
+
 ```bash
 export NVIDIA_API_KEY=<YOUR_NVIDIA_API_KEY>
-# Optional if you switch models in the config
+```
+
+**Optional:** Set these only if you switch to different LLM providers in the config:
+
+```bash
+# For OpenAI models
 export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
+
+# For AWS Bedrock models
 export AWS_ACCESS_KEY_ID=<YOUR_AWS_ACCESS_KEY_ID>
 export AWS_SECRET_ACCESS_KEY=<YOUR_AWS_SECRET_ACCESS_KEY>
 export AWS_DEFAULT_REGION=us-east-1
@@ -120,11 +129,11 @@ The optimizer runs 20 trials with 3 repetitions each for statistical stability a
 
 ### 5) Profile for GPU cluster sizing (sizing_config.yml)
 
-Profiles workflow performance and calculates GPU cluster sizing requirements based on target users and workflow runtime. This configuration requires updating the `base_url` parameter to point to your NIM deployment.
+Profiles workflow performance and calculates GPU cluster sizing requirements based on target users and workflow runtime. This configuration requires updating the `base_url` parameter to point to your self-hosted NVIDIA NIM or model with OAI compatible endpoint.
 
 **Step 1: Collect profiling data**
 
-First, update the `base_url` in `sizing_config.yml` to point to your NIM instance, then run the sizing profiler to collect performance metrics at different concurrency levels:
+First, update the `base_url` in `examples/frameworks/strands_demo/configs/sizing_config.yml` to point to your self-hosted NVIDIA NIM or model endpoint, then run the sizing profiler to collect performance metrics at different concurrency levels:
 
 ```bash
 nat sizing calc --config_file examples/frameworks/strands_demo/configs/sizing_config.yml \
