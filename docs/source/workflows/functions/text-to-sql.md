@@ -215,23 +215,23 @@ Results: 42 customers found
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
-| `llm_name` | str | LLM reference for SQL generation | Required |
-| `embedder_name` | str | Embedder reference for vector ops | Required |
-| `milvus_retriever` | str | Milvus retriever reference (must use `use_async_client=true`) | Required |
-| `database_type` | str | Database type (must be 'databricks') | "databricks" |
-| `connection_url` | str | Database connection string (SQLAlchemy format) | Required |
-| `execute_sql` | bool | Execute SQL or just return query | false |
-| `allow_llm_to_see_data` | bool | Allow intermediate queries | false |
-| `train_on_startup` | bool | Train Vanna on startup | false |
-| `auto_training` | bool | Auto-extract DDL and generate training data | false |
-| `initial_prompt` | str | Custom system prompt | null |
-| `n_results` | int | Number of similar examples | 5 |
-| `sql_collection` | str | Milvus collection name for SQL examples | "vanna_sql" |
-| `ddl_collection` | str | Milvus collection name for DDL | "vanna_ddl" |
-| `doc_collection` | str | Milvus collection name for documentation | "vanna_documentation" |
-| `milvus_search_limit` | int | Maximum limit for vector search operations | 1000 |
-| `reasoning_models` | set[str] | Models requiring think tag removal | See below |
-| `chat_models` | set[str] | Models using standard response handling | See below |
+| `llm_name` | `str` | LLM reference for SQL generation | Required |
+| `embedder_name` | `str` | Embedder reference for vector ops | Required |
+| `milvus_retriever` | `str` | Milvus retriever reference (must use `use_async_client=true`) | Required |
+| `database_type` | `str` | Database type (must be 'Databricks') | "Databricks" |
+| `connection_url` | `str` | Database connection string (SQLAlchemy format) | Required |
+| `execute_sql` | `bool` | Execute SQL or just return query | false |
+| `allow_llm_to_see_data` | `bool` | Allow intermediate queries | false |
+| `train_on_startup` | `bool` | Train Vanna on startup | false |
+| `auto_training` | `bool` | Auto-extract DDL and generate training data | false |
+| `initial_prompt` | `str` | Custom system prompt | null |
+| `n_results` | `int` | Number of similar examples | 5 |
+| `sql_collection` | `str` | Milvus collection name for SQL examples | `"vanna_sql"` |
+| `ddl_collection` | `str` | Milvus collection name for DDL | `"vanna_ddl"` |
+| `doc_collection` | `str` | Milvus collection name for documentation | `"vanna_documentation"` |
+| `milvus_search_limit` | `int` | Maximum limit for vector search operations | 1000 |
+| `reasoning_models` | `set[str]` | Models requiring think tag removal | See below |
+| `chat_models` | `set[str]` | Models using standard response handling | See below |
 
 **Default reasoning models**: `nvidia/llama-3.1-nemotron-ultra-253b-v1`, `nvidia/llama-3.3-nemotron-super-49b-v1.5`, `deepseek-ai/deepseek-v3.1`, `deepseek-ai/deepseek-r1`
 
@@ -241,7 +241,7 @@ Results: 42 customers found
 
 **`train_on_startup`**: Controls whether Vanna initializes and loads training data when the workflow starts.
 
-- **`true`**: Automatically creates Milvus collections with names specified by `sql_collection`, `ddl_collection`, and `doc_collection` parameters (defaults: "vanna_sql", "vanna_ddl", "vanna_documentation") and ingests training data during workflow initialization. This ensures the vector store is populated and ready for similarity search before the first query is processed. Use this setting when you want to ensure fresh training data is loaded each time the workflow starts.
+- **`true`**: Automatically creates Milvus collections with names specified by `sql_collection`, `ddl_collection`, and `doc_collection` parameters (defaults: `"vanna_sql"`, `"vanna_ddl"`, `"vanna_documentation"`) and ingests training data during workflow initialization. This ensures the vector store is populated and ready for similarity search before the first query is processed. Use this setting when you want to ensure fresh training data is loaded each time the workflow starts.
 
 - **`false`** (default): Skips automatic collection creation and training data ingestion. The workflow assumes Milvus collections already exist and contain previously trained data. Use this setting in production environments where training data is already loaded.
 
@@ -293,9 +293,9 @@ engine = create_engine("sqlite:///local.db")
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
-| `database_type` | str | Database type (must be 'databricks') | "databricks" |
-| `connection_url` | str | Database connection string (SQLAlchemy format) | Required |
-| `max_rows` | int | Maximum rows to return | 100 |
+| `database_type` | `str` | Database type (must be 'Databricks') | "Databricks" |
+| `connection_url` | `str` | Database connection string (SQLAlchemy format) | Required |
+| `max_rows` | `int` | Maximum rows to return | 100 |
 
 ### Milvus Configuration
 
@@ -463,9 +463,9 @@ general:
 ```
 
 Other features include:
-- Full integration with NeMo Agent toolkit's intermediate step tracking system
+- Full integration with the NeMo Agent toolkit intermediate step tracking system
 - Better UI Display - Front-ends can now properly render intermediate steps
-- Parent Tracking - Each function call has a parent_id to group related steps
+- Parent Tracking - Each function call has a `parent_id` to group related steps
 
 ## Troubleshooting
 
@@ -476,7 +476,7 @@ Other features include:
 Error: Failed to connect to Milvus
 ```
 - Verify Milvus is running: `docker ps | grep milvus`
-- Check host/port configuration
+- Check host and port configuration
 - Verify TLS settings match your Milvus deployment
 
 **Database connection failed:**

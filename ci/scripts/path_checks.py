@@ -150,7 +150,8 @@ ALLOWLISTED_WORDS: set[str] = {
     "nvidia/([Ll]lama|[Nn][Vv]-).*",
     "mistralai/[Mm]ixtral.*",
     "microsoft/[Pp]hi.*",
-    "ssmits/[Qq]wen.*",  #
+    "ssmits/[Qq]wen.*",
+    "deepseek-ai/deepseek-.*",  #
     # MIME types
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
     # Time zones
