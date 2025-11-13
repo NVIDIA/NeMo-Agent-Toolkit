@@ -53,6 +53,7 @@ from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import MemoryRef
 from nat.data_models.component_ref import MiddlewareRef
+from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
 from nat.data_models.component_ref import TTCStrategyRef
@@ -1705,3 +1706,18 @@ class UserWorkflowBuilder(WorkflowBuilder):
             skip_workflow (bool): If True, skips the workflow instantiation step. Defaults to False.
         """
         await super().populate_builder(config, skip_workflow=skip_workflow)
+
+    @override
+    async def add_middleware(self, name: str | MiddlewareRef, config: MiddlewareBaseConfig) -> Middleware:
+        """Add middleware to the builder."""
+        return await self._workflow_builder.add_middleware(name, config)
+
+    @override
+    async def get_middleware(self, middleware_name: str | MiddlewareRef) -> Middleware:
+        """Get built middleware by name."""
+        return await self._workflow_builder.get_middleware(middleware_name)
+
+    @override
+    def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> MiddlewareBaseConfig:
+        """Get the configuration for middleware."""
+        return self._workflow_builder.get_middleware_config(middleware_name)
