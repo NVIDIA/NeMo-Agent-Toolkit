@@ -136,7 +136,7 @@ After setting the required environment variables, run the workflow with the appr
 
 ```bash
 nat run --config_file examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jama.yml \
-    --input "Search for requirements related to authentication in Jama"
+    --input "What Jama releases are available?"
 ```
 
 ### Dual Authentication Pattern (Jira)
