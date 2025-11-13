@@ -133,6 +133,10 @@ See the [Microsoft Presidio documentation](https://microsoft.github.io/presidio/
 
 Additionally, the `redact_keys` parameter allows you to specify custom keys that should be redacted beyond the default sensitive keys (`api_key`, `auth_headers`, `authorization`).
 
+## User Feedback Integration
+
+When Weave telemetry is enabled, a `/feedback` endpoint is automatically available, along with thumbs up and thumbs down buttons in the NeMo Agent Toolkit UI. This allows you to gather user feedback on agent responses that are linked to specific traces in your Weave project for analysis. For more details, see the [API Server Endpoints](../../reference/api-server-endpoints.md#feedback-endpoint) documentation.
+
 ## Resources
 
 - Learn more about tracing [here](https://weave-docs.wandb.ai/guides/tracking/tracing).
