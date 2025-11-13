@@ -35,7 +35,7 @@ uv pip install "nvidia-nat[langchain]"
 
 ## Configuration
 
-The ReAct agent can be used as a workflow or a function, by entering the value `react_agent` for the `_type` option, as shown in the example configurations below.
+The ReAct agent can be used as a workflow or a function.
 
 ### Example 1: ReAct Agent as a Workflow to Configure `config.yml`
 To use the ReAct agent as a workflow, configure the YAML file as follows:
@@ -62,7 +62,7 @@ functions:
 
 ### Configurable Options
 The following are more ways you can configure your config file when using the ReAct agent:
-* `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReAct agent is configured as a workflow and need to expose a customized name as a tool.
+* `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReAct agent is configured as a workflow and needs to expose a customized name as a tool.
 
 * `tool_names`: A list of tools that the agent can call. The tools must be functions or function groups configured in the YAML file.
 

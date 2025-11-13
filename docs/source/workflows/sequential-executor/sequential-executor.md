@@ -21,7 +21,7 @@ A sequential executor is a deterministic workflow orchestrator that executes fun
 ## Requirements
 The sequential executor is part of the core NeMo Agent toolkit and does not require additional plugin installations.
 
-To install NeMo Agent toolkit:
+If you have performed a source code checkout, install the NeMo Agent toolkit with the following command:
 
 ```bash
 uv pip install -e .
