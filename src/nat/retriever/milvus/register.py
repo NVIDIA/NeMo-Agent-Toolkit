@@ -48,10 +48,7 @@ class MilvusRetrieverConfig(RetrieverBaseConfig, name="milvus_retriever"):
     description: str | None = Field(default=None,
                                     description="If present it will be used as the tool description",
                                     alias="collection_description")
-    use_async_client: bool = Field(
-        default=False,
-        description="Use AsyncMilvusClient for async I/O operations. "
-    )
+    use_async_client: bool = Field(default=False, description="Use AsyncMilvusClient for async I/O operations. ")
 
 
 @register_retriever_provider(config_type=MilvusRetrieverConfig)
