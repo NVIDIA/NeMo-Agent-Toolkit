@@ -101,7 +101,7 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
             AuthResult with HeaderCred objects for service account authentication
         """
         # Get OAuth2 access token (cached if still valid)
-d        access_token = await self._token_client.get_access_token()
+        access_token = await self._token_client.get_access_token()
 
         # Build credentials list using HeaderCred
         credentials: list[Credential] = [
