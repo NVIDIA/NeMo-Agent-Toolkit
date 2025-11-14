@@ -168,7 +168,7 @@ nat run --config_file examples/MCP/service_account_auth_mcp/configs/config-mcp-s
     --input "What is status of jira ticket OCSW-2116?"
 ```
 
-The function is defined in `scripts/service_tokens.py` and demonstrates how to implement dynamic token retrieval. In production, you would replace this with logic to fetch tokens from secure vaults or token services.
+The function is defined in `examples/MCP/service_account_auth_mcp/src/nat_service_account_auth_mcp/scripts/service_tokens.py` and demonstrates how to implement dynamic token retrieval. In production, you would replace this with logic to fetch tokens from secure vaults or token services.
 
 ## Expected Behavior
 
