@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from collections.abc import AsyncGenerator
 
 from pydantic import Field
@@ -20,7 +22,10 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
+from nat.cli.register_workflow import register_function_intercept
 from nat.data_models.function import FunctionGroupBaseConfig
+from nat_simple_calculator.calculator_intercept import CalculatorIntercept
+from nat_simple_calculator.calculator_intercept import CalculatorInterceptConfig
 
 
 class CalculatorToolConfig(FunctionGroupBaseConfig, name="calculator"):
@@ -90,3 +95,16 @@ async def calculator(_config: CalculatorToolConfig, _builder: Builder) -> AsyncG
     group.add_function(name="compare", fn=_compare, description=_compare.__doc__)
 
     yield group
+
+@register_function_intercept(config_type=CalculatorInterceptConfig)
+async def calculator_intercept(config: CalculatorInterceptConfig, builder):
+    """Build a cache intercept from configuration.
+
+    Args:
+        config: The cache intercept configuration
+        builder: The workflow builder (unused but required by component pattern)
+
+    Yields:
+        A configured cache intercept instance
+    """
+    yield CalculatorIntercept(payload=config.payload)
