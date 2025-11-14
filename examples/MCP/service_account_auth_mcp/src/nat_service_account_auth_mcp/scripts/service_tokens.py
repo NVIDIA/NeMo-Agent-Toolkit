@@ -59,13 +59,17 @@ async def get_jira_service_token(**kwargs) -> tuple[str, str]:
 
             # Fetch from secure vault
             token = await fetch_from_vault(vault_path)
-            header = "X-Service-Account-Token"
+            header = os.getenv("SERVICE_TOKEN_HEADER")
 
             return (header, token)
         ```
     """
     # Read header name from environment (with default)
-    header = os.getenv("SERVICE_TOKEN_HEADER", "X-Service-Account-Token")
+    header = os.getenv("SERVICE_TOKEN_HEADER")
+
+    if not header:
+        raise ValueError("SERVICE_TOKEN_HEADER environment variable not set. "
+                         "In production, this would be set to the header name used by the service.")
 
     # Read token from environment
     token = os.getenv("JIRA_SERVICE_TOKEN")
