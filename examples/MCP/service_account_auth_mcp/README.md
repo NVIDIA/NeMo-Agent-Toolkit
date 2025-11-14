@@ -132,7 +132,7 @@ Example in config:
 service_token:
   function: "my_module.get_service_token"
   kwargs:
-    vault_path: "secrets/jira"
+    vault_path: "secrets_jira"
   header: X-Service-Account-Token
 ```
 :::

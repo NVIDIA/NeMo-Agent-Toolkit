@@ -246,7 +246,7 @@ authentication:
       function: "my_module.get_service_token"  # Python function path
       header: X-Service-Account-Token
       kwargs:  # Optional: Pass additional arguments to the function
-        vault_path: "secrets/jira"
+        vault_path: "secrets_jira"
         region: "us-west-2"
 ```
 
