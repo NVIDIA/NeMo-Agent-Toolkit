@@ -135,7 +135,7 @@ Additionally, the `redact_keys` parameter allows you to specify custom keys that
 
 ## User Feedback Integration
 
-When Weave telemetry is enabled, a `/feedback` endpoint is automatically available, along with thumbs up and thumbs down buttons in the NeMo Agent Toolkit UI. This allows you to gather user feedback on agent responses that are linked to specific traces in your Weave project for analysis. For more details, see the [API Server Endpoints](../../reference/api-server-endpoints.md#feedback-endpoint) documentation.
+When Weave telemetry is enabled, a `/feedback` endpoint is automatically available, along with thumbs-up and thumbs-down buttons in the NeMo Agent Toolkit UI. This allows you to gather user feedback on agent responses that are linked to specific traces in your Weave project for analysis. For more details, see the [API Server Endpoints](../../reference/api-server-endpoints.md#feedback-endpoint) documentation.
 
 ## Resources
 

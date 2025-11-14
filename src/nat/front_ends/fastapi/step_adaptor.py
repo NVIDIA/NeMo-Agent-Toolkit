@@ -40,12 +40,9 @@ class StepAdaptor:
         self.config = config
 
     def _get_weave_call_id(self) -> str | None:
-        """Retrieve weave_call_id from context if available."""
-        try:
-            from nat.builder.context import Context
-            return Context.get().weave_call_id
-        except Exception:
-            return None
+        """Retrieve weave_call_id from context."""
+        from nat.builder.context import Context
+        return Context.get().weave_call_id
 
     def _step_matches_filter(self, step: IntermediateStep, config: StepAdaptorConfig) -> bool:
         """
