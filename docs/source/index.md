@@ -51,12 +51,6 @@ For frequently asked questions, refer to [FAQ](./resources/faq.md).
 
 We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) if you have any feedback or feature requests.
 
-<!-- This role is needed at the index to set the default backtick role -->
-```{eval-rst}
-.. role:: py(code)
-   :language: python
-   :class: highlight
-```
 
 ```{toctree}
 :hidden:
@@ -164,4 +158,11 @@ Running Tests <./resources/running-tests.md>
 ./resources/running-ci-locally.md
 ./support.md
 ./resources/licensing.md
+```
+
+<!-- This role is needed at the index to set the default backtick role -->
+```{eval-rst}
+.. role:: py(code)
+   :language: python
+   :class: highlight
 ```

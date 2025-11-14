@@ -58,12 +58,12 @@ def _build_api_tree() -> Path:
     os.makedirs(api_tree.absolute())
 
     # Temp disable API building, this adds 4 minutes to the build time, re-enable prior to merging
-    # shutil.copytree(nat_dir, dest_dir)
+    shutil.copytree(nat_dir, dest_dir)
     # dest_plugins_dir = dest_dir / "plugins"
 
-    # for sub_dir in (dest_dir, dest_plugins_dir):
-    #     with open(sub_dir / "__init__.py", "w", encoding="utf-8") as f:
-    #         f.write("")
+    for sub_dir in (dest_dir, ):  # dest_plugins_dir):
+        with open(sub_dir / "__init__.py", "w", encoding="utf-8") as f:
+            f.write("")
 
     # plugin_dirs = [Path(p) for p in glob.glob(f'{plugins_dir}/nvidia_nat_*')]
     # for plugin_dir in plugin_dirs:
@@ -106,7 +106,7 @@ version = '.'.join(release.split('.')[:2])
 # ones.
 extensions = [
     # Temp disable API building, this adds 4 minutes to the build time, re-enable prior to merging
-    #'autoapi.extension',
+    'autoapi.extension',
     'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive',
     'myst_parser',
@@ -135,7 +135,7 @@ autoapi_options = [
 autoapi_python_use_implicit_namespaces = False
 
 # Enable this for debugging
-autoapi_keep_files = False
+autoapi_keep_files = True
 
 myst_enable_extensions = ["colon_fence"]
 
@@ -348,6 +348,6 @@ def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonO
 
 
 # Temp disable API building, this adds 4 minutes to the build time, re-enable prior to merging
-# def setup(sphinx):
-#     # Work-around for for Pydantic docstrings that trigger parsing warnings
-#     sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+def setup(sphinx):
+    # Work-around for for Pydantic docstrings that trigger parsing warnings
+    sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
