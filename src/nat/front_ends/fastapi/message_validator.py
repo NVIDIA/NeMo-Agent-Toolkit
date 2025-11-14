@@ -72,6 +72,22 @@ class MessageValidator:
 
         self._message_parent_id: str = "default_id"
 
+    def _get_weave_call_id_from_context(self, weave_call_id: str | None) -> str | None:
+        """
+        Retrieves weave_call_id from Context if not already provided
+
+        :param weave_call_id: Existing weave_call_id or None.
+        :return: weave_call_id if available, None otherwise.
+        """
+        if weave_call_id is not None:
+            return weave_call_id
+
+        try:
+            from nat.builder.context import Context
+            return Context.get().weave_call_id
+        except (ImportError, AttributeError, KeyError):
+            return None
+
     async def validate_message(self, message: dict[str, Any]) -> BaseModel:
         """
         Validates an incoming WebSocket message against its expected schema.
@@ -255,16 +271,11 @@ class MessageValidator:
         :param content: Message content.
         :param status: Status of the message (default: IN_PROGRESS).
         :param timestamp: Timestamp of the message (default: current UTC time).
+        :param weave_call_id: Weave call identifier (default: retrieved from context).
         :return: A WebSocketSystemResponseTokenMessage instance.
         """
         try:
-            # If weave_call_id not provided, try to get from context
-            if weave_call_id is None:
-                try:
-                    from nat.builder.context import Context
-                    weave_call_id = Context.get().weave_call_id
-                except Exception:
-                    pass
+            weave_call_id = self._get_weave_call_id_from_context(weave_call_id)
 
             return WebSocketSystemResponseTokenMessage(type=message_type,
                                                        id=message_id,
@@ -306,13 +317,7 @@ class MessageValidator:
         :return: A WebSocketSystemIntermediateStepMessage instance.
         """
         try:
-            # If weave_call_id not provided, try to get from context
-            if weave_call_id is None:
-                try:
-                    from nat.builder.context import Context
-                    weave_call_id = Context.get().weave_call_id
-                except Exception:
-                    pass
+            weave_call_id = self._get_weave_call_id_from_context(weave_call_id)
 
             return WebSocketSystemIntermediateStepMessage(type=message_type,
                                                           id=message_id,
@@ -355,13 +360,7 @@ class MessageValidator:
         :return: A WebSocketSystemInteractionMessage instance.
         """
         try:
-            # If weave_call_id not provided, try to get from context
-            if weave_call_id is None:
-                try:
-                    from nat.builder.context import Context
-                    weave_call_id = Context.get().weave_call_id
-                except Exception:
-                    pass
+            weave_call_id = self._get_weave_call_id_from_context(weave_call_id)
 
             return WebSocketSystemInteractionMessage(type=message_type,
                                                      id=message_id,

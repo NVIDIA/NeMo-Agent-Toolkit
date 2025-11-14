@@ -378,10 +378,8 @@ async def test_chat_endpoint_weave_call_id_integration(client: httpx.AsyncClient
         validated_response = ChatResponse(**response.json())
         assert isinstance(validated_response, ChatResponse)
 
-        # Note: In a real integration test, the weave_call_id might not be set
-        # depending on whether Weave is actually initialized in the test environment.
-        # This test verifies the structure supports weave_call_id.
-        assert hasattr(validated_response, 'weave_call_id')
+        # Verify that the weave_call_id matches the mocked value
+        assert validated_response.weave_call_id == "integration-test-weave-id"
 
 
 @pytest.mark.integration
@@ -404,8 +402,8 @@ async def test_chat_stream_endpoint_weave_call_id_integration(client: httpx.Asyn
         validated_response = ChatResponseChunk(**data_match_dict)
         assert isinstance(validated_response, ChatResponseChunk)
 
-        # Verify weave_call_id field is present in the response structure
-        assert hasattr(validated_response, 'weave_call_id')
+        # Verify that the weave_call_id matches the mocked value
+        assert validated_response.weave_call_id == "integration-stream-weave-id"
 
 
 @pytest.mark.integration

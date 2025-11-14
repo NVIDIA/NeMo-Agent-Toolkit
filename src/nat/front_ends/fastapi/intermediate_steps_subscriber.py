@@ -44,11 +44,7 @@ async def pull_intermediate(_q, adapter):
         ResponseIntermediateStep and place it into the queue.
         """
         if adapter is None:
-            weave_call_id = None
-            try:
-                weave_call_id = context.weave_call_id
-            except Exception:
-                pass
+            weave_call_id = context.weave_call_id
 
             adapted = ResponseIntermediateStep(id=item.UUID,
                                                type=item.event_type,
