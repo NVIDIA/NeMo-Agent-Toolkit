@@ -572,14 +572,7 @@ class VannaLangChain(MilvusVectorStore, VannaLangChainLLM):
 
         Args:
             client: LangChain LLM client
-            config: Configuration dict containing:
-                - async_milvus_client: Async Milvus client
-                - embedder_client: LangChain embedder
-                - initial_prompt: Optional custom prompt
-                - n_results: Number of similar examples to retrieve
-                - sql_collection: Collection name for SQL examples
-                - ddl_collection: Collection name for DDL
-                - doc_collection: Collection name for documentation
+            config: Configuration dict for Milvus vector store and LLM settings
         """
         MilvusVectorStore.__init__(self, config=config)
         VannaLangChainLLM.__init__(self, client=client, config=config)
@@ -599,7 +592,7 @@ class VannaLangChain(MilvusVectorStore, VannaLangChainLLM):
             question: Natural language question to convert to SQL
             allow_llm_to_see_data: Whether to allow LLM to see actual data
             error_message: Optional error message from previous SQL execution
-            **kwargs: Additional keyword arguments
+            kwargs: Additional keyword arguments
 
         Returns:
             Dictionary with 'sql' and optional 'explanation' keys
@@ -697,10 +690,9 @@ class VannaSingleton:
             ddl_collection: Collection name for DDL
             doc_collection: Collection name for documentation
             milvus_search_limit: Maximum limit size for vector search operations
-            reasoning_models: Models requiring special handling for think tags (defaults handled by VannaLangChainLLM)
-            chat_models: Models using standard response handling (defaults handled by VannaLangChainLLM)
-            create_collections: Whether to create Milvus collections if they don't exist (default True for
-                                backward compatibility)
+            reasoning_models: Models requiring special handling for think tags
+            chat_models: Models using standard response handling
+            create_collections: Whether to create Milvus collections if they don't exist (default True)
 
         Returns:
             Initialized Vanna instance
