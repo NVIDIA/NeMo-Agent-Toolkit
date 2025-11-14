@@ -19,7 +19,7 @@
 function_groups:
   my_calculator:
     _type: calculator
-    # No intercepts by default - they will be added via overrides
+    # No middleware by default - they will be added via overrides
 
 functions:
   current_datetime:
@@ -44,10 +44,10 @@ workflow:
   verbose: true
   parse_agent_response_max_retries: 3
 
-# Function intercepts defined but not activated
-function_intercepts:
-  calculator_intercept:
-    _type: calculator_intercept
+# Middleware defined but not activated
+middleware:
+  calculator_middleware:
+    _type: calculator_middleware
     payload: 1.0
 
 # Evaluation configuration

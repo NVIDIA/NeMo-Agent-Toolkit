@@ -21,7 +21,7 @@ from pathlib import Path
 from nat.data_models.config import Config
 from nat.eval.config import EvaluationRunOutput
 from nat.eval.evaluate import EvaluationRun
-from nat.eval.runners.redteam_config import InterceptScenarioEntry
+from nat.eval.runners.redteam_config import RedTeamScenarioEntry
 from nat.eval.runners.redteam_config import RedTeamingEvaluationConfig
 
 logger = logging.getLogger(__name__)
@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 
 class RedTeamingEvaluationRunner:
     """
-    Runner for red teaming evaluations with function intercepts.
+    Runner for red teaming agents using middleware functionality..
 
     This runner takes a base workflow configuration and applies different
-    function intercept modifications based on a JSON dataset. Each entry
+    middleware modifications based on a JSON dataset. Each entry
     in the dataset defines one test scenario.
     """
 
@@ -54,7 +54,7 @@ class RedTeamingEvaluationRunner:
             Dictionary mapping scenario IDs to their evaluation outputs
         """
         # Load intercept scenarios from JSON file
-        scenarios = self._load_intercept_scenarios()
+        scenarios = self._load_red_team_scenarios()
 
         logger.info(f"Running {len(scenarios)} red teaming scenarios")
 
@@ -66,45 +66,45 @@ class RedTeamingEvaluationRunner:
 
         return self.evaluation_run_outputs
 
-    def _load_intercept_scenarios(self) -> list[InterceptScenarioEntry]:
+    def _load_red_team_scenarios(self) -> list[RedTeamScenarioEntry]:
         """
-        Load intercept scenario entries from JSON file.
+        Load red team scenario entries from JSON file.
 
         Returns:
-            List of intercept scenario entries
+            List of red team scenario entries
 
         Raises:
             ValueError: If JSON file is invalid or contains validation errors
         """
-        scenarios_file = self.config.intercept_scenarios_file
+        scenarios_file = self.config.red_team_scenarios_file
 
-        logger.info(f"Loading intercept scenarios from: {scenarios_file}")
+        logger.info(f"Loading red team scenarios from: {scenarios_file}")
 
         with open(scenarios_file, encoding='utf-8') as f:
             scenarios_data = json.load(f)
 
         if not isinstance(scenarios_data, list):
             raise ValueError(
-                f"Intercept scenarios file must contain a JSON array, got {type(scenarios_data)}"
+                f"Red team scenarios file must contain a JSON array, got {type(scenarios_data)}"
             )
 
-        # Parse into InterceptenarioEntry objects
+        # Parse into RedTeamScenarioEntry objects
         scenarios = []
         for idx, entry_data in enumerate(scenarios_data):
             try:
-                scenario = InterceptScenarioEntry(**entry_data)
+                scenario = RedTeamScenarioEntry(**entry_data)
                 scenarios.append(scenario)
             except Exception as e:
                 raise ValueError(
                     f"Invalid scenario entry at index {idx}: {e}"
                 ) from e
 
-        # Validate: warn if multiple null intercepts
-        null_intercept_scenarios = [s for s in scenarios if s.intercept_name is None]
-        if len(null_intercept_scenarios) > 1:
+        # Validate: warn if multiple null middleware
+        null_middleware_scenarios = [s for s in scenarios if s.middleware_name is None]
+        if len(null_middleware_scenarios) > 1:
             logger.warning(
-                f"Found {len(null_intercept_scenarios)} scenarios with null intercept_name "
-                f"(baseline scenarios): {[s.scenario_id for s in null_intercept_scenarios]}. "
+                f"Found {len(null_middleware_scenarios)} scenarios with null middleware_name "
+                f"(baseline scenarios): {[s.scenario_id for s in null_middleware_scenarios]}. "
                 "It's recommended to have only one baseline scenario."
             )
 
@@ -113,13 +113,13 @@ class RedTeamingEvaluationRunner:
 
     async def run_single_scenario(
         self,
-        scenario: InterceptScenarioEntry
+        scenario: RedTeamScenarioEntry
     ) -> EvaluationRunOutput:
         """
-        Run a single red teaming scenario with the specified intercept configuration.
+        Run a single red teaming scenario with the specified middleware configuration.
 
         Args:
-            scenario: Intercept scenario entry defining the configuration
+            scenario: Red teaming scenario entry defining the middleware configuration
 
         Returns:
             Evaluation output for this scenario
@@ -139,7 +139,7 @@ class RedTeamingEvaluationRunner:
                 # If it's a different BaseModel type, try to treat it as Config
                 workflow_config = Config(**workflow_config.model_dump())
 
-        # Apply the scenario to the workflow config (handles both intercepts and instructions)
+        # Apply the scenario to the workflow config (handles both middleware and evaluation instructions)
         modified_config = scenario.apply_to_config(workflow_config)
 
         # Update the evaluation config with the modified workflow config

@@ -16,15 +16,15 @@
 from nat.eval.runners.config import MultiEvaluationRunConfig
 from nat.eval.runners.config import MultiEvaluationRunOutput
 from nat.eval.runners.multi_eval_runner import MultiEvaluationRunner
-from nat.eval.runners.redteam_config import InterceptScenarioEntry
 from nat.eval.runners.redteam_config import RedTeamingEvaluationConfig
+from nat.eval.runners.redteam_config import RedTeamScenarioEntry
 from nat.eval.runners.redteam_runner import RedTeamingEvaluationRunner
 
 __all__ = [
     "MultiEvaluationRunConfig",
     "MultiEvaluationRunOutput",
     "MultiEvaluationRunner",
-    "InterceptScenarioEntry",
+    "RedTeamScenarioEntry",
     "RedTeamingEvaluationConfig",
     "RedTeamingEvaluationRunner",
 ]

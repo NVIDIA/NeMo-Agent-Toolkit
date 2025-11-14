@@ -28,7 +28,7 @@ from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFi
 logger = logging.getLogger(__name__)
 
 
-class InterceptScenarioEntry(BaseModel):
+class RedTeamScenarioEntry(BaseModel):
     """
     A single intercept scenario entry from the JSON dataset.
 
@@ -36,19 +36,19 @@ class InterceptScenarioEntry(BaseModel):
 
     Attributes:
         scenario_id: Unique identifier for this scenario
-        intercept_name: Name of the intercept to apply, or None for baseline (no intercepts)
-        target_function: Name of the function to apply the intercept to
+        intercept_name: Name of the intercept to apply, or None for baseline (no middleware)
+        target_function: Name of the function to apply the middleware to
             (mutually exclusive with target_function_group)
-        target_function_group: Name of the function group to apply the intercept to
+        target_function_group: Name of the function group to apply the middleware to
             (mutually exclusive with target_function)
-        payload: Payload value for the intercept (only used when intercept_name is not None)
+        payload: Payload value for the middleware (only used when middleware_name is not None)
         evaluation_instructions: Optional scenario-specific instructions for the evaluator to check
-            if the intercept was successful in producing the expected behavior
+            if the middleware was successful in producing the expected behavior
     """
     scenario_id: str = Field(description="Unique identifier for this scenario")
-    intercept_name: str | None = Field(
+    middleware_name: str | None = Field(
         default=None,
-        description="Name of the intercept to apply, or null for baseline scenario"
+        description="Name of the middleware to apply, or null for baseline scenario"
     )
     target_function: str | None = Field(
         default=None,
@@ -72,21 +72,21 @@ class InterceptScenarioEntry(BaseModel):
     )
 
     @model_validator(mode='after')
-    def validate_entry(self) -> 'InterceptScenarioEntry':
+    def validate_entry(self) -> 'RedTeamScenarioEntry':
         """Validate the entry configuration."""
-        # If intercept_name is null, this is a baseline scenario
-        if self.intercept_name is None:
+        # If middleware_name is null, this is a baseline scenario
+        if self.middleware_name is None:
             if self.target_function is not None or self.target_function_group is not None:
                 raise ValueError(
-                    f"Scenario '{self.scenario_id}': When intercept_name is null (baseline), "
+                    f"Scenario '{self.scenario_id}': When middleware_name is null (baseline), "
                     "target_function and target_function_group must also be null"
                 )
             return self
 
-        # If intercept_name is provided, exactly one target must be specified
+        # If middleware_name is provided, exactly one target must be specified
         if self.target_function is None and self.target_function_group is None:
             raise ValueError(
-                f"Scenario '{self.scenario_id}': When intercept_name is provided, "
+                f"Scenario '{self.scenario_id}': When middleware_name is provided, "
                 "either target_function or target_function_group must be specified"
             )
 
@@ -103,7 +103,7 @@ class InterceptScenarioEntry(BaseModel):
         Apply this scenario to a workflow configuration.
 
         This method performs all necessary transformations including:
-        1. Applying intercept overrides (if intercept_name is specified)
+        1. Applying middleware overrides (if middleware_name is specified)
         2. Injecting evaluation instructions (if evaluation_instructions is specified)
         3. Injecting filter conditions (if filter_conditions is specified)
 
@@ -119,7 +119,7 @@ class InterceptScenarioEntry(BaseModel):
         logger.info(f"Applying scenario '{self.scenario_id}' to configuration")
 
         # Apply intercept override if this isn't a baseline scenario
-        if self.intercept_name is not None:
+        if self.middleware_name is not None:
             self._apply_intercept_override(config)
 
         # Inject evaluation instructions and/or filter conditions if provided
@@ -145,35 +145,35 @@ class InterceptScenarioEntry(BaseModel):
             ValueError: If intercept or target doesn't exist in config
         """
         # Handle baseline scenario (null intercept)
-        if self.intercept_name is None:
+        if self.middleware_name is None:
             logger.info(
                 f"Baseline scenario '{self.scenario_id}': using config as-is (no intercept modifications)"
             )
             return
 
-        # Validate that the intercept exists in function_intercepts
-        if self.intercept_name not in config.function_intercepts:
+        # Validate that the intercept exists in middleware
+        if self.middleware_name not in config.middleware:
             raise ValueError(
-                f"Scenario '{self.scenario_id}': Intercept '{self.intercept_name}' "
-                f"not found in function_intercepts. Available intercepts: "
-                f"{list(config.function_intercepts.keys())}"
+                f"Scenario '{self.scenario_id}': Middleware '{self.middleware_name}' "
+                f"not found in middleware. Available middleware: "
+                f"{list(config.middleware.keys())}"
             )
 
         # Step 1: Clear the intercept from all functions and function groups
-        logger.info(f"Clearing intercept '{self.intercept_name}' from all functions/groups")
+        logger.info(f"Clearing middleware '{self.middleware_name}' from all functions/groups")
         for func_name, func_config in config.functions.items():
-            if self.intercept_name in func_config.intercepts:
-                func_config.intercepts = [
-                    ic for ic in func_config.intercepts if ic != self.intercept_name
+            if self.middleware_name in func_config.middleware:
+                func_config.middleware = [
+                    mc for mc in func_config.middleware if mc != self.middleware_name
                 ]
-                logger.debug(f"Removed '{self.intercept_name}' from function '{func_name}'")
+                logger.debug(f"Removed '{self.middleware_name}' from function '{func_name}'")
 
         for group_name, group_config in config.function_groups.items():
-            if self.intercept_name in group_config.intercepts:
-                group_config.intercepts = [
-                    ic for ic in group_config.intercepts if ic != self.intercept_name
+            if self.middleware_name in group_config.middleware:
+                group_config.middleware = [
+                    mc for mc in group_config.middleware if mc != self.middleware_name
                 ]
-                logger.debug(f"Removed '{self.intercept_name}' from function group '{group_name}'")
+                logger.debug(f"Removed '{self.middleware_name}' from function group '{group_name}'")
 
         # Step 2: Apply the intercept to the target
         if self.target_function is not None:
@@ -184,10 +184,10 @@ class InterceptScenarioEntry(BaseModel):
                     f"not found in config. Available functions: {list(config.functions.keys())}"
                 )
 
-            logger.info(f"Adding intercept '{self.intercept_name}' to function '{self.target_function}'")
+            logger.info(f"Adding middleware '{self.middleware_name}' to function '{self.target_function}'")
             target_config = config.functions[self.target_function]
-            if self.intercept_name not in target_config.intercepts:
-                target_config.intercepts.append(self.intercept_name)
+            if self.middleware_name not in target_config.middleware:
+                target_config.middleware.append(self.middleware_name)
 
         elif self.target_function_group is not None:
             # Target is a function group
@@ -198,17 +198,17 @@ class InterceptScenarioEntry(BaseModel):
                 )
 
             logger.info(
-                f"Adding intercept '{self.intercept_name}' to function group '{self.target_function_group}'"
+                f"Adding middleware '{self.middleware_name}' to function group '{self.target_function_group}'"
             )
             target_config = config.function_groups[self.target_function_group]
-            if self.intercept_name not in target_config.intercepts:
-                target_config.intercepts.append(self.intercept_name)
+            if self.middleware_name not in target_config.middleware:
+                target_config.middleware.append(self.middleware_name)
 
         # Step 3: Update the intercept's payload if provided
         if self.payload is not None:
-            logger.info(f"Updating payload for intercept '{self.intercept_name}': {self.payload}")
-            intercept_config = config.function_intercepts[self.intercept_name]
-            config_dict = intercept_config.model_dump()
+            logger.info(f"Updating payload for middleware '{self.middleware_name}': {self.payload}")
+            middleware_config = config.middleware[self.middleware_name]
+            config_dict = middleware_config.model_dump()
 
             # Update with the payload
             if isinstance(self.payload, dict):
@@ -219,8 +219,8 @@ class InterceptScenarioEntry(BaseModel):
                 config_dict['payload'] = self.payload
 
             # Recreate the intercept config from the updated dict
-            config_type = type(intercept_config)
-            config.function_intercepts[self.intercept_name] = config_type(**config_dict)
+            config_type = type(middleware_config)
+            config.middleware[self.middleware_name] = config_type(**config_dict)
 
     def _inject_evaluation_config(self, config: Config) -> None:
         """
@@ -269,32 +269,32 @@ class InterceptScenarioEntry(BaseModel):
 
 class RedTeamingEvaluationConfig(BaseModel):
     """
-    Configuration for red teaming evaluation runs with function intercepts.
+    Configuration for red teaming evaluation runs with middleware functionality.
 
     This config allows running multiple evaluation scenarios where each scenario
-    tests different function intercept configurations. Scenarios are defined in a
+    tests different middleware configurations. Scenarios are defined in a
     JSON file similar to an evaluation dataset.
 
     Attributes:
         base_evaluation_config: Base evaluation configuration that will be modified
             for each red teaming scenario.
-        intercept_scenarios_file: Path to JSON file containing intercept scenario entries.
-            Each entry defines how to configure intercepts for one test scenario.
+        red_team_scenarios_file: Path to JSON file containing red team scenario entries.
+            Each entry defines how to configure middleware for one test scenario.
     """
     base_evaluation_config: EvaluationRunConfig
-    intercept_scenarios_file: Path = Field(
-        description="Path to JSON file containing intercept scenario entries"
+    red_team_scenarios_file: Path = Field(
+        description="Path to JSON file containing red team scenario entries"
     )
 
     @model_validator(mode='after')
     def validate_file_exists(self) -> 'RedTeamingEvaluationConfig':
         """Validate that the scenarios file exists."""
-        if not self.intercept_scenarios_file.exists():
+        if not self.red_team_scenarios_file.exists():
             raise FileNotFoundError(
-                f"Intercept scenarios file not found: {self.intercept_scenarios_file}"
+                f"Red team scenarios file not found: {self.red_team_scenarios_file}"
             )
-        if not self.intercept_scenarios_file.is_file():
+        if not self.red_team_scenarios_file.is_file():
             raise ValueError(
-                f"Intercept scenarios path is not a file: {self.intercept_scenarios_file}"
+                f"Red team scenarios path is not a file: {self.red_team_scenarios_file}"
             )
         return self

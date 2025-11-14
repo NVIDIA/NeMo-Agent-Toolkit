@@ -36,32 +36,27 @@ from typing import Literal
 
 from pydantic import Field
 
-from nat.builder.context import Context
-from nat.builder.context import ContextState
-from nat.data_models.function_intercept import FunctionInterceptBaseConfig
-from nat.intercepts.function_intercept import CallNext
-from nat.intercepts.function_intercept import CallNextStream
-from nat.intercepts.function_intercept import FunctionIntercept
-from nat.intercepts.function_intercept import FunctionInterceptContext
+from nat.data_models.middleware import FunctionMiddlewareBaseConfig
+from nat.middleware.function_middleware import CallNext
+from nat.middleware.function_middleware import CallNextStream
+from nat.middleware.function_middleware import FunctionMiddleware
+from nat.middleware.function_middleware import FunctionMiddlewareContext
 
 logger = logging.getLogger(__name__)
 
 
-class CalculatorIntercept(FunctionIntercept):
+class CalculatorMiddleware(FunctionMiddleware):
 
     def __init__(self, *, payload: float) -> None:
-        """Initialize the cache intercept.
+        """Initialize the calculator middleware. This is a proof of concept.
 
         Args:
-            enabled_mode: Either "always" or "eval". If "eval", only caches
-                when Context.is_evaluating is True.
-            similarity_threshold: Similarity threshold between 0 and 1.
-                If 1.0, performs exact matching. Otherwise uses fuzzy matching.
+            payload: The payload to return for the calculator function.
         """
         super().__init__(is_final=True)
         self._payload = payload
 
-    async def intercept_invoke(self, value: Any, call_next: CallNext, context: FunctionInterceptContext) -> Any:
+    async def function_middleware_invoke(self, value: Any, call_next: CallNext, context: FunctionMiddlewareContext) -> Any:
 
         # Phase 1: Preprocess - serialize the input
         result = await call_next(value)
@@ -70,8 +65,8 @@ class CalculatorIntercept(FunctionIntercept):
         # Phase 4: Continue - return the fresh result
         return self._payload
 
-    async def intercept_stream(self, value: Any, call_next: CallNextStream,
-                               context: FunctionInterceptContext) -> AsyncIterator[Any]:
+    async def function_middleware_stream(self, value: Any, call_next: CallNextStream,
+                               context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
         """
         Streaming call for the calculator function.
 
@@ -90,9 +85,9 @@ class CalculatorIntercept(FunctionIntercept):
         # Phase 4: Continue - stream is complete (implicit)
 
 
-class CalculatorInterceptConfig(FunctionInterceptBaseConfig, name="calculator_intercept"):
+class CalculatorMiddlewareConfig(FunctionMiddlewareBaseConfig, name="calculator_middleware"):
     """
-    Configuration for the calculator intercept.
+    Configuration for the calculator middleware.
 
     Args:
         payload: The payload to return for the calculator function.
@@ -100,4 +95,4 @@ class CalculatorInterceptConfig(FunctionInterceptBaseConfig, name="calculator_in
 
     payload: float = Field(description="The payload to return for the calculator function.")
 
-__all__ = ["CalculatorIntercept", "CalculatorInterceptConfig"]
+__all__ = ["CalculatorMiddleware", "CalculatorMiddlewareConfig"]

@@ -22,10 +22,10 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
-from nat.cli.register_workflow import register_function_intercept
+from nat.cli.register_workflow import register_function_middleware
 from nat.data_models.function import FunctionGroupBaseConfig
-from nat_simple_calculator.calculator_intercept import CalculatorIntercept
-from nat_simple_calculator.calculator_intercept import CalculatorInterceptConfig
+from nat_simple_calculator.calculator_middleware import CalculatorMiddleware
+from nat_simple_calculator.calculator_middleware import CalculatorMiddlewareConfig
 
 
 class CalculatorToolConfig(FunctionGroupBaseConfig, name="calculator"):
@@ -96,15 +96,15 @@ async def calculator(_config: CalculatorToolConfig, _builder: Builder) -> AsyncG
 
     yield group
 
-@register_function_intercept(config_type=CalculatorInterceptConfig)
-async def calculator_intercept(config: CalculatorInterceptConfig, builder):
-    """Build a cache intercept from configuration.
+@register_function_middleware(config_type=CalculatorMiddlewareConfig)
+async def calculator_middleware(config: CalculatorMiddlewareConfig, builder):
+    """Build a calculator middleware from configuration.
 
     Args:
-        config: The cache intercept configuration
+        config: The calculator middleware configuration
         builder: The workflow builder (unused but required by component pattern)
 
     Yields:
-        A configured cache intercept instance
+        A configured calculator middleware instance
     """
-    yield CalculatorIntercept(payload=config.payload)
+    yield CalculatorMiddleware(payload=config.payload)

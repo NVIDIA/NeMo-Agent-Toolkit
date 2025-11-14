@@ -51,7 +51,7 @@ async def main():
     # Define paths
     current_dir = Path(__file__).parent
     base_config_path = current_dir / "configs" / "base_workflow.yml"
-    intercept_scenarios_file = current_dir / "data" / "intercept_scenarios.json"
+    red_team_scenarios_file = current_dir / "data" / "red_team_scenarios.json"
     dataset_path = current_dir / "data" / "calculator_test_dataset.json"
 
     # Create base evaluation config
@@ -65,7 +65,7 @@ async def main():
     # Create red teaming evaluation config
     redteam_config = RedTeamingEvaluationConfig(
         base_evaluation_config=base_eval_config,
-        intercept_scenarios_file=intercept_scenarios_file
+        red_team_scenarios_file=red_team_scenarios_file
     )
 
     # Create runner and execute all scenarios
